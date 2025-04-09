@@ -1,0 +1,11 @@
+{
+  "name": "@snavio/dispatcher",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "node ../../scripts/build.js",
+    "lint": "node ../../scripts/lint.js",
+    "test": "node ../../scripts/test.js"
+  }
+}

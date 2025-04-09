@@ -1,0 +1,4 @@
+# ignore HTML test fixtures, which are arbitrary downloaded HTML pages
+**/__test__/*.html
+**/__test__/**/*.html
+terraform

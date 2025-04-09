@@ -1,0 +1,23 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "composite": true,
+    "downlevelIteration": true,
+    "forceConsistentCasingInFileNames": true,
+    "importHelpers": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noFallthroughCasesInSwitch": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true
+  },
+  "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "experimentalSpecifierResolution": "node",
+    "transpileOnly": true,
+    "esm": true
+  }
+}
