@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "node ../../scripts/build.js",
-    "typecheck": "node ../../scripts/typecheck.js",
     "lint": "node ../../scripts/lint.js",
-    "test": "node ../../scripts/test.js"
+    "test": "node ../../scripts/test.js",
+    "typecheck": "node ../../scripts/typecheck.js"
   }
 }

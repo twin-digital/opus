@@ -33,3 +33,4 @@ amplifyconfiguration*
 
 .env
 .turbo
+tsconfig.tsbuildinfo

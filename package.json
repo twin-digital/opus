@@ -8,7 +8,9 @@
   "scripts": {
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "prepare": "husky",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
@@ -16,6 +18,8 @@
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
     "tslib": "^2.8.1",
     "tsup": "^8.4.0",
