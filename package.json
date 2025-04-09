@@ -7,6 +7,9 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
+    "clean": "node scripts/clean.js",
+    "dev": "turbo run dev --parallel",
+    "predev": "turbo run build",
     "lint": "turbo run lint",
     "prepare": "husky",
     "test": "turbo run test",
