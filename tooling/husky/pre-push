@@ -1,2 +1,3 @@
 pnpm lint-staged --config tooling/config/lint-staged.config.js
-pnpm typecheck
+pnpm build
+pnpm test
