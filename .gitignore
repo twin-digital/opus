@@ -32,5 +32,10 @@ amplify_outputs*
 amplifyconfiguration*
 
 .env
-.turbo
-tsconfig.tsbuildinfo
+
+node_modules/
+dist/
+.turbo/
+code/**/dist/
+code/**/.turbo/
+code/**/tsconfig.tsbuildinfo

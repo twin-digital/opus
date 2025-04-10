@@ -1,0 +1,12 @@
+{
+  "name": "@twindigital/core",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node ../../../tooling/scripts/build.js",
+    "lint": "node ../../../tooling/scripts/lint.js",
+    "test": "node ../../../tooling/scripts/test.js",
+    "typecheck": "node ../../../tooling/scripts/typecheck.js"
+  }
+}

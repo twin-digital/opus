@@ -8,16 +8,19 @@
   "scripts": {
     "build": "turbo run build",
     "clean": "node scripts/clean.js",
+    "cdk": "cdk",
+    "cdk:deploy": "cdk deploy",
     "dev": "turbo run dev --parallel",
     "predev": "turbo run build",
     "lint": "turbo run lint",
-    "prepare": "husky",
+    "prepare": "husky tooling/husky || true",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
     "@types/node": "^22.14.0",
+    "aws-cdk": "^2.1007.0",
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.0.0",
@@ -32,5 +35,6 @@
     "vitest": "^3.1.1"
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "lint-staged": "tooling/config/lint-staged.config.js"
 }

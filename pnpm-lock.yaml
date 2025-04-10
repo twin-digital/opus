@@ -13,6 +13,9 @@ importers:
       '@types/node':
         specifier: ^22.14.0
         version: 22.14.0
+      aws-cdk:
+        specifier: ^2.1007.0
+        version: 2.1007.0
       eslint:
         specifier: ^9.24.0
         version: 9.24.0
@@ -50,11 +53,42 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(@types/node@22.14.0)(yaml@2.7.1)
 
-  apps/dispatcher: {}
+  code/apps/discord-bot:
+    dependencies:
+      aws-cdk-lib:
+        specifier: ^2.188.0
+        version: 2.188.0(constructs@10.4.2)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.4.2
 
-  packages/core: {}
+  code/apps/dispatcher: {}
+
+  code/libs/core: {}
 
 packages:
+  '@aws-cdk/asset-awscli-v1@2.2.231':
+    resolution:
+      {
+        integrity: sha512-vPqD/K2pK/ALhU5r5Nafdc2nLB+LJKxNyxUmQnLsazU6AWDJfkqjHQx8m3J4Cjl2C3chQkIRMdzSDuXIlo43GA==,
+      }
+
+  '@aws-cdk/asset-node-proxy-agent-v6@2.1.0':
+    resolution:
+      {
+        integrity: sha512-7bY3J8GCVxLupn/kNmpPc5VJz8grx+4RKfnnJiO1LG+uxkZfANZG3RMHhE+qQxxwkyQ9/MfPtTpf748UhR425A==,
+      }
+
+  '@aws-cdk/cloud-assembly-schema@41.2.0':
+    resolution:
+      {
+        integrity: sha512-JaulVS6z9y5+u4jNmoWbHZRs9uGOnmn/ktXygNWKNu1k6lF3ad4so3s18eRu15XCbUIomxN9WPYT6Ehh7hzONw==,
+      }
+    engines: { node: '>= 14.15.0' }
+    bundledDependencies:
+      - jsonschema
+      - semver
+
   '@esbuild/aix-ppc64@0.25.2':
     resolution:
       {
@@ -836,6 +870,35 @@ packages:
       }
     engines: { node: '>=12' }
 
+  aws-cdk-lib@2.188.0:
+    resolution:
+      {
+        integrity: sha512-RiAkyKHUYcpI59IXP6VP1NvO0Ph5vlqIsrz6YE8KPuGfQ0LuE5ob4Ta2ibVs/fvaGyJIZkEPw54hDrytVWrk3g==,
+      }
+    engines: { node: '>= 14.15.0' }
+    peerDependencies:
+      constructs: ^10.0.0
+    bundledDependencies:
+      - '@balena/dockerignore'
+      - case
+      - fs-extra
+      - ignore
+      - jsonschema
+      - minimatch
+      - punycode
+      - semver
+      - table
+      - yaml
+      - mime-types
+
+  aws-cdk@2.1007.0:
+    resolution:
+      {
+        integrity: sha512-/UOYOTGWUm+pP9qxg03tID5tL6euC+pb+xo0RBue+xhnUWwj/Bbsw6DbqbpOPMrNzTUxmM723/uMEQmM6S26dw==,
+      }
+    engines: { node: '>= 14.15.0' }
+    hasBin: true
+
   balanced-match@1.0.2:
     resolution:
       {
@@ -978,6 +1041,12 @@ packages:
         integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==,
       }
     engines: { node: ^14.18.0 || >=16.10.0 }
+
+  constructs@10.4.2:
+    resolution:
+      {
+        integrity: sha512-wsNxBlAott2qg8Zv87q3eYZYgheb9lchtBfjHzzLHtXbttwSrHPs1NNQbBrmbb1YZvYg2+Vh0Dor76w4mFxJkA==,
+      }
 
   cross-spawn@7.0.6:
     resolution:
@@ -1249,6 +1318,14 @@ packages:
         integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==,
       }
     engines: { node: '>=14' }
+
+  fsevents@2.3.2:
+    resolution:
+      {
+        integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==,
+      }
+    engines: { node: ^8.16.0 || ^10.6.0 || >=11.0.0 }
+    os: [darwin]
 
   fsevents@2.3.3:
     resolution:
@@ -2378,6 +2455,12 @@ packages:
     engines: { node: '>=10' }
 
 snapshots:
+  '@aws-cdk/asset-awscli-v1@2.2.231': {}
+
+  '@aws-cdk/asset-node-proxy-agent-v6@2.1.0': {}
+
+  '@aws-cdk/cloud-assembly-schema@41.2.0': {}
+
   '@esbuild/aix-ppc64@0.25.2':
     optional: true
 
@@ -2775,6 +2858,17 @@ snapshots:
 
   assertion-error@2.0.1: {}
 
+  aws-cdk-lib@2.188.0(constructs@10.4.2):
+    dependencies:
+      '@aws-cdk/asset-awscli-v1': 2.2.231
+      '@aws-cdk/asset-node-proxy-agent-v6': 2.1.0
+      '@aws-cdk/cloud-assembly-schema': 41.2.0
+      constructs: 10.4.2
+
+  aws-cdk@2.1007.0:
+    optionalDependencies:
+      fsevents: 2.3.2
+
   balanced-match@1.0.2: {}
 
   brace-expansion@1.1.11:
@@ -2844,6 +2938,8 @@ snapshots:
   concat-map@0.0.1: {}
 
   consola@3.4.2: {}
+
+  constructs@10.4.2: {}
 
   cross-spawn@7.0.6:
     dependencies:
@@ -3038,6 +3134,9 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
+
+  fsevents@2.3.2:
+    optional: true
 
   fsevents@2.3.3:
     optional: true
