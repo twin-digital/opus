@@ -1,23 +1,25 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
     "composite": true,
     "downlevelIteration": true,
+    "emitDeclarationOnly": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
+    "lib": ["es2023"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noFallthroughCasesInSwitch": true,
-    "outDir": "dist",
+    "outDir": "${configDir}/dist",
     "resolveJsonModule": true,
+    "rootDir": "${configDir}",
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "target": "es2022",
+    "tsBuildInfoFile": "${configDir}/dist/tsconfig.tsbuildinfo",
     "verbatimModuleSyntax": true
-  },
-  "exclude": ["node_modules", "dist"],
-  "ts-node": {
-    "experimentalSpecifierResolution": "node",
-    "transpileOnly": true,
-    "esm": true
   }
 }
