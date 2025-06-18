@@ -1,2 +1,5 @@
 packages:
-  - 'code/**'
+  - code/**
+
+onlyBuiltDependencies:
+  - esbuild
