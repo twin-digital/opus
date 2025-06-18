@@ -12,6 +12,7 @@
     "predev": "turbo run build",
     "lint": "turbo run lint",
     "prepare": "husky tooling/husky || true",
+    "publish-packages": "turbo run build test && changeset version && changeset publish",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
@@ -20,6 +21,7 @@
     "@tsconfig/node22": "^22.0.1",
     "@types/node": "^22.14.0",
     "aws-cdk": "^2.1007.0",
+    "@changesets/cli": "^2.29.4",
     "eslint": "^9.24.0",
     "eslint-config-prettier": "^10.1.1",
     "globals": "^16.0.0",
