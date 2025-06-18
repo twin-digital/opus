@@ -12,6 +12,7 @@
     "predev": "turbo run build",
     "lint": "turbo run lint",
     "prepare": "husky tooling/husky || true",
+    "publish-packages": "turbo run build test && changeset version && changeset publish",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
