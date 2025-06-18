@@ -1,0 +1,28 @@
+{
+  "name": "@pegasuspad/repo-kit",
+  "version": "0.0.0",
+  "description": "Opinionated CLI utilities for maintaining monorepos",
+  "type": "module",
+  "bin": {
+    "repo-kit": "./dist/cli/entry-point.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "@pegasuspad/tsconfig": "workspace:*",
+    "@types/node": "^22.14.0"
+  }
+}
