@@ -1,5 +1,5 @@
 {
-  "name": "@pegasuspad/monorepo",
+  "name": "@twin-digital/monorepo",
   "version": "0.0.0",
   "description": "Monorepo for the Pegasus",
   "private": true,
@@ -17,7 +17,7 @@
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@pegasuspad/repo-kit": "workspace:*",
+    "@twin-digital/repo-kit": "workspace:*",
     "@tsconfig/node22": "^22.0.1",
     "@types/node": "^22.14.0",
     "aws-cdk": "^2.1007.0",

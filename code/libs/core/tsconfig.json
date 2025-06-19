@@ -1,3 +1,0 @@
-{
-  "extends": ["@pegasuspad/tsconfig/tsconfig.options.json"]
-}

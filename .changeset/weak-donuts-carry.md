@@ -1,5 +1,5 @@
 ---
-'@pegasuspad/repo-kit': patch
+'@twin-digital/repo-kit': patch
 ---
 
 publish initial version of tool

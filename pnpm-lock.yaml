@@ -11,12 +11,12 @@ importers:
       '@changesets/cli':
         specifier: ^2.29.4
         version: 2.29.4
-      '@pegasuspad/repo-kit':
-        specifier: workspace:*
-        version: link:code/public/repo-kit
       '@tsconfig/node22':
         specifier: ^22.0.1
         version: 22.0.1
+      '@twin-digital/repo-kit':
+        specifier: workspace:*
+        version: link:code/public/repo-kit
       '@types/node':
         specifier: ^22.14.0
         version: 22.14.0
@@ -60,12 +60,6 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(@types/node@22.14.0)(yaml@2.7.1)
 
-  code/libs/core:
-    devDependencies:
-      '@pegasuspad/tsconfig':
-        specifier: workspace:*
-        version: link:../../public/tsconfig
-
   code/public/repo-kit:
     dependencies:
       commander:
@@ -75,7 +69,7 @@ importers:
       '@commander-js/extra-typings':
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.0)
-      '@pegasuspad/tsconfig':
+      '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
