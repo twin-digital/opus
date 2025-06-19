@@ -1,7 +1,6 @@
 name: CI
 
 on:
-  workflow_dispatch:
   # every git push (to any branch)
   push:
     tags-ignore: ['*']
@@ -21,11 +20,13 @@ env:
 jobs:
   lint-build-test:
     runs-on: ubuntu-latest
-
     steps:
+      # checkout project
+      - uses: actions/checkout@v3
+
       # setup tools and install dependencies
       - name: Setup dependencies
-        uses: ./.github/actions/setup-deps
+        uses: ./.github/actions/setup
 
       # run CI tasks
       - run: pnpm run lint

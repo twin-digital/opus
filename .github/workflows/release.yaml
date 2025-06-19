@@ -24,9 +24,12 @@ jobs:
       && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
+      # checkout project
+      - uses: actions/checkout@v3
+
       # setup tools and install dependencies
       - name: Setup dependencies
-        uses: ./.github/actions/setup-deps
+        uses: ./.github/actions/setup
 
       # perform changesets release operations
       - name: Create Release Pull Request or Publish to npm
