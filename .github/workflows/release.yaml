@@ -1,33 +1,34 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  # watch for CI workflow to finish
+  workflow_run:
+    workflows: ['CI']
+    types:
+      - completed
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  CI: 1
+  HUSKY: 0
+
 jobs:
-  release:
-    name: Release
+  publish:
+    # only run when:
+    #  • CI passed
+    #  • it was a push event (not a PR run)
+    #  • the branch was main
+    if: ${{ github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.12.1
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v3
-        with:
-          node-version: 22
-          cache: 'pnpm' # Enable pnpm caching
-
-      - name: Install Dependencies
-        run: pnpm install
-
+      # perform changesets release operations
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1

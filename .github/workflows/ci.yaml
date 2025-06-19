@@ -1,7 +1,20 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  # every git push (to any branch)
+  push:
+    tags-ignore: ['*']
+  # pull‐request events *against* main, for the "merge-commit" build
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 env:
+  CI: 1
   HUSKY: 0
 
 jobs:
@@ -9,11 +22,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - run: pnpm install
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup-deps
+
+      # run CI tasks
       - run: pnpm run lint
       - run: pnpm run typecheck
       - run: pnpm run build
