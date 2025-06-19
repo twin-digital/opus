@@ -12,6 +12,9 @@
     "lint": {
       "outputs": []
     },
+    "release": {
+      "dependsOn": ["build"]
+    },
     "test": {
       "outputs": []
     },
