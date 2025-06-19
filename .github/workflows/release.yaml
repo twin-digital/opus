@@ -26,6 +26,8 @@ jobs:
     steps:
       # checkout project
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
 
       # setup tools and install dependencies
       - name: Setup dependencies
