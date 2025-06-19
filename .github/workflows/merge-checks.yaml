@@ -31,8 +31,9 @@ jobs:
       - name: Create repo-kit .bin link
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - run: pnpm run update-readme
-      - run: |
+      - name: Fail if README out of date
+        run: |
+          pnpm run update-readme
           if ! git diff --quiet README.md; then
             echo "📚 README.md is out of date. Run \`pnpm update-readme\` and commit the changes."
             exit 1
