@@ -1,0 +1,40 @@
+name: Merge Checks
+
+on:
+  # pull‐request events *against* main, for the "merge-commit" build
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  merge-checks:
+    runs-on: ubuntu-latest
+    steps:
+      # checkout project
+      - uses: actions/checkout@v3
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Build repo-kit
+        run: pnpm build --filter @twin-digital/repo-kit
+      - name: Create repo-kit .bin link
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Fail if README out of date
+        run: |
+          pnpm run update-readme
+          if ! git diff --quiet README.md; then
+            echo "📚 README.md is out of date. Run \`pnpm update-readme\` and commit the changes."
+            exit 1
+          fi

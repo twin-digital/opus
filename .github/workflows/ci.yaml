@@ -16,6 +16,7 @@ on:
 env:
   CI: 1
   HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
   lint-build-test:
