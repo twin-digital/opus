@@ -1,7 +1,7 @@
 {
   "name": "@twin-digital/repo-kit",
   "version": "0.0.0",
-  "description": "Opinionated CLI utilities for maintaining monorepos",
+  "description": "CLI utilities for maintaining monorepos",
   "type": "module",
   "bin": {
     "repo-kit": "./dist/cli/entry-point.js"
@@ -18,10 +18,14 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "commander": "^14.0.0"
+    "@pnpm/find-workspace-dir": "^1000.1.0",
+    "commander": "^14.0.0",
+    "execa": "^9.6.0",
+    "gray-matter": "^4.0.3"
   },
   "devDependencies": {
     "@commander-js/extra-typings": "^14.0.0",
+    "@pnpm/types": "^1000.6.0",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/node": "^22.14.0"
   }

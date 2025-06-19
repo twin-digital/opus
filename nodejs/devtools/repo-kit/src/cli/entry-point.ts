@@ -59,4 +59,14 @@ const main = async () => {
   await program.parseAsync(process.argv)
 }
 
-await main()
+main().catch((err) => {
+  console.error(err)
+  console.error(
+    '--------------------------------------------------------------------------------------------------------------',
+  )
+  console.error(
+    `Command failed: ${err instanceof Error ? err.message : String(err)}`,
+  )
+  console.error('See previous output for more details.')
+  process.exit(1)
+})
