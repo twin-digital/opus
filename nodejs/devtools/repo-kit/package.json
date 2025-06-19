@@ -1,7 +1,7 @@
 {
   "name": "@twin-digital/repo-kit",
   "version": "0.0.0",
-  "description": "CLI utilities for maintaining monorepos",
+  "description": "CLI utilities for configuring and maintaining monorepos",
   "type": "module",
   "bin": {
     "repo-kit": "./dist/cli/entry-point.js"
