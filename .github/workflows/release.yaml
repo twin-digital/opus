@@ -3,9 +3,10 @@ name: Release
 on:
   # watch for CI workflow to finish
   workflow_run:
-    workflows: ['CI']
+    branches: [main]
     types:
       - completed
+    workflows: ['CI']
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -15,13 +16,8 @@ env:
 
 jobs:
   publish:
-    # only run when:
-    #  • CI passed
-    #  • it was a push event (not a PR run)
-    #  • the branch was main
-    if: ${{ github.event.workflow_run.conclusion == 'success'
-      && github.event.workflow_run.event == 'push'
-      && github.event.workflow_run.head_branch == 'main' }}
+    # only run when CI passed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       # checkout project
