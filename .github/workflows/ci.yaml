@@ -3,7 +3,7 @@ name: CI
 on:
   # every git push (to any branch)
   push:
-    tags-ignore: ['*']
+    branches: ['*']
   # pull‐request events *against* main, for the "merge-commit" build
   pull_request:
     branches:
