@@ -16,7 +16,7 @@ importers:
         version: 22.0.1
       '@twin-digital/repo-kit':
         specifier: workspace:*
-        version: link:nodejs/public/repo-kit
+        version: link:nodejs/devtools/repo-kit
       '@types/node':
         specifier: ^22.14.0
         version: 22.14.0
@@ -60,7 +60,7 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(@types/node@22.14.0)(yaml@2.7.1)
 
-  nodejs/public/repo-kit:
+  nodejs/devtools/repo-kit:
     dependencies:
       commander:
         specifier: ^14.0.0
@@ -76,7 +76,7 @@ importers:
         specifier: ^22.14.0
         version: 22.14.0
 
-  nodejs/public/tsconfig: {}
+  nodejs/devtools/tsconfig: {}
 
 packages:
 
