@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   # every git push (to any branch)
   push:
     tags-ignore: ['*']
