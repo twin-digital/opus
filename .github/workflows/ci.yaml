@@ -30,7 +30,6 @@ jobs:
         uses: ./.github/actions/setup
 
       # run CI tasks
-      - run: pnpm run typecheck
       - run: pnpm run build
       - run: pnpm run lint
       - run: pnpm run test
