@@ -1,77 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import process from 'node:process'
-import { findWorkspaceDir } from '@pnpm/find-workspace-dir'
-import type { ProjectManifest } from '@pnpm/types'
 import { Command } from 'commander'
-import { execa } from 'execa'
 import grayMatter from 'gray-matter'
-
-interface PackageMeta {
-  /**
-   * Manifest for the package (i.e. contents of its package.json)
-   */
-  manifest: ProjectManifest
-
-  /**
-   * Name of the package
-   */
-  name: string
-
-  /**
-   * Absolute path of the package
-   */
-  path: string
-}
-
-/**
- * Finds all packages in the monorepo, and returns their name and path.
- */
-const findPackages = async ({
-  includeRoot = false,
-}: {
-  /**
-   * Whether the root package should be included or not.
-   * @defaultValue false
-   */
-  includeRoot?: boolean
-} = {}): Promise<PackageMeta[]> => {
-  const { stdout } = await execa({
-    encoding: 'utf8',
-  })`pnpm list -r --depth -1 --json`
-
-  const rootPath = await findWorkspaceRoot()
-  const allPackages = JSON.parse(stdout) as { name: string; path: string }[]
-  const packages =
-    includeRoot ? allPackages : (
-      allPackages.filter((pkg) => pkg.path !== rootPath)
-    )
-
-  return Promise.all(
-    packages.map(async (pkg) => {
-      const manifestPath = path.resolve(pkg.path, 'package.json')
-      const manifest = JSON.parse(
-        await fs.promises.readFile(manifestPath, 'utf-8'),
-      ) as ProjectManifest
-      return {
-        manifest,
-        name: pkg.name,
-        path: pkg.path,
-      }
-    }),
-  )
-}
-
-const findWorkspaceRoot = async (): Promise<string> => {
-  const root = await findWorkspaceDir(process.cwd())
-  if (!root) {
-    throw new Error(
-      `Could not determine workspace root. [cwd=${process.cwd()}]`,
-    )
-  }
-
-  return root
-}
+import {
+  findPackages,
+  type PackageMeta,
+} from '../../workspace/find-packages.js'
+import { getWorkspaceRoot } from '../../workspace/get-workspace-root.js'
+import { updateSection } from '../../markdown/update-section.js'
 
 /**
  * Given the metadata for a single package, determine it's description.
@@ -124,7 +60,7 @@ const getPackageSummaries = async (): Promise<
   }[]
 > => {
   const packages = await findPackages()
-  const root = await findWorkspaceRoot()
+  const root = await getWorkspaceRoot()
 
   return Promise.all(
     packages.map(async (pkg) => {
@@ -137,110 +73,7 @@ const getPackageSummaries = async (): Promise<
   )
 }
 
-const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-/**
- * Updates a section of a markdown file by looking for specific 'marker' comments, and replacing the content between
- * them with new text. If the marker is found multiple times in the file, _all_ occurrences will be replaced.
- *
- * @returns true if any changes were made, false otherwise
- */
-const updateMarkdownFile = async ({
-  content,
-  file,
-  markerText,
-  missing = 'insert',
-}: {
-  /**
-   * Updated content for the section
-   */
-  content: string
-
-  /**
-   * Path to the markdown file to update, relative to the monorepo root.
-   */
-  file: string
-
-  /**
-   * Marker text used to locate the section where content should be updated. Will look for a section like the following:
-   *
-   * ```
-   * <!-- BEGIN <markerText> -->
-   * anything between these comments will be replaced
-   * and new content will be here when the function returns
-   * <!-- END <markerText> -->
-   * ```
-   */
-  markerText: string
-
-  /**
-   * What to do if the file *or* the section is missing.
-   *
-   * - error: throw an error
-   * - insert: create the file if needed, and append markers+content if the section isn't found
-   * - skip: do nothing, return false
-   */
-  missing?: 'error' | 'insert' | 'skip'
-}): Promise<boolean> => {
-  const getUpdatedContent = () => {
-    const beginMarker = `<!-- BEGIN ${markerText} -->`
-    const endMarker = `<!-- END ${markerText} -->`
-    const sectionRegExp = new RegExp(
-      `${escapeRegExp(beginMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`,
-      'g',
-    )
-
-    const sectionExists = !!sectionRegExp.exec(originalContent)
-    if (sectionExists) {
-      // section exists, so let's update it
-      return originalContent.replaceAll(
-        sectionRegExp,
-        `${beginMarker}\n${content}\n${endMarker}`,
-      )
-    } else {
-      switch (missing) {
-        case 'insert':
-          return `${originalContent}\n${beginMarker}\n${content}\n${endMarker}\n`
-        case 'skip':
-          return originalContent
-        default:
-          throw new Error(
-            `Could not find section to update, and 'missing' was "${missing}. [markerText=${markerText}]`,
-          )
-      }
-    }
-  }
-
-  const root = await findWorkspaceRoot()
-  const filePath = path.resolve(root, file)
-
-  const fileExists = fs.existsSync(filePath)
-  if (!fileExists) {
-    if (missing === 'skip') {
-      return false
-    } else if (missing === 'error') {
-      throw new Error(
-        `Could not find file to update, and missing was "${missing}. [filePath=${filePath}]`,
-      )
-    }
-  }
-
-  const originalContent =
-    fileExists ? await fs.promises.readFile(filePath, 'utf-8') : ''
-
-  const updatedContent = getUpdatedContent()
-
-  // only write new content if it changed
-  if (updatedContent !== originalContent) {
-    await fs.promises.writeFile(file, updatedContent, 'utf-8')
-    return true
-  } else {
-    return false
-  }
-}
-
 const handler = async () => {
-  const root = await findWorkspaceRoot()
   const packages = await getPackageSummaries()
   const content = packages
     .map((pkg) => {
@@ -248,11 +81,20 @@ const handler = async () => {
     })
     .join('\n')
 
-  await updateMarkdownFile({
+  const root = await getWorkspaceRoot()
+  const filePath = path.resolve(root, 'README.md')
+  const fileExists = fs.existsSync(filePath)
+  const readme = fileExists ? await fs.promises.readFile(filePath, 'utf-8') : ''
+
+  const newReadme = await updateSection({
     content,
-    file: 'README.md',
-    markerText: 'repo-kit: PACKAGES',
+    markdown: readme,
+    sectionId: 'repo-kit: PACKAGES',
   })
+
+  if (readme !== newReadme) {
+    await fs.promises.writeFile(filePath, newReadme, 'utf-8')
+  }
 }
 
 export const makeCommand = () =>
