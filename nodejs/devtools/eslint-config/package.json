@@ -18,10 +18,13 @@
   },
   "dependencies": {
     "@eslint/js": "catalog:",
-    "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
     "typescript-eslint": "catalog:"
+  },
+  "peerDependencies": {
+    "eslint": ">= 9",
+    "prettier": ">= 3"
   },
   "devDependencies": {
     "@twin-digital/tsconfig": "workspace:*",
