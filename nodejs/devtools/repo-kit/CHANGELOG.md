@@ -1,5 +1,11 @@
 # @twin-digital/repo-kit
 
+## 0.0.4
+
+### Patch Changes
+
+- 22d6324: update 'align-config' to correctly exclude declaration maps from packages
+
 ## 0.0.3
 
 ### Patch Changes
