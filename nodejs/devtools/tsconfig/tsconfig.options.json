@@ -13,6 +13,7 @@
     "moduleResolution": "NodeNext",
     "noFallthroughCasesInSwitch": true,
     "outDir": "${configDir}/dist",
+    "preserveWatchOutput": true,
     "resolveJsonModule": true,
     "rootDir": "${configDir}",
     "skipLibCheck": true,
