@@ -35,6 +35,17 @@ jobs:
         run: |
           pnpm run update-readme
           if ! git diff --quiet README.md; then
-            echo "📚 README.md is out of date. Run \`pnpm update-readme\` and commit the changes."
+            echo "README.md is out of date. Run \`pnpm update-readme\` and commit the changes."
+            exit 1
+          fi
+
+      - name: Fail if package.json files are not aligned
+        run: |
+          pnpm run align-config
+          changed=$(git diff --name-only HEAD | grep -E '(^|/)package\.json$' || true)
+          if [[ -n "$changed" ]]; then
+            echo "The following package.json files are out of date:"
+            echo "$changed"
+            echo "Run \`pnpm align-config\` and commit the changes."
             exit 1
           fi
