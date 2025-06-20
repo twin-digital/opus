@@ -18,7 +18,7 @@ const alignPackageConfig = async (pkg: PackageMeta): Promise<void> => {
       types: './dist/*/index.d.ts',
     },
   }
-  newManifest.files = ['dist', '!*.tsbuildinfo', '!*.d.ts.map']
+  newManifest.files = ['dist', '!*.d.ts.map']
 
   if (!isEqual(pkg.manifest, newManifest)) {
     const pkgJsonPath = path.join(pkg.path, 'package.json')
