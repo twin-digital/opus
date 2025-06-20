@@ -3,23 +3,7 @@ import path from 'node:path'
 import type { ProjectManifest } from '@pnpm/types'
 import { execa } from 'execa'
 import { getWorkspaceRoot } from './get-workspace-root.js'
-
-export interface PackageMeta {
-  /**
-   * Manifest for the package (i.e. contents of its package.json)
-   */
-  manifest: ProjectManifest
-
-  /**
-   * Name of the package
-   */
-  name: string
-
-  /**
-   * Absolute path of the package
-   */
-  path: string
-}
+import type { PackageMeta } from './package-meta.js'
 
 /**
  * Finds all packages in the monorepo, and returns their name and path.

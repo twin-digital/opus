@@ -21,12 +21,14 @@
     "@pnpm/find-workspace-dir": "^1000.1.0",
     "commander": "^14.0.0",
     "execa": "^9.6.0",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "lodash-es": "^4.17.21"
   },
   "devDependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "@pnpm/types": "^1000.6.0",
     "@twin-digital/tsconfig": "workspace:*",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.14.0"
   }
 }

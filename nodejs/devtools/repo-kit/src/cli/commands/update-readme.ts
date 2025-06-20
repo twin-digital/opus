@@ -2,12 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Command } from 'commander'
 import grayMatter from 'gray-matter'
-import {
-  findPackages,
-  type PackageMeta,
-} from '../../workspace/find-packages.js'
+import { findPackages } from '../../workspace/find-packages.js'
 import { getWorkspaceRoot } from '../../workspace/get-workspace-root.js'
 import { updateSection } from '../../markdown/update-section.js'
+import type { PackageMeta } from '../../workspace/package-meta.js'
 
 /**
  * Given the metadata for a single package, determine it's description.
