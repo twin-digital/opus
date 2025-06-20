@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
+    "align-config": "pnpm -r exec -- repo-kit align-config",
     "build": "turbo run build",
     "clean": "node scripts/clean.js",
     "dev": "turbo run dev --parallel",
