@@ -14,8 +14,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
-    "lint": "eslint src"
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "@eslint/js": "catalog:",
