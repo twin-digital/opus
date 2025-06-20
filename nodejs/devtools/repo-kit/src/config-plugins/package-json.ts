@@ -66,12 +66,12 @@ const alignFiles = async (
     if (!files.includes('dist')) {
       files.push('dist')
     }
-    if (!files.includes('!*.d.ts.map')) {
+    if (!files.includes('!dist/**/*.d.ts.map')) {
       const index = files.indexOf('dist')
-      files.splice(index + 1, 0, '!*.d.ts.map')
+      files.splice(index + 1, 0, '!dist/**/*.d.ts.map')
     }
   } else {
-    pull(files, 'dist', '!*.d.ts.map')
+    pull(files, 'dist', '!dist/**/*.d.ts.map')
   }
 
   const newManifest = cloneDeep(manifest)
