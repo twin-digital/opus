@@ -6,12 +6,9 @@
   "bin": {
     "repo-kit": "./dist/cli/entry-point.js"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "!dist/*.tsbuildinfo"
+    "!*.d.ts.map"
   ],
   "scripts": {
     "build": "tsc",
