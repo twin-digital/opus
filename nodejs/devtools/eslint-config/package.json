@@ -1,0 +1,31 @@
+{
+  "name": "@twin-digital/eslint-config",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "devDependencies": {
+    "@twin-digital/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
