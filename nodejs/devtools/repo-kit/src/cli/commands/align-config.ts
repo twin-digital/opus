@@ -1,6 +1,5 @@
 import { Command } from 'commander'
 import { getCurrentPackage } from '../../workspace/get-current-package.js'
-import type { PackageMeta } from '../../workspace/package-meta.js'
 import { makePackageJsonConfigPlugin } from '../../config-plugins/package-json.js'
 
 const handler = async () => {

@@ -1,15 +1,20 @@
 import fs from 'fs'
 import path from 'path'
-import type { ProjectManifest } from '@pnpm/types'
+import type { PackageManifest } from '@pnpm/types'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import isEqual from 'lodash-es/isEqual.js'
 import pull from 'lodash-es/pull.js'
 
-const alignExports = async (
-  manifest: ProjectManifest,
+export type ProjectManifestWithCorrectedExports = Omit<
+  PackageManifest,
+  'exports'
+> & { exports?: Record<string, string | Record<string, string>> }
+
+const alignExports = (
+  manifest: ProjectManifestWithCorrectedExports,
   packagePath: string,
-): Promise<ProjectManifest> => {
+): ProjectManifestWithCorrectedExports => {
   const hasBarrelFile = (directory: string) =>
     fs.existsSync(path.join(directory, 'index.ts'))
 
@@ -27,7 +32,7 @@ const alignExports = async (
     return false
   }
 
-  const newExports: Record<string, any> = {}
+  const newExports: Record<string, string | Record<string, string>> = {}
 
   const srcDir = path.join(packagePath, 'src')
   if (fs.existsSync(srcDir) && fs.statSync(srcDir).isDirectory()) {
@@ -46,7 +51,7 @@ const alignExports = async (
     }
   }
 
-  const newManifest = cloneDeep(manifest) as Record<string, any>
+  const newManifest = cloneDeep(manifest)
   if (Object.keys(newExports).length > 0) {
     newManifest.exports = newExports
   } else {
@@ -56,10 +61,10 @@ const alignExports = async (
   return newManifest
 }
 
-const alignFiles = async (
-  manifest: ProjectManifest,
+const alignFiles = (
+  manifest: ProjectManifestWithCorrectedExports,
   packagePath: string,
-): Promise<ProjectManifest> => {
+): ProjectManifestWithCorrectedExports => {
   const files = manifest.files ?? []
   const srcDir = path.join(packagePath, 'src')
   if (fs.existsSync(srcDir) && fs.statSync(srcDir).isDirectory()) {
@@ -88,9 +93,11 @@ export const makePackageJsonConfigPlugin = (): ((
   pkg: PackageMeta,
 ) => Promise<void>) => {
   return async (pkg) => {
-    const originalManifest = cloneDeep(pkg.manifest)
-    const newManifest = await alignFiles(
-      await alignExports(originalManifest, pkg.path),
+    const originalManifest = cloneDeep(
+      pkg.manifest,
+    ) as ProjectManifestWithCorrectedExports
+    const newManifest = alignFiles(
+      alignExports(originalManifest, pkg.path),
       pkg.path,
     )
 
