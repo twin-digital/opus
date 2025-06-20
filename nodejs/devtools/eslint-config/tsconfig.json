@@ -1,0 +1,6 @@
+{
+  "extends": ["@twin-digital/tsconfig/tsconfig.build.json"],
+  "compilerOptions": {
+    "types": ["globals", "node"]
+  }
+}
