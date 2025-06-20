@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { PackageMeta } from './package-meta.js'
+import type { PackageManifest } from '@pnpm/types'
 
 /**
  * Walks up from the given directory to find the nearest ancestor containing a package.json
@@ -10,6 +11,7 @@ import type { PackageMeta } from './package-meta.js'
 const findNearestPackageJson = (startDir: string): string | null => {
   let currentDir = startDir
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- loop only terminates via break
   while (true) {
     const pkgPath = path.join(currentDir, 'package.json')
     if (fs.existsSync(pkgPath)) {
@@ -46,7 +48,7 @@ export const getCurrentPackage = async (
       path.resolve(packageDir, 'package.json'),
       'utf-8',
     ),
-  )
+  ) as PackageManifest
 
   return {
     manifest,

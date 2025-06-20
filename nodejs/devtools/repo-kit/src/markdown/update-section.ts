@@ -6,7 +6,7 @@ const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
  *
  * @returns The new content, with the section updated or appended as required.
  */
-export const updateSection = async ({
+export const updateSection = ({
   content,
   markdown,
   missing = 'insert',
@@ -73,5 +73,5 @@ export const updateSection = async ({
     }
   }
 
-  return getUpdatedContent()
+  return Promise.resolve(getUpdatedContent())
 }

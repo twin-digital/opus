@@ -7,7 +7,7 @@ import { Command } from 'commander'
 const importTopLevelFunction = async (
   modulePath: string,
   functionName: string,
-): Promise<(...args: any[]) => unknown> => {
+): Promise<(...args: unknown[]) => unknown> => {
   const mod = (await import(modulePath)) as Record<string, unknown>
 
   if (!(functionName in mod)) {
@@ -22,7 +22,7 @@ const importTopLevelFunction = async (
     )
   }
 
-  return mod[functionName] as (...args: any[]) => unknown
+  return mod[functionName] as (...args: unknown[]) => unknown
 }
 
 const registerCommands = async (program: Command) => {
@@ -36,6 +36,7 @@ const registerCommands = async (program: Command) => {
 
     const command = makeCommand()
     if (command instanceof Command) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       program.addCommand(command)
     } else {
       throw new Error(
@@ -61,7 +62,7 @@ const main = async () => {
   await program.parseAsync(process.argv)
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error(err)
   console.error(
     '--------------------------------------------------------------------------------------------------------------',
