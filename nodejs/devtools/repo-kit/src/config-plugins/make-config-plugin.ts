@@ -45,7 +45,10 @@ const applyTransformer = async (
   input: ApplyConfigInput,
 ): Promise<boolean> => {
   const filePath = path.join(input.packagePath, file)
-  const originalContent = await fs.promises.readFile(filePath, 'utf-8')
+  const originalContent =
+    fs.existsSync(filePath) ?
+      await fs.promises.readFile(filePath, 'utf-8')
+    : undefined
   const newContent = await transform(originalContent, input)
 
   const changed = originalContent !== newContent
