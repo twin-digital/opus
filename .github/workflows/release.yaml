@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # checkout project
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
 
