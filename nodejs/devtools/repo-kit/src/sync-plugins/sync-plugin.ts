@@ -52,6 +52,12 @@ export interface SyncPlugin {
   name: string
 
   /**
+   * Flag indicating that if this plugin makes any changes, the project's dependencies must be reinstalled.
+   * @defaultValue false
+   */
+  requiresDependencyInstall?: boolean
+
+  /**
    * Applies the configuration from this plugin to a package in the monorepo.
    * @param params
    */

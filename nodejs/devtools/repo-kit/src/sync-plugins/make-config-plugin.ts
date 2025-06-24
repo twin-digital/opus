@@ -26,7 +26,7 @@ export const transformJson =
     fn: (
       content: object | undefined,
       parameters: SyncInput,
-    ) => object | Promise<object>,
+    ) => object | Promise<object> | undefined | Promise<undefined>,
   ): FileTransformFn =>
   async (content, parameters) => {
     const originalObject =
@@ -68,9 +68,13 @@ const applyTransformer = async (
 export const makeSyncPlugin = (
   name: string,
   transformers: Record<string, FileTransformFn | FileTransformFn[]>,
+  {
+    requiresDependencyInstall = false,
+  }: { requiresDependencyInstall?: boolean } = {},
 ): SyncPlugin => {
   return {
     name,
+    requiresDependencyInstall,
     sync: async (input) => {
       const changedFiles: Set<string> = new Set<string>()
 

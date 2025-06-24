@@ -9,6 +9,7 @@ import { makePackageJsonExportsPlugin } from '../../sync-plugins/package-json-ex
 import { makePackageJsonFilesPlugin } from '../../sync-plugins/package-json-files.js'
 import { makeBootstrapEslintPlugin } from '../../sync-plugins/bootstrap-eslint.js'
 import { loadConfig } from '../../repo-kit-configuration.js'
+import { $ } from 'execa'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -36,6 +37,7 @@ const printResult = (name: string, result: SyncResult) => {
 }
 
 const applySyncPlugins = async (pkg: PackageMeta, ...plugins: SyncPlugin[]) => {
+  let installNeeded = false
   for (const plugin of plugins) {
     try {
       const result = await plugin.sync({
@@ -45,6 +47,14 @@ const applySyncPlugins = async (pkg: PackageMeta, ...plugins: SyncPlugin[]) => {
       })
 
       printResult(plugin.name, result)
+
+      if (
+        result.changedFiles &&
+        result.changedFiles.length > 0 &&
+        plugin.requiresDependencyInstall
+      ) {
+        installNeeded = true
+      }
     } catch (t: unknown) {
       console.log(
         `${chalk.redBright('[ERROR]')} ${plugin.name}: ${get(t, 'message', String(t))}`,
@@ -54,6 +64,11 @@ const applySyncPlugins = async (pkg: PackageMeta, ...plugins: SyncPlugin[]) => {
       console.error(t)
       console.groupEnd()
     }
+  }
+
+  if (installNeeded) {
+    console.log('Installing new dependencies...')
+    await $`pnpm install`
   }
 }
 
