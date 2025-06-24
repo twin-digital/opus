@@ -6,7 +6,6 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "align-config": "pnpm -r exec -- repo-kit align-config",
     "build": "turbo run build",
     "clean": "node scripts/clean.js",
     "dev": "turbo run dev --parallel",
@@ -15,6 +14,7 @@
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run release && changeset publish",
+    "sync": "pnpm -r exec -- repo-kit sync",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "update-readme": "repo-kit update-readme"
