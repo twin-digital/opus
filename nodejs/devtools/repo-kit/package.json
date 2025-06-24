@@ -23,6 +23,7 @@
     "commander": "^14.0.0",
     "execa": "^9.6.0",
     "gray-matter": "^4.0.3",
+    "yaml": "^2.8.0",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
