@@ -5,10 +5,11 @@ import type {
   ConfigPlugin,
 } from '../../config-plugins/config-plugin.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
+import chalk from 'chalk'
 import { get } from 'lodash-es'
 import { makePackageJsonExportsPlugin } from '../../config-plugins/package-json-exports.js'
 import { makePackageJsonFilesPlugin } from '../../config-plugins/package-json-files.js'
-import chalk from 'chalk'
+import { makeBootstrapEslintPlugin } from '../../config-plugins/bootstrap-eslint.js'
 
 const printResult = (name: string, result: ApplyConfigurationResult) => {
   switch (result.result) {
@@ -16,6 +17,10 @@ const printResult = (name: string, result: ApplyConfigurationResult) => {
       console.log(
         `${chalk.redBright('[ERROR]')} ${name}: ${result.error.message}`,
       )
+
+      console.group()
+      console.log(result.error)
+      console.groupEnd()
       break
     case 'ok':
       console.log(
@@ -48,6 +53,10 @@ const applyConfigPlugins = async (
       console.log(
         `${chalk.redBright('[ERROR]')} ${plugin.name}: ${get(t, 'message', String(t))}`,
       )
+
+      console.group()
+      console.error(t)
+      console.groupEnd()
     }
   }
 }
@@ -61,6 +70,7 @@ const handler = async () => {
     pkg,
     makePackageJsonExportsPlugin(),
     makePackageJsonFilesPlugin(),
+    makeBootstrapEslintPlugin(),
   )
   console.log('')
   console.groupEnd()
