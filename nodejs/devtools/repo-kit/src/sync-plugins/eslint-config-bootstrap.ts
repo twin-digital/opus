@@ -12,11 +12,11 @@ export default base
  * it returns the original content unchanged. This plugin can be used to ensure that new projects are properly
  * initialized without overwriting any package-specific configuration.
  */
-export const makeBootstrapEslintPlugin = ({
-  bootstrapEslint,
+export const makeEslintBootstrapPlugin = ({
+  eslint,
 }: Configuration): SyncPlugin | undefined =>
-  bootstrapEslint ?
-    makeSyncPlugin('bootstrap-eslint', {
+  eslint ?
+    makeSyncPlugin('eslint-config-bootstrap', {
       'eslint.config.js': (content) => {
         return content ?? bootstrapEslintConfig
       },

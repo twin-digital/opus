@@ -7,8 +7,9 @@ import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
 import { makePackageJsonExportsPlugin } from '../../sync-plugins/package-json-exports.js'
 import { makePackageJsonFilesPlugin } from '../../sync-plugins/package-json-files.js'
-import { makeBootstrapEslintPlugin } from '../../sync-plugins/bootstrap-eslint.js'
+import { makeEslintBootstrapPlugin } from '../../sync-plugins/eslint-config-bootstrap.js'
 import { loadConfig } from '../../repo-kit-configuration.js'
+import { makeEslintDependenciesPlugin } from '../../sync-plugins/eslint-dependencies.js'
 import { $ } from 'execa'
 
 const printResult = (name: string, result: SyncResult) => {
@@ -83,7 +84,8 @@ const handler = async () => {
     ...compact([
       makePackageJsonExportsPlugin(config),
       makePackageJsonFilesPlugin(config),
-      makeBootstrapEslintPlugin(config),
+      makeEslintBootstrapPlugin(config),
+      makeEslintDependenciesPlugin(config),
     ]),
   )
   console.log('')
