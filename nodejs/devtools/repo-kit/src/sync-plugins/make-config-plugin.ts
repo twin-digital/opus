@@ -28,10 +28,10 @@ export const transformJson =
       parameters: SyncInput,
     ) => object | Promise<object>,
   ): FileTransformFn =>
-  (content, parameters) => {
+  async (content, parameters) => {
     const originalObject =
       content === undefined ? undefined : (JSON.parse(content) as object)
-    const newObject = fn(originalObject, parameters)
+    const newObject = await fn(originalObject, parameters)
     return `${JSON.stringify(newObject, null, 2)}\n`
   }
 
