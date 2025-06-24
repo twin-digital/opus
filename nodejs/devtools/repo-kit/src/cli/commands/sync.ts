@@ -11,6 +11,7 @@ import { makeEslintBootstrapPlugin } from '../../sync-plugins/eslint-config-boot
 import { loadConfig } from '../../repo-kit-configuration.js'
 import { makeEslintDependenciesPlugin } from '../../sync-plugins/eslint-dependencies.js'
 import { $ } from 'execa'
+import { makeEslintScriptsPlugin } from '../../sync-plugins/eslint-scripts.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -86,6 +87,7 @@ const handler = async () => {
       makePackageJsonFilesPlugin(config),
       makeEslintBootstrapPlugin(config),
       makeEslintDependenciesPlugin(config),
+      makeEslintScriptsPlugin(config),
     ]),
   )
   console.log('')
