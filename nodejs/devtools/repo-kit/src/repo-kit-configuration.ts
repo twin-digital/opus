@@ -2,14 +2,14 @@ import merge from 'lodash-es/merge.js'
 import { makePackageConfigLoader } from './configuration/package-config-loader.js'
 
 export interface Configuration {
-  bootstrapEslint: boolean
+  eslint: boolean
 }
 
 /**
  * Default repo-kit configuration. Any values which are not supplied by the user will be taken from here.
  */
 export const DefaultConfiguration = {
-  bootstrapEslint: true,
+  eslint: true,
 } satisfies Configuration
 
 /**
