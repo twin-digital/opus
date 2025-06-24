@@ -39,12 +39,12 @@ jobs:
             exit 1
           fi
 
-      - name: Fail if package.json files are out of sync
+      - name: Fail if project configuration is out of sync
         run: |
           pnpm run sync
-          changed=$(git diff --name-only HEAD | grep -E '(^|/)package\.json$' || true)
+          changed=$(git status --porcelain) || true
           if [[ -n "$changed" ]]; then
-            echo "The following package.json files are out of date:"
+            echo "The following files are out of date:"
             echo "$changed"
             echo "Run \`pnpm sync\` and commit the changes."
             exit 1
