@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { ConfigPlugin, ApplyConfigInput } from './config-plugin.js'
+import type { SyncPlugin, SyncInput } from './sync-plugin.js'
 import entries from 'lodash-es/entries.js'
 
 /**
@@ -12,7 +12,7 @@ import entries from 'lodash-es/entries.js'
  */
 export type FileTransformFn = (
   content: string | undefined,
-  parameters: ApplyConfigInput,
+  parameters: SyncInput,
 ) => string | Promise<string>
 
 /**
@@ -25,7 +25,7 @@ export const transformJson =
   (
     fn: (
       content: object | undefined,
-      parameters: ApplyConfigInput,
+      parameters: SyncInput,
     ) => object | Promise<object>,
   ): FileTransformFn =>
   (content, parameters) => {
@@ -42,7 +42,7 @@ export const transformJson =
 const applyTransformer = async (
   file: string,
   transform: FileTransformFn,
-  input: ApplyConfigInput,
+  input: SyncInput,
 ): Promise<boolean> => {
   const filePath = path.join(input.packagePath, file)
   const originalContent =
@@ -65,13 +65,13 @@ const applyTransformer = async (
  * @param transformers
  * @returns
  */
-export const makeConfigPlugin = (
+export const makeSyncPlugin = (
   name: string,
   transformers: Record<string, FileTransformFn | FileTransformFn[]>,
-): ConfigPlugin => {
+): SyncPlugin => {
   return {
     name,
-    apply: async (input) => {
+    sync: async (input) => {
       const changedFiles: Set<string> = new Set<string>()
 
       const transformEntries = entries(transformers)

@@ -1,17 +1,16 @@
 import { Command } from 'commander'
 import { getCurrentPackage } from '../../workspace/get-current-package.js'
-import type {
-  ApplyConfigurationResult,
-  ConfigPlugin,
-} from '../../config-plugins/config-plugin.js'
+import type { SyncResult, SyncPlugin } from '../../sync-plugins/sync-plugin.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
-import { get } from 'lodash-es'
-import { makePackageJsonExportsPlugin } from '../../config-plugins/package-json-exports.js'
-import { makePackageJsonFilesPlugin } from '../../config-plugins/package-json-files.js'
-import { makeBootstrapEslintPlugin } from '../../config-plugins/bootstrap-eslint.js'
+import compact from 'lodash-es/compact.js'
+import get from 'lodash-es/get.js'
+import { makePackageJsonExportsPlugin } from '../../sync-plugins/package-json-exports.js'
+import { makePackageJsonFilesPlugin } from '../../sync-plugins/package-json-files.js'
+import { makeBootstrapEslintPlugin } from '../../sync-plugins/bootstrap-eslint.js'
+import { loadConfig } from '../../repo-kit-configuration.js'
 
-const printResult = (name: string, result: ApplyConfigurationResult) => {
+const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
     case 'error':
       console.log(
@@ -36,13 +35,10 @@ const printResult = (name: string, result: ApplyConfigurationResult) => {
   }
 }
 
-const applyConfigPlugins = async (
-  pkg: PackageMeta,
-  ...plugins: ConfigPlugin[]
-) => {
+const applySyncPlugins = async (pkg: PackageMeta, ...plugins: SyncPlugin[]) => {
   for (const plugin of plugins) {
     try {
-      const result = await plugin.apply({
+      const result = await plugin.sync({
         manifest: pkg.manifest,
         name: pkg.name,
         packagePath: pkg.path,
@@ -62,22 +58,25 @@ const applyConfigPlugins = async (
 }
 
 const handler = async () => {
+  const config = await loadConfig()
   const pkg = await getCurrentPackage()
 
-  console.log(`Updating configuration for package: ${pkg.name}...`)
+  console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
-  await applyConfigPlugins(
+  await applySyncPlugins(
     pkg,
-    makePackageJsonExportsPlugin(),
-    makePackageJsonFilesPlugin(),
-    makeBootstrapEslintPlugin(),
+    ...compact([
+      makePackageJsonExportsPlugin(config),
+      makePackageJsonFilesPlugin(config),
+      makeBootstrapEslintPlugin(config),
+    ]),
   )
   console.log('')
   console.groupEnd()
 }
 
 export const makeCommand = () =>
-  new Command('align-config')
+  new Command('sync')
     .description(
       'updates project configuration files (package.json, etc.) to align with repo-kit conventions',
     )

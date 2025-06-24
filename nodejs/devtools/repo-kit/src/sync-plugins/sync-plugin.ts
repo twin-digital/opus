@@ -1,6 +1,6 @@
 import type { ProjectManifest } from '@pnpm/types'
 
-export interface BaseApplyConfigurationResult {
+export interface BaseSyncResult {
   /**
    * Array of files which were changed, relative to the root of the package. Will be undefined of the `result` is not
    * 'ok'.
@@ -22,22 +22,19 @@ export interface BaseApplyConfigurationResult {
   result: 'error' | 'ok' | 'skipped'
 }
 
-export interface ErrorApplyConfigurationResult
-  extends BaseApplyConfigurationResult {
+export interface SyncErrorResult extends BaseSyncResult {
   changedFiles?: undefined
   error: Error
   result: 'error'
 }
 
-export interface OkApplyConfigurationResult
-  extends BaseApplyConfigurationResult {
+export interface SyncOkResult extends BaseSyncResult {
   changedFiles: string[]
   error?: undefined
   result: 'ok'
 }
 
-export interface SkippedApplyConfigurationResult
-  extends BaseApplyConfigurationResult {
+export interface SyncSkippedResult extends BaseSyncResult {
   changedFiles?: undefined
   error?: undefined
   result: 'skipped'
@@ -46,12 +43,9 @@ export interface SkippedApplyConfigurationResult
 /**
  * Result object containing the details of a configuration set applied to a package.
  */
-export type ApplyConfigurationResult =
-  | ErrorApplyConfigurationResult
-  | OkApplyConfigurationResult
-  | SkippedApplyConfigurationResult
+export type SyncResult = SyncErrorResult | SyncOkResult | SyncSkippedResult
 
-export interface ConfigPlugin {
+export interface SyncPlugin {
   /**
    * Name of the plugin
    */
@@ -61,7 +55,7 @@ export interface ConfigPlugin {
    * Applies the configuration from this plugin to a package in the monorepo.
    * @param params
    */
-  apply(input: {
+  sync(input: {
     /**
      * Manifest of the project to configure
      */
@@ -76,7 +70,7 @@ export interface ConfigPlugin {
      * Path to the root of the package to configure
      */
     packagePath: string
-  }): ApplyConfigurationResult | Promise<ApplyConfigurationResult>
+  }): SyncResult | Promise<SyncResult>
 }
 
-export type ApplyConfigInput = Parameters<ConfigPlugin['apply']>[0]
+export type SyncInput = Parameters<SyncPlugin['sync']>[0]

@@ -1,8 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import type { PackageManifest } from '@pnpm/types'
-import { makeConfigPlugin, transformJson } from './make-config-plugin.js'
-import type { ConfigPlugin } from './config-plugin.js'
+import { makeSyncPlugin, transformJson } from './make-config-plugin.js'
+import type { SyncPlugin } from './sync-plugin.js'
+import type { Configuration } from '../repo-kit-configuration.js'
 
 export type ProjectManifestWithCorrectedExports = Omit<
   PackageManifest,
@@ -27,11 +28,13 @@ const hasAnySubBarrelFiles = (directory: string) => {
 }
 
 /**
- * Creates a `ConfigPlugin` which updates the exports in a package's package.json file to include all barrel files
+ * Creates a `SyncPlugin` which updates the exports in a package's package.json file to include all barrel files
  * in the source root, or one level deep.
  */
-export const makePackageJsonExportsPlugin = (): ConfigPlugin =>
-  makeConfigPlugin('package.json exports', {
+export const makePackageJsonExportsPlugin = (
+  _configuration: Configuration,
+): SyncPlugin =>
+  makeSyncPlugin('package-exports', {
     'package.json': transformJson((content, { packagePath }) => {
       const newExports: Record<string, string | Record<string, string>> = {}
       const manifest = (content ?? {}) as ProjectManifestWithCorrectedExports
