@@ -10,9 +10,11 @@
       "persistent": true
     },
     "lint": {
+      "dependsOn": ["@twin-digital/eslint-config#build"],
       "outputs": []
     },
     "lint:fix": {
+      "dependsOn": ["@twin-digital/eslint-config#build"],
       "outputs": []
     },
     "release": {
