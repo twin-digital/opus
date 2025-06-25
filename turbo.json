@@ -1,13 +1,22 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
   "tasks": {
-    "build": {
+    "build:typescript": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "!dist/assets/**"]
+    },
+    "build:copy-assets": {
+      "inputs": ["assets/**"],
+      "outputs": ["dist/assets/**"]
+    },
+    "build": {
+      "dependsOn": ["build:typescript", "build:copy-assets"]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "dependsOn": ["build"],
+      "persistent": true,
+      "with": ["watch:typescript", "watch:copy-assets"]
     },
     "lint": {
       "dependsOn": ["@twin-digital/eslint-config#build"],
@@ -25,6 +34,15 @@
     },
     "typecheck": {
       "outputs": []
+    },
+    "watch:typescript": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true
+    },
+    "watch:copy-assets": {
+      "cache": false,
+      "persistent": true
     }
   }
 }
