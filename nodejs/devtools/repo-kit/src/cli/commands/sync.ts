@@ -4,7 +4,6 @@ import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
 import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
-import { makePackageJsonExportsPlugin } from '../../sync/legacy-plugins/package-json-exports.js'
 import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
 import { loadConfig } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
@@ -82,10 +81,7 @@ const handler = async () => {
 
   const changedFiles = await applySyncRules(
     pkg,
-    ...compact([
-      makePackageJsonExportsPlugin(config),
-      makeEslintBootstrapPlugin(config),
-    ]).map(asSyncRule),
+    ...compact([makeEslintBootstrapPlugin(config)]).map(asSyncRule),
     ...makeSyncRules({
       config,
       rules: syncRulesConfig,
