@@ -151,6 +151,9 @@ importers:
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
+      json-merge-patch:
+        specifier: ^1.0.2
+        version: 1.0.2
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -173,6 +176,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@types/json-merge-patch':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -650,6 +656,9 @@ packages:
 
   '@types/estree@1.0.7':
     resolution: {integrity: sha512-w28IoSUCJpidD/TGviZwwMJckNESJZXFu7NBZ5YJ4mEUnNraUn9Pm8HSZm/jDF1pDWYKspWE7oVphigUPRakIQ==}
+
+  '@types/json-merge-patch@1.0.0':
+    resolution: {integrity: sha512-QYEzCCHYtwpExIOY5OWY+B3MxtoS4ekbjNrPidlJpevHqNWTJt1tAPuqgHTv+j9ufEJ+6h6nvz9zTTYwe851FA==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -1286,6 +1295,9 @@ packages:
 
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
+
+  json-merge-patch@1.0.2:
+    resolution: {integrity: sha512-M6Vp2GN9L7cfuMXiWOmHj9bEFbeC250iVtcKQbqVgEsDVYnIsrNsbU+h/Y/PkbBQCtEa4Bez+Ebv0zfbC8ObLg==}
 
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
@@ -2402,6 +2414,8 @@ snapshots:
 
   '@types/estree@1.0.7': {}
 
+  '@types/json-merge-patch@1.0.0': {}
+
   '@types/json-schema@7.0.15': {}
 
   '@types/lodash-es@4.17.12':
@@ -3074,6 +3088,10 @@ snapshots:
       argparse: 2.0.1
 
   json-buffer@3.0.1: {}
+
+  json-merge-patch@1.0.2:
+    dependencies:
+      fast-deep-equal: 3.1.3
 
   json-schema-traverse@0.4.1: {}
 

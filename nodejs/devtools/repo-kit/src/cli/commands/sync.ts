@@ -14,7 +14,9 @@ import {
 import { $ } from 'execa'
 import { makeEslintScriptsPlugin } from '../../sync/legacy-plugins/eslint-scripts.js'
 import type { SyncResult } from '../../sync/sync-result.js'
+import { makeSyncRules, type SyncRule } from '../../sync/sync-rule.js'
 import type { LegacySyncPlugin } from '../../sync/legacy-sync-plugin.js'
+import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -80,6 +82,36 @@ const applySyncPlugins = async (
   }
 }
 
+const applySyncRules = async (pkg: PackageMeta, ...rules: SyncRule[]) => {
+  let installNeeded = false
+  for (const rule of rules) {
+    try {
+      const result = await rule.apply(pkg, {
+        configuration: DefaultConfiguration,
+      })
+
+      printResult(rule.name, result)
+
+      if (result.changedFiles && result.changedFiles.length > 0) {
+        installNeeded = true
+      }
+    } catch (t: unknown) {
+      console.log(
+        `${chalk.redBright('[ERROR]')} ${rule.name}: ${get(t, 'message', String(t))}`,
+      )
+
+      console.group()
+      console.error(t)
+      console.groupEnd()
+    }
+  }
+
+  if (installNeeded) {
+    console.log('Installing new dependencies...')
+    await $`pnpm install`
+  }
+}
+
 const handler = async () => {
   const config = await loadConfig()
   const pkg = await getCurrentPackage()
@@ -92,10 +124,13 @@ const handler = async () => {
       makePackageJsonExportsPlugin(config),
       makePackageJsonFilesPlugin(config),
       makeEslintBootstrapPlugin(config),
-      makeEslintDependenciesPlugin(config),
+      // makeEslintDependenciesPlugin(config),
       makeEslintScriptsPlugin(config),
     ]),
   )
+
+  await applySyncRules(pkg, ...makeSyncRules(await loadSyncRulesConfig()))
+
   console.log('')
   console.groupEnd()
 }

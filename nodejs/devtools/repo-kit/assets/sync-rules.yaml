@@ -1,0 +1,30 @@
+syncRules:
+  - name: Add eslint dependencies
+    conditions:
+      - exists: eslint.config.js
+    applyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            devDependencies:
+              '@eslint/js': 'catalog:'
+              '@twin-digital/eslint-config': workspace:*
+              eslint: 'catalog:'
+              eslint-config-prettier: 'catalog:'
+              globals: 'catalog:'
+              prettier: 'catalog:'
+              typescript-eslint: 'catalog:'
+    unapplyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            devDependencies:
+              '@eslint/js': null
+              '@twin-digital/eslint-config': null
+              eslint: null
+              eslint-config-prettier: null
+              globals: null
+              prettier: null
+              typescript-eslint: null
