@@ -7,16 +7,14 @@ import get from 'lodash-es/get.js'
 import { makePackageJsonExportsPlugin } from '../../sync/legacy-plugins/package-json-exports.js'
 import { makePackageJsonFilesPlugin } from '../../sync/legacy-plugins/package-json-files.js'
 import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
-import {
-  DefaultConfiguration,
-  loadConfig,
-} from '../../repo-kit-configuration.js'
+import { loadConfig } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import { makeEslintScriptsPlugin } from '../../sync/legacy-plugins/eslint-scripts.js'
 import type { SyncResult } from '../../sync/sync-result.js'
-import { makeSyncRules, type SyncRule } from '../../sync/sync-rule.js'
-import type { LegacySyncPlugin } from '../../sync/legacy-sync-plugin.js'
 import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
+import type { SyncRule } from '../../sync/sync-rule.js'
+import { makeSyncRules } from '../../sync/sync-rule-factory.js'
+import { asSyncRule } from '../../sync/legacy-make-config-plugin.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -43,57 +41,22 @@ const printResult = (name: string, result: SyncResult) => {
   }
 }
 
-const applySyncPlugins = async (
+/**
+ * @returns List of files which were changed, if any (relative to the package root)
+ */
+const applySyncRules = async (
   pkg: PackageMeta,
-  ...plugins: LegacySyncPlugin[]
-) => {
-  let installNeeded = false
-  for (const plugin of plugins) {
-    try {
-      const result = await plugin.sync({
-        manifest: pkg.manifest,
-        name: pkg.name,
-        packagePath: pkg.path,
-      })
-
-      printResult(plugin.name, result)
-
-      if (
-        result.changedFiles &&
-        result.changedFiles.length > 0 &&
-        plugin.requiresDependencyInstall
-      ) {
-        installNeeded = true
-      }
-    } catch (t: unknown) {
-      console.log(
-        `${chalk.redBright('[ERROR]')} ${plugin.name}: ${get(t, 'message', String(t))}`,
-      )
-
-      console.group()
-      console.error(t)
-      console.groupEnd()
-    }
-  }
-
-  if (installNeeded) {
-    console.log('Installing new dependencies...')
-    await $`pnpm install`
-  }
-}
-
-const applySyncRules = async (pkg: PackageMeta, ...rules: SyncRule[]) => {
-  let installNeeded = false
+  ...rules: SyncRule[]
+): Promise<string[]> => {
+  const changedFiles: string[] = []
   for (const rule of rules) {
     try {
-      const result = await rule.apply(pkg, {
-        configuration: DefaultConfiguration,
-      })
+      const result = await rule.apply(pkg)
 
       printResult(rule.name, result)
 
-      if (result.changedFiles && result.changedFiles.length > 0) {
-        installNeeded = true
+      if (result.result === 'ok') {
+        changedFiles.push(...result.changedFiles)
       }
     } catch (t: unknown) {
       console.log(
@@ -106,30 +69,35 @@ const applySyncRules = async (pkg: PackageMeta, ...rules: SyncRule[]) => {
     }
   }
 
-  if (installNeeded) {
-    console.log('Installing new dependencies...')
-    await $`pnpm install`
-  }
+  return changedFiles
 }
 
 const handler = async () => {
   const config = await loadConfig()
+  const syncRulesConfig = await loadSyncRulesConfig()
   const pkg = await getCurrentPackage()
 
   console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
-  await applySyncPlugins(
+
+  const changedFiles = await applySyncRules(
     pkg,
     ...compact([
       makePackageJsonExportsPlugin(config),
       makePackageJsonFilesPlugin(config),
       makeEslintBootstrapPlugin(config),
-      // makeEslintDependenciesPlugin(config),
       makeEslintScriptsPlugin(config),
-    ]),
+    ]).map(asSyncRule),
+    ...makeSyncRules({
+      config,
+      rules: syncRulesConfig,
+    }),
   )
 
-  await applySyncRules(pkg, ...makeSyncRules(await loadSyncRulesConfig()))
+  if (changedFiles.includes('package.json')) {
+    console.log('Installing dependencies...')
+    await $`pnpm install`
+  }
 
   console.log('')
   console.groupEnd()
