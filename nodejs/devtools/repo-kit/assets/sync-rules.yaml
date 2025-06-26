@@ -24,6 +24,29 @@ syncRules:
             - opx: removeValue
               path: /files
               value: '!dist/**/*.d.ts.map'
+  - name: package-exports
+    conditions:
+      - exists: src/**/index.ts
+    applyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            exports:
+              .:
+                import: ./dist/index.js
+                types: ./dist/index.d.ts
+              ./*:
+                import: ./dist/*/index.js
+                types: ./dist/*/index.d.ts
+    unapplyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            exports:
+              .: null
+              ./*: null
   - name: eslint
     conditions:
       - exists: eslint.config.js
