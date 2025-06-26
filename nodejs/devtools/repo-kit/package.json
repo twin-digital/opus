@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.0",
+    "@twin-digital/json-patch-x": "workspace:*",
     "chalk": "^5.4.1",
     "commander": "^14.0.0",
     "execa": "^9.6.0",
