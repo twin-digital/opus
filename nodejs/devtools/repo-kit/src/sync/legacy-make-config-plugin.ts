@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import type { LegacySyncPlugin, SyncInput } from './legacy-sync-plugin.js'
 import entries from 'lodash-es/entries.js'
+import type { SyncRule } from './sync-rule.js'
 
 /**
  * Function used to apply a configuration change to a single file. Will be passed the original content of the file, and
@@ -60,6 +61,20 @@ const applyTransformer = async (
 }
 
 /**
+ * Converts a legacy 'sync plugin' to a sync rule.
+ */
+export const asSyncRule = (plugin: LegacySyncPlugin): SyncRule => ({
+  apply: (workspace) => {
+    return plugin.sync({
+      manifest: workspace.manifest,
+      name: workspace.name,
+      packagePath: workspace.path,
+    })
+  },
+  name: plugin.name,
+})
+
+/**
  * Creates a `ConfigPlugin` with a given name that applies a specific set of FileTransform functions to a package.
  * @param name
  * @param transformers
@@ -68,13 +83,9 @@ const applyTransformer = async (
 export const makeConfigPlugin = (
   name: string,
   transformers: Record<string, FileTransformFn | FileTransformFn[]>,
-  {
-    requiresDependencyInstall = false,
-  }: { requiresDependencyInstall?: boolean } = {},
 ): LegacySyncPlugin => {
   return {
     name,
-    requiresDependencyInstall,
     sync: async (input) => {
       const changedFiles: Set<string> = new Set<string>()
 
@@ -109,4 +120,17 @@ export const makeConfigPlugin = (
           }
     },
   }
+}
+
+/**
+ * Creates a `ConfigPlugin` with a given name that applies a specific set of FileTransform functions to a package.
+ * @param name
+ * @param transformers
+ * @returns
+ */
+export const makeConfigPluginRule = (
+  name: string,
+  transformers: Record<string, FileTransformFn | FileTransformFn[]>,
+): SyncRule => {
+  return asSyncRule(makeConfigPlugin(name, transformers))
 }

@@ -14,28 +14,22 @@ export const makeEslintDependenciesPlugin = ({
   eslint,
 }: Configuration): LegacySyncPlugin | undefined =>
   eslint ?
-    makeConfigPlugin(
-      'eslint-dependencies',
-      {
-        'package.json': transformJson((content) => {
-          const manifest = content as ProjectManifest
-          return {
-            ...manifest,
-            devDependencies: canonicalizeJson({
-              ...manifest.devDependencies,
-              '@eslint/js': 'catalog:',
-              '@twin-digital/eslint-config': 'workspace:*',
-              eslint: 'catalog:',
-              'eslint-config-prettier': 'catalog:',
-              globals: 'catalog:',
-              prettier: 'catalog:',
-              'typescript-eslint': 'catalog:',
-            }),
-          }
-        }),
-      },
-      {
-        requiresDependencyInstall: true,
-      },
-    )
+    makeConfigPlugin('eslint-dependencies', {
+      'package.json': transformJson((content) => {
+        const manifest = content as ProjectManifest
+        return {
+          ...manifest,
+          devDependencies: canonicalizeJson({
+            ...manifest.devDependencies,
+            '@eslint/js': 'catalog:',
+            '@twin-digital/eslint-config': 'workspace:*',
+            eslint: 'catalog:',
+            'eslint-config-prettier': 'catalog:',
+            globals: 'catalog:',
+            prettier: 'catalog:',
+            'typescript-eslint': 'catalog:',
+          }),
+        }
+      }),
+    })
   : undefined
