@@ -9,7 +9,6 @@ import { makePackageJsonFilesPlugin } from '../../sync/legacy-plugins/package-js
 import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
 import { loadConfig } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
-import { makeEslintScriptsPlugin } from '../../sync/legacy-plugins/eslint-scripts.js'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
 import type { SyncRule } from '../../sync/sync-rule.js'
@@ -29,11 +28,11 @@ const printResult = (name: string, result: SyncResult) => {
       break
     case 'ok':
       console.log(
-        `${chalk.greenBright('[OK]')} ${name}: Updated ${result.changedFiles.join(', ')}`,
+        `${chalk.greenBright('[CHANGED]')} ${name}: ${chalk.yellow(result.changedFiles.join(', '))}`,
       )
       break
     case 'skipped':
-      console.log(`${chalk.yellow('[SKIP]')} ${name}: Package up-to-date`)
+      console.log(`${chalk.blue('[OK]')} ${name}`)
       break
     default:
       console.log(`${chalk.yellowBright('[UNKNOWN]')} ${name}`)
@@ -48,7 +47,7 @@ const applySyncRules = async (
   pkg: PackageMeta,
   ...rules: SyncRule[]
 ): Promise<string[]> => {
-  const changedFiles: string[] = []
+  const changedFiles: Set<string> = new Set<string>()
   for (const rule of rules) {
     try {
       const result = await rule.apply(pkg)
@@ -56,7 +55,9 @@ const applySyncRules = async (
       printResult(rule.name, result)
 
       if (result.result === 'ok') {
-        changedFiles.push(...result.changedFiles)
+        result.changedFiles.forEach((file) => {
+          changedFiles.add(file)
+        })
       }
     } catch (t: unknown) {
       console.log(
@@ -69,7 +70,7 @@ const applySyncRules = async (
     }
   }
 
-  return changedFiles
+  return [...changedFiles]
 }
 
 const handler = async () => {
@@ -86,7 +87,6 @@ const handler = async () => {
       makePackageJsonExportsPlugin(config),
       makePackageJsonFilesPlugin(config),
       makeEslintBootstrapPlugin(config),
-      makeEslintScriptsPlugin(config),
     ]).map(asSyncRule),
     ...makeSyncRules({
       config,
@@ -109,3 +109,8 @@ export const makeCommand = () =>
       'updates project configuration files (package.json, etc.) to align with repo-kit conventions',
     )
     .action(handler)
+
+// more things:
+//   - exceptions for eslint project
+//   - tsconfig stuff (configs, scripts, etc)
+//   - 'init' to bootstrap a whole new package

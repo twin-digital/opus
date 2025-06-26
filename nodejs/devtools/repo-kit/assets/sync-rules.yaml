@@ -1,8 +1,15 @@
 syncRules:
-  - name: Add eslint dependencies
+  - name: eslint
     conditions:
       - exists: eslint.config.js
     applyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            scripts:
+              lint: eslint --no-error-on-unmatched-pattern src
+              lint:fix: eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .
       - action: json-merge-patch
         file: package.json
         options:
@@ -16,6 +23,13 @@ syncRules:
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
     unapplyActions:
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            scripts:
+              lint: null
+              lint:fix: null
       - action: json-merge-patch
         file: package.json
         options:
