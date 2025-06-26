@@ -5,7 +5,6 @@ import chalk from 'chalk'
 import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
 import { makePackageJsonExportsPlugin } from '../../sync/legacy-plugins/package-json-exports.js'
-import { makePackageJsonFilesPlugin } from '../../sync/legacy-plugins/package-json-files.js'
 import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
 import { loadConfig } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
@@ -85,7 +84,6 @@ const handler = async () => {
     pkg,
     ...compact([
       makePackageJsonExportsPlugin(config),
-      makePackageJsonFilesPlugin(config),
       makeEslintBootstrapPlugin(config),
     ]).map(asSyncRule),
     ...makeSyncRules({

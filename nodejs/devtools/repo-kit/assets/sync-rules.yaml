@@ -1,4 +1,29 @@
 syncRules:
+  - name: package-files
+    conditions:
+      - exists: src/*
+    applyActions:
+      - action: json-patch
+        file: package.json
+        options:
+          patch: |
+            - opx: appendIfMissing
+              path: /files
+              value: dist
+            - opx: appendIfMissing
+              path: /files
+              value: "!dist/**/*.d.ts.map"
+    unapplyActions:
+      - action: json-patch
+        file: package.json
+        options:
+          patch: |
+            - opx: removeValue
+              path: /files
+              value: dist
+            - opx: removeValue
+              path: /files
+              value: '!dist/**/*.d.ts.map'
   - name: eslint
     conditions:
       - exists: eslint.config.js
