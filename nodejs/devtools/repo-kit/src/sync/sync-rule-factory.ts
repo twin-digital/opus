@@ -38,20 +38,22 @@ const doApplyActions = async (
   workspace: PackageMeta,
   actions: SyncRuleActionFn[] = [],
 ): Promise<SyncResult> => {
-  const changedFiles: string[] = []
+  const changedFiles: Set<string> = new Set<string>()
   for (const action of actions) {
     const result = await action(workspace)
     if (result.result === 'error') {
       return result
     } else if (result.result === 'ok') {
-      changedFiles.push(...result.changedFiles)
+      result.changedFiles.forEach((file) => {
+        changedFiles.add(file)
+      })
     }
   }
 
-  return changedFiles.length === 0 ?
+  return changedFiles.size === 0 ?
       { result: 'skipped' }
     : {
-        changedFiles,
+        changedFiles: [...changedFiles],
         result: 'ok',
       }
 }

@@ -3,7 +3,8 @@ import path from 'node:path'
 import jsonMergePatch from 'json-merge-patch'
 import yaml from 'yaml'
 import { removeEmptyValues } from '../../utils/remove-empty-values.js'
-import { isEqual } from 'lodash-es'
+import cloneDeep from 'lodash-es/cloneDeep.js'
+import isEqual from 'lodash-es/isEqual.js'
 import type { SyncRuleActionFn } from '../sync-rule-factory.js'
 
 /**
@@ -43,7 +44,7 @@ export const makeJsonMergePatchAction =
     const original = JSON.parse(content) as object
     const patch = yaml.parse(options.patch) as object
     const patched = removeEmptyValues(
-      jsonMergePatch.apply({ ...original }, patch),
+      jsonMergePatch.apply(cloneDeep(original), patch),
     )
 
     if (!isEqual(patched, original)) {
