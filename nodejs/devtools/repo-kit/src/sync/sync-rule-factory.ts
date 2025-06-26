@@ -10,7 +10,6 @@ import type {
   SyncRulesCondition,
   SyncRulesConfig,
 } from './sync-rules-config.js'
-import some from 'lodash-es/some.js'
 
 /**
  * Predicate (condition) used to determine if a particular rule applies to a given package.
@@ -78,11 +77,22 @@ const makeSyncRule = (
     makeActionFn(action as SyncRulesAction<{ patch: string }>),
   )
 
-  return {
-    apply: (workspace: PackageMeta) => {
-      const isApplicable = some(conditions, (fn) => fn(workspace))
+  const isApplicable = async (workspace: PackageMeta): Promise<boolean> => {
+    for (const condition of conditions) {
+      const result = await condition(workspace)
+      if (result) {
+        return true
+      }
+    }
 
-      return isApplicable ?
+    return false
+  }
+
+  return {
+    apply: async (workspace: PackageMeta) => {
+      const applicable = await isApplicable(workspace)
+
+      return applicable ?
           doApplyActions(workspace, applyActions)
         : doApplyActions(workspace, unapplyActions)
     },
