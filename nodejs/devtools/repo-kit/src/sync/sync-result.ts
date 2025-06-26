@@ -1,5 +1,3 @@
-import type { ProjectManifest } from '@pnpm/types'
-
 export interface BaseSyncResult {
   /**
    * Array of files which were changed, relative to the root of the package. Will be undefined of the `result` is not
@@ -44,39 +42,3 @@ export interface SyncSkippedResult extends BaseSyncResult {
  * Result object containing the details of a configuration set applied to a package.
  */
 export type SyncResult = SyncErrorResult | SyncOkResult | SyncSkippedResult
-
-export interface SyncPlugin {
-  /**
-   * Name of the plugin
-   */
-  name: string
-
-  /**
-   * Flag indicating that if this plugin makes any changes, the project's dependencies must be reinstalled.
-   * @defaultValue false
-   */
-  requiresDependencyInstall?: boolean
-
-  /**
-   * Applies the configuration from this plugin to a package in the monorepo.
-   * @param params
-   */
-  sync(input: {
-    /**
-     * Manifest of the project to configure
-     */
-    manifest: ProjectManifest
-
-    /**
-     * Name of the package to configure
-     */
-    name: string
-
-    /**
-     * Path to the root of the package to configure
-     */
-    packagePath: string
-  }): SyncResult | Promise<SyncResult>
-}
-
-export type SyncInput = Parameters<SyncPlugin['sync']>[0]

@@ -1,10 +1,13 @@
 import fs from 'fs'
 import path from 'path'
-import { type SyncPlugin } from './sync-plugin.js'
+import { type LegacySyncPlugin } from '../legacy-sync-plugin.js'
 import pull from 'lodash-es/pull.js'
-import { makeSyncPlugin, transformJson } from './make-config-plugin.js'
+import {
+  makeConfigPlugin,
+  transformJson,
+} from '../legacy-make-config-plugin.js'
 import type { ProjectManifest } from '@pnpm/types'
-import type { Configuration } from '../repo-kit-configuration.js'
+import type { Configuration } from '../../repo-kit-configuration.js'
 
 /**
  * Creates a `SyncPlugin` which updates the exports in a package's package.json file to include all barrel files
@@ -12,8 +15,8 @@ import type { Configuration } from '../repo-kit-configuration.js'
  */
 export const makePackageJsonFilesPlugin = (
   _configuration: Configuration,
-): SyncPlugin =>
-  makeSyncPlugin('package-files', {
+): LegacySyncPlugin =>
+  makeConfigPlugin('package-files', {
     'package.json': transformJson((content, { packagePath }) => {
       const manifest = content === undefined ? {} : (content as ProjectManifest)
       const files = manifest.files ?? []

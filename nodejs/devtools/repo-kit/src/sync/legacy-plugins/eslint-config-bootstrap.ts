@@ -1,6 +1,6 @@
-import type { SyncPlugin } from './sync-plugin.js'
-import { makeSyncPlugin } from './make-config-plugin.js'
-import type { Configuration } from '../repo-kit-configuration.js'
+import type { LegacySyncPlugin } from '../legacy-sync-plugin.js'
+import { makeConfigPlugin } from '../legacy-make-config-plugin.js'
+import type { Configuration } from '../../repo-kit-configuration.js'
 
 const bootstrapEslintConfig = `import base from '@twin-digital/eslint-config'
 
@@ -14,9 +14,9 @@ export default base
  */
 export const makeEslintBootstrapPlugin = ({
   eslint,
-}: Configuration): SyncPlugin | undefined =>
+}: Configuration): LegacySyncPlugin | undefined =>
   eslint ?
-    makeSyncPlugin('eslint-config-bootstrap', {
+    makeConfigPlugin('eslint-config-bootstrap', {
       'eslint.config.js': (content) => {
         return content ?? bootstrapEslintConfig
       },

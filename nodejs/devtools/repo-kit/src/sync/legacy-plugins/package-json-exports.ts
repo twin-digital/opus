@@ -1,9 +1,12 @@
 import fs from 'fs'
 import path from 'path'
 import type { PackageManifest } from '@pnpm/types'
-import { makeSyncPlugin, transformJson } from './make-config-plugin.js'
-import type { SyncPlugin } from './sync-plugin.js'
-import type { Configuration } from '../repo-kit-configuration.js'
+import {
+  makeConfigPlugin,
+  transformJson,
+} from '../legacy-make-config-plugin.js'
+import type { LegacySyncPlugin } from '../legacy-sync-plugin.js'
+import type { Configuration } from '../../repo-kit-configuration.js'
 
 export type ProjectManifestWithCorrectedExports = Omit<
   PackageManifest,
@@ -33,8 +36,8 @@ const hasAnySubBarrelFiles = (directory: string) => {
  */
 export const makePackageJsonExportsPlugin = (
   _configuration: Configuration,
-): SyncPlugin =>
-  makeSyncPlugin('package-exports', {
+): LegacySyncPlugin =>
+  makeConfigPlugin('package-exports', {
     'package.json': transformJson((content, { packagePath }) => {
       const newExports: Record<string, string | Record<string, string>> = {}
       const manifest = (content ?? {}) as ProjectManifestWithCorrectedExports
