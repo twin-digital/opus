@@ -1,6 +1,7 @@
 import type { Configuration } from '../repo-kit-configuration.js'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
+import { makeJsonPatchAction } from './actions/json-patch.js'
 import { makeExistsCondition } from './conditions/exists-condition.js'
 import type { SyncResult } from './sync-result.js'
 import type { SyncRule } from './sync-rule.js'
@@ -30,7 +31,14 @@ const makeConditionFn = (condition: SyncRulesCondition) => {
 }
 
 const makeActionFn = (action: SyncRulesAction<{ patch: string }>) => {
-  return makeJsonMergePatchAction(action.file, action.options)
+  switch (action.action) {
+    case 'json-merge-patch':
+      return makeJsonMergePatchAction(action.file, action.options)
+    case 'json-patch':
+      return makeJsonPatchAction(action.file, action.options)
+    default:
+      throw new Error(`Unknown action: ${action.action}`)
+  }
 }
 
 const doApplyActions = async (
