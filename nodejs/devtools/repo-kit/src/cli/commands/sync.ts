@@ -1,17 +1,20 @@
 import { Command } from 'commander'
 import { getCurrentPackage } from '../../workspace/get-current-package.js'
-import type { SyncResult, SyncPlugin } from '../../sync-plugins/sync-plugin.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
 import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
-import { makePackageJsonExportsPlugin } from '../../sync-plugins/package-json-exports.js'
-import { makePackageJsonFilesPlugin } from '../../sync-plugins/package-json-files.js'
-import { makeEslintBootstrapPlugin } from '../../sync-plugins/eslint-config-bootstrap.js'
-import { loadConfig } from '../../repo-kit-configuration.js'
-import { makeEslintDependenciesPlugin } from '../../sync-plugins/eslint-dependencies.js'
+import { makePackageJsonExportsPlugin } from '../../sync/legacy-plugins/package-json-exports.js'
+import { makePackageJsonFilesPlugin } from '../../sync/legacy-plugins/package-json-files.js'
+import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
+import {
+  DefaultConfiguration,
+  loadConfig,
+} from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
-import { makeEslintScriptsPlugin } from '../../sync-plugins/eslint-scripts.js'
+import { makeEslintScriptsPlugin } from '../../sync/legacy-plugins/eslint-scripts.js'
+import type { SyncResult } from '../../sync/sync-result.js'
+import type { LegacySyncPlugin } from '../../sync/legacy-sync-plugin.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -38,7 +41,10 @@ const printResult = (name: string, result: SyncResult) => {
   }
 }
 
-const applySyncPlugins = async (pkg: PackageMeta, ...plugins: SyncPlugin[]) => {
+const applySyncPlugins = async (
+  pkg: PackageMeta,
+  ...plugins: LegacySyncPlugin[]
+) => {
   let installNeeded = false
   for (const plugin of plugins) {
     try {

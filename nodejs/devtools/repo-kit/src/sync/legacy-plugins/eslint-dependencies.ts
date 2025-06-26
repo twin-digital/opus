@@ -1,17 +1,20 @@
-import type { SyncPlugin } from './sync-plugin.js'
-import { makeSyncPlugin, transformJson } from './make-config-plugin.js'
-import type { Configuration } from '../repo-kit-configuration.js'
+import type { LegacySyncPlugin } from '../legacy-sync-plugin.js'
+import {
+  makeConfigPlugin,
+  transformJson,
+} from '../legacy-make-config-plugin.js'
+import type { Configuration } from '../../repo-kit-configuration.js'
 import type { ProjectManifest } from '@pnpm/types'
-import { canonicalizeJson } from '../utils/canonicalize-json.js'
+import { canonicalizeJson } from '../../utils/canonicalize-json.js'
 
 /**
  * Config plugin that adds the dependencies necessary to use our project's eslint configuration.
  */
 export const makeEslintDependenciesPlugin = ({
   eslint,
-}: Configuration): SyncPlugin | undefined =>
+}: Configuration): LegacySyncPlugin | undefined =>
   eslint ?
-    makeSyncPlugin(
+    makeConfigPlugin(
       'eslint-dependencies',
       {
         'package.json': transformJson((content) => {

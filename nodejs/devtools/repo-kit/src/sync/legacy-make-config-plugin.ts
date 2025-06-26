@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { SyncPlugin, SyncInput } from './sync-plugin.js'
+import type { LegacySyncPlugin, SyncInput } from './legacy-sync-plugin.js'
 import entries from 'lodash-es/entries.js'
 
 /**
@@ -65,13 +65,13 @@ const applyTransformer = async (
  * @param transformers
  * @returns
  */
-export const makeSyncPlugin = (
+export const makeConfigPlugin = (
   name: string,
   transformers: Record<string, FileTransformFn | FileTransformFn[]>,
   {
     requiresDependencyInstall = false,
   }: { requiresDependencyInstall?: boolean } = {},
-): SyncPlugin => {
+): LegacySyncPlugin => {
   return {
     name,
     requiresDependencyInstall,
