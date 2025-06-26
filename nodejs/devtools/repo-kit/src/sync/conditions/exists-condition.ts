@@ -1,8 +1,7 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import type { SyncRuleConditionFn } from '../sync-rule-factory.js'
+import { globMatches } from '../../utils/glob-matches.js'
 
 export const makeExistsCondition =
   (file: string): SyncRuleConditionFn =>
   (workspace) =>
-    fs.existsSync(path.join(workspace.path, file))
+    globMatches(file, workspace.path)

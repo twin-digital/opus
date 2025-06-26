@@ -62,6 +62,30 @@ const main = async () => {
   await program.parseAsync(process.argv)
 }
 
+// disable warnings for experimental features we are knowingly using
+const originalWarningListeners = process.listeners('warning').slice()
+process.removeAllListeners('warning')
+process.on('warning', (warning) => {
+  // suppress warnings for experimental 'glob' feature we are using, iff:
+  //   - name is ExperimentalWarning
+  //   - message mentions the glob API
+  if (
+    warning.name === 'ExperimentalWarning' &&
+    warning.message.includes('glob')
+  ) {
+    return
+  }
+
+  // otherwise, re-emit by handing off to the original handlers (preserving Node’s default output)
+  for (const listener of originalWarningListeners) {
+    try {
+      listener.call(process, warning)
+    } catch {
+      // if they fail, ignore
+    }
+  }
+})
+
 main().catch((err: unknown) => {
   console.error(err)
   console.error(
