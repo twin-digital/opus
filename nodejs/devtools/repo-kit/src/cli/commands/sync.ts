@@ -114,6 +114,5 @@ export const makeCommand = () =>
     .action(handler)
 
 // more things:
-//   - exceptions for eslint project
 //   - tsconfig stuff (configs, scripts, etc)
 //   - 'init' to bootstrap a whole new package
