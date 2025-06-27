@@ -3,10 +3,6 @@
   "version": "0.0.1",
   "description": "Twin Digital's preferred eslint rules.",
   "type": "module",
-  "files": [
-    "dist",
-    "!dist/**/*.d.ts.map"
-  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -17,6 +13,10 @@
       "types": "./dist/*/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
   "scripts": {
     "build:typescript": "tsc",
     "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
