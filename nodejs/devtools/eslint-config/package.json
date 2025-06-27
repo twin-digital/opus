@@ -22,7 +22,9 @@
     "dev": "tsc --watch",
     "lint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix": "eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:typescript": "tsc",
+    "watch:typescript": "tsc --watch"
   },
   "dependencies": {
     "@eslint/js": "catalog:",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@twin-digital/tsconfig": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "@types/node": "22.x"
   }
 }

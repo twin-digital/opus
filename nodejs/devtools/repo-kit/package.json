@@ -38,12 +38,13 @@
     "@twin-digital/tsconfig": "workspace:*",
     "@types/json-merge-patch": "^1.0.0",
     "@types/lodash-es": "^4.17.12",
-    "@types/node": "^22.14.0",
+    "@types/node": "22.x",
     "chokidar-cli": "^3.0.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
     "prettier": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }

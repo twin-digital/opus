@@ -76,3 +76,31 @@ syncRules:
               globals: 'catalog:'
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
+  - name: typescript
+    applyActions:
+      - action: write-file
+        file: tsconfig.json
+        options:
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.build.json"],
+              "compilerOptions": {
+                "types": ["node"]
+              }
+            }
+
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            scripts:
+              build:typescript: tsc
+              typecheck: tsc --noEmit
+              watch:typescript: tsc --watch
+      - action: json-merge-patch
+        file: package.json
+        options:
+          patch: |
+            devDependencies:
+              typescript: 'catalog:'
+              '@types/node': '22.x'
