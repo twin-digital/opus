@@ -17,7 +17,7 @@ features:
               lint: null
               lint:eslint: eslint --no-error-on-unmatched-pattern src
               lint:packagejson: prettier-package-json --list-different
-              lint:prettier: prettier --list-different --ignore-path ../../../.gitignore .
+              lint:prettier: prettier --check --ignore-path ../../../.gitignore .
               lint:fix: null
               lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
               lint:fix:packagejson: prettier-package-json --write ./package.json
