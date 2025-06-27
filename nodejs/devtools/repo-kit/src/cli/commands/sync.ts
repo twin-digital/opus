@@ -5,7 +5,7 @@ import chalk from 'chalk'
 import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
 import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
-import { loadConfig } from '../../repo-kit-configuration.js'
+import { loadConfig, type Configuration } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
@@ -42,11 +42,19 @@ const printResult = (name: string, result: SyncResult) => {
  * @returns List of files which were changed, if any (relative to the package root)
  */
 const applySyncRules = async (
+  config: Configuration,
   pkg: PackageMeta,
   ...rules: SyncRule[]
 ): Promise<string[]> => {
   const changedFiles: Set<string> = new Set<string>()
   for (const rule of rules) {
+    const enabled = config.rules?.[rule.name] ?? true
+
+    if (!enabled) {
+      console.log(chalk.dim.gray(`[DISABLED] ${rule.name}`))
+      continue
+    }
+
     try {
       const result = await rule.apply(pkg)
 
@@ -80,8 +88,9 @@ const handler = async () => {
   console.group()
 
   const changedFiles = await applySyncRules(
+    config,
     pkg,
-    ...compact([makeEslintBootstrapPlugin(config)]).map(asSyncRule),
+    ...compact([makeEslintBootstrapPlugin()]).map(asSyncRule),
     ...makeSyncRules({
       config,
       rules: syncRulesConfig,
