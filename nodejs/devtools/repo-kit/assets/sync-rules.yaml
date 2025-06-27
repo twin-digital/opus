@@ -76,23 +76,3 @@ syncRules:
               globals: 'catalog:'
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
-    unapplyActions:
-      - action: json-merge-patch
-        file: package.json
-        options:
-          patch: |
-            scripts:
-              lint: null
-              lint:fix: null
-      - action: json-merge-patch
-        file: package.json
-        options:
-          patch: |
-            devDependencies:
-              '@eslint/js': null
-              '@twin-digital/eslint-config': null
-              eslint: null
-              eslint-config-prettier: null
-              globals: null
-              prettier: null
-              typescript-eslint: null
