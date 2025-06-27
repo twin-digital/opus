@@ -97,7 +97,6 @@ export type SyncActionConfig = {
     }
   | {
       action: 'write-file'
-      file: string
       options: {
         /**
          * Package-relative path of the file to write.
