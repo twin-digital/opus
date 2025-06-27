@@ -48,9 +48,15 @@ syncRules:
               .: null
               ./*: null
   - name: eslint
-    conditions:
-      - exists: eslint.config.js
     applyActions:
+      - action: write-file
+        file: eslint.config.js
+        options:
+          content: |
+            import base from '@twin-digital/eslint-config'
+
+            export default base
+
       - action: json-merge-patch
         file: package.json
         options:
