@@ -2,16 +2,13 @@ import { Command } from 'commander'
 import { getCurrentPackage } from '../../workspace/get-current-package.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
-import compact from 'lodash-es/compact.js'
 import get from 'lodash-es/get.js'
-import { makeEslintBootstrapPlugin } from '../../sync/legacy-plugins/eslint-config-bootstrap.js'
 import { loadConfig, type Configuration } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
 import type { SyncRule } from '../../sync/sync-rule.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
-import { asSyncRule } from '../../sync/legacy-make-config-plugin.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -90,7 +87,6 @@ const handler = async () => {
   const changedFiles = await applySyncRules(
     config,
     pkg,
-    ...compact([makeEslintBootstrapPlugin()]).map(asSyncRule),
     ...makeSyncRules({
       config,
       rules: syncRulesConfig,
