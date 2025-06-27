@@ -18,12 +18,10 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build:typescript": "tsc",
     "lint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix": "eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .",
     "typecheck": "tsc --noEmit",
-    "build:typescript": "tsc",
     "watch:typescript": "tsc --watch"
   },
   "dependencies": {
@@ -38,7 +36,7 @@
   },
   "devDependencies": {
     "@twin-digital/tsconfig": "workspace:*",
-    "typescript": "catalog:",
-    "@types/node": "22.x"
+    "@types/node": "22.x",
+    "typescript": "catalog:"
   }
 }
