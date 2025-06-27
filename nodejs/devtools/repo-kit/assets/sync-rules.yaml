@@ -64,10 +64,6 @@ syncRules:
             scripts:
               lint: eslint --no-error-on-unmatched-pattern src
               lint:fix: eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .
-      - action: json-merge-patch
-        file: package.json
-        options:
-          patch: |
             devDependencies:
               '@eslint/js': 'catalog:'
               '@twin-digital/eslint-config': workspace:*
@@ -97,10 +93,6 @@ syncRules:
               build:typescript: tsc
               typecheck: tsc --noEmit
               watch:typescript: tsc --watch
-      - action: json-merge-patch
-        file: package.json
-        options:
-          patch: |
             devDependencies:
               typescript: 'catalog:'
               '@types/node': '22.x'
