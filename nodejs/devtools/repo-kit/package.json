@@ -11,7 +11,7 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "build:copy-assets": "rsync -a assets/ dist/assets",
+    "build:copy-assets": "rsync -a --mkpath assets/ dist/assets",
     "build:typescript": "tsc",
     "lint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix": "eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .",

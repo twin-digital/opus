@@ -21,7 +21,7 @@ export const appendIfMissing = <T>(
       `Value at path '${path}' is not an array`,
       'SEQUENCE_NOT_AN_ARRAY',
       undefined,
-      'removeValue',
+      'appendIfMissing',
     )
   }
 
