@@ -2,3 +2,6 @@ rules:
   eslint: false
   eslint-config-bootstrap: false
   typescript: false
+  typescript-dependencies: false
+  typescript-scripts-and-dependencies: false
+  typescript-with-options: false
