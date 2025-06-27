@@ -4,6 +4,7 @@ import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
 import { makeWriteFileAction } from './actions/write-file.js'
 import { makeExistsCondition } from './conditions/exists-condition.js'
+import { makeNotExistsCondition } from './conditions/not-exists-condition.js'
 import type { SyncResult } from './sync-result.js'
 import type { SyncRule } from './sync-rule.js'
 import type {
@@ -28,7 +29,12 @@ export type SyncRuleActionFn = (
 ) => SyncResult | Promise<SyncResult>
 
 const makeConditionFn = (condition: SyncRulesCondition) => {
-  return makeExistsCondition(condition.exists)
+  if ('exists' in condition) {
+    return makeExistsCondition(condition.exists)
+  } else if ('notExists' in condition) {
+    return makeNotExistsCondition(condition.notExists)
+  }
+  throw new Error('Unknown condition type')
 }
 
 const makeActionFn = (action: SyncRulesAction) => {
