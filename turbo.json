@@ -19,13 +19,25 @@
       "with": ["watch:typescript", "watch:copy-assets"]
     },
     "lint": {
-      "dependsOn": ["@twin-digital/eslint-config#build"],
-      "outputs": []
+      "dependsOn": ["lint:eslint", "lint:packagejson", "lint:prettier"]
     },
+    "lint:eslint": {
+      "dependsOn": ["@twin-digital/eslint-config#build"]
+    },
+    "lint:packagejson": {},
+    "lint:prettier": {},
     "lint:fix": {
-      "dependsOn": ["@twin-digital/eslint-config#build"],
-      "outputs": []
+      "dependsOn": [
+        "lint:fix:eslint",
+        "lint:fix:packagejson",
+        "lint:fix:prettier"
+      ]
     },
+    "lint:fix:eslint": {
+      "dependsOn": ["@twin-digital/eslint-config#build"]
+    },
+    "lint:fix:packagejson": {},
+    "lint:fix:prettier": {},
     "release": {
       "dependsOn": ["build"]
     },

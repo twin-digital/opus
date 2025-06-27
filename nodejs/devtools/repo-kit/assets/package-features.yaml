@@ -1,4 +1,36 @@
 features:
+  - name: eslint
+    actions:
+      - action: write-file
+        options:
+          file: eslint.config.js
+          content: |
+            import base from '@twin-digital/eslint-config'
+
+            export default base
+
+      - action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              lint: null
+              lint:eslint: eslint --no-error-on-unmatched-pattern src
+              lint:packagejson: prettier-package-json --list-different
+              lint:prettier: prettier --list-different --ignore-path ../../../.gitignore .
+              lint:fix: null
+              lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
+              lint:fix:packagejson: prettier-package-json --write ./package.json
+              lint:fix:prettier: prettier --write --ignore-path ../../../.gitignore .
+            devDependencies:
+              '@eslint/js': 'catalog:'
+              '@twin-digital/eslint-config': workspace:*
+              eslint: 'catalog:'
+              eslint-config-prettier: 'catalog:'
+              globals: 'catalog:'
+              prettier: 'catalog:'
+              prettier-package-json: 'catalog:'
+              typescript-eslint: 'catalog:'
   - name: package-manifest
     actions:
       # if project has source files...
@@ -53,31 +85,6 @@ features:
             exports:
               .: null
               ./*: null
-  - name: eslint
-    actions:
-      - action: write-file
-        options:
-          file: eslint.config.js
-          content: |
-            import base from '@twin-digital/eslint-config'
-
-            export default base
-
-      - action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              lint: eslint --no-error-on-unmatched-pattern src
-              lint:fix: eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .
-            devDependencies:
-              '@eslint/js': 'catalog:'
-              '@twin-digital/eslint-config': workspace:*
-              eslint: 'catalog:'
-              eslint-config-prettier: 'catalog:'
-              globals: 'catalog:'
-              prettier: 'catalog:'
-              typescript-eslint: 'catalog:'
   - name: typescript
     actions:
       - name: Add scripts and dependencies
@@ -110,5 +117,8 @@ features:
           file: tsconfig.json
           content: |
             {
-              "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]
+              "extends": [
+                "@twin-digital/tsconfig/tsconfig.build.json",
+                "./tsconfig.options.json"
+              ]
             }
