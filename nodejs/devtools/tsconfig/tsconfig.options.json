@@ -19,6 +19,7 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "es2022",
+    "types": ["node"],
     "verbatimModuleSyntax": true
   }
 }
