@@ -73,6 +73,8 @@ syncRules:
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
   - name: typescript
+    conditions:
+      - notExists: tsconfig.options.json
     applyActions:
       - action: write-file
         file: tsconfig.json
@@ -82,6 +84,8 @@ syncRules:
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
             }
 
+  - name: typescript-dependencies
+    applyActions:
       - action: json-merge-patch
         file: package.json
         options:

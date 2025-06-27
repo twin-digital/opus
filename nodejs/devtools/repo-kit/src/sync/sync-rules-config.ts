@@ -11,7 +11,18 @@ export interface SyncRulesExistsCondition {
   exists: string
 }
 
-export type SyncRulesCondition = SyncRulesExistsCondition
+/**
+ * A `SyncRules` condition which matches if a specific file pattern does NOT exist in the package
+ */
+export interface SyncRulesNotExistsCondition {
+  /**
+   * File glob used to look for files within a package. This glob is interpreted relative to the base directory of the
+   * package. If no files match the glob, the condition is satisfied and `applyActions` will be applied.
+   */
+  notExists: string
+}
+
+export type SyncRulesCondition = SyncRulesExistsCondition | SyncRulesNotExistsCondition
 
 export type SyncRulesAction =
   | {
