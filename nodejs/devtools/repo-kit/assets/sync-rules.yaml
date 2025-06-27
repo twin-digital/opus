@@ -72,19 +72,7 @@ syncRules:
               globals: 'catalog:'
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
-  - name: typescript
-    conditions:
-      - notExists: tsconfig.options.json
-    applyActions:
-      - action: write-file
-        file: tsconfig.json
-        options:
-          content: |
-            {
-              "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
-            }
-
-  - name: typescript-dependencies
+  - name: typescript-scripts-and-dependencies
     applyActions:
       - action: json-merge-patch
         file: package.json
@@ -97,6 +85,18 @@ syncRules:
             devDependencies:
               typescript: 'catalog:'
               '@types/node': '22.x'
+  - name: typescript
+    conditions:
+      - notExists: tsconfig.options.json
+    applyActions:
+      - action: write-file
+        file: tsconfig.json
+        options:
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
+            }
+
   - name: typescript-with-options
     conditions:
       - exists: tsconfig.options.json

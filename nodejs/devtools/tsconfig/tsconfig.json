@@ -1,3 +1,0 @@
-{
-  "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]
-}
