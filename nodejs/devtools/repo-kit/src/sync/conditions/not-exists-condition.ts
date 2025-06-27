@@ -1,7 +1,7 @@
-import type { SyncRuleConditionFn } from '../sync-rule-factory.js'
 import { globMatches } from '../../utils/glob-matches.js'
+import type { SyncConditionFn } from '../sync-rule-factory.js'
 
 export const makeNotExistsCondition =
-  (file: string): SyncRuleConditionFn =>
+  (file: string): SyncConditionFn =>
   async (workspace) =>
     !(await globMatches(file, workspace.path))

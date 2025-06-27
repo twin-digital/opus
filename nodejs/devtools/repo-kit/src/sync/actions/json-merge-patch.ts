@@ -5,7 +5,7 @@ import yaml from 'yaml'
 import { removeEmptyValues } from '../../utils/remove-empty-values.js'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import isEqual from 'lodash-es/isEqual.js'
-import type { SyncRuleActionFn } from '../sync-rule-factory.js'
+import type { SyncActionFn } from '../sync-rule-factory.js'
 
 /**
  * Applies a JSON Merge Patch to the content of a JSON file. After the patch is applied, the file will be normalized
@@ -19,32 +19,34 @@ import type { SyncRuleActionFn } from '../sync-rule-factory.js'
  * @returns An `ok` result if there were changes, or `skipped` if no changes were needed.
  */
 export const makeJsonMergePatchAction =
-  (
-    file: string,
-    options: {
-      /**
-       * A string containing the JSON Merge Patch content in Yaml format.
-       *
-       * @example
-       * ```
-       * patch: |
-       *   title: Hello!
-       *   phoneNumber: '+01-123-456-7890'
-       *   author:
-       *     familyName: null
-       *   tags: ["example"]
-       * ```
-       */
-      patch: string
-    },
-  ): SyncRuleActionFn =>
+  ({
+    file,
+    patch,
+  }: {
+    file: string
+
+    /**
+     * A string containing the JSON Merge Patch content in Yaml format.
+     *
+     * @example
+     * ```
+     * patch: |
+     *   title: Hello!
+     *   phoneNumber: '+01-123-456-7890'
+     *   author:
+     *     familyName: null
+     *   tags: ["example"]
+     * ```
+     */
+    patch: string
+  }): SyncActionFn =>
   async (workspace) => {
     const filePath = path.join(workspace.path, file)
     const content = await fsP.readFile(filePath, 'utf-8')
     const original = JSON.parse(content) as object
-    const patch = yaml.parse(options.patch) as object
+    const parsedPatch = yaml.parse(patch) as object
     const patched = removeEmptyValues(
-      jsonMergePatch.apply(cloneDeep(original), patch),
+      jsonMergePatch.apply(cloneDeep(original), parsedPatch),
     )
 
     if (!isEqual(patched, original)) {

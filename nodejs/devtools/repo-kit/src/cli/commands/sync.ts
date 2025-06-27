@@ -6,9 +6,9 @@ import get from 'lodash-es/get.js'
 import { loadConfig, type Configuration } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
-import { loadSyncRulesConfig } from '../../sync/sync-rules-config.js'
-import type { SyncRule } from '../../sync/sync-rule.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
+import type { PackageFeature } from '../../sync/package-feature.js'
+import { loadFeaturesConfig } from '../../sync/sync-rules-config.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -38,24 +38,24 @@ const printResult = (name: string, result: SyncResult) => {
 /**
  * @returns List of files which were changed, if any (relative to the package root)
  */
-const applySyncRules = async (
+const applyFeatures = async (
   config: Configuration,
   pkg: PackageMeta,
-  ...rules: SyncRule[]
+  ...features: PackageFeature[]
 ): Promise<string[]> => {
   const changedFiles: Set<string> = new Set<string>()
-  for (const rule of rules) {
-    const enabled = config.rules?.[rule.name] ?? true
+  for (const feature of features) {
+    const enabled = config.rules?.[feature.name] ?? true
 
     if (!enabled) {
-      console.log(chalk.dim.gray(`[DISABLED] ${rule.name}`))
+      console.log(chalk.dim.gray(`[DISABLED] ${feature.name}`))
       continue
     }
 
     try {
-      const result = await rule.apply(pkg)
+      const result = await feature.configure(pkg)
 
-      printResult(rule.name, result)
+      printResult(feature.name, result)
 
       if (result.result === 'ok') {
         result.changedFiles.forEach((file) => {
@@ -64,7 +64,7 @@ const applySyncRules = async (
       }
     } catch (t: unknown) {
       console.log(
-        `${chalk.redBright('[ERROR]')} ${rule.name}: ${get(t, 'message', String(t))}`,
+        `${chalk.redBright('[ERROR]')} ${feature.name}: ${get(t, 'message', String(t))}`,
       )
 
       console.group()
@@ -78,18 +78,18 @@ const applySyncRules = async (
 
 const handler = async () => {
   const config = await loadConfig()
-  const syncRulesConfig = await loadSyncRulesConfig()
+  const featureConfig = await loadFeaturesConfig()
   const pkg = await getCurrentPackage()
 
   console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
 
-  const changedFiles = await applySyncRules(
+  const changedFiles = await applyFeatures(
     config,
     pkg,
     ...makeSyncRules({
       config,
-      rules: syncRulesConfig,
+      featureConfig,
     }),
   )
 
@@ -108,7 +108,3 @@ export const makeCommand = () =>
       'updates project configuration files (package.json, etc.) to align with repo-kit conventions',
     )
     .action(handler)
-
-// more things:
-//   - tsconfig stuff (configs, scripts, etc)
-//   - 'init' to bootstrap a whole new package

@@ -4,7 +4,7 @@ import { applyPatch, type ExtendedOperation } from '@twin-digital/json-patch-x'
 import yaml from 'yaml'
 import { removeEmptyValues } from '../../utils/remove-empty-values.js'
 import isEqual from 'lodash-es/isEqual.js'
-import type { SyncRuleActionFn } from '../sync-rule-factory.js'
+import type { SyncActionFn } from '../sync-rule-factory.js'
 
 /**
  * Applies an Extended JSON Patch to the content of a JSON file. After the patch is applied, the file will be normalized
@@ -18,26 +18,28 @@ import type { SyncRuleActionFn } from '../sync-rule-factory.js'
  * @returns An `ok` result if there were changes, or `skipped` if no changes were needed.
  */
 export const makeJsonPatchAction =
-  (
-    file: string,
-    options: {
-      /**
-       * A string containing the JSON Patch content in Yaml format.
-       *
-       * @example
-       * ```
-       * TBD
-       * ```
-       */
-      patch: string
-    },
-  ): SyncRuleActionFn =>
+  ({
+    file,
+    patch,
+  }: {
+    file: string
+
+    /**
+     * A string containing the JSON Patch content in Yaml format.
+     *
+     * @example
+     * ```
+     * TBD
+     * ```
+     */
+    patch: string
+  }): SyncActionFn =>
   async (workspace) => {
     const filePath = path.join(workspace.path, file)
     const content = await fsP.readFile(filePath, 'utf-8')
     const original = JSON.parse(content) as object
-    const patch = yaml.parse(options.patch) as ExtendedOperation[]
-    const patched = removeEmptyValues(applyPatch(original, patch))
+    const parsedPatch = yaml.parse(patch) as ExtendedOperation[]
+    const patched = removeEmptyValues(applyPatch(original, parsedPatch))
 
     if (!isEqual(patched, original)) {
       await fsP.writeFile(
