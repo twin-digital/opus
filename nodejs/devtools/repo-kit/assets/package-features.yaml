@@ -1,11 +1,13 @@
-syncRules:
-  - name: package-files
-    conditions:
-      - exists: src/*
-    applyActions:
-      - action: json-patch
-        file: package.json
+features:
+  - name: package-manifest
+    actions:
+      # if project has source files...
+      - name: Add files entries
+        action: json-patch
+        conditions:
+          - exists: src/*
         options:
+          file: package.json
           patch: |
             - opx: appendIfMissing
               path: /files
@@ -13,24 +15,12 @@ syncRules:
             - opx: appendIfMissing
               path: /files
               value: "!dist/**/*.d.ts.map"
-    unapplyActions:
-      - action: json-patch
-        file: package.json
+      - name: Add exports
+        action: json-merge-patch
+        conditions:
+          - exists: src/**/index.ts
         options:
-          patch: |
-            - opx: removeValue
-              path: /files
-              value: dist
-            - opx: removeValue
-              path: /files
-              value: '!dist/**/*.d.ts.map'
-  - name: package-exports
-    conditions:
-      - exists: src/**/index.ts
-    applyActions:
-      - action: json-merge-patch
-        file: package.json
-        options:
+          file: package.json
           patch: |
             exports:
               .:
@@ -39,27 +29,43 @@ syncRules:
               ./*:
                 import: ./dist/*/index.js
                 types: ./dist/*/index.d.ts
-    unapplyActions:
-      - action: json-merge-patch
-        file: package.json
+      # if project does not have source files...
+      - name: Remove files entries
+        action: json-patch
+        conditions:
+          - notExists: src/*
         options:
+          file: package.json
+          patch: |
+            - opx: removeValue
+              path: /files
+              value: dist
+            - opx: removeValue
+              path: /files
+              value: '!dist/**/*.d.ts.map'
+      - name: Remove exports
+        action: json-merge-patch
+        conditions:
+          - notExists: src/**/index.ts
+        options:
+          file: package.json
           patch: |
             exports:
               .: null
               ./*: null
   - name: eslint
-    applyActions:
+    actions:
       - action: write-file
-        file: eslint.config.js
         options:
+          file: eslint.config.js
           content: |
             import base from '@twin-digital/eslint-config'
 
             export default base
 
       - action: json-merge-patch
-        file: package.json
         options:
+          file: package.json
           patch: |
             scripts:
               lint: eslint --no-error-on-unmatched-pattern src
@@ -72,11 +78,12 @@ syncRules:
               globals: 'catalog:'
               prettier: 'catalog:'
               typescript-eslint: 'catalog:'
-  - name: typescript-scripts-and-dependencies
-    applyActions:
-      - action: json-merge-patch
-        file: package.json
+  - name: typescript
+    actions:
+      - name: Add scripts and dependencies
+        action: json-merge-patch
         options:
+          file: package.json
           patch: |
             scripts:
               build:typescript: tsc
@@ -85,25 +92,22 @@ syncRules:
             devDependencies:
               typescript: 'catalog:'
               '@types/node': '22.x'
-  - name: typescript
-    conditions:
-      - notExists: tsconfig.options.json
-    applyActions:
-      - action: write-file
-        file: tsconfig.json
+      - name: Create tsconfig file
+        action: write-file
+        conditions:
+          - notExists: tsconfig.options.json
         options:
+          file: tsconfig.json
           content: |
             {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
             }
-
-  - name: typescript-with-options
-    conditions:
-      - exists: tsconfig.options.json
-    applyActions:
-      - action: write-file
-        file: tsconfig.json
+      - name: Create tsconfig file with custom options
+        action: write-file
+        conditions:
+          - exists: tsconfig.options.json
         options:
+          file: tsconfig.json
           content: |
             {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]

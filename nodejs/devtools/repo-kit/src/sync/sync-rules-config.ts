@@ -1,9 +1,9 @@
 import { loadYamlAsset } from '../assets.js'
 
 /**
- * A `SyncRules` condition which matches if a specific file pattern exist in the package
+ * Configuration for a sync condition which matches if a specific file pattern exist in the package
  */
-export interface SyncRulesExistsCondition {
+export interface ExistsConditionConfig {
   /**
    * File glob used to look for files within a package. This glob is interpreted relative to the base directory of the
    * package. If any files match the glob, the condition is satisfied and `applyActions` will be applied.
@@ -12,9 +12,9 @@ export interface SyncRulesExistsCondition {
 }
 
 /**
- * A `SyncRules` condition which matches if a specific file pattern does NOT exist in the package
+ * Configuration for a sync condition which matches if a specific file pattern does NOT exist in the package
  */
-export interface SyncRulesNotExistsCondition {
+export interface NotExistsConditionConfig {
   /**
    * File glob used to look for files within a package. This glob is interpreted relative to the base directory of the
    * package. If no files match the glob, the condition is satisfied and `applyActions` will be applied.
@@ -22,13 +22,38 @@ export interface SyncRulesNotExistsCondition {
   notExists: string
 }
 
-export type SyncRulesCondition = SyncRulesExistsCondition | SyncRulesNotExistsCondition
+/**
+ * A condition used to determine if a sync feature (or a specific action within a feature) will be applied to a package
+ * or not.
+ */
+export type SyncConditionConfig =
+  | ExistsConditionConfig
+  | NotExistsConditionConfig
 
-export type SyncRulesAction =
+/**
+ * A single action taken to sync a feature's configuration in a package.
+ */
+export type SyncActionConfig = {
+  /**
+   * Conditions used to determine if an action applies to a package. If there are no conditions, the action is always
+   * applied. If there is at least one condition, the action will apply if _any_ of the conditions is satisfied.
+   * Otherwise, it will be be skipped.
+   */
+  conditions?: SyncConditionConfig[]
+
+  /**
+   * Human-readable name of the action. If not specified, the `action` key will be used instead.
+   */
+  name?: string
+} & (
   | {
       action: 'json-patch'
-      file: string
       options: {
+        /**
+         * The file to which the patch is applied.
+         */
+        file: string
+
         /**
          * A string containing the JSON Patch content in Yaml format.
          *
@@ -47,8 +72,12 @@ export type SyncRulesAction =
     }
   | {
       action: 'json-merge-patch'
-      file: string
       options: {
+        /**
+         * The file to which the patch is applied.
+         */
+        file: string
+
         /**
          * A string containing the JSON Merge Patch content in Yaml format.
          *
@@ -71,45 +100,46 @@ export type SyncRulesAction =
       file: string
       options: {
         /**
+         * Package-relative path of the file to write.
+         */
+        file: string
+
+        /**
          * Content to write to the specified file.
          */
         content: string
       }
     }
+)
 
 /**
  * A single item in the sync-rules.yaml config.
  */
-export interface SyncRuleConfigEntry {
+export interface PackageFeatureConfigItem {
   /**
-   * Conditions used to determine if a rule applies to a package. If there are no conditions, the rule is always
-   * applied. If there is at least one condition, the rule will apply if _any_ of the conditions is satisfied.
-   * Otherwise, it will be `unapplied`.
+   * Set of actions take to sync a package if this feature applies.
    */
-  conditions?: SyncRulesCondition[]
+  actions: SyncActionConfig[]
 
   /**
-   * Set of actions take to sync a package if this rule applies.
+   * Conditions used to determine if a feature applies to a package. If there are no conditions, the feature is always
+   * applied. If there is at least one condition, the feature will apply if _any_ of the conditions is satisfied.
+   * Otherwise, it will be be skipped.
    */
-  applyActions: SyncRulesAction[]
+  conditions?: SyncConditionConfig[]
 
   /**
-   * Name of this rule
+   * Name of this feature
    */
   name: string
-
-  /**
-   * Set of actions take to sync a package if this rule does not apply. Generally used to undo the `applyActions`.
-   */
-  unapplyActions?: SyncRulesAction[]
 }
 
-export interface SyncRulesConfig {
+export interface PackageFeatureConfig {
   /**
-   * List of SyncRules which have been configured.
+   * List of PackageFeature which have been configured.
    */
-  syncRules: SyncRuleConfigEntry[]
+  features: PackageFeatureConfigItem[]
 }
 
-export const loadSyncRulesConfig = (assetName = 'sync-rules.yaml') =>
-  loadYamlAsset<SyncRulesConfig>(assetName)
+export const loadFeaturesConfig = (assetName = 'package-features.yaml') =>
+  loadYamlAsset<PackageFeatureConfig>(assetName)
