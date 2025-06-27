@@ -22,20 +22,23 @@
     "dev": "tsc --watch",
     "lint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix": "eslint --no-error-on-unmatched-pattern --fix src && prettier --write --ignore-path ../../../.gitignore .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:typescript": "tsc",
+    "watch:typescript": "tsc --watch"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1"
   },
   "devDependencies": {
     "@twin-digital/tsconfig": "workspace:*",
-    "@types/node": "^22.14.0",
+    "@types/node": "22.x",
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
     "prettier": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "typescript": "catalog:"
   }
 }
