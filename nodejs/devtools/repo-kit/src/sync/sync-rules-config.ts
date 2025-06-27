@@ -13,34 +13,69 @@ export interface SyncRulesExistsCondition {
 
 export type SyncRulesCondition = SyncRulesExistsCondition
 
-export interface SyncRulesAction<
-  O extends object | undefined = object | undefined,
-> {
-  /**
-   * Name of the action.
-   */
-  action: string
-
-  /**
-   * Name of the file which the action will modify
-   */
-  file: string
-
-  /**
-   * Action-specific options
-   */
-  options: O
-}
+export type SyncRulesAction =
+  | {
+      action: 'json-patch'
+      file: string
+      options: {
+        /**
+         * A string containing the JSON Patch content in Yaml format.
+         *
+         * @example
+         * ```
+         * patch: |
+         *   title: Hello!
+         *   phoneNumber: '+01-123-456-7890'
+         *   author:
+         *     familyName: null
+         *   tags: ["example"]
+         * ```
+         */
+        patch: string
+      }
+    }
+  | {
+      action: 'json-merge-patch'
+      file: string
+      options: {
+        /**
+         * A string containing the JSON Merge Patch content in Yaml format.
+         *
+         * @example
+         * ```
+         * patch: |
+         *   - op: add
+         *     path: /files/-
+         *     value: dist
+         *   - opx: add
+         *     path: /files/-
+         *     value: public
+         * ```
+         */
+        patch: string
+      }
+    }
+  | {
+      action: 'write-file'
+      file: string
+      options: {
+        /**
+         * Content to write to the specified file.
+         */
+        content: string
+      }
+    }
 
 /**
  * A single item in the sync-rules.yaml config.
  */
 export interface SyncRuleConfigEntry {
   /**
-   * Conditions used to determine if a rule applies to a package. If _any_ of these conditions is satisfied, the rule
-   * will be applied. (Otherwise, it will be `unapplied`.)
+   * Conditions used to determine if a rule applies to a package. If there are no conditions, the rule is always
+   * applied. If there is at least one condition, the rule will apply if _any_ of the conditions is satisfied.
+   * Otherwise, it will be `unapplied`.
    */
-  conditions: SyncRulesCondition[]
+  conditions?: SyncRulesCondition[]
 
   /**
    * Set of actions take to sync a package if this rule applies.

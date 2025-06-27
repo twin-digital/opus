@@ -2,6 +2,7 @@ import type { Configuration } from '../repo-kit-configuration.js'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
+import { makeWriteFileAction } from './actions/write-file.js'
 import { makeExistsCondition } from './conditions/exists-condition.js'
 import type { SyncResult } from './sync-result.js'
 import type { SyncRule } from './sync-rule.js'
@@ -30,14 +31,14 @@ const makeConditionFn = (condition: SyncRulesCondition) => {
   return makeExistsCondition(condition.exists)
 }
 
-const makeActionFn = (action: SyncRulesAction<{ patch: string }>) => {
+const makeActionFn = (action: SyncRulesAction) => {
   switch (action.action) {
     case 'json-merge-patch':
       return makeJsonMergePatchAction(action.file, action.options)
     case 'json-patch':
       return makeJsonPatchAction(action.file, action.options)
-    default:
-      throw new Error(`Unknown action: ${action.action}`)
+    case 'write-file':
+      return makeWriteFileAction(action.file, action.options)
   }
 }
 
@@ -75,25 +76,28 @@ const makeSyncRule = (
   config: SyncRuleConfigEntry,
   _userConfig: Configuration,
 ): SyncRule => {
-  const conditions = config.conditions.map((condition) =>
+  const conditions = config.conditions?.map((condition) =>
     makeConditionFn(condition),
   )
-  const applyActions = config.applyActions.map((action) =>
-    makeActionFn(action as SyncRulesAction<{ patch: string }>),
-  )
+  const applyActions = config.applyActions.map((action) => makeActionFn(action))
   const unapplyActions = config.unapplyActions?.map((action) =>
-    makeActionFn(action as SyncRulesAction<{ patch: string }>),
+    makeActionFn(action),
   )
 
   const isApplicable = async (workspace: PackageMeta): Promise<boolean> => {
-    for (const condition of conditions) {
-      const result = await condition(workspace)
-      if (result) {
-        return true
+    if (conditions !== undefined && conditions.length > 0) {
+      for (const condition of conditions) {
+        const result = await condition(workspace)
+        if (result) {
+          return true
+        }
       }
-    }
 
-    return false
+      return false
+    } else {
+      // no conditions == always apply this rule
+      return true
+    }
   }
 
   return {
