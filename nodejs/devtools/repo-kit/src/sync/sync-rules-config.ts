@@ -1,7 +1,7 @@
 import { loadYamlAsset } from '../assets.js'
 
 /**
- * Configuration for a sync condition which matches if a specific file pattern exist in the package
+ * Configuration for a sync condition which matches if a specific file pattern exists in the package
  */
 export interface ExistsConditionConfig {
   /**
