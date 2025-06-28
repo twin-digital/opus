@@ -5,13 +5,14 @@ service: discord-bot
 stages:
   default:
     params:
-      profile: 775111556400-AdministratorAccess
+      region: us-east-2
+  dev:
+    params:
       region: us-east-2
   prod:
     params:
-      profile: 775111556400-AdministratorAccess
       region: us-east-2
-  dev:
+  sean:
     params:
       profile: 775111556400-AdministratorAccess
       region: us-east-2
@@ -21,7 +22,7 @@ provider:
   runtime: nodejs22.x
   stage: ${opt:stage, 'dev'}
   region: ${param:region}
-  profile: ${param:profile}
+  profile: ${param:profile, ''}
 
 functions:
   poc:
