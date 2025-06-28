@@ -29,8 +29,9 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  deploy:
-    environment: development
+  preview:
+    if: ${{ github.event_name == 'pull_request' }}
+    environment: preview
     runs-on: ubuntu-latest
     steps:
       # checkout project
@@ -43,6 +44,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Compute STAGE slug
+        id: slugify
         shell: bash
         run: |
           # pick raw value (PR head-ref vs. prod)
@@ -60,13 +62,36 @@ jobs:
             | sed -E 's/^-+|-+$//g')
 
           echo "Deploying stage: $SLUG"
-          echo "STAGE=$SLUG" >> $GITHUB_ENV
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          echo "STAGE=$SLUG" >> $GITHUB_OUTPUT
+
+      # authenticate with AWS & deploy
       - name: Deploy
-        env:
-          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: pnpm exec turbo run deploy -- --stage "${STAGE}"
+        uses: ./.github/actions/deploy
+        with:
+          stage: ${{ steps.slugify.outputs.stage }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+
+  production:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      # checkout project
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # authenticate with AWS & deploy
+      - name: Deploy
+        uses: ./.github/actions/deploy
+        with:
+          stage: prod
+          aws-region: ${{ vars.AWS_REGION }}
+          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}

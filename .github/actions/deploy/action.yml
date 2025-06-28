@@ -1,0 +1,30 @@
+name: Deploy via Serverless
+description: Configure AWS credentials via OIDC and then deploy via serverless
+
+inputs:
+  aws-region:
+    description: AWS region (e.g. us-east-2)
+    required: true
+  role-arn:
+    description: The AWS OIDC Role ARN to assume
+    required: true
+  serverless-access-key:
+    description: Serverless Framework Dashboard access key
+    required: true
+  stage:
+    description: Which Serverless stage to deploy (e.g. "preview", "prod")
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+    - name: Deploy with Serverless
+      env:
+        SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
+      run: pnpm exec turbo run deploy -- --stage "${{ inputs.stage }}"
+      shell: bash
