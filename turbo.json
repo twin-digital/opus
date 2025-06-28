@@ -15,7 +15,11 @@
     "deploy": {
       "cache": false,
       "dependsOn": ["build", "^deploy"],
-      "passThroughEnv": ["SERVERLESS_ACCESS_KEY"]
+      "passThroughEnv": [
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "SERVERLESS_ACCESS_KEY"
+      ]
     },
     "dev": {
       "cache": false,
