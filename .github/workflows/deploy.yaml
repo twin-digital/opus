@@ -1,0 +1,61 @@
+name: "Deploy - ${{ github.event_name == 'pull_request' ? 'Review' : 'Production' }}"
+
+on:
+  # watch for CI workflow to finish
+  workflow_run:
+    branches: [main]
+    types:
+      - completed
+    workflows: ['CI']
+  # pull‐request events *against* main, for the "merge-commit" build
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  publish:
+    # only run when CI passed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      # checkout project
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Compute STAGE slug
+        shell: bash
+        run: |
+          # pick raw value (PR head-ref vs. prod)
+          if [[ "${{ github.event_name }}" == "pull_request" ]] && \
+             [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
+            RAW="${{ github.event.pull_request.head.ref }}"
+          else
+            RAW="prod"
+          fi
+
+          # slugify: lowercase, non-alphanumeric/_/- → '-', collapse dashes, trim
+          SLUG=$(echo "$RAW" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9_-]+/-/g' \
+            | sed -E 's/^-+|-+$//g')
+
+          echo "Deploying stage: $SLUG"
+          echo "STAGE=$SLUG" >> $GITHUB_ENV
+      - name: Deploy
+        run: pnpm deploy --stage "${STAGE}"

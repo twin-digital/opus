@@ -35,6 +35,7 @@ amplifyconfiguration*
 
 node_modules/
 dist/
+.serverless/
 .turbo/
 code/**/dist/
 code/**/.turbo/
