@@ -18,7 +18,15 @@
       "dependsOn": ["build", "^deploy"],
       "passThroughEnv": [
         "AWS_ACCESS_KEY_ID",
-        "AWS_DEFAULT_REGION",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN",
+        "SERVERLESS_ACCESS_KEY"
+      ]
+    },
+    "destroy": {
+      "cache": false,
+      "passThroughEnv": [
+        "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_SESSION_TOKEN",
         "SERVERLESS_ACCESS_KEY"

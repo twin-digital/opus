@@ -6,7 +6,7 @@ inputs:
     description: AWS region (e.g. us-east-2)
     required: true
   operation:
-    description: Which Turbo task to run - `"deploy"` or `"remove"`
+    description: Which Turbo task to run - `"deploy"` or `"destroy"`
     required: false
     default: deploy
   role-arn:
@@ -26,10 +26,10 @@ runs:
       shell: bash
       run: |
         case "${{ inputs.operation }}" in
-          deploy|remove) 
+          deploy|destroy) 
             ;; 
           *) 
-            echo "::error ::Invalid operation: '${{ inputs.operation }}'. Must be 'deploy' or 'remove'."
+            echo "::error ::Invalid operation: '${{ inputs.operation }}'. Must be 'deploy' or 'destroy'."
             exit 1
             ;;
         esac
