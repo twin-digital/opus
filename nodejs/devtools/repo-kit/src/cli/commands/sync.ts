@@ -94,10 +94,10 @@ const handler = async () => {
   )
 
   if (changedFiles.includes('package.json')) {
-    console.log('Formatting package.json...')
-    await $`pnpm run --if-present lint:fix:packagejson`
     console.log('Installing dependencies...')
     await $`pnpm install`
+    console.log('Formatting package.json...')
+    await $`pnpm run --if-present lint:fix:packagejson`
   }
 
   console.log('')
