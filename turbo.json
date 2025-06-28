@@ -14,7 +14,8 @@
     },
     "deploy": {
       "cache": false,
-      "dependsOn": ["build", "^deploy"]
+      "dependsOn": ["build", "^deploy"],
+      "passThroughEnv": ["SERVERLESS_ACCESS_KEY"]
     },
     "dev": {
       "cache": false,
