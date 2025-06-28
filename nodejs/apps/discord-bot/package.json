@@ -10,6 +10,7 @@
   "scripts": {
     "build:typescript": "tsc",
     "deploy": "serverless deploy",
+    "destroy": "serverless remove",
     "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
     "lint:fix:packagejson": "prettier-package-json --write ./package.json",
