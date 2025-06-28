@@ -182,8 +182,9 @@ features:
               🔩:watch:typescript: pnpm run 🔩:build:typescript --watch
               typecheck: tsc --noEmit
             devDependencies:
-              typescript: 'catalog:'
+              "@twin-digital/tsconfig": "workspace:*",
               '@types/node': '22.x'
+              typescript: 'catalog:'
       - name: Add scripts for cjs support
         action: json-merge-patch
         conditions:
@@ -213,3 +214,22 @@ features:
           patch: |
             scripts:
               clean: rm -rf dist
+  - name: serverless
+    conditions:
+      - exists:
+          - serverless.js
+          - serverless.json
+          - serverless.ts
+          - serverless.yaml
+          - serverless.yml
+    actions:
+      - name: Add scripts and dependencies
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              deploy:serverless: serverless deploy
+              destroy:serverless: serverless remove
+            devDependencies:
+              serverless: 'catalog:'
