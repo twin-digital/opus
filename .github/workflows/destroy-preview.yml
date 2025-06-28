@@ -1,4 +1,4 @@
-name: Undeploy Preview
+name: Destroy Preview
 
 permissions:
   id-token: write
@@ -15,7 +15,7 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  teardown:
+  destroy:
     environment: preview
     runs-on: ubuntu-latest
     steps:
@@ -38,12 +38,11 @@ jobs:
             | sed -E 's/^-+|-+$//g')
           echo "STAGE=$SLUG" >> $GITHUB_OUTPUT
 
-      - name: Teardown preview
+      - name: Destroy preview
         uses: ./.github/actions/deploy
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          operation: remove
+          operation: destroy
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-          serverless-command: remove
           stage: ${{ steps.slugify.outputs.STAGE }}
