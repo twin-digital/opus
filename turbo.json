@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "globalPassThroughEnv": ["CI"],
+  "globalPassThroughEnv": [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+    "CI",
+    "SERVERLESS_ACCESS_KEY",
+    "USER_ID"
+  ],
   "tasks": {
     "🔩:build:copy-assets": {
       "inputs": ["assets/**", "package.json"],
@@ -34,22 +41,17 @@
     },
     "deploy": {
       "cache": false,
-      "dependsOn": ["build", "^deploy"],
-      "passThroughEnv": [
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SESSION_TOKEN",
-        "SERVERLESS_ACCESS_KEY"
-      ]
+      "dependsOn": ["^deploy", "build", "deploy:serverless"]
+    },
+    "deploy:serverless": {
+      "cache": false
     },
     "destroy": {
       "cache": false,
-      "passThroughEnv": [
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SESSION_TOKEN",
-        "SERVERLESS_ACCESS_KEY"
-      ]
+      "dependsOn": ["destroy:serverless"]
+    },
+    "destroy:serverless": {
+      "cache": false
     },
     "dev": {
       "cache": false,

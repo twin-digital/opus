@@ -11,6 +11,8 @@
     "clean": "rm -rf dist",
     "deploy": "serverless deploy",
     "destroy": "serverless remove",
+    "deploy:serverless": "serverless deploy",
+    "destroy:serverless": "serverless remove",
     "typecheck": "tsc --noEmit",
     "🔩:build:typescript": "tsc",
     "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
@@ -36,7 +38,7 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "serverless": "^4.17.1",
+    "serverless": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   }
