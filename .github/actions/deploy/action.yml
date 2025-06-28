@@ -38,11 +38,11 @@ runs:
       with:
         role-to-assume: ${{ inputs.role-arn }}
         aws-region: ${{ inputs.aws-region }}
-    - name: Run `serverless ${{ inputs.serverless-command }}`
+    - name: Run `serverless ${{ inputs.operation }}`
       env:
         SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
       run: |
-        pnpm exec turbo run "${{ inputs.operation }}"" -- \
+        pnpm exec turbo run "${{ inputs.operation }}" -- \
           --stage "${{ inputs.stage }}" \
           --region "${{ inputs.aws-region }}"
       shell: bash
