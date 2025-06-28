@@ -16,6 +16,7 @@ env:
 
 jobs:
   destroy:
+    if: ${{ github.event.pull_request.head.ref != 'changeset-release/main' }}
     environment: preview
     runs-on: ubuntu-latest
     steps:
