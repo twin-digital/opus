@@ -1,5 +1,10 @@
 name: 'Deploy'
 
+# Allow GitHub to mint OIDC tokens for this workflow
+permissions:
+  id-token: write
+  contents: read
+
 on:
   # watch for CI workflow to finish
   workflow_run:
@@ -25,6 +30,7 @@ env:
 
 jobs:
   deploy:
+    environment: development
     runs-on: ubuntu-latest
     steps:
       # checkout project
@@ -55,6 +61,11 @@ jobs:
 
           echo "Deploying stage: $SLUG"
           echo "STAGE=$SLUG" >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
       - name: Deploy
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
