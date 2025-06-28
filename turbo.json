@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
+  "globalPassThroughEnv": ["CI"],
   "tasks": {
     "build:typescript": {
       "dependsOn": ["^build"],
