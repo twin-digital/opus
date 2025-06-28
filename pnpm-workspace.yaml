@@ -1,8 +1,6 @@
 packages:
-  - nodejs/**
-
-onlyBuiltDependencies:
-  - esbuild
+  - nodejs/*
+  - nodejs/*/*
 
 catalog:
   '@eslint/js': ^9.29.0
@@ -13,3 +11,7 @@ catalog:
   prettier-package-json: ^2.8.0
   typescript: ^5.8.3
   typescript-eslint: ^8.34.1
+
+onlyBuiltDependencies:
+  - esbuild
+  - serverless

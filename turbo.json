@@ -10,7 +10,11 @@
       "outputs": ["dist/assets/**"]
     },
     "build": {
-      "dependsOn": ["build:typescript", "build:copy-assets"]
+      "dependsOn": ["^build", "build:typescript", "build:copy-assets"]
+    },
+    "deploy": {
+      "cache": false,
+      "dependsOn": ["build", "^deploy"]
     },
     "dev": {
       "cache": false,
