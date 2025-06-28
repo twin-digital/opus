@@ -1,10 +1,14 @@
 name: Deploy via Serverless
-description: Configure AWS credentials via OIDC and then deploy via serverless
+description: Configure AWS credentials via OIDC and then run Serverless Framework
 
 inputs:
   aws-region:
     description: AWS region (e.g. us-east-2)
     required: true
+  operation:
+    description: Which Turbo task to run - `"deploy"` or `"remove"`
+    required: false
+    default: deploy
   role-arn:
     description: The AWS OIDC Role ARN to assume
     required: true
@@ -18,13 +22,27 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate `operation` input
+      shell: bash
+      run: |
+        case "${{ inputs.operation }}" in
+          deploy|remove) 
+            ;; 
+          *) 
+            echo "::error ::Invalid operation: '${{ inputs.operation }}'. Must be 'deploy' or 'remove'."
+            exit 1
+            ;;
+        esac
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ inputs.role-arn }}
         aws-region: ${{ inputs.aws-region }}
-    - name: Deploy with Serverless
+    - name: Run `serverless ${{ inputs.serverless-command }}`
       env:
         SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
-      run: pnpm exec turbo run deploy -- --stage "${{ inputs.stage }}"
+      run: |
+        pnpm exec turbo run "${{ inputs.operation }}"" -- \
+          --stage "${{ inputs.stage }}" \
+          --region "${{ inputs.aws-region }}"
       shell: bash

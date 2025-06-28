@@ -1,0 +1,49 @@
+name: Undeploy Preview
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  teardown:
+    environment: preview
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Compute STAGE slug
+        id: slugify
+        shell: bash
+        run: |
+          RAW="${{ github.event.pull_request.head.ref }}"
+          SLUG=$(echo "$RAW" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9_-]+/-/g' \
+            | sed -E 's/^-+|-+$//g')
+          echo "STAGE=$SLUG" >> $GITHUB_OUTPUT
+
+      - name: Teardown preview
+        uses: ./.github/actions/deploy
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          operation: remove
+          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          serverless-command: remove
+          stage: ${{ steps.slugify.outputs.STAGE }}

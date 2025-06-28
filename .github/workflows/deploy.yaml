@@ -1,4 +1,4 @@
-name: 'Deploy'
+name: Deploy
 
 # Allow GitHub to mint OIDC tokens for this workflow
 permissions:
@@ -68,10 +68,10 @@ jobs:
       - name: Deploy
         uses: ./.github/actions/deploy
         with:
-          stage: ${{ steps.slugify.outputs.stage }}
           aws-region: ${{ vars.AWS_REGION }}
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          stage: ${{ steps.slugify.outputs.stage }}
 
   production:
     if: ${{ github.ref == 'refs/heads/main' }}
@@ -91,7 +91,7 @@ jobs:
       - name: Deploy
         uses: ./.github/actions/deploy
         with:
-          stage: prod
           aws-region: ${{ vars.AWS_REGION }}
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          stage: prod
