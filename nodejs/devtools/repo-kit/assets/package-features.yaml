@@ -182,7 +182,7 @@ features:
               🔩:watch:typescript: pnpm run 🔩:build:typescript --watch
               typecheck: tsc --noEmit
             devDependencies:
-              "@twin-digital/tsconfig": "workspace:*",
+              '@twin-digital/tsconfig': "workspace:*"
               '@types/node': '22.x'
               typescript: 'catalog:'
       - name: Add scripts for cjs support

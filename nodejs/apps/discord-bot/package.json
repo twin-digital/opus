@@ -32,7 +32,6 @@
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/aws-lambda": "^8.10.150",
-    "@types/jiti": "",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "22.x",
     "@types/serverless": "*",
