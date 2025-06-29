@@ -8,7 +8,9 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "build:typescript": "tsc",
+    "_:build:typescript": "tsc",
+    "_:watch:typescript": "pnpm run _:build:typescript --watch",
+    "clean": "rm -rf dist",
     "deploy": "serverless deploy",
     "destroy": "serverless remove",
     "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
@@ -17,8 +19,7 @@
     "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
     "lint:packagejson": "prettier-package-json --list-different",
     "lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "typecheck": "tsc --noEmit",
-    "watch:typescript": "tsc --watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lodash-es": "^4.17.21"

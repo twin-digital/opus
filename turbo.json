@@ -2,16 +2,35 @@
   "$schema": "./node_modules/turbo/schema.json",
   "globalPassThroughEnv": ["CI"],
   "tasks": {
-    "build:typescript": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "!dist/assets/**"]
-    },
-    "build:copy-assets": {
-      "inputs": ["assets/**"],
+    "_:build:copy-assets": {
+      "inputs": ["assets/**", "package.json"],
       "outputs": ["dist/assets/**"]
     },
+    "_:build:copy-assets:cjs": {
+      "inputs": ["assets/**", "package.json"],
+      "outputs": ["dist/cjs/assets/**"]
+    },
+    "_:build:typescript": {
+      "dependsOn": ["^build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
+      "outputs": ["dist/**", "!dist/cjs/**", "!dist/assets/**"]
+    },
+    "_:build:typescript:cjs": {
+      "dependsOn": ["^build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
+      "outputs": ["dist/cjs/**", "!dist/cjs/assets/**"]
+    },
     "build": {
-      "dependsOn": ["^build", "build:typescript", "build:copy-assets"]
+      "dependsOn": [
+        "^build",
+        "_:build:typescript",
+        "_:build:copy-assets",
+        "_:build:typescript:cjs",
+        "_:build:copy-assets:cjs"
+      ]
+    },
+    "clean": {
+      "cache": false
     },
     "deploy": {
       "cache": false,
@@ -36,15 +55,23 @@
       "cache": false,
       "dependsOn": ["build"],
       "persistent": true,
-      "with": ["watch:typescript", "watch:copy-assets"]
+      "with": [
+        "_:watch:typescript",
+        "_:watch:copy-assets",
+        "_:watch:typescript:cjs",
+        "_:watch:copy-assets:cjs"
+      ]
     },
     "lint": {
       "dependsOn": ["lint:eslint", "lint:packagejson", "lint:prettier"]
     },
     "lint:eslint": {
-      "dependsOn": ["@twin-digital/eslint-config#build"]
+      "dependsOn": ["@twin-digital/eslint-config#build"],
+      "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
-    "lint:packagejson": {},
+    "lint:packagejson": {
+      "inputs": ["package.json"]
+    },
     "lint:prettier": {},
     "lint:fix": {
       "dependsOn": [
@@ -58,22 +85,32 @@
     },
     "lint:fix:packagejson": {},
     "lint:fix:prettier": {},
-    "release": {
-      "dependsOn": ["build"]
-    },
     "test": {
       "outputs": []
     },
     "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
     },
-    "watch:typescript": {
+    "_:watch:typescript": {
       "cache": false,
-      "dependsOn": ["^build"],
+      "dependsOn": ["_:build:typescript"],
       "persistent": true
     },
-    "watch:copy-assets": {
+    "_:watch:typescript:cjs": {
       "cache": false,
+      "dependsOn": ["_:build:typescript:cjs"],
+      "persistent": true
+    },
+    "_:watch:copy-assets": {
+      "cache": false,
+      "dependsOn": ["_:build:copy-assets"],
+      "persistent": true
+    },
+    "_:watch:copy-assets:cjs": {
+      "cache": false,
+      "dependsOn": ["_:build:copy-assets:cjs"],
       "persistent": true
     }
   }
