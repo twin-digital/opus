@@ -2,20 +2,20 @@
   "$schema": "./node_modules/turbo/schema.json",
   "globalPassThroughEnv": ["CI"],
   "tasks": {
-    "_:build:copy-assets": {
+    "🔩:build:copy-assets": {
       "inputs": ["assets/**", "package.json"],
       "outputs": ["dist/assets/**"]
     },
-    "_:build:copy-assets:cjs": {
+    "🔩:build:copy-assets:cjs": {
       "inputs": ["assets/**", "package.json"],
       "outputs": ["dist/cjs/assets/**"]
     },
-    "_:build:typescript": {
+    "🔩:build:typescript": {
       "dependsOn": ["^build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": ["dist/**", "!dist/cjs/**", "!dist/assets/**"]
     },
-    "_:build:typescript:cjs": {
+    "🔩:build:typescript:cjs": {
       "dependsOn": ["^build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": ["dist/cjs/**", "!dist/cjs/assets/**"]
@@ -23,10 +23,10 @@
     "build": {
       "dependsOn": [
         "^build",
-        "_:build:typescript",
-        "_:build:copy-assets",
-        "_:build:typescript:cjs",
-        "_:build:copy-assets:cjs"
+        "🔩:build:typescript",
+        "🔩:build:copy-assets",
+        "🔩:build:typescript:cjs",
+        "🔩:build:copy-assets:cjs"
       ]
     },
     "clean": {
@@ -56,10 +56,10 @@
       "dependsOn": ["build"],
       "persistent": true,
       "with": [
-        "_:watch:typescript",
-        "_:watch:copy-assets",
-        "_:watch:typescript:cjs",
-        "_:watch:copy-assets:cjs"
+        "🔩:watch:typescript",
+        "🔩:watch:copy-assets",
+        "🔩:watch:typescript:cjs",
+        "🔩:watch:copy-assets:cjs"
       ]
     },
     "lint": {
@@ -93,24 +93,24 @@
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
     },
-    "_:watch:typescript": {
+    "🔩:watch:typescript": {
       "cache": false,
-      "dependsOn": ["_:build:typescript"],
+      "dependsOn": ["🔩:build:typescript"],
       "persistent": true
     },
-    "_:watch:typescript:cjs": {
+    "🔩:watch:typescript:cjs": {
       "cache": false,
-      "dependsOn": ["_:build:typescript:cjs"],
+      "dependsOn": ["🔩:build:typescript:cjs"],
       "persistent": true
     },
-    "_:watch:copy-assets": {
+    "🔩:watch:copy-assets": {
       "cache": false,
-      "dependsOn": ["_:build:copy-assets"],
+      "dependsOn": ["🔩:build:copy-assets"],
       "persistent": true
     },
-    "_:watch:copy-assets:cjs": {
+    "🔩:watch:copy-assets:cjs": {
       "cache": false,
-      "dependsOn": ["_:build:copy-assets:cjs"],
+      "dependsOn": ["🔩:build:copy-assets:cjs"],
       "persistent": true
     }
   }
