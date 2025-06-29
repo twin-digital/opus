@@ -1,0 +1,55 @@
+{
+  "name": "@twin-digital/deploy-tools",
+  "version": "0.0.0",
+  "description": "TF CLI wrapper used to facilitate deployments using Twin Digital's infrastructure conventions",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*": {
+      "import": "./dist/*/index.js",
+      "types": "./dist/*/index.d.ts"
+    }
+  },
+  "bin": {
+    "tdtf": "./dist/cli/entry-point.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build:typescript": "tsc",
+    "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
+    "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
+    "lint:fix:packagejson": "prettier-package-json --write ./package.json",
+    "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
+    "lint:packagejson": "prettier-package-json --list-different",
+    "lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
+    "typecheck": "tsc --noEmit",
+    "watch:typescript": "tsc --watch"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
+    "execa": "^9.6.0",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "22.x",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

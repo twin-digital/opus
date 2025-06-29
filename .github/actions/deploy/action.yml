@@ -40,9 +40,9 @@ runs:
         aws-region: ${{ inputs.aws-region }}
     - name: Run `serverless ${{ inputs.operation }}`
       env:
+        AWS_REGION: ${{ inputs.aws-region }}
         SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
+        STAGE: ${{ inputs.stage }}
       run: |
-        pnpm exec turbo run "${{ inputs.operation }}" -- \
-          --stage "${{ inputs.stage }}" \
-          --region "${{ inputs.aws-region }}"
+        pnpm exec turbo run "${{ inputs.operation }}"
       shell: bash

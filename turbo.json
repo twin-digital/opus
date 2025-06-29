@@ -41,16 +41,22 @@
     },
     "deploy": {
       "cache": false,
-      "dependsOn": ["^deploy", "build", "deploy:serverless"]
+      "dependsOn": ["^deploy", "build", "deploy:serverless", "deploy:terraform"]
     },
     "deploy:serverless": {
       "cache": false
     },
+    "deploy:terraform": {
+      "cache": false
+    },
     "destroy": {
       "cache": false,
-      "dependsOn": ["destroy:serverless"]
+      "dependsOn": ["destroy:serverless", "destroy:terraform"]
     },
     "destroy:serverless": {
+      "cache": false
+    },
+    "destroy:terraform": {
       "cache": false
     },
     "dev": {

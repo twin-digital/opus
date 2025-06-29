@@ -1,0 +1,7 @@
+{
+  "name": "@twin-digital/terraform-backend",
+  "version": "0.0.1",
+  "scripts": {
+    "deploy:terraform": "./scripts/tf.sh"
+  }
+}

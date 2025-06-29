@@ -1,0 +1,25 @@
+{
+  "name": "@twin-digital/terraform-backend",
+  "version": "0.0.0",
+  "description": "TF CLI wrapper used to facilitate deployments using Twin Digital's infrastructure conventions",
+  "scripts": {
+    "deploy:terraform": "tdtf plan",
+    "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
+    "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
+    "lint:fix:packagejson": "prettier-package-json --write ./package.json",
+    "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
+    "lint:packagejson": "prettier-package-json --list-different",
+    "lint:prettier": "prettier --check --ignore-path ../../../.gitignore ."
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/deploy-tools": "workspace:*",
+    "@twin-digital/eslint-config": "workspace:*",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

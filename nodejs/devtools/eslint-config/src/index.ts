@@ -24,6 +24,7 @@ const config: ReturnType<(typeof tsLint)['config']> = tsLint.config(
             'eslint.config.js',
             'scripts/*.js',
             'scripts/*.ts',
+            'serverless.*',
           ],
         },
       },
@@ -72,6 +73,13 @@ const config: ReturnType<(typeof tsLint)['config']> = tsLint.config(
       }),
       {},
     ),
+  },
+  {
+    files: ['**/*.cjs'],
+    rules: {
+      // CJS files _have to_ use require
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
   {
     ignores: ['dist', 'node_modules', '**/node_modules'],
