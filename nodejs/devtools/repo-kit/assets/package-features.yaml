@@ -184,7 +184,7 @@ features:
             devDependencies:
               typescript: 'catalog:'
               '@types/node': '22.x'
-      - name: Add scrpts for cjs support
+      - name: Add scripts for cjs support
         action: json-merge-patch
         conditions:
           - exists: tsconfig.cjs.json
