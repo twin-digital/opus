@@ -22,8 +22,6 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "_:build:typescript": "tsc",
-    "_:watch:typescript": "pnpm run _:build:typescript --watch",
     "clean": "rm -rf dist",
     "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
@@ -31,7 +29,15 @@
     "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
     "lint:packagejson": "prettier-package-json --list-different",
     "lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "🔩:build:typescript": "tsc",
+    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
+    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
+    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
+    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
+    "🔩:lint:packagejson": "prettier-package-json --list-different",
+    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
+    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1"
