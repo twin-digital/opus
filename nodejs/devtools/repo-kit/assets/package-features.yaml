@@ -47,7 +47,7 @@ features:
             - opx: appendIfMissing
               path: /files
               value: "!dist/**/*.d.ts.map"
-      - name: Add exports
+      - name: Add esm exports
         action: json-merge-patch
         conditions:
           - exists: src/**/index.ts
@@ -56,11 +56,41 @@ features:
           patch: |
             exports:
               .:
-                import: ./dist/index.js
-                types: ./dist/index.d.ts
+                import:
+                  types: ./dist/index.d.ts
+                  import: ./dist/index.js
               ./*:
-                import: ./dist/*/index.js
-                types: ./dist/*/index.d.ts
+                import:
+                  types: ./dist/*/index.d.ts
+                  import: ./dist/*/index.js
+      - name: Add cjs exports
+        action: json-merge-patch
+        conditions:
+          - exists: tsconfig.cjs.json
+        options:
+          file: package.json
+          patch: |
+            exports:
+              .:
+                require:
+                  types: ./dist/cjs/index.d.ts
+                  require: ./dist/cjs/index.js
+              ./*:
+                require:
+                  types: ./dist/cjs/*/index.d.ts
+                  require: ./dist/cjs/*/index.js
+      - name: Remove unnecessary cjs exports
+        action: json-merge-patch
+        conditions:
+          - notExists: tsconfig.cjs.json
+        options:
+          file: package.json
+          patch: |
+            exports:
+              .:
+                require: null
+              ./*:
+                require: null
       # if project does not have source files...
       - name: Remove files entries
         action: json-patch
@@ -85,7 +115,9 @@ features:
             exports:
               .: null
               ./*: null
-  - name: typescript
+  - name: assets
+    conditions:
+      - exists: assets/*
     actions:
       - name: Add scripts and dependencies
         action: json-merge-patch
@@ -93,12 +125,32 @@ features:
           file: package.json
           patch: |
             scripts:
-              build:typescript: tsc
-              typecheck: tsc --noEmit
-              watch:typescript: tsc --watch
+              _:build:copy-assets: rsync -a --mkpath assets/ dist/assets
+              _:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
             devDependencies:
-              typescript: 'catalog:'
-              '@types/node': '22.x'
+              chokidar-cli: ^3.0.0
+      - name: Add scripts for cjs support
+        conditions:
+          - exists: tsconfig.cjs.json
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              _:build:copy-assets:cjs: rsync -a --mkpath assets/ dist/cjs/assets
+              _:watch:copy-assets:cjs: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/cjs/assets/"
+      - name: Remove unnecessary scripts for cjs support
+        conditions:
+          - notExists: tsconfig.cjs.json
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              _:build:copy-assets:cjs: null
+              _:watch:copy-assets:cjs: null
+  - name: typescript
+    actions:
       - name: Create tsconfig file
         action: write-file
         conditions:
@@ -122,3 +174,44 @@ features:
                 "./tsconfig.options.json"
               ]
             }
+      - name: Add scripts and dependencies
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              _:build:typescript: tsc
+              _:watch:typescript: pnpm run _:build:typescript --watch
+              typecheck: tsc --noEmit
+            devDependencies:
+              typescript: 'catalog:'
+              '@types/node': '22.x'
+      - name: Add scrpts for cjs support
+        action: json-merge-patch
+        conditions:
+          - exists: tsconfig.cjs.json
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              _:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
+              _:watch:typescript:cjs: pnpm run _:build:typescript:cjs --watch
+      - name: Remove unnecessary scripts for cjs support
+        action: json-merge-patch
+        conditions:
+          - notExists: tsconfig.cjs.json
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              _:build:typescript:cjs: null
+              _:watch:typescript:cjs: null
+  - name: clean
+    actions:
+      - name: Add script
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              clean: rm -rf dist

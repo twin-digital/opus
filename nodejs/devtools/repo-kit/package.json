@@ -11,17 +11,18 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "build:copy-assets": "rsync -a --mkpath assets/ dist/assets",
-    "build:typescript": "tsc",
+    "_:build:copy-assets": "rsync -a --mkpath assets/ dist/assets",
+    "_:build:typescript": "tsc",
+    "_:watch:copy-assets": "chokidar 'assets/**/*' -c \"rsync -a --delete assets/ dist/assets/\"",
+    "_:watch:typescript": "pnpm run _:build:typescript --watch",
+    "clean": "rm -rf dist",
     "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
     "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
     "lint:fix:packagejson": "prettier-package-json --write ./package.json",
     "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
     "lint:packagejson": "prettier-package-json --list-different",
     "lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "typecheck": "tsc --noEmit",
-    "watch:copy-assets": "chokidar 'assets/**/*' -c \"rsync -a --delete assets/ dist/assets/\"",
-    "watch:typescript": "tsc --watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.0",
