@@ -14,12 +14,12 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:lint:eslint: eslint --no-error-on-unmatched-pattern src
-              🔩:lint:packagejson: prettier-package-json --list-different
-              🔩:lint:prettier: prettier --check --ignore-path ../../../.gitignore .
-              🔩:lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
-              🔩:lint:fix:packagejson: prettier-package-json --write ./package.json
-              🔩:lint:fix:prettier: prettier --write --ignore-path ../../../.gitignore .
+              ▪️:lint:eslint: eslint --no-error-on-unmatched-pattern src
+              ▪️:lint:packagejson: prettier-package-json --list-different
+              ▪️:lint:prettier: prettier --check --ignore-path ../../../.gitignore .
+              ▪️:lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
+              ▪️:lint:fix:packagejson: prettier-package-json --write ./package.json
+              ▪️:lint:fix:prettier: prettier --write --ignore-path ../../../.gitignore .
             devDependencies:
               '@eslint/js': 'catalog:'
               '@twin-digital/eslint-config': workspace:*
@@ -123,8 +123,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:copy-assets: rsync -a --mkpath assets/ dist/assets
-              🔩:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
+              ▪️:build:copy-assets: rsync -a --mkpath assets/ dist/assets
+              ▪️:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
             devDependencies:
               chokidar-cli: ^3.0.0
       - name: Add scripts for cjs support
@@ -135,8 +135,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:copy-assets:cjs: rsync -a --mkpath assets/ dist/cjs/assets
-              🔩:watch:copy-assets:cjs: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/cjs/assets/"
+              ▪️:build:copy-assets:cjs: rsync -a --mkpath assets/ dist/cjs/assets
+              ▪️:watch:copy-assets:cjs: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/cjs/assets/"
       - name: Remove unnecessary scripts for cjs support
         conditions:
           - notExists: tsconfig.cjs.json
@@ -145,8 +145,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:copy-assets:cjs: null
-              🔩:watch:copy-assets:cjs: null
+              ▪️:build:copy-assets:cjs: null
+              ▪️:watch:copy-assets:cjs: null
   - name: typescript
     actions:
       - name: Create tsconfig file
@@ -178,8 +178,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:typescript: tsc
-              🔩:watch:typescript: pnpm run 🔩:build:typescript --watch
+              ▪️:build:typescript: tsc
+              ▪️:watch:typescript: pnpm run ▪️:build:typescript --watch
               typecheck: tsc --noEmit
             devDependencies:
               '@twin-digital/tsconfig': "workspace:*"
@@ -193,8 +193,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
-              🔩:watch:typescript:cjs: pnpm run 🔩:build:typescript:cjs --watch
+              ▪️:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
+              ▪️:watch:typescript:cjs: pnpm run ▪️:build:typescript:cjs --watch
       - name: Remove unnecessary scripts for cjs support
         action: json-merge-patch
         conditions:
@@ -203,8 +203,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:typescript:cjs: null
-              🔩:watch:typescript:cjs: null
+              ▪️:build:typescript:cjs: null
+              ▪️:watch:typescript:cjs: null
   - name: clean
     actions:
       - name: Add script
