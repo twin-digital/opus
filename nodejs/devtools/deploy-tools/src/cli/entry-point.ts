@@ -1,20 +1,12 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs'
-import path from 'node:path'
 import { Command } from 'commander'
 import { execTf } from '../tf/exec-tf.js'
-
-const packageJson = JSON.parse(
-  fs.readFileSync(
-    path.join(import.meta.dirname, '..', '..', 'package.json'),
-    'utf-8',
-  ),
-) as { version: string | undefined }
+import { getPackageVersion } from './get-package-version.cjs'
 
 const program = new Command()
   .name('tdtf')
-  .version(packageJson.version ?? 'unknown')
+  .version(getPackageVersion() ?? 'unknown')
   .argument('[tfArgs...]')
   .action(async (tfArgs) => {
     const resultOrError = await execTf(tfArgs)
