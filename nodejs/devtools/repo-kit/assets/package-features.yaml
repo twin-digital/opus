@@ -193,7 +193,7 @@ features:
           file: package.json
           patch: |
             scripts:
-              ▪️:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
+              ▪️:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{"type":"commonjs"}' > dist/cjs/package.json
               ▪️:watch:typescript:cjs: pnpm run ▪️:build:typescript:cjs --watch
       - name: Remove unnecessary scripts for cjs support
         action: json-merge-patch

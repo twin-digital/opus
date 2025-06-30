@@ -36,7 +36,7 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "▪️:build:typescript": "tsc",
-    "▪️:build:typescript:cjs": "tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\\\"type\\\":\\\"commonjs\\\"}' > dist/cjs/package.json",
+    "▪️:build:typescript:cjs": "tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "▪️:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
     "▪️:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
     "▪️:lint:fix:packagejson": "prettier-package-json --write ./package.json",
