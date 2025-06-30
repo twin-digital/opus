@@ -8,6 +8,8 @@
   },
   "include": [
     "${configDir}/src",
+    "${configDir}/src/**/*.cts",
+    "${configDir}/src/**/*.mts",
     "${configDir}/src/**/*.d.ts",
     "${configDir}/src/**/*.json"
   ],
