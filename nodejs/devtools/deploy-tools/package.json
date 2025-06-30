@@ -9,7 +9,6 @@
         "types": "./dist/esm/index.d.ts",
         "import": "./dist/esm/index.js"
       },
-      "types": "./dist/index.d.ts",
       "require": {
         "types": "./dist/cjs/index.d.ts",
         "require": "./dist/cjs/index.js"
@@ -20,7 +19,6 @@
         "types": "./dist/esm/*/index.d.ts",
         "import": "./dist/esm/*/index.js"
       },
-      "types": "./dist/*/index.d.ts",
       "require": {
         "types": "./dist/cjs/*/index.d.ts",
         "require": "./dist/cjs/*/index.js"

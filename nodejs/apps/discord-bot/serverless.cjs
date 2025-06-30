@@ -1,7 +1,23 @@
-// https://github.com/zirkelc/serverless-esm-ts
-// https://github.com/serverless/serverless/issues/11039#issuecomment-1935514544
+'use strict'
 
-const { createJiti } = require('jiti')
-const jiti = createJiti(null, { interopDefault: true })
+const { getDeploymentConfig } = require('@twin-digital/deploy-tools')
 
-module.exports = jiti.import(`${__dirname}/serverless.ts`, { default: true })
+const config = getDeploymentConfig()
+
+module.exports = {
+  frameworkVersion: '~4.17.1',
+  functions: {
+    poc: {
+      handler: 'src/functions/poc.handler',
+    },
+  },
+  org: 'twindigital',
+  provider: {
+    name: 'aws',
+    profile: config.profile,
+    region: 'us-east-2',
+    runtime: 'nodejs22.x',
+    stage: config.stage,
+  },
+  service: 'discord-bot',
+}
