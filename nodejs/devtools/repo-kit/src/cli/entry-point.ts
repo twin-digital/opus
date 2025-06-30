@@ -49,7 +49,7 @@ const registerCommands = async (program: Command) => {
 const main = async () => {
   const packageJson = JSON.parse(
     fs.readFileSync(
-      path.join(import.meta.dirname, '..', '..', 'package.json'),
+      path.join(import.meta.dirname, '..', '..', '..', 'package.json'),
       'utf-8',
     ),
   ) as { version: string | undefined }

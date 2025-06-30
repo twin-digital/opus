@@ -11,7 +11,7 @@
   "tasks": {
     "▪️:build:copy-assets": {
       "inputs": ["assets/**", "package.json"],
-      "outputs": ["dist/assets/**"]
+      "outputs": ["dist/esm/assets/**"]
     },
     "▪️:build:copy-assets:cjs": {
       "inputs": ["assets/**", "package.json"],
@@ -20,7 +20,7 @@
     "▪️:build:typescript": {
       "dependsOn": ["^build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
-      "outputs": ["dist/**", "!dist/cjs/**", "!dist/assets/**"]
+      "outputs": ["dist/esm/**", "!dist/esm/assets/**"]
     },
     "▪️:build:typescript:cjs": {
       "dependsOn": ["^build"],

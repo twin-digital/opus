@@ -55,12 +55,12 @@ features:
             exports:
               .:
                 import:
-                  types: ./dist/index.d.ts
-                  import: ./dist/index.js
+                  types: ./dist/esm/index.d.ts
+                  import: ./dist/esm/index.js
               ./*:
                 import:
-                  types: ./dist/*/index.d.ts
-                  import: ./dist/*/index.js
+                  types: ./dist/esm/*/index.d.ts
+                  import: ./dist/esm/*/index.js
       - name: Add cjs exports
         action: json-merge-patch
         conditions:
@@ -123,8 +123,8 @@ features:
           file: package.json
           patch: |
             scripts:
-              ▪️:build:copy-assets: rsync -a --mkpath assets/ dist/assets
-              ▪️:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
+              ▪️:build:copy-assets: rsync -a --mkpath assets/ dist/esm/assets
+              ▪️:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/esm/assets/"
             devDependencies:
               chokidar-cli: ^3.0.0
       - name: Add scripts for cjs support

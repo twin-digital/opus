@@ -5,31 +5,48 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "import": "./dist/esm/index.js"
+      },
+      "types": "./dist/index.d.ts",
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "require": "./dist/cjs/index.js"
+      }
     },
     "./*": {
-      "import": "./dist/*/index.js",
-      "types": "./dist/*/index.d.ts"
+      "import": {
+        "types": "./dist/esm/*/index.d.ts",
+        "import": "./dist/esm/*/index.js"
+      },
+      "types": "./dist/*/index.d.ts",
+      "require": {
+        "types": "./dist/cjs/*/index.d.ts",
+        "require": "./dist/cjs/*/index.js"
+      }
     }
   },
   "bin": {
-    "tdtf": "./dist/cli/entry-point.js"
+    "tdtf": "./dist/esm/cli/entry-point.js"
   },
   "files": [
     "dist",
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "build:typescript": "tsc",
-    "lint:eslint": "eslint --no-error-on-unmatched-pattern src",
-    "lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
-    "lint:fix:packagejson": "prettier-package-json --write ./package.json",
-    "lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
-    "lint:packagejson": "prettier-package-json --list-different",
-    "lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
+    "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "watch:typescript": "tsc --watch"
+    "▪️:build:typescript": "tsc",
+    "▪️:build:typescript:cjs": "tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\\\"type\\\":\\\"commonjs\\\"}' > dist/cjs/package.json",
+    "▪️:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
+    "▪️:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
+    "▪️:lint:fix:packagejson": "prettier-package-json --write ./package.json",
+    "▪️:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
+    "▪️:lint:packagejson": "prettier-package-json --list-different",
+    "▪️:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
+    "▪️:watch:typescript": "pnpm run ▪️:build:typescript --watch",
+    "▪️:watch:typescript:cjs": "pnpm run ▪️:build:typescript:cjs --watch"
   },
   "dependencies": {
     "chalk": "^5.4.1",
