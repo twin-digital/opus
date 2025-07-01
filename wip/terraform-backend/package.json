@@ -4,16 +4,7 @@
   "description": "TF CLI wrapper used to facilitate deployments using Twin Digital's infrastructure conventions",
   "scripts": {
     "clean": "rm -rf dist",
-    "deploy:terraform": "tdtf plan",
-    "typecheck": "tsc --noEmit",
-    "🔩:build:typescript": "tsc",
-    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
-    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
-    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
-    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
-    "🔩:lint:packagejson": "prettier-package-json --list-different",
-    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "▪️:deploy:terraform": "tdtf init"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

@@ -41,13 +41,22 @@
     },
     "deploy": {
       "cache": false,
-      "dependsOn": ["^deploy", "build", "deploy:serverless", "deploy:terraform"]
+      "dependsOn": [
+        "^deploy",
+        "build",
+        "▪️:deploy:terraform",
+        "▪️:deploy:serverless"
+      ]
     },
-    "deploy:serverless": {
+    "▪️:deploy:serverless": {
       "cache": false
     },
-    "deploy:terraform": {
-      "cache": false
+    "▪️:deploy:terraform": {
+      "cache": false,
+      "dependsOn": ["^deploy", "build", "▪️:deploy:terraform-init"]
+    },
+    "▪️:deploy:terraform-init": {
+      "outputs": [".terraform"]
     },
     "destroy": {
       "cache": false,

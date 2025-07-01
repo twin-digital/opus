@@ -18,6 +18,8 @@ export const execTf = (args: string[]): Promise<Result | ExecaError> => {
     }
   }
 
+  console.warn(path.resolve('terraform', 'stages', 'default'))
+
   return execa({
     buffer: false,
     cwd: path.resolve('terraform', 'stages', 'default'),

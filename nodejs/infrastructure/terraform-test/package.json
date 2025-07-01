@@ -1,0 +1,13 @@
+{
+  "name": "@twin-digital/terraform-test",
+  "version": "0.0.0",
+  "description": "tbd",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "▪️:deploy:terraform": "tdtf apply -auto-approve",
+    "▪️:deploy:terraform-init": "tdtf init"
+  },
+  "devDependencies": {
+    "@twin-digital/deploy-tools": "workspace:*"
+  }
+}

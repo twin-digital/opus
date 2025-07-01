@@ -12,6 +12,7 @@ const program = new Command()
     const resultOrError = await execTf(tfArgs)
 
     if (resultOrError.failed) {
+      console.error(resultOrError.cause)
       console.error(
         `Failed to invoke tf command. See above output for details.`,
       )

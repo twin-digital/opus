@@ -346,44 +346,11 @@ importers:
 
   nodejs/devtools/tsconfig: {}
 
-  nodejs/infrastructure/terraform-backend:
+  nodejs/infrastructure/terraform-test:
     devDependencies:
-      '@eslint/js':
-        specifier: 'catalog:'
-        version: 9.29.0
       '@twin-digital/deploy-tools':
         specifier: workspace:*
         version: link:../../devtools/deploy-tools
-      '@twin-digital/eslint-config':
-        specifier: workspace:*
-        version: link:../../devtools/eslint-config
-      '@twin-digital/tsconfig':
-        specifier: workspace:*
-        version: link:../../devtools/tsconfig
-      '@types/node':
-        specifier: 22.x
-        version: 22.14.0
-      eslint:
-        specifier: 'catalog:'
-        version: 9.29.0(jiti@2.4.2)
-      eslint-config-prettier:
-        specifier: 'catalog:'
-        version: 10.1.5(eslint@9.29.0(jiti@2.4.2))
-      globals:
-        specifier: 'catalog:'
-        version: 16.0.0
-      prettier:
-        specifier: 'catalog:'
-        version: 3.5.3
-      prettier-package-json:
-        specifier: 'catalog:'
-        version: 2.8.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.8.3
-      typescript-eslint:
-        specifier: 'catalog:'
-        version: 8.34.1(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3)
 
 packages:
 
