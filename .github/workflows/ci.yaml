@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  # every git push (to any branch)
+  # every git push (to main branch)
   push:
-    branches: ['*']
+    branches:
+      - main
   # pull‐request events *against* main, for the "merge-commit" build
   pull_request:
     branches:
@@ -13,23 +14,13 @@ on:
       - reopened
       - synchronize
 
-env:
-  CI: 1
-  HUSKY: 0
-  TURBO_TELEMETRY_DISABLED: 1
+permissions:
+  contents: read
+  deployments: write
+  id-token: write
+  packages: write
+  pull-requests: write
 
 jobs:
-  lint-build-test:
-    runs-on: ubuntu-latest
-    steps:
-      # checkout project
-      - uses: actions/checkout@v4
-
-      # setup tools and install dependencies
-      - name: Setup dependencies
-        uses: ./.github/actions/setup
-
-      # run CI tasks
-      - run: pnpm run build
-      - run: pnpm run lint
-      - run: pnpm run test
+  orchestrate:
+    uses: twin-digital/pipeline-platform/.github/workflows/main.yml@develop

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  # every git push (to any branch)
+  push:
+    branches: ['*']
+  # pull‐request events *against* main, for the "merge-commit" build
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  lint-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      # checkout project
+      - uses: actions/checkout@v4
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # run CI tasks
+      - run: pnpm run build
+      - run: pnpm run lint
+      - run: pnpm run test

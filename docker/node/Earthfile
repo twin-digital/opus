@@ -1,0 +1,9 @@
+VERSION 0.8
+
+build:
+  FROM DOCKERFILE .
+
+publish:
+  BUILD +build
+  FROM +build
+  SAVE IMAGE --push twin-digital/node:latest
