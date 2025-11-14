@@ -1,4 +1,4 @@
-name: Release
+name: Publish
 
 on:
   # watch for CI workflow to finish
@@ -30,8 +30,16 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # configure git to ignore executable bit on files and remove executable bits from all files
+      # (except node_modules) to prevent publishing failures via github-api
+      - name: Configure git file mode and remove executable bits
+        run: |
+          git config core.fileMode false
+          find . -type f -not -path "*/node_modules/*" -executable -exec chmod -x {} +
+        shell: bash
+
       # perform changesets release operations
-      - name: Create Release Pull Request or Publish to npm
+      - name: Create Publish Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
