@@ -54,7 +54,7 @@ features:
       - name: Add files entries
         action: json-patch
         conditions:
-          - exists: src/*
+          - exists: src/*.ts
         options:
           file: package.json
           patch: |
@@ -64,10 +64,18 @@ features:
             - opx: appendIfMissing
               path: /files
               value: "!dist/**/*.d.ts.map"
-      - name: Add esm exports
+      - name: Remove pre-existing exports
         action: json-merge-patch
         conditions:
-          - exists: src/**/index.ts
+          - exists: src/*.ts
+        options:
+          file: package.json
+          patch: |
+            exports: null
+      - name: Add default esm export
+        action: json-merge-patch
+        conditions:
+          - exists: src/index.ts
         options:
           file: package.json
           patch: |
@@ -76,14 +84,36 @@ features:
                 import:
                   types: ./dist/index.d.ts
                   import: ./dist/index.js
+      - name: Forbid direct import of '/index'
+        action: json-patch
+        conditions:
+          - exists: src/index.ts
+        options:
+          file: package.json
+          patch: |
+            - op: add
+              path: /exports/.~1index
+              value: null
+            - op: add
+              path: /exports/.~1index.js
+              value: null
+      - name: Add additional esm exports
+        action: json-merge-patch
+        conditions:
+          - exists: src/*.ts
+        options:
+          file: package.json
+          patch: |
+            exports:
               ./*:
                 import:
-                  types: ./dist/*/index.d.ts
-                  import: ./dist/*/index.js
-      - name: Add cjs exports
+                  types: ./dist/*.d.ts
+                  import: ./dist/*.js
+      - name: Add default cjs export
         action: json-merge-patch
         conditions:
           - exists: tsconfig.cjs.json
+          - exists: src/index.ts
         options:
           file: package.json
           patch: |
@@ -92,10 +122,19 @@ features:
                 require:
                   types: ./dist/cjs/index.d.ts
                   require: ./dist/cjs/index.js
+      - name: Add additional cjs exports
+        action: json-merge-patch
+        conditions:
+          - exists: tsconfig.cjs.json
+          - exists: src/*.ts
+        options:
+          file: package.json
+          patch: |
+            exports:
               ./*:
                 require:
-                  types: ./dist/cjs/*/index.d.ts
-                  require: ./dist/cjs/*/index.js
+                  types: ./dist/cjs/*.d.ts
+                  require: ./dist/cjs/*.js
       - name: Remove unnecessary cjs exports
         action: json-merge-patch
         conditions:

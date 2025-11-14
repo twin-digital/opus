@@ -1,5 +1,5 @@
 import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
-import { bedrock } from '../client.js'
+import { bedrock } from '../core/client.js'
 import type { InferenceRequest, InferenceResponse } from './inference-api.js'
 import { getModelAdapater } from './model-adapters.js'
 

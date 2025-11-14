@@ -6,7 +6,7 @@ import {
   loadConfig,
   type Configuration,
   type PackageConfiguration,
-} from '../../repo-kit-configuration.js'
+} from '../../config/repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
