@@ -11,18 +11,12 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",
-    "🔩:build:copy-assets": "rsync -a --mkpath assets/ dist/assets",
-    "🔩:build:typescript": "tsc",
-    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
-    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
-    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
-    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
-    "🔩:lint:packagejson": "prettier-package-json --list-different",
-    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "🔩:watch:copy-assets": "chokidar 'assets/**/*' -c \"rsync -a --delete assets/ dist/assets/\"",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "watch": "watch"
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.0",
@@ -40,6 +34,7 @@
     "@eslint/js": "catalog:",
     "@pnpm/types": "^1000.6.0",
     "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/json-merge-patch": "^1.0.0",
     "@types/lodash-es": "^4.17.12",

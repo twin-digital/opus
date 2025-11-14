@@ -1,0 +1,34 @@
+{
+  "private": true,
+  "name": "@twin-digital/opus-scripts",
+  "version": "0.0.0",
+  "description": "Scripts used to perform package-level operations in the Opus repository.",
+  "type": "module",
+  "bin": {
+    "build": "./bin/build.js",
+    "clean": "./bin/clean.js",
+    "lint": "./bin/lint.js",
+    "lint_fix": "./bin/lint_fix.js",
+    "test": "./bin/test.js",
+    "watch": "./bin/watch.js"
+  },
+  "scripts": {
+    "clean": "clean",
+    "lint": "node ./bin/lint.js",
+    "lint:fix": "node ./bin/lint_fix.js"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "execa": "^9.6.0",
+    "globby": "^15.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}

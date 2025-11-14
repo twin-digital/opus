@@ -13,8 +13,8 @@
     "lint:fix": "turbo run lint:fix",
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
-    "publish-packages": "turbo run release && changeset publish",
-    "sync": "pnpm -r exec -- repo-kit sync",
+    "publish-packages": "turbo run build && changeset publish",
+    "sync": "repo-kit sync --config tooling/config/repo-kit.yaml",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "update-readme": "repo-kit update-readme"

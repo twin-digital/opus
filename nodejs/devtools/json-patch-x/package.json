@@ -22,16 +22,12 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",
-    "🔩:build:typescript": "tsc",
-    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
-    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
-    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
-    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
-    "🔩:lint:packagejson": "prettier-package-json --list-different",
-    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "watch": "watch"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1"
@@ -39,6 +35,7 @@
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/node": "22.x",
     "eslint": "catalog:",

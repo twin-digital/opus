@@ -5,6 +5,6 @@
     "tsconfig.*.json"
   ],
   "scripts": {
-    "clean": "rm -rf dist"
+    "clean": "clean"
   }
 }

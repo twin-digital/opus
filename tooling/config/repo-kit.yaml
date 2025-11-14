@@ -1,3 +1,25 @@
+packages:
+  '@twin-digital/eslint-config':
+    rules:
+      eslint: false
+      eslint-config-bootstrap: false
+  '@twin-digital/opus-scripts':
+    rules:
+      eslint: false
+      eslint-config-bootstrap: false
+      typescript: false
+      typescript-dependencies: false
+      typescript-scripts-and-dependencies: false
+      typescript-with-options: false
+  '@twin-digital/tsconfig':
+    rules:
+      eslint: false
+      eslint-config-bootstrap: false
+      typescript: false
+      typescript-dependencies: false
+      typescript-scripts-and-dependencies: false
+      typescript-with-options: false
+
 features:
   - name: eslint
     actions:
@@ -14,15 +36,12 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:lint:eslint: eslint --no-error-on-unmatched-pattern src
-              🔩:lint:packagejson: prettier-package-json --list-different
-              🔩:lint:prettier: prettier --check --ignore-path ../../../.gitignore .
-              🔩:lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
-              🔩:lint:fix:packagejson: prettier-package-json --write ./package.json
-              🔩:lint:fix:prettier: prettier --write --ignore-path ../../../.gitignore .
+              lint: lint
+              'lint:fix': lint_fix
             devDependencies:
               '@eslint/js': 'catalog:'
               '@twin-digital/eslint-config': workspace:*
+              '@twin-digital/opus-scripts': workspace:*
               eslint: 'catalog:'
               eslint-config-prettier: 'catalog:'
               globals: 'catalog:'
@@ -113,40 +132,6 @@ features:
             exports:
               .: null
               ./*: null
-  - name: assets
-    conditions:
-      - exists: assets/*
-    actions:
-      - name: Add scripts and dependencies
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets: rsync -a --mkpath assets/ dist/assets
-              🔩:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
-            devDependencies:
-              chokidar-cli: ^3.0.0
-      - name: Add scripts for cjs support
-        conditions:
-          - exists: tsconfig.cjs.json
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets:cjs: rsync -a --mkpath assets/ dist/cjs/assets
-              🔩:watch:copy-assets:cjs: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/cjs/assets/"
-      - name: Remove unnecessary scripts for cjs support
-        conditions:
-          - notExists: tsconfig.cjs.json
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets:cjs: null
-              🔩:watch:copy-assets:cjs: null
   - name: typescript
     actions:
       - name: Create tsconfig file
@@ -178,32 +163,13 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:typescript: tsc
-              🔩:watch:typescript: pnpm run 🔩:build:typescript --watch
+              build: build
               typecheck: tsc --noEmit
+              watch: watch
             devDependencies:
-              typescript: 'catalog:'
+              '@twin-digital/opus-scripts': workspace:*
               '@types/node': '22.x'
-      - name: Add scripts for cjs support
-        action: json-merge-patch
-        conditions:
-          - exists: tsconfig.cjs.json
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
-              🔩:watch:typescript:cjs: pnpm run 🔩:build:typescript:cjs --watch
-      - name: Remove unnecessary scripts for cjs support
-        action: json-merge-patch
-        conditions:
-          - notExists: tsconfig.cjs.json
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:typescript:cjs: null
-              🔩:watch:typescript:cjs: null
+              typescript: 'catalog:'
   - name: clean
     actions:
       - name: Add script
@@ -212,4 +178,4 @@ features:
           file: package.json
           patch: |
             scripts:
-              clean: rm -rf dist
+              clean: clean

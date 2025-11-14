@@ -2,32 +2,10 @@
   "$schema": "./node_modules/turbo/schema.json",
   "globalPassThroughEnv": ["CI"],
   "tasks": {
-    "🔩:build:copy-assets": {
-      "inputs": ["assets/**", "package.json"],
-      "outputs": ["dist/assets/**"]
-    },
-    "🔩:build:copy-assets:cjs": {
-      "inputs": ["assets/**", "package.json"],
-      "outputs": ["dist/cjs/assets/**"]
-    },
-    "🔩:build:typescript": {
-      "dependsOn": ["^build"],
-      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
-      "outputs": ["dist/**", "!dist/cjs/**", "!dist/assets/**"]
-    },
-    "🔩:build:typescript:cjs": {
-      "dependsOn": ["^build"],
-      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
-      "outputs": ["dist/cjs/**", "!dist/cjs/assets/**"]
-    },
     "build": {
-      "dependsOn": [
-        "^build",
-        "🔩:build:typescript",
-        "🔩:build:copy-assets",
-        "🔩:build:typescript:cjs",
-        "🔩:build:copy-assets:cjs"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["assets/**", "package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
+      "outputs": ["dist/**"]
     },
     "clean": {
       "cache": false
@@ -54,37 +32,17 @@
     "dev": {
       "cache": false,
       "dependsOn": ["build"],
+      "outputLogs": "full",
       "persistent": true,
-      "with": [
-        "🔩:watch:typescript",
-        "🔩:watch:copy-assets",
-        "🔩:watch:typescript:cjs",
-        "🔩:watch:copy-assets:cjs"
-      ]
+      "with": ["watch"]
     },
     "lint": {
-      "dependsOn": ["lint:eslint", "lint:packagejson", "lint:prettier"]
-    },
-    "lint:eslint": {
       "dependsOn": ["@twin-digital/eslint-config#build"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
-    "lint:packagejson": {
-      "inputs": ["package.json"]
-    },
-    "lint:prettier": {},
     "lint:fix": {
-      "dependsOn": [
-        "lint:fix:eslint",
-        "lint:fix:packagejson",
-        "lint:fix:prettier"
-      ]
-    },
-    "lint:fix:eslint": {
       "dependsOn": ["@twin-digital/eslint-config#build"]
     },
-    "lint:fix:packagejson": {},
-    "lint:fix:prettier": {},
     "test": {
       "outputs": []
     },
@@ -93,24 +51,10 @@
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
     },
-    "🔩:watch:typescript": {
+    "watch": {
       "cache": false,
-      "dependsOn": ["🔩:build:typescript"],
-      "persistent": true
-    },
-    "🔩:watch:typescript:cjs": {
-      "cache": false,
-      "dependsOn": ["🔩:build:typescript:cjs"],
-      "persistent": true
-    },
-    "🔩:watch:copy-assets": {
-      "cache": false,
-      "dependsOn": ["🔩:build:copy-assets"],
-      "persistent": true
-    },
-    "🔩:watch:copy-assets:cjs": {
-      "cache": false,
-      "dependsOn": ["🔩:build:copy-assets:cjs"],
+      "dependsOn": ["build"],
+      "outputLogs": "full",
       "persistent": true
     }
   }
