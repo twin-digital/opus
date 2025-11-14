@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "@twin-digital/opus-scripts",
   "version": "0.0.0",
   "description": "Scripts used to perform package-level operations in the Opus repository.",
@@ -13,8 +14,8 @@
   },
   "scripts": {
     "clean": "clean",
-    "lint": "./bin/lint.js",
-    "lint:fix": "./bin/lint_fix.js"
+    "lint": "node ./bin/lint.js",
+    "lint:fix": "node ./bin/lint_fix.js"
   },
   "dependencies": {
     "chokidar": "^4.0.3",

@@ -24,7 +24,7 @@ jobs:
       # checkout project
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+          token: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
 
       # setup tools and install dependencies
       - name: Setup dependencies
@@ -35,10 +35,8 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          commit: 'chore: update versions'
           commitMode: github-api
           publish: pnpm publish-packages
-          title: 'chore: update versions'
         env:
-          GITHUB_TOKEN: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

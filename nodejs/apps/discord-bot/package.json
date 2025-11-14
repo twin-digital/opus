@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "@twin-digital/discord-bot",
   "version": "0.0.0",
   "description": "Discord Bot providing server presence and message utilities for Twin Digital applications.",
