@@ -14,10 +14,10 @@
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run release && changeset publish",
-    "sync": "pnpm -r exec -- repo-kit sync",
+    "sync": "pnpm -r exec -- repo-kit --config twd/opus/tooling/config/repo-kit.yaml sync",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "update-readme": "repo-kit update-readme"
+    "update-readme": "repo-kit --config twd/opus/tooling/config/repo-kit.yaml update-readme"
   },
   "devDependencies": {
     "@twin-digital/repo-kit": "workspace:*",

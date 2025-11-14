@@ -1,4 +1,4 @@
-import type { Configuration } from '../repo-kit-configuration.js'
+import type { FeatureConfigItem, FeatureConfiguration, PackageConfiguration, SyncActionConfig, SyncConditionConfig } from '../repo-kit-configuration.js'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
@@ -7,12 +7,6 @@ import { makeExistsCondition } from './conditions/exists-condition.js'
 import { makeNotExistsCondition } from './conditions/not-exists-condition.js'
 import type { PackageFeature } from './package-feature.js'
 import type { SyncResult } from './sync-result.js'
-import type {
-  PackageFeatureConfig,
-  PackageFeatureConfigItem,
-  SyncActionConfig,
-  SyncConditionConfig,
-} from './sync-rules-config.js'
 
 /**
  * Predicate (condition) used to determine if a particular rule applies to a given package.
@@ -115,8 +109,8 @@ const applyActions = async (
  * @returns The `PackageFeature` corresponding to the supplied configuration.
  */
 const makePackageFeature = (
-  config: PackageFeatureConfigItem,
-  _userConfig: Configuration,
+  config: FeatureConfigItem,
+  _userConfig: PackageConfiguration,
 ): PackageFeature => {
   const conditions = config.conditions?.map((condition) =>
     makeConditionFn(condition),
@@ -154,13 +148,13 @@ export const makeSyncRules = ({
   featureConfig,
 }: {
   /**
-   * User-supplied repo-kit configuration used to customize how features are configured.
+   * Package-specific repo-kit configuration used to customize how features are configured.
    */
-  config: Configuration
+  config: PackageConfiguration
 
   /**
    * The `PackageFeatureConfig` config defining the available features.
    */
-  featureConfig: PackageFeatureConfig
+  featureConfig: FeatureConfiguration
 }): PackageFeature[] =>
   featureConfig.features.map((feature) => makePackageFeature(feature, config))

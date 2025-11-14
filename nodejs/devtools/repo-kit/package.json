@@ -13,7 +13,6 @@
   "scripts": {
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "🔩:build:copy-assets": "rsync -a --mkpath assets/ dist/assets",
     "🔩:build:typescript": "tsc",
     "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
     "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
