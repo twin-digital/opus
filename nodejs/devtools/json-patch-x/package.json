@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/json-patch-x",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "JSON patch library that provides custom extensions for operations not found in RFC 6902.",
   "type": "module",
   "exports": {
