@@ -22,12 +22,12 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
+    "build": "build",
     "clean": "rm -rf dist",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",
-    "🔩:build:typescript": "tsc",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "watch": "watch"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1"

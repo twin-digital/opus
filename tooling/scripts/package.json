@@ -9,7 +9,7 @@
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
     "test": "./bin/test.js",
-    "typecheck": "./bin/typecheck.js"
+    "watch": "./bin/watch.js"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@twin-digital/eslint-config": "workspace:*",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",

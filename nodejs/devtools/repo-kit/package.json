@@ -11,13 +11,12 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
+    "build": "build",
     "clean": "rm -rf dist",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",
-    "🔩:build:typescript": "tsc",
-    "🔩:watch:copy-assets": "chokidar 'assets/**/*' -c \"rsync -a --delete assets/ dist/assets/\"",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "watch": "watch"
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.0",

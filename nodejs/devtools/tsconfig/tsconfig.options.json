@@ -11,6 +11,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "noEmit": true,
+    "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "outDir": "${configDir}/dist",
     "preserveWatchOutput": true,

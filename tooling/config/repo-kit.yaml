@@ -6,6 +6,7 @@ packages:
   '@twin-digital/opus-scripts':
     rules:
       eslint: false
+      eslint-config-bootstrap: false
       typescript: false
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
@@ -196,32 +197,13 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:build:typescript: tsc
-              🔩:watch:typescript: pnpm run 🔩:build:typescript --watch
+              build: build
               typecheck: tsc --noEmit
+              watch: watch
             devDependencies:
-              typescript: 'catalog:'
+              '@twin-digital/opus-scripts': workspace:*
               '@types/node': '22.x'
-      - name: Add scripts for cjs support
-        action: json-merge-patch
-        conditions:
-          - exists: tsconfig.cjs.json
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:typescript:cjs: tsc --project tsconfig.cjs.json && [ -d dist/cjs ] && printf '%s' '{\"type\":\"commonjs\"}' > dist/cjs/package.json
-              🔩:watch:typescript:cjs: pnpm run 🔩:build:typescript:cjs --watch
-      - name: Remove unnecessary scripts for cjs support
-        action: json-merge-patch
-        conditions:
-          - notExists: tsconfig.cjs.json
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:typescript:cjs: null
-              🔩:watch:typescript:cjs: null
+              typescript: 'catalog:'
   - name: clean
     actions:
       - name: Add script

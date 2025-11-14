@@ -8,14 +8,14 @@
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
+    "build": "build",
     "clean": "rm -rf dist",
     "deploy": "serverless deploy",
     "destroy": "serverless remove",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",
-    "🔩:build:typescript": "tsc",
-    "🔩:watch:typescript": "pnpm run 🔩:build:typescript --watch"
+    "watch": "watch"
   },
   "dependencies": {
     "lodash-es": "^4.17.21"
