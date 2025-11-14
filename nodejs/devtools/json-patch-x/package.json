@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "build",
-    "clean": "rm -rf dist",
+    "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit",

@@ -132,40 +132,6 @@ features:
             exports:
               .: null
               ./*: null
-  - name: assets
-    conditions:
-      - exists: assets/*
-    actions:
-      - name: Add scripts and dependencies
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets: rsync -a --mkpath assets/ dist/assets
-              🔩:watch:copy-assets: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/assets/"
-            devDependencies:
-              chokidar-cli: ^3.0.0
-      - name: Add scripts for cjs support
-        conditions:
-          - exists: tsconfig.cjs.json
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets:cjs: rsync -a --mkpath assets/ dist/cjs/assets
-              🔩:watch:copy-assets:cjs: chokidar 'assets/**/*' -c "rsync -a --delete assets/ dist/cjs/assets/"
-      - name: Remove unnecessary scripts for cjs support
-        conditions:
-          - notExists: tsconfig.cjs.json
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              🔩:build:copy-assets:cjs: null
-              🔩:watch:copy-assets:cjs: null
   - name: typescript
     actions:
       - name: Create tsconfig file
@@ -212,4 +178,4 @@ features:
           file: package.json
           patch: |
             scripts:
-              clean: rm -rf dist
+              clean: clean

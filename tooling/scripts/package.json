@@ -12,13 +12,14 @@
     "watch": "./bin/watch.js"
   },
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "clean",
     "lint": "./bin/lint.js",
     "lint:fix": "./bin/lint_fix.js"
   },
   "dependencies": {
     "chokidar": "^4.0.3",
-    "execa": "^9.6.0"
+    "execa": "^9.6.0",
+    "globby": "^15.0.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

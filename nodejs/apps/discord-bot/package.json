@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "build",
-    "clean": "rm -rf dist",
+    "clean": "clean",
     "deploy": "serverless deploy",
     "destroy": "serverless remove",
     "lint": "lint",
