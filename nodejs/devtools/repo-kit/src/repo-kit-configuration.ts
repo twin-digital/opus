@@ -165,10 +165,12 @@ export interface Configuration {
 /**
  * Loads the repo-kit configuration, with any defaults applied.
  */
-export const loadConfig = async (configPath: string): Promise<Configuration> => {
+export const loadConfig = async (
+  configPath: string,
+): Promise<Configuration> => {
   const content = await fsP.readFile(path.resolve(configPath), 'utf-8')
   return {
     packages: {},
-    ...yaml.parse(content)
+    ...yaml.parse(content),
   } as Configuration
 }

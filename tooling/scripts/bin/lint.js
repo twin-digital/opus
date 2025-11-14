@@ -1,10 +1,9 @@
-import { spawnSync } from 'node:child_process'
+#!/usr/bin/env node
 
-const args = ['src', '--ext', '.ts,.tsx', ...process.argv.slice(2)]
+import { $ } from '../lib/shell.js'
 
-const result = spawnSync('eslint', args, {
-  stdio: 'inherit',
-  shell: true,
-})
+const gitIgnorePath = '../../../.gitignore'
 
-process.exit(result.status ?? 1)
+$`eslint --no-error-on-unmatched-pattern src`
+$`prettier --check --ignore-path ${gitIgnorePath} .`
+$`prettier-package-json --list-different ./package.json`

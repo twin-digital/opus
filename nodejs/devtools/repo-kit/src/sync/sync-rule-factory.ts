@@ -1,4 +1,10 @@
-import type { FeatureConfigItem, FeatureConfiguration, PackageConfiguration, SyncActionConfig, SyncConditionConfig } from '../repo-kit-configuration.js'
+import type {
+  FeatureConfigItem,
+  FeatureConfiguration,
+  PackageConfiguration,
+  SyncActionConfig,
+  SyncConditionConfig,
+} from '../repo-kit-configuration.js'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'

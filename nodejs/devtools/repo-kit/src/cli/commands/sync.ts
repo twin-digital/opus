@@ -2,7 +2,11 @@ import { Command } from 'commander'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
 import get from 'lodash-es/get.js'
-import { loadConfig, type Configuration, type PackageConfiguration } from '../../repo-kit-configuration.js'
+import {
+  loadConfig,
+  type Configuration,
+  type PackageConfiguration,
+} from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'

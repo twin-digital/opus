@@ -5,6 +5,7 @@ packages:
       eslint-config-bootstrap: false
   '@twin-digital/opus-scripts':
     rules:
+      eslint: false
       typescript: false
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
@@ -34,15 +35,12 @@ features:
           file: package.json
           patch: |
             scripts:
-              🔩:lint:eslint: eslint --no-error-on-unmatched-pattern src
-              🔩:lint:packagejson: prettier-package-json --list-different
-              🔩:lint:prettier: prettier --check --ignore-path ../../../.gitignore .
-              🔩:lint:fix:eslint: eslint --no-error-on-unmatched-pattern --fix src
-              🔩:lint:fix:packagejson: prettier-package-json --write ./package.json
-              🔩:lint:fix:prettier: prettier --write --ignore-path ../../../.gitignore .
+              lint: lint
+              'lint:fix': lint_fix
             devDependencies:
               '@eslint/js': 'catalog:'
               '@twin-digital/eslint-config': workspace:*
+              '@twin-digital/opus-scripts': workspace:*
               eslint: 'catalog:'
               eslint-config-prettier: 'catalog:'
               globals: 'catalog:'

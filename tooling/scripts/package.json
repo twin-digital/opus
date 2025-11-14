@@ -2,21 +2,22 @@
   "name": "@twin-digital/opus-scripts",
   "version": "0.0.0",
   "description": "Scripts used to perform package-level operations in the Opus repository.",
+  "type": "module",
   "bin": {
-    "clean": "./bin/clean.js",
     "build": "./bin/build.js",
+    "clean": "./bin/clean.js",
     "lint": "./bin/lint.js",
+    "lint_fix": "./bin/lint_fix.js",
     "test": "./bin/test.js",
     "typecheck": "./bin/typecheck.js"
   },
   "scripts": {
-    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
-    "🔩:lint:packagejson": "prettier-package-json --list-different",
-    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
-    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
-    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
-    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "lint": "./bin/lint.js",
+    "lint:fix": "./bin/lint_fix.js"
+  },
+  "dependencies": {
+    "execa": "^9.6.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

@@ -63,28 +63,12 @@
       ]
     },
     "lint": {
-      "dependsOn": ["lint:eslint", "lint:packagejson", "lint:prettier"]
-    },
-    "lint:eslint": {
       "dependsOn": ["@twin-digital/eslint-config#build"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
-    "lint:packagejson": {
-      "inputs": ["package.json"]
-    },
-    "lint:prettier": {},
     "lint:fix": {
-      "dependsOn": [
-        "lint:fix:eslint",
-        "lint:fix:packagejson",
-        "lint:fix:prettier"
-      ]
-    },
-    "lint:fix:eslint": {
       "dependsOn": ["@twin-digital/eslint-config#build"]
     },
-    "lint:fix:packagejson": {},
-    "lint:fix:prettier": {},
     "test": {
       "outputs": []
     },

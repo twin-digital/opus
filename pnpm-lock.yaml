@@ -84,6 +84,9 @@ importers:
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
@@ -167,6 +170,9 @@ importers:
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -237,6 +243,9 @@ importers:
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
@@ -277,6 +286,10 @@ importers:
   nodejs/devtools/tsconfig: {}
 
   tooling/scripts:
+    dependencies:
+      execa:
+        specifier: ^9.6.0
+        version: 9.6.0
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
