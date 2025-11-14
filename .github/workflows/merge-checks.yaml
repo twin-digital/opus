@@ -42,7 +42,7 @@ jobs:
       - name: Fail if project configuration is out of sync
         run: |
           pnpm run sync
-          changed=$(git status --porcelain) || true
+          changed=$(git -c core.fileMode=false status --porcelain) || true
           if [[ -n "$changed" ]]; then
             echo "The following files are out of date:"
             echo "$changed"
