@@ -1,13 +1,13 @@
 import { Command } from 'commander'
-import { getCurrentPackage } from '../../workspace/get-current-package.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
 import get from 'lodash-es/get.js'
-import { loadConfig, type PackageConfiguration } from '../../repo-kit-configuration.js'
+import { loadConfig, type Configuration, type PackageConfiguration } from '../../repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
 import type { PackageFeature } from '../../sync/package-feature.js'
+import { findPackages } from '../../workspace/find-packages.js'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -75,10 +75,7 @@ const applyFeatures = async (
   return [...changedFiles]
 }
 
-const handler = async (options: { config: string }) => {
-  const config = await loadConfig(options.config)
-  const pkg = await getCurrentPackage()
-
+const syncOnePackage = async (pkg: PackageMeta, config: Configuration) => {
   console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
 
@@ -102,6 +99,14 @@ const handler = async (options: { config: string }) => {
 
   console.log('')
   console.groupEnd()
+}
+
+const handler = async (options: { config: string }) => {
+  const config = await loadConfig(options.config)
+  const packages = await findPackages()
+  for (const pkg of packages) {
+    await syncOnePackage(pkg, config)
+  }
 }
 
 export const makeCommand = () =>

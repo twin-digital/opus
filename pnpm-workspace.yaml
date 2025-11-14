@@ -1,6 +1,7 @@
 packages:
   - nodejs/*
   - nodejs/*/*
+  - tooling/scripts
 
 catalog:
   '@eslint/js': ^9.29.0

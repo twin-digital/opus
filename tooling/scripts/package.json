@@ -1,0 +1,31 @@
+{
+  "name": "@twin-digital/opus-scripts",
+  "version": "0.0.0",
+  "description": "Scripts used to perform package-level operations in the Opus repository.",
+  "bin": {
+    "clean": "./bin/clean.js",
+    "build": "./bin/build.js",
+    "lint": "./bin/lint.js",
+    "test": "./bin/test.js",
+    "typecheck": "./bin/typecheck.js"
+  },
+  "scripts": {
+    "🔩:lint:eslint": "eslint --no-error-on-unmatched-pattern src",
+    "🔩:lint:packagejson": "prettier-package-json --list-different",
+    "🔩:lint:prettier": "prettier --check --ignore-path ../../../.gitignore .",
+    "🔩:lint:fix:eslint": "eslint --no-error-on-unmatched-pattern --fix src",
+    "🔩:lint:fix:packagejson": "prettier-package-json --write ./package.json",
+    "🔩:lint:fix:prettier": "prettier --write --ignore-path ../../../.gitignore .",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}
