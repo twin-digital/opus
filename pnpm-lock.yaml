@@ -365,7 +365,7 @@ importers:
   nodejs/devtools/tsconfig:
     devDependencies:
       '@twin-digital/opus-scripts':
-        specifier: 'workspace:'
+        specifier: workspace:*
         version: link:../../../tooling/scripts
 
   nodejs/genai/bedrock:
@@ -471,6 +471,9 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.29.0
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: 'link:'
       eslint:
         specifier: 'catalog:'
         version: 9.29.0

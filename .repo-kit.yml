@@ -5,6 +5,7 @@ packages:
       eslint-config-bootstrap: false
   '@twin-digital/opus-scripts':
     rules:
+      clean: false
       eslint: false
       eslint-config-bootstrap: false
       typescript: false
@@ -23,7 +24,7 @@ packages:
 hooks:
   - description: Reformat package.json
     path: package.json
-    run: prettier-package-json --write ./package.json
+    run: pnpm exec prettier-package-json --write ./package.json
   - description: Install dependencies
     path: package.json
     run: pnpm install
@@ -219,3 +220,5 @@ features:
           patch: |
             scripts:
               clean: clean
+            devDependencies:
+              '@twin-digital/opus-scripts': workspace:*
