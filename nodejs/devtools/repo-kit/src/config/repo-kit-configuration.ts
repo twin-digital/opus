@@ -33,6 +33,37 @@ export type SyncConditionConfig =
   | NotExistsConditionConfig
 
 /**
+ * Configuration for a hook that runs after files are changed during sync.
+ */
+export interface HookConfig {
+  /**
+   * Optional human-readable description of what the hook does. If provided, this will be displayed when the hook runs.
+   * If not provided, the `run` command will be displayed instead.
+   */
+  description?: string
+
+  /**
+   * Glob pattern to match against changed files (relative to package root). If any changed files match this pattern,
+   * the hook will be executed.
+   *
+   * @example "package.json" - matches package.json in the package root
+   * @example "**\/*.ts" - matches any TypeScript file in any directory
+   */
+  path: string
+
+  /**
+   * Shell command to execute in the package directory when the pattern matches.
+   *
+   * SECURITY NOTE: This command is executed via shell in the package directory. Only use trusted configuration sources.
+   * The command runs with the package directory as the working directory.
+   *
+   * @example "pnpm install"
+   * @example "prettier --write package.json"
+   */
+  run: string
+}
+
+/**
  * A single action taken to sync a feature's configuration in a package.
  */
 export type SyncActionConfig = {
@@ -157,6 +188,12 @@ export interface Configuration {
   features: FeatureConfigItem[]
 
   /**
+   * Hooks to run after files are changed during sync operations. Hooks are executed in the order they are defined.
+   * Each hook specifies a glob pattern to match changed files and a shell command to run when matches occur.
+   */
+  hooks?: HookConfig[]
+
+  /**
    * Package-levle configuration for members of this repo. Key is the package name (i.e. @my-scope/my-name).
    */
   packages: Partial<Record<string, PackageConfiguration>>
@@ -170,6 +207,7 @@ export const loadConfig = async (
 ): Promise<Configuration> => {
   const content = await fsP.readFile(path.resolve(configPath), 'utf-8')
   return {
+    hooks: [],
     packages: {},
     ...yaml.parse(content),
   } as Configuration

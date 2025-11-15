@@ -13,7 +13,7 @@
     "watch": "./bin/watch.js"
   },
   "scripts": {
-    "clean": "node ./bin/clean.js",
+    "clean": "clean",
     "lint": "node ./bin/lint.js",
     "lint:fix": "node ./bin/lint_fix.js"
   },

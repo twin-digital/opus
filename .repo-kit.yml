@@ -20,6 +20,14 @@ packages:
       typescript-scripts-and-dependencies: false
       typescript-with-options: false
 
+hooks:
+  - description: Reformat package.json
+    path: package.json
+    run: prettier-package-json --write ./package.json
+  - description: Install dependencies
+    path: package.json
+    run: pnpm install
+
 features:
   - name: eslint
     actions:
@@ -64,14 +72,6 @@ features:
             - opx: appendIfMissing
               path: /files
               value: "!dist/**/*.d.ts.map"
-      - name: Remove pre-existing exports
-        action: json-merge-patch
-        conditions:
-          - exists: src/*.ts
-        options:
-          file: package.json
-          patch: |
-            exports: null
       - name: Add default esm export
         action: json-merge-patch
         conditions:
