@@ -4,7 +4,7 @@ import type {
   PackageConfiguration,
   SyncActionConfig,
   SyncConditionConfig,
-} from '../repo-kit-configuration.js'
+} from '../config/repo-kit-configuration.js'
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
@@ -32,19 +32,15 @@ const appliesTo = async (
   workspace: PackageMeta,
   conditions: SyncConditionFn[] | undefined,
 ): Promise<boolean> => {
-  if (conditions !== undefined && conditions.length > 0) {
-    for (const condition of conditions) {
-      const result = await condition(workspace)
-      if (result) {
-        return true
-      }
+  const resolvedConditions = conditions ?? []
+  for (const condition of resolvedConditions) {
+    const result = await condition(workspace)
+    if (!result) {
+      return false
     }
-
-    return false
-  } else {
-    // no conditions == always configure this feature
-    return true
   }
+
+  return true
 }
 
 const makeConditionFn = (condition: SyncConditionConfig) => {

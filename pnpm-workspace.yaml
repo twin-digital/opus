@@ -15,4 +15,5 @@ catalog:
 
 onlyBuiltDependencies:
   - esbuild
+  - hnswlib-node
   - serverless

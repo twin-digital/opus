@@ -1,7 +1,7 @@
 {
-  "name": "@twin-digital/json-patch-x",
-  "version": "0.0.1",
-  "description": "JSON patch library that provides custom extensions for operations not found in RFC 6902.",
+  "name": "@twin-digital/bedrock",
+  "version": "0.0.0",
+  "description": "Utilities for integrating with AWS Bedrock.",
   "type": "module",
   "exports": {
     ".": {
@@ -31,10 +31,8 @@
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },
-  "dependencies": {
-    "fast-json-patch": "^3.1.1"
-  },
   "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.928.0",
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
