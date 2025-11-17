@@ -14,7 +14,8 @@
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run build && changeset publish",
-    "sync": "repo-kit sync --config tooling/config/repo-kit.yaml",
+    "squash": "node tooling/scripts/bin/squash.js",
+    "sync": "repo-kit sync",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "update-readme": "repo-kit update-readme"

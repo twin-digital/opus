@@ -6,5 +6,8 @@
   ],
   "scripts": {
     "clean": "clean"
+  },
+  "devDependencies": {
+    "@twin-digital/opus-scripts": "workspace:*"
   }
 }

@@ -2,16 +2,19 @@ import { Command } from 'commander'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 import chalk from 'chalk'
 import get from 'lodash-es/get.js'
+import intersection from 'lodash-es/intersection.js'
 import {
   loadConfig,
   type Configuration,
+  type HookConfig,
   type PackageConfiguration,
-} from '../../repo-kit-configuration.js'
+} from '../../config/repo-kit-configuration.js'
 import { $ } from 'execa'
 import type { SyncResult } from '../../sync/sync-result.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
 import type { PackageFeature } from '../../sync/package-feature.js'
 import { findPackages } from '../../workspace/find-packages.js'
+import fsP from 'node:fs/promises'
 
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
@@ -79,6 +82,77 @@ const applyFeatures = async (
   return [...changedFiles]
 }
 
+/**
+ * Applies a single hook if any changed files match its pattern.
+ *
+ * @param hook The hook configuration to apply
+ * @param pkg Package metadata containing the working directory
+ * @param changedFiles Array of files that were changed during sync (relative to package root)
+ * @throws Error if the hook command fails
+ */
+const applyHookIfNeeded = async (
+  hook: HookConfig,
+  pkg: PackageMeta,
+  changedFiles: string[],
+): Promise<void> => {
+  // Find files matching the hook's pattern and check if any changed files match
+  const matchingFiles: string[] = []
+  for await (const file of fsP.glob(hook.path, { cwd: pkg.path })) {
+    matchingFiles.push(file)
+  }
+
+  // Check if any changed files intersect with matching files
+  if (intersection(changedFiles, matchingFiles).length === 0) {
+    return
+  }
+
+  const hookLabel = hook.description ?? hook.run
+  console.log(`${chalk.cyan('[HOOK]')} ${hookLabel}`)
+
+  await $({ cwd: pkg.path, stdio: 'inherit', shell: true })`${hook.run}`
+}
+
+/**
+ * Applies hooks from configuration if any changed files match their patterns.
+ * Hooks are executed in the order they are defined. If any hooks fail, an error is thrown
+ * after attempting to run all applicable hooks.
+ *
+ * @param pkg Package metadata
+ * @param config Repository configuration containing hooks
+ * @param changedFiles Array of files that were changed during sync (relative to package root)
+ * @throws Error if any hooks fail during execution
+ */
+const applyHooks = async (
+  pkg: PackageMeta,
+  config: Configuration,
+  changedFiles: string[],
+): Promise<void> => {
+  const hooks = config.hooks ?? []
+  if (hooks.length === 0 || changedFiles.length === 0) {
+    return
+  }
+
+  const errors: { hook: string; error: unknown }[] = []
+
+  for (const hook of hooks) {
+    try {
+      await applyHookIfNeeded(hook, pkg, changedFiles)
+    } catch (error: unknown) {
+      const hookLabel = hook.description ?? hook.run
+      const errorMessage = get(error, 'message', String(error))
+      console.log(
+        `${chalk.redBright('[ERROR]')} Hook failed: ${hookLabel}: ${errorMessage}`,
+      )
+      errors.push({ hook: hookLabel, error })
+    }
+  }
+
+  if (errors.length > 0) {
+    const errorMessages = errors.map(({ hook }) => `  - ${hook}`).join('\n')
+    throw new Error(`${errors.length} hook(s) failed:\n${errorMessages}`)
+  }
+}
+
 const syncOnePackage = async (pkg: PackageMeta, config: Configuration) => {
   console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
@@ -94,12 +168,7 @@ const syncOnePackage = async (pkg: PackageMeta, config: Configuration) => {
     }),
   )
 
-  if (changedFiles.includes('package.json')) {
-    console.log('Installing dependencies...')
-    await $`pnpm install`
-    console.log('Formatting package.json...')
-    await $`pnpm run --if-present lint:fix:packagejson`
-  }
+  await applyHooks(pkg, config, changedFiles)
 
   console.log('')
   console.groupEnd()
