@@ -35,6 +35,9 @@
     "@langchain/community": "^1.0.0",
     "@langchain/core": "^1.0.3"
   },
+  "optionalDependencies": {
+    "pdfjs-dist": "^5.4.394"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",

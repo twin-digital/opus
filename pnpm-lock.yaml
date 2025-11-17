@@ -418,6 +418,9 @@ importers:
       '@langchain/core':
         specifier: ^1.0.3
         version: 1.0.5(openai@6.9.0(ws@8.18.3)(zod@4.1.12))
+      pdfjs-dist:
+        specifier: ^5.4.394
+        version: 5.4.394
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -471,9 +474,6 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 9.29.0
-      '@twin-digital/opus-scripts':
-        specifier: workspace:*
-        version: 'link:'
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
