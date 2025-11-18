@@ -76,7 +76,7 @@ jobs:
       - name: Detect Docker packages
         id: detect
         run: |
-          packages=$(./tooling/scripts/bin/docker-packages)
+          packages=$(node ./tooling/scripts/bin/docker-packages.js)
           echo "packages=$packages" >> $GITHUB_OUTPUT
           if [ "$packages" = "[]" ]; then
             echo "has-packages=false" >> $GITHUB_OUTPUT
