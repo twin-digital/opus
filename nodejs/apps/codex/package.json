@@ -1,0 +1,68 @@
+{
+  "private": true,
+  "name": "@twin-digital/codex",
+  "version": "0.0.0",
+  "description": "Implementation of the 'Codex' bot.",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "bin": {
+    "codex:": "./bin/run.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "artifact": "artifact",
+    "build": "build",
+    "clean": "clean",
+    "dev": "BUILDKIT_PROGRESS=plain docker-compose up --build --watch",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "./bin/run.js start",
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
+  },
+  "dependencies": {
+    "@oclif/core": "^4.8.0",
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/node": "22.x",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "^0.16.5",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
+  },
+  "oclif": {
+    "bin": "codex",
+    "commands": {
+      "strategy": "explicit",
+      "target": "./dist/commands.mjs",
+      "identifier": "Commands"
+    },
+    "dirname": "codex",
+    "topicSeparator": " "
+  }
+}

@@ -10,7 +10,7 @@ import fsP from 'node:fs/promises'
  */
 export async function globMatches(
   pattern: string | string[],
-  cwd = process.cwd(),
+  cwd: string = process.cwd(),
 ): Promise<boolean> {
   const iterator = fsP.glob(pattern, {
     cwd,

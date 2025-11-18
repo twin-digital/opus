@@ -4,6 +4,7 @@ import {
   makeLoaderChain,
   makePackageJsonLoader,
   makeYamlFileLoader,
+  type ConfigurationLoaderFn,
 } from './configuration-loader.js'
 
 /**
@@ -30,7 +31,7 @@ import {
 export const makePackageConfigLoader = (
   configName: string,
   packagePath: string,
-) =>
+): ConfigurationLoaderFn =>
   makeLoaderChain(
     makePackageJsonLoader(configName, packagePath),
     makeYamlFileLoader(path.join(packagePath, `.${configName}.yaml`)),

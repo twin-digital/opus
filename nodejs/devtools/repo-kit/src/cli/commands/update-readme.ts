@@ -95,7 +95,7 @@ const handler = async () => {
   }
 }
 
-export const makeCommand = () =>
+export const makeCommand = (): Command =>
   new Command('update-readme')
     .description(
       'updates the project README.md file to include updated descriptions of all packages',

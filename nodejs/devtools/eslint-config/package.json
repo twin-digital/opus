@@ -51,5 +51,9 @@
     "@types/node": "22.x",
     "prettier-package-json": "catalog:",
     "typescript": "catalog:"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
   }
 }

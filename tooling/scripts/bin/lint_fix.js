@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { $ } from '../lib/shell.js'
+import { $ } from '../lib/util/shell.js'
 
 const gitIgnorePath = '../../../.gitignore'
 

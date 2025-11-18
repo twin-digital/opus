@@ -1,0 +1,22 @@
+services:
+  codex-dev:
+    build:
+      context: ../../../
+      dockerfile: nodejs/apps/codex/Dockerfile
+      target: runner
+    env_file:
+      - .env
+    working_dir: /app
+    develop:
+      watch:
+        # Sync bin and dist changes, restart container
+        - path: ./bin
+          action: sync+restart
+          target: /app/bin
+        - path: ./dist
+          action: sync+restart
+          target: /app/dist
+        # Rebuild image if package.json changes
+        - path: ./package.json
+          action: rebuild
+    restart: unless-stopped

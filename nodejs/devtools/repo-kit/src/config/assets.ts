@@ -9,7 +9,8 @@ const ASSETS_ROOT = path.join(import.meta.dirname, 'assets')
  * @param asset Name of the asset, relative to the root asset directory and with no leading slash.
  * @returns Absolute path to the asset file.
  */
-export const getAssetPath = (asset: string) => path.join(ASSETS_ROOT, asset)
+export const getAssetPath = (asset: string): string =>
+  path.join(ASSETS_ROOT, asset)
 
 /**
  * Loads the named asset, and parses it as a JSON string. Returns the parsing result.

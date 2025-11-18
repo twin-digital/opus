@@ -182,7 +182,7 @@ const handler = async (options: { config: string }) => {
   }
 }
 
-export const makeCommand = () =>
+export const makeCommand = (): Command =>
   new Command('sync')
     .description(
       'updates project configuration files (package.json, etc.) to align with repo-kit conventions',
