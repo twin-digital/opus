@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.0.3
+
+### Patch Changes
+
+- 965c25d: fix error publishing docker images
+
 ## 0.0.2
 
 ### Patch Changes
