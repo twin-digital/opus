@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.1.0
+
+### Minor Changes
+
+- 50c71be: add dice rolling behavior
+
 ## 0.0.4
 
 ### Patch Changes
