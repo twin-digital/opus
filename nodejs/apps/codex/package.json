@@ -32,6 +32,7 @@
     "watch": "watch"
   },
   "dependencies": {
+    "@dice-roller/rpg-dice-roller": "^5.5.1",
     "@oclif/core": "^4.8.0",
     "discord.js": "^14.24.2",
     "dotenv": "^17.2.3"
@@ -59,7 +60,7 @@
     "bin": "codex",
     "commands": {
       "strategy": "explicit",
-      "target": "./dist/commands.mjs",
+      "target": "./dist/cli.mjs",
       "identifier": "Commands"
     },
     "dirname": "codex",
