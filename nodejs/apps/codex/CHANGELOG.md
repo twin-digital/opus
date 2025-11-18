@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.0.4
+
+### Patch Changes
+
+- f5fc836: fix error publishing docker images
+
 ## 0.0.3
 
 ### Patch Changes
