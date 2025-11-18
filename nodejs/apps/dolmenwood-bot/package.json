@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/dolmenwood-bot",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Discord bot able to assist with questions during Dolmenwood games.",
   "type": "module",
   "bin": {
