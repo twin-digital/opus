@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.0.2
+
+### Patch Changes
+
+- 3beda66: publish first version of package
+
 ## 0.0.1
 
 ### Patch Changes
