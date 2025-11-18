@@ -8,6 +8,7 @@
     "artifact": "./bin/artifact.js",
     "build": "./bin/build.js",
     "clean": "./bin/clean.js",
+    "docker-packages": "./bin/docker-packages.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
     "squash": "./bin/squash.js",
