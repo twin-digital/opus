@@ -68,12 +68,6 @@
       "dependsOn": ["^build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
-    },
-    "watch": {
-      "cache": false,
-      "dependsOn": ["build"],
-      "outputLogs": "full",
-      "persistent": true
     }
   }
 }
