@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/codex",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Implementation of the 'Codex' bot.",
   "type": "module",
   "exports": {
