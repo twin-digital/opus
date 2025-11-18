@@ -1,11 +1,16 @@
 # @twin-digital/tsconfig
 
+## 0.1.1
+
+### Patch Changes
+
+- b5fa9b9: initial publish of package from new repository
+
 ## 0.1.0
 
 ### Minor Changes
 
 - 0120313: update config to abandon use of project references:
-
   - remove composite flag
   - add 'noEmit' flag
   - remove 'tsBuildInfoFile' option

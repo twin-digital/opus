@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/repo-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI utilities for configuring and maintaining monorepos",
   "type": "module",
   "bin": {

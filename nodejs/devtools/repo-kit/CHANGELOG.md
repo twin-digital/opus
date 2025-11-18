@@ -1,5 +1,13 @@
 # @twin-digital/repo-kit
 
+## 0.1.1
+
+### Patch Changes
+
+- b5fa9b9: add support for hooks to run after file changes
+- 700cee0: add support for "dependency" condition
+  - @twin-digital/json-patch-x@0.0.1
+
 ## 0.1.0
 
 ### Minor Changes
