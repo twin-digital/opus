@@ -1,0 +1,14 @@
+*
+!nodejs
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tooling
+!turbo.json
+
+# ignore files everywhere
+.env
+.env.*
+.turbo
+dist
+node_modules

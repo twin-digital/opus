@@ -22,14 +22,65 @@ packages:
       typescript-with-options: false
 
 hooks:
-  - description: Reformat package.json
-    path: package.json
-    run: pnpm exec prettier-package-json --write ./package.json
   - description: Install dependencies
     path: package.json
     run: pnpm install
+  - description: Reformat package.json
+    path: package.json
+    run: pnpm exec prettier-package-json --write ./package.json
 
 features:
+  - name: bundle
+    actions:
+      - name: Create tsdown config file
+        action: write-file
+        conditions:
+          - dependency: tsdown
+        options:
+          file: tsdown.config.ts
+          content: |
+            import { defineConfig } from 'tsdown'
+
+            export default defineConfig({
+              dts: true,
+              entry: 'src/*.ts',
+              noExternal: [/^@twin-digital\//],
+              shims: true,
+            })
+  - name: clean
+    actions:
+      - name: Add script
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              clean: clean
+            devDependencies:
+              '@twin-digital/opus-scripts': workspace:*
+  - name: docker
+    actions:
+      - name: Build container image
+        action: json-merge-patch
+        conditions:
+          - exists: Dockerfile
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              artifact: artifact
+            devDependencies:
+              '@twin-digital/opus-scripts': workspace:*
+  - name: engines
+    actions:
+      - name: Add engines specification to package.json
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            engines:
+              node: 22.x
+              pnpm: 10.x
   - name: eslint
     actions:
       - action: write-file
@@ -165,7 +216,7 @@ features:
       - name: Remove exports
         action: json-merge-patch
         conditions:
-          - notExists: src/**/index.ts
+          - notExists: src/*.ts
         options:
           file: package.json
           patch: |
@@ -205,20 +256,8 @@ features:
             scripts:
               build: build
               typecheck: tsc --noEmit
-              watch: watch
             devDependencies:
               '@twin-digital/opus-scripts': workspace:*
               '@twin-digital/tsconfig': workspace:*
               '@types/node': '22.x'
               typescript: 'catalog:'
-  - name: clean
-    actions:
-      - name: Add script
-        action: json-merge-patch
-        options:
-          file: package.json
-          patch: |
-            scripts:
-              clean: clean
-            devDependencies:
-              '@twin-digital/opus-scripts': workspace:*

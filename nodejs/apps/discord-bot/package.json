@@ -37,5 +37,9 @@
     "serverless": "^4.17.1",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
   }
 }

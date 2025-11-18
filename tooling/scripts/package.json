@@ -5,13 +5,13 @@
   "description": "Scripts used to perform package-level operations in the Opus repository.",
   "type": "module",
   "bin": {
+    "artifact": "./bin/artifact.js",
     "build": "./bin/build.js",
     "clean": "./bin/clean.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
     "squash": "./bin/squash.js",
-    "test": "./bin/test.js",
-    "watch": "./bin/watch.js"
+    "test": "./bin/test.js"
   },
   "scripts": {
     "clean": "node ./bin/clean.js",
@@ -31,5 +31,9 @@
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
   }
 }

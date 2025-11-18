@@ -3,6 +3,35 @@ import path from 'node:path'
 import yaml from 'yaml'
 
 /**
+ * Configuration for a dependency condition which matches if the package declares a dependency
+ * with the specified package name. This can either be a simple string (shorthand) or an
+ * object containing the `dependency` key with optional `match` flags.
+ *
+ * If a string is provided, it is treated as the dependency `name` and default matching
+ * options are assumed.
+ */
+export interface DependencyConditionConfig {
+  dependency:
+    | string
+    | {
+        /**
+         * Name of the dependency to look for in the package manifest (package.json).
+         */
+        name: string
+
+        /**
+         * Optional matching flags. If omitted, defaults are used by the condition.
+         */
+        match?: {
+          dependency?: boolean
+          devDependency?: boolean
+          optionalDependency?: boolean
+          peerDependency?: boolean
+        }
+      }
+}
+
+/**
  * Configuration for a sync condition which matches if a specific file pattern exists in the package
  */
 export interface ExistsConditionConfig {
@@ -29,6 +58,7 @@ export interface NotExistsConditionConfig {
  * or not.
  */
 export type SyncConditionConfig =
+  | DependencyConditionConfig
   | ExistsConditionConfig
   | NotExistsConditionConfig
 

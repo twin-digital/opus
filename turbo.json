@@ -2,9 +2,26 @@
   "$schema": "./node_modules/turbo/schema.json",
   "globalPassThroughEnv": ["CI"],
   "tasks": {
+    "artifact": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "assets/**",
+        "Dockerfile",
+        "package.json",
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ]
+    },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["assets/**", "package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
+      "inputs": [
+        "assets/**",
+        "package.json",
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
       "outputs": ["dist/**"]
     },
     "clean": {

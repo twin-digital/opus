@@ -48,6 +48,10 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
+  },
   "oclif": {
     "bin": "dw",
     "commands": "./dist/commands",

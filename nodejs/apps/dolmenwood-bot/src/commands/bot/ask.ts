@@ -7,7 +7,7 @@ export default class Ask extends Command {
   static override description =
     'Ask a question using RAG (Retrieval-Augmented Generation) with the ingested rulebook index'
 
-  static override examples = [
+  static override examples: string[] = [
     '<%= config.bin %> <%= command.id %> "What are the rules for initiative?"',
     '<%= config.bin %> <%= command.id %> "How does spell casting work?" --index ./custom/index',
     '<%= config.bin %> <%= command.id %> "What are the character classes?" --results 10',

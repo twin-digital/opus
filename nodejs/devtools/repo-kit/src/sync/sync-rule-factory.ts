@@ -9,6 +9,8 @@ import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
 import { makeWriteFileAction } from './actions/write-file.js'
+import { makeDependencyCondition } from './conditions/dependency-condition.js'
+import type { DependencyConditionOptions } from './conditions/dependency-condition.js'
 import { makeExistsCondition } from './conditions/exists-condition.js'
 import { makeNotExistsCondition } from './conditions/not-exists-condition.js'
 import type { PackageFeature } from './package-feature.js'
@@ -44,7 +46,44 @@ const appliesTo = async (
 }
 
 const makeConditionFn = (condition: SyncConditionConfig) => {
-  if ('exists' in condition) {
+  if ('dependency' in condition) {
+    const c = condition as unknown as {
+      dependency:
+        | string
+        | {
+            name: string
+            match?: {
+              dependency?: boolean
+              devDependency?: boolean
+              optionalDependency?: boolean
+              peerDependency?: boolean
+            }
+          }
+    }
+
+    // If shorthand string form is used, treat it as the dependency name with default options
+    if (typeof c.dependency === 'string') {
+      return makeDependencyCondition(c.dependency, {})
+    }
+
+    const dep = c.dependency
+    const match = dep.match ?? {}
+    const opts: DependencyConditionOptions = {
+      ...(match.dependency === undefined ?
+        {}
+      : { dependency: match.dependency }),
+      ...(match.devDependency === undefined ?
+        {}
+      : { devDependency: match.devDependency }),
+      ...(match.optionalDependency === undefined ?
+        {}
+      : { optionalDependency: match.optionalDependency }),
+      ...(match.peerDependency === undefined ?
+        {}
+      : { peerDependency: match.peerDependency }),
+    }
+    return makeDependencyCondition(dep.name, opts)
+  } else if ('exists' in condition) {
     return makeExistsCondition(condition.exists)
   } else if ('notExists' in condition) {
     return makeNotExistsCondition(condition.notExists)

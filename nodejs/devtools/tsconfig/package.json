@@ -8,6 +8,11 @@
     "clean": "clean"
   },
   "devDependencies": {
-    "@twin-digital/opus-scripts": "workspace:*"
+    "@twin-digital/opus-scripts": "workspace:*",
+    "prettier-package-json": "catalog:"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": "10.x"
   }
 }
