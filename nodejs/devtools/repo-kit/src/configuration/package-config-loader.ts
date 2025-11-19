@@ -28,10 +28,7 @@ import {
  * @param packagePath Path of the package root, containing `package.json`
  * @returns The loaded configuration, or undefined if no such configuration exists.
  */
-export const makePackageConfigLoader = (
-  configName: string,
-  packagePath: string,
-): ConfigurationLoaderFn =>
+export const makePackageConfigLoader = (configName: string, packagePath: string): ConfigurationLoaderFn =>
   makeLoaderChain(
     makePackageJsonLoader(configName, packagePath),
     makeYamlFileLoader(path.join(packagePath, `.${configName}.yaml`)),

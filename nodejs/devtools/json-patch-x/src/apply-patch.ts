@@ -3,10 +3,7 @@ import type { AnyOperation, ExtendedOperation } from './operations.js'
 import { removeValue } from './operations/remove-value.js'
 import { appendIfMissing } from './operations/append-if-missing.js'
 
-const applyExtendedOperation = <T>(
-  document: T,
-  patch: ExtendedOperation,
-): T => {
+const applyExtendedOperation = <T>(document: T, patch: ExtendedOperation): T => {
   switch (patch.opx) {
     case 'appendIfMissing':
       return appendIfMissing(document, patch.path, patch.value)
@@ -15,16 +12,11 @@ const applyExtendedOperation = <T>(
   }
 }
 
-const applyOperation = <T>(
-  document: T,
-  patch: AnyOperation,
-  index: number,
-): T => {
+const applyOperation = <T>(document: T, patch: AnyOperation, index: number): T => {
   if ('opx' in patch) {
     return applyExtendedOperation(document, patch)
   } else {
-    return jsonPatch.applyOperation(document, patch, true, true, true, index)
-      .newDocument
+    return jsonPatch.applyOperation(document, patch, true, true, true, index).newDocument
   }
 }
 
@@ -39,19 +31,12 @@ const applyOperation = <T>(
  */
 export function applyPatch<T>(document: T, patch: AnyOperation[]): T {
   if (!Array.isArray(patch)) {
-    throw new jsonPatch.JsonPatchError(
-      'Patch sequence must be an array',
-      'SEQUENCE_NOT_AN_ARRAY',
-    )
+    throw new jsonPatch.JsonPatchError('Patch sequence must be an array', 'SEQUENCE_NOT_AN_ARRAY')
   }
 
   let result = jsonPatch.deepClone(document) as T
   for (let i = 0, length = patch.length; i < length; i++) {
-    result = applyOperation(
-      result,
-      jsonPatch.deepClone(patch[i]) as AnyOperation,
-      i,
-    )
+    result = applyOperation(result, jsonPatch.deepClone(patch[i]) as AnyOperation, i)
   }
 
   return result

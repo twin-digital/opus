@@ -9,8 +9,7 @@ const ASSETS_ROOT = path.join(import.meta.dirname, 'assets')
  * @param asset Name of the asset, relative to the root asset directory and with no leading slash.
  * @returns Absolute path to the asset file.
  */
-export const getAssetPath = (asset: string): string =>
-  path.join(ASSETS_ROOT, asset)
+export const getAssetPath = (asset: string): string => path.join(ASSETS_ROOT, asset)
 
 /**
  * Loads the named asset, and parses it as a JSON string. Returns the parsing result.
@@ -27,8 +26,7 @@ export const loadJsonAsset = async <T = unknown>(asset: string): Promise<T> => {
  * @param asset Name of the asset, relative to the root asset directory
  * @returns Content of the asset
  */
-export const loadTextAsset = (asset: string): Promise<string> =>
-  fsP.readFile(getAssetPath(asset), 'utf-8')
+export const loadTextAsset = (asset: string): Promise<string> => fsP.readFile(getAssetPath(asset), 'utf-8')
 
 /**
  * Loads the named asset, and parses it as a YAML string. Returns the parsing result.

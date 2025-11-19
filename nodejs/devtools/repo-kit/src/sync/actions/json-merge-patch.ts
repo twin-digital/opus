@@ -45,16 +45,10 @@ export const makeJsonMergePatchAction =
     const content = await fsP.readFile(filePath, 'utf-8')
     const original = JSON.parse(content) as object
     const parsedPatch = yaml.parse(patch) as object
-    const patched = removeEmptyValues(
-      jsonMergePatch.apply(cloneDeep(original), parsedPatch),
-    )
+    const patched = removeEmptyValues(jsonMergePatch.apply(cloneDeep(original), parsedPatch))
 
     if (!isEqual(patched, original)) {
-      await fsP.writeFile(
-        filePath,
-        `${JSON.stringify(patched, null, 2)}\n`,
-        'utf-8',
-      )
+      await fsP.writeFile(filePath, `${JSON.stringify(patched, null, 2)}\n`, 'utf-8')
       return {
         changedFiles: [file],
         result: 'ok',

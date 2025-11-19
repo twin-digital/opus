@@ -1,11 +1,5 @@
 import { Command, Flags } from '@oclif/core'
-import {
-  Client,
-  GatewayIntentBits,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-} from 'discord.js'
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from 'discord.js'
 import * as path from 'node:path'
 import { createKnowledgeBase } from '../../app/knowledge-base.js'
 import { askRulesQuestion } from '../../app/ask-rules-question.js'
@@ -72,16 +66,11 @@ export default class Run extends Command {
     this.log(`Loading vector store from ${indexPath}...`)
     let knowledgeBase
     try {
-      knowledgeBase = await createKnowledgeBase(
-        indexPath,
-        flags['embeddings-model'],
-      )
+      knowledgeBase = await createKnowledgeBase(indexPath, flags['embeddings-model'])
       this.log('Vector store loaded successfully')
     } catch (error) {
       const err = error as Error
-      this.error(
-        `Failed to load vector store from ${indexPath}: ${err.message}`,
-      )
+      this.error(`Failed to load vector store from ${indexPath}: ${err.message}`)
     }
 
     // Setup Discord bot
@@ -92,9 +81,7 @@ export default class Run extends Command {
       new SlashCommandBuilder()
         .setName('ask')
         .setDescription('Ask a Dolmenwood rules question')
-        .addStringOption((o: any) =>
-          o.setName('q').setDescription('Your question').setRequired(true),
-        ),
+        .addStringOption((o: any) => o.setName('q').setDescription('Your question').setRequired(true)),
     ].map((c: any) => c.toJSON())
 
     // Register slash commands
@@ -112,11 +99,7 @@ export default class Run extends Command {
 
     // Handle interactions
     client.on('interactionCreate', (interaction: any) => {
-      if (
-        !interaction.isChatInputCommand() ||
-        interaction.commandName !== 'ask'
-      )
-        return
+      if (!interaction.isChatInputCommand() || interaction.commandName !== 'ask') return
 
       void (async () => {
         const question = interaction.options.getString('q', true) as string
@@ -134,9 +117,7 @@ export default class Run extends Command {
           await interaction.editReply(answer)
         } catch (error) {
           this.log(`Error answering question: ${(error as Error).message}`)
-          await interaction.editReply(
-            'Sorry—something went wrong retrieving that.',
-          )
+          await interaction.editReply('Sorry—something went wrong retrieving that.')
         }
       })()
     })

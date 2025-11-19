@@ -10,8 +10,7 @@ export interface BaseExtendedOperation extends BaseOperation {
 /**
  * Appends the specified value to an array, if and only if it does not already exist in the array.
  */
-export interface AppendIfMissingExtendedOperation<T = unknown>
-  extends BaseExtendedOperation {
+export interface AppendIfMissingExtendedOperation<T = unknown> extends BaseExtendedOperation {
   opx: 'appendIfMissing'
 
   /**
@@ -23,8 +22,7 @@ export interface AppendIfMissingExtendedOperation<T = unknown>
 /**
  * Removes all occurrences of a value from an array, leaving any others intact.
  */
-export interface RemoveValueExtendedOperation<T = unknown>
-  extends BaseExtendedOperation {
+export interface RemoveValueExtendedOperation<T = unknown> extends BaseExtendedOperation {
   opx: 'removeValue'
 
   /**
@@ -33,7 +31,5 @@ export interface RemoveValueExtendedOperation<T = unknown>
   value: T
 }
 
-export type ExtendedOperation =
-  | AppendIfMissingExtendedOperation
-  | RemoveValueExtendedOperation
+export type ExtendedOperation = AppendIfMissingExtendedOperation | RemoveValueExtendedOperation
 export type AnyOperation = ExtendedOperation | Operation

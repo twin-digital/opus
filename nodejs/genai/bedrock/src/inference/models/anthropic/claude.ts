@@ -33,11 +33,7 @@ export interface ClaudeMessage {
  * @see https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
  */
 export interface ClaudeTool {
-  type:
-    | 'custom'
-    | 'computer_20241022'
-    | 'bash_20241022'
-    | 'text_editor_20241022'
+  type: 'custom' | 'computer_20241022' | 'bash_20241022' | 'text_editor_20241022'
   name: string
   description?: string
   input_schema?: unknown

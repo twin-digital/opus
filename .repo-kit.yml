@@ -243,10 +243,7 @@ features:
           file: tsconfig.json
           content: |
             {
-              "extends": [
-                "@twin-digital/tsconfig/tsconfig.build.json",
-                "./tsconfig.options.json"
-              ]
+              "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]
             }
       - name: Add scripts and dependencies
         action: json-merge-patch

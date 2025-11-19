@@ -39,8 +39,7 @@ export const removeEmptyValues = (obj: unknown): unknown => {
           const cleaned = recurse(v)
 
           const isEmptyArr = Array.isArray(cleaned) && cleaned.length === 0
-          const isEmptyObj =
-            isPlainObject(cleaned) && keys(cleaned).length === 0
+          const isEmptyObj = isPlainObject(cleaned) && keys(cleaned).length === 0
 
           if (cleaned !== undefined && !isEmptyArr && !isEmptyObj) {
             out[k] = cleaned

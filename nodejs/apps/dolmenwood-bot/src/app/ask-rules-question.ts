@@ -60,9 +60,7 @@ function formatPageCitation(meta: DocumentMetadata): string {
   }
 
   // Check if pages are consecutive
-  const isConsecutive = pages.every(
-    (page, i) => i === 0 || page === pages[i - 1] + 1,
-  )
+  const isConsecutive = pages.every((page, i) => i === 0 || page === pages[i - 1] + 1)
 
   if (isConsecutive) {
     return `pp. ${pages[0]}-${pages[pages.length - 1]}`
@@ -79,10 +77,7 @@ function formatPageCitation(meta: DocumentMetadata): string {
 
 function makePrompt(question: string, contexts: Context[]): string {
   const citeBlock = contexts
-    .map(
-      (c, i) =>
-        `#${i + 1} [${c.meta.book} ${formatPageCitation(c.meta)}] ${c.text}`,
-    )
+    .map((c, i) => `#${i + 1} [${c.meta.book} ${formatPageCitation(c.meta)}] ${c.text}`)
     .join('\n---\n')
 
   return `
@@ -110,16 +105,8 @@ FORMAT:
  * @param options Configuration for the question answering process
  * @returns The answer to the question
  */
-export async function askRulesQuestion(
-  options: AskRulesQuestionOptions,
-): Promise<string> {
-  const {
-    knowledgeBase,
-    question,
-    llmModelId,
-    resultCount = 6,
-    maxTokens = 400,
-  } = options
+export async function askRulesQuestion(options: AskRulesQuestionOptions): Promise<string> {
+  const { knowledgeBase, question, llmModelId, resultCount = 6, maxTokens = 400 } = options
 
   // Search for similar chunks
   console.log(`Searching for relevant context (k=${resultCount})...`)

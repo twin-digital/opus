@@ -8,10 +8,7 @@ import fsP from 'node:fs/promises'
  * @param cwd Working directory from which to match files, defaulting to cwd
  * @return true if the glob(s) match at least one file, otherwise false
  */
-export async function globMatches(
-  pattern: string | string[],
-  cwd: string = process.cwd(),
-): Promise<boolean> {
+export async function globMatches(pattern: string | string[], cwd: string = process.cwd()): Promise<boolean> {
   const iterator = fsP.glob(pattern, {
     cwd,
   })

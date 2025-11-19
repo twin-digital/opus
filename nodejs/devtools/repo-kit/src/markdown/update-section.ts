@@ -47,18 +47,12 @@ export const updateSection = ({
   const getUpdatedContent = () => {
     const beginMarker = `<!-- BEGIN ${sectionId} -->`
     const endMarker = `<!-- END ${sectionId} -->`
-    const sectionRegExp = new RegExp(
-      `${escapeRegExp(beginMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`,
-      'g',
-    )
+    const sectionRegExp = new RegExp(`${escapeRegExp(beginMarker)}[\\s\\S]*?${escapeRegExp(endMarker)}`, 'g')
 
     const sectionExists = !!sectionRegExp.exec(markdown)
     if (sectionExists) {
       // section exists, so let's update it
-      return markdown.replaceAll(
-        sectionRegExp,
-        `${beginMarker}\n\n${content}\n\n${endMarker}`,
-      )
+      return markdown.replaceAll(sectionRegExp, `${beginMarker}\n\n${content}\n\n${endMarker}`)
     } else {
       switch (missing) {
         case 'insert':
@@ -66,9 +60,7 @@ export const updateSection = ({
         case 'skip':
           return markdown
         default:
-          throw new Error(
-            `Could not find section to update, and 'missing' was "${missing}. [sectionId=${sectionId}]`,
-          )
+          throw new Error(`Could not find section to update, and 'missing' was "${missing}. [sectionId=${sectionId}]`)
       }
     }
   }

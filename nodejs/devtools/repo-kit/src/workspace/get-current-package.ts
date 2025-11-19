@@ -35,19 +35,14 @@ const findNearestPackageJson = (startDir: string): string | null => {
  *
  * @param cwd - Directory for which to find the package (defaults to process.cwd())
  */
-export const getCurrentPackage = async (
-  cwd: string = process.cwd(),
-): Promise<PackageMeta> => {
+export const getCurrentPackage = async (cwd: string = process.cwd()): Promise<PackageMeta> => {
   const packageDir = findNearestPackageJson(cwd)
   if (packageDir === null) {
     throw new Error(`No package.json found in any ancestor of "${cwd}".`)
   }
 
   const manifest = JSON.parse(
-    await fs.promises.readFile(
-      path.resolve(packageDir, 'package.json'),
-      'utf-8',
-    ),
+    await fs.promises.readFile(path.resolve(packageDir, 'package.json'), 'utf-8'),
   ) as PackageManifest
 
   return {

@@ -8,11 +8,7 @@ import yaml from 'yaml'
  * Function which is able to load configuration from an implementation-specific source. Will return undefined if the
  * underlying source of configuration data does not exist.
  */
-export type ConfigurationLoaderFn = () =>
-  | ConfigValue
-  | Promise<ConfigValue>
-  | undefined
-  | Promise<undefined>
+export type ConfigurationLoaderFn = () => ConfigValue | Promise<ConfigValue> | undefined | Promise<undefined>
 
 /**
  * Returns a `ConfigurationLoaderFn` which reads configuration from a specified file.
@@ -36,10 +32,7 @@ export const makeJsonFileLoader =
  * @param key Key (or array of nested keys) of the config value to select.
  */
 export const makeKeySelector =
-  (
-    key: string | string[],
-    delegateLoader: ConfigurationLoaderFn,
-  ): ConfigurationLoaderFn =>
+  (key: string | string[], delegateLoader: ConfigurationLoaderFn): ConfigurationLoaderFn =>
   async () => {
     const allConfig = await delegateLoader()
     return get(allConfig, key) as ConfigValue
@@ -69,14 +62,8 @@ export const makeLoaderChain =
  * @param key Key to return from the package.json file
  * @param packagePath Package path, containing the package.json file
  */
-export const makePackageJsonLoader = (
-  key: string | string[],
-  packagePath: string,
-): ConfigurationLoaderFn =>
-  makeKeySelector(
-    key,
-    makeJsonFileLoader(path.join(packagePath, 'package.json')),
-  )
+export const makePackageJsonLoader = (key: string | string[], packagePath: string): ConfigurationLoaderFn =>
+  makeKeySelector(key, makeJsonFileLoader(path.join(packagePath, 'package.json')))
 
 /**
  * Returns a `ConfigurationLoaderFn` which reads configuration from a specified Yaml file.

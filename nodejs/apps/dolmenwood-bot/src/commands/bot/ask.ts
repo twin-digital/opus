@@ -61,15 +61,10 @@ export default class Ask extends Command {
     this.log(`Loading vector store from ${indexPath}...`)
     let knowledgeBase
     try {
-      knowledgeBase = await createKnowledgeBase(
-        indexPath,
-        flags['embeddings-model'],
-      )
+      knowledgeBase = await createKnowledgeBase(indexPath, flags['embeddings-model'])
     } catch (error) {
       const err = error as Error
-      this.error(
-        `Failed to load vector store from ${indexPath}: ${err.message}`,
-      )
+      this.error(`Failed to load vector store from ${indexPath}: ${err.message}`)
     }
 
     // Ask the question using the shared function

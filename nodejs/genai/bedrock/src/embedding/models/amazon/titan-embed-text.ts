@@ -57,10 +57,7 @@ export interface TitanEmbedTextResponse {
   }
 }
 
-export const adapter: EmbeddingModelAdapter<
-  TitanEmbedTextRequest,
-  TitanEmbedTextResponse
-> = {
+export const adapter: EmbeddingModelAdapter<TitanEmbedTextRequest, TitanEmbedTextResponse> = {
   createRequest: (request) => request,
 
   parseResponse: (response) => {

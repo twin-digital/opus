@@ -2,6 +2,7 @@ import { Command, Flags } from '@oclif/core'
 import type { OptionFlag } from '@oclif/core/interfaces'
 import { runBot } from '../bot/bot.js'
 import { makeDiceRollerBehavior } from '../bot/dice-roller/behavior.js'
+import { RepositoryCoordinator } from '../core/db/s3-repository/repository-coordinator.js'
 
 export default class Start extends Command {
   static override description = 'Run the Codex Discord bot'
@@ -14,11 +15,12 @@ export default class Start extends Command {
   static override flags: {
     'app-id': OptionFlag<string>
     diceChannelId: OptionFlag<string | undefined>
+    repositoryBucket: OptionFlag<string>
+    repositoryPrefix: OptionFlag<string | undefined>
     token: OptionFlag<string>
   } = {
     diceChannelId: Flags.string({
-      description:
-        'ID of the Discord channel in which to respond to dice roll commands',
+      description: 'ID of the Discord channel in which to respond to dice roll commands',
       env: 'CODEX_DICE_CHANNEL_ID',
       required: false,
     }),
@@ -32,12 +34,40 @@ export default class Start extends Command {
       env: 'DISCORD_TOKEN',
       required: true,
     }),
+    repositoryBucket: Flags.string({
+      description: 'S3 bucket for persisting bot data',
+      env: 'CODEX_REPOSITORY_BUCKET',
+      required: true,
+    }),
+    repositoryPrefix: Flags.string({
+      description: 'S3 prefix in which to store bot data. S3 key will be "<PREFIX><APP_ID>.json"',
+      default: '',
+      env: 'CODEX_REPOSITORY_PREFIX',
+      required: false,
+    }),
   }
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(Start)
 
     const log = this.log.bind(this)
+
+    const logger = {
+      error: this.log.bind(this),
+      info: this.log.bind(this),
+    }
+
+    // Initialize the repository coordinator
+    log('Loading bot data from S3...')
+    const coordinator = new RepositoryCoordinator({
+      bucket: flags.repositoryBucket,
+      documentId: flags['app-id'],
+      log: logger,
+      prefix: flags.repositoryPrefix,
+    })
+
+    await coordinator.init()
+    log('Bot data loaded')
 
     const diceChannelId = flags.diceChannelId
     const behaviors =
@@ -46,15 +76,15 @@ export default class Start extends Command {
       : [
           makeDiceRollerBehavior({
             channelIds: [diceChannelId],
+            db: coordinator,
             log,
           }),
         ]
 
-    // graceful shutdown helpers
     await runBot({
       appId: flags['app-id'],
       behaviors,
-      log,
+      log: logger,
       token: flags.token,
     })
 

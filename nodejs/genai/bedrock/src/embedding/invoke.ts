@@ -9,10 +9,7 @@ import { getEmbeddingModelAdapter } from './model-adapters.js'
  * @param request Request input containing the string to embed.
  * @returns The generated embeddings.
  */
-export const invokeEmbeddingModel = async (
-  modelId: string,
-  request: EmbeddingRequest,
-): Promise<EmbeddingResponse> => {
+export const invokeEmbeddingModel = async (modelId: string, request: EmbeddingRequest): Promise<EmbeddingResponse> => {
   const adapter = getEmbeddingModelAdapter(modelId)
   if (adapter === undefined) {
     throw new Error(`No adapter found for model: ${modelId}`)
@@ -26,8 +23,6 @@ export const invokeEmbeddingModel = async (
     }),
   )
 
-  const responseBody = JSON.parse(
-    new TextDecoder().decode(response.body),
-  ) as unknown
+  const responseBody = JSON.parse(new TextDecoder().decode(response.body)) as unknown
   return adapter.parseResponse(responseBody)
 }

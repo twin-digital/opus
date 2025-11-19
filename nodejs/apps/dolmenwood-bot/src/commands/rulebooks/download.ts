@@ -1,9 +1,5 @@
 import { Command, Flags } from '@oclif/core'
-import {
-  GetObjectCommand,
-  ListObjectsV2Command,
-  S3Client,
-} from '@aws-sdk/client-s3'
+import { GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -60,10 +56,7 @@ export default class Download extends Command {
     })
   }
 
-  private async streamToFile(
-    stream: Readable,
-    filePath: string,
-  ): Promise<void> {
+  private async streamToFile(stream: Readable, filePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const writeStream = fs.createWriteStream(filePath)
       stream.pipe(writeStream)
@@ -79,11 +72,7 @@ export default class Download extends Command {
     return etag.replace(/^"|"$/g, '')
   }
 
-  private async shouldDownload(
-    localPath: string,
-    s3ETag: string,
-    s3Size?: number,
-  ): Promise<boolean> {
+  private async shouldDownload(localPath: string, s3ETag: string, s3Size?: number): Promise<boolean> {
     // If file doesn't exist, download it
     if (!fs.existsSync(localPath)) {
       return true
@@ -141,9 +130,7 @@ export default class Download extends Command {
     }
 
     // Filter for PDF files
-    const pdfObjects = response.Contents.filter((obj: S3Object) =>
-      obj.Key?.toLowerCase().endsWith('.pdf'),
-    )
+    const pdfObjects = response.Contents.filter((obj: S3Object) => obj.Key?.toLowerCase().endsWith('.pdf'))
 
     if (pdfObjects.length === 0) {
       this.warn('No PDF files found')
@@ -164,11 +151,7 @@ export default class Download extends Command {
       const localPath = path.join(outputDir, filename)
 
       // Check if we need to download
-      const needsDownload = await this.shouldDownload(
-        localPath,
-        obj.ETag ?? '',
-        obj.Size,
-      )
+      const needsDownload = await this.shouldDownload(localPath, obj.ETag ?? '', obj.Size)
 
       if (!needsDownload) {
         this.log(`✓ Skipping ${filename} (already exists and is valid)`)
@@ -202,8 +185,6 @@ export default class Download extends Command {
       }
     }
 
-    this.log(
-      `\n✓ Complete: ${downloadedCount} downloaded, ${skippedCount} skipped, ${pdfObjects.length} total`,
-    )
+    this.log(`\n✓ Complete: ${downloadedCount} downloaded, ${skippedCount} skipped, ${pdfObjects.length} total`)
   }
 }

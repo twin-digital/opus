@@ -5,12 +5,7 @@ import { resolve } from 'node:path'
 import { globby } from 'globby'
 
 const projectRoot = resolve(process.cwd())
-const patterns = [
-  '**/dist',
-  '**/.turbo',
-  '**/tsconfig.tsbuildinfo',
-  '!**/node_modules/**',
-]
+const patterns = ['**/dist', '**/.turbo', '**/tsconfig.tsbuildinfo', '!**/node_modules/**']
 
 try {
   const files = await globby(patterns, {

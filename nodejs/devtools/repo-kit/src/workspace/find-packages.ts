@@ -23,17 +23,12 @@ export const findPackages = async ({
 
   const rootPath = await getWorkspaceRoot()
   const allPackages = JSON.parse(stdout) as { name: string; path: string }[]
-  const packages =
-    includeRoot ? allPackages : (
-      allPackages.filter((pkg) => pkg.path !== rootPath)
-    )
+  const packages = includeRoot ? allPackages : allPackages.filter((pkg) => pkg.path !== rootPath)
 
   return Promise.all(
     packages.map(async (pkg) => {
       const manifestPath = path.resolve(pkg.path, 'package.json')
-      const manifest = JSON.parse(
-        await fs.promises.readFile(manifestPath, 'utf-8'),
-      ) as ProjectManifest
+      const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf-8')) as ProjectManifest
       return {
         manifest,
         name: pkg.name,

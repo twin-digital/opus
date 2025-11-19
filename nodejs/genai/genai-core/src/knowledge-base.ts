@@ -1,9 +1,5 @@
 import type { VectorStore } from '@langchain/core/vectorstores'
-import type {
-  KnowledgeBase,
-  KnowledgeBaseSearchOptions,
-  KnowledgeBaseSearchResult,
-} from './rag.js'
+import type { KnowledgeBase, KnowledgeBaseSearchOptions, KnowledgeBaseSearchResult } from './rag.js'
 import { HNSWLib } from '@langchain/community/vectorstores/hnswlib'
 
 /**
@@ -48,8 +44,7 @@ export const createHnswKnowledgeBase = async (
 ): Promise<KnowledgeBase> => {
   const store = await HNSWLib.load(storePath, {
     embedQuery: createEmbedding,
-    embedDocuments: async (texts: string[]) =>
-      Promise.all(texts.map((t) => createEmbedding(t))),
+    embedDocuments: async (texts: string[]) => Promise.all(texts.map((t) => createEmbedding(t))),
   })
   return new VectorStoreKnowledgeBase(store)
 }
