@@ -1,5 +1,13 @@
 # @twin-digital/codex
 
+## 0.2.0
+
+### Minor Changes
+
+- aadf980: add bot support for input command handling
+- aadf980: update stats rolling to be a chat command instead of message-based
+- aadf980: add persistent stat rolling and replay of existing stats
+
 ## 0.1.0
 
 ### Minor Changes
