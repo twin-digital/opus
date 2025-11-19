@@ -24,10 +24,7 @@ export const makeWriteFileAction =
   }): SyncActionFn =>
   async (workspace) => {
     const filePath = path.join(workspace.path, file)
-    const previousContent =
-      fs.existsSync(filePath) ?
-        await fsP.readFile(filePath, 'utf-8')
-      : undefined
+    const previousContent = fs.existsSync(filePath) ? await fsP.readFile(filePath, 'utf-8') : undefined
     const changed = previousContent === undefined || previousContent !== content
 
     if (changed) {

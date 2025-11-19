@@ -1,9 +1,5 @@
 import { Command, Flags } from '@oclif/core'
-import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-  ThrottlingException,
-} from '@aws-sdk/client-bedrock-runtime'
+import { BedrockRuntimeClient, InvokeModelCommand, ThrottlingException } from '@aws-sdk/client-bedrock-runtime'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -79,8 +75,7 @@ interface DryRunStats {
 const MAX_ALLOWED_COST = 0.5 // $0.50
 
 export default class Ingest extends Command {
-  static override description =
-    'Ingest PDF rulebooks and create vector embeddings for semantic search'
+  static override description = 'Ingest PDF rulebooks and create vector embeddings for semantic search'
 
   static override examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -94,8 +89,7 @@ export default class Ingest extends Command {
   static override flags = {
     input: Flags.string({
       char: 'i',
-      description:
-        'Directory containing PDF rulebooks, or a single PDF file to ingest',
+      description: 'Directory containing PDF rulebooks, or a single PDF file to ingest',
       default: '.data/rulebooks',
     }),
     output: Flags.string({
@@ -131,8 +125,7 @@ export default class Ingest extends Command {
       default: 2,
     }),
     'dry-run': Flags.boolean({
-      description:
-        'Calculate costs and time estimates without performing ingestion',
+      description: 'Calculate costs and time estimates without performing ingestion',
       default: false,
     }),
     force: Flags.boolean({
@@ -179,18 +172,13 @@ export default class Ingest extends Command {
     while (retryCount < maxRetries) {
       try {
         const response = await bedrock.send(command)
-        const output = JSON.parse(
-          new TextDecoder().decode(response.body),
-        ) as EmbeddingResponse
+        const output = JSON.parse(new TextDecoder().decode(response.body)) as EmbeddingResponse
         return output.embedding
       } catch (error) {
         lastError = error as Error
 
         // Check if it's a throttling exception
-        if (
-          error instanceof ThrottlingException ||
-          (error as Error).name === 'ThrottlingException'
-        ) {
+        if (error instanceof ThrottlingException || (error as Error).name === 'ThrottlingException') {
           retryCount++
 
           // Extract retry-after header if available from error metadata
@@ -205,17 +193,9 @@ export default class Ingest extends Command {
           if (errorWithMetadata.$retryAfterSeconds) {
             waitTime = errorWithMetadata.$retryAfterSeconds * 1000
             this.log(`Throttled. AWS SDK indicates waiting ${waitTime}ms...`)
-          } else if (
-            errorWithMetadata.$metadata?.httpHeaders?.['retry-after']
-          ) {
-            waitTime =
-              Number.parseInt(
-                errorWithMetadata.$metadata.httpHeaders['retry-after'],
-                10,
-              ) * 1000
-            this.log(
-              `Throttled. Retry-After header indicates waiting ${waitTime}ms...`,
-            )
+          } else if (errorWithMetadata.$metadata?.httpHeaders?.['retry-after']) {
+            waitTime = Number.parseInt(errorWithMetadata.$metadata.httpHeaders['retry-after'], 10) * 1000
+            this.log(`Throttled. Retry-After header indicates waiting ${waitTime}ms...`)
           } else {
             // Use exponential backoff: 1s, 2s, 4s, 8s, etc., with jitter
             const baseDelay = 1000
@@ -240,11 +220,7 @@ export default class Ingest extends Command {
     throw new Error(`Failed after ${maxRetries} retries: ${lastError?.message}`)
   }
 
-  private createEmbeddings(
-    bedrock: BedrockRuntimeClient,
-    modelId: string,
-    maxConcurrent: number,
-  ): Embeddings {
+  private createEmbeddings(bedrock: BedrockRuntimeClient, modelId: string, maxConcurrent: number): Embeddings {
     const embedQuery = async (text: string): Promise<number[]> => {
       const body = JSON.stringify({ inputText: text })
       const command = new InvokeModelCommand({
@@ -259,9 +235,7 @@ export default class Ingest extends Command {
       const embeddings: number[][] = []
       const totalChunks = texts.length
 
-      this.log(
-        `Creating embeddings for ${totalChunks} chunks (${maxConcurrent} concurrent requests)...`,
-      )
+      this.log(`Creating embeddings for ${totalChunks} chunks (${maxConcurrent} concurrent requests)...`)
 
       // Process in batches to limit concurrency
       for (let i = 0; i < texts.length; i += maxConcurrent) {
@@ -270,14 +244,10 @@ export default class Ingest extends Command {
         const totalBatches = Math.ceil(texts.length / maxConcurrent)
         const progress = Math.round((i / totalChunks) * 100)
 
-        this.log(
-          `Batch ${batchNumber}/${totalBatches} (${progress}% complete)...`,
-        )
+        this.log(`Batch ${batchNumber}/${totalBatches} (${progress}% complete)...`)
 
         // Process batch concurrently with automatic retry and backoff
-        const batchEmbeddings = await Promise.all(
-          batch.map((text) => embedQuery(text)),
-        )
+        const batchEmbeddings = await Promise.all(batch.map((text) => embedQuery(text)))
         embeddings.push(...batchEmbeddings)
       }
 
@@ -297,9 +267,7 @@ export default class Ingest extends Command {
       const start = Number.parseInt(rangeMatch[1], 10)
       const end = Number.parseInt(rangeMatch[2], 10)
       if (start > end) {
-        this.error(
-          `Invalid page range: start (${start}) must be less than or equal to end (${end})`,
-        )
+        this.error(`Invalid page range: start (${start}) must be less than or equal to end (${end})`)
       }
       return { start, end }
     }
@@ -311,22 +279,14 @@ export default class Ingest extends Command {
       return { start: page, end: page }
     }
 
-    this.error(
-      `Invalid page specification: "${pagesFlag}". Use a single page (e.g., "32") or range (e.g., "100-109")`,
-    )
+    this.error(`Invalid page specification: "${pagesFlag}". Use a single page (e.g., "32") or range (e.g., "100-109")`)
   }
 
-  private calculateRealPageNumber(
-    pdfPageNumber: number,
-    pageOffset: number,
-  ): number {
+  private calculateRealPageNumber(pdfPageNumber: number, pageOffset: number): number {
     return pdfPageNumber + pageOffset
   }
 
-  private shouldIncludePage(
-    realPageNumber: number,
-    pageRange?: { start: number; end: number },
-  ): boolean {
+  private shouldIncludePage(realPageNumber: number, pageRange?: { start: number; end: number }): boolean {
     // Skip pages with real page number <= 0
     if (realPageNumber <= 0) return false
     // If no range specified, include all valid pages
@@ -340,9 +300,7 @@ export default class Ingest extends Command {
     const bookMap = new Map<string, BookMetadata>()
 
     if (!fs.existsSync(indexPath)) {
-      this.warn(
-        `No index.json found in ${inputDir}. Book titles will be derived from filenames.`,
-      )
+      this.warn(`No index.json found in ${inputDir}. Book titles will be derived from filenames.`)
       return bookMap
     }
 
@@ -357,9 +315,7 @@ export default class Ingest extends Command {
       this.log(`Loaded metadata for ${bookMap.size} book(s) from index.json`)
     } catch (error) {
       const err = error as Error
-      this.warn(
-        `Failed to parse index.json: ${err.message}. Book titles will be derived from filenames.`,
-      )
+      this.warn(`Failed to parse index.json: ${err.message}. Book titles will be derived from filenames.`)
     }
 
     return bookMap
@@ -378,10 +334,7 @@ export default class Ingest extends Command {
     return (estimatedTokens / 1000) * costPer1000Tokens
   }
 
-  private estimateTime(
-    totalWords: number,
-    maxConcurrent: number,
-  ): { min: number; max: number } {
+  private estimateTime(totalWords: number, maxConcurrent: number): { min: number; max: number } {
     // Average latency per API call: 300-500ms
     // Each chunk is ~1200 chars = ~300 words = ~400 tokens
     const avgWordsPerChunk = 300
@@ -429,17 +382,11 @@ export default class Ingest extends Command {
     this.log(`Total pages: ${stats.totalPages.toLocaleString()}`)
     this.log(`Total words: ${stats.totalWords.toLocaleString()}`)
     this.log(`\nEstimated cost: $${stats.estimatedCost.toFixed(4)}`)
-    this.log(
-      `Estimated time: ${this.formatTime(stats.estimatedTimeMin)} - ${this.formatTime(stats.estimatedTimeMax)}`,
-    )
+    this.log(`Estimated time: ${this.formatTime(stats.estimatedTimeMin)} - ${this.formatTime(stats.estimatedTimeMax)}`)
     this.log('═══════════════════════════════════════════════════════\n')
   }
 
-  private calculatePositionKey(
-    book: string,
-    pages: number[],
-    chunk: number,
-  ): string {
+  private calculatePositionKey(book: string, pages: number[], chunk: number): string {
     // Position-based key for identifying a specific chunk location
     // Use the first page as the primary page for the key
     const primaryPage = pages[0] || 0
@@ -476,10 +423,7 @@ export default class Ingest extends Command {
       const store = await HNSWLib.load(vectorStorePath, embeddings)
 
       // Track chunks by position key and count chunks per page
-      const existingChunks = new Map<
-        string,
-        { id: string; contentHash: string }
-      >()
+      const existingChunks = new Map<string, { id: string; contentHash: string }>()
       const pageChunkCounts = new Map<string, number>()
 
       // Read the docstore.json file directly
@@ -521,11 +465,7 @@ export default class Ingest extends Command {
                 const effectivePrimaryPage = primaryPage ?? pages[0]
 
                 if (book && pages.length > 0 && typeof chunk === 'number') {
-                  const positionKey = this.calculatePositionKey(
-                    book,
-                    pages,
-                    chunk,
-                  )
+                  const positionKey = this.calculatePositionKey(book, pages, chunk)
                   existingChunks.set(positionKey, {
                     id: id as string,
                     contentHash: contentHash || '',
@@ -533,10 +473,7 @@ export default class Ingest extends Command {
 
                   // Track chunk count per primary page
                   const pageKey = `${book}|${effectivePrimaryPage}`
-                  pageChunkCounts.set(
-                    pageKey,
-                    (pageChunkCounts.get(pageKey) ?? 0) + 1,
-                  )
+                  pageChunkCounts.set(pageKey, (pageChunkCounts.get(pageKey) ?? 0) + 1)
                 }
               }
             }
@@ -551,9 +488,7 @@ export default class Ingest extends Command {
       return { store, existingChunks, pageChunkCounts }
     } catch (error) {
       const err = error as Error
-      this.warn(
-        `Failed to load existing index: ${err.message}. Creating new index...`,
-      )
+      this.warn(`Failed to load existing index: ${err.message}. Creating new index...`)
       return {
         store: null,
         existingChunks: new Map(),
@@ -591,9 +526,7 @@ export default class Ingest extends Command {
     let pageRange: { start: number; end: number } | undefined
     if (flags.pages) {
       if (isDirectory) {
-        this.error(
-          'The --pages flag can only be used when --input specifies a single file, not a directory',
-        )
+        this.error('The --pages flag can only be used when --input specifies a single file, not a directory')
       }
       pageRange = this.parsePageRange(flags.pages)
       this.log(`Filtering to pages ${pageRange.start}-${pageRange.end}`)
@@ -662,10 +595,7 @@ export default class Ingest extends Command {
       }[] = []
 
       for (const { page: pdfPageNumber, text } of pages) {
-        const realPageNumber = this.calculateRealPageNumber(
-          pdfPageNumber,
-          pageOffset,
-        )
+        const realPageNumber = this.calculateRealPageNumber(pdfPageNumber, pageOffset)
 
         // Skip pages based on real page number
         if (!this.shouldIncludePage(realPageNumber, pageRange)) {
@@ -705,9 +635,7 @@ export default class Ingest extends Command {
 
         if (chunkStartPos === -1) {
           // This shouldn't happen, but if it does, log and skip
-          this.warn(
-            `Warning: Could not locate chunk ${index} in full text for ${bookTitle}`,
-          )
+          this.warn(`Warning: Could not locate chunk ${index} in full text for ${bookTitle}`)
           return
         }
 
@@ -717,10 +645,7 @@ export default class Ingest extends Command {
         const pagesInChunk: number[] = []
         for (const marker of pageMarkers) {
           // Check if this page overlaps with the chunk
-          if (
-            marker.charStart < chunkEndPos &&
-            marker.charEnd > chunkStartPos
-          ) {
+          if (marker.charStart < chunkEndPos && marker.charEnd > chunkStartPos) {
             pagesInChunk.push(marker.page)
           }
         }
@@ -733,11 +658,7 @@ export default class Ingest extends Command {
         }
 
         // Calculate position key and content hash
-        const positionKey = this.calculatePositionKey(
-          bookTitle,
-          pagesInChunk,
-          index,
-        )
+        const positionKey = this.calculatePositionKey(bookTitle, pagesInChunk, index)
         const contentHash = this.calculateContentHash(chunk)
 
         const metadata: Record<string, string | number | number[]> = {
@@ -774,15 +695,11 @@ export default class Ingest extends Command {
       })
 
       if (skippedInvalidPages > 0) {
-        this.log(
-          `  Skipped ${skippedInvalidPages} page(s) with real page number ≤ 0`,
-        )
+        this.log(`  Skipped ${skippedInvalidPages} page(s) with real page number ≤ 0`)
       }
 
       if (pageRange) {
-        this.log(
-          `  Included ${includedPageCount} page(s) from real page range ${pageRange.start}-${pageRange.end}`,
-        )
+        this.log(`  Included ${includedPageCount} page(s) from real page range ${pageRange.start}-${pageRange.end}`)
       }
     }
 
@@ -823,11 +740,7 @@ export default class Ingest extends Command {
       maxAttempts: 10, // Maximum retry attempts
       retryMode: 'adaptive', // Adaptive retry mode adjusts based on service response
     })
-    const embeddings = this.createEmbeddings(
-      bedrock,
-      flags['model-id'],
-      flags['max-concurrent'],
-    )
+    const embeddings = this.createEmbeddings(bedrock, flags['model-id'], flags['max-concurrent'])
 
     // Load existing store and get existing chunks with position tracking
     const {
@@ -911,9 +824,7 @@ export default class Ingest extends Command {
       this.log(`Replacing ${replacedCount} chunk(s) with updated content`)
     }
     if (skippedCount > 0) {
-      this.log(
-        `Skipping ${skippedCount} chunk(s) that already exist with identical content`,
-      )
+      this.log(`Skipping ${skippedCount} chunk(s) that already exist with identical content`)
     }
 
     if (docsToAdd.length === 0) {
@@ -922,9 +833,7 @@ export default class Ingest extends Command {
     }
 
     // Create or update vector store
-    this.log(
-      `Creating embeddings for ${docsToAdd.length} new/updated chunk(s)...`,
-    )
+    this.log(`Creating embeddings for ${docsToAdd.length} new/updated chunk(s)...`)
     let store: HNSWLib
     if (existingStore) {
       store = existingStore
@@ -942,9 +851,7 @@ export default class Ingest extends Command {
 
     // Append new chunks to chunks.jsonl (or create if it doesn't exist)
     const chunksPath = path.join(outputDir, 'chunks.jsonl')
-    const newChunksData = docsToAdd
-      .map((d) => JSON.stringify({ meta: d.metadata, text: d.pageContent }))
-      .join('\n')
+    const newChunksData = docsToAdd.map((d) => JSON.stringify({ meta: d.metadata, text: d.pageContent })).join('\n')
     if (newChunksData) {
       if (fs.existsSync(chunksPath)) {
         // Append to existing file
@@ -957,16 +864,11 @@ export default class Ingest extends Command {
     }
 
     // Calculate actual cost only for new embeddings
-    const actualCost = this.estimateCost(
-      docsToAdd.reduce((sum, doc) => sum + this.countWords(doc.pageContent), 0),
-    )
+    const actualCost = this.estimateCost(docsToAdd.reduce((sum, doc) => sum + this.countWords(doc.pageContent), 0))
 
-    const finalChunkCount =
-      existingChunks.size - idsToRemove.length + docsToAdd.length
+    const finalChunkCount = existingChunks.size - idsToRemove.length + docsToAdd.length
 
-    this.log(
-      `✓ Successfully indexed ${docsToAdd.length} new/updated chunk(s) from ${files.length} PDF(s)`,
-    )
+    this.log(`✓ Successfully indexed ${docsToAdd.length} new/updated chunk(s) from ${files.length} PDF(s)`)
     this.log(`  Total chunks in index: ${finalChunkCount}`)
     this.log(`  Actual cost: ~$${actualCost.toFixed(4)}`)
   }

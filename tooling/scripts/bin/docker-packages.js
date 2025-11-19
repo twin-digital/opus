@@ -51,10 +51,7 @@ async function main() {
       // Find package directory by searching package.json files
       const packageJsonPath = await findPackageJson(packageName)
       if (!packageJsonPath) {
-        console.error(
-          `Warning: Could not find package.json for ${packageName}`,
-          { stderr: true },
-        )
+        console.error(`Warning: Could not find package.json for ${packageName}`, { stderr: true })
         continue
       }
 

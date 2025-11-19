@@ -42,11 +42,7 @@ export const makeJsonPatchAction =
     const patched = removeEmptyValues(applyPatch(original, parsedPatch))
 
     if (!isEqual(patched, original)) {
-      await fsP.writeFile(
-        filePath,
-        `${JSON.stringify(patched, null, 2)}\n`,
-        'utf-8',
-      )
+      await fsP.writeFile(filePath, `${JSON.stringify(patched, null, 2)}\n`, 'utf-8')
       return {
         changedFiles: [file],
         result: 'ok',

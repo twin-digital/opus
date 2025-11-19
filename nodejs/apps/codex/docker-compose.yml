@@ -4,9 +4,6 @@ services:
       context: ../../../
       dockerfile: nodejs/apps/codex/Dockerfile
       target: runner
-    env_file:
-      - .env
-    working_dir: /app
     develop:
       watch:
         # Sync bin and dist changes, restart container
@@ -19,4 +16,7 @@ services:
         # Rebuild image if package.json changes
         - path: ./package.json
           action: rebuild
+    env_file:
+      - .env
     restart: unless-stopped
+    working_dir: /app

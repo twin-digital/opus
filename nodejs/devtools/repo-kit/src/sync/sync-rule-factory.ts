@@ -19,21 +19,14 @@ import type { SyncResult } from './sync-result.js'
 /**
  * Predicate (condition) used to determine if a particular rule applies to a given package.
  */
-export type SyncConditionFn = (
-  workspace: PackageMeta,
-) => boolean | Promise<boolean>
+export type SyncConditionFn = (workspace: PackageMeta) => boolean | Promise<boolean>
 
 /**
  * Action which is taken by a rule to modify the contents of a package.
  */
-export type SyncActionFn = (
-  workspace: PackageMeta,
-) => SyncResult | Promise<SyncResult>
+export type SyncActionFn = (workspace: PackageMeta) => SyncResult | Promise<SyncResult>
 
-const appliesTo = async (
-  workspace: PackageMeta,
-  conditions: SyncConditionFn[] | undefined,
-): Promise<boolean> => {
+const appliesTo = async (workspace: PackageMeta, conditions: SyncConditionFn[] | undefined): Promise<boolean> => {
   const resolvedConditions = conditions ?? []
   for (const condition of resolvedConditions) {
     const result = await condition(workspace)
@@ -69,18 +62,10 @@ const makeConditionFn = (condition: SyncConditionConfig) => {
     const dep = c.dependency
     const match = dep.match ?? {}
     const opts: DependencyConditionOptions = {
-      ...(match.dependency === undefined ?
-        {}
-      : { dependency: match.dependency }),
-      ...(match.devDependency === undefined ?
-        {}
-      : { devDependency: match.devDependency }),
-      ...(match.optionalDependency === undefined ?
-        {}
-      : { optionalDependency: match.optionalDependency }),
-      ...(match.peerDependency === undefined ?
-        {}
-      : { peerDependency: match.peerDependency }),
+      ...(match.dependency === undefined ? {} : { dependency: match.dependency }),
+      ...(match.devDependency === undefined ? {} : { devDependency: match.devDependency }),
+      ...(match.optionalDependency === undefined ? {} : { optionalDependency: match.optionalDependency }),
+      ...(match.peerDependency === undefined ? {} : { peerDependency: match.peerDependency }),
     }
     return makeDependencyCondition(dep.name, opts)
   } else if ('exists' in condition) {
@@ -102,10 +87,7 @@ const getActionImplementation = (action: SyncActionConfig): SyncActionFn => {
   }
 }
 
-const makeActionFn = (
-  action: SyncActionConfig,
-  conditions: SyncConditionFn[] | undefined,
-): SyncActionFn => {
+const makeActionFn = (action: SyncActionConfig, conditions: SyncConditionFn[] | undefined): SyncActionFn => {
   const delegate = getActionImplementation(action)
   return async (workspace) => {
     const applicable = await appliesTo(workspace, conditions)
@@ -119,10 +101,7 @@ const makeActionFn = (
   }
 }
 
-const applyActions = async (
-  workspace: PackageMeta,
-  actions: SyncActionFn[] = [],
-): Promise<SyncResult> => {
+const applyActions = async (workspace: PackageMeta, actions: SyncActionFn[] = []): Promise<SyncResult> => {
   const changedFiles: Set<string> = new Set<string>()
   for (const action of actions) {
     const result = await action(workspace)
@@ -149,18 +128,11 @@ const applyActions = async (
  * @param userConfig User-supplied configuration to customize feature configuration.
  * @returns The `PackageFeature` corresponding to the supplied configuration.
  */
-const makePackageFeature = (
-  config: FeatureConfigItem,
-  _userConfig: PackageConfiguration,
-): PackageFeature => {
-  const conditions = config.conditions?.map((condition) =>
-    makeConditionFn(condition),
-  )
+const makePackageFeature = (config: FeatureConfigItem, _userConfig: PackageConfiguration): PackageFeature => {
+  const conditions = config.conditions?.map((condition) => makeConditionFn(condition))
 
   const actions = config.actions.map((action) => {
-    const conditionFns = action.conditions?.map((config) =>
-      makeConditionFn(config),
-    )
+    const conditionFns = action.conditions?.map((config) => makeConditionFn(config))
     return makeActionFn(action, conditionFns)
   })
 
@@ -197,5 +169,4 @@ export const makeSyncRules = ({
    * The `PackageFeatureConfig` config defining the available features.
    */
   featureConfig: FeatureConfiguration
-}): PackageFeature[] =>
-  featureConfig.features.map((feature) => makePackageFeature(feature, config))
+}): PackageFeature[] => featureConfig.features.map((feature) => makePackageFeature(feature, config))

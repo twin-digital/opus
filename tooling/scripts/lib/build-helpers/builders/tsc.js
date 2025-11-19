@@ -42,9 +42,7 @@ export const watch = () => {
   }
 
   if (hasTypescriptCjs) {
-    watches.push(
-      bg$`tsc --watch --preserveWatchOutput --project tsconfig.cjs.json`,
-    )
+    watches.push(bg$`tsc --watch --preserveWatchOutput --project tsconfig.cjs.json`)
   }
 
   return Promise.all(watches)

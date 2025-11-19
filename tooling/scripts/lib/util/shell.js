@@ -3,12 +3,7 @@ import { execa, execaSync } from 'execa'
 // Tagged-template shell helper. Reconstructs the command and runs it via a
 // shell so callers can write: $`docker build -f ${dockerfile} ${context}`
 export const $ = (strings, ...values) => {
-  const command = strings
-    .reduce(
-      (acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ''),
-      '',
-    )
-    .trim()
+  const command = strings.reduce((acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ''), '').trim()
 
   try {
     // Use shell:true so the full command string is interpreted by the shell.
@@ -24,12 +19,7 @@ export const $ = (strings, ...values) => {
 
 // For long-running background processes (watch, servers, etc.)
 export const bg$ = (strings, ...values) => {
-  const command = strings
-    .reduce(
-      (acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ''),
-      '',
-    )
-    .trim()
+  const command = strings.reduce((acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ''), '').trim()
 
   console.log(`🔄 Starting: ${command}`)
 

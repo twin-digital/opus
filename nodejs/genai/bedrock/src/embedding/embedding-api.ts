@@ -26,10 +26,7 @@ export interface EmbeddingResponse {
 /**
  * Model adapter interface for embedding models.
  */
-export interface EmbeddingModelAdapter<
-  TRequest = unknown,
-  TResponse = unknown,
-> {
+export interface EmbeddingModelAdapter<TRequest = unknown, TResponse = unknown> {
   /**
    * Converts a generic {@see EmbeddingRequest} to a model-specific input body.
    */

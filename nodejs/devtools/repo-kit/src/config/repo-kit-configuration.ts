@@ -57,10 +57,7 @@ export interface NotExistsConditionConfig {
  * A condition used to determine if a sync feature (or a specific action within a feature) will be applied to a package
  * or not.
  */
-export type SyncConditionConfig =
-  | DependencyConditionConfig
-  | ExistsConditionConfig
-  | NotExistsConditionConfig
+export type SyncConditionConfig = DependencyConditionConfig | ExistsConditionConfig | NotExistsConditionConfig
 
 /**
  * Configuration for a hook that runs after files are changed during sync.
@@ -232,9 +229,7 @@ export interface Configuration {
 /**
  * Loads the repo-kit configuration, with any defaults applied.
  */
-export const loadConfig = async (
-  configPath: string,
-): Promise<Configuration> => {
+export const loadConfig = async (configPath: string): Promise<Configuration> => {
   const content = await fsP.readFile(path.resolve(configPath), 'utf-8')
   return {
     hooks: [],

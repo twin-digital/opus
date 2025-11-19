@@ -1,10 +1,6 @@
 import jsonPatch from 'fast-json-patch'
 
-export const removeValue = <T>(
-  document: T,
-  path: string,
-  value: unknown,
-): T => {
+export const removeValue = <T>(document: T, path: string, value: unknown): T => {
   const array = jsonPatch.getValueByPointer(document, path) as unknown
 
   // nothing to remove

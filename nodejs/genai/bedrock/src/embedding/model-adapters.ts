@@ -13,11 +13,7 @@ const embeddingModelAdapters = [
  * @param modelId The Bedrock model ID
  * @returns The matching adapter, or undefined if no adapter matches
  */
-export const getEmbeddingModelAdapter = (
-  modelId: string,
-): EmbeddingModelAdapter | undefined => {
-  const matched = embeddingModelAdapters.find((entry) =>
-    entry.match.test(modelId),
-  )
+export const getEmbeddingModelAdapter = (modelId: string): EmbeddingModelAdapter | undefined => {
+  const matched = embeddingModelAdapters.find((entry) => entry.match.test(modelId))
   return matched?.adapter
 }

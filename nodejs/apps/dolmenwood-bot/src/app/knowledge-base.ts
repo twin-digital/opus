@@ -1,8 +1,5 @@
 import { invokeEmbeddingModel } from '@twin-digital/bedrock'
-import {
-  createHnswKnowledgeBase,
-  type CreateEmbeddingFn,
-} from '@twin-digital/genai-core'
+import { createHnswKnowledgeBase, type CreateEmbeddingFn } from '@twin-digital/genai-core'
 import type { KnowledgeBase } from '@twin-digital/genai-core'
 
 /**
@@ -19,13 +16,7 @@ export const createBedrockEmbeddingFunction =
     return result.embedding
   }
 
-export const createKnowledgeBase = async (
-  path: string,
-  embeddingModelId: string,
-): Promise<KnowledgeBase> => {
+export const createKnowledgeBase = async (path: string, embeddingModelId: string): Promise<KnowledgeBase> => {
   console.log('modid', embeddingModelId)
-  return await createHnswKnowledgeBase(
-    path,
-    createBedrockEmbeddingFunction(embeddingModelId),
-  )
+  return await createHnswKnowledgeBase(path, createBedrockEmbeddingFunction(embeddingModelId))
 }

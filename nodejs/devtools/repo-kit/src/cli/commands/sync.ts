@@ -19,18 +19,14 @@ import fsP from 'node:fs/promises'
 const printResult = (name: string, result: SyncResult) => {
   switch (result.result) {
     case 'error':
-      console.log(
-        `${chalk.redBright('[ERROR]')} ${name}: ${result.error.message}`,
-      )
+      console.log(`${chalk.redBright('[ERROR]')} ${name}: ${result.error.message}`)
 
       console.group()
       console.log(result.error)
       console.groupEnd()
       break
     case 'ok':
-      console.log(
-        `${chalk.greenBright('[CHANGED]')} ${name}: ${chalk.yellow(result.changedFiles.join(', '))}`,
-      )
+      console.log(`${chalk.greenBright('[CHANGED]')} ${name}: ${chalk.yellow(result.changedFiles.join(', '))}`)
       break
     case 'skipped':
       console.log(`${chalk.blue('[OK]')} ${name}`)
@@ -69,9 +65,7 @@ const applyFeatures = async (
         })
       }
     } catch (t: unknown) {
-      console.log(
-        `${chalk.redBright('[ERROR]')} ${feature.name}: ${get(t, 'message', String(t))}`,
-      )
+      console.log(`${chalk.redBright('[ERROR]')} ${feature.name}: ${get(t, 'message', String(t))}`)
 
       console.group()
       console.error(t)
@@ -90,11 +84,7 @@ const applyFeatures = async (
  * @param changedFiles Array of files that were changed during sync (relative to package root)
  * @throws Error if the hook command fails
  */
-const applyHookIfNeeded = async (
-  hook: HookConfig,
-  pkg: PackageMeta,
-  changedFiles: string[],
-): Promise<void> => {
+const applyHookIfNeeded = async (hook: HookConfig, pkg: PackageMeta, changedFiles: string[]): Promise<void> => {
   // Find files matching the hook's pattern and check if any changed files match
   const matchingFiles: string[] = []
   for await (const file of fsP.glob(hook.path, { cwd: pkg.path })) {
@@ -122,11 +112,7 @@ const applyHookIfNeeded = async (
  * @param changedFiles Array of files that were changed during sync (relative to package root)
  * @throws Error if any hooks fail during execution
  */
-const applyHooks = async (
-  pkg: PackageMeta,
-  config: Configuration,
-  changedFiles: string[],
-): Promise<void> => {
+const applyHooks = async (pkg: PackageMeta, config: Configuration, changedFiles: string[]): Promise<void> => {
   const hooks = config.hooks ?? []
   if (hooks.length === 0 || changedFiles.length === 0) {
     return
@@ -140,9 +126,7 @@ const applyHooks = async (
     } catch (error: unknown) {
       const hookLabel = hook.description ?? hook.run
       const errorMessage = get(error, 'message', String(error))
-      console.log(
-        `${chalk.redBright('[ERROR]')} Hook failed: ${hookLabel}: ${errorMessage}`,
-      )
+      console.log(`${chalk.redBright('[ERROR]')} Hook failed: ${hookLabel}: ${errorMessage}`)
       errors.push({ hook: hookLabel, error })
     }
   }
@@ -184,12 +168,6 @@ const handler = async (options: { config: string }) => {
 
 export const makeCommand = (): Command =>
   new Command('sync')
-    .description(
-      'updates project configuration files (package.json, etc.) to align with repo-kit conventions',
-    )
-    .option(
-      '--config <path>',
-      'path to repo-kit configuration file',
-      '.repo-kit.yml',
-    )
+    .description('updates project configuration files (package.json, etc.) to align with repo-kit conventions')
+    .option('--config <path>', 'path to repo-kit configuration file', '.repo-kit.yml')
     .action(handler)

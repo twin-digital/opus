@@ -43,35 +43,19 @@ export const makeDependencyCondition =
   (workspace) => {
     const manifest: ProjectManifest = workspace.manifest
 
-    if (
-      dependency &&
-      manifest.dependencies &&
-      dependencyName in manifest.dependencies
-    ) {
+    if (dependency && manifest.dependencies && dependencyName in manifest.dependencies) {
       return true
     }
 
-    if (
-      devDependency &&
-      manifest.devDependencies &&
-      dependencyName in manifest.devDependencies
-    ) {
+    if (devDependency && manifest.devDependencies && dependencyName in manifest.devDependencies) {
       return true
     }
 
-    if (
-      optionalDependency &&
-      manifest.optionalDependencies &&
-      dependencyName in manifest.optionalDependencies
-    ) {
+    if (optionalDependency && manifest.optionalDependencies && dependencyName in manifest.optionalDependencies) {
       return true
     }
 
-    if (
-      peerDependency &&
-      manifest.peerDependencies &&
-      dependencyName in manifest.peerDependencies
-    ) {
+    if (peerDependency && manifest.peerDependencies && dependencyName in manifest.peerDependencies) {
       return true
     }
 

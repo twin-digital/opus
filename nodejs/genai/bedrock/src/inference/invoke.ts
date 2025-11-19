@@ -9,10 +9,7 @@ import { getModelAdapter } from './model-adapters.js'
  * @param request Request input containing the prompt and generation parameters.
  * @returns The generated text response.
  */
-export const invokeInferenceModel = async (
-  modelId: string,
-  request: InferenceRequest,
-): Promise<InferenceResponse> => {
+export const invokeInferenceModel = async (modelId: string, request: InferenceRequest): Promise<InferenceResponse> => {
   const adapter = getModelAdapter(modelId)
   if (adapter === undefined) {
     throw new Error(`No adapter found for model: ${modelId}`)
@@ -26,8 +23,6 @@ export const invokeInferenceModel = async (
     }),
   )
 
-  const responseBody = JSON.parse(
-    new TextDecoder().decode(response.body),
-  ) as unknown
+  const responseBody = JSON.parse(new TextDecoder().decode(response.body)) as unknown
   return adapter.parseResponse(responseBody)
 }

@@ -31,10 +31,7 @@ export type BotAction = CreateMessageAction
  */
 export const execute = async (
   action: BotAction,
-  {
-    client,
-    log: _log,
-  }: { client: Client; log: (message?: string, ...args: unknown[]) => void },
+  { client, log: _log }: { client: Client; log: (message?: string, ...args: unknown[]) => void },
 ): Promise<void> => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (action.type === 'create-message') {

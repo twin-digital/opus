@@ -13,9 +13,7 @@ const bundlerConfigFiles = [
   'tsdown.config',
 ]
 
-const hasBundlerConfig = bundlerConfigFiles.some((f) =>
-  fs.existsSync(path.resolve(f)),
-)
+const hasBundlerConfig = bundlerConfigFiles.some((f) => fs.existsSync(path.resolve(f)))
 
 export const supports = () => {
   return Promise.resolve(hasBundlerConfig)

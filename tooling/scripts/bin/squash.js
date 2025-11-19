@@ -50,9 +50,7 @@ const ensureCleanWorkingTree = async () => {
     await $`git diff --quiet`
     await $`git diff --cached --quiet`
   } catch {
-    throw new Error(
-      'Working tree must be clean (no staged or unstaged changes) before squashing.',
-    )
+    throw new Error('Working tree must be clean (no staged or unstaged changes) before squashing.')
   }
 }
 
@@ -60,9 +58,7 @@ const ensureDerivedFromBase = async (baseBranch) => {
   try {
     await $`git merge-base --is-ancestor ${baseBranch} HEAD`
   } catch {
-    throw new Error(
-      `Current branch is not derived from ${baseBranch}. Rebase/merge required.`,
-    )
+    throw new Error(`Current branch is not derived from ${baseBranch}. Rebase/merge required.`)
   }
 }
 
@@ -142,9 +138,7 @@ const main = async () => {
     return
   }
 
-  const lastSquash = [...commits]
-    .reverse()
-    .find((c) => c.body.includes(SQUASH_MARKER))
+  const lastSquash = [...commits].reverse().find((c) => c.body.includes(SQUASH_MARKER))
 
   let priorBullets = []
   let newBullets = []
@@ -174,8 +168,7 @@ const main = async () => {
   const message = buildMessage({ header: finalHeader, bullets: allBullets })
 
   // Always show a preview of what will happen
-  const previewRange =
-    lastSquash ? `${lastSquash.sha}..HEAD` : `${mergeBase}..HEAD`
+  const previewRange = lastSquash ? `${lastSquash.sha}..HEAD` : `${mergeBase}..HEAD`
   console.log('Preview of squash commit:')
   console.log('Range  :', previewRange)
   console.log('Header :', finalHeader)
@@ -195,9 +188,7 @@ const main = async () => {
       input: process.stdin,
       output: process.stdout,
     })
-    const answer = await new Promise((resolve) =>
-      rl.question('Proceed with squash? [y/N] ', resolve),
-    )
+    const answer = await new Promise((resolve) => rl.question('Proceed with squash? [y/N] ', resolve))
     rl.close()
     const input = String(answer).trim().toLowerCase()
     return input === 'y' || input === 'yes'

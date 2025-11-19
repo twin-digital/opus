@@ -13,9 +13,7 @@ const modelAdapters = [
   },
 ]
 
-export const getModelAdapter = (
-  modelId: string,
-): ModelApiAdapter | undefined => {
+export const getModelAdapter = (modelId: string): ModelApiAdapter | undefined => {
   const matched = modelAdapters.find((entry) => entry.match.test(modelId))
   return matched?.adapter
 }

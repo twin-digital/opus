@@ -1,13 +1,7 @@
 /**
  * Represents all possible JSON types
  */
-export type JsonType =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonType[]
-  | { [key: string]: JsonType }
+export type JsonType = string | number | boolean | null | JsonType[] | { [key: string]: JsonType }
 
 /**
  * Options for configuring a knowledge base search query.
@@ -56,8 +50,5 @@ export interface KnowledgeBase {
    * @param options Additional options to control how the query is performed.
    * @returns Promise resolving to an array of search results, ordered by relevance.
    */
-  search(
-    query: string,
-    options?: KnowledgeBaseSearchOptions,
-  ): Promise<KnowledgeBaseSearchResult[]>
+  search(query: string, options?: KnowledgeBaseSearchOptions): Promise<KnowledgeBaseSearchResult[]>
 }
