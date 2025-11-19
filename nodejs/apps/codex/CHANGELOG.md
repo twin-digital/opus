@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.2.1
+
+### Patch Changes
+
+- 3539ae3: add 'Mod' column to stat roll results table
+
 ## 0.2.0
 
 ### Minor Changes
