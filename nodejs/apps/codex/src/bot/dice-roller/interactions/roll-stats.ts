@@ -6,6 +6,7 @@ import { patchRecord } from '../../../core/db/utils.js'
 import type { Player, PlayerCharacter, PlayerCharacterStatRoll, StatRoll } from '../../../game/model.js'
 import { DefaultPlayerService } from '../../../game/player/player-service.js'
 import { DefaultPlayerCharacterService } from '../../../game/player/player-character-service.js'
+import { AbilityModifiers } from '../../../game/core/ability-scores.js'
 
 // Force ANSI color output even when Node isn't running in a TTY so
 // the generated strings include escape sequences (Discord "```ansi```" blocks
@@ -25,6 +26,9 @@ const formatStats = (roll: StatRoll) => {
     sum(roll.charisma),
   ]
 
+  const modifiers = values.map((v) => AbilityModifiers.lookup(v)?.data ?? 0)
+  const modStrings = modifiers.map((m) => (m >= 0 ? `+${m}` : String(m)))
+
   const toDiceString = (values: number[]) => values.join(' + ')
   const dice = [
     toDiceString(roll.strength),
@@ -38,12 +42,14 @@ const formatStats = (roll: StatRoll) => {
   // Column content widths (no padding)
   const statContentWidth = Math.max('Stat'.length, ...attributeNames.map((n) => n.length))
   const valueContentWidth = Math.max('Val'.length, ...values.map((v) => String(v).length))
+  const modContentWidth = Math.max('Mod'.length, ...modStrings.map((m) => m.length))
   const diceContentWidth = Math.max('Dice'.length, ...dice.map((d) => d.length))
 
   // Total column widths include 1 space left + content + 1 space right
   // For dice column we add two additional spaces on either side (total 3 each side)
   const statColWidth = statContentWidth + 2
   const valueColWidth = valueContentWidth + 2
+  const modColWidth = modContentWidth + 2
   const diceColWidth = diceContentWidth + 6
 
   // Cell renderers
@@ -55,9 +61,36 @@ const formatStats = (roll: StatRoll) => {
   }
 
   // Unicode box drawing characters for tighter table
-  const top = '┌' + '─'.repeat(statColWidth) + '┬' + '─'.repeat(valueColWidth) + '┬' + '─'.repeat(diceColWidth) + '┐'
-  const mid = '├' + '─'.repeat(statColWidth) + '┼' + '─'.repeat(valueColWidth) + '┼' + '─'.repeat(diceColWidth) + '┤'
-  const bottom = '└' + '─'.repeat(statColWidth) + '┴' + '─'.repeat(valueColWidth) + '┴' + '─'.repeat(diceColWidth) + '┘'
+  const top =
+    '┌' +
+    '─'.repeat(statColWidth) +
+    '┬' +
+    '─'.repeat(valueColWidth) +
+    '┬' +
+    '─'.repeat(modColWidth) +
+    '┬' +
+    '─'.repeat(diceColWidth) +
+    '┐'
+  const mid =
+    '├' +
+    '─'.repeat(statColWidth) +
+    '┼' +
+    '─'.repeat(valueColWidth) +
+    '┼' +
+    '─'.repeat(modColWidth) +
+    '┼' +
+    '─'.repeat(diceColWidth) +
+    '┤'
+  const bottom =
+    '└' +
+    '─'.repeat(statColWidth) +
+    '┴' +
+    '─'.repeat(valueColWidth) +
+    '┴' +
+    '─'.repeat(modColWidth) +
+    '┴' +
+    '─'.repeat(diceColWidth) +
+    '┘'
 
   // Left-justify Dice header with 3 leading blanks inside the content area
   // padEnd to match the dice column total width (content + 6) minus the two wrapper spaces
@@ -67,6 +100,8 @@ const formatStats = (roll: StatRoll) => {
     centerCell('Stat', statContentWidth) +
     '│' +
     centerCell('Val', valueContentWidth) +
+    '│' +
+    centerCell('Mod', modContentWidth) +
     '│' +
     ' ' +
     diceHeaderInner +
@@ -86,9 +121,12 @@ const formatStats = (roll: StatRoll) => {
     const valuePadded = String(v).padStart(valueContentWidth)
     const valueCell = ' ' + colorFor(v)(valuePadded) + ' '
 
+    const modPadded = modStrings[i].padStart(modContentWidth)
+    const modCell = ' ' + colorFor(v)(modPadded) + ' '
+
     // dice cell: include 3 spaces on either side and left-justify the dice string within content area
     const diceCell = ' '.repeat(3) + dice[i].padEnd(diceContentWidth) + ' '.repeat(3)
-    return '│' + statCell + '│' + valueCell + '│' + diceCell + '│'
+    return '│' + statCell + '│' + valueCell + '│' + modCell + '│' + diceCell + '│'
   })
 
   return `\`\`\`ansi
