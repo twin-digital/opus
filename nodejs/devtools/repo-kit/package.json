@@ -15,8 +15,7 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "typecheck": "tsc --noEmit",
-    "watch": "watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.0",

@@ -36,8 +36,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "./bin/run.js start",
-    "typecheck": "tsc --noEmit",
-    "watch": "watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.932.0",

@@ -28,8 +28,7 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "typecheck": "tsc --noEmit",
-    "watch": "watch"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.928.0",
