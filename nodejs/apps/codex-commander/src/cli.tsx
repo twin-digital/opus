@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import React from 'react'
-import { render } from 'ink'
+import { withFullScreen } from 'fullscreen-ink'
 import meow from 'meow'
 import App from './app.js'
 
@@ -26,5 +26,4 @@ const cli = meow(
   },
 )
 
-const app = render(<App name={cli.flags.name} />)
-await app.waitUntilExit()
+await withFullScreen(<App name={cli.flags.name} />, {}).start()

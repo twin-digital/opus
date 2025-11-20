@@ -1,2 +1,25 @@
-export const GameModes = ['Camping', 'Combat', 'Dungeon', 'Encounter', 'Settlement', 'Travel'] as const
-export type GameMode = (typeof GameModes)[number]
+export interface GameMode {
+  /**
+   * Name of this mode
+   */
+  name: string
+}
+
+export const GameModes: GameMode[] = [
+  {
+    name: 'Camping',
+  },
+  {
+    name: 'Combat',
+  },
+  {
+    name: 'Dungeon',
+  },
+  {
+    name: 'Encounter',
+  },
+  {
+    name: 'Settlement',
+  },
+  { name: 'Travel' },
+] as const satisfies GameMode[]
