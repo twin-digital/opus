@@ -10,7 +10,15 @@
         "types": "./dist/*.d.ts",
         "import": "./dist/*.js"
       }
-    }
+    },
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null
   },
   "bin": {
     "codex:": "./bin/run.js"
@@ -64,7 +72,7 @@
     "bin": "codex",
     "commands": {
       "strategy": "explicit",
-      "target": "./dist/cli.mjs",
+      "target": "./dist/cli.js",
       "identifier": "Commands"
     },
     "dirname": "codex",
