@@ -8,6 +8,7 @@ Repository of all public works developed by Twin Digital.
 
 - [@twin-digital/codex](./nodejs/apps/codex): Implementation of the 'Codex' bot.
 - [@twin-digital/codex-commander](./nodejs/apps/codex-commander): CLI console for managing Dolmenwood sessions with Codex
+- [@twin-digital/context-server](./nodejs/apps/context-server): Web service providing contextual information for LLM queries.
 - [@twin-digital/discord-bot](./nodejs/apps/discord-bot): Discord Bot providing server presence and message utilities for Twin Digital applications.
 - [@twin-digital/dolmenwood-bot](./nodejs/apps/dolmenwood-bot): Discord bot able to assist with questions during Dolmenwood games.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
