@@ -1,49 +1,44 @@
 {
-  "name": "@twin-digital/repo-kit",
-  "version": "0.1.1",
-  "description": "CLI utilities for configuring and maintaining monorepos",
+  "name": "@twin-digital/codex-commander",
+  "version": "0.0.0",
+  "description": "CLI console for managing Dolmenwood sessions with Codex",
+  "license": "MIT",
   "type": "module",
-  "bin": {
-    "repo-kit": "./dist/cli/entry-point.js"
-  },
+  "bin": "dist/cli.js",
   "files": [
-    "dist",
-    "!dist/**/*.d.ts.map"
+    "dist"
   ],
   "scripts": {
     "build": "build",
     "clean": "clean",
+    "dev": "node ./bin/dev.js",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pnpm/find-workspace-dir": "^1000.1.0",
-    "@twin-digital/json-patch-x": "workspace:*",
-    "chalk": "^5.4.1",
-    "commander": "^14.0.0",
-    "execa": "^9.6.0",
-    "gray-matter": "^4.0.3",
-    "json-merge-patch": "^1.0.2",
-    "lodash-es": "^4.17.21",
-    "yaml": "^2.8.0"
+    "@twin-digital/codex": "workspace:*",
+    "fullscreen-ink": "^0.1.0",
+    "ink": "^4.1.0",
+    "meow": "^11.0.0",
+    "react": "^18.2.0"
   },
   "devDependencies": {
-    "@commander-js/extra-typings": "^14.0.0",
     "@eslint/js": "catalog:",
-    "@pnpm/types": "^1000.6.0",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
-    "@types/json-merge-patch": "^1.0.0",
-    "@types/lodash-es": "^4.17.12",
     "@types/node": "22.x",
-    "chokidar-cli": "^3.0.0",
+    "@types/react": "^18.0.32",
+    "chalk": "^5.2.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
+    "ts-node": "^10.9.1",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

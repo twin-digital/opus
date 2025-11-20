@@ -4,25 +4,12 @@
   "tasks": {
     "artifact": {
       "dependsOn": ["build"],
-      "inputs": [
-        "assets/**",
-        "Dockerfile",
-        "package.json",
-        "src/**",
-        "tsconfig.json",
-        "tsconfig.*.json"
-      ],
+      "inputs": ["assets/**", "Dockerfile", "package.json", "src/**", "tsconfig.json", "tsconfig.*.json"],
       "outputs": [".out/**"]
     },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "assets/**",
-        "package.json",
-        "src/**",
-        "tsconfig.json",
-        "tsconfig.*.json"
-      ],
+      "inputs": ["assets/**", "package.json", "src/**", "tsconfig.json", "tsconfig.*.json"],
       "outputs": ["dist/**"]
     },
     "clean": {
@@ -31,28 +18,11 @@
     "deploy": {
       "cache": false,
       "dependsOn": ["build", "^deploy"],
-      "passThroughEnv": [
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SESSION_TOKEN",
-        "SERVERLESS_ACCESS_KEY"
-      ]
+      "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
     "destroy": {
       "cache": false,
-      "passThroughEnv": [
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "AWS_SESSION_TOKEN",
-        "SERVERLESS_ACCESS_KEY"
-      ]
-    },
-    "dev": {
-      "cache": false,
-      "dependsOn": ["build"],
-      "outputLogs": "full",
-      "persistent": true,
-      "with": ["watch"]
+      "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
     "lint": {
       "dependsOn": ["@twin-digital/eslint-config#build"],

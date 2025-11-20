@@ -6,9 +6,11 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "isolatedDeclarations": true,
+    "jsx": "react-jsx",
     "lib": ["es2023"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "newLine": "lf",
     "noEmit": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
@@ -19,7 +21,7 @@
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
-    "target": "es2022",
+    "target": "esnext",
     "types": ["node"],
     "verbatimModuleSyntax": true
   }

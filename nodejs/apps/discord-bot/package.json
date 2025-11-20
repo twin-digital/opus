@@ -15,8 +15,7 @@
     "destroy": "serverless remove",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "typecheck": "tsc --noEmit",
-    "watch": "watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lodash-es": "^4.17.21"

@@ -17,8 +17,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "./bin/run.js bot run",
-    "typecheck": "tsc --noEmit",
-    "watch": "watch"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.928.0",
