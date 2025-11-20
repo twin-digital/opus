@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/codex-commander",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "CLI console for managing Dolmenwood sessions with Codex",
   "license": "MIT",
   "type": "module",

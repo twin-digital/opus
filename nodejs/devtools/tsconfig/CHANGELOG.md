@@ -1,5 +1,11 @@
 # @twin-digital/tsconfig
 
+## 0.1.2
+
+### Patch Changes
+
+- 8d56808: update configuration to support jsx
+
 ## 0.1.1
 
 ### Patch Changes

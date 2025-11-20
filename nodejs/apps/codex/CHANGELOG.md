@@ -1,5 +1,11 @@
 # @twin-digital/codex
 
+## 0.2.2
+
+### Patch Changes
+
+- 8d56808: update project configuration to facilitate exporting a library
+
 ## 0.2.1
 
 ### Patch Changes
