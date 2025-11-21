@@ -20,16 +20,7 @@ export const Footer = () => {
   const commandText = commands.map((cmd) => `${cmd.key}: ${cmd.description}`).join(' | ')
 
   return (
-    <Box
-      borderTop={true}
-      borderBottom={false}
-      borderLeft={false}
-      borderRight={false}
-      borderStyle='single'
-      paddingLeft={1}
-      paddingRight={1}
-      justifyContent='space-between'
-    >
+    <Box borderDimColor borderStyle='single' paddingLeft={1} paddingRight={1} justifyContent='space-between'>
       <Text>{commandText}</Text>
       <Text>?: help | {date}</Text>
     </Box>

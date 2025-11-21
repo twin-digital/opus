@@ -1,8 +1,14 @@
 import React, { useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
 import { useGameState, useAdvanceTurn, useSetCommands } from '../shared/game-context.js'
+import { LogPanel } from '../shared/log-panel.js'
 
 interface DungeonProps {
+  /**
+   * Number of terminal rows available to this component.
+   */
+  rows: number
+
   /**
    * Initial turn number to start on.
    */
@@ -84,15 +90,16 @@ const DungeonTurnCounter = ({ turn = 1 }: { turn?: number }) => {
  * <DungeonScreen initialTurn={3} />
  * ```
  */
-export const DungeonScreen = (_props: DungeonProps) => {
-  const { turn } = useGameState()
+export const DungeonScreen = ({ rows }: DungeonProps) => {
+  const gameState = useGameState()
+  const { turn, eventLog } = gameState
   const advanceTurn = useAdvanceTurn()
   const setCommands = useSetCommands()
 
   // Set commands on mount
   useEffect(() => {
     setCommands([
-      { key: 't', description: 'next turn' },
+      { key: 't/T', description: 'turn +1/-1' },
       { key: 'w', description: 'check wandering monsters' },
       { key: 'm', description: 'change mode' },
     ])
@@ -100,13 +107,58 @@ export const DungeonScreen = (_props: DungeonProps) => {
 
   useInput((input, _key) => {
     if (input === 't') {
-      advanceTurn()
+      advanceTurn(1)
+    }
+    if (input === 'T') {
+      advanceTurn(-1)
     }
   })
 
   return (
-    <Box flexDirection='row'>
-      <DungeonTurnCounter turn={turn} />
+    <Box flexDirection='row' width='100%' height='100%'>
+      {/* Left column (2/5) - blank for now */}
+      <Box
+        width='40%'
+        height='100%'
+        paddingRight={1}
+        borderDimColor
+        borderRight={true}
+        borderStyle='single'
+        borderLeft={false}
+        borderTop={false}
+        borderBottom={false}
+        flexDirection='column'
+      >
+        <Text dimColor>Left panel</Text>
+      </Box>
+
+      {/* Middle column (2/5) - turn track */}
+      <Box
+        width='40%'
+        height='100%'
+        paddingX={1}
+        borderRight={true}
+        borderDimColor
+        borderStyle='single'
+        borderLeft={false}
+        borderTop={false}
+        borderBottom={false}
+        flexDirection='column'
+      >
+        <Text>Turn: </Text>
+        <DungeonTurnCounter turn={turn} />
+      </Box>
+
+      {/* Right column (1/5) - event log */}
+      <LogPanel
+        backgroundColor='black'
+        entries={eventLog}
+        flexDirection='column'
+        height={rows}
+        overflow='hidden'
+        paddingLeft={1}
+        width='20%'
+      />
     </Box>
   )
 }

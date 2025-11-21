@@ -15,21 +15,12 @@ import { formatTime } from './time-utils.js'
  * ```
  */
 export const Header = () => {
-  const { locationName, modeName, hour, turn } = useGameState()
+  const { locationName, modeName, hour, minutes } = useGameState()
 
-  const formattedTime = formatTime(hour, turn)
+  const formattedTime = formatTime(hour, minutes)
 
   return (
-    <Box
-      borderBottom={true}
-      borderLeft={false}
-      borderRight={false}
-      borderStyle='single'
-      borderTop={false}
-      paddingLeft={1}
-      paddingRight={1}
-      justifyContent='space-between'
-    >
+    <Box borderDimColor borderStyle='single' paddingLeft={1} paddingRight={1} justifyContent='space-between'>
       <Text>
         {locationName} | <Text color='blue'>{modeName}</Text>
       </Text>

@@ -10,6 +10,7 @@ import { CampingScreen } from './camping/camping-screen.js'
 import { SettlementScreen } from './settlement/settlement-screen.js'
 import { EncounterScreen } from './encounter/encounter-screen.js'
 import { CombatScreen } from './combat/combat-screen.js'
+import { useScreenSize } from 'fullscreen-ink'
 
 interface Props {
   name: string | undefined
@@ -19,6 +20,11 @@ const AppContent = () => {
   const { exit } = useApp()
   const [modeIndex, setModeIndex] = useState(2)
   const updateGameState = useUpdateGameState()
+
+  // Calculate how many events can fit in the available space
+  // height - 3 (header + borders) - 3 (footer + borders)
+  const { height } = useScreenSize()
+  const bodyHeight = height - 6
 
   const gameMode = GameModes[modeIndex]
 
@@ -52,7 +58,7 @@ const AppContent = () => {
   const renderModeScreen = () => {
     switch (gameMode.name) {
       case 'Dungeon':
-        return <DungeonScreen />
+        return <DungeonScreen rows={bodyHeight} />
       case 'Travel':
         return <TravelScreen />
       case 'Camping':
@@ -69,7 +75,7 @@ const AppContent = () => {
   }
 
   return (
-    <Box borderStyle='single' flexDirection='column' flexGrow={1}>
+    <Box flexDirection='column' flexGrow={1}>
       <Header />
       <Box flexDirection='column' flexGrow={1} paddingLeft={1} paddingRight={1}>
         {renderModeScreen()}
@@ -86,7 +92,7 @@ export default function App({ name: _name = 'Stranger' }: Props) {
       initialModeName='Dungeon'
       initialDate='3rd of Coldwane'
       initialHour={14}
-      initialTurn={3}
+      initialMinutes={20}
     >
       <AppContent />
     </GameProvider>

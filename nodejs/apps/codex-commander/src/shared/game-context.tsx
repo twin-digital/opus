@@ -12,9 +12,24 @@ export interface GameState {
   date: string
 
   /**
+   * Array of recent event log messages
+   */
+  eventLog: string[]
+
+  /**
    * Hour of the day in 24-hour format (0-23)
    */
   hour: number
+
+  /**
+   * Initial hour when turn tracking started (0-23)
+   */
+  initialHour: number
+
+  /**
+   * Initial minutes when turn tracking started (0-59)
+   */
+  initialMinutes: number
 
   /**
    * The current location name (e.g., "The Fogbound Forest")
@@ -22,12 +37,17 @@ export interface GameState {
   locationName: string
 
   /**
+   * Minutes past the hour (0-59)
+   */
+  minutes: number
+
+  /**
    * The current game mode (e.g., "Dungeon", "Travel", "Combat")
    */
   modeName: string
 
   /**
-   * Turn number within the hour (1-6), representing 10-minute increments
+   * Ever-increasing turn counter (not bounded to 1-6)
    */
   turn: number
 }
@@ -54,14 +74,24 @@ export interface Command {
  */
 interface GameContextValue {
   /**
-   * Semantic function to advance to the next turn
+   * Semantic function to add an event to the log
    */
-  advanceTurn: () => void
+  addEvent: (message: string) => void
+
+  /**
+   * Semantic function to advance the turn counter
+   */
+  advanceTurn: (delta?: number) => void
 
   /**
    * Semantic function to change the current location
    */
   changeLocation: (locationName: string) => void
+
+  /**
+   * Semantic function to clear the event log
+   */
+  clearEventLog: () => void
 
   /**
    * Array of currently active commands for the footer
@@ -111,14 +141,14 @@ interface GameProviderProps {
   initialLocationName?: string
 
   /**
+   * Initial minutes past the hour, 0-59 (defaults to 0)
+   */
+  initialMinutes?: number
+
+  /**
    * Initial mode name (defaults to "Unknown Mode")
    */
   initialModeName?: string
-
-  /**
-   * Initial turn number, 1-6 (defaults to 1)
-   */
-  initialTurn?: number
 }
 
 /**
@@ -130,7 +160,6 @@ interface GameProviderProps {
  * <GameProvider
  *   initialLocationName="The Fogbound Forest"
  *   initialHour={14}
- *   initialTurn={3}
  * >
  *   <App />
  * </GameProvider>
@@ -142,14 +171,18 @@ export const GameProvider = ({
   initialModeName = 'Unknown Mode',
   initialDate = 'Unknown Date',
   initialHour = 0,
-  initialTurn = 1,
+  initialMinutes = 0,
 }: GameProviderProps) => {
   const [gameState, setGameState] = useState<GameState>({
     locationName: initialLocationName,
     modeName: initialModeName,
     date: initialDate,
     hour: initialHour,
-    turn: initialTurn,
+    initialHour: initialHour,
+    minutes: initialMinutes,
+    initialMinutes: initialMinutes,
+    turn: 1,
+    eventLog: [],
   })
 
   const [commands, setCommands] = useState<Command[]>([])
@@ -158,15 +191,44 @@ export const GameProvider = ({
     setGameState((prev) => ({ ...prev, ...updates }))
   }, [])
 
-  const advanceTurn = useCallback(() => {
+  const addEvent = useCallback((message: string) => {
+    setGameState((prev) => ({
+      ...prev,
+      eventLog: [...prev.eventLog, message],
+    }))
+  }, [])
+
+  const clearEventLog = useCallback(() => {
+    setGameState((prev) => ({ ...prev, eventLog: [] }))
+  }, [])
+
+  const advanceTurn = useCallback((delta = 1) => {
     setGameState((prev) => {
-      const newTurn = prev.turn + 1
-      if (newTurn > 6) {
-        // Roll over to next hour
-        const newHour = (prev.hour + 1) % 24
-        return { ...prev, hour: newHour, turn: 1 }
+      const newTurn = prev.turn + delta
+
+      // Don't allow turn to go below 1
+      if (newTurn < 1) {
+        return prev
       }
-      return { ...prev, turn: newTurn }
+
+      // Calculate new time based on initial time + ((turn - 1) * 10 minutes)
+      // Turn 1 = initial time, turn 2 = +10 min, turn 3 = +20 min, etc.
+      const totalMinutesElapsed = (newTurn - 1) * 10
+      const totalMinutesFromMidnight = prev.initialHour * 60 + prev.initialMinutes + totalMinutesElapsed
+      const newHour = Math.floor(totalMinutesFromMidnight / 60) % 24
+      const newMinutes = totalMinutesFromMidnight % 60
+
+      // Add event log entry with proper sign formatting
+      const sign = delta >= 0 ? '+' : ''
+      const eventMessage = `Turn ${sign}${delta} (${newTurn})`
+
+      return {
+        ...prev,
+        turn: newTurn,
+        hour: newHour,
+        minutes: newMinutes,
+        eventLog: [...prev.eventLog, eventMessage],
+      }
     })
   }, [])
 
@@ -179,6 +241,8 @@ export const GameProvider = ({
     updateGameState,
     commands,
     setCommands,
+    addEvent,
+    clearEventLog,
     advanceTurn,
     changeLocation,
   }
@@ -277,21 +341,21 @@ export const useSetCommands = (): ((commands: Command[]) => void) => {
 }
 
 /**
- * Hook to advance to the next turn.
- * Automatically handles turn rollover - when advancing past turn 6,
- * it resets to turn 1 and advances the hour.
+ * Hook to advance the turn counter.
+ * The turn is an ever-increasing counter. Time is calculated as initialTime + (turn * 10 minutes).
+ * Automatically logs an event when the turn advances.
  *
- * @returns Function that advances the turn
+ * @returns Function that advances the turn by a given delta (defaults to 1)
  * @throws Error if used outside of GameProvider
  *
  * @example
  * ```tsx
  * const advanceTurn = useAdvanceTurn()
- * advanceTurn() // Advances from turn 3 to turn 4
- * advanceTurn() // If on turn 6, advances to turn 1 and increments hour
+ * advanceTurn() // Advances turn by 1
+ * advanceTurn(3) // Advances turn by 3
  * ```
  */
-export const useAdvanceTurn = (): (() => void) => {
+export const useAdvanceTurn = (): ((delta?: number) => void) => {
   const context = useContext(GameContext)
   if (!context) {
     throw new Error('useAdvanceTurn must be used within a GameProvider')
@@ -319,4 +383,47 @@ export const useChangeLocation = (): ((locationName: string) => void) => {
     throw new Error('useChangeLocation must be used within a GameProvider')
   }
   return context.changeLocation
+}
+
+/**
+ * Hook to add an event message to the event log.
+ * Events are appended to the end of the log array.
+ *
+ * @returns Function that accepts an event message string
+ * @throws Error if used outside of GameProvider
+ *
+ * @example
+ * ```tsx
+ * const addEvent = useAddEvent()
+ * addEvent('Party encounters a wandering monster')
+ * addEvent('Found a secret door')
+ * ```
+ */
+export const useAddEvent = (): ((message: string) => void) => {
+  const context = useContext(GameContext)
+  if (!context) {
+    throw new Error('useAddEvent must be used within a GameProvider')
+  }
+  return context.addEvent
+}
+
+/**
+ * Hook to clear all events from the event log.
+ * Resets the event log to an empty array.
+ *
+ * @returns Function that clears the event log
+ * @throws Error if used outside of GameProvider
+ *
+ * @example
+ * ```tsx
+ * const clearEventLog = useClearEventLog()
+ * clearEventLog() // Removes all events from the log
+ * ```
+ */
+export const useClearEventLog = (): (() => void) => {
+  const context = useContext(GameContext)
+  if (!context) {
+    throw new Error('useClearEventLog must be used within a GameProvider')
+  }
+  return context.clearEventLog
 }
