@@ -30,6 +30,14 @@ hooks:
     run: pnpm exec prettier-package-json --write ./package.json
 
 features:
+  - name: .nvmrc
+    actions:
+      - name: Create .nvmrc file
+        action: write-file
+        options:
+          file: .nvmrc
+          content: |
+            lts/krypton
   - name: bundle
     actions:
       - name: Create tsdown config file
@@ -82,7 +90,7 @@ features:
           file: package.json
           patch: |
             engines:
-              node: 22.x
+              node: 24.x
               pnpm: 10.x
   - name: eslint
     actions:
