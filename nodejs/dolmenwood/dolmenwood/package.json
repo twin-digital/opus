@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "@twin-digital/codex",
+  "name": "@twin-digital/dolmenwood",
   "version": "0.2.1",
-  "description": "Implementation of the 'Codex' bot.",
+  "description": "Core game models and logic for Dolmenwood applications",
   "type": "module",
   "exports": {
     "./*": {
@@ -20,9 +20,6 @@
     "./index": null,
     "./index.js": null
   },
-  "bin": {
-    "codex:": "./bin/run.js"
-  },
   "files": [
     "bin",
     "dist",
@@ -32,20 +29,12 @@
     "artifact": "artifact",
     "build": "build",
     "clean": "clean",
-    "dev": "BUILDKIT_PROGRESS=plain docker-compose up --build --watch",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "start": "./bin/run.js start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.932.0",
     "@dice-roller/rpg-dice-roller": "^5.5.1",
-    "@oclif/core": "^4.8.0",
-    "@twin-digital/dolmenwood": "workspace:*",
-    "chalk": "^5.6.2",
-    "discord.js": "^14.24.2",
-    "dotenv": "^17.2.3",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
@@ -60,22 +49,11 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "tsdown": "^0.16.5",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },
   "engines": {
     "node": "22.x",
     "pnpm": "10.x"
-  },
-  "oclif": {
-    "bin": "codex",
-    "commands": {
-      "strategy": "explicit",
-      "target": "./dist/cli.js",
-      "identifier": "Commands"
-    },
-    "dirname": "codex",
-    "topicSeparator": " "
   }
 }

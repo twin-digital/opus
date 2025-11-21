@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@twin-digital/codex": "workspace:*",
+    "@twin-digital/dolmenwood": "workspace:*",
     "fullscreen-ink": "^0.1.0",
     "ink": "^6.5.1",
     "meow": "^11.0.0",

@@ -1,12 +1,12 @@
 import { Chalk } from 'chalk'
 import sum from 'lodash-es/sum.js'
+import { AbilityModifiers } from '@twin-digital/dolmenwood'
 import type { CommandHandlerFn } from '../../bot.js'
 import type { RepositoryFactory } from '../../../core/db/repository-factory.js'
 import { patchRecord } from '../../../core/db/utils.js'
 import type { Player, PlayerCharacter, PlayerCharacterStatRoll, StatRoll } from '../../../game/model.js'
 import { DefaultPlayerService } from '../../../game/player/player-service.js'
 import { DefaultPlayerCharacterService } from '../../../game/player/player-character-service.js'
-import { AbilityModifiers } from '../../../game/core/ability-scores.js'
 
 // Force ANSI color output even when Node isn't running in a TTY so
 // the generated strings include escape sequences (Discord "```ansi```" blocks

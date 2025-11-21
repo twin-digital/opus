@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Box, useApp, useInput } from 'ink'
-import { GameModes } from '@twin-digital/codex'
+import { GameModes } from '@twin-digital/dolmenwood'
 import { GameProvider, useUpdateGameState } from './shared/game-context.js'
 import { Header } from './shared/header.js'
 import { Footer } from './shared/footer.js'
