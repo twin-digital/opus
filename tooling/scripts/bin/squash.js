@@ -208,6 +208,9 @@ const main = async () => {
   const tmpDir = await fs.mkdtemp(tmpPrefix)
   const tmpBranch = `squash-tmp-${Date.now()}`
 
+  console.log('Pushing current branch history, so commits are retrievable...')
+  await $`git push`
+
   console.log('Preparing temporary worktree for atomic squash...')
   await $`git worktree add -b ${tmpBranch} ${tmpDir} HEAD`
 
@@ -220,6 +223,9 @@ const main = async () => {
     console.log('Applying squash commit to current branch...')
     await $`git reset --hard ${newSha}`
     console.log('Squash commit created.')
+
+    console.log('Pushing squashed history...')
+    await $`git push --force-with-lease --no-verify`
   } finally {
     // Cleanup worktree and temp branch regardless of success or failure
     await $({ reject: false })`git worktree remove --force ${tmpDir}`
