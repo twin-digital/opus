@@ -48,5 +48,8 @@ code/**/tsconfig.tsbuildinfo
 # build outputs
 .out
 
+# test outputs
+coverage.json
+
 # runtime outputs
 nodejs/apps/dolmenwood-bot/.data

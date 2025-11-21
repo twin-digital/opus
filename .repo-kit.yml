@@ -226,6 +226,33 @@ features:
             exports:
               .: null
               ./*: null
+  - name: test
+    actions:
+      - name: Add dependencies
+        action: json-merge-patch
+        conditions:
+          - exists: src/**/*.test.ts
+        options:
+          file: package.json
+          patch: |
+            devDependencies:
+              "@twin-digital/vitest-config": "workspace:*"
+              "@vitest/coverage-istanbul": "catalog:"
+              vitest: "catalog:"
+            scripts:
+                test: vitest run
+                "test:watch": vitest
+      - name: Create vitest config
+        action: write-file
+        conditions:
+          - exists: src/**/*.test.ts
+        options:
+          file: vitest.config.ts
+          content: |
+            import { defineConfig } from 'vitest/config';
+            import { sharedConfig } from '@twin-digital/vitest-config';
+
+            export default sharedConfig
   - name: typescript
     actions:
       - name: Create tsconfig file
