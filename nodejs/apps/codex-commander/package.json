@@ -19,9 +19,9 @@
   "dependencies": {
     "@twin-digital/codex": "workspace:*",
     "fullscreen-ink": "^0.1.0",
-    "ink": "^4.1.0",
+    "ink": "^6.5.1",
     "meow": "^11.0.0",
-    "react": "^18.2.0"
+    "react": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -29,11 +29,11 @@
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/node": "22.x",
-    "@types/react": "^18.0.32",
+    "@types/react": "^19.2.6",
     "chalk": "^5.2.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
-    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.0",
     "globals": "catalog:",
     "prettier": "catalog:",

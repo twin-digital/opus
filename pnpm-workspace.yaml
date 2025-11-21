@@ -17,3 +17,6 @@ onlyBuiltDependencies:
   - esbuild
   - hnswlib-node
   - serverless
+
+patchedDependencies:
+  ink: patches/ink.patch
