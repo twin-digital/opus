@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useGameState, useAdvanceTurn, useSetCommands } from '../shared/game-context.js'
 
 interface DungeonProps {
   /**
@@ -8,6 +9,12 @@ interface DungeonProps {
   initialTurn?: number
 }
 
+/**
+ * Determines the display character for a turn status indicator.
+ * @param currentTurn - The active turn number (1-6)
+ * @param index - The turn index being rendered (1-6)
+ * @returns Display character: '*' for current, 'X' for past, 'r' for turn 6, ' ' for future
+ */
 const getText = (currentTurn: number, index: number) => {
   if (index === currentTurn) {
     return '*'
@@ -20,6 +27,12 @@ const getText = (currentTurn: number, index: number) => {
   return index === 6 ? 'r' : ' '
 }
 
+/**
+ * Renders a single turn status indicator with appropriate styling.
+ * Even-indexed turns have red background, current turn has green background.
+ * @param currentTurn - The active turn number
+ * @param index - The turn index for this indicator
+ */
 const TurnStatus = ({ currentTurn, index }: { currentTurn: number; index: number }) => {
   return (
     <>
@@ -39,6 +52,12 @@ const TurnStatus = ({ currentTurn, index }: { currentTurn: number; index: number
   )
 }
 
+/**
+ * Displays a visual counter showing all 6 turns with status indicators.
+ * Past turns show 'X', current turn shows '*', future turns are blank,
+ * and turn 6 shows 'r' (for wandering monster check).
+ * @param turn - The current turn number (1-6), defaults to 1
+ */
 const DungeonTurnCounter = ({ turn = 1 }: { turn?: number }) => {
   return (
     <Box>
@@ -52,30 +71,42 @@ const DungeonTurnCounter = ({ turn = 1 }: { turn?: number }) => {
   )
 }
 
-export const DungeonScreen = (props: DungeonProps) => {
-  const [turn, setTurn] = useState(props.initialTurn ?? 1)
+/**
+ * Dungeon mode screen component.
+ * Displays a turn counter and handles turn advancement.
+ * Automatically updates header state and registers dungeon-specific commands.
+ *
+ * @param props - Component props
+ * @param props.initialTurn - Optional starting turn number (1-6), defaults to 1
+ *
+ * @example
+ * ```tsx
+ * <DungeonScreen initialTurn={3} />
+ * ```
+ */
+export const DungeonScreen = (_props: DungeonProps) => {
+  const { turn } = useGameState()
+  const advanceTurn = useAdvanceTurn()
+  const setCommands = useSetCommands()
 
-  const nextTurn = () => {
-    setTurn((i) => {
-      const next = (i + 1) % 7
-      return next === 0 ? 1 : next
-    })
-  }
+  // Set commands on mount
+  useEffect(() => {
+    setCommands([
+      { key: 't', description: 'next turn' },
+      { key: 'w', description: 'check wandering monsters' },
+      { key: 'm', description: 'change mode' },
+    ])
+  }, [setCommands])
 
   useInput((input, _key) => {
-    if (input === ' ') {
-      nextTurn()
+    if (input === 't') {
+      advanceTurn()
     }
   })
 
   return (
-    <>
-      <Box flexDirection='row' flexGrow={1}>
-        <Text>DUNGEON</Text>
-      </Box>
-      <Box flexDirection='row'>
-        <DungeonTurnCounter turn={turn} />
-      </Box>
-    </>
+    <Box flexDirection='row'>
+      <DungeonTurnCounter turn={turn} />
+    </Box>
   )
 }

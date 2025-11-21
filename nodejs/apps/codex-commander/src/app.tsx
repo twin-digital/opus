@@ -1,21 +1,38 @@
-import React, { useState } from 'react'
-import { Box, Text, useApp, useInput } from 'ink'
+import React, { useState, useEffect } from 'react'
+import { Box, useApp, useInput } from 'ink'
 import { GameModes } from '@twin-digital/codex'
+import { GameProvider, useUpdateGameState } from './shared/game-context.js'
+import { Header } from './shared/header.js'
+import { Footer } from './shared/footer.js'
 import { DungeonScreen } from './dungeon/dungeon-screen.js'
+import { TravelScreen } from './travel/travel-screen.js'
+import { CampingScreen } from './camping/camping-screen.js'
+import { SettlementScreen } from './settlement/settlement-screen.js'
+import { EncounterScreen } from './encounter/encounter-screen.js'
+import { CombatScreen } from './combat/combat-screen.js'
 
 interface Props {
   name: string | undefined
 }
 
-export default function App({ name: _name = 'Stranger' }: Props) {
+const AppContent = () => {
   const { exit } = useApp()
   const [modeIndex, setModeIndex] = useState(2)
+  const updateGameState = useUpdateGameState()
 
   const gameMode = GameModes[modeIndex]
 
-  const incrementModeIndex = () => {
-    setModeIndex((i) => (i + 1) % GameModes.length)
+  const adjustModeIndex = (adjustment = 1) => {
+    setModeIndex((i) => {
+      const newIndex = (i + adjustment + GameModes.length) % GameModes.length
+      return newIndex
+    })
   }
+
+  // Update game state when mode changes
+  useEffect(() => {
+    updateGameState({ modeName: gameMode.name })
+  }, [gameMode.name, updateGameState])
 
   useInput((input, _key) => {
     if (input === 'q') {
@@ -24,30 +41,54 @@ export default function App({ name: _name = 'Stranger' }: Props) {
     }
 
     if (input === 'm') {
-      incrementModeIndex()
+      adjustModeIndex(1)
+    }
+
+    if (input === 'M') {
+      adjustModeIndex(-1)
     }
   })
 
+  const renderModeScreen = () => {
+    switch (gameMode.name) {
+      case 'Dungeon':
+        return <DungeonScreen />
+      case 'Travel':
+        return <TravelScreen />
+      case 'Camping':
+        return <CampingScreen />
+      case 'Settlement':
+        return <SettlementScreen />
+      case 'Encounter':
+        return <EncounterScreen />
+      case 'Combat':
+        return <CombatScreen />
+      default:
+        return <Box></Box>
+    }
+  }
+
   return (
     <Box borderStyle='single' flexDirection='column' flexGrow={1}>
-      <Box
-        borderBottom={true}
-        borderLeft={false}
-        borderRight={false}
-        borderStyle='single'
-        borderTop={false}
-        paddingLeft={1}
-        paddingRight={1}
-      >
-        {gameMode.name === 'Dungeon' ?
-          <DungeonScreen />
-        : <>
-            <Box flexDirection='row' flexGrow={1}>
-              <Text>Mode: {gameMode.name}</Text>
-            </Box>
-          </>
-        }
+      <Header />
+      <Box flexDirection='column' flexGrow={1} paddingLeft={1} paddingRight={1}>
+        {renderModeScreen()}
       </Box>
+      <Footer />
     </Box>
+  )
+}
+
+export default function App({ name: _name = 'Stranger' }: Props) {
+  return (
+    <GameProvider
+      initialLocationName='The Fogbound Forest'
+      initialModeName='Dungeon'
+      initialDate='3rd of Coldwane'
+      initialHour={14}
+      initialTurn={3}
+    >
+      <AppContent />
+    </GameProvider>
   )
 }
