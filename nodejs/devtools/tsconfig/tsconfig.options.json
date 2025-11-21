@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "declarationDir": "${configDir}/dist",
+    "allowJs": true,
+    "checkJs": true,
+    "declaration": true,
+    "declarationMap": true,
     "downlevelIteration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
-    "isolatedDeclarations": true,
     "jsx": "react-jsx",
     "lib": ["es2023"],
     "module": "nodenext",

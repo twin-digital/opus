@@ -249,13 +249,12 @@ features:
         options:
           file: vitest.config.ts
           content: |
-            import { defineConfig } from 'vitest/config';
-            import { sharedConfig } from '@twin-digital/vitest-config';
+            import { sharedConfig } from '@twin-digital/vitest-config'
 
             export default sharedConfig
   - name: typescript
     actions:
-      - name: Create tsconfig file
+      - name: Create tsconfig.json file
         action: write-file
         conditions:
           - notExists: tsconfig.options.json
@@ -263,14 +262,34 @@ features:
           file: tsconfig.json
           content: |
             {
+              "extends": ["@twin-digital/tsconfig/tsconfig.json"]
+            }
+      - name: Create tsconfig.build.json file
+        action: write-file
+        conditions:
+          - notExists: tsconfig.options.json
+        options:
+          file: tsconfig.build.json
+          content: |
+            {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
             }
-      - name: Create tsconfig file with custom options
+      - name: Create tsconfig.json file with custom options
         action: write-file
         conditions:
           - exists: tsconfig.options.json
         options:
           file: tsconfig.json
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.json", "./tsconfig.options.json"]
+            }
+      - name: Create tsconfig.build.json file with custom options
+        action: write-file
+        conditions:
+          - exists: tsconfig.options.json
+        options:
+          file: tsconfig.build.json
           content: |
             {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]

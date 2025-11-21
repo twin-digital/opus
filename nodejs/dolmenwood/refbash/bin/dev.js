@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename)
 const distDir = path.join(__dirname, '..', 'dist')
 const entry = path.join(distDir, 'cli.js')
 
+/** @type {import('child_process').ChildProcess | null} */
 let child = null
 let restarting = false
 
@@ -43,7 +44,7 @@ function killChild() {
   try {
     restarting = true
     child.kill('SIGTERM')
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -55,11 +56,12 @@ function startWatcher() {
       console.log('`dist` directory not found yet. Build the project to create it.')
     }
 
+    /** @type {NodeJS.Timeout | null} */
     let timer = null
-    const watcher = fs.watch(distDir, { recursive: true }, (eventType, filename) => {
+    const watcher = fs.watch(distDir, { recursive: true }, (_eventType, filename) => {
       if (!filename) return
       // debounce rapid changes
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
       timer = setTimeout(() => {
         console.log(`Detected change in dist/${filename}, restarting...`)
         restart()
@@ -67,10 +69,10 @@ function startWatcher() {
     })
 
     watcher.on('error', (err) => {
-      console.error('Watcher error:', err.message || err)
+      console.error('Watcher error:', err instanceof Error ? err.message : String(err))
     })
   } catch (err) {
-    console.error('Failed to start watcher:', err.message || err)
+    console.error('Failed to start watcher:', err instanceof Error ? err.message : String(err))
   }
 }
 
