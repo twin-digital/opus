@@ -13,9 +13,9 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI utilities for configuring and maintaining monorepos
 - [@twin-digital/tsconfig](./nodejs/devtools/tsconfig): Opinionated `tsconfig` files implementing modern defaults and familiar project layouts.
 - [@twin-digital/codex](./nodejs/dolmenwood/codex): Implementation of the 'Codex' bot.
-- [@twin-digital/codex-commander](./nodejs/dolmenwood/codex-commander): CLI console for managing Dolmenwood sessions with Codex
 - [@twin-digital/dolmenwood](./nodejs/dolmenwood/dolmenwood): Core game models and logic for Dolmenwood applications
 - [@twin-digital/dolmenwood-bot](./nodejs/dolmenwood/dolmenwood-bot): Discord bot able to assist with questions during Dolmenwood games.
+- [@twin-digital/refbash](./nodejs/dolmenwood/refbash): CLI console for managing Dolmenwood sessions
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.

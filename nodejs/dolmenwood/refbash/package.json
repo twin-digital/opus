@@ -1,7 +1,7 @@
 {
-  "name": "@twin-digital/codex-commander",
+  "name": "@twin-digital/refbash",
   "version": "0.0.0",
-  "description": "CLI console for managing Dolmenwood sessions with Codex",
+  "description": "CLI console for managing Dolmenwood sessions",
   "license": "MIT",
   "type": "module",
   "bin": "dist/cli.js",

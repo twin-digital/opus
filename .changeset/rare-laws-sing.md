@@ -1,5 +1,5 @@
 ---
-'@twin-digital/codex-commander': patch
+'@twin-digital/refbash': patch
 ---
 
 create initial project skeleton

@@ -7,13 +7,13 @@ import App from './app.js'
 const cli = meow(
   `
 	Usage
-	  $ codex-commander
+	  $ refbash
 
 	Options
 		--name  Your name
 
 	Examples
-	  $ codex-commander --name=Jane
+	  $ refbash --name=Jane
 	  Hello, Jane
 `,
   {
