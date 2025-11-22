@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Box, Text } from 'ink'
-import { useSetCommands } from '../shared/game-context.js'
 
 /**
  * Encounter mode screen component.
@@ -13,15 +12,15 @@ import { useSetCommands } from '../shared/game-context.js'
  * ```
  */
 export const EncounterScreen = () => {
-  const setCommands = useSetCommands()
+  // const setCommands = useSetCommands()
 
-  useEffect(() => {
-    setCommands([
-      { key: 'r', description: 'reaction roll' },
-      { key: 'c', description: 'enter combat' },
-      { key: 'm', description: 'change mode' },
-    ])
-  }, [setCommands])
+  // useEffect(() => {
+  //   setCommands([
+  //     { key: 'r', description: 'reaction roll' },
+  //     { key: 'c', description: 'enter combat' },
+  //     { key: 'm', description: 'change mode' },
+  //   ])
+  // }, [setCommands])
 
   return (
     <Box flexDirection='column'>

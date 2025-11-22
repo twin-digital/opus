@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Box, Text } from 'ink'
-import { useSetCommands } from '../shared/game-context.js'
 
 /**
  * Travel mode screen component.
@@ -13,15 +12,15 @@ import { useSetCommands } from '../shared/game-context.js'
  * ```
  */
 export const TravelScreen = () => {
-  const setCommands = useSetCommands()
+  // const setCommands = useSetCommands()
 
-  useEffect(() => {
-    setCommands([
-      { key: 'w', description: 'check for encounters' },
-      { key: 'r', description: 'rest' },
-      { key: 'm', description: 'change mode' },
-    ])
-  }, [setCommands])
+  // useEffect(() => {
+  //   setCommands([
+  //     { key: 'w', description: 'check for encounters' },
+  //     { key: 'r', description: 'rest' },
+  //     { key: 'm', description: 'change mode' },
+  //   ])
+  // }, [setCommands])
 
   return (
     <Box flexDirection='column'>

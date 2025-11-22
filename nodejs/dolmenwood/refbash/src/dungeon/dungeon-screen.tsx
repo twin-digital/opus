@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Box, Text, useInput } from 'ink'
-import { useGameState, useAdvanceTurn, useSetCommands } from '../shared/game-context.js'
 import { LogPanel } from '../shared/log-panel.js'
+import { useCampaign } from '../shared/game-context.js'
+import { CalendarEpoch, difference } from '@twin-digital/dolmenwood'
+import { observer } from 'mobx-react-lite'
 
 interface DungeonProps {
   /**
@@ -90,27 +92,35 @@ const DungeonTurnCounter = ({ turn = 1 }: { turn?: number }) => {
  * <DungeonScreen initialTurn={3} />
  * ```
  */
-export const DungeonScreen = ({ rows }: DungeonProps) => {
-  const gameState = useGameState()
-  const { turn, eventLog } = gameState
-  const advanceTurn = useAdvanceTurn()
-  const setCommands = useSetCommands()
+export const DungeonScreen = observer(({ rows }: DungeonProps) => {
+  const campaign = useCampaign()
+
+  const turn = difference(campaign.currentDateTime, CalendarEpoch, 'turn') + 1
+
+  // const advanceTurn = useMemo(
+  //   () =>
+  //     (delta = 1) => {
+  //       gameState.campaign.currentDateTime = addTurns(gameState.campaign.currentDateTime, delta)
+  //       updateGameState(gameState)
+  //     },
+  //   [gameState, updateGameState],
+  // )
 
   // Set commands on mount
-  useEffect(() => {
-    setCommands([
-      { key: 't/T', description: 'turn +1/-1' },
-      { key: 'w', description: 'check wandering monsters' },
-      { key: 'm', description: 'change mode' },
-    ])
-  }, [setCommands])
+  // useEffect(() => {
+  //   setCommands([
+  //     { key: 't/T', description: 'turn +1/-1' },
+  //     { key: 'w', description: 'check wandering monsters' },
+  //     { key: 'm', description: 'change mode' },
+  //   ])
+  // }, [setCommands])
 
   useInput((input, _key) => {
     if (input === 't') {
-      advanceTurn(1)
+      campaign.advanceTurn(1)
     }
     if (input === 'T') {
-      advanceTurn(-1)
+      campaign.advanceTurn(-1)
     }
   })
 
@@ -145,14 +155,14 @@ export const DungeonScreen = ({ rows }: DungeonProps) => {
         borderBottom={false}
         flexDirection='column'
       >
-        <Text>Turn: </Text>
+        <Text>Turn: {turn}</Text>
         <DungeonTurnCounter turn={turn} />
       </Box>
 
       {/* Right column (1/5) - event log */}
       <LogPanel
         backgroundColor='black'
-        entries={eventLog}
+        entries={[] /* eventLog */}
         flexDirection='column'
         height={rows}
         overflow='hidden'
@@ -161,4 +171,4 @@ export const DungeonScreen = ({ rows }: DungeonProps) => {
       />
     </Box>
   )
-}
+})

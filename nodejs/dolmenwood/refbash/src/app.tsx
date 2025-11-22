@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Box, useApp, useInput } from 'ink'
 import { GameModes } from '@twin-digital/dolmenwood'
-import { GameProvider, useUpdateGameState } from './shared/game-context.js'
+import { CampaignProvider } from './shared/game-context.js'
 import { Header } from './shared/header.js'
 import { Footer } from './shared/footer.js'
 import { DungeonScreen } from './dungeon/dungeon-screen.js'
@@ -11,6 +11,7 @@ import { SettlementScreen } from './settlement/settlement-screen.js'
 import { EncounterScreen } from './encounter/encounter-screen.js'
 import { CombatScreen } from './combat/combat-screen.js'
 import { useScreenSize } from 'fullscreen-ink'
+import { campaignStore } from './store/game-state.js'
 
 interface Props {
   name: string | undefined
@@ -19,7 +20,6 @@ interface Props {
 const AppContent = () => {
   const { exit } = useApp()
   const [modeIndex, setModeIndex] = useState(2)
-  const updateGameState = useUpdateGameState()
 
   // Calculate how many events can fit in the available space
   // height - 3 (header + borders) - 3 (footer + borders)
@@ -34,11 +34,6 @@ const AppContent = () => {
       return newIndex
     })
   }
-
-  // Update game state when mode changes
-  useEffect(() => {
-    updateGameState({ modeName: gameMode.name })
-  }, [gameMode.name, updateGameState])
 
   useInput((input, _key) => {
     if (input === 'q') {
@@ -87,14 +82,8 @@ const AppContent = () => {
 
 export default function App({ name: _name = 'Stranger' }: Props) {
   return (
-    <GameProvider
-      initialLocationName='The Fogbound Forest'
-      initialModeName='Dungeon'
-      initialDate='3rd of Coldwane'
-      initialHour={14}
-      initialMinutes={20}
-    >
+    <CampaignProvider campaign={campaignStore.list()[0] ?? campaignStore.create()}>
       <AppContent />
-    </GameProvider>
+    </CampaignProvider>
   )
 }

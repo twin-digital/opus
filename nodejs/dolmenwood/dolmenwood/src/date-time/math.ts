@@ -65,12 +65,12 @@ export const fromTimestamp = (timestamp: GameTimestamp): GameDateTime => {
   const round = (roundsAfterHours % ROUNDS_PER_TURN) + 1 // rounds are 1-indexed
 
   return {
-    year,
-    month,
     day,
     hour,
-    turn,
+    month,
     round,
+    turn,
+    year,
   }
 }
 

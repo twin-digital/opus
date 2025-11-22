@@ -1,6 +1,9 @@
-import React from 'react'
-import { Box, Text } from 'ink'
-import { useCommands, useGameState } from './game-context.js'
+import React, { useState } from 'react'
+import { Box, Text, useInput } from 'ink'
+import { Campaign } from '@twin-digital/dolmenwood'
+import { observer } from 'mobx-react-lite'
+
+const campaign = new Campaign()
 
 /**
  * Footer component that displays available keyboard commands and date.
@@ -13,16 +16,28 @@ import { useCommands, useGameState } from './game-context.js'
  * // Displays: "t: next turn | w: check wandering monsters    ?: help | 3rd of Coldwane"
  * ```
  */
-export const Footer = () => {
-  const commands = useCommands()
-  const { date } = useGameState()
+export const Footer = observer(() => {
+  // const commands = useCommands()
+  // const campaign = useCampaign()
 
-  const commandText = commands.map((cmd) => `${cmd.key}: ${cmd.description}`).join(' | ')
+  const [c, setC] = useState('')
+
+  // const commandText = commands.map((cmd) => `${cmd.key}: ${cmd.description}`).join(' | ')
+  const commandText = ''
+
+  const dateString = `${campaign.currentDateTime.month}/${campaign.currentDateTime.day}/${campaign.currentDateTime.year}`
+
+  useInput((input) => {
+    campaign.advanceTurn(1)
+    setC(input)
+  })
 
   return (
     <Box borderDimColor borderStyle='single' paddingLeft={1} paddingRight={1} justifyContent='space-between'>
       <Text>{commandText}</Text>
-      <Text>?: help | {date}</Text>
+      <Text>
+        ?: help | {dateString} -- {c}
+      </Text>
     </Box>
   )
-}
+})

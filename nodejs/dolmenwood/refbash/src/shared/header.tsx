@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Text } from 'ink'
-import { useGameState } from './game-context.js'
+import { useCampaign } from './game-context.js'
 import { formatTime } from './time-utils.js'
 
 /**
@@ -15,14 +15,16 @@ import { formatTime } from './time-utils.js'
  * ```
  */
 export const Header = () => {
-  const { locationName, modeName, hour, minutes } = useGameState()
+  const campaign = useCampaign()
+  const modeName = 'zazzy'
 
-  const formattedTime = formatTime(hour, minutes)
+  const { hour, turn } = campaign.currentDateTime
+  const formattedTime = formatTime(hour, (turn - 1) * 10)
 
   return (
     <Box borderDimColor borderStyle='single' paddingLeft={1} paddingRight={1} justifyContent='space-between'>
       <Text>
-        {locationName} | <Text color='blue'>{modeName}</Text>
+        Unknown | <Text color='blue'>{modeName}</Text>
       </Text>
       <Text>{formattedTime}</Text>
     </Box>

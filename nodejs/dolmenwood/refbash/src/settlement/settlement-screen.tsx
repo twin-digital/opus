@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Box, Text } from 'ink'
-import { useSetCommands } from '../shared/game-context.js'
 
 /**
  * Settlement mode screen component.
@@ -13,15 +12,15 @@ import { useSetCommands } from '../shared/game-context.js'
  * ```
  */
 export const SettlementScreen = () => {
-  const setCommands = useSetCommands()
+  // const setCommands = useSetCommands()
 
-  useEffect(() => {
-    setCommands([
-      { key: 's', description: 'visit shops' },
-      { key: 't', description: 'visit tavern' },
-      { key: 'm', description: 'change mode' },
-    ])
-  }, [setCommands])
+  // useEffect(() => {
+  //   setCommands([
+  //     { key: 's', description: 'visit shops' },
+  //     { key: 't', description: 'visit tavern' },
+  //     { key: 'm', description: 'change mode' },
+  //   ])
+  // }, [setCommands])
 
   return (
     <Box flexDirection='column'>
