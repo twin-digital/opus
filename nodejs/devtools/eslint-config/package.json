@@ -52,7 +52,7 @@
     "typescript": "catalog:"
   },
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "pnpm": "10.x"
   }
 }
