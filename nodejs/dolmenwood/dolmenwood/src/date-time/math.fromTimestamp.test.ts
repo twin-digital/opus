@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fromTimestamp } from './math.js'
-import { CalendarEpoch, Months } from './calendar.js'
+import { CalendarEpoch } from './calendar.js'
 
 describe('fromTimestamp', () => {
   it('returns CalendarEpoch for timestamp 0', () => {
