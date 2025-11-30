@@ -1,0 +1,81 @@
+{
+  "private": true,
+  "name": "@twin-digital/codex",
+  "version": "0.2.1",
+  "description": "Implementation of the 'Codex' bot.",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    },
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null
+  },
+  "bin": {
+    "codex:": "./bin/run.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "artifact": "artifact",
+    "build": "build",
+    "clean": "clean",
+    "dev": "BUILDKIT_PROGRESS=plain docker-compose up --build --watch",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "./bin/run.js start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.932.0",
+    "@dice-roller/rpg-dice-roller": "^5.5.1",
+    "@oclif/core": "^4.8.0",
+    "@twin-digital/dolmenwood": "workspace:*",
+    "chalk": "^5.6.2",
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "^0.16.5",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  },
+  "oclif": {
+    "bin": "codex",
+    "commands": {
+      "strategy": "explicit",
+      "target": "./dist/cli.js",
+      "identifier": "Commands"
+    },
+    "dirname": "codex",
+    "topicSeparator": " "
+  }
+}

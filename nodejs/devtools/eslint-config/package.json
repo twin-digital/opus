@@ -47,12 +47,12 @@
   "devDependencies": {
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
-    "@types/node": "22.x",
+    "@types/node": "catalog:",
     "prettier-package-json": "catalog:",
     "typescript": "catalog:"
   },
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "pnpm": "10.x"
   }
 }

@@ -1,6 +1,0 @@
-{
-  "compilerOptions": {
-    "isolatedDeclarations": false,
-    "lib": ["DOM", "DOM.Iterable", "es2023"]
-  }
-}

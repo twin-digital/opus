@@ -30,6 +30,14 @@ hooks:
     run: pnpm exec prettier-package-json --write ./package.json
 
 features:
+  - name: .nvmrc
+    actions:
+      - name: Create .nvmrc file
+        action: write-file
+        options:
+          file: .nvmrc
+          content: |
+            lts/krypton
   - name: bundle
     actions:
       - name: Create tsdown config file
@@ -82,7 +90,7 @@ features:
           file: package.json
           patch: |
             engines:
-              node: 22.x
+              node: 24.x
               pnpm: 10.x
   - name: eslint
     actions:
@@ -226,9 +234,35 @@ features:
             exports:
               .: null
               ./*: null
+  - name: test
+    actions:
+      - name: Add dependencies
+        action: json-merge-patch
+        conditions:
+          - exists: src/**/*.test.ts
+        options:
+          file: package.json
+          patch: |
+            devDependencies:
+              "@twin-digital/vitest-config": "workspace:*"
+              "@vitest/coverage-istanbul": "catalog:"
+              vitest: "catalog:"
+            scripts:
+                test: vitest run
+                "test:watch": vitest
+      - name: Create vitest config
+        action: write-file
+        conditions:
+          - exists: src/**/*.test.ts
+        options:
+          file: vitest.config.ts
+          content: |
+            import { sharedConfig } from '@twin-digital/vitest-config'
+
+            export default sharedConfig
   - name: typescript
     actions:
-      - name: Create tsconfig file
+      - name: Create tsconfig.json file
         action: write-file
         conditions:
           - notExists: tsconfig.options.json
@@ -236,14 +270,34 @@ features:
           file: tsconfig.json
           content: |
             {
+              "extends": ["@twin-digital/tsconfig/tsconfig.json"]
+            }
+      - name: Create tsconfig.build.json file
+        action: write-file
+        conditions:
+          - notExists: tsconfig.options.json
+        options:
+          file: tsconfig.build.json
+          content: |
+            {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json"]
             }
-      - name: Create tsconfig file with custom options
+      - name: Create tsconfig.json file with custom options
         action: write-file
         conditions:
           - exists: tsconfig.options.json
         options:
           file: tsconfig.json
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.json", "./tsconfig.options.json"]
+            }
+      - name: Create tsconfig.build.json file with custom options
+        action: write-file
+        conditions:
+          - exists: tsconfig.options.json
+        options:
+          file: tsconfig.build.json
           content: |
             {
               "extends": ["@twin-digital/tsconfig/tsconfig.build.json", "./tsconfig.options.json"]
@@ -259,5 +313,5 @@ features:
             devDependencies:
               '@twin-digital/opus-scripts': workspace:*
               '@twin-digital/tsconfig': workspace:*
-              '@types/node': '22.x'
+              '@types/node': 'catalog:'
               typescript: 'catalog:'

@@ -15,9 +15,7 @@
     "test": "./bin/test.js"
   },
   "scripts": {
-    "clean": "node ./bin/clean.js",
-    "lint": "node ./bin/lint.js",
-    "lint:fix": "node ./bin/lint_fix.js"
+    "clean": "node ./bin/clean.js"
   },
   "dependencies": {
     "chokidar": "^4.0.3",
@@ -34,7 +32,7 @@
     "typescript-eslint": "catalog:"
   },
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "pnpm": "10.x"
   }
 }
