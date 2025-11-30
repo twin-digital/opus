@@ -3,7 +3,7 @@ import path from 'node:path'
 import { bg$, $ } from '../../util/shell.js'
 
 export const supports = () => {
-  const hasTypescriptEsm = fs.existsSync(path.resolve('tsconfig.json'))
+  const hasTypescriptEsm = fs.existsSync(path.resolve('tsconfig.build.json'))
   const hasTypescriptCjs = fs.existsSync(path.resolve('tsconfig.cjs.json'))
   return Promise.resolve(hasTypescriptCjs || hasTypescriptEsm)
 }
@@ -14,7 +14,7 @@ export const build = () => {
 
   // transpile with tsc
   if (hasTypescriptEsm) {
-    $`tsc`
+    $`tsc --project tsconfig.build.json`
   }
 
   if (hasTypescriptCjs) {
@@ -32,13 +32,13 @@ export const build = () => {
 }
 
 export const watch = () => {
-  const hasTypescriptEsm = fs.existsSync(path.resolve('tsconfig.json'))
+  const hasTypescriptEsm = fs.existsSync(path.resolve('tsconfig.build.json'))
   const hasTypescriptCjs = fs.existsSync(path.resolve('tsconfig.cjs.json'))
 
   const watches = []
 
   if (hasTypescriptEsm) {
-    watches.push(bg$`tsc --watch --preserveWatchOutput`)
+    watches.push(bg$`tsc --project tsconfig.build.json --watch --preserveWatchOutput`)
   }
 
   if (hasTypescriptCjs) {

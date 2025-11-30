@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
+  "concurrency": "5",
   "globalPassThroughEnv": ["CI"],
   "tasks": {
     "artifact": {
@@ -25,19 +26,28 @@
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
     "lint": {
-      "dependsOn": ["@twin-digital/eslint-config#build"],
+      "dependsOn": ["^build", "@twin-digital/eslint-config#build"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
     "lint:fix": {
-      "dependsOn": ["@twin-digital/eslint-config#build"]
+      "dependsOn": ["^build", "@twin-digital/eslint-config#build"]
     },
     "test": {
-      "outputs": []
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
+      "outputs": ["coverage.json"]
+    },
+    "test:watch": {
+      "dependsOn": ["@twin-digital/vitest-config#build"],
+      "cache": false,
+      "persistent": true
     },
     "typecheck": {
       "dependsOn": ["^build"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
+    },
+    "upstream-sources": {
+      "dependsOn": ["^upstream-sources"]
     }
   }
 }
