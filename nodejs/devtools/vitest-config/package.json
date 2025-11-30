@@ -1,0 +1,54 @@
+{
+  "name": "@twin-digital/vitest-config",
+  "version": "0.0.0",
+  "description": "Twin Digital's preferred vitest configuration.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null,
+    "./*": {
+      "import": {
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  }
+}

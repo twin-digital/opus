@@ -1,0 +1,60 @@
+{
+  "private": true,
+  "name": "@twin-digital/dolmenwood-bot",
+  "version": "0.0.1",
+  "description": "Discord bot able to assist with questions during Dolmenwood games.",
+  "type": "module",
+  "bin": {
+    "dw": "./bin/run.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "./bin/run.js bot run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.928.0",
+    "@aws-sdk/client-s3": "^3.928.0",
+    "@langchain/community": "^1.0.0",
+    "@langchain/core": "^1.0.3",
+    "@langchain/textsplitters": "^1.0.0",
+    "@oclif/core": "^4.8.0",
+    "@twin-digital/bedrock": "workspace:*",
+    "@twin-digital/genai-core": "workspace:*",
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3",
+    "hnswlib-node": "^3.0.0",
+    "pdfjs-dist": "^5.4.394"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  },
+  "oclif": {
+    "bin": "dw",
+    "commands": "./dist/commands",
+    "dirname": "dw",
+    "topicSeparator": " "
+  }
+}

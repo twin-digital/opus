@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.options.json",
+  "include": [
+    //
+    "${configDir}/**/*.cjs",
+    "${configDir}/**/*.cts",
+    "${configDir}/**/*.js",
+    "${configDir}/**/*.jsx",
+    "${configDir}/**/*.ts",
+    "${configDir}/**/*.tsx",
+    "${configDir}/**/*.d.ts",
+    "${configDir}/**/*.json"
+  ]
+}

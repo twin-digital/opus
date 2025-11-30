@@ -1,0 +1,59 @@
+{
+  "name": "@twin-digital/refbash",
+  "version": "0.0.0",
+  "description": "CLI console for managing Dolmenwood sessions",
+  "license": "MIT",
+  "type": "module",
+  "bin": "dist/cli.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "node ./bin/dev.js",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "@mishieck/ink-titled-box": "^0.3.0",
+    "@twin-digital/dolmenwood": "workspace:*",
+    "chalk": "^5.6.2",
+    "dotenv": "^17.2.3",
+    "fullscreen-ink": "^0.1.0",
+    "ink": "^6.5.1",
+    "ink-text-input": "^6.0.0",
+    "lodash-es": "^4.17.21",
+    "meow": "^11.0.0",
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.6",
+    "chalk": "^5.2.0",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "ts-node": "^10.9.1",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  }
+}

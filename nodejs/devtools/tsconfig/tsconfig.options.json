@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
-    "declarationDir": "${configDir}/dist",
+    "allowJs": true,
+    "checkJs": true,
+    "declaration": true,
+    "declarationMap": true,
     "downlevelIteration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
-    "isolatedDeclarations": true,
     "jsx": "react-jsx",
-    "lib": ["es2023"],
-    "module": "nodenext",
+    "lib": ["ESNext"],
+    "module": "node20",
     "moduleResolution": "nodenext",
     "newLine": "lf",
     "noEmit": true,
@@ -21,7 +23,7 @@
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
-    "target": "esnext",
+    "target": "ES2024",
     "types": ["node"],
     "verbatimModuleSyntax": true
   }

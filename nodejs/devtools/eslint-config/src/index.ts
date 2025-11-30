@@ -2,6 +2,7 @@ import jsLint from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import tsLint from 'typescript-eslint'
 import globals from 'globals'
+import { defineConfig } from 'eslint/config'
 
 const IgnoredRulesInTests = [
   '@typescript-eslint/no-explicit-any',
@@ -10,7 +11,7 @@ const IgnoredRulesInTests = [
   '@typescript-eslint/no-unused-vars',
 ]
 
-const config: ReturnType<(typeof tsLint)['config']> = tsLint.config(
+const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,jsx,tsx}'],
     languageOptions: {
@@ -19,13 +20,7 @@ const config: ReturnType<(typeof tsLint)['config']> = tsLint.config(
         ...globals.node,
       },
       parserOptions: {
-        projectService: {
-          allowDefaultProject: [
-            'eslint.config.js',
-            'scripts/*.js',
-            'scripts/*.ts',
-          ],
-        },
+        projectService: true,
       },
     },
   },

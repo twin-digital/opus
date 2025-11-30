@@ -1,0 +1,37 @@
+diff --git a/dist/main.js b/dist/main.js
+index 6580092695317b060c43132eb794aaedb5a7792a..7bc7609ed3119927b0a62a399ac7aa9d0b7b88dd 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -504,7 +504,22 @@ var TitledBox = (props) => {
+     },
+     titleJustify,
+     titleStyles: titleStyles2
+-  }), []);
++  }), [
++    borderTop,
++    borderRight,
++    borderBottom,
++    borderLeft,
++    size.height,
++    size.width,
++    borderStyle,
++    titles,
++    borderColor,
++    borderBottomColor,
++    borderDimColor,
++    borderBottomDimColor,
++    titleJustify,
++    titleStyles2
++  ]);
+   const [data2, setData] = useState(box);
+   const { topBorderData } = data2;
+   useEffect(() => {
+@@ -512,7 +527,7 @@ var TitledBox = (props) => {
+       return;
+     box.size = measureElement(boxRef.current);
+     setData(box.toJSON());
+-  }, [boxRef.current]);
++  }, [box, boxRef.current]);
+   return /* @__PURE__ */ jsxDEV2(Box, {
+     ref: boxRef,
+     flexDirection: "column",
