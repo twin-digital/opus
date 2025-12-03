@@ -1,5 +1,5 @@
 import castArray from 'lodash-es/castArray.js'
-import { makeAutoObservable, observable, reaction, runInAction, type IReactionDisposer } from 'mobx'
+import { observable, reaction, runInAction, type IReactionDisposer } from 'mobx'
 
 export interface SerializableState<T extends object = object> {
   /**
@@ -163,26 +163,16 @@ export abstract class AbstractStore<
     })
   }
 
-  private _initializeObservable(result: T) {
-    // make the new object observable
-    makeAutoObservable(
-      result,
-      {
-        id: false,
-      },
-      { autoBind: true },
-    )
-
-    // automatically call our onChange callback if the object's serialized form is updated
+  private _initializeObservable(root: T) {
     const disposer = reaction(
-      () => result.toJSON(),
+      () => root.toJSON(),
       () => {
         if (!this._isLoading) {
-          void this._onChanged?.(result)
+          void this._onChanged?.(root)
         }
       },
     )
-    this._reactionDisposers.set(result.id, disposer)
+    this._reactionDisposers.set(root.id, disposer)
   }
 
   /**

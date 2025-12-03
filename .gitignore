@@ -49,6 +49,7 @@ code/**/tsconfig.tsbuildinfo
 .out
 
 # test outputs
+coverage
 coverage.json
 
 # runtime outputs

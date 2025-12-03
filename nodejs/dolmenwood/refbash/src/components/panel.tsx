@@ -118,8 +118,8 @@ const makeStyleProps = (
   }
   const stateColors: StateColors = state === undefined ? {} : theme.state[state]
   const stateStyles = {
-    backgroundColor: stateColors.background,
-    borderColor: stateColors.border,
+    backgroundColor: stateColors.dark,
+    borderColor: stateColors.medium,
   }
 
   const styleProps = panelToBoxProps(merge({}, typeStyles, stateStyles, styleOverrides))

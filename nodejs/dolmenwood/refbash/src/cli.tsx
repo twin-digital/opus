@@ -5,7 +5,7 @@ import React from 'react'
 import { withFullScreen } from 'fullscreen-ink'
 import meow from 'meow'
 import chalk from 'chalk'
-import App from './app.js'
+import App from './components/app/app.js'
 import { patchConsoleToLog } from './utils/log-utils.js'
 
 // force truecolor support

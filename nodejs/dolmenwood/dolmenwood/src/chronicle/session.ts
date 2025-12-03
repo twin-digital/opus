@@ -1,3 +1,4 @@
+import { makeAutoObservable } from 'mobx'
 import { DEFAULT_DATE_TIME } from '../date-time/calendar.js'
 import { type GameDateTime } from '../date-time/model.js'
 import { randomUUID } from 'node:crypto'
@@ -17,6 +18,7 @@ export class Session {
 
   public constructor(public readonly id: string = randomUUID()) {
     this.currentDateTime = DEFAULT_DATE_TIME
+    makeAutoObservable(this)
   }
 
   public fromJSON(_state: SessionJson): void {

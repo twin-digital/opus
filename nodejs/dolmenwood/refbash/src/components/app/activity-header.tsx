@@ -1,9 +1,9 @@
 import React from 'react'
-import { formatTime } from '../utils/time-utils.js'
+import { formatTime } from '../../utils/time-utils.js'
 import { observer } from 'mobx-react-lite'
 import type { Activity } from '@twin-digital/dolmenwood'
-import { StyledText } from './styled-text.js'
-import { Panel } from './panel.js'
+import { StyledText } from '../styled-text.js'
+import { Panel } from '../panel.js'
 
 interface Props {
   activity: Activity

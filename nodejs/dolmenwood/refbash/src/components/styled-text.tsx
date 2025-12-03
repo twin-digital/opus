@@ -16,6 +16,7 @@ export const textStyleTypeNames = [
   'h2',
   'info',
   'label',
+  'selected',
   'strong',
   'success',
   'warning',
@@ -27,15 +28,16 @@ const makeTextStyleTypes = (theme: Theme): Record<TextStyleType, TextStyle> =>
     body: { color: theme.text.default },
     bodySecondary: { color: theme.text.subtle },
     strong: { color: theme.text.strong },
-    destructive: { color: theme.state.destructive.text },
-    disabled: { color: theme.state.disabled.text },
-    error: { color: theme.state.error.text },
+    destructive: { color: theme.state.destructive.medium },
+    disabled: { color: theme.state.disabled.medium },
+    error: { color: theme.state.error.medium },
     h1: { color: theme.text.brandPrimary },
     h2: { color: theme.text.brandSecondary },
-    info: { color: theme.state.info.text },
+    info: { color: theme.state.info.medium },
     label: { color: theme.text.accent },
-    success: { color: theme.state.success.text },
-    warning: { color: theme.state.warning.text },
+    selected: { color: theme.state.selected.light },
+    success: { color: theme.state.success.medium },
+    warning: { color: theme.state.warning.medium },
   }) as const
 
 interface Props {
@@ -92,9 +94,9 @@ export const StyledText = ({ backgroundColor, color, children, state, style, tex
 
   const stateColors: StateColors = state === undefined ? {} : theme.state[state]
   const stateStyles = {
-    backgroundColor: stateColors.background,
-    borderColor: stateColors.border,
-    color: stateColors.text,
+    backgroundColor: stateColors.dark,
+    borderColor: stateColors.medium,
+    color: stateColors.light,
   }
 
   const styleProps = toTextProps(merge({}, typeStyles, stateStyles, styleOverrides))

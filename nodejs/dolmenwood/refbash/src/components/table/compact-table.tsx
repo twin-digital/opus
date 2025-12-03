@@ -1,14 +1,15 @@
-import type React from 'react'
-import { Box, Text, type BoxProps, type TextProps } from 'ink'
+import React, { type ReactElement } from 'react'
+import { Box, Text, useInput, type BoxProps, type TextProps } from 'ink'
 import get from 'lodash-es/get.js'
-import type { ReactElement } from 'react'
 import type { ColorToken } from '../../theme/style-types.js'
 import { StyledText } from '../styled-text.js'
 import { Panel } from '../panel.js'
 import { useTheme } from '../../store/hooks.js'
 import type { TextStyle } from '../../theme/text.js'
+import { useTableSelection } from './use-table-selection.js'
+import noop from 'lodash-es/noop.js'
 
-interface ColumnDefinition {
+export interface ColumnDefinition {
   /**
    * How to align this column.
    */
@@ -68,7 +69,8 @@ export interface CompactTableProps {
   cellPadding?: number
 
   /**
-   * Style to apply to cells.
+   * Style to apply to cells by default. May be overridden by {@link headerStyle} or the value returned by
+   * {@link getRowStyle()}.
    */
   cellStyle?: CellStyle
 
@@ -76,7 +78,7 @@ export interface CompactTableProps {
    * Columns to render, specified either as a simple property name or a complete configuration with options such as
    * width and label. Default value is to display all properties of the data in natural order.
    */
-  columns?: (string | ColumnDefinition)[]
+  columns?: readonly (string | ColumnDefinition)[]
 
   /**
    * Data to render into this list
@@ -90,10 +92,41 @@ export interface CompactTableProps {
   emptyContent?: string | ReactElement
 
   /**
+   * Optional function to extract a unique identifier from a data item. IDs are used to provide stable selection if the
+   * underlying data changes. If not using selection (i.e. `onSelectRow` is undefined), then this will not be used. If
+   * not provided, will use 'id', then 'iid', then fall back to array index.
+   *
+   * @param item The data item
+   * @param index The index of the item in the data array
+   * @returns A unique identifier for the item
+   */
+  getItemId?: (item: object, index: number) => string | number
+
+  /**
+   * Determines a row-specific style to use. May return undefined, in which case {@link cellStyle} (or a default style)
+   * will be used.
+   *
+   * @param rowIndex Zero-based index of the row
+   * @param data Data for the row
+   * @returns The TextStyle to use for the row, if an override is required
+   */
+  getRowStyle?: (rowIndex: number, data: object) => TextStyle | undefined
+
+  /**
    * Style overrides to apply to header cells.
    * @default use `cellStyle` values
    */
   headerStyle?: CellStyle
+
+  /**
+   * Optional callback which will be invoked when the user selects a row in this table. If set, then the table's UI may
+   * be altered to include selection controls. These controls will not be displayed if this callback is undefined.
+   */
+  onSelectRow?: (rowIndex: number, data: object) => void
+}
+
+const defaultGetItemId = (item: object, index: number): string | number => {
+  return get(item, 'id', get(item, 'iid', index))
 }
 
 const enumerateProperties = (data: readonly object[]) => Array.from(new Set(data.flatMap((item) => Object.keys(item))))
@@ -101,7 +134,7 @@ const enumerateProperties = (data: readonly object[]) => Array.from(new Set(data
 /**
  * Normalize the `columns` property so that any 'string' entries are specified as a full ColumnDefinition.
  */
-const toColumnDefinitions = (columns: (string | ColumnDefinition)[]): ColumnDefinition[] =>
+const toColumnDefinitions = (columns: readonly (string | ColumnDefinition)[]): ColumnDefinition[] =>
   columns.map((c) =>
     typeof c === 'string' ?
       {
@@ -166,9 +199,26 @@ export const CompactTable = ({
   columns,
   data,
   emptyContent,
+  getItemId = defaultGetItemId,
+  getRowStyle,
   headerStyle,
+  onSelectRow,
 }: CompactTableProps) => {
+  const isSelectionEnabled = onSelectRow !== undefined
   const theme = useTheme()
+
+  // Use the extracted selection hook
+  const selection = useTableSelection({
+    data,
+    getItemId,
+    isEnabled: isSelectionEnabled,
+    onSelectRow: onSelectRow ?? noop,
+  })
+
+  // Handle arrow key input
+  useInput((_, key) => {
+    selection.handleArrowKey(key.upArrow, key.downArrow)
+  })
 
   const resolvedCellDividerColor = cellDividerColor ?? theme.border.default
   const resolvedCellDividerStyle = cellDividerStyle ?? 'single'
@@ -198,22 +248,25 @@ export const CompactTable = ({
     Math.max(column.title?.length ?? column.property.length, ...rows.map((row) => row[colIndex].length)),
   )
 
-  const getColumnLayoutProps = ({ style }: ColumnDefinition, index: number) => {
-    const borderProps =
-      resolvedCellDividerStyle === 'none' ?
+  const getBorderProps = (columnIndex: number) => {
+    return resolvedCellDividerStyle === 'none' ?
         {}
       : {
           borderBottom: false,
           borderColor: resolvedCellDividerColor,
-          borderLeft: index !== 0,
+          borderLeft: columnIndex !== 0,
           borderRight: false,
           borderStyle: resolvedCellDividerStyle,
           borderTop: false,
         }
+  }
 
+  const getColumnLayoutProps = ({ style }: ColumnDefinition, index: number) => {
     const { paddingX, paddingLeft, paddingRight, ...rest } = style ?? {}
     const resolvedPaddingLeft = paddingLeft ?? paddingX ?? 1
     const resolvedPaddingRight = paddingRight ?? paddingX ?? 1
+
+    const borderProps = getBorderProps(index)
 
     return {
       paddingLeft: resolvedPaddingLeft,
@@ -223,12 +276,16 @@ export const CompactTable = ({
     }
   }
 
-  const makeRow = (rowId: number | string, rowValues: string[], type: 'header' | 'data') => {
-    const style = type === 'header' ? resolvedHeaderStyle : resolvedCellStyle
+  const makeRow = (rowIndex: number | null, rowId: number | string, rowValues: string[], type: 'header' | 'data') => {
+    const defaultStyle = type === 'header' ? resolvedHeaderStyle : resolvedCellStyle
+    const rowStyle = type === 'header' || rowIndex === null ? undefined : getRowStyle?.(rowIndex, data[rowIndex])
+    const style = rowStyle ?? defaultStyle
+    const selectedColor =
+      isSelectionEnabled && rowIndex === selection.selectedRow ? theme.state.selected.dark : undefined
 
     const cells = columnDefinitions.map((column, index) => (
       <Box
-        backgroundColor={style.backgroundColor}
+        backgroundColor={selectedColor ?? style.backgroundColor}
         key={index}
         paddingX={cellPadding}
         {...getColumnLayoutProps(column, index)}
@@ -265,10 +322,11 @@ export const CompactTable = ({
       resolvedEmptyContent
     : <Box flexDirection='column' width='100%'>
         {makeRow(
+          null,
           'header',
           columnDefinitions.map((column) => column.title ?? column.property),
           'header',
         )}
-        {rows.map((row, index) => makeRow(rowIds[index], row, 'data'))}
+        {rows.map((row, index) => makeRow(index, rowIds[index], row, 'data'))}
       </Box>
 }
