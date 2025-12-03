@@ -2,3 +2,6 @@
 **/__test__/*.html
 **/__test__/**/*.html
 terraform
+
+# automatically generated files
+**/CHANGELOG.md

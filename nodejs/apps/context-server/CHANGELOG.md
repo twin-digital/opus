@@ -1,4 +1,4 @@
-# @twin-digital/eslint-config
+# @twin-digital/context-server
 
 ## 0.1.0
 
@@ -6,8 +6,6 @@
 
 - 22f58e3: update to nodejs v24.x and Typescript 5.9
 
-## 0.0.2
-
 ### Patch Changes
 
-- bb51809: initial release or project
+- b8747c8: create initial service structure and dev workflow

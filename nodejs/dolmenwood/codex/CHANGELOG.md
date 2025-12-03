@@ -1,5 +1,30 @@
 # @twin-digital/codex
 
+## 0.3.0
+
+### Minor Changes
+
+- 22f58e3: update to nodejs v24.x and Typescript 5.9
+
+### Patch Changes
+
+- 22f58e3: move core Dolmenwood model into new @twin-digital/dolmenwood package
+  - create new package
+  - move relevant code from 'codex'
+  - update dependencies in refbash
+
+- 8d56808: update project configuration to facilitate exporting a library
+- Updated dependencies [22f58e3]
+- Updated dependencies [b78823f]
+- Updated dependencies [b78823f]
+- Updated dependencies [22f58e3]
+- Updated dependencies [22f58e3]
+- Updated dependencies [22f58e3]
+- Updated dependencies [b78823f]
+- Updated dependencies [b78823f]
+- Updated dependencies [b78823f]
+  - @twin-digital/dolmenwood@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes
