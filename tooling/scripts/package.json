@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/opus-scripts",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Scripts used to perform package-level operations in the Opus repository.",
   "type": "module",
   "bin": {

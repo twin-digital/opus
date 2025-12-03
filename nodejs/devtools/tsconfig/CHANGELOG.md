@@ -1,5 +1,20 @@
 # @twin-digital/tsconfig
 
+## 0.2.0
+
+### Minor Changes
+
+- 22f58e3: update tsconfig to include everything for linting & specific build override
+- 22f58e3: update to nodejs v24.x and Typescript 5.9
+
+### Patch Changes
+
+- 22f58e3: change library to ESNext
+
+  This grants support for the new Iterable helpers.
+
+- 8d56808: update configuration to support jsx
+
 ## 0.1.1
 
 ### Patch Changes
