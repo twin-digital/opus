@@ -22,23 +22,34 @@ export const Palette = {
 
   // semantic / status colors - https://miro.medium.com/v2/resize:fit:1358/1*jglFchy9-ZhiDZke7BtsZQ.png
   errorRed200: '#FECDC7',
+  errorRed400: '#f97066',
   errorRed500: '#f04438',
   errorRed900: '#7a271a',
   infoBlue200: '#b2ccff',
   infoBlue500: '#2970ff',
   infoBlue900: '#00359e',
-  warningOrange200: '#fedf89',
-  warningOrange500: '#fdb022',
-  warningOrange700: '#b54708',
-  warningOrange900: '#7a2a0e',
-  successGreen100: '#D1FADF',
+  // warningAmber100: '#FFF8C5',
+  warningAmber200: '#FFE991',
+  // warningAmber300: '#FFD768',
+  warningAmber400: '#FFC043',
+  // warningAmber500: '#EAAA08',
+  // warningAmber700: '#996200',
+  warningAmber800: '#6A4100',
+  // warningAmber900: '#4E3100',
+  // selectedBlue100: '#E2E6F5',
+  // selectedBlue200: '#BBC9EA',
+  selectedBlue300: '#6A84C4',
+  selectedBlue500: '#3B5B9A', // primary selected/focused
+  // selectedBlue700: '#2A4475',
+  selectedBlue800: '#1C2F52',
+  // successGreen100: '#D1FADF',
   successGreen200: '#A6F4C5',
-  successGreen300: '#6CE9A6',
-  successGreen400: '#32D38E',
-  successGreen500: '#12B76A',
-  successGreen600: '#079455',
+  // successGreen300: '#6CE9A6',
+  // successGreen400: '#32D38E',
+  // successGreen500: '#12B76A',
+  // successGreen600: '#079455',
   successGreen700: '#067647',
-  successGreen800: '#085C3C',
+  // successGreen800: '#085C3C',
   successGreen900: '#044A2B',
   // 🌿 Ancient Moss — more olive/earthy but brightened for dark terminals
   ancientMoss100: '#B4CC7A',
@@ -69,11 +80,12 @@ export const UiStates = [
   'error',
   'focus',
   'info',
+  'selected',
   'success',
   'warning',
 ] as const
 export type UiState = (typeof UiStates)[number]
-export type StateColors = Partial<Record<'background' | 'border' | 'text', ColorToken>>
+export type StateColors = Partial<Record<'dark' | 'medium' | 'light', ColorToken>>
 
 /**
  * Color design system, adding semantic meaning to colors used in the app.
@@ -97,40 +109,46 @@ export const Colors = {
   },
   state: {
     current: {
-      border: Palette.ancientMoss100,
+      medium: Palette.ancientMoss500,
+      light: Palette.ancientMoss100,
     },
     destructive: {
-      text: Palette.errorRed500,
+      medium: Palette.errorRed400,
     },
     disabled: {
-      background: Palette.gray900,
-      border: Palette.gray900,
-      text: Palette.gray600,
+      dark: Palette.gray900,
+      medium: Palette.gray900,
+      light: Palette.gray600,
     },
     error: {
-      background: Palette.errorRed900,
-      border: Palette.errorRed500,
-      text: Palette.errorRed200,
+      dark: Palette.errorRed900,
+      medium: Palette.errorRed500,
+      light: Palette.errorRed200,
     },
     focus: {
-      border: Palette.ancientMoss700,
-      background: Palette.ancientMoss900,
-      text: Palette.gray300,
+      dark: Palette.ancientMoss900,
+      medium: Palette.ancientMoss700,
+      light: Palette.gray300,
     },
     info: {
-      background: Palette.infoBlue900,
-      border: Palette.infoBlue500,
-      text: Palette.infoBlue200,
+      dark: Palette.infoBlue900,
+      medium: Palette.infoBlue500,
+      light: Palette.infoBlue200,
+    },
+    selected: {
+      dark: Palette.selectedBlue800,
+      medium: Palette.selectedBlue500,
+      light: Palette.selectedBlue300,
     },
     success: {
-      background: Palette.successGreen900,
-      border: Palette.successGreen700,
-      text: Palette.successGreen200,
+      dark: Palette.successGreen900,
+      medium: Palette.successGreen700,
+      light: Palette.successGreen200,
     },
     warning: {
-      background: Palette.warningOrange900,
-      border: Palette.warningOrange700,
-      text: Palette.warningOrange200,
+      dark: Palette.warningAmber800,
+      medium: Palette.warningAmber400,
+      light: Palette.warningAmber200,
     },
   },
   border: {

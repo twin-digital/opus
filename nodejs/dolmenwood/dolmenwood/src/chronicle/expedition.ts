@@ -1,3 +1,4 @@
+import { makeAutoObservable } from 'mobx'
 import { randomUUID } from 'node:crypto'
 
 export interface ExpeditionJson {
@@ -15,7 +16,9 @@ export interface ExpeditionJson {
  * - {@link Delve}: Investigation of a localized site such as a ruin, barrow, cave, or faerie landmark.
  */
 export class Expedition {
-  public constructor(public readonly id: string = randomUUID()) {}
+  public constructor(public readonly id: string = randomUUID()) {
+    makeAutoObservable(this)
+  }
 
   public fromJSON(_state: ExpeditionJson): void {
     /* noop */

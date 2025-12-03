@@ -254,12 +254,33 @@ features:
         action: write-file
         conditions:
           - exists: src/**/*.test.ts
+          - notExists: src/**/*.tsx
         options:
           file: vitest.config.ts
           content: |
             import { sharedConfig } from '@twin-digital/vitest-config'
 
             export default sharedConfig
+      - name: Create vitest config (React support)
+        action: write-file
+        conditions:
+          - exists: src/**/*.test.ts
+          - exists: src/**/*.tsx
+        options:
+          file: vitest.config.ts
+          content: |
+            import { defineConfig, mergeConfig } from 'vitest/config'
+            import { sharedConfig } from '@twin-digital/vitest-config'
+
+            export default mergeConfig(
+              sharedConfig,
+              defineConfig({
+                test: {
+                  environment: 'jsdom',
+                },
+              }),
+            )
+
   - name: typescript
     actions:
       - name: Create tsconfig.json file

@@ -1,3 +1,4 @@
+import { makeAutoObservable } from 'mobx'
 import { randomUUID } from 'node:crypto'
 
 export interface AdventureJson {
@@ -17,7 +18,9 @@ export interface AdventureJson {
  * This is just a placeholder currently.
  */
 export class Adventure {
-  public constructor(public readonly id: string = randomUUID()) {}
+  public constructor(public readonly id: string = randomUUID()) {
+    makeAutoObservable(this)
+  }
 
   public fromJSON(_state: AdventureJson): void {
     /* noop */

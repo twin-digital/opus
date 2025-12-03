@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react'
-import { Box } from 'ink'
 import { useStore } from '../../store/store-context.js'
 import { InputLayer } from '../../input/input-controller.js'
 import { TextField } from '../form/text-field.js'
 import { Form } from '../form/form.js'
 import type { AddLightSourceData } from '@twin-digital/dolmenwood/chronicle'
+import { Panel } from '../panel.js'
 
 interface Props {
   /**
@@ -41,16 +41,16 @@ export const AddLightSourceForm = ({ onCancel, onSubmit }: Props) => {
   return (
     <Form
       onSubmit={(values) => {
-        const light = values as { duration: string; heldBy: string; type: string }
+        const light = values as { duration: string; heldBy?: string; type?: string }
         onSubmit({
-          carriedBy: light.heldBy,
+          carriedBy: light.heldBy ?? 'party',
           maximumDuration: Number(light.duration),
-          type: light.type,
+          type: light.type ?? 'other',
         })
       }}
       submitMode='on-enter'
     >
-      <Box alignItems='flex-end' flexDirection='row' gap={1} minHeight={2}>
+      <Panel alignItems='flex-end' flexDirection='row' gap={1} minHeight={2} paddingX={1}>
         <TextField autoFocus={true} label='Held by:' name='heldBy' placeholder='Enter character name...' width={30} />
         <TextField defaultValue='torch' label={'Type:'} name='type' width={20} />
         <TextField
@@ -68,7 +68,7 @@ export const AddLightSourceForm = ({ onCancel, onSubmit }: Props) => {
           }}
           width={7}
         />
-      </Box>
+      </Panel>
     </Form>
   )
 }

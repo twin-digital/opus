@@ -2,7 +2,7 @@ import React from 'react'
 import { useFormField, type FormFieldContext } from './hooks/use-form-field.js'
 import { Panel } from '../panel.js'
 import { StyledText } from '../styled-text.js'
-import { useFocus } from '../use-focus.js'
+import { useFocus } from '../../hooks/use-focus.js'
 
 export interface FormFieldControlProps extends FormFieldContext {
   /**

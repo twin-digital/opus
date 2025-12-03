@@ -12,7 +12,7 @@ interface Props {
    * Callback invoked when the form is submitted and validation has passed.
    * @param values All field values, as (fieldName, value) tuples
    */
-  onSubmit: (values: Record<string, string>) => void | Promise<void>
+  onSubmit: (values: Record<string, string | undefined>) => void | Promise<void>
 
   /**
    * Sets the mechanism by which the form is submitted:
@@ -163,7 +163,6 @@ export const Form = ({ children, onSubmit, submitMode = 'manual' }: Props) => {
     return true
   }
 
-  // Example: Enter submits the form
   useInput((_, key) => {
     if (submitMode === 'on-enter' && key.return) {
       submit()

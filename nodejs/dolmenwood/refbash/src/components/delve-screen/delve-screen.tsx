@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Box } from 'ink'
-import { LogPanel } from '..//log-panel.js'
+import { LogPanel } from '../log-panel/log-panel.js'
 import { Delve } from '@twin-digital/dolmenwood'
 import { observer } from 'mobx-react-lite'
 import { LightSourcesTable } from './light-sources-table.js'
-import { AddLightSourceForm } from './add-light-source-form.js'
-import { InputLayer } from '../../input/input-controller.js'
+import { LayerPriority } from '../../input/input-controller.js'
 import { StyledText } from '../styled-text.js'
-import { useUi } from '../../store/hooks.js'
+import { formatTime } from '../../utils/time-utils.js'
+import { Panel } from '../panel.js'
+import { EncounterPanel } from '../encounter/encounter-panel.js'
+import { useInputLayer } from '../../input/use-input-layer.js'
 
 interface DelveScreenProps {
   /**
@@ -40,48 +42,20 @@ interface DelveScreenProps {
  * ```
  */
 export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
-  const ui = useUi()
-  const input = ui.input
   const [focus, setFocus] = useState<string | null>(null)
-  const [activeForm, setActiveForm] = useState<string | null>(null)
 
-  // Set commands on mount
-  // useEffect(() => {
-  //   setCommands([
-  //     { key: 't/T', description: 'turn +1/-1' },
-  //     { key: 'w', description: 'check wandering monsters' },
-  //     { key: 'm', description: 'change mode' },
-  //   ])
-  // }, [setCommands])
-
-  useEffect(() => {
-    const layer = new InputLayer('screen:delve')
-
-    if (focus === 'light-sources') {
-      layer.addAction(
-        'a',
-        () => {
-          setActiveForm('add-light-source')
-        },
-        'add light source',
-      )
-
-      layer.addAction(
-        'escape',
-        () => {
-          setFocus('null')
-          setActiveForm(null)
-        },
-        'back',
-      )
-    } else {
-      layer.addAction(
-        'l',
-        () => {
-          setFocus('light-sources')
-        },
-        'light sources',
-      )
+  // global actions
+  useInputLayer(
+    (layer) => {
+      if (focus !== null) {
+        layer.addAction(
+          'escape',
+          () => {
+            setFocus(null)
+          },
+          'back',
+        )
+      }
 
       layer.addAction(
         't',
@@ -98,40 +72,60 @@ export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
         },
         '-1 turn',
       )
-    }
+    },
+    {
+      global: true,
+      priority: LayerPriority.Screen,
+    },
+    [delve, focus, setFocus],
+  )
 
-    input.register(layer)
-    return () => {
-      input.remove(layer.id)
-    }
-  }, [activeForm, delve, focus, input, setActiveForm, setFocus])
-
-  const renderForm = () => {
-    switch (activeForm) {
-      case 'add-light-source':
-        return (
-          <Box width={'100%'}>
-            <AddLightSourceForm
-              onCancel={() => {
-                setActiveForm(null)
-              }}
-              onSubmit={(light) => {
-                delve.addLightSource(light)
-                setActiveForm(null)
-              }}
-            />
-          </Box>
+  // non-global actions
+  useInputLayer(
+    (layer) => {
+      if (delve.activeEncounter !== undefined) {
+        layer.addAction(
+          'e',
+          () => {
+            setFocus('encounter')
+          },
+          'encounter',
         )
-      default:
-        return null
-    }
-  }
+      }
 
-  const form = renderForm()
+      layer.addAction(
+        'l',
+        () => {
+          setFocus('light-sources')
+        },
+        'light sources',
+      )
+
+      layer.addAction(
+        'm',
+        () => {
+          setFocus('message-log')
+        },
+        'message log',
+      )
+
+      layer.addAction(
+        'w',
+        () => {
+          delve.checkForWanderingMonsters('ad-hoc')
+        },
+        'wandering check',
+      )
+    },
+    {
+      priority: LayerPriority.Screen,
+    },
+    [delve, delve.activeEncounter, setFocus],
+  )
 
   return (
     <>
-      <Box flexDirection='row' width='100%' height='100%'>
+      <Box flexDirection='row' width='100%' height='100%' columnGap={1}>
         {/* Left column (2/5) - blank for now */}
         <Box
           width='40%'
@@ -150,7 +144,6 @@ export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
         <Box
           width='40%'
           height='100%'
-          paddingX={1}
           borderRight={true}
           borderDimColor
           borderLeft={false}
@@ -158,23 +151,42 @@ export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
           borderBottom={false}
           flexDirection='column'
         >
-          <StyledText>Turn: {delve.turns}</StyledText>
-
           {/* <StyleGuide /> */}
+
+          <LogPanel
+            eventLog={delve.eventLog}
+            flexDirection='column'
+            focused={focus === 'message-log'}
+            getText={(_, event) =>
+              `${formatTime(event.gameTime.hour, (event.gameTime.turn - 1) * 10)}: ${event.description}`
+            }
+            height={Math.min(rows, 10)}
+            overflow='hidden'
+          />
+
+          {delve.activeEncounter && (
+            <EncounterPanel encounter={delve.activeEncounter} focused={focus === 'encounter'} />
+          )}
         </Box>
 
         {/* Right column (1/5) - event log */}
-        <LogPanel
-          backgroundColor='black'
-          entries={[] /* eventLog */}
-          flexDirection='column'
-          height={rows}
-          overflow='hidden'
-          paddingLeft={1}
-          width='20%'
-        />
+        <Panel flexDirection='column' width='20%'>
+          <Panel title='Overview' type='titled'>
+            <StyledText>Turn: {delve.turns}</StyledText>
+          </Panel>
+
+          <Panel flexDirection='column' title='Wandering Monsters' type='titled'>
+            <StyledText>
+              Frequency:{' '}
+              {delve.wanderingMonsterConfig.checkFrequencyType === 'probability' ?
+                `${delve.wanderingMonsterConfig.checkFrequency}%`
+              : `every ${delve.wanderingMonsterConfig.checkFrequency} turns`}
+            </StyledText>
+
+            <StyledText>Chance&nbsp;&nbsp;&nbsp;: {delve.wanderingMonsterConfig.chance}-in-6</StyledText>
+          </Panel>
+        </Panel>
       </Box>
-      {form && <Box marginTop={1}>{form}</Box>}
     </>
   )
 })

@@ -1,3 +1,4 @@
+import { makeAutoObservable } from 'mobx'
 import { DEFAULT_DATE_TIME } from '../date-time/calendar.js'
 import { addTurns } from '../date-time/math.js'
 import { type GameDateTime } from '../date-time/model.js'
@@ -35,6 +36,7 @@ export class Campaign {
 
   public constructor(public readonly id: string = randomUUID()) {
     this.currentDateTime = DEFAULT_DATE_TIME
+    makeAutoObservable(this)
   }
 
   public advanceTurn(delta = 1): void {
