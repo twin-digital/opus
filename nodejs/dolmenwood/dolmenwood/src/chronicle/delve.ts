@@ -159,6 +159,26 @@ export class Delve implements Activity {
     makeAutoObservable(this)
   }
 
+  /**
+   * Called when the current turn is decremented. Will prune any delve data objects which exist in the future.
+   */
+  private _pruneFutureObjects() {
+    const endTimeStamp = toTimestamp(this.endTime)
+
+    // prune event log messages
+    this.eventLog.rewindTo(this.endTime)
+
+    // prune encounters
+    const encountersToRemove = this._encounters
+      .values()
+      .filter((encounter) => toTimestamp(encounter.timestamp) > endTimeStamp)
+    encountersToRemove.forEach((encounter) => this._encounters.delete(encounter))
+
+    // prune light sources
+    const lightsToRemove = this._lightSources.values().filter((light) => toTimestamp(light.litAt) > endTimeStamp)
+    lightsToRemove.forEach((light) => this._lightSources.delete(light))
+  }
+
   private _shouldCheckForWanderingMonsters(): boolean {
     switch (this._wanderingMonsterConfig.checkFrequencyType ?? 'interval') {
       case 'interval':
@@ -220,6 +240,7 @@ export class Delve implements Activity {
     }
 
     this._lightSources.add(newLightSource)
+    this.eventLog.addEvent(`${lightSource.carriedBy} lit a ${lightSource.type}.`, this.endTime)
   }
 
   /**
@@ -229,7 +250,7 @@ export class Delve implements Activity {
     this.turns = Math.max(1, this.turns + delta)
 
     if (delta < 0) {
-      this.eventLog.rewindTo(this.endTime)
+      this._pruneFutureObjects()
       return
     }
 
