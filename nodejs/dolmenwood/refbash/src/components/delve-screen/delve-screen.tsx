@@ -138,6 +138,7 @@ export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
           flexDirection='column'
         >
           <LightSourcesTable delve={delve} focused={focus === 'light-sources'} />
+          {/* <StyleGuide /> */}
         </Box>
 
         {/* Middle column (2/5) - turn track */}
@@ -151,8 +152,6 @@ export const DelveScreeen = observer(({ delve, rows }: DelveScreenProps) => {
           borderBottom={false}
           flexDirection='column'
         >
-          {/* <StyleGuide /> */}
-
           <LogPanel
             eventLog={delve.eventLog}
             flexDirection='column'
