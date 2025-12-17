@@ -8,6 +8,8 @@ Repository of all public works developed by Twin Digital.
 
 - [@twin-digital/context-server](./nodejs/apps/context-server): Web service providing contextual information for LLM queries.
 - [@twin-digital/discord-bot](./nodejs/apps/discord-bot): Discord Bot providing server presence and message utilities for Twin Digital applications.
+- [@twin-digital/bookify](./nodejs/bookify/bookify): Core logic and models for the Bookify platform
+- [@twin-digital/bookify-cli](./nodejs/bookify/bookify-cli): CLI toolkit for interacting with the Bookify publishing engine.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI utilities for configuring and maintaining monorepos

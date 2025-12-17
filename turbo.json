@@ -48,6 +48,11 @@
     },
     "upstream-sources": {
       "dependsOn": ["^upstream-sources"]
+    },
+    "watch": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true
     }
   }
 }
