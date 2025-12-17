@@ -1,5 +1,11 @@
 # @twin-digital/opus-scripts
 
+## 0.2.0
+
+### Minor Changes
+
+- a163e66: add "watch" script for dependency-aware watch
+
 ## 0.1.0
 
 ### Minor Changes
