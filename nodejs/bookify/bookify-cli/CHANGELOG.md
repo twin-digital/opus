@@ -1,5 +1,13 @@
 # @twin-digital/bookify-cli
 
+## 0.1.1
+
+### Patch Changes
+
+- 644c2fb: make package publishable
+- Updated dependencies [644c2fb]
+  - @twin-digital/bookify@0.0.2
+
 ## 0.1.0
 
 ### Minor Changes
