@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/bookify-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI toolkit for interacting with the Bookify publishing engine.",
   "type": "module",
   "exports": {
