@@ -1,5 +1,11 @@
 # @twin-digital/dolmenwood
 
+## 0.3.1
+
+### Patch Changes
+
+- 68c283d: prune lights and encounter when decrementing time
+
 ## 0.3.0
 
 ### Minor Changes

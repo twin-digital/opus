@@ -1,5 +1,13 @@
 # @twin-digital/refbash
 
+## 0.1.1
+
+### Patch Changes
+
+- 68c283d: prune lights and encounter when decrementing time
+- Updated dependencies [68c283d]
+  - @twin-digital/dolmenwood@0.3.1
+
 ## 0.1.0
 
 ### Minor Changes

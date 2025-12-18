@@ -1,5 +1,12 @@
 # @twin-digital/codex
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [68c283d]
+  - @twin-digital/dolmenwood@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
