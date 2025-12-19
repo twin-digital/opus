@@ -12,7 +12,8 @@ import { resolveConfig } from './resolve.js'
  * @param projectConfigPath cwd-relative path to a .bookify.yml
  */
 export const loadConfig = async (projectConfigPath: string): Promise<BookifyProject> => {
-  const configContent = await fsP.readFile(path.resolve(projectConfigPath), 'utf-8')
+  const resolvedConfigPath = path.resolve(projectConfigPath)
+  const configContent = await fsP.readFile(resolvedConfigPath, 'utf-8')
   const unvalidatedConfig = yaml.parse(configContent) as unknown
 
   if (!validateConfig(unvalidatedConfig)) {
@@ -20,5 +21,7 @@ export const loadConfig = async (projectConfigPath: string): Promise<BookifyProj
     throw new Error(`Invalid project configuration: ${errors}`)
   }
 
-  return resolveConfig(unvalidatedConfig)
+  // Resolve all paths relative to the directory containing the config file
+  const configDir = path.dirname(resolvedConfigPath)
+  return resolveConfig(unvalidatedConfig, configDir)
 }
