@@ -30,12 +30,16 @@
     "dev": "turbo run watch",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },
   "dependencies": {
+    "ajv": "^8.17.1",
     "execa": "^9.6.1",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -52,7 +56,8 @@
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",

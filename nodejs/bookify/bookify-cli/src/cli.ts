@@ -1,12 +1,8 @@
 import type { Command } from '@oclif/core'
-import Assemble from './cli/assemble.js'
-import Pipeline from './cli/pipeline.js'
-import Render from './cli/render.js'
-import Transform from './cli/transform.js'
+import Pdf from './cli/pdf.js'
+import Html from './cli/html.js'
 
 export const Commands: Record<string, typeof Command> = {
-  assemble: Assemble,
-  pipeline: Pipeline,
-  render: Render,
-  transform: Transform,
+  html: Html,
+  pdf: Pdf,
 }

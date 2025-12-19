@@ -1,10 +1,44 @@
+body {
+  column-count: 2;
+  column-gap: 2rem;
+  column-rule: 1px solid #ddd;
+
+  /* Prevent elements from breaking across columns */
+  column-fill: balance; /* Balances content height across columns */
+}
+
 h1 {
   background-color: #3a5a1f;
+  border-radius: 24px;
   color: #fff;
   padding: 8px 16px;
-  border-radius: 24px;
 }
 
 h2 {
   color: #633415;
 }
+
+blockquote {
+  background-color: #b4cc7a;
+  border-left: 6px solid #3a5a1f;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  margin: 0;
+  padding: 8px 8px 8px 12px;
+}
+
+blockquote p {
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent specific elements from breaking across columns */
+h1 {
+  break-inside: avoid;
+  break-after: avoid;
+  column-span: all;
+}
+
+/* blockquote, table {
+  break-inside: avoid;
+} */
