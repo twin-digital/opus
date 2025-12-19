@@ -1,5 +1,11 @@
 # @twin-digital/bookify
 
+## 0.1.1
+
+### Patch Changes
+
+- f8705dc: resolve paths relative to a project file if using one
+
 ## 0.1.0
 
 ### Minor Changes
