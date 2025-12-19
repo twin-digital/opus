@@ -1,5 +1,13 @@
 # @twin-digital/bookify-cli
 
+## 0.2.1
+
+### Patch Changes
+
+- f8705dc: resolve paths relative to a project file if using one
+- Updated dependencies [f8705dc]
+  - @twin-digital/bookify@0.1.1
+
 ## 0.2.0
 
 ### Minor Changes
