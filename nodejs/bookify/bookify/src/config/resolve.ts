@@ -10,9 +10,11 @@ import type { BookifyProject, BookifyProjectConfig } from './model.js'
 const require = createRequire(import.meta.url)
 
 /**
- * Resolves a CSS path that may be a file system path or an npm package path (npm://@scope/package/path/to/file.css)
+ * Resolves a CSS path that may be a file system path or a package path.
+ * @param cssPath The path to resolve (may have pkg:// prefix)
+ * @param basePath The base directory to resolve relative paths from
  */
-const resolveCssPath = (cssPath: string): string => {
+const resolveCssPath = (cssPath: string, basePath: string): string => {
   if (cssPath.startsWith('pkg://')) {
     // Strip the pkg:// prefix and resolve via require
     const npmPath = cssPath.slice(6) // Remove 'pkg://'
@@ -35,13 +37,17 @@ const resolveCssPath = (cssPath: string): string => {
       )
     }
   }
-  // Regular file system path
-  return path.resolve(cssPath)
+
+  // Regular file system path - resolve relative to basePath
+  return path.resolve(basePath, cssPath)
 }
 
-const resolveAssetPaths = (paths: string | string[] = []) => castArray(paths).map((p) => path.resolve(p))
-const resolveCssPaths = (paths: string[] = []): string[] => paths.map((p) => resolveCssPath(p))
-const resolveInputPaths = (paths: string[] = []): string[] => paths.map((p) => path.resolve(p))
+const resolveAssetPaths = (paths: string | string[] = [], basePath: string) =>
+  castArray(paths).map((p) => path.resolve(basePath, p))
+const resolveCssPaths = (paths: string[] = [], basePath: string): string[] =>
+  paths.map((p) => resolveCssPath(p, basePath))
+const resolveInputPaths = (paths: string[] = [], basePath: string): string[] =>
+  paths.map((p) => path.resolve(basePath, p))
 
 /**
  * Reads environment variables matching the renderer prefix and converts them to renderer options.
@@ -66,14 +72,16 @@ const getDefaultRendererOptions = (renderer: string): Record<string, string> => 
 
 /**
  * Given a user-supplied project configuration, generates a fully resolved and validated project.
+ * @param config The project configuration to resolve
+ * @param basePath The base directory to resolve relative paths from (defaults to cwd)
  */
-export const resolveConfig = (config: BookifyProjectConfig): BookifyProject => {
+export const resolveConfig = (config: BookifyProjectConfig, basePath: string = process.cwd()): BookifyProject => {
   const renderer = config.pdf?.renderer ?? 'euro-pdf'
 
   return {
-    assetPaths: resolveAssetPaths(config.assetPaths ?? process.cwd()),
-    css: resolveCssPaths(config.css),
-    inputs: resolveInputPaths(config.inputs),
+    assetPaths: resolveAssetPaths(config.assetPaths ?? basePath, basePath),
+    css: resolveCssPaths(config.css ?? [], basePath),
+    inputs: resolveInputPaths(config.inputs, basePath),
     pdf: {
       renderer,
       rendererOptions: merge({}, getDefaultRendererOptions(renderer), config.pdf?.rendererOptions ?? {}),
