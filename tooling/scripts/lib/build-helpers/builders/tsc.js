@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { bg$, $ } from '../../util/shell.js'
+import { bg$, $ } from '../../shell.js'
 
 export const supports = () => {
   const hasTypescriptEsm = fs.existsSync(path.resolve('tsconfig.build.json'))

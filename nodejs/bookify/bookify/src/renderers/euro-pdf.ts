@@ -1,4 +1,4 @@
-import type { DocumentRendererFn } from './rendering.js'
+import type { DocumentRendererFn } from '../rendering.js'
 
 export interface EuroPdfOptions {
   /**
@@ -16,7 +16,7 @@ export interface EuroPdfOptions {
 }
 
 export const makeEuroPdfRenderer =
-  ({ apiKey, test = false }: EuroPdfOptions): DocumentRendererFn =>
+  ({ apiKey, test }: EuroPdfOptions): DocumentRendererFn =>
   async (html) => {
     const url = `https://api.europdf.eu/v1/docs?api_key=${apiKey}`
     const options = {
@@ -24,7 +24,7 @@ export const makeEuroPdfRenderer =
       headers: { 'Content-Type': 'application/json', Accept: '*/*, application/json' },
       body: JSON.stringify({
         document_content: html,
-        test,
+        test: test,
       }),
     }
 

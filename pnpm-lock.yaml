@@ -192,12 +192,18 @@ importers:
 
   nodejs/bookify/bookify:
     dependencies:
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
       execa:
         specifier: ^9.6.1
         version: 9.6.1
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
+      yaml:
+        specifier: ^2.8.2
+        version: 2.8.2
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -222,7 +228,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -244,6 +250,9 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
 
   nodejs/bookify/bookify-cli:
     dependencies:
@@ -484,7 +493,7 @@ importers:
     dependencies:
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -628,7 +637,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -652,7 +661,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
 
   nodejs/dolmenwood/dolmenwood-bot:
     dependencies:
@@ -804,7 +813,7 @@ importers:
         version: 19.2.6
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -837,7 +846,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
 
   nodejs/genai/bedrock:
     devDependencies:
@@ -5843,6 +5852,11 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  yaml@2.8.2:
+    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yargs-parser@13.1.2:
     resolution: {integrity: sha512-3lbsNRf/j+A4QuSZfDRA7HRSfWrzO0YjqTJd5kjAq37Zep1CEgaYmrH9Q3GwPiB9cHyd1Y1UwggGhJGoxipbzg==}
 
@@ -7092,7 +7106,7 @@ snapshots:
       openapi-types: 12.1.3
       p-retry: 4.6.2
       uuid: 10.0.0
-      yaml: 2.8.0
+      yaml: 2.8.2
       zod: 4.1.12
     optionalDependencies:
       langsmith: 0.3.79(openai@6.9.0(ws@8.18.3)(zod@4.1.12))
@@ -7972,7 +7986,7 @@ snapshots:
       '@typescript-eslint/types': 8.47.0
       eslint-visitor-keys: 4.2.1
 
-  '@vitest/coverage-istanbul@4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))':
+  '@vitest/coverage-istanbul@4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))':
     dependencies:
       '@istanbuljs/schema': 0.1.3
       debug: 4.4.3(supports-color@8.1.1)
@@ -7983,7 +7997,7 @@ snapshots:
       istanbul-reports: 3.2.0
       magicast: 0.5.1
       tinyrainbow: 3.0.3
-      vitest: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+      vitest: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -7996,13 +8010,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.12(vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))':
+  '@vitest/mocker@4.0.12(vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.0.12
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+      vite: 7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
 
   '@vitest/pretty-format@4.0.12':
     dependencies:
@@ -9308,7 +9322,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.13.2)
+      retry-axios: 2.6.0(axios@1.13.2(debug@4.4.3))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -10361,7 +10375,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.13.2):
+  retry-axios@2.6.0(axios@1.13.2(debug@4.4.3)):
     dependencies:
       axios: 1.13.2(debug@4.4.3)
 
@@ -11037,7 +11051,7 @@ snapshots:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
 
-  vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0):
+  vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -11050,12 +11064,12 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.44.1
       tsx: 4.20.6
-      yaml: 2.8.0
+      yaml: 2.8.2
 
-  vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0):
+  vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2):
     dependencies:
       '@vitest/expect': 4.0.12
-      '@vitest/mocker': 4.0.12(vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0))
+      '@vitest/mocker': 4.0.12(vite@7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       '@vitest/pretty-format': 4.0.12
       '@vitest/runner': 4.0.12
       '@vitest/snapshot': 4.0.12
@@ -11072,7 +11086,7 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.0)
+      vite: 7.2.2(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
@@ -11237,6 +11251,8 @@ snapshots:
   yaml@1.10.2: {}
 
   yaml@2.8.0: {}
+
+  yaml@2.8.2: {}
 
   yargs-parser@13.1.2:
     dependencies:
