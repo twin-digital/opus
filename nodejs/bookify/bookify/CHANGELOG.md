@@ -1,5 +1,23 @@
 # @twin-digital/bookify
 
+## 0.1.0
+
+### Minor Changes
+
+- 8401a71: bookify: replace loose render functions with a unified engine
+  - operates on a project model
+  - handles 'watch' functionality internally
+  - normalizes configuration of options for renderers via env variables
+  - update CLI to use new API
+
+  BREAKING: all previous commands removed from CLI, and replaced with 'html' and 'pdf'
+
+- 8401a71: introduce configuration model
+
+### Patch Changes
+
+- 8401a71: add support for reusing CSS published as 'style pack' packages to npm
+
 ## 0.0.2
 
 ### Patch Changes
