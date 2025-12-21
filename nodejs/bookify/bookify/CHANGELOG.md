@@ -1,5 +1,14 @@
 # @twin-digital/bookify
 
+## 0.2.0
+
+### Minor Changes
+
+- 1a694f5: significant improvements to watch behavior
+  - switched from native watcher to chokidar
+  - added glob support for all inputs
+  - correctly rebuild when implicit dependencies change (css @imports, url(...) references, etc.)
+
 ## 0.1.1
 
 ### Patch Changes
