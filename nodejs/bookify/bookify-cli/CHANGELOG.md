@@ -1,5 +1,16 @@
 # @twin-digital/bookify-cli
 
+## 0.3.0
+
+### Minor Changes
+
+- 1a694f5: add 'serve' command for hosting and hot-reloading rendered outputs
+
+### Patch Changes
+
+- Updated dependencies [1a694f5]
+  - @twin-digital/bookify@0.2.0
+
 ## 0.2.1
 
 ### Patch Changes
