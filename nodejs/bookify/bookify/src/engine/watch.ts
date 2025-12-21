@@ -1,4 +1,4 @@
-import { watch } from 'node:fs'
+import chokidar, { type FSWatcher } from 'chokidar'
 
 interface WatcherOptions {
   /**
@@ -25,22 +25,26 @@ interface WatcherOptions {
 }
 
 /**
- * Creates a watcher which invokes a callback if there are changes to a static list of files.
- * @param files Set of files to monitor for changes.
+ * Creates a watcher which invokes a callback if there are changes to files matching the patterns.
+ * Supports glob patterns in addition to individual file paths.
+ * Supports dynamically updating the watch list.
+ *
+ * @param patterns Set of files or glob patterns to monitor for changes.
  * @param onChange Callback to invoke if any file changes.
  * @param options Options to use when configuring the watcher.
  */
 export const makeWatcher = (
-  files: string[],
+  patterns: string[],
   onChange: () => void | Promise<void>,
   options: WatcherOptions = {},
-): { start: () => void; stop: () => void } => {
+): { start: () => void; stop: () => Promise<void>; updateWatchList: (newPatterns: string[]) => void } => {
   const { debounceMs = 250, onChangeStarted, onChangeCompleted, onError } = options
 
-  const watchers = new Set<ReturnType<typeof watch>>()
+  let watcher: FSWatcher | null = null
   let callbackRunning = false
   let pendingCallback = false
   let timeoutId: NodeJS.Timeout | null = null
+  let currentWatchedPatterns = new Set<string>()
 
   const invokeCallback = async () => {
     if (callbackRunning) {
@@ -81,27 +85,64 @@ export const makeWatcher = (
   }
 
   const start = () => {
-    for (const file of files) {
-      const watcher = watch(file, (eventType) => {
-        if (eventType === 'change') {
-          handleChange(file)
-        }
-      })
-      watchers.add(watcher)
-    }
+    // Use chokidar which natively supports glob patterns
+    watcher = chokidar.watch(patterns, {
+      ignoreInitial: true,
+      persistent: true,
+    })
+
+    // Track currently watched patterns
+    currentWatchedPatterns = new Set(patterns)
+
+    watcher.on('change', handleChange)
+    watcher.on('add', handleChange)
+    watcher.on('unlink', handleChange)
   }
 
-  const stop = () => {
+  const updateWatchList = (newPatterns: string[]) => {
+    if (!watcher) {
+      return
+    }
+
+    const newPatternSet = new Set(newPatterns)
+
+    // Find patterns to add (in new but not in current)
+    const toAdd = newPatterns.filter((p) => !currentWatchedPatterns.has(p))
+
+    // Find patterns to remove (in current but not in new)
+    const toRemove = Array.from(currentWatchedPatterns).filter((p) => !newPatternSet.has(p))
+
+    // Add new patterns
+    if (toAdd.length > 0) {
+      watcher.add(toAdd)
+    }
+
+    // Remove old patterns
+    if (toRemove.length > 0) {
+      watcher.unwatch(toRemove)
+    }
+
+    // Update tracked patterns
+    currentWatchedPatterns = newPatternSet
+  }
+
+  const stop = async () => {
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
 
-    for (const watcher of watchers) {
-      watcher.close()
+    // Wait for any running callback to complete
+    while (callbackRunning) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
     }
 
-    watchers.clear()
+    if (watcher) {
+      await watcher.close()
+      watcher = null
+    }
+
+    currentWatchedPatterns.clear()
   }
 
-  return { start, stop }
+  return { start, stop, updateWatchList }
 }
