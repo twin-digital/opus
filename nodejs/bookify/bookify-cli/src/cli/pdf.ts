@@ -87,7 +87,16 @@ export default class Pdf extends Command {
       })
     }
 
-    const engine = new BookifyEngine()
+    const engine = new BookifyEngine({
+      logger: {
+        error: (...args: []) => {
+          this.logToStderr(...args)
+        },
+        info: (...args: []) => {
+          this.log(...args)
+        },
+      },
+    })
 
     if (flags.watch && outputPath) {
       await engine.watch(project, {

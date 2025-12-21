@@ -52,12 +52,12 @@ export interface BookifyProject {
   assetPaths: string[]
 
   /**
-   * Absolute paths to any CSS files which should be used for rendering.
+   * Absolute paths or glob patterns to any CSS files which should be used for rendering.
    */
   css: string[]
 
   /**
-   * Absolute paths to all inputs to use for rendering.
+   * Absolute paths or glob patterns to all inputs to use for rendering.
    */
   inputs: string[]
 

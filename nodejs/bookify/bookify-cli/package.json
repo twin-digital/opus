@@ -42,8 +42,10 @@
   "dependencies": {
     "@oclif/core": "^4.8.0",
     "@twin-digital/bookify": "workspace:*",
+    "@types/express": "^5.0.6",
     "chalk": "^5.6.2",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {

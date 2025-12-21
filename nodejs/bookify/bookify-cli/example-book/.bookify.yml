@@ -1,0 +1,5 @@
+inputs:
+  - content/one.md
+  - content/two.md
+css:
+  - css/base.css

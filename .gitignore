@@ -55,3 +55,4 @@ coverage.json
 # runtime outputs
 nodejs/dolmenwood/dolmenwood-bot/.data
 nodejs/dolmenwood/refbash/.data
+.bookify-tmp

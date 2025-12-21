@@ -5,6 +5,7 @@ import camelCase from 'lodash-es/camelCase.js'
 import castArray from 'lodash-es/castArray.js'
 import merge from 'lodash-es/merge.js'
 import snakeCase from 'lodash-es/snakeCase.js'
+import { normalizePath } from './glob.js'
 import type { BookifyProject, BookifyProjectConfig } from './model.js'
 
 const require = createRequire(import.meta.url)
@@ -44,10 +45,12 @@ const resolveCssPath = (cssPath: string, basePath: string): string => {
 
 const resolveAssetPaths = (paths: string | string[] = [], basePath: string) =>
   castArray(paths).map((p) => path.resolve(basePath, p))
+
 const resolveCssPaths = (paths: string[] = [], basePath: string): string[] =>
-  paths.map((p) => resolveCssPath(p, basePath))
+  paths.map((p) => resolveCssPath(p, basePath)).map(normalizePath)
+
 const resolveInputPaths = (paths: string[] = [], basePath: string): string[] =>
-  paths.map((p) => path.resolve(basePath, p))
+  paths.map((p) => path.resolve(basePath, p)).map(normalizePath)
 
 /**
  * Reads environment variables matching the renderer prefix and converts them to renderer options.
