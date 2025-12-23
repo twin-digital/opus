@@ -84,33 +84,33 @@ export class PreviewServer {
 
     // Root endpoint
     app.get('/', (_req, res) => {
-      this.log('[REQUEST] GET /')
+      // this.log('[SERVER] GET /')
       this.handleRoot(res)
     })
 
     // HTML endpoint
     app.get('/html', (_req, res) => {
-      this.log('[REQUEST] GET /html')
+      // this.log('[SERVER] GET /html')
       this.handleHtml(res)
     })
     app.get('/html/raw', (_req, res) => {
-      this.log('[REQUEST] GET /html/raw')
+      // this.log('[SERVER] GET /html/raw')
       void this.handleHtmlRaw(res)
     })
 
     // PDF endpoints
     app.get('/pdf', (_req, res) => {
-      this.log('[REQUEST] GET /pdf')
+      // this.log('[SERVER] GET /pdf')
       this.handlePdf(res)
     })
     app.get('/pdf/raw', (_req, res) => {
-      this.log('[REQUEST] GET /pdf/raw')
+      // this.log('[SERVER] GET /pdf/raw')
       this.handlePdfRaw(res)
     })
 
     // SSE endpoint for live reload
     app.get('/events', (req, res) => {
-      this.log('[REQUEST] GET /events')
+      // this.log('[SERVER] GET /events')
       this.handleSseConnection(req, res)
     })
 
@@ -160,7 +160,6 @@ export class PreviewServer {
     }
 
     const absolutePath = path.resolve(this.config.htmlPath)
-    this.log(`[SERVE] Serving HTML from: ${absolutePath}`)
 
     try {
       // Stream the file directly - more reliable than sendFile

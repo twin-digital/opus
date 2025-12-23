@@ -1,6 +1,3 @@
-import fsP from 'node:fs/promises'
-import path from 'node:path'
-import { analyzeCssDependencies } from './css-deps.js'
 import { resolveGlobs } from '../config/glob.js'
 import type { BookifyProject } from '../config/model.js'
 import { requireTrailingNewline } from '../pandoc.js'
@@ -8,7 +5,7 @@ import { pandoc } from '../pandoc/pandoc.js'
 import { makeDefaultRendererFactory } from '../renderers/factory.js'
 import type { RendererFactoryFn } from '../rendering.js'
 import { consoleLogger, type Logger } from '../log.js'
-import { makeWatcher } from './watch.js'
+import { makeBookifyWatcher, type BookifyWatcherOptions } from './bookify-watcher.js'
 
 export interface EngineOptions {
   /**
@@ -24,103 +21,11 @@ export interface EngineOptions {
   rendererFactory?: RendererFactoryFn
 }
 
-interface BaseWatchOptions {
-  /**
-   * Debounce delay, in ms, to wait for file changes to settle.
-   * @defaultValue 250
-   */
-  debounceMs?: number
-
-  /**
-   * Optional callback invoked when a change is detected in a file.
-   * @param filename Name of the changed file
-   */
-  onChangeStarted?: (filename: string) => void
-
-  /**
-   * Optional callback invoked when change process is completed.
-   */
-  onChangeCompleted?: () => void
-
-  /**
-   * Optional callback invoked if there is an error handling a change.
-   */
-  onError?: (error: unknown) => void
-
-  /**
-   * Path (absolute or relative to cwd) at which a new HTML rendering will be written whenever changes are detected. If
-   * this value is not specified, an HTML output will not be generated. At least one of `htmlPath` or `pdfPath` is
-   * required.
-   */
-  htmlPath?: string
-
-  /**
-   * Path (absolute or relative to cwd) at which a new PDF rendering will be written whenever changes are detected. If
-   * this value is not specified, an HTML output will not be generated.At least one of `htmlPath` or `pdfPath` is
-   * required.
-   */
-  pdfPath?: string
-}
-
-type WatchOptionsWithHtml = BaseWatchOptions & {
-  htmlPath: string
-}
-
-type WatchOptionsWithPdf = BaseWatchOptions & {
-  pdfPath: string
-}
-
 /**
- * Options used to configure how a watch is performed.
+ * Options for the engine's watch method.
+ * Excludes renderHtml, renderPdf, and logger which are provided by the engine.
  */
-export type WatchOptions = WatchOptionsWithHtml | WatchOptionsWithPdf
-
-/**
- * Ensures that the parent directory of the specified file exists.
- */
-const ensureDirectoryExists = async (filePath: string): Promise<void> => {
-  const parent = path.dirname(path.resolve(filePath))
-  await fsP.mkdir(parent, { recursive: true })
-}
-
-/**
- * Manages dependency tracking for watch mode, including both explicit
- * configuration files and implicit CSS dependencies.
- */
-class DependencyTracker {
-  private implicitDeps: string[] = []
-
-  constructor(
-    private readonly configuredFiles: string[],
-    private readonly project: BookifyProject,
-    private readonly logger: Logger,
-  ) {}
-
-  public async updateImplicitDependencies(): Promise<string[]> {
-    try {
-      const cssFiles = await resolveGlobs(this.project.css)
-      const cssDeps = await analyzeCssDependencies(cssFiles)
-
-      // Implicit deps are CSS dependencies minus the explicit CSS files
-      const explicitCssSet = new Set(cssFiles)
-      this.implicitDeps = cssDeps.filter((dep) => !explicitCssSet.has(dep))
-
-      const allDeps = this.getAllDependencies()
-      this.logger.info(
-        `Watching ${allDeps.length} files (${this.configuredFiles.length} configured, ${this.implicitDeps.length} CSS imports)`,
-      )
-
-      return allDeps
-    } catch (error) {
-      this.logger.error(`Failed to analyze CSS dependencies: ${String(error)}`)
-      return this.getAllDependencies()
-    }
-  }
-
-  public getAllDependencies(): string[] {
-    return [...this.configuredFiles, ...this.implicitDeps]
-  }
-}
+export type EngineWatchOptions = Omit<BookifyWatcherOptions, 'renderHtml' | 'renderPdf' | 'logger'>
 
 export class BookifyEngine {
   private _log: Logger
@@ -167,117 +72,16 @@ export class BookifyEngine {
     return renderer(html)
   }
 
-  public async watch(project: BookifyProject, options: WatchOptions): Promise<void> {
-    const { htmlPath, pdfPath, ...watcherOptions } = options
-
-    await this._performInitialRender(htmlPath, pdfPath, project)
-    options.onChangeCompleted?.()
-
-    return this._startWatchMode(project, htmlPath, pdfPath, watcherOptions)
-  }
-
-  private async _performInitialRender(
-    htmlPath: string | undefined,
-    pdfPath: string | undefined,
-    project: BookifyProject,
-  ): Promise<void> {
-    const tasks: Promise<void>[] = []
-
-    if (htmlPath) {
-      tasks.push(this._writeHtml(project, htmlPath))
-    }
-
-    if (pdfPath) {
-      tasks.push(this._writePdf(project, pdfPath))
-    }
-
-    await Promise.all(tasks)
-  }
-
-  private async _writeHtml(project: BookifyProject, outputPath: string): Promise<void> {
-    const html = await this.renderHtml(project)
-    await ensureDirectoryExists(outputPath)
-    await fsP.writeFile(outputPath, html, 'utf-8')
-    this._log.info(`HTML written to ${outputPath}`)
-  }
-
-  private async _writePdf(project: BookifyProject, outputPath: string): Promise<void> {
-    const pdf = await this.renderPdf(project)
-    await ensureDirectoryExists(outputPath)
-    await fsP.writeFile(outputPath, Buffer.from(pdf))
-    this._log.info(`PDF written to ${outputPath}`)
-  }
-
-  private async _startWatchMode(
-    project: BookifyProject,
-    htmlPath: string | undefined,
-    pdfPath: string | undefined,
-    watcherOptions: Omit<WatchOptions, 'htmlPath' | 'pdfPath'>,
-  ): Promise<void> {
-    return new Promise((resolve) => {
-      this._log.info('Watching for changes...')
-
-      const configuredFiles = [...project.inputs, ...project.css]
-      const depTracker = new DependencyTracker(configuredFiles, project, this._log)
-
-      const renderAll = async () => {
-        this._log.info('[RENDER] Starting regeneration...')
-        const tasks: Promise<void>[] = []
-        if (htmlPath) {
-          tasks.push(this._writeHtml(project, htmlPath))
-        }
-
-        if (pdfPath) {
-          tasks.push(this._writePdf(project, pdfPath))
-        }
-
-        await Promise.all(tasks)
-        this._log.info('[RENDER] Regeneration complete')
-      }
-
-      const watcher = makeWatcher(configuredFiles, renderAll, {
-        debounceMs: watcherOptions.debounceMs,
-        onChangeStarted: (filename) => {
-          this._log.info(`Change detected in ${filename}, regenerating...`)
-          watcherOptions.onChangeStarted?.(filename)
-        },
-        onChangeCompleted: () => {
-          void depTracker.updateImplicitDependencies().then((allDeps) => {
-            watcher.updateWatchList(allDeps)
-          })
-          watcherOptions.onChangeCompleted?.()
-        },
-        onError: (error) => {
-          this._log.error(`Failed to regenerate: ${String(error)}`)
-          watcherOptions.onError?.(error)
-        },
-      })
-
-      watcher.start()
-
-      // Perform initial CSS dependency analysis
-      void depTracker.updateImplicitDependencies().then((allDeps) => {
-        watcher.updateWatchList(allDeps)
-      })
-
-      // Graceful shutdown on SIGINT (register once)
-      const sigintHandler = () => {
-        this._log.info('\nStopping watch mode...')
-        // Remove handler to prevent multiple invocations
-        process.off('SIGINT', sigintHandler)
-
-        // Force exit after 2 seconds if cleanup hangs
-        const forceExitTimer = setTimeout(() => {
-          this._log.info('Cleanup timeout, forcing exit...')
-          process.exit(0)
-        }, 2000)
-
-        void watcher.stop().then(() => {
-          clearTimeout(forceExitTimer)
-          resolve()
-        })
-      }
-      process.once('SIGINT', sigintHandler)
+  /**
+   * Watches a project for file changes and automatically rebuilds outputs.
+   * Delegates to makeBookifyWatcher for the actual watch implementation.
+   */
+  public async watch(project: BookifyProject, options: EngineWatchOptions): Promise<void> {
+    return makeBookifyWatcher(project, {
+      ...options,
+      renderHtml: (proj) => this.renderHtml(proj),
+      renderPdf: (proj) => this.renderPdf(proj),
+      logger: this._log,
     })
   }
 }

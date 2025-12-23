@@ -88,7 +88,7 @@ export default class Transform extends Command {
 
     if (flags.watch && outputPath) {
       await engine.watch(project, {
-        htmlPath: outputPath,
+        htmlOutputPath: outputPath,
       })
     } else {
       const html = await engine.renderHtml(project)
