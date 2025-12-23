@@ -100,7 +100,7 @@ export default class Pdf extends Command {
 
     if (flags.watch && outputPath) {
       await engine.watch(project, {
-        pdfPath: outputPath,
+        pdfOutputPath: outputPath,
       })
     } else {
       const pdf = await engine.renderPdf(project)

@@ -3,7 +3,7 @@ import path from 'node:path'
 import { Args, Command, Flags } from '@oclif/core'
 import { loadConfig, resolveConfig } from '@twin-digital/bookify/config'
 import { BookifyEngine } from '@twin-digital/bookify/engine/engine'
-import type { WatchOptions } from '@twin-digital/bookify/engine/engine'
+import type { EngineWatchOptions } from '@twin-digital/bookify/engine'
 import { PreviewServer, type OutputConfig } from '../preview-server/preview-server.js'
 
 export default class Serve extends Command {
@@ -153,36 +153,13 @@ export default class Serve extends Command {
     })
   }
 
-  private createWatchOptions(config: OutputConfig, server: PreviewServer): WatchOptions {
-    const baseOptions = {
+  private createWatchOptions(config: OutputConfig, server: PreviewServer): EngineWatchOptions {
+    return {
+      htmlOutputPath: config.htmlPath,
+      pdfOutputPath: config.pdfPath,
       onChangeCompleted: () => {
         void server.loadContent()
       },
     }
-
-    if (config.htmlPath && config.pdfPath) {
-      return {
-        ...baseOptions,
-        htmlPath: config.htmlPath,
-        pdfPath: config.pdfPath,
-      }
-    }
-
-    if (config.htmlPath) {
-      return {
-        ...baseOptions,
-        htmlPath: config.htmlPath,
-      }
-    }
-
-    if (config.pdfPath) {
-      return {
-        ...baseOptions,
-        pdfPath: config.pdfPath,
-      }
-    }
-
-    // Should never reach here due to earlier validation
-    throw new Error('At least one of htmlPath or pdfPath must be defined')
   }
 }
