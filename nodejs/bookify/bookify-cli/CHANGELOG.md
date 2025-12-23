@@ -1,5 +1,13 @@
 # @twin-digital/bookify-cli
 
+## 0.3.1
+
+### Patch Changes
+
+- 3ea389f: replace esbuild with postcss
+- Updated dependencies [3ea389f]
+  - @twin-digital/bookify@0.2.1
+
 ## 0.3.0
 
 ### Minor Changes

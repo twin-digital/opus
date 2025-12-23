@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/bookify",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Core logic and models for the Bookify platform",
   "type": "module",
   "exports": {
