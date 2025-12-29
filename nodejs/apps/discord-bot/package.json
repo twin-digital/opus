@@ -12,9 +12,13 @@
     "build": "build",
     "clean": "clean",
     "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage prod",
     "destroy": "serverless remove",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "logs": "serverless logs -f hello --tail",
+    "remove": "serverless remove",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -33,7 +37,8 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "serverless": "^4.17.1",
+    "serverless": "catalog:",
+    "serverless-offline": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

@@ -1,0 +1,35 @@
+service: bookify-render-api
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs22.x
+  architecture: x86_64
+  stage: ${opt:stage, 'dev'}
+  ecr:
+    images:
+      render-html-image:
+        path: ./
+        file: Dockerfile
+        buildArgs:
+          NODE_ENV: production
+
+functions:
+  render-html:
+    image:
+      name: render-html-image
+      command:
+        - dist/render-html.handler
+    events:
+      - httpApi:
+          path: /render/html
+          method: get
+    environment:
+      NODE_ENV: ${self:provider.stage}
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 8080

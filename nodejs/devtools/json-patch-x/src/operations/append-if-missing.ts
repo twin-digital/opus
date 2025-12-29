@@ -1,7 +1,8 @@
 import jsonPatch from 'fast-json-patch'
+import { tryGetValueByPointer } from '../try-get-value-by-pointer.js'
 
 export const appendIfMissing = <T>(document: T, path: string, value: unknown): T => {
-  const array = jsonPatch.getValueByPointer(document, path) as unknown
+  const array = tryGetValueByPointer(document, path)
 
   // no existing array, so add one
   if (array === undefined || array === null) {

@@ -6,12 +6,14 @@
   "exports": {
     "./*": {
       "import": {
+        "source": "./src/*.ts",
         "types": "./dist/*.d.ts",
         "import": "./dist/*.js"
       }
     },
     ".": {
       "import": {
+        "source": "./src/index.ts",
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
       }

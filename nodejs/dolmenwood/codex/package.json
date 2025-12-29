@@ -7,18 +7,11 @@
   "exports": {
     "./*": {
       "import": {
+        "source": "./src/*.ts",
         "types": "./dist/*.d.ts",
         "import": "./dist/*.js"
       }
-    },
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      }
-    },
-    "./index": null,
-    "./index.js": null
+    }
   },
   "bin": {
     "codex:": "./bin/run.js"
@@ -32,7 +25,7 @@
     "artifact": "artifact",
     "build": "build",
     "clean": "clean",
-    "dev": "BUILDKIT_PROGRESS=plain docker-compose up --build --watch",
+    "dev": "docker-dev",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "./bin/run.js start",

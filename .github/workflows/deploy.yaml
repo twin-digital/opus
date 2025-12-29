@@ -52,7 +52,7 @@ jobs:
              [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
             RAW="${{ github.event.pull_request.head.ref }}"
           else
-            RAW="prod"
+            RAW="preview"
           fi
 
           # slugify: lowercase, non-alphanumeric/_/- → '-', collapse dashes, trim

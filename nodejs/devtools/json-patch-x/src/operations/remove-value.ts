@@ -1,7 +1,8 @@
 import jsonPatch from 'fast-json-patch'
+import { tryGetValueByPointer } from '../try-get-value-by-pointer.js'
 
 export const removeValue = <T>(document: T, path: string, value: unknown): T => {
-  const array = jsonPatch.getValueByPointer(document, path) as unknown
+  const array = tryGetValueByPointer(document, path)
 
   // nothing to remove
   if (array === undefined || array === null) {

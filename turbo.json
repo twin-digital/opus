@@ -10,7 +10,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["assets/**", "package.json", "src/**", "tsconfig.json", "tsconfig.*.json"],
+      "inputs": ["assets/**", "package.json", "src/**", "tsconfig.json", "tsconfig.*.json", "tsdown.config.ts"],
       "outputs": ["dist/**"]
     },
     "clean": {

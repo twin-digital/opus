@@ -4,7 +4,6 @@ import jsonMergePatch from 'json-merge-patch'
 import yaml from 'yaml'
 import { removeEmptyValues } from '../../utils/remove-empty-values.js'
 import cloneDeep from 'lodash-es/cloneDeep.js'
-import isEqual from 'lodash-es/isEqual.js'
 import type { SyncActionFn } from '../sync-rule-factory.js'
 
 /**
@@ -47,7 +46,8 @@ export const makeJsonMergePatchAction =
     const parsedPatch = yaml.parse(patch) as object
     const patched = removeEmptyValues(jsonMergePatch.apply(cloneDeep(original), parsedPatch))
 
-    if (!isEqual(patched, original)) {
+    // Compare using JSON.stringify to detect both value and key order changes
+    if (JSON.stringify(patched) !== JSON.stringify(original)) {
       await fsP.writeFile(filePath, `${JSON.stringify(patched, null, 2)}\n`, 'utf-8')
       return {
         changedFiles: [file],

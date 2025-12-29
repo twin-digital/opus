@@ -54,9 +54,14 @@ features:
               entry: 'src/**/*.ts',
               fixedExtension: false,
               hash: false,
-              // noExternal: [/^@twin-digital\//],
+              inputOptions: {
+                resolve: {
+                  conditionNames: ['source'],
+                },
+              },
+              noExternal: () => true,
               shims: true,
-              unbundle: true,
+              unbundle: false,
             })
   - name: clean
     actions:
@@ -71,7 +76,7 @@ features:
               '@twin-digital/opus-scripts': workspace:*
   - name: docker
     actions:
-      - name: Build container image
+      - name: Add 'artifact' script to build containers
         action: json-merge-patch
         conditions:
           - exists: Dockerfile
@@ -80,6 +85,17 @@ features:
           patch: |
             scripts:
               artifact: artifact
+            devDependencies:
+              '@twin-digital/opus-scripts': workspace:*
+      - name: Add 'dev' script to create docker development environment
+        action: json-merge-patch
+        conditions:
+          - exists: docker-compose.yml
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              dev: docker-dev
             devDependencies:
               '@twin-digital/opus-scripts': workspace:*
   - name: engines
@@ -119,6 +135,23 @@ features:
               prettier: 'catalog:'
               prettier-package-json: 'catalog:'
               typescript-eslint: 'catalog:'
+  - name: serverless
+    actions:
+      - name: Add serverless scripts and dependencies
+        action: json-merge-patch
+        conditions:
+          - exists: serverless.yml
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              deploy: serverless deploy
+              'deploy:dev': serverless deploy --stage dev
+              'deploy:prod': serverless deploy --stage prod
+              destroy: serverless remove
+            devDependencies:
+              serverless: 'catalog:'
+              serverless-offline: 'catalog:'
   - name: package-manifest
     actions:
       # if project has source files...
@@ -145,6 +178,7 @@ features:
             exports:
               .:
                 import:
+                  source: ./src/index.ts
                   types: ./dist/index.d.ts
                   import: ./dist/index.js
       - name: Forbid direct import of '/index'
@@ -170,6 +204,7 @@ features:
             exports:
               ./*:
                 import:
+                  source: ./src/*.ts
                   types: ./dist/*.d.ts
                   import: ./dist/*.js
       - name: Add default cjs export
@@ -234,6 +269,25 @@ features:
             exports:
               .: null
               ./*: null
+      - name: Reorder export keys
+        action: json-patch
+        conditions:
+          - exists: package.json
+        options:
+          file: package.json
+          patch: |
+            - opx: reorderMapKeys
+              path: /exports/./import
+              value:
+                - source
+                - types
+                - import
+            - opx: reorderMapKeys
+              path: /exports/.~1*/import
+              value:
+                - source
+                - types
+                - import
   - name: test
     actions:
       - name: Add dependencies
@@ -280,7 +334,6 @@ features:
                 },
               }),
             )
-
   - name: typescript
     actions:
       - name: Create tsconfig.json file
@@ -291,7 +344,10 @@ features:
           file: tsconfig.json
           content: |
             {
-              "extends": ["@twin-digital/tsconfig/tsconfig.json"]
+              "extends": ["@twin-digital/tsconfig/tsconfig.json"],
+              "compilerOptions": {
+                "customConditions": ["source"]
+              }
             }
       - name: Create tsconfig.build.json file
         action: write-file
@@ -311,7 +367,10 @@ features:
           file: tsconfig.json
           content: |
             {
-              "extends": ["@twin-digital/tsconfig/tsconfig.json", "./tsconfig.options.json"]
+              "extends": ["@twin-digital/tsconfig/tsconfig.json", "./tsconfig.options.json"],
+              "compilerOptions": {
+                "customConditions": ["source"]
+              }
             }
       - name: Create tsconfig.build.json file with custom options
         action: write-file

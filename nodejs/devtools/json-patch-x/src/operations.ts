@@ -31,5 +31,17 @@ export interface RemoveValueExtendedOperation<T = unknown> extends BaseExtendedO
   value: T
 }
 
-export type ExtendedOperation = AppendIfMissingExtendedOperation | RemoveValueExtendedOperation
+/**
+ * Modifies an object value so that the specified keys have the specified order.
+ */
+export interface ReorderMapKeys extends BaseExtendedOperation {
+  opx: 'reorderMapKeys'
+
+  /**
+   * New map key order to apply.
+   */
+  value: string[]
+}
+
+export type ExtendedOperation = AppendIfMissingExtendedOperation | RemoveValueExtendedOperation | ReorderMapKeys
 export type AnyOperation = ExtendedOperation | Operation
