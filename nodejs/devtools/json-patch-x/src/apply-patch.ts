@@ -2,6 +2,7 @@ import jsonPatch from 'fast-json-patch'
 import type { AnyOperation, ExtendedOperation } from './operations.js'
 import { removeValue } from './operations/remove-value.js'
 import { appendIfMissing } from './operations/append-if-missing.js'
+import { reorderMapKeys } from './operations/reorder-map-keys.js'
 
 const applyExtendedOperation = <T>(document: T, patch: ExtendedOperation): T => {
   switch (patch.opx) {
@@ -9,6 +10,8 @@ const applyExtendedOperation = <T>(document: T, patch: ExtendedOperation): T => 
       return appendIfMissing(document, patch.path, patch.value)
     case 'removeValue':
       return removeValue(document, patch.path, patch.value)
+    case 'reorderMapKeys':
+      return reorderMapKeys(document, patch.path, patch.value)
   }
 }
 

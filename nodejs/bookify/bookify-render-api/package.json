@@ -1,0 +1,57 @@
+{
+  "private": true,
+  "name": "@twin-digital/bookify-render-api",
+  "version": "0.1.0",
+  "description": "Serverless API for Bookify rendering platform",
+  "type": "module",
+  "scripts": {
+    "artifact": "artifact",
+    "build": "build",
+    "clean": "clean",
+    "deploy": "serverless deploy",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:prod": "serverless deploy --stage prod",
+    "destroy": "serverless remove",
+    "dev": "docker-dev",
+    "invoke": "serverless invoke -f render-html",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "logs": "serverless logs -f render-html --tail",
+    "remove": "serverless remove",
+    "test": "vitest run",
+    "test:local": "bash test-lambda.sh",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
+  },
+  "dependencies": {
+    "@twin-digital/bookify": "workspace:*",
+    "lodash-es": "^4.17.22"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/aws-lambda": "^8.10.145",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "serverless": "catalog:",
+    "serverless-offline": "catalog:",
+    "tsdown": "~0.18.3",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  }
+}

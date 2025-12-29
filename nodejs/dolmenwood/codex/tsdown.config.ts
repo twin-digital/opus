@@ -5,7 +5,12 @@ export default defineConfig({
   entry: 'src/**/*.ts',
   fixedExtension: false,
   hash: false,
-  // noExternal: [/^@twin-digital\//],
+  inputOptions: {
+    resolve: {
+      conditionNames: ['source'],
+    },
+  },
+  noExternal: () => true,
   shims: true,
-  unbundle: true,
+  unbundle: false,
 })

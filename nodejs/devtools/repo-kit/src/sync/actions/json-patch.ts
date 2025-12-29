@@ -3,7 +3,6 @@ import path from 'node:path'
 import { applyPatch, type ExtendedOperation } from '@twin-digital/json-patch-x'
 import yaml from 'yaml'
 import { removeEmptyValues } from '../../utils/remove-empty-values.js'
-import isEqual from 'lodash-es/isEqual.js'
 import type { SyncActionFn } from '../sync-rule-factory.js'
 
 /**
@@ -41,7 +40,8 @@ export const makeJsonPatchAction =
     const parsedPatch = yaml.parse(patch) as ExtendedOperation[]
     const patched = removeEmptyValues(applyPatch(original, parsedPatch))
 
-    if (!isEqual(patched, original)) {
+    // Compare using JSON.stringify to detect both value and key order changes
+    if (JSON.stringify(patched) !== JSON.stringify(original)) {
       await fsP.writeFile(filePath, `${JSON.stringify(patched, null, 2)}\n`, 'utf-8')
       return {
         changedFiles: [file],

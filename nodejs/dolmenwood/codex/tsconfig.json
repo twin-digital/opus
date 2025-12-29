@@ -1,3 +1,6 @@
 {
-  "extends": ["@twin-digital/tsconfig/tsconfig.json"]
+  "extends": ["@twin-digital/tsconfig/tsconfig.json"],
+  "compilerOptions": {
+    "customConditions": ["source"]
+  }
 }
