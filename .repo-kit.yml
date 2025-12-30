@@ -149,9 +149,10 @@ features:
               'deploy:dev': serverless deploy --stage dev
               'deploy:prod': serverless deploy --stage prod
               destroy: serverless remove
+              dev: pnpm exec sls-dev-tools generate | docker-dev -
             devDependencies:
+              '@twin-digital/serverless-dev-tools': workspace:*
               serverless: 'catalog:'
-              serverless-offline: 'catalog:'
   - name: package-manifest
     actions:
       # if project has source files...

@@ -2,12 +2,11 @@
 
 import chalk from 'chalk'
 import { execa } from 'execa'
-import { dirname } from 'path'
+import { basename, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
-import { resolve } from 'path'
 
-// Timeout constants
+// Configuration
 const INITIAL_BUILD_WAIT_MS = 3000
 const CONTAINER_CHECK_INTERVAL_MS = 500
 const CONTAINER_START_TIMEOUT_MS = 60000
@@ -15,40 +14,59 @@ const COMPOSE_SHUTDOWN_TIMEOUT_MS = 30000
 
 const cwd = process.cwd()
 
+// Derive project name from directory name (lowercase, alphanumeric only)
+const projectName = basename(cwd)
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, '')
+
+// Parse command line arguments
+const composeFileArg = process.argv[2] ?? 'docker-compose.yml'
+const useStdin = composeFileArg === '-'
+
+// State
+let composeFilePath = null
+let stdinContent = null
 let watchProcess = null
 let composeProcess = null
 let shuttingDown = false
 
 /**
- * Stop a process and wait for it to exit with a timeout
+ * Gracefully stop a process with timeout, returning true if it exited cleanly
  */
-async function stopProcessWithTimeout(process, timeoutMs) {
-  process.kill('SIGTERM')
+const stopProcess = async (proc, timeoutMs) => {
+  if (!proc) {
+    return true
+  }
 
-  let exited = false
-  await Promise.race([
-    process
-      .then(() => {
-        exited = true
-      })
-      .catch((err) => {
-        // Exit code 130 means SIGINT/SIGTERM - this is expected
-        if (err?.exitCode === 130) {
-          exited = true
-        } else {
-          console.error('⚠️  Process error:', err)
-        }
+  proc.kill('SIGTERM')
+
+  try {
+    await Promise.race([
+      proc,
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('timeout'))
+        }, timeoutMs)
       }),
-    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
-  ])
-
-  return exited
+    ])
+    return true
+  } catch (err) {
+    // Exit code 130 means SIGINT/SIGTERM - expected during shutdown
+    if (err?.exitCode === 130) {
+      return true
+    }
+    if (err?.message === 'timeout') {
+      return false
+    }
+    console.error('⚠️  Process error:', err.message)
+    return false
+  }
 }
 
 /**
  * Prefix each line of output from a stream
  */
-function prefixOutput(stream, prefix) {
+const prefixOutput = (stream, prefix) => {
   let buffer = ''
 
   stream.on('data', (chunk) => {
@@ -56,14 +74,13 @@ function prefixOutput(stream, prefix) {
     const lines = buffer.split('\n')
     buffer = lines.pop() // Keep incomplete line in buffer
 
-    lines.forEach((line) => {
+    for (const line of lines) {
       if (line) {
         console.log(`${prefix} ${line}`)
       }
-    })
+    }
   })
 
-  // Flush remaining buffer on end
   stream.on('end', () => {
     if (buffer) {
       console.log(`${prefix} ${buffer}`)
@@ -71,45 +88,41 @@ function prefixOutput(stream, prefix) {
   })
 }
 
-async function cleanup() {
+const cleanup = async () => {
   if (shuttingDown) {
     return
   }
-
   shuttingDown = true
 
   console.log('\n🛑 Shutting down development environment...')
 
-  // Stop watch process
   if (watchProcess) {
     console.log('Stopping build watch...')
-    watchProcess.kill('SIGTERM')
+    const exited = await stopProcess(watchProcess, COMPOSE_SHUTDOWN_TIMEOUT_MS)
+    if (!exited) {
+      console.warn(`⚠️  Build watch did not exit after ${COMPOSE_SHUTDOWN_TIMEOUT_MS / 1000}s, proceeding...`)
+    }
   }
 
-  // Stop docker compose watch process
   if (composeProcess) {
     console.log('Stopping Docker Compose watch...')
-    const exited = await stopProcessWithTimeout(composeProcess, COMPOSE_SHUTDOWN_TIMEOUT_MS)
-
+    const exited = await stopProcess(composeProcess, COMPOSE_SHUTDOWN_TIMEOUT_MS)
     if (!exited) {
-      console.warn(
-        `⚠️  Docker Compose watch did not exit after ${COMPOSE_SHUTDOWN_TIMEOUT_MS / 1000}s, proceeding with shutdown...`,
-      )
+      console.warn(`⚠️  Docker Compose watch did not exit after ${COMPOSE_SHUTDOWN_TIMEOUT_MS / 1000}s, proceeding...`)
     }
+  }
 
-    // Clean up containers
-    try {
-      await execa('docker', ['compose', 'down'], {
-        cwd,
-        stdio: 'inherit',
-      })
-    } catch (e) {
-      console.error('⚠️  Error stopping Docker Compose:', e.message)
-    }
+  // Clean up containers using project name (no compose file needed for 'down')
+  try {
+    await execa('docker', ['compose', '-p', projectName, 'down'], {
+      cwd,
+      stdio: 'inherit',
+    })
+  } catch (e) {
+    console.error('⚠️  Error stopping Docker Compose:', e.message)
   }
 
   console.log('✅ Shutdown complete')
-
   process.exit(0)
 }
 
@@ -120,26 +133,21 @@ process.on('SIGTERM', cleanup)
 /**
  * Check if all Docker Compose containers are running
  */
-async function areContainersRunning() {
+const areContainersRunning = async () => {
   try {
-    const { stdout } = await execa('docker', ['compose', 'ps', '--format', 'json'], {
-      cwd,
-    })
+    const { stdout } = await execa(
+      'docker',
+      ['ps', '--filter', `label=com.docker.compose.project=${projectName}`, '--format', '{{.Status}}'],
+      { cwd },
+    )
 
     if (!stdout.trim()) {
       return false
     }
 
-    // Parse JSON output (one JSON object per line)
-    const containers = stdout
-      .trim()
-      .split('\n')
-      .map((line) => JSON.parse(line))
-
-    // Check if we have containers and all are in running state
-    return containers.length > 0 && containers.every((c) => c.State === 'running')
-  } catch (e) {
-    // Containers might not exist yet
+    const statuses = stdout.trim().split('\n')
+    return statuses.length > 0 && statuses.every((status) => status.startsWith('Up'))
+  } catch {
     return false
   }
 }
@@ -147,41 +155,38 @@ async function areContainersRunning() {
 /**
  * Wait for Docker Compose containers to be ready
  */
-async function waitForContainers() {
+const waitForContainers = async () => {
   console.log('⏳ Waiting for containers to start...')
-
   const startTime = Date.now()
 
   while (Date.now() - startTime < CONTAINER_START_TIMEOUT_MS) {
     if (await areContainersRunning()) {
       return true
     }
-    await new Promise((resolve) => setTimeout(resolve, CONTAINER_CHECK_INTERVAL_MS))
+    await new Promise((r) => {
+      setTimeout(r, CONTAINER_CHECK_INTERVAL_MS)
+    })
   }
 
   return false
 }
 
-/**
- * Start a process and handle errors unless shutting down
- */
-function startProcess(processPromise, errorMessage) {
-  processPromise.catch((e) => {
-    if (!shuttingDown) {
-      console.error(`❌ ${errorMessage}:`, e.message)
-      cleanup()
+const main = async () => {
+  // Resolve compose file source
+  if (useStdin) {
+    const chunks = []
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk)
     }
-  })
-  return processPromise
-}
-
-async function main() {
-  // Check for docker-compose.yml
-  const composeFile = resolve(cwd, 'docker-compose.yml')
-  if (!existsSync(composeFile)) {
-    console.error('❌ docker-compose.yml not found in current directory')
-    console.error('   This script must be run from a package with Docker Compose configured')
-    process.exit(1)
+    stdinContent = Buffer.concat(chunks)
+    console.log(`📄 Read ${stdinContent.length} bytes from stdin`)
+  } else {
+    composeFilePath = resolve(cwd, composeFileArg)
+    if (!existsSync(composeFilePath)) {
+      console.error(`❌ ${composeFileArg} not found in current directory`)
+      console.error('   This script must be run from a package with Docker Compose configured')
+      process.exit(1)
+    }
   }
 
   console.log('🚀 Starting Docker development environment...\n')
@@ -191,30 +196,45 @@ async function main() {
   const scriptDir = dirname(fileURLToPath(import.meta.url))
   const watchScript = resolve(scriptDir, '../bin/watch.js')
 
-  const watchProc = execa('node', [watchScript], {
+  watchProcess = execa('node', [watchScript], {
     cwd,
-    cleanup: true,
+    stdin: 'ignore',
   })
 
-  prefixOutput(watchProc.stdout, chalk.cyan('[BUILD] '))
-  prefixOutput(watchProc.stderr, chalk.cyan('[BUILD] '))
+  prefixOutput(watchProcess.stdout, chalk.cyan('[BUILD] '))
+  prefixOutput(watchProcess.stderr, chalk.cyan('[BUILD] '))
 
-  watchProcess = startProcess(watchProc, 'Build watch failed')
+  watchProcess.catch((e) => {
+    if (!shuttingDown) {
+      console.error('❌ Build watch failed:', e.message)
+      cleanup()
+    }
+  })
 
   // Wait for initial build
   console.log('⏳ Waiting for initial build...\n')
-  await new Promise((resolve) => setTimeout(resolve, INITIAL_BUILD_WAIT_MS))
-
-  // Start docker compose watch
-  const composeProc = execa('docker', ['compose', 'watch'], {
-    cwd,
-    cleanup: true,
+  await new Promise((r) => {
+    setTimeout(r, INITIAL_BUILD_WAIT_MS)
   })
 
-  prefixOutput(composeProc.stdout, chalk.blue('[DOCKER]'))
-  prefixOutput(composeProc.stderr, chalk.blue('[DOCKER]'))
+  // Build docker compose args
+  const composeArgs = ['compose', '-p', projectName, '-f', useStdin ? '-' : composeFilePath, 'watch']
 
-  composeProcess = startProcess(composeProc, 'Docker Compose failed')
+  // Start docker compose watch
+  composeProcess = execa('docker', composeArgs, {
+    cwd,
+    ...(stdinContent?.length && { input: stdinContent }),
+  })
+
+  prefixOutput(composeProcess.stdout, chalk.blue('[DOCKER]'))
+  prefixOutput(composeProcess.stderr, chalk.blue('[DOCKER]'))
+
+  composeProcess.catch((e) => {
+    if (!shuttingDown) {
+      console.error('❌ Docker Compose failed:', e.message)
+      cleanup()
+    }
+  })
 
   // Wait for containers to be ready
   console.log('')
@@ -228,8 +248,12 @@ async function main() {
   }
   console.log('   Press Ctrl+C to stop gracefully\n')
 
-  // Wait for either process to complete (both should run indefinitely)
-  await Promise.all([watchProcess, composeProcess].map((p) => p.catch(() => {})))
+  // Wait for processes to complete (both should run indefinitely)
+  await Promise.all(
+    [watchProcess, composeProcess].map((p) => {
+      return p.catch(() => {})
+    }),
+  )
 }
 
 main().catch((e) => {

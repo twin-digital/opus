@@ -14,6 +14,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI utilities for configuring and maintaining monorepos
+- [@twin-digital/serverless-dev-tools](./nodejs/devtools/serverless-dev-tools): CLI tools for local Serverless Framework development
 - [@twin-digital/tsconfig](./nodejs/devtools/tsconfig): Opinionated `tsconfig` files implementing modern defaults and familiar project layouts.
 - [@twin-digital/vitest-config](./nodejs/devtools/vitest-config): Twin Digital's preferred vitest configuration.
 - [@twin-digital/codex](./nodejs/dolmenwood/codex): Implementation of the 'Codex' bot.

@@ -1,17 +1,44 @@
+frameworkVersion: ^4.0.0
+org: twindigital
 service: bookify-render-api
 
+# we use tsdown for our own building
+build:
+  esbuild:
+    bundle: false
+
+stages:
+  default:
+    params:
+      region: us-east-1
+  dev:
+    params:
+      region: us-east-1
+  prod:
+    params:
+      region: us-east-1
+  sean:
+    params:
+      profile: 775111556400-AdministratorAccess
+      region: us-east-1
+
 provider:
-  name: aws
-  region: us-east-1
-  runtime: nodejs22.x
   architecture: x86_64
+  environment:
+    NODE_ENV: ${self:provider.stage}
+  name: aws
+  region: ${param:region}
+  profile: ${param:profile, ''}
+  runtime: nodejs24.x
   stage: ${opt:stage, 'dev'}
   ecr:
     images:
       render-html-image:
         path: ./
-        file: Dockerfile
+        file: src/functions/render-html/Dockerfile
         buildArgs:
+          PANDOC_VERSION: 3.8.3
+          PANDOC_CHECKSUM: 'sha256:c224fab89f827d3623380ecb7c1078c163c769c849a14ac27e8d3bfbb914c9b4'
           NODE_ENV: production
 
 functions:
@@ -19,17 +46,20 @@ functions:
     image:
       name: render-html-image
       command:
-        - dist/render-html.handler
+        - dist/render-html/render-html.handler
     events:
       - httpApi:
           path: /render/html
           method: get
-    environment:
-      NODE_ENV: ${self:provider.stage}
 
-plugins:
-  - serverless-offline
-
-custom:
-  serverless-offline:
-    httpPort: 8080
+  version:
+    handler: dist/version/version.handler
+    events:
+      - httpApi:
+          path: /version
+          method: get
+    package:
+      patterns:
+        - '!**'
+        - package.json
+        - dist/version/version.js
