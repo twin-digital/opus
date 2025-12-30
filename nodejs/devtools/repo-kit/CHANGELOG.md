@@ -1,5 +1,13 @@
 # @twin-digital/repo-kit
 
+## 0.2.1
+
+### Patch Changes
+
+- c6c2536: correctly identify JSON files with reordered keys as changed
+- Updated dependencies [c6c2536]
+  - @twin-digital/json-patch-x@0.2.0
+
 ## 0.2.0
 
 ### Minor Changes

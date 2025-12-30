@@ -1,5 +1,15 @@
 # @twin-digital/opus-scripts
 
+## 0.3.0
+
+### Minor Changes
+
+- c6c2536: add 'docker-dev' script for iterating on docker containers with 'compose watch'
+
+### Patch Changes
+
+- 9d06270: opus-scripts: update docker-dev to allow reading Compose file from stdin
+
 ## 0.2.0
 
 ### Minor Changes
