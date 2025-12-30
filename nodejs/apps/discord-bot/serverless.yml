@@ -1,6 +1,11 @@
-frameworkVersion: ~4.17.1
+frameworkVersion: ^4.0.0
 org: twindigital
 service: discord-bot
+
+# we use tsdown for our own building
+build:
+  esbuild:
+    bundle: false
 
 stages:
   default:

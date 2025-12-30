@@ -15,6 +15,7 @@
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
     "destroy": "serverless remove",
+    "dev": "pnpm exec sls-dev-tools generate | docker-dev -",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "logs": "serverless logs -f hello --tail",
@@ -28,6 +29,7 @@
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/serverless-dev-tools": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@types/aws-lambda": "^8.10.150",
     "@types/lodash-es": "^4.17.12",
@@ -38,7 +40,6 @@
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "serverless": "catalog:",
-    "serverless-offline": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

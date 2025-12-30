@@ -15,6 +15,10 @@ inputs:
   serverless-access-key:
     description: Serverless Framework Dashboard access key
     required: true
+  serverless-version:
+    default: ^4.0.0
+    description: Version specifier of the Serverless framework version to install
+    required: true
   stage:
     description: Which Serverless stage to deploy (e.g. "preview", "prod")
     required: true
@@ -42,6 +46,7 @@ runs:
       env:
         SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
       run: |
+        pnpm serverless update
         pnpm exec turbo run "${{ inputs.operation }}" -- \
           --stage "${{ inputs.stage }}" \
           --region "${{ inputs.aws-region }}"
