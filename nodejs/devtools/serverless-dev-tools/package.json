@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/serverless-dev-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI tools for local Serverless Framework development",
   "type": "module",
   "exports": {
