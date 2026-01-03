@@ -1,5 +1,18 @@
 # @twin-digital/bookify
 
+## 0.3.0
+
+### Minor Changes
+
+- c697c86: remove 'Logger' intgerface and APIs
+
+  These have moved to the @twin-digital/logger-lib package.
+
+### Patch Changes
+
+- Updated dependencies [c697c86]
+  - @twin-digital/logger-lib@0.0.1
+
 ## 0.2.1
 
 ### Patch Changes
