@@ -20,17 +20,35 @@ stages:
 custom:
   alerts:
     alarms:
-      # Built-in Lambda alarms
-      - functionErrors
-      - functionThrottles
+      # Function-specific alarms for authorizer (handler-based function)
+      - functionErrors:
+          function: authorizer
+      - functionThrottles:
+          function: authorizer
       - functionDuration:
+          function: authorizer
           threshold: 5000
+
+      # Function-specific alarms for render-html (image-based function)
+      - functionErrors:
+          function: render-html
+      - functionThrottles:
+          function: render-html
+      - functionDuration:
+          function: render-html
+          threshold: 5000
+
+      # Function-specific alarms for version (image-based function)
+      - functionErrors:
+          function: version
+      - functionThrottles:
+          function: version
 
       # ========================================
       # Authorizer Alarms
       # ========================================
 
-      - name: authorizerErrors
+      - name: ${self:service}-${sls:stage}-authorizer-error
         namespace: ${self:custom.metricsNamespace}
         description: Alert when authorizer encounters errors
         metric: AuthError
@@ -42,7 +60,7 @@ custom:
         topic: alarm
         treatMissingData: notBreaching
 
-      - name: authorizerRevokedKeyUsage
+      - name: ${self:service}-${sls:stage}-authorizer-revoked-key-usage
         namespace: ${self:custom.metricsNamespace}
         description: Alert on revoked API key usage (security event)
         metric: AuthDeniedRevoked
