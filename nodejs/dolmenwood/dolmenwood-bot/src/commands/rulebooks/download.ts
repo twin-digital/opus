@@ -67,7 +67,9 @@ export default class Download extends Command {
   }
 
   private normalizeETag(etag?: string): string {
-    if (!etag) return ''
+    if (!etag) {
+      return ''
+    }
     // Remove quotes from ETag if present
     return etag.replace(/^"|"$/g, '')
   }
@@ -144,7 +146,9 @@ export default class Download extends Command {
 
     // Download each PDF
     for (const obj of pdfObjects) {
-      if (!obj.Key) continue
+      if (!obj.Key) {
+        continue
+      }
 
       // Extract filename from key (remove prefix if any)
       const filename = path.basename(obj.Key)

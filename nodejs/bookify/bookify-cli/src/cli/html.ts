@@ -4,6 +4,7 @@ import { Args, Command, Flags } from '@oclif/core'
 import { BookifyEngine } from '@twin-digital/bookify/engine/engine'
 import { loadConfig, resolveConfig } from '@twin-digital/bookify/config'
 import { ensureDirectoryExists } from '../utils/fs.js'
+import { makeOclifLogger } from '@twin-digital/cli-lib'
 
 export default class Transform extends Command {
   static override description =
@@ -76,14 +77,7 @@ export default class Transform extends Command {
     }
 
     const engine = new BookifyEngine({
-      logger: {
-        error: (...args: []) => {
-          this.logToStderr(...args)
-        },
-        info: (...args: []) => {
-          this.log(...args)
-        },
-      },
+      logger: makeOclifLogger(this),
     })
 
     if (flags.watch && outputPath) {

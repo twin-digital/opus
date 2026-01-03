@@ -209,14 +209,14 @@ const main = async () => {
   const tmpBranch = `squash-tmp-${Date.now()}`
 
   console.log('Pushing current branch history, so commits are retrievable...')
-  await $`git push`
+  await $`git push --no-verify`
 
   console.log('Preparing temporary worktree for atomic squash...')
   await $`git worktree add -b ${tmpBranch} ${tmpDir} HEAD`
 
   try {
     await $({ cwd: tmpDir })`git reset --soft ${mergeBase}`
-    await $({ cwd: tmpDir })`git commit -S -m ${message}`
+    await $({ cwd: tmpDir })`git commit -S -m ${message} --no-verify`
     const { stdout: newShaOut } = await $({ cwd: tmpDir })`git rev-parse HEAD`
     const newSha = newShaOut.trim()
 

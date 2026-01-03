@@ -1,7 +1,7 @@
 import chokidar, { type FSWatcher } from 'chokidar'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Logger } from '../log.js'
+import type { Logger } from '@twin-digital/logger-lib'
 
 export interface WatcherOptions {
   /** Debounce delay in milliseconds to wait for file changes to settle (default: 250) */

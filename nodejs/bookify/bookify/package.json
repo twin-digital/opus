@@ -38,6 +38,7 @@
     "watch": "watch"
   },
   "dependencies": {
+    "@twin-digital/logger-lib": "workspace:*",
     "ajv": "^8.17.1",
     "chokidar": "^4.0.3",
     "execa": "^9.6.1",

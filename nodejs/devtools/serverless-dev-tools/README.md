@@ -81,7 +81,6 @@ All function definitions, routes, and configuration live in `serverless.yml`. Th
 The tool generates a `docker-compose.yml` with:
 
 - **Gateway service** - OpenResty/nginx with inline Dockerfile and config
-
   - Listens on `http://localhost:9000`
   - Routes HTTP requests to Lambda containers
   - Transforms requests to Lambda HTTP API v2 event format

@@ -40,7 +40,9 @@ function spawnChild() {
 }
 
 function killChild() {
-  if (!child) return
+  if (!child) {
+    return
+  }
   try {
     restarting = true
     child.kill('SIGTERM')
@@ -59,9 +61,14 @@ function startWatcher() {
     /** @type {NodeJS.Timeout | null} */
     let timer = null
     const watcher = fs.watch(distDir, { recursive: true }, (_eventType, filename) => {
-      if (!filename) return
+      if (!filename) {
+        return
+      }
+
       // debounce rapid changes
-      if (timer) clearTimeout(timer)
+      if (timer) {
+        clearTimeout(timer)
+      }
       timer = setTimeout(() => {
         console.log(`Detected change in dist/${filename}, restarting...`)
         restart()

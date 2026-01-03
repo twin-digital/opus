@@ -22,13 +22,19 @@ export type RollResult = InvalidRollResult | ValidRollResult
  */
 export const extractDieValues = (roll: RollResult): number[] => {
   const extractNumbers = (node: unknown): number[] => {
-    if (node == null) return []
-    if (typeof node === 'number') return [node]
+    if (node == null) {
+      return []
+    }
+    if (typeof node === 'number') {
+      return [node]
+    }
     if (typeof node === 'string') {
       const parsed = Number(node)
       return !isNaN(parsed) ? [parsed] : []
     }
-    if (Array.isArray(node)) return node.flatMap((n) => extractNumbers(n))
+    if (Array.isArray(node)) {
+      return node.flatMap((n) => extractNumbers(n))
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (typeof node === 'object' && node !== null) {
@@ -45,7 +51,9 @@ export const extractDieValues = (roll: RollResult): number[] => {
       }
 
       // Some result objects expose a numeric value property
-      if (typeof obj.value === 'number') return [obj.value]
+      if (typeof obj.value === 'number') {
+        return [obj.value]
+      }
     }
 
     return []

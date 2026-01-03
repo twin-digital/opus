@@ -5,6 +5,7 @@ import { loadConfig, resolveConfig } from '@twin-digital/bookify/config'
 import { BookifyEngine } from '@twin-digital/bookify/engine/engine'
 import type { EngineWatchOptions } from '@twin-digital/bookify/engine'
 import { PreviewServer, type OutputConfig } from '../preview-server/preview-server.js'
+import { makeOclifLogger } from '@twin-digital/cli-lib'
 
 export default class Serve extends Command {
   static override description =
@@ -142,14 +143,7 @@ export default class Serve extends Command {
 
   private createEngine(): BookifyEngine {
     return new BookifyEngine({
-      logger: {
-        error: (msg) => {
-          this.logToStderr(msg)
-        },
-        info: (msg) => {
-          this.log(msg)
-        },
-      },
+      logger: makeOclifLogger(this),
     })
   }
 

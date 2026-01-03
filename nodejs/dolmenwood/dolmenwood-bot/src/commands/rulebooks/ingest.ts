@@ -288,9 +288,13 @@ export default class Ingest extends Command {
 
   private shouldIncludePage(realPageNumber: number, pageRange?: { start: number; end: number }): boolean {
     // Skip pages with real page number <= 0
-    if (realPageNumber <= 0) return false
+    if (realPageNumber <= 0) {
+      return false
+    }
     // If no range specified, include all valid pages
-    if (!pageRange) return true
+    if (!pageRange) {
+      return true
+    }
     // Check if real page number is in the specified range
     return realPageNumber >= pageRange.start && realPageNumber <= pageRange.end
   }
@@ -605,7 +609,9 @@ export default class Ingest extends Command {
           continue
         }
 
-        if (!text) continue
+        if (!text) {
+          continue
+        }
 
         // Count words for cost estimation
         const pageWords = this.countWords(text)

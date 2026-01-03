@@ -24,20 +24,29 @@
     "watch": "watch"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "catalog:",
+    "@aws-sdk/lib-dynamodb": "catalog:",
     "@twin-digital/bookify": "workspace:*",
-    "lodash-es": "^4.17.22"
+    "@twin-digital/observability-lib": "workspace:*",
+    "adm-zip": "^0.5.16",
+    "lodash-es": "catalog:",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/lambda-test-lib": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/serverless-dev-tools": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
-    "@types/aws-lambda": "^8.10.145",
-    "@types/lodash-es": "^4.17.12",
+    "@types/adm-zip": "^0.5.7",
+    "@types/aws-lambda": "catalog:",
+    "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
+    "aws-sdk-client-mock": "catalog:",
+    "aws-sdk-client-mock-vitest": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
@@ -47,10 +56,16 @@
     "tsdown": "~0.18.3",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
+    "vite": "^7.3.0",
     "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",
     "pnpm": "10.x"
+  },
+  "pnpm": {
+    "overrides": {
+      "@smithy/types": "^4.11.0"
+    }
   }
 }

@@ -4,7 +4,7 @@ import { requireTrailingNewline } from '../pandoc.js'
 import { pandoc } from '../pandoc/pandoc.js'
 import { makeDefaultRendererFactory } from '../renderers/factory.js'
 import type { RendererFactoryFn } from '../rendering.js'
-import { consoleLogger, type Logger } from '../log.js'
+import { consoleLogger, type Logger } from '@twin-digital/logger-lib'
 import { makeBookifyWatcher, type BookifyWatcherOptions } from './bookify-watcher.js'
 
 export interface EngineOptions {

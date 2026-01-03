@@ -3,7 +3,7 @@ import path from 'node:path'
 import { analyzeCssDependencies } from '../engine/css-deps.js'
 import { resolveGlobs } from '../config/glob.js'
 import type { BookifyProject } from '../config.js'
-import { consoleLogger, type Logger } from '../log.js'
+import { consoleLogger, type Logger } from '@twin-digital/logger-lib'
 import { makeWatcher } from '../watcher/watch.js'
 
 export interface BookifyWatcherOptions {
@@ -89,7 +89,9 @@ export const makeBookifyWatcher = async (project: BookifyProject, options: Booki
 
   // Helper to write HTML output
   const writeHtml = async (): Promise<void> => {
-    if (!htmlOutputPath) return
+    if (!htmlOutputPath) {
+      return
+    }
 
     const html = await renderHtml(project)
     await ensureDirectoryExists(htmlOutputPath)
@@ -99,7 +101,9 @@ export const makeBookifyWatcher = async (project: BookifyProject, options: Booki
 
   // Helper to write PDF output
   const writePdf = async (): Promise<void> => {
-    if (!pdfOutputPath) return
+    if (!pdfOutputPath) {
+      return
+    }
 
     const pdf = await renderPdf(project)
     await ensureDirectoryExists(pdfOutputPath)
