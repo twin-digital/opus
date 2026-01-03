@@ -99,7 +99,9 @@ export default class Run extends Command {
 
     // Handle interactions
     client.on('interactionCreate', (interaction: any) => {
-      if (!interaction.isChatInputCommand() || interaction.commandName !== 'ask') return
+      if (!interaction.isChatInputCommand() || interaction.commandName !== 'ask') {
+        return
+      }
 
       void (async () => {
         const question = interaction.options.getString('q', true) as string

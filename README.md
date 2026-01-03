@@ -11,6 +11,10 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/bookify](./nodejs/bookify/bookify): Core logic and models for the Bookify platform
 - [@twin-digital/bookify-cli](./nodejs/bookify/bookify-cli): CLI toolkit for interacting with the Bookify publishing engine.
 - [@twin-digital/bookify-render-api](./nodejs/bookify/bookify-render-api): Serverless API for Bookify rendering platform
+- [@twin-digital/lambda-test-lib](./nodejs/core-aws/lambda-test-lib): Test helpers for AWS Lambda functions, including mock contexts and EMF metrics capture
+- [@twin-digital/observability-lib](./nodejs/core-aws/observability-lib): AWS Lambda observability utilities with Powertools integration (logging, tracing, metrics)
+- [@twin-digital/cli-lib](./nodejs/core/cli-lib): Utilities for building CLI applications with oclif.
+- [@twin-digital/logger-lib](./nodejs/core/logger-lib): Generic logging interface and implementations for TypeScript applications
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI utilities for configuring and maintaining monorepos

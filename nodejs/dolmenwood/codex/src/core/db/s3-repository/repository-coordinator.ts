@@ -161,7 +161,9 @@ export class RepositoryCoordinator implements RepositoryFactory {
    * Serialize all repositories into a single document and save to S3.
    */
   private async _save(): Promise<void> {
-    if (!this._dirty) return
+    if (!this._dirty) {
+      return
+    }
 
     this._log.info('[RepositoryCoordinator] Saving document to S3')
 

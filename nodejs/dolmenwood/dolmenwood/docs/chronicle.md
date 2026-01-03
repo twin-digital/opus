@@ -52,7 +52,6 @@ The model is further divided into **In-Fiction** (story/world elements) and **Ou
    A character only participates in one expedition at a time.
 
    **Within an Expedition:**
-
    - **Journey** – Inter-hex travel across the wilderness.
    - **Survey** – Thorough exploration within a single hex.
    - **Delve** – Investigation of a localized site such as a ruin, barrow, cave, or faerie landmark.

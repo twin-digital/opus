@@ -1,7 +1,7 @@
 import fsP from 'node:fs/promises'
 import path from 'node:path'
 import postcss from 'postcss'
-import { consoleLogger, type Logger } from '../log.js'
+import { consoleLogger, type Logger } from '@twin-digital/logger-lib'
 
 export interface AnalyzeCssDependenciesOptions {
   logger?: Logger

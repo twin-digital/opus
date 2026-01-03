@@ -34,5 +34,22 @@
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
   "packageManager": "pnpm@10.12.1",
-  "lint-staged": "tooling/config/lint-staged.config.js"
+  "lint-staged": "tooling/config/lint-staged.config.js",
+  "pnpm": {
+    "overrides": {
+      "@smithy/types": "4.11.0"
+    },
+    "packageExtensions": {
+      "aws-sdk-client-mock": {
+        "dependencies": {
+          "@smithy/types": "4.11.0"
+        }
+      },
+      "@aws-sdk/*": {
+        "dependencies": {
+          "@smithy/types": "4.11.0"
+        }
+      }
+    }
+  }
 }

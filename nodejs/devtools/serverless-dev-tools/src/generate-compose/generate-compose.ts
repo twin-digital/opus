@@ -39,7 +39,9 @@ function generateNginxConfig(serverless: ServerlessConfig): string {
 
   for (const [functionName, func] of Object.entries(serverless.functions)) {
     const path = getHttpPath(func)
-    if (!path) continue
+    if (!path) {
+      continue
+    }
 
     const serviceName = toServiceName(functionName)
 
@@ -78,6 +80,20 @@ ${routes.join('\n\n')}
       local body = ngx.var.request_body or ""
       local route_path = ngx.var.route_path
       
+      -- Base64 encode body for safe JSON transport (binary data support)
+      local encoded_body = body ~= "" and ngx.encode_base64(body) or nil
+      
+      -- Mock authorizer context with header overrides
+      -- Use X-Mock-* headers to override defaults for testing
+      local mock_auth = {
+        lambda = {
+          userId = headers["x-mock-user-id"] or "dev-user",
+          keyId = headers["x-mock-key-id"] or "dev-key",
+          scopes = headers["x-mock-scopes"] or "render:html render:pdf",
+          rateLimitTier = headers["x-mock-rate-limit-tier"] or "unlimited"
+        }
+      }
+      
       ngx.var.lambda_event_json = cjson.encode({
         version = "2.0",
         routeKey = ngx.var.request_method .. " " .. route_path,
@@ -96,10 +112,11 @@ ${routes.join('\n\n')}
           requestId = "local-" .. ngx.now(), stage = "$default",
           routeKey = ngx.var.request_method .. " " .. route_path,
           time = os.date("!%d/%b/%Y:%H:%M:%S +0000"),
-          timeEpoch = ngx.now() * 1000
+          timeEpoch = ngx.now() * 1000,
+          authorizer = mock_auth
         },
-        body = body ~= "" and body or nil,
-        isBase64Encoded = false
+        body = encoded_body,
+        isBase64Encoded = encoded_body ~= nil
       })
     }
 
@@ -189,6 +206,11 @@ function generateLambdaService(
         dockerfile: imageConfig.file || `src/functions/${functionName}/Dockerfile`,
         ...(imageConfig.buildArgs ? { args: imageConfig.buildArgs } : {}),
       }
+    }
+
+    // Set command from the function's image config
+    if (func.image.command) {
+      service.command = func.image.command
     }
   } else {
     // Zip-based Lambda: reuse the shared build object

@@ -4,18 +4,29 @@ packages:
   - tooling/scripts
 
 catalog:
+  '@aws-lambda-powertools/logger': ^2.30.0
+  '@aws-lambda-powertools/metrics': ^2.30.0
+  '@aws-lambda-powertools/tracer': ^2.30.0
+  '@aws-sdk/client-dynamodb': ^3.958.0
+  '@aws-sdk/lib-dynamodb': ^3.958.0
   '@eslint/js': ^9.29.0
+  'aws-sdk-client-mock': ^4.1.0
+  'aws-sdk-client-mock-vitest': ^7.0.1
+  '@middy/core': ^5.5.0
+  '@types/aws-lambda': ^8.10.159
+  '@types/lodash-es': ^4.17.12
   '@types/node': 24.10.1
   eslint: ^9.29.0
   eslint-config-prettier: ^10.1.5
   globals: ^16.0.0
+  lodash-es: ^4.17.22
   prettier: ^3.5.3
   prettier-package-json: ^2.8.0
   serverless: 4.29.0
   typescript: ^5.9.3
   typescript-eslint: ^8.47.0
   vitest: ^4.0.12
-  '@vitest/coverage-istanbul': ^4.0.12
+  '@vitest/coverage-istanbul': 4.0.12
 
 onlyBuiltDependencies:
   - esbuild

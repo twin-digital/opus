@@ -1,11 +1,6 @@
 frameworkVersion: ^4.0.0
 org: twindigital
-service: bookify-render-api
-
-# we use tsdown for our own building
-build:
-  esbuild:
-    bundle: false
+service: bookify-render
 
 stages:
   default:
@@ -22,44 +17,210 @@ stages:
       profile: 775111556400-AdministratorAccess
       region: us-east-1
 
+custom:
+  alerts:
+    alarms:
+      # Built-in Lambda alarms
+      - functionErrors
+      - functionThrottles
+      - functionDuration:
+          threshold: 5000
+
+      # ========================================
+      # Authorizer Alarms
+      # ========================================
+
+      - name: authorizerErrors
+        namespace: ${self:custom.metricsNamespace}
+        description: Alert when authorizer encounters errors
+        metric: AuthError
+        threshold: 5
+        statistic: Sum
+        period: 300 # 5 minutes
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        topic: alarm
+        treatMissingData: notBreaching
+
+      - name: authorizerRevokedKeyUsage
+        namespace: ${self:custom.metricsNamespace}
+        description: Alert on revoked API key usage (security event)
+        metric: AuthDeniedRevoked
+        threshold: 0
+        statistic: Sum
+        period: 300 # 5 minutes
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+        topic: security
+
+      # ========================================
+      # Render HTML ALARMS
+      # ========================================
+
+      # SECURITY: Path traversal attempts
+      - name: ${self:service}-${sls:stage}-path-traversal
+        namespace: ${self:custom.metricsNamespace}
+        metric: RenderPathTraversalAttempt
+        threshold: 0
+        statistic: Sum
+        period: 60
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+        topic: security
+
+      # ERROR RATE: Absolute count
+      - name: ${self:service}-${sls:stage}-render-error-rate
+        namespace: ${self:custom.metricsNamespace}
+        metric: RenderError
+        threshold: 10
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 2
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+        topic: alarm
+
+      # INVALID REQUESTS: Client errors
+      - name: ${self:service}-${sls:stage}-high-invalid-request-rate
+        namespace: ${self:custom.metricsNamespace}
+        metric: RenderInvalidRequest
+        threshold: 20
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 2
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+        topic: alarm
+
+      # SLOW RENDERS: Performance degradation
+      - name: ${self:service}-${sls:stage}-slow-renders
+        namespace: ${self:custom.metricsNamespace}
+        metric: RenderDuration
+        threshold: 3000
+        statistic: Average
+        period: 300
+        evaluationPeriods: 3
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+        topic: alarm
+
+    stages:
+      - prod
+      - staging
+    topics:
+      alarm:
+        topic: ${self:service}-${sls:stage}-alerts
+        notifications:
+          - protocol: email
+            endpoint: techops@twindigital.io
+      security:
+        topic: ${self:service}-${sls:stage}-security
+        notifications:
+          - protocol: email
+            endpoint: techops@twindigital.io
+  logLevel:
+    dev: DEBUG
+    sean: DEBUG
+    prod: INFO
+  metricsNamespace: Bookify
+
 provider:
   architecture: x86_64
   environment:
     NODE_ENV: ${self:provider.stage}
+    API_KEYS_TABLE: !Ref ApiKeysTable
+    # Powertools configuration
+    POWERTOOLS_SERVICE_NAME: ${self:service}
+    POWERTOOLS_LOG_LEVEL: ${self:custom.logLevel.${self:provider.stage}, 'INFO'}
+    POWERTOOLS_LOGGER_LOG_EVENT: false
+    # Namespace groups all Bookify services; service name becomes a dimension for filtering
+    POWERTOOLS_METRICS_NAMESPACE: ${self:custom.metricsNamespace}
   name: aws
   region: ${param:region}
   profile: ${param:profile, ''}
   runtime: nodejs24.x
   stage: ${opt:stage, 'dev'}
+  # Enable X-Ray tracing for all Lambda functions
+  tracing:
+    lambda: true
   ecr:
     images:
-      render-html-image:
+      pandoc-image:
         path: ./
-        file: src/functions/render-html/Dockerfile
+        file: docker/pandoc/Dockerfile
         buildArgs:
           PANDOC_VERSION: 3.8.3
           PANDOC_CHECKSUM: 'sha256:c224fab89f827d3623380ecb7c1078c163c769c849a14ac27e8d3bfbb914c9b4'
           NODE_ENV: production
+  httpApi:
+    authorizers:
+      apiKeyAuthorizer:
+        type: request
+        functionName: authorizer
+        enableSimpleResponses: true
+        identitySource:
+          - $request.header.Authorization
+
+# we use tsdown for our own building
+build:
+  esbuild: false
+
+package:
+  patterns:
+    - '!**/*'
+    - package.json
+    - 'dist/**/*.js'
+    - 'dist/**/*.js.map'
 
 functions:
+  authorizer:
+    handler: dist/functions/authorizer/authorizer.handler
+    environment:
+      API_KEYS_TABLE: !Ref ApiKeysTable
+
   render-html:
     image:
-      name: render-html-image
+      name: pandoc-image
       command:
-        - dist/render-html/render-html.handler
+        - dist/functions/render-html/render-html.handler
     events:
       - httpApi:
           path: /render/html
-          method: get
+          method: post
+          authorizer:
+            name: apiKeyAuthorizer
 
   version:
-    handler: dist/version/version.handler
+    image:
+      name: pandoc-image
+      command:
+        - dist/functions/version/version.handler
     events:
       - httpApi:
           path: /version
           method: get
-    package:
-      patterns:
-        - '!**'
-        - package.json
-        - dist/version/version.js
+
+resources:
+  Resources:
+    ApiKeysTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-api-keys-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: keyId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: keyId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: userId-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL

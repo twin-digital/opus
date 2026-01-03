@@ -159,7 +159,9 @@ export const makeRollStatsHandler = (db: RepositoryFactory): CommandHandlerFn =>
     const { results, isNew } = await playerCharacterService.rollStats(originalCharacter.id)
 
     const formatRolledAt = (iso?: string) => {
-      if (!iso) return 'on unknown date'
+      if (!iso) {
+        return 'on unknown date'
+      }
       const d = new Date(iso)
       try {
         // Use America/Chicago to represent Central Time (handles DST)
@@ -189,7 +191,9 @@ export const makeRollStatsHandler = (db: RepositoryFactory): CommandHandlerFn =>
         const hh24 = d.getHours()
         const period = hh24 >= 12 ? 'pm' : 'am'
         let hh12 = hh24 % 12
-        if (hh12 === 0) hh12 = 12
+        if (hh12 === 0) {
+          hh12 = 12
+        }
         const min = String(d.getMinutes()).padStart(2, '0')
         return `on ${mm}/${dd}/${yyyy} at ${hh12}:${min} ${period}`
       }

@@ -4,7 +4,7 @@ export const sharedConfig = {
     // vitest uses the 'ssr' environment of vite
     ssr: {
       resolve: {
-        conditions: ['source', 'module', 'browser', 'development|production'],
+        conditions: ['source'],
       },
     },
   },

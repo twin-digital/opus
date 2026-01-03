@@ -1,3 +1,10 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Pandoc Lambda Runtime Image
+# ════════════════════════════════════════════════════════════════════════════
+# Base image for Lambda functions that require pandoc.
+# Used by multiple functions in the bookify-render-api service.
+# ════════════════════════════════════════════════════════════════════════════
+
 # Stage 1: Download and extract pandoc using Amazon Linux
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023 AS pandoc-builder
 
@@ -29,5 +36,3 @@ RUN pandoc --version
 # Copy bundled function code
 COPY package*.json ./
 COPY dist/ ./dist/
-
-CMD [ "dist/render-html/render-html.handler" ]
