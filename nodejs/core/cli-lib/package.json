@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/cli-lib",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Utilities for building CLI applications with oclif.",
   "type": "module",
   "exports": {
