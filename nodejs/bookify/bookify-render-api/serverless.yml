@@ -22,27 +22,27 @@ custom:
     alarms:
       # Function-specific alarms for authorizer (handler-based function)
       - functionErrors:
-          function: authorizer
+          functionName: authorizer
       - functionThrottles:
-          function: authorizer
+          functionName: authorizer
       - functionDuration:
-          function: authorizer
+          functionName: authorizer
           threshold: 5000
 
       # Function-specific alarms for render-html (image-based function)
       - functionErrors:
-          function: render-html
+          functionName: render-html
       - functionThrottles:
-          function: render-html
+          functionName: render-html
       - functionDuration:
-          function: render-html
+          functionName: render-html
           threshold: 5000
 
       # Function-specific alarms for version (image-based function)
       - functionErrors:
-          function: version
+          functionName: version
       - functionThrottles:
-          function: version
+          functionName: version
 
       # ========================================
       # Authorizer Alarms
