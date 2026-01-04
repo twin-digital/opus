@@ -1,5 +1,11 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.3
+
+### Patch Changes
+
+- 3e8a62b: fix deployment error caused by alarm names
+
 ## 0.1.2
 
 ### Patch Changes
