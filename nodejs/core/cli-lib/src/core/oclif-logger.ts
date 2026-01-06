@@ -42,26 +42,26 @@ export function makeOclifLogger(command: Command): Logger {
         return
       }
       // Use logToStderr to ensure we never exit the process
-      command.logToStderr(message, args)
+      command.logToStderr(message, ...args)
     },
     warn(message?: string, ...args: unknown[]): void {
       if (message === undefined) {
         return
       }
-      command.logToStderr(message, args)
+      command.logToStderr(message, ...args)
     },
     info(message?: string, ...args: unknown[]): void {
       if (message === undefined) {
         return
       }
-      command.log(message, args)
+      command.log(message, ...args)
     },
     debug(message?: string, ...args: unknown[]): void {
       if (message === undefined) {
         return
       }
       // oclif doesn't have a debug method, use logToStderr for debug output
-      command.logToStderr(message, args)
+      command.logToStderr(message, ...args)
     },
   }
 }
