@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+cd ~
+git init
+git remote add origin https://github.com/skleinjung/dotfiles.git
+git fetch
+git checkout -f main

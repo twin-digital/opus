@@ -95,12 +95,12 @@ describe('resolveConfig', () => {
   })
 
   describe('renderer configuration', () => {
-    it('should default renderer to euro-pdf', () => {
+    it('should default renderer to weasyprint', () => {
       const config: BookifyProjectConfig = {
         inputs: ['src/chapter1.md'],
       }
       const resolved = resolveConfig(config)
-      expect(resolved.pdf.renderer).toBe('euro-pdf')
+      expect(resolved.pdf.renderer).toBe('weasyprint')
     })
 
     it('should use specified renderer', () => {

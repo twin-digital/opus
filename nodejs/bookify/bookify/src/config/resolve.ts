@@ -79,7 +79,7 @@ const getDefaultRendererOptions = (renderer: string): Record<string, string> => 
  * @param basePath The base directory to resolve relative paths from (defaults to cwd)
  */
 export const resolveConfig = (config: BookifyProjectConfig, basePath: string = process.cwd()): BookifyProject => {
-  const renderer = config.pdf?.renderer ?? 'euro-pdf'
+  const renderer = config.pdf?.renderer ?? 'weasyprint'
 
   return {
     assetPaths: resolveAssetPaths(config.assetPaths ?? basePath, basePath),

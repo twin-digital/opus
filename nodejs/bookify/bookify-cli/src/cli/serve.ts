@@ -30,7 +30,7 @@ export default class Serve extends Command {
 
   static override flags = {
     'api-key': Flags.string({
-      description: 'EuroPDF API key (required for PDF generation)',
+      description: 'EuroPDF API key (required for PDF generation with euro-pdf renderer)',
       env: 'EURO_PDF_API_KEY',
       required: false,
     }),
@@ -53,7 +53,13 @@ export default class Serve extends Command {
     project: Flags.string({
       char: 'p',
       description: 'Path to a .bookify.yml project file',
-      exclusive: ['css'],
+      exclusive: ['css', 'renderer'],
+    }),
+    renderer: Flags.string({
+      char: 'r',
+      default: 'weasyprint',
+      description: 'PDF renderer to use',
+      options: ['weasyprint', 'euro-pdf'],
     }),
   }
 
@@ -99,7 +105,7 @@ export default class Serve extends Command {
   }
 
   private async loadOrCreateProject(
-    flags: { project?: string; 'api-key'?: string; css: string[] },
+    flags: { project?: string; 'api-key'?: string; css: string[]; renderer: string },
     argv: string[],
     outputConfig: OutputConfig,
   ) {
@@ -115,21 +121,24 @@ export default class Serve extends Command {
       this.error('Either --project or input files must be specified')
     }
 
-    if (outputConfig.servePdf && !flags['api-key']) {
-      this.error('--api-key is required for PDF generation when not using --project')
+    const renderer = flags.renderer as 'weasyprint' | 'euro-pdf'
+
+    // Validate api-key is provided for euro-pdf renderer when serving PDF
+    if (outputConfig.servePdf && renderer === 'euro-pdf' && !flags['api-key']) {
+      this.error('--api-key is required for PDF generation with euro-pdf renderer')
     }
+
+    const rendererOptions: Record<string, string> =
+      renderer === 'euro-pdf' && flags['api-key'] ? { apiKey: flags['api-key'], test: 'true' } : {}
 
     return resolveConfig({
       css: flags.css,
       inputs: argv,
       pdf:
-        outputConfig.servePdf && flags['api-key'] ?
+        outputConfig.servePdf ?
           {
-            renderer: 'euro-pdf',
-            rendererOptions: {
-              apiKey: flags['api-key'],
-              test: 'true',
-            },
+            renderer,
+            rendererOptions,
           }
         : undefined,
     })

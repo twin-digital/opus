@@ -10,8 +10,9 @@ export default class Pdf extends Command {
   static override description = 'Renders a set of markdown files into a publishable PDF'
 
   static override examples: string[] = [
-    '<%= config.bin %> <%= command.id %> --api-key abczzz123 -o result.pdf --css base.css --css theme.css -- foo.md bar.md',
-    '<%= config.bin %> <%= command.id %> --api-key abczzz123 -o result.pdf --css base.css --css theme.css --watch -- foo.md bar.md',
+    '<%= config.bin %> <%= command.id %> -o result.pdf --css base.css --css theme.css -- foo.md bar.md',
+    '<%= config.bin %> <%= command.id %> -o result.pdf --css base.css --watch -- foo.md bar.md',
+    '<%= config.bin %> <%= command.id %> --renderer euro-pdf --api-key KEY -o result.pdf -- foo.md bar.md',
     '<%= config.bin %> <%= command.id %> --project .bookify.yml -o result.pdf',
     '<%= config.bin %> <%= command.id %> --project .bookify.yml -o result.pdf --watch',
   ]
@@ -26,7 +27,7 @@ export default class Pdf extends Command {
 
   static override flags = {
     'api-key': Flags.string({
-      description: 'EuroPDF API key',
+      description: 'EuroPDF API key (required when using euro-pdf renderer)',
       env: 'EURO_PDF_API_KEY',
       required: false,
     }),
@@ -44,7 +45,13 @@ export default class Pdf extends Command {
     project: Flags.string({
       char: 'p',
       description: 'Path to a .bookify.yml project file',
-      exclusive: ['css'],
+      exclusive: ['css', 'renderer'],
+    }),
+    renderer: Flags.string({
+      char: 'r',
+      default: 'weasyprint',
+      description: 'PDF renderer to use',
+      options: ['weasyprint', 'euro-pdf'],
     }),
     watch: Flags.boolean({
       char: 'w',
@@ -59,6 +66,7 @@ export default class Pdf extends Command {
     const { argv, flags } = await this.parse(Pdf)
 
     const outputPath = path.resolve(process.cwd(), flags.output)
+    const renderer = flags.renderer as 'weasyprint' | 'euro-pdf'
 
     let project
     if (flags.project) {
@@ -68,22 +76,28 @@ export default class Pdf extends Command {
       }
       project = await loadConfig(flags.project)
     } else {
-      // Validate that input files and api-key were provided
+      // Validate that input files were provided
       if (argv.length === 0) {
         this.error('Either --project or input files must be specified')
       }
-      if (!flags['api-key']) {
-        this.error('--api-key is required when not using --project')
+
+      // Validate api-key is provided for euro-pdf renderer
+      if (renderer === 'euro-pdf' && !flags['api-key']) {
+        this.error('--api-key is required when using euro-pdf renderer')
       }
+
+      const rendererOptions: Record<string, string> =
+        renderer === 'euro-pdf' ?
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          { apiKey: flags['api-key']!, test: 'true' }
+        : {}
+
       project = resolveConfig({
         css: flags.css,
         inputs: argv as string[],
         pdf: {
-          renderer: 'euro-pdf',
-          rendererOptions: {
-            apiKey: flags['api-key'],
-            test: 'true',
-          },
+          renderer,
+          rendererOptions,
         },
       })
     }

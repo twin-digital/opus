@@ -28,7 +28,7 @@ const bookifyProjectConfigSchema = {
       properties: {
         renderer: {
           type: 'string',
-          enum: ['euro-pdf'],
+          enum: ['euro-pdf', 'weasyprint'],
           nullable: true,
           description: 'Name of the renderer to use.',
         },
