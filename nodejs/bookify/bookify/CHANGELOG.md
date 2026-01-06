@@ -1,5 +1,11 @@
 # @twin-digital/bookify
 
+## 0.4.0
+
+### Minor Changes
+
+- 1b55066: add support for pdf rendering with weasyprint
+
 ## 0.3.0
 
 ### Minor Changes
