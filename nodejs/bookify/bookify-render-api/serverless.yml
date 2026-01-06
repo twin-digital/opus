@@ -1,6 +1,7 @@
 frameworkVersion: ^4.0.0
 org: twindigital
 service: bookify-render
+useDotenv: true
 
 stages:
   default:
@@ -8,123 +9,30 @@ stages:
       region: us-east-1
   dev:
     params:
+      profile: ${env:DEV_AWS_PROFILE}
       region: us-east-1
   prod:
     params:
-      region: us-east-1
-  sean:
-    params:
-      profile: 775111556400-AdministratorAccess
       region: us-east-1
 
 custom:
   alerts:
     alarms:
-      # Function-specific alarms for authorizer (handler-based function)
-      - functionErrors:
-          functionName: authorizer
-      - functionThrottles:
-          functionName: authorizer
-      - functionDuration:
-          functionName: authorizer
-          threshold: 5000
-
-      # Function-specific alarms for render-html (image-based function)
-      - functionErrors:
-          functionName: render-html
-      - functionThrottles:
-          functionName: render-html
-      - functionDuration:
-          functionName: render-html
-          threshold: 5000
-
-      # Function-specific alarms for version (image-based function)
-      - functionErrors:
-          functionName: version
-      - functionThrottles:
-          functionName: version
-
-      # ========================================
-      # Authorizer Alarms
-      # ========================================
-
-      - name: ${self:service}-${sls:stage}-authorizer-error
-        namespace: ${self:custom.metricsNamespace}
-        description: Alert when authorizer encounters errors
-        metric: AuthError
-        threshold: 5
-        statistic: Sum
-        period: 300 # 5 minutes
-        evaluationPeriods: 1
-        comparisonOperator: GreaterThanThreshold
-        topic: alarm
+      - functionErrors
+      - functionThrottles
+      - functionDuration
+    definitions:
+      functionErrors:
+        nameTemplate: ${self:custom.nameTemplates.criticalSeverity}
         treatMissingData: notBreaching
-
-      - name: ${self:service}-${sls:stage}-authorizer-revoked-key-usage
-        namespace: ${self:custom.metricsNamespace}
-        description: Alert on revoked API key usage (security event)
-        metric: AuthDeniedRevoked
-        threshold: 0
-        statistic: Sum
-        period: 300 # 5 minutes
-        evaluationPeriods: 1
-        comparisonOperator: GreaterThanThreshold
+      functionThrottles:
         treatMissingData: notBreaching
-        topic: security
-
-      # ========================================
-      # Render HTML ALARMS
-      # ========================================
-
-      # SECURITY: Path traversal attempts
-      - name: ${self:service}-${sls:stage}-path-traversal
-        namespace: ${self:custom.metricsNamespace}
-        metric: RenderPathTraversalAttempt
-        threshold: 0
-        statistic: Sum
-        period: 60
-        evaluationPeriods: 1
-        comparisonOperator: GreaterThanThreshold
+      functionDuration:
         treatMissingData: notBreaching
-        topic: security
-
-      # ERROR RATE: Absolute count
-      - name: ${self:service}-${sls:stage}-render-error-rate
-        namespace: ${self:custom.metricsNamespace}
-        metric: RenderError
-        threshold: 10
-        statistic: Sum
-        period: 300
-        evaluationPeriods: 2
-        comparisonOperator: GreaterThanThreshold
-        treatMissingData: notBreaching
-        topic: alarm
-
-      # INVALID REQUESTS: Client errors
-      - name: ${self:service}-${sls:stage}-high-invalid-request-rate
-        namespace: ${self:custom.metricsNamespace}
-        metric: RenderInvalidRequest
-        threshold: 20
-        statistic: Sum
-        period: 300
-        evaluationPeriods: 2
-        comparisonOperator: GreaterThanThreshold
-        treatMissingData: notBreaching
-        topic: alarm
-
-      # SLOW RENDERS: Performance degradation
-      - name: ${self:service}-${sls:stage}-slow-renders
-        namespace: ${self:custom.metricsNamespace}
-        metric: RenderDuration
-        threshold: 3000
-        statistic: Average
-        period: 300
-        evaluationPeriods: 3
-        comparisonOperator: GreaterThanThreshold
-        treatMissingData: notBreaching
-        topic: alarm
-
+    nameTemplate: ${self:custom.nameTemplates.mediumSeverity}
+    prefixTemplate: ''
     stages:
+      - dev
       - prod
       - staging
     topics:
@@ -133,16 +41,21 @@ custom:
         notifications:
           - protocol: email
             endpoint: techops@twindigital.io
-      security:
-        topic: ${self:service}-${sls:stage}-security
-        notifications:
-          - protocol: email
-            endpoint: techops@twindigital.io
   logLevel:
     dev: DEBUG
-    sean: DEBUG
     prod: INFO
   metricsNamespace: Bookify
+  nameTemplates:
+    criticalSeverity: ${self:service}-${sls:stage}-$[functionName]-CRITICAL-$[metricName]
+    lowSeverity: ${self:service}-${sls:stage}-$[functionName]-LOW-$[metricName]
+    mediumSeverity: ${self:service}-${sls:stage}-$[functionName]-MEDIUM-$[metricName]
+    securitySeverity: ${self:service}-${sls:stage}-$[functionName]-SECURITY-$[metricName]
+  servicePascal: BookifyRender
+  stagePascal: ${self:custom.stagesPascal.${sls:stage}, sls:stage}
+  stagesPascal:
+    dev: Dev
+    prod: Prod
+    staging: Staging
 
 provider:
   architecture: x86_64
@@ -197,6 +110,18 @@ functions:
     handler: dist/functions/authorizer/authorizer.handler
     environment:
       API_KEYS_TABLE: !Ref ApiKeysTable
+    alarms:
+      - name: RevokedKeyUsage
+        namespace: ${self:custom.metricsNamespace}
+        nameTemplate: ${self:custom.nameTemplates.securitySeverity}
+        description: Alert on revoked API key usage (security event)
+        metric: AuthDeniedRevoked
+        threshold: 0
+        statistic: Sum
+        period: 300 # 5 minutes
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
 
   render-html:
     image:
@@ -209,6 +134,53 @@ functions:
           method: post
           authorizer:
             name: apiKeyAuthorizer
+    alarms:
+      # SECURITY: Path traversal attempts
+      - name: RenderPathTraversal
+        namespace: ${self:custom.metricsNamespace}
+        nameTemplate: ${self:custom.nameTemplates.securitySeverity}
+        metric: RenderPathTraversalAttempt
+        threshold: 0
+        statistic: Sum
+        period: 60
+        evaluationPeriods: 1
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+
+      # ERROR RATE: Absolute count
+      - name: RenderErrorRate
+        namespace: ${self:custom.metricsNamespace}
+        nameTemplate: ${self:custom.nameTemplates.criticalSeverity}
+        metric: RenderError
+        threshold: 10
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 2
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+
+      # INVALID REQUESTS: Client errors
+      - name: InvalidRequestRate
+        namespace: ${self:custom.metricsNamespace}
+        nameTemplate: ${self:custom.nameTemplates.lowSeverity}
+        metric: RenderInvalidRequest
+        threshold: 20
+        statistic: Sum
+        period: 300
+        evaluationPeriods: 2
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
+
+      # SLOW RENDERS: Performance degradation
+      - name: SlowRenders
+        namespace: ${self:custom.metricsNamespace}
+        metric: RenderDuration
+        threshold: 3000
+        statistic: Average
+        period: 300
+        evaluationPeriods: 3
+        comparisonOperator: GreaterThanThreshold
+        treatMissingData: notBreaching
 
   version:
     image:
@@ -219,13 +191,20 @@ functions:
       - httpApi:
           path: /version
           method: get
+    alarms:
+      - name: functionErrors
+        enabled: false
+      - name: functionThrottles
+        enabled: false
+      - name: functionDuration
+        enabled: false
 
 resources:
   Resources:
     ApiKeysTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:service}-api-keys-${self:provider.stage}
+        TableName: ${self:custom.servicePascal}${self:custom.stagePascal}ApiKeys
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: keyId

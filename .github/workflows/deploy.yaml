@@ -47,22 +47,22 @@ jobs:
         id: slugify
         shell: bash
         run: |
-          # pick raw value (PR head-ref vs. prod)
+          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'
           if [[ "${{ github.event_name }}" == "pull_request" ]] && \
              [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
-            RAW="${{ github.event.pull_request.head.ref }}"
+            RAW="pr-${{ github.event.pull_request.number }}"
           else
             RAW="preview"
           fi
 
-          # slugify: lowercase, non-alphanumeric/_/- → '-', collapse dashes, trim
+          # slugify (keeps only simple characters)
           SLUG=$(echo "$RAW" \
             | tr '[:upper:]' '[:lower:]' \
             | sed -E 's/[^a-z0-9_-]+/-/g' \
             | sed -E 's/^-+|-+$//g')
 
           echo "Deploying stage: $SLUG"
-          echo "STAGE=$SLUG" >> $GITHUB_OUTPUT
+          echo "stage=$SLUG" >> $GITHUB_OUTPUT
 
       # authenticate with AWS & deploy
       - name: Deploy
