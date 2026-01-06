@@ -24,8 +24,10 @@ export interface BookifyProjectConfig {
   pdf?: {
     /**
      * Name of the renderer to use.
+     * - 'euro-pdf': Uses the EuroPDF cloud API (requires API key)
+     * - 'weasyprint': Uses the local WeasyPrint installation (free, must be installed)
      */
-    renderer?: 'euro-pdf'
+    renderer?: 'euro-pdf' | 'weasyprint'
 
     /**
      * Optional arguments to pass to the renderer implementation. Default values will be set from environment variables.
@@ -67,8 +69,10 @@ export interface BookifyProject {
   pdf: {
     /**
      * Name of the renderer to use.
+     * - 'euro-pdf': Uses the EuroPDF cloud API (requires API key)
+     * - 'weasyprint': Uses the local WeasyPrint installation (free, must be installed)
      */
-    renderer: 'euro-pdf'
+    renderer: 'euro-pdf' | 'weasyprint'
 
     /**
      * Full set of options to use, including those read from the environment and explicitly set by the user.
