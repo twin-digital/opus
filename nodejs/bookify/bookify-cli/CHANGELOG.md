@@ -1,5 +1,16 @@
 # @twin-digital/bookify-cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 1b55066: add support for pdf rendering with weasyprint
+
+### Patch Changes
+
+- Updated dependencies [1b55066]
+  - @twin-digital/bookify@0.4.0
+
 ## 0.3.2
 
 ### Patch Changes

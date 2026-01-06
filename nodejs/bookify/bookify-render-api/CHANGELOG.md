@@ -1,5 +1,13 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.5
+
+### Patch Changes
+
+- c167d0b: fix invalid serverless configuration for observability resources
+- Updated dependencies [1b55066]
+  - @twin-digital/bookify@0.4.0
+
 ## 0.1.4
 
 ### Patch Changes
