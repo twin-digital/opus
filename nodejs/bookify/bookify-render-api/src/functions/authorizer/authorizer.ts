@@ -152,7 +152,6 @@ export const rawHandler: ObservabilityHandler<
     }
   } catch (error) {
     logger.error('Authorizer error', { error })
-    metrics.addMetric('AuthError', MetricUnit.Count, 1)
     return {
       isAuthorized: false,
       context: { userId: '', keyId: '', scopes: '[]', rateLimitTier: 'free' },
