@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-// @ts-check
 /**
  * Auto-generate a changeset for a Renovate dependency-update PR.
  *
@@ -15,6 +13,11 @@
  * Fail-open: any unexpected error logs a warning and exits 0 so a Renovate PR
  * is never blocked by this helper.
  *
+ * Runs under Node 24's native type-stripping (`node renovate-changeset.ts`):
+ * uses only erasable TypeScript syntax — no enums, namespaces, or param
+ * properties. Not part of any tsconfig/eslint project, so it is not type-checked
+ * or linted by the repo toolchain; keep it self-contained and dependency-free.
+ *
  * Env:
  *   BASE_REF  - PR base branch (default "main")
  *   PR_TITLE  - used as the changeset summary
@@ -23,12 +26,22 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path'
 
+type DepMap = Record<string, string>
+
+interface WorkspacePackage {
+  dir: string
+  rel: string
+  name: string | undefined
+  runtimeDeps: Set<string>
+  runtimeCatalogDeps: Set<string>
+}
+
 const BASE_REF = process.env.BASE_REF || 'main'
 const PR_TITLE = process.env.PR_TITLE || 'chore(deps): update dependencies'
 const repoRoot = process.cwd()
 
 /** Run git, returning stdout (trimmed) or '' on failure. */
-function git(args, { allowFail = false } = {}) {
+function git(args: string[], { allowFail = false }: { allowFail?: boolean } = {}): string {
   try {
     return execFileSync('git', args, { encoding: 'utf8', cwd: repoRoot }).trim()
   } catch (err) {
@@ -38,19 +51,17 @@ function git(args, { allowFail = false } = {}) {
 }
 
 /** Read a file at a git ref, or null if it does not exist there. */
-function showAtRef(ref, path) {
+function showAtRef(ref: string, path: string): string | null {
   const out = git(['show', `${ref}:${path}`], { allowFail: true })
   return out === '' ? null : out
 }
 
 /** Recursively collect package.json paths under the workspace roots. */
-function findPackageJsons() {
+function findPackageJsons(): string[] {
   const roots = ['nodejs', 'tooling']
-  /** @type {string[]} */
-  const results = []
-  /** @param {string} dir */
-  const walk = (dir) => {
-    let entries
+  const results: string[] = []
+  const walk = (dir: string): void => {
+    let entries: string[]
     try {
       entries = readdirSync(dir)
     } catch {
@@ -78,9 +89,8 @@ function findPackageJsons() {
  * { key: versionSpec } map. Deliberately minimal — the repo uses a single
  * default catalog with 2-space-indented, optionally single-quoted keys.
  */
-function parseCatalog(yamlText) {
-  /** @type {Record<string,string>} */
-  const map = {}
+function parseCatalog(yamlText: string | null): DepMap {
+  const map: DepMap = {}
   if (!yamlText) return map
   const lines = yamlText.split('\n')
   let inCatalog = false
@@ -98,7 +108,25 @@ function parseCatalog(yamlText) {
   return map
 }
 
-function main() {
+function safeJson(text: string | null): Record<string, any> {
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch {
+    return {}
+  }
+}
+
+/** True if any runtime dependency key was added, removed, or had its spec changed. */
+function runtimeDepsChanged(baseDeps: DepMap = {}, headDeps: DepMap = {}): boolean {
+  const keys = new Set([...Object.keys(baseDeps), ...Object.keys(headDeps)])
+  for (const k of keys) {
+    if (baseDeps[k] !== headDeps[k]) return true
+  }
+  return false
+}
+
+function main(): void {
   git(['fetch', 'origin', BASE_REF], { allowFail: true })
   const base = `origin/${BASE_REF}`
 
@@ -117,24 +145,17 @@ function main() {
     return
   }
 
-  // Index every workspace package: dir -> { name, runtimeDeps:Set, runtimeCatalogDeps:Set }
-  const packages = findPackageJsons().map((abs) => {
+  // Index every workspace package: dir -> { name, runtimeDeps, runtimeCatalogDeps }
+  const packages: WorkspacePackage[] = findPackageJsons().map((abs) => {
     const rel = relative(repoRoot, abs)
-    /** @type {any} */
-    let pkg = {}
-    try {
-      pkg = JSON.parse(readFileSync(abs, 'utf8'))
-    } catch {
-      /* ignore unreadable package.json */
-    }
-    const runtime = pkg.dependencies || {}
+    const pkg = safeJson(readFileSync(abs, 'utf8'))
+    const runtime: DepMap = pkg.dependencies || {}
     const runtimeDeps = new Set(Object.keys(runtime))
     const runtimeCatalogDeps = new Set(Object.keys(runtime).filter((d) => String(runtime[d]).startsWith('catalog:')))
     return { dir: dirname(rel), rel, name: pkg.name, runtimeDeps, runtimeCatalogDeps }
   })
 
-  /** @type {Set<string>} package names to bump */
-  const affected = new Set()
+  const affected = new Set<string>()
 
   // 1) Direct runtime-dependency bumps in a package's own package.json.
   for (const pkg of packages) {
@@ -142,7 +163,7 @@ function main() {
     if (!changedFiles.includes(pkg.rel)) continue
     const headPkg = safeJson(readFileSync(join(repoRoot, pkg.rel), 'utf8'))
     const basePkg = safeJson(showAtRef(base, pkg.rel))
-    if (!basePkg) continue // new package — Renovate doesn't add these; skip
+    if (Object.keys(basePkg).length === 0) continue // new package — Renovate doesn't add these; skip
     if (runtimeDepsChanged(basePkg.dependencies, headPkg.dependencies)) {
       affected.add(pkg.name)
     }
@@ -182,25 +203,6 @@ function main() {
   const file = join(repoRoot, '.changeset', `renovate-${sha}.md`)
   writeFileSync(file, body)
   console.log(`Wrote ${relative(repoRoot, file)} bumping: ${names.join(', ')}`)
-}
-
-/** @param {string|null} text */
-function safeJson(text) {
-  if (!text) return {}
-  try {
-    return JSON.parse(text)
-  } catch {
-    return {}
-  }
-}
-
-/** True if any runtime dependency key was added, removed, or had its spec changed. */
-function runtimeDepsChanged(baseDeps = {}, headDeps = {}) {
-  const keys = new Set([...Object.keys(baseDeps), ...Object.keys(headDeps)])
-  for (const k of keys) {
-    if (baseDeps[k] !== headDeps[k]) return true
-  }
-  return false
 }
 
 try {

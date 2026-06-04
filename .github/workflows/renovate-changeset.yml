@@ -27,7 +27,8 @@ jobs:
           node-version-file: .nvmrc
 
       - name: Generate changeset for dependency update
-        run: node .github/scripts/renovate-changeset.mjs
+        # Node 24 (.nvmrc = lts/krypton) runs TypeScript directly via native type-stripping.
+        run: node .github/scripts/renovate-changeset.ts
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
