@@ -1,6 +1,8 @@
 services:
-  devcontainer_opus:
+  opus:
     build:
+      args:
+        USERNAME: "${USER}"
       context: .
       dockerfile: Dockerfile
     deploy:
@@ -8,9 +10,15 @@ services:
         limits:
           cpus: "6"
           memory: 6g
-    hostname: devcontainer
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    hostname: opus
     ipc: host
     network_mode: host
     shm_size: 1g
     volumes:
-      - ..:/workspace:cached
+      - ..:/workspace/opus:cached
+      - ${HOME}/.bash_history:/home/${USER}/.bash_history:cached
+      - ${HOME}/.claude:/home/${USER}/.claude:cached
+      - ${HOME}/.claude.json:/home/${USER}/.claude.json:cached
+      - ${HOME}/.config/gh:/home/${USER}/.config/gh:cached

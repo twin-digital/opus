@@ -1,35 +1,49 @@
 {
+
   "containerEnv": {
+    "NODE_OPTIONS": "--experimental-transform-types --no-warnings=ExperimentalWarning",
     "PW_CHROMIUM_SANDBOX": "0",
     "VSCODE_AGENT_FOLDER": "/vscode"
   },
   "customizations": {
     "vscode": {
       "settings": {
-        "dev.containers.dockerCredentialHelper": false
+        "dev.containers.dockerCredentialHelper": false,
+        "extensions": [
+          "dbaeumer.vscode-eslint",
+          "esbenp.prettier-vscode"
+        ]
       }
     }
   },
   "dockerComposeFile": ["docker-compose.yml"],
   "features": {
-    // "ghcr.io/devcontainers-extra/features/lastpass-cli-homebrew:1": {}, -- broken, because ghcr.io no longer exists
     "ghcr.io/devcontainers/features/aws-cli:1": {},
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    // only uncomment one of the following (docker-in-docker or docker-outside-of-docker)
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    },
     // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts/krypton"
+      "version": "24"
     },
-    "ghcr.io/devcontainers/features/python:1": {}
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {}
   },
-  "forwardPorts": [],
+  "forwardPorts": [3001, 7470],
   "portsAttributes": {},
   "init": true,
+  "initializeCommand": ".devcontainer/scripts/host/initialize.sh",
   "name": "Opus",
   "overrideCommand": true,
-  "postAttachCommand": "sudo chown -R vscode.vscode /workspace",
-  "postCreateCommand": "/usr/local/bin/postcreate",
-  "remoteUser": "vscode",
-  "service": "devcontainer_opus",
-  "workspaceFolder": "/workspace"
+  "postAttachCommand": "/usr/local/bin/post-attach",
+  "postCreateCommand": "/usr/local/bin/post-create",
+  "remoteEnv": {
+    // to enable, need to rename `10-start-filter-agent.sh.DISABLED` as well
+    // "SSH_AUTH_SOCK": "/tmp/ssh-filter/agent.sock"
+  },
+  "remoteUser": "${localEnv:USER}",
+  "service": "opus",
+  "workspaceFolder": "/workspace/opus"
 }
