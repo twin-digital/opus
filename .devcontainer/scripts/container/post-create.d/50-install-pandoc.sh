@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# configure our dotfiles
-/usr/local/bin/dotfiles-init
-
-# install ansible
-pipx install ansible-core
-
-# install dependencies needed by Ansible plugins
-pipx inject ansible-core requests
+# TODO: why is this here instead of in the Dockerfile? we should standardize...
 
 export PANDOC_VERSION=3.8.3
 export PANDOC_CHECKSUM="sha256:c224fab89f827d3623380ecb7c1078c163c769c849a14ac27e8d3bfbb914c9b4"
@@ -23,5 +17,3 @@ curl -L https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc
   fi && \
   sudo tar xvzf pandoc.tar.gz --strip-components 1 -C /usr/local/ && \
   rm pandoc.tar.gz
-
-cd /workspace

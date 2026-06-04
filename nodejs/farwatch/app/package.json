@@ -1,0 +1,54 @@
+{
+  "private": true,
+  "name": "@thrashplay/farwatch",
+  "version": "0.0.0",
+  "description": "Farwatch end-to-end CLI: simulate an adventure and chronicle the outcome.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "tsx watch src/main.ts",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@thrashplay/fw-chronicler": "workspace:*",
+    "@thrashplay/fw-core": "workspace:*",
+    "@thrashplay/fw-simulation": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  }
+}

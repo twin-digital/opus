@@ -25,6 +25,11 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/dolmenwood](./nodejs/dolmenwood/dolmenwood): Core game models and logic for Dolmenwood applications
 - [@twin-digital/dolmenwood-bot](./nodejs/dolmenwood/dolmenwood-bot): Discord bot able to assist with questions during Dolmenwood games.
 - [@twin-digital/refbash](./nodejs/dolmenwood/refbash): CLI console for managing Dolmenwood sessions
+- [@thrashplay/farwatch](./nodejs/farwatch/app): Farwatch end-to-end CLI: simulate an adventure and chronicle the outcome.
+- [@thrashplay/fw-chronicler](./nodejs/farwatch/chronicler): Turns pinned simulation outcomes into narrative via an LLM backend.
+- [@thrashplay/fw-core](./nodejs/farwatch/core): Deterministic RNG and shared primitives for Farwatch.
+- [@thrashplay/fw-simulation](./nodejs/farwatch/simulation): Adventure resolution and simulation loop for Farwatch.
+- [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural covenant and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.
