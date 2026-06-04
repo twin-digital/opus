@@ -50,11 +50,16 @@ Serverless Dashboard auth via `secrets.SERVERLESS_ACCESS_KEY`.
 
 ### Publish (`publish.yaml`)
 
+All three release jobs check out `github.event.workflow_run.head_sha` — the exact commit CI
+validated — so the published version, its git tags, and the built images stay in lockstep (a
+newer `main` commit can't be released/built under the just-published version tags).
+
 1. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
    changesets are pending) or, when none are pending, publishes packages with
    `pnpm publish-packages` and pushes git tags. Uses `CHANGESETS_GITHUB_TOKEN` + `NPM_TOKEN`.
 2. **docker-matrix** — only after a publish (no pending changesets). `tooling/scripts/bin/docker-packages.js`
    reads the git tags on `HEAD` and selects the just-released packages that have a `Dockerfile`.
+   (This is why the lookup must run on the same `head_sha` the publish job tagged.)
 3. **docker-build-publish** — matrix per package: `pnpm run artifact --filter <pkg>` builds the
    image to `.out/`, which is then tagged `latest` / `major` / `minor` / `patch` and pushed to
    `ghcr.io`.
