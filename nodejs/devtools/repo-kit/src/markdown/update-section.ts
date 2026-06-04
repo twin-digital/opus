@@ -65,5 +65,7 @@ export const updateSection = ({
     }
   }
 
-  return Promise.resolve(getUpdatedContent())
+  // Defer the work into the promise chain so a thrown error surfaces as a rejection
+  // (rather than synchronously, which would be surprising for a Promise-returning function).
+  return Promise.resolve().then(getUpdatedContent)
 }

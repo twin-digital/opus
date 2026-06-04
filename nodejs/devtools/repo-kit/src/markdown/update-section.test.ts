@@ -47,12 +47,10 @@ describe('updateSection', () => {
     expect(result).toBe(markdown)
   })
 
-  it('throws when missing=error and the section is absent', () => {
-    // NB: despite the Promise return type, this path throws synchronously (the work is evaluated
-    // eagerly as the argument to Promise.resolve), so assert a sync throw rather than a rejection.
-    expect(() =>
+  it('rejects when missing=error and the section is absent', async () => {
+    await expect(
       updateSection({ content: 'fresh', markdown: '# Title\n', missing: 'error', sectionId: 'demo' }),
-    ).toThrow(/Could not find section/)
+    ).rejects.toThrow(/Could not find section/)
   })
 
   it('escapes regex-special characters in the section id', async () => {
