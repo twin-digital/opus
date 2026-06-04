@@ -12,6 +12,7 @@
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
+    "lint:deps": "sherif",
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run build && changeset publish",
@@ -29,6 +30,7 @@
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "serverless": "catalog:",
+    "sherif": "^1.11.1",
     "turbo": "^2.6.1",
     "typescript": "^5.9.3"
   },

@@ -31,7 +31,7 @@
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/serverless-dev-tools": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
-    "@types/aws-lambda": "^8.10.150",
+    "@types/aws-lambda": "catalog:",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "catalog:",
     "eslint": "catalog:",

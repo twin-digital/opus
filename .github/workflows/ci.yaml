@@ -35,7 +35,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # run CI tasks
+      # run CI tasks (lint also runs the sherif dependency check via turbo's //#lint:deps task)
       - run: pnpm run build
       - run: pnpm run lint
       - run: pnpm run test

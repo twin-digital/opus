@@ -19,9 +19,9 @@
     "clean": "node ./bin/clean.js"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "catalog:",
     "chokidar": "^4.0.3",
-    "execa": "^9.6.0",
+    "execa": "catalog:",
     "globby": "^15.0.0"
   },
   "devDependencies": {

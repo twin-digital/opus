@@ -30,7 +30,7 @@
     "@twin-digital/observability-lib": "workspace:*",
     "adm-zip": "^0.5.16",
     "lodash-es": "catalog:",
-    "yaml": "^2.8.2"
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -53,7 +53,7 @@
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "serverless": "catalog:",
-    "tsdown": "~0.18.3",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite": "^7.3.0",

@@ -1,6 +1,7 @@
 import { config as loadEnv } from 'dotenv'
 
-loadEnv()
+// `quiet: true` preserves dotenv's pre-v17 silent behavior (v17 logs an info line on load by default)
+loadEnv({ quiet: true })
 
 const parseIntEnv = (name: string, fallback: number) => {
   const v = process.env[name]

@@ -35,8 +35,8 @@
     "@twin-digital/bookify": "workspace:*",
     "@twin-digital/cli-lib": "workspace:*",
     "@types/express": "^5.0.6",
-    "chalk": "^5.6.2",
-    "dotenv": "^17.2.3",
+    "chalk": "catalog:",
+    "dotenv": "catalog:",
     "express": "^5.2.1",
     "lodash-es": "^4.17.21"
   },
@@ -52,8 +52,8 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "ts-node": "^10.9.2",
-    "tsdown": "^0.16.5",
+    "ts-node": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

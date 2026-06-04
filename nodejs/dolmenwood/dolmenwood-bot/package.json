@@ -20,8 +20,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.928.0",
-    "@aws-sdk/client-s3": "^3.928.0",
+    "@aws-sdk/client-bedrock-runtime": "catalog:",
+    "@aws-sdk/client-s3": "catalog:",
     "@langchain/community": "^1.0.0",
     "@langchain/core": "^1.0.3",
     "@langchain/textsplitters": "^1.0.0",
@@ -29,7 +29,7 @@
     "@twin-digital/bedrock": "workspace:*",
     "@twin-digital/genai-core": "workspace:*",
     "discord.js": "^14.24.2",
-    "dotenv": "^17.2.3",
+    "dotenv": "catalog:",
     "hnswlib-node": "^3.0.0",
     "pdfjs-dist": "^5.4.394"
   },

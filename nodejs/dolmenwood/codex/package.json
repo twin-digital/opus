@@ -32,13 +32,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.932.0",
+    "@aws-sdk/client-s3": "catalog:",
     "@dice-roller/rpg-dice-roller": "^5.5.1",
     "@oclif/core": "^4.8.0",
     "@twin-digital/dolmenwood": "workspace:*",
-    "chalk": "^5.6.2",
+    "chalk": "catalog:",
     "discord.js": "^14.24.2",
-    "dotenv": "^17.2.3",
+    "dotenv": "catalog:",
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
@@ -53,7 +53,7 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "tsdown": "^0.16.5",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

@@ -26,11 +26,14 @@
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
     "lint": {
-      "dependsOn": ["^build", "@twin-digital/eslint-config#build"],
+      "dependsOn": ["^build", "@twin-digital/eslint-config#build", "//#lint:deps"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
     "lint:fix": {
       "dependsOn": ["^build", "@twin-digital/eslint-config#build"]
+    },
+    "//#lint:deps": {
+      "inputs": ["**/package.json", "pnpm-workspace.yaml"]
     },
     "test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],

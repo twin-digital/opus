@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.928.0",
+    "@aws-sdk/client-bedrock-runtime": "catalog:",
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
