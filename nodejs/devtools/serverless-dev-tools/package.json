@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@oclif/core": "^4.8.0",
-    "yaml": "^2.8.0"
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -51,7 +51,7 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
-    "tsdown": "~0.18.3",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },

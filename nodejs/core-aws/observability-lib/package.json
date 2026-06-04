@@ -49,7 +49,7 @@
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
-    "@types/aws-lambda": "^8.10.145",
+    "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
