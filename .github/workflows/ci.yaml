@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  # every git push (to any branch)
+  # every git push (to any branch, including slash-named branches)
   push:
-    branches: ['*']
+    branches: ['**']
   # pull‐request events *against* main, for the "merge-commit" build
   pull_request:
     branches:
@@ -13,6 +13,11 @@ on:
       - reopened
       - synchronize
 
+# Cancel superseded runs for the same ref (a newer push obsoletes an in-flight run)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: 1
   HUSKY: 0
@@ -21,9 +26,10 @@ env:
 jobs:
   lint-build-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # checkout project
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       # setup tools and install dependencies
       - name: Setup dependencies
