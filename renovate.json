@@ -1,6 +1,29 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "group:allNonMajor"
+  ],
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 0,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
+      "matchManagers": ["nvm"],
+      "enabled": false
+    },
+    {
+      "description": "engines.node / engines.pnpm are written by repo-kit (.repo-kit.yml); updating them fails the sync gate",
+      "matchDepTypes": ["engines"],
+      "enabled": false
+    },
+    {
+      "description": "tsdown's version is owned by repo-kit (.repo-kit.yml), not Renovate",
+      "matchPackageNames": ["tsdown"],
+      "enabled": false
+    }
   ]
 }
