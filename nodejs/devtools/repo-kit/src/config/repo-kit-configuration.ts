@@ -96,8 +96,8 @@ export interface HookConfig {
 export type SyncActionConfig = {
   /**
    * Conditions used to determine if an action applies to a package. If there are no conditions, the action is always
-   * applied. If there is at least one condition, the action will apply if _any_ of the conditions is satisfied.
-   * Otherwise, it will be be skipped.
+   * applied. If there is at least one condition, the action will apply only if _all_ of the conditions are satisfied
+   * (logical AND). Otherwise, it will be skipped.
    */
   conditions?: SyncConditionConfig[]
 
@@ -182,8 +182,8 @@ export interface FeatureConfigItem {
 
   /**
    * Conditions used to determine if a feature applies to a package. If there are no conditions, the feature is always
-   * applied. If there is at least one condition, the feature will apply if _any_ of the conditions is satisfied.
-   * Otherwise, it will be be skipped.
+   * applied. If there is at least one condition, the feature will apply only if _all_ of the conditions are satisfied
+   * (logical AND). Otherwise, it will be skipped.
    */
   conditions?: SyncConditionConfig[]
 

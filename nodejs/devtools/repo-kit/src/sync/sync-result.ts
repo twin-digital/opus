@@ -1,6 +1,6 @@
-export interface BaseSyncResult {
+interface BaseSyncResult {
   /**
-   * Array of files which were changed, relative to the root of the package. Will be undefined of the `result` is not
+   * Array of files which were changed, relative to the root of the package. Will be undefined if the `result` is not
    * 'ok'.
    */
   changedFiles?: string[]
