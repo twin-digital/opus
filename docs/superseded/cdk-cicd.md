@@ -3,7 +3,7 @@
 > Step Functions–orchestrated artifact deployment design that was **never implemented** and
 > does **not** reflect how this repository actually deploys. The repo contains no CDK; it
 > deploys via the **Serverless Framework** through GitHub Actions. For the real, current
-> CI/CD see [`CICD.md`](./CICD.md). This file is retained only as a historical design record.
+> CI/CD see [`CICD.md`](../CICD.md). This file is retained only as a historical design record.
 
 # 🛠 CDK Artifact Deployment Architecture (v1.16)
 
