@@ -1,0 +1,85 @@
+name: Deploy Preview
+
+# Allow GitHub to mint OIDC tokens for this workflow
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+on:
+  # watch for CI to finish, then deploy the PR's preview stack
+  # (mirrors the production gate: only deploy commits that passed CI)
+  workflow_run:
+    types:
+      - completed
+    workflows: ['CI']
+
+# Serialize per PR branch; don't cancel an in-flight serverless deploy
+concurrency: deploy-preview-${{ github.event.workflow_run.head_branch }}
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  preview:
+    # Only for CI runs that (a) succeeded, (b) were triggered by a pull_request
+    # (the push-triggered CI run for the same commit is ignored to avoid a double
+    # deploy), and (c) are not the changesets release PR.
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.head_branch != 'changeset-release/main'
+      }}
+    environment: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # checkout the exact commit CI validated
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+
+      # setup tools and install dependencies
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Resolve PR number and stage slug
+        id: slugify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # workflow_run doesn't carry PR context directly; resolve the open PR
+          # against main for this commit (works for same-repo and fork PRs).
+          NUM=$(gh api "repos/${{ github.repository }}/commits/${{ github.event.workflow_run.head_sha }}/pulls" \
+            --jq '[.[] | select(.state == "open" and .base.ref == "main")][0].number // empty')
+
+          if [[ -z "$NUM" ]]; then
+            echo "No open PR against main for ${{ github.event.workflow_run.head_sha }}; skipping preview deploy."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # slugify (keeps only simple characters)
+          SLUG=$(echo "pr-$NUM" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9_-]+/-/g' \
+            | sed -E 's/^-+|-+$//g')
+
+          echo "Deploying stage: $SLUG (PR #$NUM)"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "stage=$SLUG" >> "$GITHUB_OUTPUT"
+
+      # authenticate with AWS & deploy
+      - name: Deploy
+        if: ${{ steps.slugify.outputs.found == 'true' }}
+        uses: ./.github/actions/deploy
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          stage: ${{ steps.slugify.outputs.stage }}

@@ -6,20 +6,12 @@ permissions:
   contents: read
 
 on:
-  # watch for CI workflow to finish
+  # watch for CI workflow to finish on main
   workflow_run:
     branches: [main]
     types:
       - completed
     workflows: ['CI']
-  # pull‐request events *against* main, for the "merge-commit" build
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -29,58 +21,17 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  preview:
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'changeset-release/main' }}
-    environment: preview
-    runs-on: ubuntu-latest
-    steps:
-      # checkout project
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
-
-      # setup tools and install dependencies
-      - name: Setup dependencies
-        uses: ./.github/actions/setup
-
-      - name: Compute STAGE slug
-        id: slugify
-        shell: bash
-        run: |
-          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'
-          if [[ "${{ github.event_name }}" == "pull_request" ]] && \
-             [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
-            RAW="pr-${{ github.event.pull_request.number }}"
-          else
-            RAW="preview"
-          fi
-
-          # slugify (keeps only simple characters)
-          SLUG=$(echo "$RAW" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed -E 's/[^a-z0-9_-]+/-/g' \
-            | sed -E 's/^-+|-+$//g')
-
-          echo "Deploying stage: $SLUG"
-          echo "stage=$SLUG" >> $GITHUB_OUTPUT
-
-      # authenticate with AWS & deploy
-      - name: Deploy
-        uses: ./.github/actions/deploy
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-arn: ${{ secrets.AWS_ROLE_ARN }}
-          serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-          stage: ${{ steps.slugify.outputs.stage }}
-
   production:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # Only deploy when the triggering CI run succeeded, and only for main.
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
     environment: production
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      # checkout project
-      - uses: actions/checkout@v4
+      # checkout the exact commit CI validated (not whatever main points at now)
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
 
       # setup tools and install dependencies
