@@ -10,8 +10,8 @@ images publish to **GHCR**.
 
 ## Shared building blocks
 
-- **`.github/actions/setup`** — checks out tooling, installs pnpm, installs Node from `.nvmrc`,
-  then `pnpm install --frozen-lockfile`. Used by every job.
+- **`.github/actions/setup`** — installs pnpm, installs Node from `.nvmrc`, then runs
+  `pnpm install --frozen-lockfile`. Used by every job (after a separate checkout step).
 - **`.github/actions/deploy`** — assumes the AWS OIDC role, runs `pnpm serverless update`, then
   `turbo run deploy|destroy -- --stage <stage> --region <region>`. Driving deploys through turbo
   means dependencies build (tsdown → `dist/`) before Serverless packages them.
