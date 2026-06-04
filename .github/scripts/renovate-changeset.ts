@@ -1,46 +1,51 @@
 /**
- * Auto-generate a changeset for a Renovate dependency-update PR.
+ * Auto-generate the managed changeset for a Renovate dependency-update PR.
  *
- * A workspace package gets a `patch` changeset when its *runtime dependency
- * closure* changed — i.e. either:
- *   - a runtime `dependencies` entry in its own package.json was bumped, or
- *   - a `catalog:` entry it consumes at runtime (in pnpm-workspace.yaml) was bumped.
+ * Spec: docs/cicd/renovate-integration.md. This script is the §5 generator.
  *
- * devDependency / tooling bumps do NOT change a package's published output, so
- * they intentionally produce no changeset. If nothing publishable is affected
- * (e.g. a pure devtool/CI bump), the script exits without writing anything.
+ * Behavior (idempotent — derived entirely from the current diff vs base):
+ *   - Writes exactly one file, `.changeset/renovate-<PR_NUMBER>.md`, and touches
+ *     no other changeset (human changesets are preserved — §6.5).
+ *   - A workspace package gets an entry iff its published surface changed: a
+ *     `dependencies` / `optionalDependencies` / `peerDependencies` entry was
+ *     bumped, directly in its package.json or via a default-`catalog:` value it
+ *     consumes (§5.2–5.3). devDependencies never produce an entry (§5.5).
+ *   - Bump type (§5.4): dependencies/optionalDependencies → patch; peer within
+ *     the same major → patch; peer crossing a major → major. Per package, the
+ *     max over its changed deps.
+ *   - All workspace packages are eligible, including private ones (§5.6).
+ *   - If nothing publishable changed (devDep/tooling-only PR), an EMPTY changeset
+ *     is written so the change is still accounted for (§5.5).
  *
- * Fail-open: any unexpected error logs a warning and exits 0 so a Renovate PR
- * is never blocked by this helper.
+ * Runs under Node 24 native type-stripping (`node renovate-changeset.ts`): only
+ * erasable TypeScript syntax. Not part of any tsconfig/eslint project, so keep it
+ * self-contained and dependency-free. Fail-open: unexpected errors log and exit 0.
  *
- * Runs under Node 24's native type-stripping (`node renovate-changeset.ts`):
- * uses only erasable TypeScript syntax — no enums, namespaces, or param
- * properties. Not part of any tsconfig/eslint project, so it is not type-checked
- * or linted by the repo toolchain; keep it self-contained and dependency-free.
- *
- * Env:
- *   BASE_REF  - PR base branch (default "main")
- *   PR_TITLE  - used as the changeset summary
+ * Env: BASE_REF (default "main"), PR_TITLE (changeset summary), PR_NUMBER (file key).
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs'
-import { join, dirname, relative } from 'node:path'
+import { join, relative } from 'node:path'
 
 type DepMap = Record<string, string>
 
 interface WorkspacePackage {
-  dir: string
   rel: string
   name: string | undefined
-  runtimeDeps: Set<string>
-  runtimeCatalogDeps: Set<string>
+  raw: Record<string, any>
 }
+
+const RUNTIME_TYPES = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
+const PATCH = 0
+const MAJOR = 2
+const RANK_NAME = ['patch', 'minor', 'major']
+const DEFAULT_CATALOG = 'catalog:'
 
 const BASE_REF = process.env.BASE_REF || 'main'
 const PR_TITLE = process.env.PR_TITLE || 'chore(deps): update dependencies'
+const PR_NUMBER = process.env.PR_NUMBER || 'unknown'
 const repoRoot = process.cwd()
 
-/** Run git, returning stdout (trimmed) or '' on failure. */
 function git(args: string[], { allowFail = false }: { allowFail?: boolean } = {}): string {
   try {
     return execFileSync('git', args, { encoding: 'utf8', cwd: repoRoot }).trim()
@@ -50,13 +55,28 @@ function git(args: string[], { allowFail = false }: { allowFail?: boolean } = {}
   }
 }
 
-/** Read a file at a git ref, or null if it does not exist there. */
 function showAtRef(ref: string, path: string): string | null {
   const out = git(['show', `${ref}:${path}`], { allowFail: true })
   return out === '' ? null : out
 }
 
-/** Recursively collect package.json paths under the workspace roots. */
+function readFileOr(path: string): string | null {
+  try {
+    return readFileSync(path, 'utf8')
+  } catch {
+    return null
+  }
+}
+
+function safeJson(text: string | null): Record<string, any> {
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch {
+    return {}
+  }
+}
+
 function findPackageJsons(): string[] {
   const roots = ['nodejs', 'tooling']
   const results: string[] = []
@@ -84,125 +104,118 @@ function findPackageJsons(): string[] {
   return results
 }
 
-/**
- * Parse the default `catalog:` block of a pnpm-workspace.yaml document into a
- * { key: versionSpec } map. Deliberately minimal — the repo uses a single
- * default catalog with 2-space-indented, optionally single-quoted keys.
- */
+/** Parse the DEFAULT `catalog:` block only. Named `catalogs:` are CI-rejected (§8). */
 function parseCatalog(yamlText: string | null): DepMap {
   const map: DepMap = {}
   if (!yamlText) return map
-  const lines = yamlText.split('\n')
   let inCatalog = false
-  for (const line of lines) {
+  for (const line of yamlText.split('\n')) {
     if (/^catalog:\s*$/.test(line)) {
       inCatalog = true
       continue
     }
     if (!inCatalog) continue
-    // a non-indented, non-empty line ends the block
-    if (/^\S/.test(line)) break
+    if (/^\S/.test(line)) break // a non-indented line ends the block
     const m = line.match(/^\s{2}(['"]?)([^'":]+)\1:\s*(.+?)\s*$/)
     if (m) map[m[2]] = m[3]
   }
   return map
 }
 
-function safeJson(text: string | null): Record<string, any> {
-  if (!text) return {}
-  try {
-    return JSON.parse(text)
-  } catch {
-    return {}
-  }
+/** Leading major integer of a range spec (`^19.2` → 19, `>=18 <20` → 18), or null. */
+function majorOf(spec: string | undefined): number | null {
+  if (!spec) return null
+  const m = spec.match(/(\d+)/)
+  return m ? parseInt(m[1], 10) : null
 }
 
-/** True if any runtime dependency key was added, removed, or had its spec changed. */
-function runtimeDepsChanged(baseDeps: DepMap = {}, headDeps: DepMap = {}): boolean {
-  const keys = new Set([...Object.keys(baseDeps), ...Object.keys(headDeps)])
-  for (const k of keys) {
-    if (baseDeps[k] !== headDeps[k]) return true
-  }
-  return false
+/** True only when both specs parse and their majors differ (widening keeps the old major → false). */
+function crossesMajor(baseSpec: string | undefined, headSpec: string | undefined): boolean {
+  const b = majorOf(baseSpec)
+  const h = majorOf(headSpec)
+  return b !== null && h !== null && b !== h
 }
 
 function main(): void {
   git(['fetch', 'origin', BASE_REF], { allowFail: true })
   const base = `origin/${BASE_REF}`
+  const managedRel = join('.changeset', `renovate-${PR_NUMBER}.md`)
 
-  const changedFiles = git(['diff', '--name-only', `${base}...HEAD`], { allowFail: true })
-    .split('\n')
-    .filter(Boolean)
+  const changedFiles = new Set(
+    git(['diff', '--name-only', `${base}...HEAD`], { allowFail: true }).split('\n').filter(Boolean),
+  )
 
-  if (changedFiles.length === 0) {
-    console.log('No changed files vs base; nothing to do.')
-    return
-  }
+  // Default-catalog version maps at base and head (fan-out source, §5.3).
+  const headCatalog = parseCatalog(readFileOr(join(repoRoot, 'pnpm-workspace.yaml')))
+  const baseCatalog = parseCatalog(showAtRef(base, 'pnpm-workspace.yaml'))
 
-  // Already has a changeset? Respect it.
-  if (changedFiles.some((f) => f.startsWith('.changeset/') && f.endsWith('.md') && !f.endsWith('README.md'))) {
-    console.log('A changeset is already present in this PR; skipping.')
-    return
-  }
-
-  // Index every workspace package: dir -> { name, runtimeDeps, runtimeCatalogDeps }
   const packages: WorkspacePackage[] = findPackageJsons().map((abs) => {
     const rel = relative(repoRoot, abs)
-    const pkg = safeJson(readFileSync(abs, 'utf8'))
-    const runtime: DepMap = pkg.dependencies || {}
-    const runtimeDeps = new Set(Object.keys(runtime))
-    const runtimeCatalogDeps = new Set(Object.keys(runtime).filter((d) => String(runtime[d]).startsWith('catalog:')))
-    return { dir: dirname(rel), rel, name: pkg.name, runtimeDeps, runtimeCatalogDeps }
+    return { rel, name: safeJson(readFileOr(abs)).name, raw: safeJson(readFileOr(abs)) }
   })
 
-  const affected = new Set<string>()
+  const affected = new Map<string, number>() // package name -> max bump rank
 
-  // 1) Direct runtime-dependency bumps in a package's own package.json.
   for (const pkg of packages) {
     if (!pkg.name) continue
-    if (!changedFiles.includes(pkg.rel)) continue
-    const headPkg = safeJson(readFileSync(join(repoRoot, pkg.rel), 'utf8'))
-    const basePkg = safeJson(showAtRef(base, pkg.rel))
-    if (Object.keys(basePkg).length === 0) continue // new package — Renovate doesn't add these; skip
-    if (runtimeDepsChanged(basePkg.dependencies, headPkg.dependencies)) {
-      affected.add(pkg.name)
-    }
-  }
 
-  // 2) Catalog runtime bumps in pnpm-workspace.yaml fan out to consumers.
-  if (changedFiles.includes('pnpm-workspace.yaml')) {
-    const headCatalog = parseCatalog(readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8'))
-    const baseCatalog = parseCatalog(showAtRef(base, 'pnpm-workspace.yaml') || '')
-    const changedKeys = new Set(
-      [...new Set([...Object.keys(headCatalog), ...Object.keys(baseCatalog)])].filter(
-        (k) => headCatalog[k] !== baseCatalog[k],
-      ),
-    )
-    if (changedKeys.size > 0) {
-      for (const pkg of packages) {
-        if (!pkg.name) continue
-        for (const dep of pkg.runtimeCatalogDeps) {
-          if (changedKeys.has(dep)) {
-            affected.add(pkg.name)
-            break
-          }
+    // Base view of this package.json: identical to head unless its own file changed.
+    let basePkg = pkg.raw
+    if (changedFiles.has(pkg.rel)) {
+      const loaded = safeJson(showAtRef(base, pkg.rel))
+      if (Object.keys(loaded).length === 0) continue // new package — Renovate doesn't add these (§5.2)
+      basePkg = loaded
+    }
+
+    let bump = -1
+    for (const type of RUNTIME_TYPES) {
+      const headDeps: DepMap = pkg.raw[type] || {}
+      const baseDeps: DepMap = basePkg[type] || {}
+      for (const name of new Set([...Object.keys(headDeps), ...Object.keys(baseDeps)])) {
+        const headSpec = headDeps[name]
+        const baseSpec = baseDeps[name]
+
+        let changed = false
+        let major = false
+        if (headSpec === undefined || baseSpec === undefined) {
+          changed = headSpec !== baseSpec // added or removed; magnitude unknowable → patch
+        } else if (headSpec === DEFAULT_CATALOG) {
+          const headEff = headCatalog[name]
+          const baseEff = baseSpec === DEFAULT_CATALOG ? baseCatalog[name] : baseSpec
+          changed = baseEff !== headEff || baseSpec !== headSpec
+          major = crossesMajor(baseEff, headEff)
+        } else {
+          changed = baseSpec !== headSpec
+          major = crossesMajor(baseSpec, headSpec)
         }
+
+        if (!changed) continue
+        const rank = type === 'peerDependencies' && major ? MAJOR : PATCH
+        if (rank > bump) bump = rank
       }
     }
+
+    if (bump >= 0) affected.set(pkg.name, bump)
   }
 
+  writeFileSync(join(repoRoot, managedRel), renderChangeset(affected))
+  if (affected.size > 0) {
+    const summary = [...affected].map(([n, r]) => `${n}:${RANK_NAME[r]}`).join(', ')
+    console.log(`Wrote ${managedRel} (${affected.size} package(s): ${summary})`)
+  } else {
+    console.log(`Wrote ${managedRel} (empty changeset — no published surface changed)`)
+  }
+}
+
+function renderChangeset(affected: Map<string, number>): string {
   if (affected.size === 0) {
-    console.log('No publishable runtime dependencies changed; no changeset needed.')
-    return
+    return `---\n---\n\n${PR_TITLE}\n` // empty changeset — accounts for the change, no bump (§5.5)
   }
-
-  const names = [...affected].sort()
-  const frontmatter = names.map((n) => `'${n}': patch`).join('\n')
-  const sha = (git(['rev-parse', '--short', 'HEAD'], { allowFail: true }) || 'update').slice(0, 8)
-  const body = `---\n${frontmatter}\n---\n\n${PR_TITLE}\n`
-  const file = join(repoRoot, '.changeset', `renovate-${sha}.md`)
-  writeFileSync(file, body)
-  console.log(`Wrote ${relative(repoRoot, file)} bumping: ${names.join(', ')}`)
+  const frontmatter = [...affected.keys()]
+    .sort()
+    .map((name) => `'${name}': ${RANK_NAME[affected.get(name) as number]}`)
+    .join('\n')
+  return `---\n${frontmatter}\n---\n\n${PR_TITLE}\n`
 }
 
 try {

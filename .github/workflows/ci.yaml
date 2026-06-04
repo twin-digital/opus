@@ -35,6 +35,11 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # Guard: named pnpm catalogs break the Renovate changeset automation.
+      # See docs/cicd/renovate-integration.md §8.
+      - name: Assert no named pnpm catalogs
+        run: node .github/scripts/assert-no-named-catalogs.ts
+
       # run CI tasks (lint also runs the sherif dependency check via turbo's //#lint:deps task)
       - run: pnpm run build
       - run: pnpm run lint

@@ -102,8 +102,10 @@ identical file → no commit.
   reruns overwrite in place instead of accumulating files).
 - The automation **only ever reads/writes this one path.** All other `.changeset/*.md` (human or
   from other PRs) are left untouched — see §6.5.
-- The summary line marks it as managed, e.g.
-  `chore(deps): <PR title> — managed by renovate-changeset, do not edit`.
+- The **filename** (`renovate-<PR>.md`) is what marks the file as automation-managed; the changeset
+  **summary is the PR title verbatim** so the changelog entry stays clean (no "managed/do-not-edit"
+  boilerplate leaking into published changelogs). "Do not hand-edit" is a convention documented
+  here, not text in the file.
 
 ### 5.2 Affected packages (direct)
 
@@ -161,8 +163,8 @@ integer from each range string and comparing; ambiguous/unparseable ranges fall 
 
 The repo configures `privatePackages: { version: true, tag: true }`, and existing changesets bump
 private packages. Accordingly the generator includes **all** affected workspace packages regardless
-of the `private` flag; private packages receive version bumps + git tags (no npm publish). *(See
-§11 — reviewers should confirm this, as it produces tag churn on private apps.)*
+of the `private` flag; private packages receive version bumps + git tags (no npm publish).
+**Confirmed** (§11), accepting tag churn on private apps for routine dependency bumps.
 
 ### 5.7 Output
 
@@ -172,10 +174,11 @@ of the `private` flag; private packages receive version bumps + git tags (no npm
 '@twin-digital/pkg-b': major
 ---
 
-chore(deps): update dependency react to v19 — managed by renovate-changeset, do not edit
+chore(deps): update dependency react to v19
 ```
 
-Entries are sorted by package name for stable, diff-friendly output.
+The summary is the PR title verbatim. Entries are sorted by package name for stable, diff-friendly
+output.
 
 ---
 
@@ -318,11 +321,10 @@ need for the separate workflow.
 
 ---
 
-## 11. Decisions for reviewers
+## 11. Decisions (resolved)
 
-1. **Peer-major bump type (§5.4).** Proposed: a peer dependency moving to a new major escalates the
-   consuming package to **major**. Alternative: **minor**. (Regular/optional stay patch regardless.)
-2. **Private package inclusion (§5.6).** Proposed: include private packages (matches
+1. **Peer-major bump type (§5.4).** ✅ **major** — a peer dependency moving to a new major escalates
+   the consuming package to a major bump. (Regular/optional stay patch regardless.)
+2. **Private package inclusion (§5.6).** ✅ **include** private packages (matches
    `privatePackages.version: true` and existing changesets), accepting version+tag churn on private
-   apps for routine dependency bumps. Alternative: restrict entries to publishable (non-private)
-   packages.
+   apps for routine dependency bumps.
