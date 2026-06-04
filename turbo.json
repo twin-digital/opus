@@ -1,7 +1,13 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "concurrency": "5",
+  "concurrency": "10",
   "globalPassThroughEnv": ["CI"],
+  "globalDependencies": [
+    ".prettierrc",
+    ".prettierignore",
+    "nodejs/devtools/tsconfig/tsconfig.json",
+    "nodejs/devtools/tsconfig/tsconfig.build.json"
+  ],
   "tasks": {
     "artifact": {
       "dependsOn": ["build"],
@@ -26,17 +32,19 @@
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
     "lint": {
-      "dependsOn": ["^build", "@twin-digital/eslint-config#build", "//#lint:deps"],
+      "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
     "lint:fix": {
-      "dependsOn": ["^build", "@twin-digital/eslint-config#build"]
+      "cache": false,
+      "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build"]
     },
     "//#lint:deps": {
       "inputs": ["**/package.json", "pnpm-workspace.yaml"]
     },
     "test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
+      "inputs": ["src/**", "package.json", "vitest.config.ts", "tsconfig.json", "tsconfig.*.json"],
       "outputs": ["coverage.json"]
     },
     "test:watch": {
@@ -45,7 +53,7 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["upstream-sources"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
       "outputs": []
     },
