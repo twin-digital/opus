@@ -107,7 +107,7 @@ chore(deps): update react to v19
 | `tooling/renovate-tools/` | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.** |
 | `.github/workflows/renovate-changeset.yml` | **Caller** (untrusted half): `pull_request` trigger, `renovate/*` + actor gate, concurrency. Delegates to the reusable workflow pinned `@main`. |
 | `.github/workflows/_renovate-mint-commit.yml` | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7). |
-| `ci.yaml` → `renovate-changeset-present` job | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). |
+| `merge-checks.yaml` → `renovate-changeset-present` job | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). (In `merge-checks`, not `ci.yaml`: it's a PR-merge gate, not an every-push build.) |
 | AWS minter role (`secrets.GH_APP_MINTER_ROLE_ARN_RENOVATE`) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]` (§7). |
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` + `automerge` (§6.2, §6.8). |
 | `docs/cicd/renovate-integration.md` | This reference. |
@@ -246,8 +246,8 @@ re-tags affected private packages.
 
 ## 5. The workflows (caller + reusable)
 
-The commit must be **signed** (branch protection requires it) and must **re-trigger CI** (so the
-auto-merge gate re-runs on the commit that carries the changeset). A local `git commit` is unsigned,
+The commit must be **signed** (branch protection requires it) and must **re-trigger the PR checks**
+(so the auto-merge gate re-runs on the commit that carries the changeset). A local `git commit` is unsigned,
 and a `GITHUB_TOKEN` push triggers nothing — so we commit through the GitHub API with a short-lived
 **GitHub App token minted via OIDC→KMS** (the same mechanism as `publish.yaml`; see
 [`./github-app-token-minting.md`](./github-app-token-minting.md)). API commits are signed
@@ -286,8 +286,8 @@ Trigger rationale (`pull_request`, not `pull_request_target`) and the minting tr
 ### 6.1 Initial PR open
 Renovate opens a PR → caller gates → reusable computes the affected set → writes
 `.changeset/renovate-<PR>.md` → commits it via the GitHub API, **signed** (§6.7). Renovate ignores
-the commit (`gitIgnoredAuthors`), so the PR stays managed; the App-token commit re-triggers CI, which
-re-runs the auto-merge gate (§6.8).
+the commit (`gitIgnoredAuthors`), so the PR stays managed; the App-token commit re-triggers the PR
+checks, which re-runs the auto-merge gate (§6.8).
 
 ### 6.2 Hazard: foreign commit freezes Renovate *(mitigated)*
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
@@ -330,10 +330,11 @@ the OIDC→KMS-minted App token (§7).
 
 ### 6.8 Hazard: auto-merge races the changeset *(mitigated)*
 With `automerge: true`, native auto-merge could merge Renovate's original commit **before** the
-changeset is added. **Mitigation:** the required `renovate-changeset-present` check (a `ci.yaml` job)
-fails on a `renovate/*` PR until `.changeset/renovate-<PR>.md` exists. Auto-merge waits for it; it
-only goes green after the App-token commit lands (which re-triggers CI). This is also why the commit
-uses an App token rather than `GITHUB_TOKEN` — the latter wouldn't re-run the gate on the new head.
+changeset is added. **Mitigation:** the required `renovate-changeset-present` check (a
+`merge-checks.yaml` job — it's a PR-merge gate, not an every-push build) fails on a `renovate/*` PR
+until `.changeset/renovate-<PR>.md` exists. Auto-merge waits for it; it only goes green after the
+App-token commit lands (which re-triggers the PR checks). This is also why the commit uses an App
+token rather than `GITHUB_TOKEN` — the latter wouldn't re-run the gate on the new head.
 
 ### 6.9 Hazard summary
 
