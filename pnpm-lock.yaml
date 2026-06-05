@@ -96,9 +96,6 @@ catalogs:
     vitest:
       specifier: ^4.0.12
       version: 4.0.12
-    yaml:
-      specifier: ^2.8.2
-      version: 2.8.2
 
 overrides:
   '@smithy/types': 4.11.0
@@ -286,7 +283,7 @@ importers:
         version: 8.5.10
       yaml:
         specifier: 'catalog:'
-        version: 2.8.2
+        version: 2.8.3
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -314,7 +311,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -338,7 +335,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   nodejs/bookify/bookify-cli:
     dependencies:
@@ -435,7 +432,7 @@ importers:
         version: 4.17.22
       yaml:
         specifier: 'catalog:'
-        version: 2.8.2
+        version: 2.8.3
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -472,13 +469,13 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       aws-sdk-client-mock:
         specifier: 'catalog:'
         version: 4.1.0
       aws-sdk-client-mock-vitest:
         specifier: 'catalog:'
-        version: 7.0.1(@smithy/types@4.11.0)(aws-sdk-client-mock@4.1.0)(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 7.0.1(@smithy/types@4.11.0)(aws-sdk-client-mock@4.1.0)(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -508,10 +505,10 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vite:
         specifier: ^7.3.0
-        version: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   nodejs/core-aws/lambda-test-lib:
     dependencies:
@@ -545,7 +542,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -569,7 +566,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/core-aws/observability-lib:
     dependencies:
@@ -612,7 +609,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -636,7 +633,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/core/cli-lib:
     dependencies:
@@ -706,7 +703,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -730,7 +727,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/devtools/eslint-config:
     dependencies:
@@ -840,7 +837,7 @@ importers:
         version: 4.17.21
       yaml:
         specifier: 'catalog:'
-        version: 2.8.2
+        version: 2.8.3
     devDependencies:
       '@commander-js/extra-typings':
         specifier: ^14.0.0
@@ -874,7 +871,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       chokidar-cli:
         specifier: ^3.0.0
         version: 3.0.0
@@ -901,7 +898,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   nodejs/devtools/serverless-dev-tools:
     dependencies:
@@ -910,7 +907,7 @@ importers:
         version: 4.8.0
       yaml:
         specifier: 'catalog:'
-        version: 2.8.2
+        version: 2.8.3
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -965,7 +962,7 @@ importers:
     dependencies:
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1109,7 +1106,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1133,7 +1130,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/dolmenwood/dolmenwood-bot:
     dependencies:
@@ -1285,7 +1282,7 @@ importers:
         version: 19.2.6
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1318,7 +1315,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/farwatch/app:
     dependencies:
@@ -1404,7 +1401,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1428,7 +1425,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/farwatch/core:
     devDependencies:
@@ -1452,7 +1449,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1476,7 +1473,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/farwatch/simulation:
     dependencies:
@@ -1504,7 +1501,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1528,7 +1525,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/farwatch/worldgen:
     dependencies:
@@ -1556,7 +1553,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1583,7 +1580,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   nodejs/genai/bedrock:
     devDependencies:
@@ -1677,7 +1674,7 @@ importers:
     dependencies:
       yaml:
         specifier: 'catalog:'
-        version: 2.8.2
+        version: 2.8.3
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1699,7 +1696,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1726,7 +1723,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   tooling/scripts:
     dependencies:
@@ -7621,12 +7618,17 @@ packages:
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
 
-  yaml@1.10.2:
-    resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
+  yaml@1.10.3:
+    resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
     engines: {node: '>= 6'}
 
-  yaml@2.8.2:
-    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
+  yaml@2.8.3:
+    resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
     engines: {node: '>= 14.6'}
     hasBin: true
 
@@ -9418,7 +9420,7 @@ snapshots:
       openapi-types: 12.1.3
       p-retry: 4.6.2
       uuid: 10.0.0
-      yaml: 2.8.2
+      yaml: 2.9.0
       zod: 4.1.12
     optionalDependencies:
       langsmith: 0.3.79(openai@6.9.0(ws@8.21.0)(zod@4.1.12))
@@ -10554,7 +10556,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 24.10.1
+      '@types/node': 18.19.130
       form-data: 4.0.5
 
   '@types/node@12.20.55': {}
@@ -10699,7 +10701,7 @@ snapshots:
       '@typescript-eslint/types': 8.47.0
       eslint-visitor-keys: 4.2.1
 
-  '@vitest/coverage-istanbul@4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))':
+  '@vitest/coverage-istanbul@4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))':
     dependencies:
       '@istanbuljs/schema': 0.1.3
       debug: 4.4.3(supports-color@8.1.1)
@@ -10710,7 +10712,22 @@ snapshots:
       istanbul-reports: 3.2.0
       magicast: 0.5.1
       tinyrainbow: 3.0.3
-      vitest: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+      vitest: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@vitest/coverage-istanbul@4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))':
+    dependencies:
+      '@istanbuljs/schema': 0.1.3
+      debug: 4.4.3(supports-color@8.1.1)
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-instrument: 6.0.3
+      istanbul-lib-report: 3.0.1
+      istanbul-lib-source-maps: 5.0.6
+      istanbul-reports: 3.2.0
+      magicast: 0.5.1
+      tinyrainbow: 3.0.3
+      vitest: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -10732,13 +10749,21 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.0.12
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+
+  '@vitest/mocker@4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))':
+    dependencies:
+      '@vitest/spy': 4.0.12
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.0.12':
     dependencies:
@@ -10983,12 +11008,12 @@ snapshots:
       '@fastify/error': 4.2.0
       fastq: 1.20.1
 
-  aws-sdk-client-mock-vitest@7.0.1(@smithy/types@4.11.0)(aws-sdk-client-mock@4.1.0)(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)):
+  aws-sdk-client-mock-vitest@7.0.1(@smithy/types@4.11.0)(aws-sdk-client-mock@4.1.0)(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)):
     dependencies:
       '@smithy/types': 4.11.0
       '@vitest/expect': 4.0.16
       aws-sdk-client-mock: 4.1.0
-      vitest: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+      vitest: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   aws-sdk-client-mock@4.1.0:
     dependencies:
@@ -11254,7 +11279,7 @@ snapshots:
       import-fresh: 3.3.1
       parse-json: 5.2.0
       path-type: 4.0.0
-      yaml: 1.10.2
+      yaml: 1.10.3
 
   create-require@1.1.1: {}
 
@@ -14178,7 +14203,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2):
+  vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.3)
@@ -14191,12 +14216,27 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.44.1
       tsx: 4.20.6
-      yaml: 2.8.2
+      yaml: 2.8.3
 
-  vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2):
+  vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0):
+    dependencies:
+      esbuild: 0.27.2
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+      postcss: 8.5.15
+      rollup: 4.53.2
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 24.10.1
+      fsevents: 2.3.3
+      terser: 5.44.1
+      tsx: 4.20.6
+      yaml: 2.9.0
+
+  vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.12
-      '@vitest/mocker': 4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       '@vitest/pretty-format': 4.0.12
       '@vitest/runner': 4.0.12
       '@vitest/snapshot': 4.0.12
@@ -14213,7 +14253,47 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/debug': 4.1.13
+      '@types/node': 24.10.1
+      jsdom: 27.2.0
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+
+  vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0):
+    dependencies:
+      '@vitest/expect': 4.0.12
+      '@vitest/mocker': 4.0.12(vite@7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.0.12
+      '@vitest/runner': 4.0.12
+      '@vitest/snapshot': 4.0.12
+      '@vitest/spy': 4.0.12
+      '@vitest/utils': 4.0.12
+      debug: 4.4.3(supports-color@8.1.1)
+      es-module-lexer: 1.7.0
+      expect-type: 1.2.2
+      magic-string: 0.30.21
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 3.10.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 7.3.0(@types/node@24.10.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.13
@@ -14382,9 +14462,11 @@ snapshots:
 
   yallist@4.0.0: {}
 
-  yaml@1.10.2: {}
+  yaml@1.10.3: {}
 
-  yaml@2.8.2: {}
+  yaml@2.8.3: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@13.1.2:
     dependencies:
