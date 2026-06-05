@@ -19,6 +19,8 @@ jobs:
   publish:
     # only run when CI passed
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Binds NPM_TOKEN + the App-minter role ARN, now scoped to the `release` environment.
+    environment: release
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
