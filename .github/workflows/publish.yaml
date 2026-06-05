@@ -58,15 +58,22 @@ jobs:
           sig=$(aws kms sign --key-id "$KMS_KEY_ID" --message "fileb://$msg" --message-type RAW \
                   --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 --query Signature --output text \
                 | openssl base64 -d -A | b64url)
+          echo "::add-mask::$sig"
           rm -f "$msg"
+          # The JWT is a short-lived (~8 min) but full-power credential — it can mint installation
+          # tokens. Mask it (and the signature) the instant it exists, before any use, so a stray
+          # echo, ACTIONS_STEP_DEBUG run, or future edit can't surface it. Header+payload are not
+          # secret (App id + timestamps), so masking the assembled JWT is the meaningful guard.
           jwt="${si}.${sig}"
+          echo "::add-mask::$jwt"
           resp=$(curl -sS -X POST \
             -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
             -d '{"permissions":{"contents":"write","pull_requests":"write"}}' -w $'\n%{http_code}')
           code=${resp##*$'\n'}; json=${resp%$'\n'*}
-          [ "$code" = "201" ] || { echo "::error ::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // .')"; exit 1; }
+          # Only ever surface .message — never the whole body (a misparsed success body holds the token).
+          [ "$code" = "201" ] || { echo "::error ::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
           token=$(printf '%s' "$json" | jq -r '.token')
           echo "::add-mask::$token"
           echo "token=$token" >> "$GITHUB_OUTPUT"
