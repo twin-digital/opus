@@ -126,7 +126,6 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ needs.gate.outputs.sha }}
-          token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
 
       # setup tools and install dependencies
       - name: Setup dependencies
