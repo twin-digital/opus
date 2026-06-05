@@ -4,9 +4,10 @@
   "description": "CLI utilities for configuring and maintaining monorepos",
   "type": "module",
   "bin": {
-    "repo-kit": "./dist/cli/entry-point.js"
+    "repo-kit": "./bin/repo-kit.js"
   },
   "files": [
+    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],
