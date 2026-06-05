@@ -17,7 +17,7 @@ when they expire/are revoked. There's no per-mint touch (unlike the old SSH brok
 | `gh-token-seed` | pre-warm the cache at session start; report failures to the hook |
 | `gh-token-get` | per-Bash-call: serve cache / re-mint when stale (fail-open) |
 | `.claude/hooks/on-session-start` | wires dynamic `GH_TOKEN`, runs the seed |
-| `.claude/settings.local.json` | config (`env`) + the hook registration |
+| `.claude/settings.json` | config (`env`) + the hook registration (committed) |
 
 (All container scripts live in `.devcontainer/scripts/container/` and are copied to
 `/usr/local/bin` on container build.)
@@ -32,20 +32,21 @@ when they expire/are revoked. There's no per-mint touch (unlike the old SSH brok
 2. **Import the key into KMS** (ambient AWS creds must allow `kms:CreateKey`, `kms:CreateAlias`,
    `kms:GetParametersForImport`, `kms:ImportKeyMaterial`, `kms:DescribeKey`):
    ```bash
-   import-app-private-key /path/to/app.pem            # prints the KMS key ARN
+   import-app-private-key /path/to/app.pem            # prints the KMS key ARN; default alias/github-app-signer
    shred -u /path/to/app.pem                           # the key is now non-extractable in KMS
    ```
 
 3. **Grant `kms:Sign`** on that key to the role the container runs as (least privilege — ideally
    a dedicated role whose only permission is this):
    ```json
-   { "Effect": "Allow", "Action": ["kms:Sign", "kms:GetPublicKey"],
+   { "Effect": "Allow", "Action": ["kms:Sign"],
      "Resource": "arn:aws:kms:<region>:<acct>:key/<KEY_ID>" }
    ```
 
-4. **Configure** — fill the placeholders in `.claude/settings.local.json` `env`:
-   `APP_ID`, `INSTALLATION_ID`, `KMS_KEY_ID` (the ARN from step 2), and the least-privilege
-   `GH_TOKEN_REPOS` / `GH_TOKEN_PERMS`. (These are non-secret; the file is gitignored.)
+4. **Configure** — set in `.claude/settings.json` `env` (committed; the App/Installation IDs are
+   non-secret): `APP_ID`, `INSTALLATION_ID`, `KMS_KEY_ID` (the ARN from step 2, or its alias —
+   `alias/github-app-signer` is what ships), and the least-privilege `GH_TOKEN_REPOS` /
+   `GH_TOKEN_PERMS`. (For manual/non-Claude use these can instead live in `/etc/gh-token/minter.conf`.)
 
 5. **`gh auth setup-git`** once, so `git push` over HTTPS uses `GH_TOKEN`.
 
@@ -76,4 +77,21 @@ Then start a fresh Claude session — `gh`/`git` are authenticated and stay so a
 - `GH_TOKEN_REPOS` / `GH_TOKEN_PERMS` are the least-privilege dial, hard-capped by the App grant.
 - Config resolves from `env` first (Claude), falling back to `/etc/gh-token/minter.conf` for
   manual/non-Claude use.
-- Dependencies in the container: `aws`, `openssl`, `curl`, `jq` (+ `base64`, `xxd` for the import).
+- Dependencies in the container: `aws`, `openssl`, `curl`, `jq` (+ `base64`, `od` for the import).
+
+## In CI (publish workflow)
+
+`publish.yaml` mints the same kind of token to push the changesets "Version Packages" PR and tags
+(its pushes re-trigger downstream workflows, which the default `GITHUB_TOKEN` can't). It does **not**
+use these container scripts — it inlines the JWT→`kms:Sign`→token exchange in a step — but the moving
+parts are identical. The gate there is **GitHub OIDC → a tightly-scoped AWS role**, not an SSO session.
+Config comes from repo settings (the same names the scripts read, mapped from CI-side names):
+
+| CI source | Maps to |
+| --- | --- |
+| `vars.GH_APP_ID` | `APP_ID` |
+| `vars.GH_APP_INSTALLATION_ID` | `INSTALLATION_ID` |
+| `vars.GH_APP_KMS_KEY` | `KMS_KEY_ID` |
+| `secrets.GH_APP_MINTER_ROLE_ARN` | role assumed via OIDC to get `kms:Sign` |
+
+See `.github/workflows/publish.yaml` and `docs/CICD.md`.
