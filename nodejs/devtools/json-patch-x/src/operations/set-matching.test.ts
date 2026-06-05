@@ -149,4 +149,26 @@ describe('setMatching', () => {
       ),
     ).toThrow(/exactly one/)
   })
+
+  it('matches via `equals` regardless of object key order', () => {
+    const document = { rules: [{ cfg: { a: 1, b: 2 } }] }
+
+    // keys supplied in the opposite order — a JSON.stringify comparison would miss this
+    const result = setMatching(document, '/rules', { pointer: '/cfg', equals: { b: 2, a: 1 } }, '/hit', true)
+
+    expect((result.rules[0] as { hit?: boolean }).hit).toBe(true)
+  })
+
+  it('treats an explicit `undefined` predicate value as "not provided"', () => {
+    // `{ contains: undefined }` must not count as "specified" — only `equals` is provided here.
+    const result = setMatching(
+      renovateLike(),
+      '/packageRules',
+      { pointer: '/addLabels', contains: undefined, equals: ['build-scripts'] },
+      '/matchPackageNames',
+      ['esbuild'],
+    )
+
+    expect(result.packageRules[0].matchPackageNames).toEqual(['esbuild'])
+  })
 })

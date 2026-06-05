@@ -1,15 +1,16 @@
+import { isDeepStrictEqual } from 'node:util'
 import jsonPatch from 'fast-json-patch'
 import { tryGetValueByPointer } from '../try-get-value-by-pointer.js'
 import type { SetMatchingPredicate } from '../operations.js'
-
-const deepEqual = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b)
 
 /**
  * Evaluates a {@link SetMatchingPredicate} against a single candidate element.
  */
 const matches = (element: unknown, where: SetMatchingPredicate): boolean => {
-  const hasContains = 'contains' in where
-  const hasEquals = 'equals' in where
+  // Compare against `undefined` (value provided) rather than key presence: `{ contains: undefined }` means
+  // "not provided", matching the documented "exactly one of contains/equals" semantics.
+  const hasContains = where.contains !== undefined
+  const hasEquals = where.equals !== undefined
   if (hasContains === hasEquals) {
     throw new jsonPatch.JsonPatchError(
       `setMatching 'where' must specify exactly one of 'contains' or 'equals'`,
@@ -21,11 +22,12 @@ const matches = (element: unknown, where: SetMatchingPredicate): boolean => {
 
   const field = tryGetValueByPointer(element, where.pointer)
 
+  // `isDeepStrictEqual` is structural and order-insensitive, unlike a `JSON.stringify` comparison.
   if (hasContains) {
-    return Array.isArray(field) && field.some((item) => deepEqual(item, where.contains))
+    return Array.isArray(field) && field.some((item) => isDeepStrictEqual(item, where.contains))
   }
 
-  return deepEqual(field, where.equals)
+  return isDeepStrictEqual(field, where.equals)
 }
 
 /**

@@ -24,4 +24,9 @@ describe('resolveScope', () => {
     expect(resolveScope('all', root)).toBe(true)
     expect(resolveScope('all', pkg)).toBe(true)
   })
+
+  it('throws on an unknown scope (e.g. a config typo) rather than silently filtering', () => {
+    // `scope` comes from YAML without runtime validation, so an invalid value can reach here.
+    expect(() => resolveScope('pakages' as never, pkg)).toThrow(/Unknown feature scope/)
+  })
 })

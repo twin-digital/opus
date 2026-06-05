@@ -22,12 +22,17 @@ export interface ProjectKind {
  * @returns Whether a feature with this scope applies to the project.
  */
 export const resolveScope = (scope: FeatureScope | undefined, project: ProjectKind): boolean => {
-  switch (scope ?? 'packages') {
+  // Typed as `string` so the `default` is reachable: config is parsed from YAML without runtime validation, so an
+  // unexpected value (e.g. a typo) must throw rather than return `undefined` and silently filter the feature out.
+  const resolved: string = scope ?? 'packages'
+  switch (resolved) {
     case 'all':
       return true
     case 'root':
       return project.isRoot
     case 'packages':
       return !project.isRoot
+    default:
+      throw new Error(`Unknown feature scope '${resolved}'. Expected one of: packages, root, all.`)
   }
 }
