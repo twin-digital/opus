@@ -79,8 +79,10 @@ jobs:
             sha="$WR_HEAD_SHA"
             pr=$(gh api "repos/${REPO}/commits/${sha}/pulls" \
               --jq '[.[] | select(.state == "open" and .base.ref == "main")][0]')
-            num=$(printf '%s' "$pr" | jq -r '.number // empty')
-            [[ -n "$num" ]] || skip "No open PR against main for ${sha}; skipping."
+            # `[…][0]` yields `null` when nothing matches; guard before parsing so a null/empty result
+            # skips cleanly instead of erroring `jq` on empty input.
+            [[ -z "$pr" || "$pr" == "null" ]] && skip "No open PR against main for ${sha}; skipping."
+            num=$(printf '%s' "$pr" | jq -r '.number')
             [[ "$(printf '%s' "$pr" | jq -r 'any(.labels[]?; .name == "preview")')" == "true" ]] \
               || skip "PR #$num is not labeled 'preview'; skipping (add the label to opt in)."
           else
@@ -88,8 +90,12 @@ jobs:
             # CI already concluded successfully for this commit — closing the "label after CI" race.
             num="$PR_NUMBER"
             sha="$PR_HEAD_SHA"
-            concl=$(gh api "repos/${REPO}/actions/workflows/ci.yaml/runs?head_sha=${sha}&event=pull_request" \
-              --jq '[.workflow_runs[] | select(.status == "completed")][0].conclusion // empty')
+            # Select the run by its workflow display NAME ('CI') — the same identifier the workflow_run
+            # trigger keys on (workflows: ['CI']) — rather than the ci.yaml filename, so the two paths
+            # can't diverge if the file is renamed. Takes the most recent COMPLETED run: if a re-run is
+            # in flight over an older green run, it deploys the older green result (fine for a preview).
+            concl=$(gh api "repos/${REPO}/actions/runs?head_sha=${sha}&event=pull_request" \
+              --jq '[.workflow_runs[] | select(.name == "CI" and .status == "completed")][0].conclusion // empty')
             [[ "$concl" == "success" ]] \
               || skip "CI for ${sha} is '${concl:-not finished}'; the workflow_run path will deploy once it's green."
           fi
