@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# gh-token-seed — mint once via KMS and seed the local token cache.
+#
+# Run by the Claude SessionStart hook to pre-warm the cache (so the first git/gh call is fast)
+# and to surface mint failures at session start. Exits non-zero on failure so the hook can warn.
+#
+set -euo pipefail
+umask 077
+
+CACHE="${GH_TOKEN_CACHE:-${XDG_RUNTIME_DIR:-/tmp}/gh-token.$(id -u)}"
+
+line="$(/usr/local/bin/gh-app-token 2>&1)" \
+  || { echo "gh-token-seed: mint failed: ${line}" >&2; exit 1; }
+
+case "$line" in
+  [0-9]*\ *) printf '%s' "$line" > "$CACHE" ;;
+  *) echo "gh-token-seed: unexpected minter output: ${line}" >&2; exit 1 ;;
+esac
