@@ -22,10 +22,10 @@ export interface EffectiveDep {
 /** key `${type}:${depName}` → effective range. */
 export type EffectiveRanges = Record<string, EffectiveDep>
 
+// Only `patch` and `major` are ever emitted (flat-patch policy; peer cross-major escalates).
 export const PATCH = 0
-export const MINOR = 1
-export const MAJOR = 2
-export const RANK_NAME = ['patch', 'minor', 'major'] as const
+export const MAJOR = 1
+export const RANK_NAME = ['patch', 'major'] as const
 
 /**
  * Build the effective published ranges for one manifest, resolving `catalog:` values against the

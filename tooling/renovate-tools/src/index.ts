@@ -7,7 +7,6 @@ export {
   RANK_NAME,
   RUNTIME_TYPES,
   PATCH,
-  MINOR,
   MAJOR,
   type Manifest,
   type DepMap,

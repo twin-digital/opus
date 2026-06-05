@@ -189,7 +189,7 @@ Per `(package, depType, depName)`:
 
 ### 4.3 Bump policy
 
-Per affected package, the entry is the **max** (major > minor > patch) over its changed deps:
+Per affected package, the entry is the **max** (`major` > `patch`) over its changed deps:
 
 | Dependency type | Change | Bump |
 | --- | --- | --- |
@@ -200,7 +200,7 @@ Per affected package, the entry is the **max** (major > minor > patch) over its 
 Regular/optional updates are **flat patch** by deliberate policy (predictable, batch-releasable,
 kind to downstream consumers). Peers are the one consumer-facing contract: requiring a new **major**
 peer is breaking for consumers, so it escalates. "Crosses a major" compares the leading major integer
-of each effective range; an unparseable range falls back to `patch` and is logged. The catalog'd /
+of each effective range; an unparseable range falls back (safely) to `patch`. The catalog'd /
 named-catalog'd peer case only works because §4.1 resolves the peer's `catalog:` at **both** base and
 head (including named catalogs).
 
