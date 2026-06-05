@@ -79,8 +79,6 @@ chore(deps): update react to v19
 
 # Design & internals (for CI/CD maintainers)
 
----
-
 ## 1. Goals & non-goals
 
 **Goals**
@@ -109,7 +107,7 @@ chore(deps): update react to v19
 | `tooling/renovate-tools/` | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.** |
 | `.github/workflows/renovate-changeset.yml` | Trigger, gates, concurrency; runs the CLI and commits the managed changeset back. |
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` so our commits don't freeze Renovate (§6.2). |
-| `docs/cicd/renovate-integration.md` | This spec. |
+| `docs/cicd/renovate-integration.md` | This reference. |
 
 The integration is self-contained in `@twin-digital/renovate-tools` and supports named catalogs
 natively (§4.1).
@@ -237,8 +235,8 @@ positives).
 
 `changeset` config sets `privatePackages: { version: true, tag: true }` and existing changesets bump
 private packages, so the tool includes **all** affected workspace packages regardless of `private`;
-private packages get version bumps + git tags (no npm publish). Accepted, with the tag-churn
-tradeoff documented.
+private packages get version bumps + git tags (no npm publish). Accepted tradeoff: every Renovate bump
+re-tags affected private packages.
 
 ---
 
@@ -311,7 +309,7 @@ on unchanged state writes an identical file and commits nothing. Either alone br
 | Renovate drops changeset on rebase | self-heal via `synchronize` |
 | Stale / non-ff push | fetch+rebase retry; `cancel-in-progress: false` |
 | Clobbering human changesets | manage only `renovate-<PR>.md` |
-| Stale `renovate-<sha>.md` accumulation | stable PR-keyed filename, full regenerate |
+| Stale per-commit changeset files | stable PR-keyed name (`renovate-<PR>.md`), full regenerate |
 | Workflow self-loop | `GITHUB_TOKEN` no-retrigger + idempotent content |
 | Parse failure → spurious changeset | errored path: annotate + write nothing (§4.4) |
 | Fork PR can't push | read-only token no-op (documented, §7) |
