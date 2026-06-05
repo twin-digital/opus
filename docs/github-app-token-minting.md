@@ -53,8 +53,7 @@ when they expire/are revoked.
    `GH_TOKEN_PERMS` is intentionally **omitted** so tokens inherit the App installation's full
    permission grant — scope is managed App-side (tighten/loosen the App's granted permissions in
    GitHub). `AWS_PROFILE` is **not** here (its value embeds the account number) — it stays in your
-   shell and in gitignored `.claude/settings.local.json` for agents. (`gh-app-token` also falls
-   back to `/etc/gh-token/minter.conf` if these aren't in the env.)
+   shell and in gitignored `.claude/settings.local.json` for agents.
 
 5. **Nothing to do for git** — `post-create.d/20-configure-git-credentials.sh` wires the opus
    checkout to HTTPS + `gh auth git-credential` (via the `gh` wrapper). `git push` and `gh` then
@@ -137,8 +136,7 @@ OIDC role whose trust is scoped to it.
   The CI publish token, by contrast, requests a narrow explicit set in `publish.yaml`.
 - **No ambient `$GH_TOKEN`** — auth flows through `gh`/git only. If a script needs the raw token,
   run `gh-token-get` (e.g. `TOKEN="$(gh-token-get)"`).
-- Config resolves from the environment first (set in `containerEnv`, so both terminal and agents
-  have it), falling back to `/etc/gh-token/minter.conf` if absent.
+- Config comes from the environment, set in `containerEnv` so both terminal and agents have it.
 - The `gh` wrapper mints the opus-scoped token for **all** `gh` calls, so `gh` against your other
   GitHub repos in this container would use the wrong-scope token. Fine for an opus container.
 - **Clone opus over HTTPS** so git authenticates with the App token (this helper). An SSH clone would

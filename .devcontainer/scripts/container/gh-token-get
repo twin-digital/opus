@@ -2,12 +2,10 @@
 #
 # gh-token-get — print a currently-valid GitHub token, re-minting via KMS when stale.
 #
-# Wired into the Bash tool via the SessionStart hook as:
-#     export GH_TOKEN="$(/usr/local/bin/gh-token-get)"
-# CLAUDE_ENV_FILE is re-sourced before EVERY Bash command, so this runs constantly — it MUST be
-# cheap on the hot path (just read the cache) and only mint (KMS + GitHub API) when the cached
-# token is near expiry. On any failure it prints nothing -> GH_TOKEN is empty -> gh/git are
-# simply unauthenticated (fail-open). Minting works whenever the ambient AWS creds are valid.
+# Called by the `gh` wrapper (and thus by git, via `gh auth git-credential`) whenever gh/git needs a
+# token — so it MUST be cheap on the hot path: read the cache, and only mint (KMS + GitHub API) when
+# the cached token is near expiry. On any failure it prints nothing -> the caller is simply
+# unauthenticated (fail-open). Minting works whenever the ambient AWS creds are valid.
 #
 set -euo pipefail
 

@@ -10,18 +10,14 @@
 # and stops when they expire/are revoked. Scope the creds (ideally a role whose only permission
 # is kms:Sign on the one key) so an exfiltrated cred can do no more than mint these tokens.
 #
-# Config (non-secret) comes from the environment (set in .claude/settings.local.json `env`), or
-# a /etc/gh-token/minter.conf fallback for manual use:
+# Config (non-secret) comes from the environment — set in devcontainer.json `containerEnv`, so the
+# terminal and agents both have it:
 #   APP_ID  INSTALLATION_ID  KMS_KEY_ID(alias|id|arn)  GH_TOKEN_REPOS(json)  GH_TOKEN_PERMS(json)
 #
 # Requires: aws, openssl, curl, jq.
 #
 set -euo pipefail
 umask 077
-
-# env wins (Claude); fall back to a conf file only when unset (manual/non-Claude use)
-CONF="${GH_TOKEN_CONF:-/etc/gh-token/minter.conf}"
-if [ -z "${APP_ID:-}" ] && [ -r "$CONF" ]; then . "$CONF"; fi
 
 log() { logger -t gh-app-token -- "$*" 2>/dev/null || true; }
 die() { echo "gh-app-token: $*" >&2; log "ERROR: $*"; exit 1; }
@@ -39,6 +35,9 @@ for b in aws openssl curl jq date; do command -v "$b" >/dev/null || die "missing
 
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
+# NB: publish.yaml inlines this same JWT→KMS→exchange (a CI step can't source this container
+# script). Keep the two in sync; if this logic changes a third time, take a hard look at
+# consolidating them.
 # ── build JWT (RS256), sign header.payload with KMS ──────────────────────────
 now=$(date +%s)
 header='{"alg":"RS256","typ":"JWT"}'
@@ -68,7 +67,8 @@ resp=$(curl -sS -X POST \
   -d "$body" -w $'\n%{http_code}') || die "request to GitHub failed"
 
 code=${resp##*$'\n'}; json=${resp%$'\n'*}
-[ "$code" = "201" ] || die "GitHub $code: $(printf '%s' "$json" | jq -r '.message // .' 2>/dev/null)"
+# Only surface .message — never the whole body (a misparsed 201 body would hold the token).
+[ "$code" = "201" ] || die "GitHub $code: $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"
 token=$(printf '%s' "$json" | jq -r '.token // empty')
 [ -n "$token" ] || die "no token in response"
 exp_iso=$(printf '%s' "$json" | jq -r '.expires_at')

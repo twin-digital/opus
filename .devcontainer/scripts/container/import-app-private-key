@@ -6,11 +6,11 @@
 # using the container's ambient AWS credentials. Automates: PKCS#8 conversion, key creation
 # (EXTERNAL origin, SIGN_VERIFY), wrapping with RSA_AES_KEY_WRAP_SHA_256, and import.
 #
-# Prints the resulting key ARN on stdout (everything else on stderr). After it succeeds, put the
-# ARN + your App/Installation IDs into the gh-token config, grant kms:Sign on the key to your
-# role, and DELETE the local .pem — the key is no longer needed (and now non-extractable).
+# Prints the resulting key ARN on stdout (everything else on stderr). After it succeeds, put a key
+# reference (the alias) + your App/Installation IDs into `containerEnv`, grant kms:Sign on the key
+# to your role, and DELETE the local .pem — the key is no longer needed (and now non-extractable).
 #
-# One-time setup. Requires: aws, openssl, jq, base64, xxd. AWS creds need (for this run):
+# One-time setup. Requires: aws, openssl, jq, base64, od. AWS creds need (for this run):
 #   kms:CreateKey, kms:CreateAlias, kms:GetParametersForImport, kms:ImportKeyMaterial, kms:DescribeKey
 #
 set -euo pipefail
@@ -83,8 +83,8 @@ ARN=$(aws kms describe-key --key-id "$KEY_ID" --query KeyMetadata.Arn --output t
   echo "    KMS_KEY_ID=$ARN"
   echo "    alias=$ALIAS"
   echo
-  echo "Next: put KMS_KEY_ID + APP_ID + INSTALLATION_ID in .claude/settings.local.json env,"
-  echo "grant kms:Sign on this key to your role, then 'shred -u ${PEM}'."
+  echo "Next: put APP_ID + INSTALLATION_ID + KMS_KEY_ID (the alias above) in devcontainer.json"
+  echo "containerEnv, grant kms:Sign on this key to your role, then 'shred -u ${PEM}'."
 } >&2
 
 printf '%s\n' "$ARN"     # machine-readable
