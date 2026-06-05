@@ -106,7 +106,7 @@ chore(deps): update react to v19
 | --- | --- |
 | `tooling/renovate-tools/` | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.** |
 | `.github/workflows/renovate-changeset.yml` | **Caller** (untrusted half): `pull_request` trigger, `renovate/*` + actor gate, concurrency. Delegates to the reusable workflow pinned `@main`. |
-| `.github/workflows/_renovate-mint-commit.yml` | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7). |
+| `.github/workflows/_commit-renovate-changeset.yml` | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7). |
 | `merge-checks.yaml` → `renovate-changeset-present` job | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). (In `merge-checks`, not `ci.yaml`: it's a PR-merge gate, not an every-push build.) |
 | AWS minter role (`secrets.GH_APP_MINTER_ROLE_ARN_RENOVATE`) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]` (§7). |
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` + `automerge` (§6.2, §6.8). |
@@ -258,8 +258,8 @@ The privileged half lives in its own reusable workflow so it can be **pinned**:
 ```
 caller  renovate-changeset.yml   on: pull_request; gate: head_ref renovate/* AND actor==renovate[bot]
                                  concurrency: per-PR, cancel-in-progress:false; permissions: id-token+contents:write
-                                 → uses: …/_renovate-mint-commit.yml@main  (the @main pin is load-bearing — §7)
-reusable _renovate-mint-commit.yml  on: workflow_call
+                                 → uses: …/_commit-renovate-changeset.yml@main  (the @main pin is load-bearing — §7)
+reusable _commit-renovate-changeset.yml  on: workflow_call
 ```
 
 Reusable steps:
@@ -377,7 +377,7 @@ condition keys (notably **not** `head_ref`), so we scope on what works and is ob
 - `repository == twin-digital/opus` and `actor == renovate[bot]` — only Renovate-triggered runs.
   (Empirically, Renovate's events carry `actor: renovate[bot]`; a human/agent who pushes to a
   `renovate/*` branch triggers as themselves, so the condition fails and nothing mints.)
-- `job_workflow_ref == …/_renovate-mint-commit.yml@refs/heads/main` — the **load-bearing** pin. The
+- `job_workflow_ref == …/_commit-renovate-changeset.yml@refs/heads/main` — the **load-bearing** pin. The
   caller always invokes the reusable workflow as `@main`, so the reusable job's `job_workflow_ref`
   resolves to that exact file on `main`. A `pull_request` runs the *caller* from the PR head, so a PR
   could edit the caller — but it can only ever mint by calling this `@main` file, whose contents a PR
@@ -418,7 +418,7 @@ The base integration (#91 config, #93 automation) is already live. Moving to **s
 auto-merge** has an ordered rollout, because the AWS trust must match the reusable workflow's real
 `job_workflow_ref` (§7):
 
-1. **Merge this PR** so `_renovate-mint-commit.yml` exists on `main` and its first run logs the exact
+1. **Merge this PR** so `_commit-renovate-changeset.yml` exists on `main` and its first run logs the exact
    `job_workflow_ref`/`actor` claims. (Until the role exists, the mint step fails *visibly* but
    doesn't block — `renovate-changeset` isn't a required check.)
 2. **Create the AWS role + secret:** a `kms:Sign`-only role with trust pinned to that

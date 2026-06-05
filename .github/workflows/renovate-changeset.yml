@@ -4,7 +4,7 @@ name: Renovate Changeset
 # Full behavior + hazard analysis: docs/cicd/renovate-integration.md.
 #
 # This is the THIN, untrusted half: it only gates (renovate/* + actor) and delegates the
-# privileged work to _renovate-mint-commit.yml pinned @main. The @main pin is load-bearing:
+# privileged work to _commit-renovate-changeset.yml pinned @main. The @main pin is load-bearing:
 # it makes the reusable job's OIDC job_workflow_ref resolve to that file @refs/heads/main, which
 # the AWS minter-role trust requires — so tampering with THIS file on a PR can't redirect the mint.
 #
@@ -28,7 +28,7 @@ jobs:
   mint-and-commit:
     # Renovate's in-repo PRs only. The actor gate is also enforced in the AWS trust policy (§7).
     if: ${{ startsWith(github.head_ref, 'renovate/') && github.actor == 'renovate[bot]' }}
-    uses: twin-digital/opus/.github/workflows/_renovate-mint-commit.yml@main
+    uses: twin-digital/opus/.github/workflows/_commit-renovate-changeset.yml@main
     permissions:
       id-token: write
       contents: write
