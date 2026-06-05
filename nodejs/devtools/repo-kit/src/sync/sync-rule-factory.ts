@@ -8,7 +8,9 @@ import type {
 import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
+import { makeSyncJsonValueAction } from './actions/sync-json-value.js'
 import { makeWriteFileAction } from './actions/write-file.js'
+import { resolveScope, type ProjectKind } from './scope.js'
 import { makeDependencyCondition } from './conditions/dependency-condition.js'
 import type { DependencyConditionOptions } from './conditions/dependency-condition.js'
 import { makeExistsCondition } from './conditions/exists-condition.js'
@@ -84,6 +86,8 @@ const getActionImplementation = (action: SyncActionConfig): SyncActionFn => {
       return makeJsonPatchAction(action.options)
     case 'write-file':
       return makeWriteFileAction(action.options)
+    case 'sync-json-value':
+      return makeSyncJsonValueAction(action.options)
   }
 }
 
@@ -159,6 +163,7 @@ const makePackageFeature = (config: FeatureConfigItem, _userConfig: PackageConfi
 export const makeSyncRules = ({
   config,
   featureConfig,
+  project,
 }: {
   /**
    * Package-specific repo-kit configuration used to customize how features are configured.
@@ -169,4 +174,12 @@ export const makeSyncRules = ({
    * The `PackageFeatureConfig` config defining the available features.
    */
   featureConfig: FeatureConfiguration
-}): PackageFeature[] => featureConfig.features.map((feature) => makePackageFeature(feature, config))
+
+  /**
+   * The project the rules are being created for. Features are filtered to those whose `scope` applies to it.
+   */
+  project: ProjectKind
+}): PackageFeature[] =>
+  featureConfig.features
+    .filter((feature) => resolveScope(feature.scope, project))
+    .map((feature) => makePackageFeature(feature, config))

@@ -787,9 +787,15 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.1
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -811,6 +817,9 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
 
   nodejs/devtools/repo-kit:
     dependencies:
@@ -11901,7 +11910,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.13.2)
+      retry-axios: 2.6.0(axios@1.13.2(debug@4.4.3))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -13047,7 +13056,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.13.2):
+  retry-axios@2.6.0(axios@1.13.2(debug@4.4.3)):
     dependencies:
       axios: 1.13.2(debug@4.4.3)
 
