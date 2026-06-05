@@ -20,11 +20,14 @@ on:
     types: [labeled]
     branches: [main]
 
-# Serialize per PR branch (across both triggers) and supersede older runs: a newer push cancels the
+# Serialize per source PR (across both triggers) and supersede older runs: a newer push cancels the
 # previous (possibly still waiting-for-approval) preview run, so stale runs don't pile up. Tradeoff: a
 # new push can cancel an in-flight serverless deploy — acceptable for an ephemeral preview.
+# The key includes the head repository, not just the branch: fork branch names collide (e.g. `main`,
+# `patch-1`), so keying on branch alone would let one fork's preview cancel another's.
 concurrency:
-  group: deploy-preview-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref }}
+  group: >-
+    deploy-preview-${{ github.event.workflow_run.head_repository.full_name || github.event.pull_request.head.repo.full_name }}-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
 env:
