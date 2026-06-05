@@ -3,13 +3,13 @@ import { join } from 'node:path'
 import { parseCatalogs, type Catalogs } from './catalog.js'
 import { bumpForPackage, effectiveRanges, RANK_NAME, RUNTIME_TYPES, type Manifest } from './ranges.js'
 import { renderChangeset } from './changeset.js'
-import { gitFetch, gitShow } from './git.js'
+import { gitFetch, gitShow, repoRoot as findRepoRoot } from './git.js'
 import { findManifestPaths } from './workspace.js'
 
 const BASE_REF = process.env.BASE_REF ?? 'main'
 const PR_TITLE = process.env.PR_TITLE ?? 'chore(deps): update dependencies'
 const PR_NUMBER = process.env.PR_NUMBER ?? 'unknown'
-const repoRoot = process.cwd()
+const repoRoot = findRepoRoot()
 
 /** A condition under which we cannot confidently compute the changeset — routed to the errored path. */
 class DetectionError extends Error {}

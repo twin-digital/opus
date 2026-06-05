@@ -15,6 +15,9 @@ export const gitShow = (ref: string, path: string): GitShowResult => {
   }
 }
 
+/** Absolute path to the repository root, so the tool works regardless of the process's cwd. */
+export const repoRoot = (): string => execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim()
+
 /** Best-effort fetch so `origin/<ref>` resolves; the workflow also fetches, so failures are ignored. */
 export const gitFetch = (ref: string): void => {
   try {
