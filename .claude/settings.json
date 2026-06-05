@@ -3,5 +3,18 @@
   "attribution": {
     "commit": "",
     "pr": ""
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/on-session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   }
 }

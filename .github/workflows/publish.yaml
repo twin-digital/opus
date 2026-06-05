@@ -24,17 +24,71 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write # OIDC, to assume the AWS role that can kms:Sign the App JWT
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
-      # checkout project
+      # Mint a short-lived GitHub App installation token by signing the App JWT with AWS KMS
+      # (the App private key never leaves KMS). Replaces the long-lived CHANGESETS_GITHUB_TOKEN PAT;
+      # unlike the default GITHUB_TOKEN, its push/PR events trigger downstream workflows (the release
+      # chain). Runs before checkout: OIDC + KMS need no working tree.
+      #
+      # NB: the JWT→KMS→exchange below inlines .devcontainer/scripts/container/gh-app-token (a CI step
+      # can't source that container script). Keep the two in sync; if this changes again, take a hard
+      # look at consolidating.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.GH_APP_MINTER_ROLE_ARN }}
+          # publish has no environment, so vars.AWS_REGION (env-scoped) is empty here; fall back
+          # to the KMS key's region.
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Mint GitHub App token
+        id: app-token
+        shell: bash
+        env:
+          APP_ID: ${{ vars.GH_APP_ID }}
+          INSTALLATION_ID: ${{ vars.GH_APP_INSTALLATION_ID }}
+          KMS_KEY_ID: ${{ vars.GH_APP_KMS_KEY }}
+        run: |
+          set -euo pipefail
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          now=$(date +%s)
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now - 60))" "$((now + 480))" "$APP_ID" | b64url)
+          si="${header}.${payload}"
+          msg=$(mktemp); printf '%s' "$si" > "$msg"
+          sig=$(aws kms sign --key-id "$KMS_KEY_ID" --message "fileb://$msg" --message-type RAW \
+                  --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 --query Signature --output text \
+                | openssl base64 -d -A | b64url)
+          echo "::add-mask::$sig"
+          rm -f "$msg"
+          # The JWT is a short-lived (~8 min) but full-power credential — it can mint installation
+          # tokens. Mask it (and the signature) the instant it exists, before any use, so a stray
+          # echo, ACTIONS_STEP_DEBUG run, or future edit can't surface it. Header+payload are not
+          # secret (App id + timestamps), so masking the assembled JWT is the meaningful guard.
+          jwt="${si}.${sig}"
+          echo "::add-mask::$jwt"
+          resp=$(curl -sS -X POST \
+            -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+            -d '{"repositories":["opus"],"permissions":{"contents":"write","pull_requests":"write"}}' -w $'\n%{http_code}')
+          code=${resp##*$'\n'}; json=${resp%$'\n'*}
+          # Only ever surface .message — never the whole body (a misparsed success body holds the token).
+          [ "$code" = "201" ] || { echo "::error ::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
+          token=$(printf '%s' "$json" | jq -r '.token')
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      # checkout project (app token persisted as git creds → changesets' tag pushes trigger workflows)
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           # release the exact commit CI validated, not whatever main points at now —
           # keeps the published version, its git tags, and the built images in lockstep
           ref: ${{ github.event.workflow_run.head_sha }}
-          token: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           fetch-tags: true
 
       # setup tools and install dependencies
@@ -57,7 +111,7 @@ jobs:
           commitMode: github-api
           publish: pnpm publish-packages
         env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # Prepare matrix of Docker packages to build
@@ -66,16 +120,16 @@ jobs:
     if: needs.publish.outputs.hasChangesets == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read # default GITHUB_TOKEN is enough here — this job only reads tags
     outputs:
       packages: ${{ steps.detect.outputs.packages }}
       has-packages: ${{ steps.detect.outputs.has-packages }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          # release the exact commit CI validated, not whatever main points at now —
-          # keeps the published version, its git tags, and the built images in lockstep
+          # read the tags the publish job just pushed; head_sha keeps it in lockstep
           ref: ${{ github.event.workflow_run.head_sha }}
-          token: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
           fetch-tags: true
 
       - name: Setup dependencies
