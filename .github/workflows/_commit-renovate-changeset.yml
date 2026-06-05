@@ -13,9 +13,10 @@ on:
       base_ref:  { required: true, type: string }
       head_ref:  { required: true, type: string }
       pr_title:  { required: true, type: string }
-    # No `secrets:` input: the minter role ARN is read directly from the `renovate-mint` environment
-    # below. A reusable-workflow *caller* job can't declare `environment:`, so the env secret has to be
-    # resolved here (in the job that targets the environment), not passed in by the caller.
+    # The minter role ARN is a non-sensitive identifier, so it's a repo variable
+    # (vars.GH_APP_MINTER_ROLE_ARN_RENOVATE), read directly below — no environment, so the OIDC subject
+    # is `repo:<owner>/<repo>:pull_request`, which this role's AWS trust is pinned to (with
+    # job_workflow_ref @main + actor).
 
 permissions:
   id-token: write # OIDC -> assume the AWS minter role
@@ -23,9 +24,6 @@ permissions:
 
 jobs:
   mint-and-commit:
-    # Binds the minter role ARN secret (no protection rules — scoping only; reviewers/branch policy
-    # would block this unattended Renovate-branch run).
-    environment: renovate-mint
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -75,7 +73,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          role-to-assume: ${{ secrets.GH_APP_MINTER_ROLE_ARN_RENOVATE }}
+          role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN_RENOVATE }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       # NB: this JWT→kms:Sign→exchange duplicates the same block in publish.yaml (and the devcontainer

@@ -32,8 +32,8 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    # No secrets passed: the reusable workflow reads the minter role ARN from its `renovate-mint`
-    # environment directly (a caller job can't declare an environment).
+    # No secrets passed: the reusable workflow reads the minter role ARN from a repo variable
+    # (vars.GH_APP_MINTER_ROLE_ARN_RENOVATE) — a non-sensitive identifier, no environment needed.
     with:
       pr_number: ${{ github.event.pull_request.number }}
       base_ref: ${{ github.event.pull_request.base.ref }}
