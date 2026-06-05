@@ -76,6 +76,8 @@ jobs:
           role-to-assume: ${{ secrets.minter_role_arn }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
+      # NB: this JWT→kms:Sign→exchange duplicates the same block in publish.yaml (and the devcontainer
+      # gh-app-token script). Keep them in sync; consolidation into a shared action is tracked in #115.
       - name: Mint GitHub App token (contents:write, opus only)
         id: app-token
         env:
@@ -93,7 +95,12 @@ jobs:
           sig=$(aws kms sign --key-id "$KMS_KEY_ID" --message "fileb://$msg" --message-type RAW \
                   --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 --query Signature --output text \
                 | openssl base64 -d -A | b64url)
+          echo "::add-mask::$sig"
           rm -f "$msg"
+          # The JWT is short-lived (~8 min) but a full-power credential — it can mint installation
+          # tokens. Mask it (and the signature) the instant it exists, before any use, so a stray echo,
+          # ACTIONS_STEP_DEBUG run, or future edit can't surface it. Header+payload aren't secret (App
+          # id + timestamps), so masking the assembled JWT is the meaningful guard.
           jwt="${si}.${sig}"
           echo "::add-mask::$jwt"
           resp=$(curl -sS -X POST \
