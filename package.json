@@ -17,11 +17,11 @@
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run build && changeset publish",
     "squash": "node tooling/scripts/bin/squash.js",
-    "sync": "repo-kit sync",
+    "sync": "node nodejs/devtools/repo-kit/scripts/run-from-source.js sync",
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
     "typecheck": "turbo run typecheck",
-    "update-readme": "repo-kit update-readme",
+    "update-readme": "node nodejs/devtools/repo-kit/scripts/run-from-source.js update-readme",
     "watch": "turbo watch build"
   },
   "devDependencies": {
