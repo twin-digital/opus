@@ -109,7 +109,7 @@ jobs:
             "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
             -d '{"repositories":["opus"],"permissions":{"contents":"write"}}' -w $'\n%{http_code}')
           code=${resp##*$'\n'}; json=${resp%$'\n'*}
-          [ "$code" = "201" ] || { echo "::error ::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
+          [ "$code" = "201" ] || { echo "::error::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
           token=$(printf '%s' "$json" | jq -r '.token')
           echo "::add-mask::$token"
           echo "token=$token" >> "$GITHUB_OUTPUT"

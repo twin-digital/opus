@@ -15,9 +15,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  id-token: write # forwarded to the reusable workflow for OIDC minting
-  contents: write
+# No workflow-level permissions: id-token/contents:write are granted only on the gated job below, so a
+# future step/job added here can't inadvertently run with OIDC/write on an untrusted PR.
 
 # One run per PR, serialized: cancel-in-progress is false so a write-back run is never SIGTERM'd
 # mid-commit (§6.4).
