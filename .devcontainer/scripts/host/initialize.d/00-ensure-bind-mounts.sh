@@ -7,8 +7,11 @@ set -euo pipefail
 
 # pre-create missing directory targets
 mkdir -p "${HOME}/.claude"
-mkdir -p "${HOME}/.config/gh"
+mkdir -p "${HOME}/.ssh"
 
 # pre-create missing file targets
 touch "${HOME}/.bash_history"
 touch "${HOME}/.claude.json"
+touch "${HOME}/.ssh/id_ed25519"
+touch "${HOME}/.ssh/id_ed25519.pub"
+
