@@ -3,40 +3,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { Command } from 'commander'
+import { makeCommand as makeSyncCommand } from './commands/sync.js'
+import { makeCommand as makeUpdateReadmeCommand } from './commands/update-readme.js'
 
-const importTopLevelFunction = async (
-  modulePath: string,
-  functionName: string,
-): Promise<(...args: unknown[]) => unknown> => {
-  const mod = (await import(modulePath)) as Record<string, unknown>
+// Explicit registry of command factories. Static imports (rather than a runtime directory scan) keep behavior
+// identical whether the CLI runs from compiled `dist` or directly from TypeScript source — a filesystem scan that
+// filtered on file extension diverged between the two. Add new commands here.
+const commandFactories = [makeSyncCommand, makeUpdateReadmeCommand]
 
-  if (!(functionName in mod)) {
-    throw new Error(`Invalid command module: no top-level ${functionName} function. [module=${modulePath}]`)
-  }
-
-  if (typeof mod[functionName] !== 'function') {
-    throw new Error(`Invalid command module: ${functionName} was not a function. [module=${modulePath}]`)
-  }
-
-  return mod[functionName] as (...args: unknown[]) => unknown
-}
-
-const registerCommands = async (program: Command) => {
-  const commandModules = fs
-    .readdirSync(path.join(import.meta.dirname, 'commands'))
-    .filter((name) => name.endsWith('.js'))
-
-  for (const commandModule of commandModules) {
-    const modulePath = `./commands/${commandModule}`
-    const makeCommand = await importTopLevelFunction(modulePath, 'makeCommand')
-
-    const command = makeCommand()
-    if (command instanceof Command) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      program.addCommand(command)
-    } else {
-      throw new Error(`Invalid command module: "makeCommand" did not return a Command object. [module=${modulePath}]`)
-    }
+const registerCommands = (program: Command) => {
+  for (const makeCommand of commandFactories) {
+    program.addCommand(makeCommand())
   }
 }
 
@@ -47,7 +24,7 @@ const main = async () => {
 
   const program = new Command().name('repo-kit').version(packageJson.version ?? 'unknown')
 
-  await registerCommands(program)
+  registerCommands(program)
   await program.parseAsync(process.argv)
 }
 

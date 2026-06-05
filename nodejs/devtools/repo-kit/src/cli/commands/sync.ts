@@ -14,6 +14,7 @@ import type { SyncResult } from '../../sync/sync-result.js'
 import { makeSyncRules } from '../../sync/sync-rule-factory.js'
 import type { PackageFeature } from '../../sync/package-feature.js'
 import { findPackages } from '../../workspace/find-packages.js'
+import { getWorkspaceRoot } from '../../workspace/get-workspace-root.js'
 import fsP from 'node:fs/promises'
 
 const printResult = (name: string, result: SyncResult) => {
@@ -38,14 +39,20 @@ const printResult = (name: string, result: SyncResult) => {
 }
 
 /**
- * @returns List of files which were changed, if any (relative to the package root)
+ * Applies every enabled feature to a package. Individual failures are logged and tallied but do not abort the run, so
+ * one failing feature (or package) does not prevent the rest of the sync sweep — the caller is responsible for turning
+ * a non-zero tally into a non-zero exit code.
+ *
+ * @returns The files which were changed (relative to the package root) and the number of features that failed (whether
+ * by throwing or by returning an `error` result).
  */
-const applyFeatures = async (
+export const applyFeatures = async (
   config: PackageConfiguration,
   pkg: PackageMeta,
   ...features: PackageFeature[]
-): Promise<string[]> => {
+): Promise<{ changedFiles: string[]; errorCount: number }> => {
   const changedFiles: Set<string> = new Set<string>()
+  let errorCount = 0
   for (const feature of features) {
     const enabled = config.rules?.[feature.name] ?? true
 
@@ -63,6 +70,8 @@ const applyFeatures = async (
         result.changedFiles.forEach((file) => {
           changedFiles.add(file)
         })
+      } else if (result.result === 'error') {
+        errorCount++
       }
     } catch (t: unknown) {
       console.log(`${chalk.redBright('[ERROR]')} ${feature.name}: ${get(t, 'message', String(t))}`)
@@ -70,10 +79,11 @@ const applyFeatures = async (
       console.group()
       console.error(t)
       console.groupEnd()
+      errorCount++
     }
   }
 
-  return [...changedFiles]
+  return { changedFiles: [...changedFiles], errorCount }
 }
 
 /**
@@ -137,18 +147,24 @@ const applyHooks = async (pkg: PackageMeta, config: Configuration, changedFiles:
   }
 }
 
-const syncOnePackage = async (pkg: PackageMeta, config: Configuration) => {
+/**
+ * Syncs a single package's configuration.
+ *
+ * @returns The number of features that failed for this package.
+ */
+const syncOnePackage = async (pkg: PackageMeta, config: Configuration, isRoot: boolean): Promise<number> => {
   console.log(`Syncing configuration for package: ${pkg.name}...`)
   console.group()
 
   const packageConfig = config.packages[pkg.name] ?? {}
 
-  const changedFiles = await applyFeatures(
+  const { changedFiles, errorCount } = await applyFeatures(
     packageConfig,
     pkg,
     ...makeSyncRules({
       config: packageConfig,
       featureConfig: config,
+      project: { isRoot },
     }),
   )
 
@@ -156,13 +172,28 @@ const syncOnePackage = async (pkg: PackageMeta, config: Configuration) => {
 
   console.log('')
   console.groupEnd()
+
+  return errorCount
 }
 
 const handler = async (options: { config: string }) => {
   const config = await loadConfig(options.config)
-  const packages = await findPackages()
+  const rootPath = await getWorkspaceRoot()
+  const packages = await findPackages({ includeRoot: true })
+
+  let errorCount = 0
   for (const pkg of packages) {
-    await syncOnePackage(pkg, config)
+    errorCount += await syncOnePackage(pkg, config, pkg.path === rootPath)
+  }
+
+  // A failed feature is logged inline but must also fail the run, otherwise the merge-checks gate (which sees only a
+  // clean exit) would treat a broken sync as success. Failures are aggregated across all packages so the sweep still
+  // attempts every package before exiting non-zero.
+  if (errorCount > 0) {
+    console.log(
+      chalk.redBright(`[FAILED] ${errorCount.toString()} feature(s) failed during sync; see [ERROR] output above.`),
+    )
+    process.exitCode = 1
   }
 }
 

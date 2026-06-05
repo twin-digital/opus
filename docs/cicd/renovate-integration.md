@@ -127,6 +127,10 @@ Configured by `renovate.json` (PR #91):
 - **Grouping.** `group:allNonMajor` collapses non-major updates into a **single PR that accumulates**
   bumps over time; majors/security open separately. A grouped PR changes (`synchronize`) as Renovate
   adds/removes bumps, so the automation must converge on the *current* state each run, not append.
+  **Exception:** packages in pnpm's `onlyBuiltDependencies` (which run install/build scripts) are
+  pulled out of the batch into their own per-package PRs (distinct title + `build-scripts` label) and
+  never auto-merge, so a script-running bump is reviewed in isolation. Keep that `matchPackageNames`
+  list in sync with `pnpm-workspace.yaml`.
 - **Catalog-routed updates.** Most shared deps are referenced as `catalog:` in each `package.json`,
   with versions centralized in `pnpm-workspace.yaml`. A catalog bump changes `pnpm-workspace.yaml`
   but **not** the consuming `package.json` files — detection must resolve `catalog:` to compare

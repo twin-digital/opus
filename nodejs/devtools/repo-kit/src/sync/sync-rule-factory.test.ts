@@ -16,7 +16,7 @@ const touch = (file: string) => {
 
 /** Runs a single feature against the temp workspace and returns its result. */
 const run = (feature: FeatureConfigItem) => {
-  const [rule] = makeSyncRules({ config: {}, featureConfig: { features: [feature] } })
+  const [rule] = makeSyncRules({ config: {}, featureConfig: { features: [feature] }, project: { isRoot: false } })
   return rule.configure(workspace)
 }
 
@@ -35,6 +35,22 @@ afterEach(() => {
 })
 
 describe('makeSyncRules', () => {
+  it('filters features by scope for the project under sync', () => {
+    const featureConfig = {
+      features: [
+        { name: 'pkg-default', actions: [writeMarker('a.txt')] },
+        { name: 'root-only', scope: 'root' as const, actions: [writeMarker('b.txt')] },
+        { name: 'everywhere', scope: 'all' as const, actions: [writeMarker('c.txt')] },
+      ],
+    }
+
+    const forPackage = makeSyncRules({ config: {}, featureConfig, project: { isRoot: false } }).map((r) => r.name)
+    const forRoot = makeSyncRules({ config: {}, featureConfig, project: { isRoot: true } }).map((r) => r.name)
+
+    expect(forPackage).toEqual(['pkg-default', 'everywhere'])
+    expect(forRoot).toEqual(['root-only', 'everywhere'])
+  })
+
   it('applies a feature with no conditions', async () => {
     const result = await run({ name: 'always', actions: [writeMarker('out.txt')] })
 

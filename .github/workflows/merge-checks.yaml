@@ -14,6 +14,9 @@ env:
   CI: 1
   HUSKY: 0
   TURBO_TELEMETRY_DISABLED: 1
+  # Block dependency install scripts (pnpm `onlyBuiltDependencies`). This job runs sync/lint/typecheck
+  # and needs none of the native builds those scripts produce, and holds no deploy creds. See ci.yaml.
+  NPM_CONFIG_IGNORE_SCRIPTS: "true"
 
 jobs:
   merge-checks:
@@ -27,11 +30,8 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      - name: Build repo-kit
-        run: pnpm build --filter @twin-digital/repo-kit
-      - name: Create repo-kit .bin link
-        run: pnpm install --frozen-lockfile --prefer-offline
-
+      # `update-readme` and `sync` run repo-kit directly from source (node strips the TypeScript), so no build or
+      # bin link is needed here — and the gate can never evaluate a stale `dist`.
       - name: Fail if README out of date
         run: |
           pnpm run update-readme

@@ -1,10 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "helpers:pinGitHubActionDigests",
-    "group:allNonMajor"
-  ],
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", "group:allNonMajor"],
   "schedule": ["before 6am on monday"],
   "minimumReleaseAge": "5 days",
   "internalChecksFilter": "strict",
@@ -16,6 +12,14 @@
     "automerge": true
   },
   "packageRules": [
+    {
+      "description": "Packages with install/build scripts (pnpm `onlyBuiltDependencies` in pnpm-workspace.yaml) run arbitrary code on install. Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label, and never auto-merge — so the script-running bump is reviewed in isolation. Keep this list in sync with `onlyBuiltDependencies`.",
+      "matchPackageNames": ["esbuild", "hnswlib-node", "serverless"],
+      "groupName": null,
+      "automerge": false,
+      "addLabels": ["build-scripts"],
+      "commitMessageTopic": "build-script dependency {{depName}}"
+    },
     {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
       "matchManagers": ["nvm"],

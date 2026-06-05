@@ -3,6 +3,7 @@ import type { AnyOperation, ExtendedOperation } from './operations.js'
 import { removeValue } from './operations/remove-value.js'
 import { appendIfMissing } from './operations/append-if-missing.js'
 import { reorderMapKeys } from './operations/reorder-map-keys.js'
+import { setMatching } from './operations/set-matching.js'
 
 const applyExtendedOperation = <T>(document: T, patch: ExtendedOperation): T => {
   switch (patch.opx) {
@@ -12,6 +13,8 @@ const applyExtendedOperation = <T>(document: T, patch: ExtendedOperation): T => 
       return removeValue(document, patch.path, patch.value)
     case 'reorderMapKeys':
       return reorderMapKeys(document, patch.path, patch.value)
+    case 'setMatching':
+      return setMatching(document, patch.path, patch.where, patch.set, patch.value)
   }
 }
 

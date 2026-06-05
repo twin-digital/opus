@@ -43,5 +43,58 @@ export interface ReorderMapKeys extends BaseExtendedOperation {
   value: string[]
 }
 
-export type ExtendedOperation = AppendIfMissingExtendedOperation | RemoveValueExtendedOperation | ReorderMapKeys
+/**
+ * Predicate used by {@link SetMatchingExtendedOperation} to select array elements by a value match. Exactly one of
+ * `contains` or `equals` must be specified.
+ */
+export interface SetMatchingPredicate {
+  /**
+   * JSON Pointer, relative to each candidate array element, to the field under test.
+   */
+  pointer: string
+
+  /**
+   * Matches when the field is an array that includes this value (deep equality).
+   */
+  contains?: unknown
+
+  /**
+   * Matches when the field deep-equals this value.
+   */
+  equals?: unknown
+}
+
+/**
+ * Sets a value at a child pointer within every element of an array that satisfies a predicate. Selects array elements
+ * by value rather than by index — the addressing gap left by RFC 6901 JSON Pointers — so it is stable across reordering.
+ */
+export interface SetMatchingExtendedOperation<T = unknown> extends BaseExtendedOperation {
+  opx: 'setMatching'
+
+  /**
+   * JSON Pointer to the array whose elements are candidates.
+   */
+  path: string
+
+  /**
+   * Predicate selecting which array elements to update.
+   */
+  where: SetMatchingPredicate
+
+  /**
+   * JSON Pointer, relative to each matched element, at which to set `value`. An empty string replaces the element.
+   */
+  set: string
+
+  /**
+   * Value to set at `set` within each matched element.
+   */
+  value: T
+}
+
+export type ExtendedOperation =
+  | AppendIfMissingExtendedOperation
+  | RemoveValueExtendedOperation
+  | ReorderMapKeys
+  | SetMatchingExtendedOperation
 export type AnyOperation = ExtendedOperation | Operation
