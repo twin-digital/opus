@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/fw-simulation",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Adventure resolution and simulation loop for Farwatch.",
   "license": "ISC",
   "type": "module",
