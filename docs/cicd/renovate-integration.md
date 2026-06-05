@@ -105,7 +105,7 @@ chore(deps): update react to v19
 | Path | Role |
 | --- | --- |
 | `tooling/renovate-tools/` | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.** |
-| `.github/workflows/renovate-changeset.yml` | Trigger, gates, concurrency; runs the CLI and commits the managed changeset back. |
+| `.github/workflows/renovate-changeset.yml` | Trigger, gates, concurrency; runs the CLI and commits the managed changeset back via the GitHub API (signed → "Verified", §6.7). |
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` so our commits don't freeze Renovate (§6.2). |
 | `docs/cicd/renovate-integration.md` | This reference. |
 
@@ -257,9 +257,17 @@ Steps:
    `pnpm install`. Reusing it (vs rolling our own) satisfies the SHA-pinning standard from #90.
 3. **`git fetch origin ${BASE_REF}`** — so `git show origin/BASE:<path>` resolves.
 4. Run the CLI via `tsx` (env `BASE_REF`, `PR_TITLE`, `PR_NUMBER`).
-5. **Commit & push with rebase-retry** (§6.4): if the managed file changed, commit as
-   `github-actions[bot]` and push; on non-fast-forward, fetch+rebase the single changeset commit and
-   retry (bounded). Unchanged → no commit.
+5. **Commit the managed file via the GitHub API** (§6.4): if it changed, create the commit with the
+   GraphQL `createCommitOnBranch` mutation rather than `git commit`/`git push`. Unchanged → no commit.
+
+The commit goes through the API — **not** `git push` — because the repo's branch protection
+**requires signed commits**, and a local `git commit` from Actions is unsigned (it would be rejected
+as unverified). Commits created via the API are signed by GitHub ("Verified"), satisfying the rule
+with no GPG/SSH key to manage. `createCommitOnBranch` takes an `expectedHeadOid`, which doubles as
+optimistic concurrency: a stale tip (Renovate force-pushed since checkout) fails the mutation, so we
+re-sync + regenerate and retry (bounded) — this replaces the old fetch+rebase loop (§6.4). The
+commit's author is the `GITHUB_TOKEN` identity, which **must equal** `gitIgnoredAuthors` (§6.2); the
+workflow asserts this and warns on drift.
 
 Runtime is `tsx` (no build); the `pnpm install` from the composite is the only added cost vs the
 original dependency-free path — acceptable for CI. Trigger rationale (`pull_request`, not
@@ -271,7 +279,8 @@ original dependency-free path — acceptable for CI. Trigger rationale (`pull_re
 
 ### 6.1 Initial PR open
 Renovate opens a PR → workflow computes affected set → writes `.changeset/renovate-<PR>.md` →
-commits + pushes. Renovate ignores the commit (`gitIgnoredAuthors`), so the PR stays managed.
+commits it via the GitHub API (signed → "Verified", §6.7). Renovate ignores the commit
+(`gitIgnoredAuthors`), so the PR stays managed.
 
 ### 6.2 Hazard: foreign commit freezes Renovate *(mitigated)*
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
@@ -285,12 +294,14 @@ When Renovate adds a bump or rebases (force-push, as the app), `synchronize` fir
 recompute; a dropped changeset is re-created. Each dep ends as exactly one entry per affected
 package, regardless of how many incremental pushes built the PR.
 
-### 6.4 Hazard: stale push race *(mitigated)*
-Renovate may force-push between our checkout and push (non-ff). **Mitigation:** fetch + rebase the
-single changeset commit and retry, bounded; on exhaustion exit non-zero (a later `synchronize`
+### 6.4 Hazard: stale tip race *(mitigated)*
+Renovate may force-push between our checkout and write-back. **Mitigation:** the commit is created
+via `createCommitOnBranch` with `expectedHeadOid` pinned to our checked-out tip — if the branch moved,
+the mutation fails (it never overwrites unseen work), and we re-fetch, hard-reset to the new tip,
+**regenerate** the changeset, and retry (bounded); on exhaustion exit non-zero (a later `synchronize`
 re-heals). `concurrency` uses **`cancel-in-progress: false`** so a write-back run isn't SIGTERM'd
-mid-push — runs serialize and the in-flight push completes. (Concurrency *serializes*; it does not by
-itself make pushes transactional.)
+mid-commit — runs serialize. (`expectedHeadOid` is what makes the write-back transactional;
+concurrency only serializes.)
 
 ### 6.5 Hazard: clobbering human changesets *(mitigated)*
 The automation manages exactly `.changeset/renovate-<PR>.md` and never touches other changeset files.
@@ -298,19 +309,29 @@ A maintainer's own changeset is preserved; changesets takes the max bump per pac
 overlapping entry is harmless.
 
 ### 6.6 Hazard: workflow self-loop *(mitigated, defense-in-depth)*
-(a) `GITHUB_TOKEN` pushes don't trigger further workflow runs; (b) the tool is idempotent — a rerun
-on unchanged state writes an identical file and commits nothing. Either alone breaks the loop.
+(a) commits made with `GITHUB_TOKEN` (including via the API) don't trigger further workflow runs;
+(b) the tool is idempotent — a rerun on unchanged state writes an identical file and commits nothing.
+Either alone breaks the loop.
 
-### 6.7 Hazard summary
+### 6.7 Hazard: unsigned commit rejected by branch protection *(mitigated)*
+Branch protection **requires signed commits**; a local `git commit` from Actions is unsigned and
+would be rejected as unverified. **Mitigation:** create the commit via the GitHub API
+(`createCommitOnBranch`), which GitHub signs server-side ("Verified") — no GPG/SSH key to provision
+or rotate. **Coupling:** an API commit's author is the `GITHUB_TOKEN` identity, which must remain the
+`gitIgnoredAuthors` email (§6.2); the workflow asserts this and warns on drift (using a GitHub **App**
+token instead would change the author email and silently reintroduce the §6.2 freeze).
+
+### 6.8 Hazard summary
 
 | Hazard | Mitigation |
 | --- | --- |
 | Foreign commit freezes Renovate | `gitIgnoredAuthors` (exact email) |
 | Renovate drops changeset on rebase | self-heal via `synchronize` |
-| Stale / non-ff push | fetch+rebase retry; `cancel-in-progress: false` |
+| Stale tip / concurrent force-push | `expectedHeadOid` + regenerate-retry; `cancel-in-progress: false` |
 | Clobbering human changesets | manage only `renovate-<PR>.md` |
 | Stale per-commit changeset files | stable PR-keyed name (`renovate-<PR>.md`), full regenerate |
 | Workflow self-loop | `GITHUB_TOKEN` no-retrigger + idempotent content |
+| Unsigned commit rejected (signed-commits rule) | commit via GitHub API → "Verified" (§6.7) |
 | Parse failure → spurious changeset | errored path: annotate + write nothing (§4.4) |
 | Fork PR can't push | read-only token no-op (documented, §7) |
 

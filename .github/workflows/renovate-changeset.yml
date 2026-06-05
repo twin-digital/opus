@@ -48,39 +48,65 @@ jobs:
           git fetch origin "$BASE_REF"
           pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
 
-      - name: Commit & push managed changeset (rebase-retry on stale push)
+      - name: Commit signed managed changeset via GitHub API (§6.4)
         env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.head_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          # An API commit's author/committer is the token identity. With GITHUB_TOKEN that is this
+          # bot; it MUST equal renovate.json's gitIgnoredAuthors or Renovate treats the PR as
+          # user-edited and stops updating it (§6.2). We assert it below rather than trust it.
+          EXPECTED_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
         run: |
           set -euo pipefail
           managed=".changeset/renovate-${PR_NUMBER}.md"
 
-          # Only our managed file is ever staged — human changesets are never touched (§6.5).
-          if [[ -z "$(git status --porcelain "$managed")" ]]; then
-            echo "Managed changeset unchanged; nothing to commit (idempotent — §6.6)."
-            exit 0
-          fi
+          # Commit the managed file through the GraphQL API. Commits created via the API are signed
+          # by GitHub ("Verified"), satisfying the branch-protection "require signed commits" rule
+          # that a local `git commit` (unsigned) would fail. `expectedHeadOid` gives optimistic
+          # concurrency: if Renovate force-pushed since checkout, the stale OID fails the mutation
+          # and we re-sync + regenerate (§6.4). GITHUB_TOKEN commits never retrigger workflows (§6.6).
+          commit_via_api() {
+            local oid contents
+            oid=$(git rev-parse HEAD)
+            contents=$(base64 -w0 "$managed")
+            gh api graphql \
+              -f query='mutation($repo:String!,$branch:String!,$oid:GitObjectID!,$path:String!,$contents:Base64String!,$msg:String!){
+                createCommitOnBranch(input:{
+                  branch:{repositoryNameWithOwner:$repo, branchName:$branch},
+                  expectedHeadOid:$oid,
+                  message:{headline:$msg},
+                  fileChanges:{additions:[{path:$path, contents:$contents}]}
+                }){ commit { oid author { email } } }
+              }' \
+              -f repo="$REPO" -f branch="$HEAD_REF" -f oid="$oid" \
+              -f path="$managed" -f contents="$contents" \
+              -f msg="chore: update changeset for dependency update" \
+              --jq '.data.createCommitOnBranch.commit.author.email'
+          }
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$managed"
-          git commit -m "chore: update changeset for dependency update"
-
-          # Pushing with GITHUB_TOKEN does NOT retrigger workflows, so this can't
-          # self-loop. Renovate ignores this author via gitIgnoredAuthors (§6.2).
           for attempt in 1 2 3; do
-            if git push origin "HEAD:${HEAD_REF}"; then
-              echo "Pushed managed changeset."
+            # Only our managed file is ever committed — human changesets are never touched (§6.5).
+            # Unchanged vs the current tip → idempotent no-op (§6.6).
+            if [[ -z "$(git status --porcelain "$managed")" ]]; then
+              echo "Managed changeset unchanged; nothing to commit (idempotent — §6.6)."
               exit 0
             fi
-            echo "Push rejected (attempt ${attempt}/3) — re-fetching and rebasing (§6.4)…"
-            git fetch origin "${HEAD_REF}"
-            if ! git rebase "origin/${HEAD_REF}"; then
-              git rebase --abort || true
-              echo "Rebase failed; a later Renovate synchronize will regenerate."
-              exit 1
+
+            if author=$(commit_via_api); then
+              if [[ "$author" != "$EXPECTED_AUTHOR_EMAIL" ]]; then
+                echo "::warning::commit author '$author' != gitIgnoredAuthors '$EXPECTED_AUTHOR_EMAIL'; Renovate may now treat this PR as user-edited and stop updating it (§6.2)."
+              fi
+              echo "Committed signed changeset as ${author}."
+              exit 0
             fi
+
+            echo "createCommitOnBranch failed (attempt ${attempt}/3) — likely a stale tip; re-syncing and regenerating (§6.4)…"
+            git fetch origin "$HEAD_REF" "$BASE_REF"
+            git reset --hard "origin/${HEAD_REF}"
+            pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
           done
-          echo "Exhausted push retries; a later Renovate synchronize will regenerate."
+          echo "Exhausted retries; a later Renovate synchronize will regenerate."
           exit 1
