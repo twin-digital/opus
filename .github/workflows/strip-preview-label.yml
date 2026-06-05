@@ -21,9 +21,10 @@ on:
 permissions:
   pull-requests: write
 
-concurrency:
-  group: strip-preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+# No concurrency group on purpose: the removal is idempotent, fast, and safety-critical to COMPLETE
+# before the deploy gate re-evaluates the label. Serializing could only delay a later push's removal
+# behind a slow/hung run; cancelling could drop a push's removal entirely. Letting each push's strip
+# run independently converges fastest. Only PRs you've labeled trigger this, so it never floods.
 
 jobs:
   strip:
