@@ -29,10 +29,12 @@ die() { echo "gh-app-token: $*" >&2; log "ERROR: $*"; exit 1; }
 : "${APP_ID:?set APP_ID}"
 : "${INSTALLATION_ID:?set INSTALLATION_ID}"
 : "${KMS_KEY_ID:?set KMS_KEY_ID (alias/key-id/arn)}"
-# NB: don't inline a brace-containing JSON default in ${VAR:-…} — bash mis-parses the braces
-# and appends a stray "}". Set fallbacks separately.
-REPOS_JSON="${GH_TOKEN_REPOS:-}"; [ -n "$REPOS_JSON" ] || REPOS_JSON='["opus"]'
-PERMS_JSON="${GH_TOKEN_PERMS:-}"; [ -n "$PERMS_JSON" ] || PERMS_JSON='{"contents":"write","pull_requests":"write"}'
+# Empty/unset => OMIT that field from the request. Omitting `permissions` grants the App
+# installation's FULL permission set; omitting `repositories` grants every repo it's installed on.
+# Scope is managed App-side (the App's granted permissions / installed repos are the ceiling);
+# set these only to narrow BELOW that ceiling.
+REPOS_JSON="${GH_TOKEN_REPOS:-}"
+PERMS_JSON="${GH_TOKEN_PERMS:-}"
 for b in aws openssl curl jq date; do command -v "$b" >/dev/null || die "missing dependency: $b"; done
 
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
@@ -53,8 +55,10 @@ sig=$(printf '%s' "$sig_b64" | openssl base64 -d -A | b64url)
 jwt="${signing_input}.${sig}"
 
 # ── exchange JWT -> scoped installation token ────────────────────────────────
-body=$(jq -nc --argjson repos "$REPOS_JSON" --argjson perms "$PERMS_JSON" \
-        '{repositories: $repos, permissions: $perms}') || die "invalid GH_TOKEN_REPOS / GH_TOKEN_PERMS"
+# Include only the fields that are set; drop the rest so GitHub grants the App's full scope there.
+body=$(jq -nc --argjson repos "${REPOS_JSON:-null}" --argjson perms "${PERMS_JSON:-null}" \
+        '{repositories: $repos, permissions: $perms} | with_entries(select(.value != null))') \
+  || die "invalid GH_TOKEN_REPOS / GH_TOKEN_PERMS"
 
 resp=$(curl -sS -X POST \
   -H "Authorization: Bearer $jwt" \
@@ -70,5 +74,5 @@ token=$(printf '%s' "$json" | jq -r '.token // empty')
 exp_iso=$(printf '%s' "$json" | jq -r '.expires_at')
 exp_epoch=$(date -d "$exp_iso" +%s 2>/dev/null || echo "$((now + 3600))")
 
-log "minted repos=${REPOS_JSON} perms=${PERMS_JSON} exp=${exp_iso}"
+log "minted repos=${REPOS_JSON:-<all-installed>} perms=${PERMS_JSON:-<full-app-grant>} exp=${exp_iso}"
 printf '%s %s\n' "$exp_epoch" "$token"

@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 #
-# SessionStart hook: make an auto-refreshing GitHub token available to the Bash tool.
+# SessionStart hook: pre-warm the GitHub token cache and report whether minting works.
 #
-#   - gh-token-seed mints a token (App JWT signed by AWS KMS, using ambient AWS creds) and
-#     seeds the local cache. The gate is your AWS/SSO session — minting works while it's valid.
-#   - GH_TOKEN is exported as a COMMAND, not a literal: CLAUDE_ENV_FILE is re-sourced before
-#     every Bash call, so gh-token-get runs each time and returns a fresh token, re-minting
-#     when the current one nears expiry.
+# Auth is on-demand, not ambient: the `gh` wrapper (/usr/local/bin/gh) mints a token via AWS KMS
+# when `gh` or git over HTTPS needs one, gated by the ambient AWS session. There is no per-Bash
+# GH_TOKEN to set. This hook just (a) warms the cache so the first gh/git call is instant and
+# (b) surfaces a mint failure (expired AWS/SSO creds, missing kms:Sign, …) up front rather than
+# mid-task.
 #
-# On failure we DO NOT rely on `exit 2` + stderr — SessionStart does not reliably surface that.
-# Instead we emit JSON: `systemMessage` (visible to the user) + `additionalContext` (so the
-# model knows), and exit 0 (so the JSON is parsed and the session still starts).
+# SessionStart doesn't reliably surface `exit 2` + stderr, so we emit JSON: `systemMessage`
+# (user-visible) + `additionalContext` (model-visible), and exit 0.
 set -euo pipefail
 
-# JSON-escape a string: collapse all control chars (0x00-0x1f) to spaces, then escape
-# backslash and doublequote. Order matters: control chars first, backslash before quote.
+# JSON-escape a string: collapse control chars (0x00-0x1f) to spaces, then escape backslash and
+# doublequote. Order matters: control chars first, backslash before quote.
 _json_escape() {
   printf '%s' "$1" | tr '\000-\037' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -32,23 +31,11 @@ emit() {
   exit 0
 }
 
-# No env file to write into → nothing to do; bail quietly.
-[ -n "${CLAUDE_ENV_FILE:-}" ] || exit 0
-
-# Wire a DYNAMIC, self-refreshing GH_TOKEN. CLAUDE_ENV_FILE is re-sourced before every Bash
-# call, so gh-token-get runs each time (cheap when cached; re-mints via KMS when stale).
-# Harmless even if the seed below fails — it just resolves to empty until minting works.
-echo 'export GH_TOKEN="$(/usr/local/bin/gh-token-get)"' >> "$CLAUDE_ENV_FILE"
-
 # Pre-warm the cache + surface mint failures now (e.g. expired AWS creds, missing kms:Sign).
 if err="$(/usr/local/bin/gh-token-seed 2>&1)"; then
-  emit "" "GH_TOKEN is available and auto-refreshes while your AWS session is valid; authenticated gh/GitHub access is present."
+  emit "" "gh and git (HTTPS) authenticate on demand via the gh wrapper (KMS-minted App token), valid while your AWS session is. Use gh/git normally; for a raw token in a script, run: gh-token-get."
 else
   emit \
-    "⚠️ GitHub token mint FAILED — session started WITHOUT GH_TOKEN. ${err}" \
-    "GH_TOKEN is NOT available this session (KMS mint failed: ${err}). Do not assume authenticated gh/GitHub access; warn the user before attempting any operation that needs it. Likely cause: expired AWS/SSO credentials or missing kms:Sign."
+    "⚠️ GitHub token mint FAILED — gh/git HTTPS auth will not work this session. ${err}" \
+    "GitHub token minting is failing (${err}); gh and git-over-HTTPS will be unauthenticated this session. Warn the user before any operation that needs GitHub access. Likely cause: expired AWS/SSO credentials or missing kms:Sign."
 fi
-
-# To instead FAIL CLOSED (refuse to start without a token), replace the `else` emit with:
-#   echo '{"continue": false, "stopReason": "GitHub token mint failed; refusing to start without credentials."}'
-#   exit 0

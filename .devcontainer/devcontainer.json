@@ -3,7 +3,19 @@
   "containerEnv": {
     "NODE_OPTIONS": "--experimental-transform-types --no-warnings=ExperimentalWarning",
     "PW_CHROMIUM_SANDBOX": "0",
-    "VSCODE_AGENT_FOLDER": "/vscode"
+    "VSCODE_AGENT_FOLDER": "/vscode",
+    // GitHub App token-minter config (non-secret) — inherited by both your terminal and agents,
+    // so gh/git auth works for everyone (gh-app-token reads these). The AWS session is the gate;
+    // AWS_PROFILE is NOT here (its value embeds the account number) — it stays in your shell /
+    // gitignored .claude/settings.local.json. KMS_KEY_ID is an alias (account-agnostic).
+    //
+    // GH_TOKEN_PERMS is intentionally omitted: the token inherits the App installation's FULL
+    // permission grant, managed App-side (tighten/loosen in the App's settings). GH_TOKEN_REPOS
+    // still scopes tokens to opus within the App's installed repos.
+    "APP_ID": "3967552",
+    "INSTALLATION_ID": "138110942",
+    "KMS_KEY_ID": "alias/github-app-signer",
+    "GH_TOKEN_REPOS": "[\"opus\"]"
   },
   "customizations": {
     "vscode": {

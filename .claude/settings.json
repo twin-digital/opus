@@ -4,13 +4,6 @@
     "commit": "",
     "pr": ""
   },
-  "env": {
-    "APP_ID": "3967552",
-    "GH_TOKEN_REPOS": "[\"opus\"]",
-    "GH_TOKEN_PERMS": "{\"contents\":\"write\",\"pull_requests\":\"write\"}",
-    "INSTALLATION_ID": "138110942",
-    "KMS_KEY_ID": "alias/github-app-signer"
-  },
   "hooks": {
     "SessionStart": [
       {
