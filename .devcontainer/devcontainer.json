@@ -15,7 +15,11 @@
     "APP_ID": "3967552",
     "INSTALLATION_ID": "138110942",
     "KMS_KEY_ID": "alias/github-app-signer",
-    "GH_TOKEN_REPOS": "[\"opus\"]"
+    "GH_TOKEN_REPOS": "[\"opus\"]",
+    // Region for `aws kms sign` (the KMS key lives here). Pinning it means the mint never dies on
+    // NoRegion if a session starts before AWS_PROFILE (which carries the region) is loaded. A region
+    // is not account-revealing.
+    "AWS_REGION": "us-east-1"
   },
   "customizations": {
     "vscode": {
