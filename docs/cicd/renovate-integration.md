@@ -1,14 +1,83 @@
 # Renovate ↔ Changesets Integration
 
-**Status:** specification — implemented in PR #93, not yet active (activate per §10) · **Owner:** CI/CD · **Related:** [`../CICD.md`](../CICD.md), PR #91 (Renovate config), PR #93 (automation)
+**Status:** Active — implemented in #93, activated per §10 · **Owner:** CI/CD · **Related:** [`../CICD.md`](../CICD.md), PR #91 (Renovate config), PR #93 (automation)
 
-This document specifies how automated dependency updates from **Renovate** are reconciled with this
-repo's **changesets**-based versioning/publishing, and is the source of truth for the
-`renovate-changeset` workflow and the `@twin-digital/renovate-tools` package.
+This document describes how automated dependency updates from **Renovate** are reconciled with this
+repo's **changesets**-based versioning/publishing — the `renovate-changeset` workflow and the
+`@twin-digital/renovate-tools` package.
 
 Renovate does not natively create changesets ([renovatebot/renovate#24882](https://github.com/renovatebot/renovate/discussions/24882)).
 Without intervention, a dependency bump to a versioned package merges with **no changeset**, so
 changesets never cut a release reflecting that bump. This integration closes that gap.
+
+The first half is what a contributor needs day to day; **Design & internals** below is for whoever
+maintains the automation itself.
+
+---
+
+# For developers
+
+## How it works, end to end
+
+1. Renovate opens or updates a PR on a `renovate/*` branch (a dependency or `catalog:` bump).
+2. The `renovate-changeset` workflow runs and compares every workspace package's **effective
+   published dependency ranges** against the base branch.
+3. It writes **one** file, `.changeset/renovate-<PR>.md`, listing which packages changed and their
+   bump (`patch`, or `major` for a peer crossing a major) — or an **empty** changeset if nothing
+   publishable changed.
+4. It commits that file back to the PR. Renovate ignores the commit (via `gitIgnoredAuthors`), so it
+   keeps managing the PR.
+5. When the PR merges, changesets consumes the file like any other and includes the bump in the next
+   release.
+
+A dependency that appears or disappears (Renovate occasionally adds or removes one) counts as a
+change → `patch`.
+
+## Worked example: how the bump is chosen
+
+A catalog bump raises `react` from `^18` to `^19`. Three packages consume it differently:
+
+- **pkg-a** — `peerDependencies: { react: "catalog:" }` → the peer crosses a major → **major**.
+- **pkg-b** — `devDependencies: { react: "catalog:" }` → devDeps don't change published output → **no entry**.
+- **pkg-c** — `dependencies: { react: "catalog:" }` → runtime dep → **patch**.
+
+The generated `.changeset/renovate-<PR>.md`:
+
+```
+---
+'pkg-a': major
+'pkg-c': patch
+---
+
+chore(deps): update react to v19
+```
+
+(pkg-b is absent.) Full rules: §4.3.
+
+## FAQ
+
+- **I see `.changeset/renovate-<PR>.md` on a Renovate PR — should I edit it?**
+  No. It's regenerated from scratch on every run, so edits are overwritten. To change the result,
+  add your *own* changeset (next question).
+- **Can I add my own changeset to a Renovate PR?**
+  Yes. Add a separate `.changeset/<name>.md`; the automation only manages `renovate-<PR>.md` and
+  never touches yours. At release, changesets takes the **max bump per package**, so a higher human
+  bump wins (§6.5).
+- **Why did a major upstream bump release as only a `patch`?**
+  By design — regular/optional dependency updates are flat `patch`; the dependency's real magnitude
+  is in the changeset summary. See §9.
+- **The Renovate PR's changeset is empty — is that a bug?**
+  No. devDependency-only and in-range updates don't change published ranges, so the changeset is
+  intentionally empty (the change is still recorded).
+- **I got a `::warning::` / errored annotation on a Renovate PR — now what?**
+  The tool couldn't parse a manifest or `pnpm-workspace.yaml`, or hit a catalog misconfiguration, so
+  it wrote **nothing** rather than risk a wrong changeset. Read the annotation and fix the
+  manifest/catalog — the same issue usually also fails `pnpm install --frozen-lockfile` — then let
+  the next push re-run it (§4.4).
+
+---
+
+# Design & internals (for CI/CD maintainers)
 
 ---
 
