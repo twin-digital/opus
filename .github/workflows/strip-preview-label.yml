@@ -3,8 +3,11 @@ name: Strip preview label on push
 # Preview deploys are opt-in via the `preview` label (see deploy-preview.yaml). The label is sticky,
 # so without this a commit pushed AFTER labeling would auto-deploy with credentials, unreviewed —
 # the risk being a fork PR you previewed once, to which the author then pushes malicious code. This
-# removes the label on every push, making the opt-in effectively per-commit: you re-add it to deploy
-# the new commit.
+# removes the label on a push so the opt-in is per-commit: you re-add it to deploy the new commit.
+#
+# Scoped to FORK PRs only. For a same-repo PR the pusher already has write access (they could deploy
+# directly), so stripping there adds re-labeling friction for no security gain; the threat — an
+# untrusted author pushing to a PR you already labeled — only exists for forks.
 #
 # SAFETY — this uses `pull_request_target` (needed so the token can WRITE labels on FORK PRs, which a
 # read-only `pull_request` token cannot). That is safe here ONLY because this workflow:
@@ -28,8 +31,10 @@ permissions:
 
 jobs:
   strip:
-    # Only act when the label is actually present (cheap guard from the event payload — no API call).
-    if: contains(github.event.pull_request.labels.*.name, 'preview')
+    # Fork PRs only, and only when the label is present (cheap guards from the event payload — no API call).
+    if: >-
+      github.event.pull_request.head.repo.full_name != github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'preview')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
