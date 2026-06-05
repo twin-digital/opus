@@ -1,25 +1,30 @@
 name: Deploy Preview
 
-# Default (workflow-level) token is read-only. id-token:write (OIDC) is granted ONLY to the deploy
-# job below, so the cheap `gate` job that decides whether to deploy never holds deploy credentials.
+# Default (workflow-level) token is read-only (+ actions:read so the gate can look up CI status on the
+# label path). id-token:write (OIDC) is granted ONLY to the deploy job, so the gate that decides
+# whether to deploy never holds deploy credentials.
 permissions:
   contents: read
   pull-requests: read
+  actions: read
 
 on:
-  # watch for CI to finish, then (if opted in) deploy the PR's preview stack
-  # (mirrors the production gate: only deploy commits that passed CI)
+  # Two entry points so the `preview` label works in EITHER order:
+  #  - workflow_run: CI finished — deploy if the PR is already labeled.
+  #  - pull_request labeled: the label was just added — deploy if CI already passed for the head commit.
+  # Whichever fires, the gate converges on the same decision; concurrency de-dupes.
   workflow_run:
-    types:
-      - completed
+    types: [completed]
     workflows: ['CI']
+  pull_request:
+    types: [labeled]
+    branches: [main]
 
-# Serialize per PR branch and supersede older runs: a newer push cancels the previous (possibly
-# still waiting-for-approval) preview run for that branch, so stale runs don't pile up. The tradeoff
-# is that a new push can cancel an in-flight serverless deploy — acceptable for an ephemeral preview,
-# which the next run reconciles.
+# Serialize per PR branch (across both triggers) and supersede older runs: a newer push cancels the
+# previous (possibly still waiting-for-approval) preview run, so stale runs don't pile up. Tradeoff: a
+# new push can cancel an in-flight serverless deploy — acceptable for an ephemeral preview.
 concurrency:
-  group: deploy-preview-${{ github.event.workflow_run.head_branch }}
+  group: deploy-preview-${{ github.event.workflow_run.head_branch || github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
 env:
@@ -34,43 +39,57 @@ jobs:
   gate:
     if: >-
       ${{
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'pull_request' &&
-        github.event.workflow_run.head_branch != 'changeset-release/main'
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'pull_request' &&
+         github.event.workflow_run.head_branch != 'changeset-release/main') ||
+        (github.event_name == 'pull_request' &&
+         github.event.label.name == 'preview' &&
+         github.event.pull_request.head.repo.full_name == github.repository &&
+         github.event.pull_request.head.ref != 'changeset-release/main')
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       should_deploy: ${{ steps.decide.outputs.should_deploy }}
       stage: ${{ steps.decide.outputs.stage }}
+      sha: ${{ steps.decide.outputs.sha }}
     steps:
       - name: Decide whether to deploy a preview
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT: ${{ github.event_name }}
+          # workflow_run path
+          WR_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          # pull_request (labeled) path
+          LABEL_NAME: ${{ github.event.label.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          # workflow_run carries no PR context; resolve the open PR against main for this commit
-          # (works for same-repo and fork PRs).
-          pr=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
-            --jq '[.[] | select(.state == "open" and .base.ref == "main")][0]')
-          num=$(printf '%s' "$pr" | jq -r '.number // empty')
+          skip() { echo "$1"; echo "should_deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
 
-          if [[ -z "$num" ]]; then
-            echo "No open PR against main for ${HEAD_SHA}; skipping preview deploy."
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Opt-in gate: only deploy a preview when the PR carries the `preview` label. Setting that
-          # label requires repo write/triage (a fork author cannot), so it doubles as the trust gate
-          # for the deploy credentials.
-          if [[ "$(printf '%s' "$pr" | jq -r 'any(.labels[]?; .name == "preview")')" != "true" ]]; then
-            echo "PR #$num is not labeled 'preview'; skipping preview deploy (add the label to opt in)."
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [[ "$EVENT" == "workflow_run" ]]; then
+            # CI just finished (the job `if:` already required success + pull_request). Deploy iff the
+            # source PR is labeled `preview`.
+            sha="$WR_HEAD_SHA"
+            pr=$(gh api "repos/${REPO}/commits/${sha}/pulls" \
+              --jq '[.[] | select(.state == "open" and .base.ref == "main")][0]')
+            num=$(printf '%s' "$pr" | jq -r '.number // empty')
+            [[ -n "$num" ]] || skip "No open PR against main for ${sha}; skipping."
+            [[ "$(printf '%s' "$pr" | jq -r 'any(.labels[]?; .name == "preview")')" == "true" ]] \
+              || skip "PR #$num is not labeled 'preview'; skipping (add the label to opt in)."
+          else
+            # The `preview` label was just added. The label event carries no CI status, so query whether
+            # CI already concluded successfully for this commit — closing the "label after CI" race.
+            num="$PR_NUMBER"
+            sha="$PR_HEAD_SHA"
+            concl=$(gh api "repos/${REPO}/actions/workflows/ci.yaml/runs?head_sha=${sha}&event=pull_request" \
+              --jq '[.workflow_runs[] | select(.status == "completed")][0].conclusion // empty')
+            [[ "$concl" == "success" ]] \
+              || skip "CI for ${sha} is '${concl:-not finished}'; the workflow_run path will deploy once it's green."
           fi
 
           # slugify (keeps only simple characters)
@@ -79,9 +98,10 @@ jobs:
             | sed -E 's/[^a-z0-9_-]+/-/g' \
             | sed -E 's/^-+|-+$//g')
 
-          echo "PR #$num is labeled 'preview' → deploying stage: $slug"
+          echo "PR #$num is labeled 'preview' and CI is green → deploying stage: $slug"
           echo "should_deploy=true" >> "$GITHUB_OUTPUT"
           echo "stage=$slug" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
   preview:
     needs: gate
@@ -94,10 +114,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      # checkout the exact commit CI validated
+      # checkout the exact commit CI validated (resolved by the gate, for either trigger)
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ needs.gate.outputs.sha }}
           token: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
 
       # setup tools and install dependencies
