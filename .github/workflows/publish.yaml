@@ -19,7 +19,7 @@ jobs:
   publish:
     # only run when CI passed
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    # Binds NPM_TOKEN + the App-minter role ARN, now scoped to the `release` environment.
+    # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -42,9 +42,8 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          role-to-assume: ${{ secrets.GH_APP_MINTER_ROLE_ARN }}
-          # publish has no environment, so vars.AWS_REGION (env-scoped) is empty here; fall back
-          # to the KMS key's region.
+          role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN }}
+          # Fall back to us-east-1 (the KMS key's region) if AWS_REGION is unset.
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
       - name: Mint GitHub App token
         id: app-token
