@@ -77,7 +77,7 @@ jobs:
             -d '{"repositories":["opus"],"permissions":{"contents":"write","pull_requests":"write"}}' -w $'\n%{http_code}')
           code=${resp##*$'\n'}; json=${resp%$'\n'*}
           # Only ever surface .message — never the whole body (a misparsed success body holds the token).
-          [ "$code" = "201" ] || { echo "::error ::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
+          [ "$code" = "201" ] || { echo "::error::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
           token=$(printf '%s' "$json" | jq -r '.token')
           echo "::add-mask::$token"
           echo "token=$token" >> "$GITHUB_OUTPUT"

@@ -19,7 +19,12 @@
     // Region for `aws kms sign` (the KMS key lives here). Pinning it means the mint never dies on
     // NoRegion if a session starts before AWS_PROFILE (which carries the region) is loaded. A region
     // is not account-revealing.
-    "AWS_REGION": "us-east-1"
+    "AWS_REGION": "us-east-1",
+    // Make Claude Code fetch the plugin marketplace over HTTPS instead of git@github.com (ssh).
+    // The forwarded FIDO/yubikey agent is the only github ssh credential, so an ssh fetch prompts a
+    // hardware touch on every startup; HTTPS rides the App-token auth above instead. (The startup
+    // ssh connectivity probe is handled separately by the ~/.claude/bin/ssh shim.)
+    "CLAUDE_CODE_PLUGIN_PREFER_HTTPS": "1"
   },
   "customizations": {
     "vscode": {

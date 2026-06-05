@@ -3,84 +3,39 @@ name: Renovate Changeset
 # Reconciles Renovate's dependency updates with changesets-based versioning.
 # Full behavior + hazard analysis: docs/cicd/renovate-integration.md.
 #
-# Trigger choice (spec §7): we use `pull_request`, NOT `pull_request_target`.
-# Renovate's `renovate/*` branches are in-repo (not forks), so `pull_request`
-# already grants a writable GITHUB_TOKEN — we get push access without the
-# `pull_request_target` privileged-execution attack surface. The tool only reads
-# package.json / pnpm-workspace.yaml as data; it never executes PR code.
+# This is the THIN, untrusted half: it only gates (renovate/* + actor) and delegates the
+# privileged work to _commit-renovate-changeset.yml pinned @main. The @main pin is load-bearing:
+# it makes the reusable job's OIDC job_workflow_ref resolve to that file @refs/heads/main, which
+# the AWS minter-role trust requires — so tampering with THIS file on a PR can't redirect the mint.
+#
+# Trigger is `pull_request`, not `pull_request_target` (§7): renovate/* branches are in-repo, so a
+# fork can neither push nor (being denied id-token) mint.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: write
+# No workflow-level permissions: id-token/contents:write are granted only on the gated job below, so a
+# future step/job added here can't inadvertently run with OIDC/write on an untrusted PR.
 
-# One run per PR, serialized: cancel-in-progress is false so a write-back run is
-# never SIGTERM'd mid-push (§6.4).
+# One run per PR, serialized: cancel-in-progress is false so a write-back run is never SIGTERM'd
+# mid-commit (§6.4).
 concurrency:
   group: renovate-changeset-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
-  changeset:
-    # Renovate's in-repo PRs only (actor gate is defense-in-depth, §7).
+  mint-and-commit:
+    # Renovate's in-repo PRs only. The actor gate is also enforced in the AWS trust policy (§7).
     if: ${{ startsWith(github.head_ref, 'renovate/') && github.actor == 'renovate[bot]' }}
-    runs-on: ubuntu-latest
-    steps:
-      # The setup composite does NOT check out the repo, so check out first (§5).
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
-      # SHA-pinned pnpm + Node (from .nvmrc) + `pnpm install` (provides tsx + yaml).
-      - name: Setup dependencies
-        uses: ./.github/actions/setup
-
-      - name: Generate managed changeset
-        env:
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          # Ensure origin/BASE resolves for `git show origin/BASE:<path>` (§5).
-          git fetch origin "$BASE_REF"
-          pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
-
-      - name: Commit & push managed changeset (rebase-retry on stale push)
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          managed=".changeset/renovate-${PR_NUMBER}.md"
-
-          # Only our managed file is ever staged — human changesets are never touched (§6.5).
-          if [[ -z "$(git status --porcelain "$managed")" ]]; then
-            echo "Managed changeset unchanged; nothing to commit (idempotent — §6.6)."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$managed"
-          git commit -m "chore: update changeset for dependency update"
-
-          # Pushing with GITHUB_TOKEN does NOT retrigger workflows, so this can't
-          # self-loop. Renovate ignores this author via gitIgnoredAuthors (§6.2).
-          for attempt in 1 2 3; do
-            if git push origin "HEAD:${HEAD_REF}"; then
-              echo "Pushed managed changeset."
-              exit 0
-            fi
-            echo "Push rejected (attempt ${attempt}/3) — re-fetching and rebasing (§6.4)…"
-            git fetch origin "${HEAD_REF}"
-            if ! git rebase "origin/${HEAD_REF}"; then
-              git rebase --abort || true
-              echo "Rebase failed; a later Renovate synchronize will regenerate."
-              exit 1
-            fi
-          done
-          echo "Exhausted push retries; a later Renovate synchronize will regenerate."
-          exit 1
+    uses: twin-digital/opus/.github/workflows/_commit-renovate-changeset.yml@main
+    permissions:
+      id-token: write
+      contents: write
+    secrets:
+      minter_role_arn: ${{ secrets.GH_APP_MINTER_ROLE_ARN_RENOVATE }}
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      base_ref: ${{ github.event.pull_request.base.ref }}
+      head_ref: ${{ github.head_ref }}
+      pr_title: ${{ github.event.pull_request.title }}
