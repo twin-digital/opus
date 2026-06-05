@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "concurrency": "10",
+  "concurrency": "2",
   "globalPassThroughEnv": ["CI"],
   "globalDependencies": [
     ".prettierrc",
