@@ -1,0 +1,33 @@
+name: OIDC Claims Probe
+
+# Throwaway diagnostic: prints the GitHub OIDC token claims (decoded payload only)
+# so we can pin AWS trust conditions to what GitHub actually emits — specifically
+# job_workflow_ref for a NON-reusable vs a reusable (workflow_call) job, plus actor,
+# sub, ref, repository. No AWS, no write permissions. Delete once trust is settled.
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  direct:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decode OIDC claims (direct, non-reusable job)
+        run: |
+          set -euo pipefail
+          jwt=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "::add-mask::${jwt}"   # the raw JWT is a short-lived credential — never print it
+          p=$(printf '%s' "$jwt" | cut -d. -f2)
+          case $(( ${#p} % 4 )) in 2) p="${p}==";; 3) p="${p}=";; esac
+          # Only the decoded payload (non-secret claims) is printed.
+          printf '%s' "$p" | tr '_-' '/+' | base64 -d \
+            | jq '{event:.event_name, sub, actor, actor_id, workflow, workflow_ref, job_workflow_ref, ref, head_ref, base_ref, repository}'
+
+  via-reusable:
+    uses: ./.github/workflows/_oidc-probe-reusable.yml
