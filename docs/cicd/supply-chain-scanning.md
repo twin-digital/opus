@@ -64,19 +64,36 @@ community) time to flag a bad version before it is ever eligible to auto-merge.
 
 # How it gates auto-merge
 
-The Socket GitHub App posts a check named **`Socket Security: Pull Request Alerts`** on each PR.
-Configured as a **required status check** on `main`, it blocks merge until it passes. Renovate, by
-default, [will not auto-merge until it sees passing status checks for the branch](https://docs.renovatebot.com/key-concepts/automerge/) —
+The Socket GitHub App posts **two** checks on each PR, and only one is the gate:
+
+- **`Socket Security: Pull Request Alerts`** — the **gate**. It analyzes only the dependencies a PR
+  *introduces or changes* (the diff), so a Renovate bump scans a handful of packages, not the tree.
+- **`Socket Security: Project Report`** — an **informational** full-dependency-tree (SBOM) report.
+  Not a merge gate.
+
+Configure **`Socket Security: Pull Request Alerts`** as a **required status check** on `main`; it
+blocks merge until it passes. Renovate, by default,
+[will not auto-merge until it sees passing status checks for the branch](https://docs.renovatebot.com/key-concepts/automerge/) —
 so the required check is, transitively, an auto-merge gate. No `renovate.json` change is needed for
 the gating itself.
+
+**Free-tier note.** Socket's self-serve free tier caps dependencies per scan and **truncates the
+full `Project Report`** for a large monorepo. That cap lands on the informational full-tree report —
+**not** on the `Pull Request Alerts` gate, which scans only the small per-PR delta. The
+qualifying-open-source free Team account (requested separately) lifts the cap and restores full
+reports; until then the gate still functions on the delta. Confirm on the first real (multi-bump)
+Renovate PR that its `Pull Request Alerts` scan is not itself truncated before relying on it as a
+required check.
 
 ## Block vs. warn policy
 
 Whether an alert **fails** the check (block) or only **comments** (warn) is set in the Socket
-dashboard's org **security policy** — a UI, not in-repo config. For this repo's threat model, the
-install-script / network+shell-access / obfuscation / known-malware / typosquat categories are set
-to **block**; lower-signal categories warn. Tune the policy in the dashboard; nothing here needs a
-commit to change it.
+dashboard's org **Security Policy** (per alert: Block / Warn / Monitor / Ignore) — a UI, not in-repo
+config. Socket ships sensible **defaults** (known-malware and the high-severity categories block out
+of the box), so the gate has teeth before any tuning. For this repo's threat model, also set the
+install-script / network+shell-access / obfuscation / typosquat categories to **block**; lower-signal
+categories warn. Editing the policy (and the full reports) may require the open-source Team account;
+the default policy applies meanwhile. Nothing here needs a commit to change it.
 
 ## Caveat: the check must report on every PR
 
