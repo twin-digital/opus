@@ -1,5 +1,13 @@
 # @twin-digital/repo-kit
 
+## 0.2.2
+
+### Patch Changes
+
+- 68e432d: Single-source previously-drifting shared dependencies through the pnpm catalog. `dotenv`, `chalk`, `ts-node`, `tsdown`, `execa`, `yaml`, and the `@aws-sdk/*` clients (`client-s3` and `client-bedrock-runtime`, kept in lockstep with the existing DynamoDB clients at `^3.958.0`) are now defined once in the workspace catalog, and `@types/aws-lambda` now resolves via the catalog in the packages that had pinned it directly. No API changes.
+- b80fa6c: Internal cleanup: remove dead modules orphaned by earlier refactors (the per-package `configuration/` loaders, `config/assets.ts`, `getCurrentPackage`, and `canonicalizeJson`), add a unit-test suite covering the actions, conditions, rule factory, and markdown/JSON utilities, and add a package README. Also corrects the `SyncActionConfig`/`FeatureConfigItem` doc comments to state that multiple conditions are combined with logical AND (matching the long-standing behavior). No runtime behavior changes.
+  - @twin-digital/json-patch-x@0.2.0
+
 ## 0.2.1
 
 ### Patch Changes
