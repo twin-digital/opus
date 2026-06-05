@@ -1,0 +1,18 @@
+# Code owners for twin-digital/opus.
+#
+# Takes effect when the `main` ruleset has "Require review from Code Owners" enabled:
+# a PR touching an owned path then needs an owning reviewer's approval before merge.
+# Agents (the GitHub App) can open PRs and push to branches, but a human owner must
+# approve. Solo today — @skleinjung owns everything; the explicit high-risk paths below
+# are just documentation of intent (same owner) and future-proofing for a team.
+
+# Default owner for the whole repo
+*                       @skleinjung
+
+# Highest blast radius — CI/CD, automation, container, release config.
+# Always want an owner's eyes here (esp. workflow changes, which run in CI).
+/.github/               @skleinjung
+/.github/workflows/     @skleinjung
+/.devcontainer/         @skleinjung
+/.changeset/            @skleinjung
+/.repo-kit.yml          @skleinjung
