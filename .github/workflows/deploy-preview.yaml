@@ -1,21 +1,26 @@
 name: Deploy Preview
 
-# Allow GitHub to mint OIDC tokens for this workflow
+# Default (workflow-level) token is read-only. id-token:write (OIDC) is granted ONLY to the deploy
+# job below, so the cheap `gate` job that decides whether to deploy never holds deploy credentials.
 permissions:
-  id-token: write
   contents: read
   pull-requests: read
 
 on:
-  # watch for CI to finish, then deploy the PR's preview stack
+  # watch for CI to finish, then (if opted in) deploy the PR's preview stack
   # (mirrors the production gate: only deploy commits that passed CI)
   workflow_run:
     types:
       - completed
     workflows: ['CI']
 
-# Serialize per PR branch; don't cancel an in-flight serverless deploy
-concurrency: deploy-preview-${{ github.event.workflow_run.head_branch }}
+# Serialize per PR branch and supersede older runs: a newer push cancels the previous (possibly
+# still waiting-for-approval) preview run for that branch, so stale runs don't pile up. The tradeoff
+# is that a new push can cancel an in-flight serverless deploy — acceptable for an ephemeral preview,
+# which the next run reconciles.
+concurrency:
+  group: deploy-preview-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
 
 env:
   CI: 1
@@ -23,17 +28,69 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  preview:
-    # Only for CI runs that (a) succeeded, (b) were triggered by a pull_request
-    # (the push-triggered CI run for the same commit is ignored to avoid a double
-    # deploy), and (c) are not the changesets release PR.
+  # Cheap, credential-free decision: preview deploys are OPT-IN via the `preview` label. Because this
+  # job has no `environment:`, an un-opted-in PR never enters the `preview` environment — so it never
+  # queues an approval and never reaches the deploy credentials.
+  gate:
     if: >-
       ${{
         github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'pull_request' &&
         github.event.workflow_run.head_branch != 'changeset-release/main'
       }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_deploy: ${{ steps.decide.outputs.should_deploy }}
+      stage: ${{ steps.decide.outputs.stage }}
+    steps:
+      - name: Decide whether to deploy a preview
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          # workflow_run carries no PR context; resolve the open PR against main for this commit
+          # (works for same-repo and fork PRs).
+          pr=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
+            --jq '[.[] | select(.state == "open" and .base.ref == "main")][0]')
+          num=$(printf '%s' "$pr" | jq -r '.number // empty')
+
+          if [[ -z "$num" ]]; then
+            echo "No open PR against main for ${HEAD_SHA}; skipping preview deploy."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Opt-in gate: only deploy a preview when the PR carries the `preview` label. Setting that
+          # label requires repo write/triage (a fork author cannot), so it doubles as the trust gate
+          # for the deploy credentials.
+          if [[ "$(printf '%s' "$pr" | jq -r 'any(.labels[]?; .name == "preview")')" != "true" ]]; then
+            echo "PR #$num is not labeled 'preview'; skipping preview deploy (add the label to opt in)."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # slugify (keeps only simple characters)
+          slug=$(echo "pr-$num" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9_-]+/-/g' \
+            | sed -E 's/^-+|-+$//g')
+
+          echo "PR #$num is labeled 'preview' → deploying stage: $slug"
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "stage=$slug" >> "$GITHUB_OUTPUT"
+
+  preview:
+    needs: gate
+    if: ${{ needs.gate.outputs.should_deploy == 'true' }}
     environment: preview
+    # OIDC for the AWS role lives only here, on the gated deploy.
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -47,39 +104,11 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      - name: Resolve PR number and stage slug
-        id: slugify
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          # workflow_run doesn't carry PR context directly; resolve the open PR
-          # against main for this commit (works for same-repo and fork PRs).
-          NUM=$(gh api "repos/${{ github.repository }}/commits/${{ github.event.workflow_run.head_sha }}/pulls" \
-            --jq '[.[] | select(.state == "open" and .base.ref == "main")][0].number // empty')
-
-          if [[ -z "$NUM" ]]; then
-            echo "No open PR against main for ${{ github.event.workflow_run.head_sha }}; skipping preview deploy."
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # slugify (keeps only simple characters)
-          SLUG=$(echo "pr-$NUM" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed -E 's/[^a-z0-9_-]+/-/g' \
-            | sed -E 's/^-+|-+$//g')
-
-          echo "Deploying stage: $SLUG (PR #$NUM)"
-          echo "found=true" >> "$GITHUB_OUTPUT"
-          echo "stage=$SLUG" >> "$GITHUB_OUTPUT"
-
       # authenticate with AWS & deploy
       - name: Deploy
-        if: ${{ steps.slugify.outputs.found == 'true' }}
         uses: ./.github/actions/deploy
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-          stage: ${{ steps.slugify.outputs.stage }}
+          stage: ${{ needs.gate.outputs.stage }}
