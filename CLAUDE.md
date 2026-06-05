@@ -40,6 +40,7 @@ Scope to one package with turbo filters, e.g. `pnpm build --filter @twin-digital
 - **Tests** are colocated `*.test.ts` next to source, run with **vitest** (`describe`/`it`/`expect`). Packages extend `@twin-digital/vitest-config` (`export default sharedConfig`). AWS code uses `aws-sdk-client-mock`; Lambda code uses `@twin-digital/lambda-test-lib` for mock contexts/metrics.
 - **Public surface** is a barrel `src/index.ts`; subpath exports map to `src/*.ts`.
 - **Formatting** is Prettier; lint-staged + husky run it on commit. Don't hand-format against it.
+- **Comments & docs describe the final design**, not the path to it. Don't narrate approaches tried and discarded *within the change* — the squash erases that churn, so it's just clutter. Contrasting with behavior the change supersedes (that predates it) is fine.
 
 ## Config is repo-kit–managed — do not hand-edit generated files
 
