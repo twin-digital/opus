@@ -1,0 +1,176 @@
+name: Renovate Mint & Commit (reusable)
+
+# Privileged half of the Renovate -> changeset automation. It lives in its own
+# reusable workflow and is ALWAYS called as `@main`, so the OIDC `job_workflow_ref`
+# claim resolves to this exact file @refs/heads/main. The AWS minter role's trust is
+# pinned to that value, so even a pull_request that tampers with the caller can't
+# redirect the mint to attacker-controlled steps. Full design: docs/cicd/renovate-integration.md.
+
+on:
+  workflow_call:
+    inputs:
+      pr_number: { required: true, type: string }
+      base_ref:  { required: true, type: string }
+      head_ref:  { required: true, type: string }
+      pr_title:  { required: true, type: string }
+    secrets:
+      minter_role_arn:
+        description: AWS role (OIDC) permitted to kms:Sign the App JWT
+        required: true
+
+permissions:
+  id-token: write # OIDC -> assume the AWS minter role
+  contents: write
+
+jobs:
+  mint-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # An API commit's author is the App-token identity (twin-digital-agent[bot]); it MUST equal
+      # renovate.json's gitIgnoredAuthors or Renovate freezes the PR (§6.2). Asserted below.
+      EXPECTED_AUTHOR_EMAIL: "290907000+twin-digital-agent[bot]@users.noreply.github.com"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 0
+
+      # Hand-rolled setup (NOT ./.github/actions/setup) so we can install with --ignore-scripts:
+      # this job mints a privileged token, so a bumped dependency's lifecycle script must never
+      # run here. Same SHA pins as the composite. tsx + yaml need no lifecycle scripts.
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies (no lifecycle scripts)
+        run: pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
+
+      - name: Generate managed changeset
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+          PR_TITLE: ${{ inputs.pr_title }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$BASE_REF"
+          pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
+
+      # First-run calibration: print the OIDC claims the AWS trust must match (job_workflow_ref,
+      # actor, sub). Non-secret; the raw JWT is masked. Remove once the trust value is locked in.
+      - name: Show OIDC claims (trust calibration)
+        run: |
+          set -euo pipefail
+          jwt=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "::add-mask::${jwt}"
+          p=$(printf '%s' "$jwt" | cut -d. -f2); case $(( ${#p} % 4 )) in 2) p="${p}==";; 3) p="${p}=";; esac
+          printf '%s' "$p" | tr '_-' '/+' | base64 -d | jq '{sub, actor, job_workflow_ref, ref, repository}'
+
+      # Mint AFTER install/generate so no AWS creds or App token are in the environment while
+      # third-party dependency code is on disk.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.minter_role_arn }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      # NB: this JWT→kms:Sign→exchange duplicates the same block in publish.yaml (and the devcontainer
+      # gh-app-token script). Keep them in sync; consolidation into a shared action is tracked in #115.
+      - name: Mint GitHub App token (contents:write, opus only)
+        id: app-token
+        env:
+          APP_ID: ${{ vars.GH_APP_ID }}
+          INSTALLATION_ID: ${{ vars.GH_APP_INSTALLATION_ID }}
+          KMS_KEY_ID: ${{ vars.GH_APP_KMS_KEY }}
+        run: |
+          set -euo pipefail
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          now=$(date +%s)
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now - 60))" "$((now + 480))" "$APP_ID" | b64url)
+          si="${header}.${payload}"
+          msg=$(mktemp); printf '%s' "$si" > "$msg"
+          sig=$(aws kms sign --key-id "$KMS_KEY_ID" --message "fileb://$msg" --message-type RAW \
+                  --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 --query Signature --output text \
+                | openssl base64 -d -A | b64url)
+          echo "::add-mask::$sig"
+          rm -f "$msg"
+          # The JWT is short-lived (~8 min) but a full-power credential — it can mint installation
+          # tokens. Mask it (and the signature) the instant it exists, before any use, so a stray echo,
+          # ACTIONS_STEP_DEBUG run, or future edit can't surface it. Header+payload aren't secret (App
+          # id + timestamps), so masking the assembled JWT is the meaningful guard.
+          jwt="${si}.${sig}"
+          echo "::add-mask::$jwt"
+          resp=$(curl -sS -X POST \
+            -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+            -d '{"repositories":["opus"],"permissions":{"contents":"write"}}' -w $'\n%{http_code}')
+          code=${resp##*$'\n'}; json=${resp%$'\n'*}
+          [ "$code" = "201" ] || { echo "::error::App token mint failed (HTTP $code): $(printf '%s' "$json" | jq -r '.message // "unknown error"' 2>/dev/null)"; exit 1; }
+          token=$(printf '%s' "$json" | jq -r '.token')
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Commit signed managed changeset via GitHub API
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          BASE_REF: ${{ inputs.base_ref }}
+          HEAD_REF: ${{ inputs.head_ref }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          # Passed via env (never interpolated into the script) — PR titles are externally
+          # influenced, so `${{ }}` inline would be a shell-injection vector. The CLI reads it.
+          PR_TITLE: ${{ inputs.pr_title }}
+        run: |
+          set -euo pipefail
+          managed=".changeset/renovate-${PR_NUMBER}.md"
+
+          # Commits created via the API are signed by GitHub ("Verified"), satisfying the
+          # require-signed-commits rule that a local `git commit` would fail. `expectedHeadOid`
+          # gives optimistic concurrency: a stale tip (Renovate force-pushed) fails the mutation,
+          # and we re-sync + regenerate and retry (§6.4). GITHUB_TOKEN/App-token API commits do
+          # re-trigger workflows here — that is intentional (it re-runs the CI changeset gate).
+          commit_via_api() {
+            local oid contents
+            oid=$(git rev-parse HEAD)
+            contents=$(base64 -w0 "$managed")
+            gh api graphql \
+              -f query='mutation($repo:String!,$branch:String!,$oid:GitObjectID!,$path:String!,$contents:Base64String!,$msg:String!){
+                createCommitOnBranch(input:{
+                  branch:{repositoryNameWithOwner:$repo, branchName:$branch},
+                  expectedHeadOid:$oid,
+                  message:{headline:$msg},
+                  fileChanges:{additions:[{path:$path, contents:$contents}]}
+                }){ commit { oid author { email } } }
+              }' \
+              -f repo="$REPO" -f branch="$HEAD_REF" -f oid="$oid" \
+              -f path="$managed" -f contents="$contents" \
+              -f msg="chore: update changeset for dependency update" \
+              --jq '.data.createCommitOnBranch.commit.author.email'
+          }
+
+          for attempt in 1 2 3; do
+            # Only our managed file is ever committed — human changesets are untouched (§6.5).
+            # Unchanged vs the current tip -> idempotent no-op (§6.6).
+            if [[ -z "$(git status --porcelain "$managed")" ]]; then
+              echo "Managed changeset unchanged; nothing to commit (idempotent — §6.6)."
+              exit 0
+            fi
+            if author=$(commit_via_api); then
+              if [[ "$author" != "$EXPECTED_AUTHOR_EMAIL" ]]; then
+                echo "::warning::commit author '$author' != gitIgnoredAuthors '$EXPECTED_AUTHOR_EMAIL'; Renovate may now treat this PR as user-edited (§6.2)."
+              fi
+              echo "Committed signed changeset as ${author}."
+              exit 0
+            fi
+            echo "createCommitOnBranch failed (attempt ${attempt}/3) — likely a stale tip; re-syncing and regenerating (§6.4)…"
+            git fetch origin "$HEAD_REF" "$BASE_REF"
+            git reset --hard "origin/${HEAD_REF}"
+            # BASE_REF / PR_TITLE / PR_NUMBER are already in this step's env — the CLI reads them.
+            pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
+          done
+          echo "Exhausted retries; a later Renovate synchronize will regenerate."
+          exit 1

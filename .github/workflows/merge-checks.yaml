@@ -50,3 +50,35 @@ jobs:
             echo "Run \`pnpm sync\` and commit the changes."
             exit 1
           fi
+
+  # Gate Renovate auto-merge: a renovate/* PR must carry its managed changeset before it can merge.
+  # Fails on Renovate's own commit; passes once the renovate-changeset automation commits it (that
+  # App-token commit re-triggers this workflow). Make this a REQUIRED check so native auto-merge
+  # waits for it.
+  #
+  # The job runs on EVERY PR and no-ops to success on non-Renovate PRs (rather than being `if:`-skipped)
+  # so that, as a required check, it always reports a completed success/failure conclusion — never an
+  # absent/skipped run that some branch-protection configs leave pending.
+  renovate-changeset-present:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Require the managed changeset on Renovate PRs
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          case "$HEAD_REF" in
+            renovate/*) ;;
+            *) echo "Not a Renovate PR (${HEAD_REF}); nothing to gate."; exit 0 ;;
+          esac
+          f=".changeset/renovate-${PR_NUMBER}.md"
+          if [[ ! -f "$f" ]]; then
+            echo "::error::Missing ${f}. The renovate-changeset automation hasn't committed it yet (or failed); auto-merge is blocked until it lands."
+            exit 1
+          fi
+          echo "Found ${f}."
