@@ -6,7 +6,7 @@ set -euo pipefail
 # token to git. Works for everyone using this checkout — you at the terminal and any agent.
 #
 # Clone opus over HTTPS so git authenticates with the App token. An SSH clone would use your own
-# keys/agent instead; we don't rewrite remotes either way.
+# keys/agent instead.
 #
 # Repo-local (not --global): the App installation token is scoped to twin-digital/opus. Idempotent.
 

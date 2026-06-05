@@ -2,10 +2,10 @@
 #
 # gh-token-seed — ensure a fresh-enough token is cached, minting via KMS only when needed.
 #
-# Run by the Claude SessionStart hook to pre-warm the cache (so the first git/gh call is fast)
-# and to surface mint failures. It REUSES a still-fresh cached token instead of force-minting on
-# every session — a needless AWS call (and a chance to fail) when we already hold a valid token.
-# Exits non-zero only when a mint was actually required and failed, so the hook warns then.
+# Run by the Claude SessionStart hook to pre-warm the cache (so the first git/gh call is fast) and
+# to surface mint failures. It serves a still-fresh cached token when one exists and mints via KMS
+# only when the cache is stale, so a session start needn't hit AWS. Exits non-zero only when a mint
+# was actually required and failed, so the hook warns then.
 #
 set -euo pipefail
 umask 077

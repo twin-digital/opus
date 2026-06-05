@@ -7,7 +7,7 @@ installation token. Tokens are minted on demand — by the `gh` wrapper, for bot
 HTTPS — and re-minted from cache as they expire; nothing ambient to keep fresh.
 
 **The human gate is your AWS/SSO session** — minting works while those creds are valid and stops
-when they expire/are revoked. There's no per-mint touch (unlike the old SSH broker).
+when they expire/are revoked.
 
 ## Pieces
 
@@ -19,7 +19,7 @@ when they expire/are revoked. There's no per-mint touch (unlike the old SSH brok
 | `gh-token-get` | serve cache / re-mint when stale (fail-open) — the one place tokens are obtained |
 | `gh` (wrapper) | put a fresh token in `GH_TOKEN`, then exec real gh — authenticates `gh` **and** git (via `gh auth git-credential`) for terminal + agents |
 | `post-create.d/20-configure-git-credentials.sh` | wire the opus checkout's git credential helper (`gh auth git-credential`) — repo-local |
-| `.claude/hooks/on-session-start` | pre-warm the cache + warn if minting fails (no longer sets `GH_TOKEN`) |
+| `.claude/hooks/on-session-start` | pre-warm the cache + warn if minting fails |
 | `devcontainer.json` `containerEnv` | App config (`APP_ID`/`INSTALLATION_ID`/`KMS_KEY_ID`/`AWS_REGION`/scope) — inherited by terminal **and** agents |
 
 (All container scripts live in `.devcontainer/scripts/container/` and are copied to
@@ -142,7 +142,7 @@ OIDC role whose trust is scoped to it.
 - The `gh` wrapper mints the opus-scoped token for **all** `gh` calls, so `gh` against your other
   GitHub repos in this container would use the wrong-scope token. Fine for an opus container.
 - **Clone opus over HTTPS** so git authenticates with the App token (this helper). An SSH clone would
-  use your own keys/agent instead; we don't rewrite remotes either way.
+  use your own keys/agent instead.
 - Dependencies in the container: `aws`, `openssl`, `curl`, `jq` (+ `base64`, `od` for the import).
 
 ## In CI (publish workflow)
