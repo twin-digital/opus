@@ -1,0 +1,63 @@
+{
+  "private": true,
+  "name": "@twin-digital/renovate-tools",
+  "version": "0.0.0",
+  "description": "Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null,
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "10.x"
+  }
+}

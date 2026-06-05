@@ -27,6 +27,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/refbash](./nodejs/dolmenwood/refbash): CLI console for managing Dolmenwood sessions
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
+- [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.
 
 <!-- END repo-kit: PACKAGES -->
