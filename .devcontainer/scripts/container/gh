@@ -16,6 +16,8 @@ set -euo pipefail
 export GH_TOKEN="${GH_TOKEN:-$(/usr/local/bin/gh-token-get 2>/dev/null || true)}"
 
 # Exec the real gh (the github-cli feature installs it at /usr/bin/gh); never recurse into self.
+# This wrapper must win PATH precedence over the real binary — it ships in /usr/local/bin (ahead of
+# /usr/bin); keep them on distinct paths so a feature that installs gh can't clobber the wrapper.
 real_gh=/usr/bin/gh
 [ -x "$real_gh" ] || real_gh="$(type -ap gh 2>/dev/null | grep -vx /usr/local/bin/gh | head -1)"
 exec "${real_gh:?gh wrapper: cannot locate the real gh}" "$@"
