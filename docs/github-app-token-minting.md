@@ -21,7 +21,6 @@ when they expire/are revoked. There's no per-mint touch (unlike the old SSH brok
 | `post-create.d/20-configure-git-credentials.sh` | wire the opus checkout's git credential helper (`gh auth git-credential`) — repo-local |
 | `.claude/hooks/on-session-start` | pre-warm the cache + warn if minting fails (no longer sets `GH_TOKEN`) |
 | `devcontainer.json` `containerEnv` | App config (`APP_ID`/`INSTALLATION_ID`/`KMS_KEY_ID`/`AWS_REGION`/scope) — inherited by terminal **and** agents |
-| `rootfs/etc/ssh/ssh_config.d/10-github-ssh.conf` | detach the agent from `github.com` (kills the per-session yubikey from Claude's SSH probe); `github-ssh` alias = opt-in SSH escape hatch |
 
 (All container scripts live in `.devcontainer/scripts/container/` and are copied to
 `/usr/local/bin` on container build.)
@@ -142,11 +141,8 @@ OIDC role whose trust is scoped to it.
   have it), falling back to `/etc/gh-token/minter.conf` if absent.
 - The `gh` wrapper mints the opus-scoped token for **all** `gh` calls, so `gh` against your other
   GitHub repos in this container would use the wrong-scope token. Fine for an opus container.
-- **Clone opus over HTTPS.** SSH to `github.com` is intentionally agent-less, so an SSH clone fails
-  to authenticate — use HTTPS and the App token does the rest. We don't rewrite remotes to avoid it.
-- **SSH escape hatch:** for work *outside* opus (e.g. your dotfiles), or to bypass the App-token flow
-  during soak, use the `github-ssh` alias — `git@github-ssh:owner/repo.git` reaches `github.com`
-  *with* the forwarded yubikey agent (one explicit touch). Plain `git@github.com:` stays agent-less.
+- **Clone opus over HTTPS** so git authenticates with the App token (this helper). An SSH clone would
+  use your own keys/agent instead; we don't rewrite remotes either way.
 - Dependencies in the container: `aws`, `openssl`, `curl`, `jq` (+ `base64`, `od` for the import).
 
 ## In CI (publish workflow)

@@ -5,10 +5,8 @@ set -euo pipefail
 # wrapper mints on demand (gated by the ambient AWS session) and `gh auth git-credential` hands the
 # token to git. Works for everyone using this checkout — you at the terminal and any agent.
 #
-# Clone opus over HTTPS. We deliberately DON'T rewrite SSH remotes to HTTPS: github.com is agent-less
-# here (see ssh_config.d/10-github-ssh.conf), so an SSH clone simply fails to authenticate — the
-# right signal to use HTTPS, rather than papering over it with config. (Need SSH anyway? Use the
-# `git@github-ssh:` alias.)
+# Clone opus over HTTPS so git authenticates with the App token. An SSH clone would use your own
+# keys/agent instead; we don't rewrite remotes either way.
 #
 # Repo-local (not --global): the App installation token is scoped to twin-digital/opus. Idempotent.
 
