@@ -12,6 +12,9 @@
   "prHourlyLimit": 0,
   "labels": ["dependencies"],
   "gitIgnoredAuthors": ["290907000+twin-digital-agent[bot]@users.noreply.github.com"],
+  "vulnerabilityAlerts": {
+    "automerge": true
+  },
   "packageRules": [
     {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
