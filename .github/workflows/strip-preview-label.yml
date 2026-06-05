@@ -1,0 +1,50 @@
+name: Strip preview label on push
+
+# Preview deploys are opt-in via the `preview` label (see deploy-preview.yaml). The label is sticky,
+# so without this a commit pushed AFTER labeling would auto-deploy with credentials, unreviewed —
+# the risk being a fork PR you previewed once, to which the author then pushes malicious code. This
+# removes the label on a push so the opt-in is per-commit: you re-add it to deploy the new commit.
+#
+# Scoped to FORK PRs only. For a same-repo PR the pusher already has write access (they could deploy
+# directly), so stripping there adds re-labeling friction for no security gain; the threat — an
+# untrusted author pushing to a PR you already labeled — only exists for forks.
+#
+# SAFETY — this uses `pull_request_target` (needed so the token can WRITE labels on FORK PRs, which a
+# read-only `pull_request` token cannot). That is safe here ONLY because this workflow:
+#   - runs the trusted base-branch (main) version of this file — a fork cannot modify it;
+#   - never checks out or executes any PR/fork code;
+#   - uses the token solely to call the labels API (no secrets, no build, no deploy).
+# Do NOT add a checkout of the PR head or run PR code in this workflow.
+
+on:
+  pull_request_target:
+    types: [synchronize]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+# No concurrency group on purpose: the removal is idempotent, fast, and safety-critical to COMPLETE
+# before the deploy gate re-evaluates the label. Serializing could only delay a later push's removal
+# behind a slow/hung run; cancelling could drop a push's removal entirely. Letting each push's strip
+# run independently converges fastest. Only PRs you've labeled trigger this, so it never floods.
+
+jobs:
+  strip:
+    # Fork PRs only, and only when the label is present (cheap guards from the event payload — no API call).
+    if: >-
+      github.event.pull_request.head.repo.full_name != github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remove the preview label after a push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # 404 if the label was already removed in a race — tolerate it.
+          gh api -X DELETE "repos/${REPO}/issues/${PR}/labels/preview" >/dev/null 2>&1 || true
+          echo "Removed 'preview' from PR #${PR} after a new push; re-add the label to deploy a preview of the new commit."
