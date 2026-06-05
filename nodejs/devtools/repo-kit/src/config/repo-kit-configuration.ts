@@ -191,6 +191,18 @@ export type SyncActionConfig = {
            * Value to use when `source.pointer` resolves to nothing. If omitted, a missing source value is an error.
            */
           default?: unknown
+
+          /**
+           * When true, use the KEYS of the object at `pointer` rather than its value. Errors if the resolved value is
+           * not an object. Use for map-shaped config like pnpm `patchedDependencies` (`{ 'pkg@1.2.3': '…' }`).
+           */
+          keys?: boolean
+
+          /**
+           * When true, reduce each (string) entry to its bare package name by dropping a trailing `@<version>`
+           * (scope-aware). Combine with `keys` to turn pnpm `patchedDependencies` keys into package names.
+           */
+          stripVersion?: boolean
         }
 
         /**
