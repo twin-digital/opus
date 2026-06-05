@@ -1,9 +1,9 @@
 # Renovate ↔ Changesets Integration
 
-**Status:** specification · **Owner:** CI/CD · **Related:** [`../CICD.md`](../CICD.md), PR #91 (Renovate config), PR #93 (automation)
+**Status:** specification — implemented in PR #93, not yet active (activate per §10) · **Owner:** CI/CD · **Related:** [`../CICD.md`](../CICD.md), PR #91 (Renovate config), PR #93 (automation)
 
 This document specifies how automated dependency updates from **Renovate** are reconciled with this
-repo's **changesets**-based versioning/publishing. It is the source of truth for the
+repo's **changesets**-based versioning/publishing, and is the source of truth for the
 `renovate-changeset` workflow and the `@twin-digital/renovate-tools` package.
 
 Renovate does not natively create changesets ([renovatebot/renovate#24882](https://github.com/renovatebot/renovate/discussions/24882)).
@@ -19,18 +19,17 @@ changesets never cut a release reflecting that bump. This integration closes tha
 1. Every Renovate PR carries exactly **one** automation-owned changeset, correct and idempotent
    across reruns and across a PR that **grows** over time.
 2. A package receives a changeset entry **iff** its **effective published dependency ranges**
-   changed (see §5). Updates with no published-range change (devDep/tooling-only, or in-range
-   relocks) get an **empty** changeset.
+   changed (§4). Updates with no published-range change (devDep/tooling-only, or in-range relocks)
+   get an **empty** changeset.
 3. The automation never fights Renovate's branch management, never loops, and never clobbers
    human-authored changesets.
 
 **Non-goals**
 
 - Reacting to resolution-only changes (overrides, `patchedDependencies`, `lockFileMaintenance`
-  relocks). The lockfile isn't published, so these don't change what a published package delivers —
-  see §10.
-- Supporting Renovate's native `postUpgradeTasks` (disabled on the Mend-hosted app — §9).
-- A hard CI gate that *requires* a changeset (deferred — §10).
+  relocks) — these don't change a published package's declared ranges (§4).
+- Supporting Renovate's native `postUpgradeTasks` (disabled on the Mend-hosted app — §8).
+- A hard CI gate that *requires* a changeset (deferred).
 
 ---
 
@@ -43,8 +42,8 @@ changesets never cut a release reflecting that bump. This integration closes tha
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` so our commits don't freeze Renovate (§6.2). |
 | `docs/cicd/renovate-integration.md` | This spec. |
 
-There is **no** `.github/scripts/*` and **no** named-catalog CI guard — named catalogs are supported
-natively (§5.1).
+The integration is self-contained in `@twin-digital/renovate-tools` and supports named catalogs
+natively (§4.1).
 
 ---
 
@@ -53,21 +52,21 @@ natively (§5.1).
 Configured by `renovate.json` (PR #91):
 
 - **Branches are in-repo.** The Mend-hosted app pushes `renovate/*` branches directly to
-  `twin-digital/opus` (not forks) — why the workflow can use `pull_request` with a writable token (§8).
+  `twin-digital/opus` (not forks) — why the workflow can use `pull_request` with a writable token (§7).
 - **Grouping.** `group:allNonMajor` collapses non-major updates into a **single PR that accumulates**
   bumps over time; majors/security open separately. A grouped PR changes (`synchronize`) as Renovate
   adds/removes bumps, so the automation must converge on the *current* state each run, not append.
 - **Catalog-routed updates.** Most shared deps are referenced as `catalog:` in each `package.json`,
   with versions centralized in `pnpm-workspace.yaml`. A catalog bump changes `pnpm-workspace.yaml`
   but **not** the consuming `package.json` files — detection must resolve `catalog:` to compare
-  effective ranges (§5.1).
+  effective ranges (§4.1).
 - **`rangeStrategy` (default `auto`).** Most in-range minor/patch updates change only the lockfile,
   not the declared range — so they correctly produce no changeset. Floor-raising and exact/catalog
   bumps change the effective range and are detected.
 - **Renovate pushes trigger `synchronize`** (it pushes as its own app identity), which makes the
-  integration self-healing (§7.3).
+  integration self-healing (§6.3).
 - **`gitIgnoredAuthors`** is set to our bot email so our changeset commit doesn't mark the PR as
-  "edited by user" and freeze Renovate (§6.2 / §7.2).
+  "edited by user" and freeze Renovate (§6.2).
 
 ---
 
@@ -76,7 +75,8 @@ Configured by `renovate.json` (PR #91):
 The core idea: **the lockfile isn't published — consumers resolve a package's *declared ranges*
 against their own tree.** So a package needs a changeset iff its **effective published dependency
 ranges** changed. That is the complete, semver-correct signal for published packages, and it
-naturally ignores resolution-only churn (overrides/relocks) that doesn't affect consumers.
+naturally ignores resolution-only churn (overrides/relocks) that doesn't affect consumers. This is
+the canonical rationale referenced from §1, §3, and §9.
 
 The tool is **stateless and idempotent**: it derives everything from the current working tree vs a
 single base ref, writes one deterministically-named file, and exits. Same state → identical file →
@@ -99,11 +99,11 @@ change published output):
     (recursive), is a **misconfiguration** → routed to the error path (§4.4), never silently treated
     as "unchanged."
 
-We parse the workspace YAML ourselves (robustly, with `yaml` — not a regex). `@pnpm/workspace.read-manifest`
-is filesystem/directory-only and cannot read the base revision's content (which we have only as
-`git show` output), so it does not fit; and `@pnpm/catalogs.resolver` is an explicitly-unstable
-internal package (decoupled `major×100` versioning, no stability guarantee) whose ~15-line
-substitution we own and test instead.
+Why hand-rolled rather than pnpm's own libraries: `@pnpm/workspace.read-manifest` is directory-only
+and cannot read the base revision's content (which we have only as `git show` output), and
+`@pnpm/catalogs.resolver` is an explicitly-unstable internal package (decoupled `major×100`
+versioning, no stability guarantee). Its ~15-line substitution is cheaper to own and test; the full
+rationale lives in the `catalog.ts` header comment.
 
 ### 4.2 Diff against a single base ref
 
@@ -141,7 +141,7 @@ head (including named catalogs).
 
 **File:** `.changeset/renovate-<PR_NUMBER>.md` — stable per PR (not keyed on commit SHA, so reruns
 overwrite in place). The automation reads/writes **only this path**; all other `.changeset/*.md`
-(human or other PRs) are untouched (§7.5). The summary is the **PR title verbatim** (the filename
+(human or other PRs) are untouched (§6.5). The summary is the **PR title verbatim** (the filename
 marks it as managed; no boilerplate leaks into changelogs). Entries sorted by package name.
 
 **Three distinct outcomes — never conflate them:**
@@ -154,7 +154,7 @@ marks it as managed; no boilerplate leaks into changelogs). Entries sorted by pa
    or a catalog misconfiguration) → emit a `::warning::` annotation and **write nothing** (leave the
    managed file as-is); exit 0 (fail-open, never blocks Renovate).
 
-The critical rule (§4.2/§4.4): there is **no `safeJson(...) → {}` fallback**. In the effective-range
+The critical rule (§4.2): there is **no `safeJson(...) → {}` fallback**. In the effective-range
 model, treating a failed base parse as "no deps at base" would make every head dep look *added* →
 a spurious, authoritative `patch`-everything changeset. A throw must route to the **errored** path,
 never masquerade as a clean (empty or full) result.
@@ -168,7 +168,7 @@ positives).
 
 `changeset` config sets `privatePackages: { version: true, tag: true }` and existing changesets bump
 private packages, so the tool includes **all** affected workspace packages regardless of `private`;
-private packages get version bumps + git tags (no npm publish). Accepted (§12), with the tag-churn
+private packages get version bumps + git tags (no npm publish). Accepted, with the tag-churn
 tradeoff documented.
 
 ---
@@ -178,7 +178,7 @@ tradeoff documented.
 ```
 on: pull_request [opened, synchronize, reopened]
 gate: head_ref starts with "renovate/"  AND  actor == "renovate[bot]"
-concurrency: per-PR, cancel-in-progress: false   # serialize write-backs (§7.4)
+concurrency: per-PR, cancel-in-progress: false   # serialize write-backs (§6.4)
 permissions: contents: write
 ```
 
@@ -190,55 +190,51 @@ Steps:
    `pnpm install`. Reusing it (vs rolling our own) satisfies the SHA-pinning standard from #90.
 3. **`git fetch origin ${BASE_REF}`** — so `git show origin/BASE:<path>` resolves.
 4. Run the CLI via `tsx` (env `BASE_REF`, `PR_TITLE`, `PR_NUMBER`).
-5. **Commit & push with rebase-retry** (§7.4): if the managed file changed, commit as
+5. **Commit & push with rebase-retry** (§6.4): if the managed file changed, commit as
    `github-actions[bot]` and push; on non-fast-forward, fetch+rebase the single changeset commit and
    retry (bounded). Unchanged → no commit.
 
 Runtime is `tsx` (no build); the `pnpm install` from the composite is the only added cost vs the
 original dependency-free path — acceptable for CI. Trigger rationale (`pull_request`, not
-`pull_request_target`) in §8.
+`pull_request_target`) in §7.
 
 ---
 
-## 6. (reserved)
+## 6. Lifecycle scenarios & hazards
 
----
-
-## 7. Lifecycle scenarios & hazards
-
-### 7.1 Initial PR open
+### 6.1 Initial PR open
 Renovate opens a PR → workflow computes affected set → writes `.changeset/renovate-<PR>.md` →
 commits + pushes. Renovate ignores the commit (`gitIgnoredAuthors`), so the PR stays managed.
 
-### 7.2 Hazard: foreign commit freezes Renovate *(mitigated)*
+### 6.2 Hazard: foreign commit freezes Renovate *(mitigated)*
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
 **stop updating it** (maintainer-confirmed, #24882). **Mitigation:** `gitIgnoredAuthors:
 ["41898282+github-actions[bot]@users.noreply.github.com"]` — and it **must equal** the workflow's
-commit-author email exactly (§11).
+commit-author email exactly (§10).
 
-### 7.3 PR grows / Renovate rebases *(self-healing)*
+### 6.3 PR grows / Renovate rebases *(self-healing)*
 When Renovate adds a bump or rebases (force-push, as the app), `synchronize` fires → the workflow
 **regenerates from current state**. New affected packages appear, removed ones disappear, bumps
 recompute; a dropped changeset is re-created. Each dep ends as exactly one entry per affected
 package, regardless of how many incremental pushes built the PR.
 
-### 7.4 Hazard: stale push race *(mitigated)*
+### 6.4 Hazard: stale push race *(mitigated)*
 Renovate may force-push between our checkout and push (non-ff). **Mitigation:** fetch + rebase the
 single changeset commit and retry, bounded; on exhaustion exit non-zero (a later `synchronize`
 re-heals). `concurrency` uses **`cancel-in-progress: false`** so a write-back run isn't SIGTERM'd
 mid-push — runs serialize and the in-flight push completes. (Concurrency *serializes*; it does not by
 itself make pushes transactional.)
 
-### 7.5 Hazard: clobbering human changesets *(mitigated)*
+### 6.5 Hazard: clobbering human changesets *(mitigated)*
 The automation manages exactly `.changeset/renovate-<PR>.md` and never touches other changeset files.
 A maintainer's own changeset is preserved; changesets takes the max bump per package, so an
 overlapping entry is harmless.
 
-### 7.6 Hazard: workflow self-loop *(mitigated, defense-in-depth)*
+### 6.6 Hazard: workflow self-loop *(mitigated, defense-in-depth)*
 (a) `GITHUB_TOKEN` pushes don't trigger further workflow runs; (b) the tool is idempotent — a rerun
 on unchanged state writes an identical file and commits nothing. Either alone breaks the loop.
 
-### 7.7 Hazard summary
+### 6.7 Hazard summary
 
 | Hazard | Mitigation |
 | --- | --- |
@@ -249,11 +245,11 @@ on unchanged state writes an identical file and commits nothing. Either alone br
 | Stale `renovate-<sha>.md` accumulation | stable PR-keyed filename, full regenerate |
 | Workflow self-loop | `GITHUB_TOKEN` no-retrigger + idempotent content |
 | Parse failure → spurious changeset | errored path: annotate + write nothing (§4.4) |
-| Fork PR can't push | read-only token no-op (documented, §8) |
+| Fork PR can't push | read-only token no-op (documented, §7) |
 
 ---
 
-## 8. Security model: `pull_request`, not `pull_request_target`
+## 7. Security model: `pull_request`, not `pull_request_target`
 
 Community changeset bots use `pull_request_target` to get a writable token for **fork**/**Dependabot**
 PRs, then guard against the "pwn request." We don't need it: Renovate's `renovate/*` branches are
@@ -265,7 +261,7 @@ PR runs read-only and no-ops (functional boundary — if Dependabot/fork PRs are
 
 ---
 
-## 9. Why not native `postUpgradeTasks`
+## 8. Why not native `postUpgradeTasks`
 
 Renovate's post-update hook could add files to the commit, but it is **disabled on the Mend-hosted
 app**, and community reports (#24882) confirm files being silently ignored. A CI-side workflow is the
@@ -273,41 +269,23 @@ supported path. If we ever self-host Renovate, `postUpgradeTasks` running the CL
 
 ---
 
-## 10. Known limitations
+## 9. Known limitations
 
 - **Flat-patch semver.** All regular/optional updates emit `patch` by deliberate choice — a
   floor-raising major dep bump ships as a `patch`. The changeset summary carries the real magnitude
-  (PR title) even when the bump is `patch`. (Bump policy is swappable; see the design discussion on
-  range-delta alternatives.)
+  (PR title) even when the bump is `patch`. The bump policy is swappable (see §4.3).
 - **Direct-deps-only scope.** Transitive changes are not inspected.
 - **Resolution-only changes produce no changeset.** Overrides, `patchedDependencies`, and
   `lockFileMaintenance` relocks change resolution but not declared ranges — correct for published
-  packages (the lockfile isn't published). **Accepted residual:** a *private deployed app* whose
-  deployed deps shift via an override/relock won't get a changeset (bookkeeping only; deploys happen
-  regardless).
+  packages (§4). **Accepted residual:** a *private deployed app* whose deployed deps shift via an
+  override/relock won't get a changeset (bookkeeping only; deploys happen regardless).
 
 ---
 
-## 11. Activation prerequisite
+## 10. Activation prerequisite
 
 Enable the automation only after **both** #91 and #93 merge. Renovate stays in onboarding (no
 dependency PRs) until #91 merges, so there is no window where the workflow runs without
 `gitIgnoredAuthors` — **provided the onboarding PR is merged, not closed.** `renovate.json`'s
 `gitIgnoredAuthors` **must equal** `41898282+github-actions[bot]@users.noreply.github.com` (the
-workflow's commit-author email); a mismatch silently reintroduces the freeze hazard (§7.2).
-
----
-
-## 12. Decisions (resolved)
-
-1. **Detection signal.** ✅ Effective published dependency ranges (manifest + resolved catalog), **not
-   the lockfile** — semver-correct for published packages and avoids relock churn.
-2. **Catalog resolution.** ✅ Hand-rolled against catalogs we parse ourselves with `yaml`; **no
-   `@pnpm/*` dependency** (the resolver is an unstable internal package; its ~15-line substitution is
-   owned and tested).
-3. **Package home & runtime.** ✅ `tooling/renovate-tools` (`private: true`), run via `tsx` after the
-   SHA-pinned `setup` composite.
-4. **Bump policy.** ✅ Flat `patch` for regular/optional; peer cross-major → `major`.
-5. **Private packages.** ✅ Included (matches `privatePackages.version: true`), accepting tag churn.
-6. **Named catalogs.** ✅ Supported natively (no guard).
-7. **Private-app resolution gap.** ✅ Documented and accepted (§10).
+workflow's commit-author email); a mismatch silently reintroduces the freeze hazard (§6.2).
