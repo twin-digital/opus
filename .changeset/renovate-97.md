@@ -1,0 +1,4 @@
+---
+---
+
+chore(deps): update dependency vite to v7.3.2 [security]

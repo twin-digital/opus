@@ -1,10 +1,13 @@
 name: CI
 
 on:
-  # every git push (to any branch, including slash-named branches)
+  # post-merge build on main (also drives the publish/deploy `workflow_run` chain)
   push:
-    branches: ['**']
-  # pull‐request events *against* main, for the "merge-commit" build
+    branches: [main]
+  # PR "merge-commit" build against main — the single source of the required
+  # `lint-build-test` check. Previously CI also ran on `push: ['**']`, so each PR
+  # produced TWO `lint-build-test` runs under the same required context (one push,
+  # one pull_request) — ambiguous for required-check enforcement. One run per PR now.
   pull_request:
     branches:
       - main

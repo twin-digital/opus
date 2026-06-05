@@ -7,7 +7,10 @@
   "prConcurrentLimit": 10,
   "prHourlyLimit": 0,
   "labels": ["dependencies"],
-  "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"],
+  "gitIgnoredAuthors": ["290907000+twin-digital-agent[bot]@users.noreply.github.com"],
+  "vulnerabilityAlerts": {
+    "automerge": true
+  },
   "packageRules": [
     {
       "description": "Packages with install/build scripts (pnpm `onlyBuiltDependencies` in pnpm-workspace.yaml) run arbitrary code on install. Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label, and never auto-merge — so the script-running bump is reviewed in isolation. Keep this list in sync with `onlyBuiltDependencies`.",
