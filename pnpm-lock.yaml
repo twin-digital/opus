@@ -1673,6 +1673,61 @@ importers:
         specifier: 'catalog:'
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
 
+  tooling/renovate-tools:
+    dependencies:
+      yaml:
+        specifier: 'catalog:'
+        version: 2.8.2
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 9.29.0
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../nodejs/devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../nodejs/devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../nodejs/devtools/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.1
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2))
+      eslint:
+        specifier: 'catalog:'
+        version: 9.29.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.5(eslint@9.29.0)
+      globals:
+        specifier: 'catalog:'
+        version: 16.0.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.6
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.12(@types/debug@4.1.12)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.2)
+
   tooling/scripts:
     dependencies:
       chalk:

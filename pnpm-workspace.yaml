@@ -1,6 +1,7 @@
 packages:
   - nodejs/*/*
   - tooling/scripts
+  - tooling/renovate-tools
 
 catalog:
   '@aws-lambda-powertools/logger': ^2.30.0
