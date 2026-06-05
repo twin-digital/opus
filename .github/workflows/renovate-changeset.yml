@@ -6,8 +6,8 @@ name: Renovate Changeset
 # Trigger choice (spec §7): we use `pull_request`, NOT `pull_request_target`.
 # Renovate's `renovate/*` branches are in-repo (not forks), so `pull_request`
 # already grants a writable GITHUB_TOKEN — we get push access without the
-# `pull_request_target` privileged-execution attack surface. The generator only
-# reads package.json / pnpm-workspace.yaml as data; it never executes PR code.
+# `pull_request_target` privileged-execution attack surface. The tool only reads
+# package.json / pnpm-workspace.yaml as data; it never executes PR code.
 
 on:
   pull_request:
@@ -16,10 +16,11 @@ on:
 permissions:
   contents: write
 
-# One run per PR; a newer push cancels an in-flight run so our own runs can't race (§6.4).
+# One run per PR, serialized: cancel-in-progress is false so a write-back run is
+# never SIGTERM'd mid-push (§6.4).
 concurrency:
   group: renovate-changeset-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   changeset:
@@ -27,22 +28,25 @@ jobs:
     if: ${{ startsWith(github.head_ref, 'renovate/') && github.actor == 'renovate[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # The setup composite does NOT check out the repo, so check out first (§5).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
+      # SHA-pinned pnpm + Node (from .nvmrc) + `pnpm install` (provides tsx + yaml).
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
 
       - name: Generate managed changeset
-        # Node 24 (.nvmrc = lts/krypton) runs TypeScript directly via native type-stripping.
-        run: node .github/scripts/renovate-changeset.ts
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Ensure origin/BASE resolves for `git show origin/BASE:<path>` (§5).
+          git fetch origin "$BASE_REF"
+          pnpm --filter @twin-digital/renovate-tools exec tsx src/cli.ts
 
       - name: Commit & push managed changeset (rebase-retry on stale push)
         env:
