@@ -43,7 +43,6 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   ink: patches/ink.patch
-  '@mishieck/ink-titled-box@0.3.0': patches/@mishieck__ink-titled-box@0.3.0.patch
 
 overrides:
   '@smithy/types': 4.14.2

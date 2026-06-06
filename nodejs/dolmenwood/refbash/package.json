@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
-    "@mishieck/ink-titled-box": "^0.3.0",
+    "@mishieck/ink-titled-box": "^0.4.0",
     "@twin-digital/dolmenwood": "workspace:*",
     "chalk": "catalog:",
     "dotenv": "catalog:",
