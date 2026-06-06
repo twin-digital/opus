@@ -9,6 +9,7 @@ import type { PackageMeta } from '../workspace/package-meta.js'
 import { makeJsonMergePatchAction } from './actions/json-merge-patch.js'
 import { makeJsonPatchAction } from './actions/json-patch.js'
 import { makeSyncJsonValueAction } from './actions/sync-json-value.js'
+import { makeSyncMapToArrayAction } from './actions/sync-map-to-array.js'
 import { makeWriteFileAction } from './actions/write-file.js'
 import { resolveScope, type ProjectKind } from './scope.js'
 import { makeDependencyCondition } from './conditions/dependency-condition.js'
@@ -88,6 +89,8 @@ const getActionImplementation = (action: SyncActionConfig): SyncActionFn => {
       return makeWriteFileAction(action.options)
     case 'sync-json-value':
       return makeSyncJsonValueAction(action.options)
+    case 'sync-map-to-array':
+      return makeSyncMapToArrayAction(action.options)
   }
 }
 

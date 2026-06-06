@@ -136,14 +136,16 @@ features:
       - exists: pnpm-workspace.yaml
     actions:
       - name: Sync patched-dependency packages into renovate's matchPackageNames
-        action: sync-json-value
+        action: sync-map-to-array
         options:
           source:
             file: pnpm-workspace.yaml
             pointer: /patchedDependencies
             default: {}
-            keys: true
-            stripVersion: true
+          # `patchedDependencies` is a map keyed by selector (`pkg` or `pkg@version`); take the keys and reduce each to
+          # its bare package name so the result matches renovate's `matchPackageNames`.
+          emit: keys
+          transform: strip-package-version
           target:
             file: renovate.json
             array: /packageRules
