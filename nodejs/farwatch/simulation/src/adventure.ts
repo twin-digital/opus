@@ -1,5 +1,10 @@
 import type { Rng } from '@thrashplay/fw-core'
 
+import { APPROACHES, type Approach } from './approaches.js'
+import { generatePrimaryGoal, type Goal } from './goals.js'
+import type { ResourceDelta } from './resources.js'
+import { generateStake } from './stakes.js'
+
 /**
  * The success threshold for the (deliberately trivial) check: a flat 50%.
  *
@@ -24,40 +29,6 @@ export interface Check {
 }
 
 /**
- * The approaches a party can bring to bear on a trial — the method they (try to) overcome it with.
- * A mechanical skeleton only: it says *how* they engaged (a fight, a ruse, an outlasting), giving
- * the chronicler a concrete hook for variety, but carries no narrative texture itself. One is drawn
- * at random per trial for now — there are no seekers or stats yet to choose it.
- */
-export const APPROACHES = [
-  'combat',
-  'might',
-  'speed',
-  'endurance',
-  'agility',
-  'lore',
-  'insight',
-  'cunning',
-  'resolve',
-  'diplomacy',
-  'deception',
-  'intimidation',
-  'charm',
-  'performance',
-  'stealth',
-  'evasion',
-  'magic',
-  'ritual',
-  'sacrifice',
-  'wealth',
-  'craft',
-  'preparation',
-] as const
-
-/** How a party (tries to) overcome a trial. @see APPROACHES */
-export type Approach = (typeof APPROACHES)[number]
-
-/**
  * A node in the adventure: a hard thing the party came through. For now a leaf — a single check
  * met with one {@link Approach}, its outcome equal to that check's. It gains an obstacle, a prize,
  * and (eventually) nested sub-trials as generated chronicles show we need them.
@@ -65,14 +36,28 @@ export type Approach = (typeof APPROACHES)[number]
 export interface Trial {
   /** The method the party used to (try to) overcome this trial. */
   readonly approach: Approach
+  /** What failing this trial costs — generated from the approach; absent on most trials. */
+  readonly stake?: ResourceDelta
   readonly check: Check
   readonly outcome: Outcome
 }
 
-/** One resolved adventure: an ordered run of trials plus its overall verdict. */
+/** Where a ledger movement came from. */
+export type LedgerSource = 'cost' | 'stake' | 'prize' | 'reward'
+
+/** One resource movement an adventure produced, tagged with its source (gain/loss is implied). */
+export interface LedgerEntry {
+  readonly source: LedgerSource
+  readonly delta: ResourceDelta
+}
+
+/** One resolved adventure: its goal, the trials, the overall verdict, and the resource ledger. */
 export interface Adventure {
+  readonly goal: Goal
   readonly trials: readonly Trial[]
   readonly outcome: Outcome
+  /** Itemized resource movements (stakes lost, reward won), in order. @see buildLedger */
+  readonly ledger: readonly LedgerEntry[]
 }
 
 /** Resolve a single check: one random draw against {@link TARGET}. */
@@ -88,7 +73,23 @@ const pickApproach = (rng: Rng): Approach => APPROACHES[Math.floor(rng.next() * 
 const resolveTrial = (rng: Rng): Trial => {
   const approach = pickApproach(rng)
   const check = resolveCheck(rng)
-  return { approach, check, outcome: check.outcome }
+  const stake = generateStake(rng, approach)
+  return stake ? { approach, stake, check, outcome: check.outcome } : { approach, check, outcome: check.outcome }
+}
+
+/** Assemble the itemized ledger: stakes lost on failed trials, plus the goal reward if won. */
+const buildLedger = (goal: Goal, trials: readonly Trial[], outcome: Outcome): LedgerEntry[] => {
+  const ledger: LedgerEntry[] = []
+  for (const trial of trials) {
+    if (trial.stake && trial.outcome === 'failure') {
+      ledger.push({ source: 'stake', delta: trial.stake })
+    }
+  }
+  // The reward lands only on overall success, and only if the goal was actually there to win.
+  if (outcome === 'success' && goal.viable) {
+    ledger.push({ source: 'reward', delta: goal.reward })
+  }
+  return ledger
 }
 
 /**
@@ -106,6 +107,7 @@ const TRIALS = APPROACH_TRIALS + 1
  * yet; "the last one decides" is the thinnest rule that still gives the chain a spine.)
  */
 export const resolveAdventure = (rng: Rng): Adventure => {
+  const goal = generatePrimaryGoal(rng)
   const trials: Trial[] = []
   let outcome: Outcome = 'failure'
   for (let i = 0; i < TRIALS; i++) {
@@ -113,5 +115,5 @@ export const resolveAdventure = (rng: Rng): Adventure => {
     trials.push(trial)
     outcome = trial.outcome
   }
-  return { trials, outcome }
+  return { goal, trials, outcome, ledger: buildLedger(goal, trials, outcome) }
 }

@@ -1,0 +1,21 @@
+# Primary-goal generation. Weights are relative (need not sum to 1). Tune freely.
+
+# Which resource a primary goal seeks — skewed to the quest-worthy kinds.
+rewardKindWeights:
+  item: 5
+  secret: 4
+  wealth: 4
+  lore: 2
+  renown: 2
+  supplies: 1
+  vigor: 1
+
+# Magnitude of a fungible reward.
+rewardTierWeights:
+  minor: 1
+  moderate: 3
+  major: 3
+  extreme: 1
+
+# Chance the primary goal isn't actually there (revealed by a trial).
+inviableChance: 0.15

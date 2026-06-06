@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 
 import { createRng, type Rng } from '@thrashplay/fw-core'
 
-import { APPROACHES, resolveAdventure, TARGET } from './adventure.js'
+import { APPROACHES } from './approaches.js'
+import { resolveAdventure, TARGET } from './adventure.js'
 
 /** A stub Rng whose `next()` always returns `value`; only `next` is exercised here. */
 const fixedRng = (value: number): Rng => ({ next: () => value }) as unknown as Rng
@@ -22,6 +23,12 @@ describe('resolveAdventure', () => {
     expect(adventure.trials).toHaveLength(4)
     expect(adventure.outcome).toBe(adventure.trials[adventure.trials.length - 1].outcome)
     expect(adventure.trials[0].check.target).toBe(TARGET)
+  })
+
+  it('has a primary goal: a reward of some kind plus a viability flag', () => {
+    const { goal } = resolveAdventure(createRng(7))
+    expect(goal.reward.kind.length).toBeGreaterThan(0)
+    expect(typeof goal.viable).toBe('boolean')
   })
 
   it('assigns every trial an approach from the pool', () => {
