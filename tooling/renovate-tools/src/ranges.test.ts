@@ -80,8 +80,8 @@ describe('bumpForPackage', () => {
   })
 
   it('ignores devDependencies entirely', () => {
-    const b = effectiveRanges({ name: 'p', dependencies: { a: '^1' } } as Manifest, catalogs).ranges
-    const h = effectiveRanges({ name: 'p', dependencies: { a: '^1' } } as Manifest, catalogs).ranges
+    const b = effectiveRanges({ name: 'p', dependencies: { a: '^1' } }, catalogs).ranges
+    const h = effectiveRanges({ name: 'p', dependencies: { a: '^1' } }, catalogs).ranges
     expect(bumpForPackage(b, h)).toBeNull()
   })
 })
