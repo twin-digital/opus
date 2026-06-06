@@ -17,7 +17,7 @@ catalog:
   '@middy/core': ^5.5.0
   '@types/aws-lambda': ^8.10.159
   '@types/lodash-es': ^4.17.12
-  '@types/node': 24.10.1
+  '@types/node': 24.12.4
   chalk: ^5.6.2
   dotenv: ^17.2.3
   eslint: ^9.29.0
@@ -33,7 +33,7 @@ catalog:
   typescript: ^5.9.3
   typescript-eslint: ^8.47.0
   vitest: ^4.0.12
-  '@vitest/coverage-istanbul': 4.0.12
+  '@vitest/coverage-istanbul': 4.1.7
   yaml: ^2.8.2
 
 onlyBuiltDependencies:
@@ -46,7 +46,7 @@ patchedDependencies:
   '@mishieck/ink-titled-box@0.3.0': patches/@mishieck__ink-titled-box@0.3.0.patch
 
 overrides:
-  '@smithy/types': 4.11.0
+  '@smithy/types': 4.14.2
 
 packageExtensions:
   aws-sdk-client-mock:
