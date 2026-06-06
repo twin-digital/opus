@@ -108,7 +108,7 @@ chore(deps): update react to v19
 | `.github/workflows/renovate-changeset.yml` | **Caller** (untrusted half): `pull_request` trigger, `renovate/*` + actor gate, concurrency. Delegates to the reusable workflow pinned `@main`. |
 | `.github/workflows/_commit-renovate-changeset.yml` | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7). |
 | `merge-checks.yaml` → `renovate-changeset-present` job | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). (In `merge-checks`, not `ci.yaml`: it's a PR-merge gate, not an every-push build.) |
-| AWS minter role (`secrets.GH_APP_MINTER_ROLE_ARN_RENOVATE`) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]` (§7). |
+| AWS minter role (`vars.GH_APP_MINTER_ROLE_ARN_RENOVATE`, a repo variable — the ARN isn't sensitive) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]`, on the `repo:…:pull_request` subject (no environment) (§7). |
 | `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` + `automerge` (§6.2, §6.8). |
 | `docs/cicd/renovate-integration.md` | This reference. |
 
