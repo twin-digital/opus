@@ -40,7 +40,7 @@ jobs:
       # can't source that container script). Keep the two in sync; if this changes again, take a hard
       # look at consolidating.
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN }}
           # Fall back to us-east-1 (the KMS key's region) if AWS_REGION is unset.
@@ -84,7 +84,7 @@ jobs:
           echo "token=$token" >> "$GITHUB_OUTPUT"
 
       # checkout project (app token persisted as git creds → changesets' tag pushes trigger workflows)
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           # release the exact commit CI validated, not whatever main points at now —
           # keeps the published version, its git tags, and the built images in lockstep
@@ -127,7 +127,7 @@ jobs:
       packages: ${{ steps.detect.outputs.packages }}
       has-packages: ${{ steps.detect.outputs.has-packages }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           # read the tags the publish job just pushed; head_sha keeps it in lockstep
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -163,7 +163,7 @@ jobs:
         package: ${{ fromJson(needs.docker-matrix.outputs.packages) }}
     steps:
       # build images from the exact released commit (matches docker-matrix's tag lookup)
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
@@ -174,7 +174,7 @@ jobs:
         run: pnpm run artifact --filter=${{ matrix.package.name }}
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
