@@ -31,6 +31,32 @@ So a resource delta is one of two shapes: `{ kind, tier }` (fungible) or `{ kind
 `lore` (general knowledge) vs `secret` (knowing one specific thing), and `wealth` (fungible coin) vs
 `item` (the specific macguffin), are the fungible/non-fungible pairs.
 
+### Resource vocabulary (growing toward)
+
+The starter set above is a deliberate **lean subset** (per §8 — lean built surface, rich design
+model), not the whole picture. The fuller palette we may grow into, by scope:
+
+**Adventure-scoped** — what a single expedition wins, risks, or spends:
+
+- _Material:_ `wealth` (coin) · `supplies` (consumables) · `item` (a specific treasure, artifact, or
+  piece of equipment — magic or mundane)
+- _Corporeal:_ `vigor` (health/stamina) · **life** (a death) · vitality / youth
+- _Social:_ `renown` (fame)
+- _Mental:_ `lore` (general knowledge) · `secret` (a specific thing known) · skill / capability
+- _Volitional:_ `morale` · `faith`
+
+**Covenant-scoped** — holdings that accrue across arcs; rarely an expedition's whole reward, though
+one can _serve_ them:
+
+- **territory / holdings** (land, strongholds, claims)
+- **followers / vassals / members** (the covenant's people — the anonymous mass and named recruits)
+- **political standing / influence** (with factions, rivals, powers)
+- **allies / pacts** with other covenants and factions
+- institutional **knowledge / library**; covenant **relics** (named items that become treasures)
+
+Relational ties — love, honour, fear, allies — are **bonds**, not plain resources; they live in the
+bond model (`social-simulation.md`), even though gaining an ally _feels_ like gaining a resource.
+
 ## Goals
 
 An adventure has:
