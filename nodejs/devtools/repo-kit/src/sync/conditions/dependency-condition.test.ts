@@ -5,7 +5,7 @@ import { makeDependencyCondition } from './dependency-condition.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 
 const workspaceWith = (manifest: Partial<ProjectManifest>): PackageMeta => ({
-  manifest: { name: 'pkg', ...manifest } as ProjectManifest,
+  manifest: { name: 'pkg', ...manifest },
   name: 'pkg',
   path: '/tmp/pkg',
 })

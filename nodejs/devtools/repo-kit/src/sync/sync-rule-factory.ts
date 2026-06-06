@@ -43,19 +43,7 @@ const appliesTo = async (workspace: PackageMeta, conditions: SyncConditionFn[] |
 
 const makeConditionFn = (condition: SyncConditionConfig) => {
   if ('dependency' in condition) {
-    const c = condition as unknown as {
-      dependency:
-        | string
-        | {
-            name: string
-            match?: {
-              dependency?: boolean
-              devDependency?: boolean
-              optionalDependency?: boolean
-              peerDependency?: boolean
-            }
-          }
-    }
+    const c = condition
 
     // If shorthand string form is used, treat it as the dependency name with default options
     if (typeof c.dependency === 'string') {
