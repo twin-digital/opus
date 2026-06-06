@@ -19,11 +19,10 @@ jobs:
   # are OPT-IN (see deploy-preview.yaml), so most PRs never deploy a stage; without this guard every
   # close would enter the `preview` environment and run a no-op `serverless remove` (issue #123).
   #
-  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it when it deploys a stage,
+  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it when it starts a stage deploy,
   # and (unlike `preview`) strip-preview-label.yml never removes it, so its presence on the close
-  # event's `pull_request.labels` durably means "a stage was deployed for this PR". We read it straight
-  # off the event payload — no API call, no credentials — and a `false` here skips the whole job, so an
-  # un-deployed close never enters the `preview` environment. The label is keyed on the PR number, like
+  # event's `pull_request.labels` durably means “this PR initiated a preview deploy” (and teardown may
+  # be needed). We read it straight off the event payload — no API call, no credentials — and a `false` here skips the whole job, so an
   # the `pr-<number>` stage it guards, so this is immune to the branch reuse/rename ambiguity a
   # branch-scoped deploy-history lookup would have. (Surfacing the deploy URL/details on the PR is
   # tracked separately and intentionally out of scope here.)
