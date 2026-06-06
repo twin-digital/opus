@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { Adventure, Approach, Goal, LedgerEntry, Outcome } from '@thrashplay/fw-simulation'
+import type { Adventure, Approach, Goal, LedgerEntry, Outcome, ResourceDelta } from '@thrashplay/fw-simulation'
 
 /** Per-call options a backend may honour — generic, so each backend reads what it supports. */
 export interface LlmOptions {
@@ -113,9 +113,16 @@ interface TrialView {
   readonly outcome: Outcome
 }
 
+/** A secondary aim as the chronicler sees it: its reward and whether the party achieved it. */
+interface OptionalGoalView {
+  readonly reward: ResourceDelta
+  readonly won: boolean
+}
+
 /** An adventure as the chronicler is allowed to see it. @see chronicleView */
 interface AdventureView {
   readonly goal: Goal
+  readonly optionalGoals: readonly OptionalGoalView[]
   readonly trials: readonly TrialView[]
   readonly outcome: Outcome
   readonly ledger: readonly LedgerEntry[]
@@ -132,6 +139,10 @@ interface AdventureView {
  */
 const chronicleView = (adventure: Adventure): AdventureView => ({
   goal: adventure.goal,
+  optionalGoals: adventure.optionalGoals.map((opt) => ({
+    reward: opt.reward,
+    won: adventure.trials[opt.trial].outcome === 'success',
+  })),
   trials: adventure.trials.map((trial) => ({ approach: trial.approach, outcome: trial.outcome })),
   outcome: adventure.outcome,
   ledger: adventure.ledger,

@@ -36,8 +36,12 @@ and no others:
 
 - `goal` — what the expedition set out to win; render it as why they went.
   - `reward` — the prize sought: a `kind` (and a magnitude `tier`, if a fungible kind).
-  - `viable` — `true` if the prize was really there; `false` if it was not, so even a
-    successful expedition brings it not home (they sought it in vain).
+  - `viable` — `true` if the prize was really there; `false` if it was never there at all —
+    the expedition cannot have won it, and the overall `outcome` already reflects that (a
+    failure, however the trials went). Render it as a journey to a thing that was not there.
+- `optionalGoals` — secondary aims the party also pursued, each with a `reward` and `won`
+  (whether they achieved it). Render the `won` as gained, the unwon as reached-for and
+  missed. May be empty.
 - `trials` — the trials the party faced, **in the order given**. Narrate them in that
   order.
   - `approach` — the method the party used to meet this trial, one of: _combat, might,
@@ -49,10 +53,12 @@ and no others:
   - `outcome` — `"success"` if the trial went the party's way; `"failure"` if it went
     against them.
 - `outcome` (at the top level) — how the expedition resolved as a whole.
-- `ledger` — what the expedition actually won and lost; render these as concrete gains and
-  losses. Each entry has a `source` and a resource (`kind`, plus a `tier` if fungible):
+- `ledger` — the resource residue of the trials above: what the expedition won and lost.
+  **Weave these gains and losses into the telling of the trials, do not list them apart.**
+  Each entry has a `source` and a resource (`kind`, plus a `tier` if fungible):
   - `reward` — the goal, carried home (only on success).
-  - `prize` — a lesser boon won along the way.
+  - `optional` — a secondary objective won.
+  - `prize` — a lesser, incidental boon won along the way.
   - `stake` — a loss suffered on a failed trial.
   - `cost` — something spent to attempt a trial.
 
