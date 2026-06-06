@@ -69,9 +69,6 @@ catalogs:
     globals:
       specifier: ^16.0.0
       version: 16.0.0
-    lodash-es:
-      specifier: ^4.17.22
-      version: 4.17.22
     prettier:
       specifier: ^3.5.3
       version: 3.6.2
@@ -161,7 +158,7 @@ importers:
         version: 9.0.2
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -213,7 +210,7 @@ importers:
     dependencies:
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -280,7 +277,7 @@ importers:
         version: 9.6.1
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
       postcss:
         specifier: ^8.4.0
         version: 8.5.10
@@ -365,7 +362,7 @@ importers:
         version: 5.2.1
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -432,7 +429,7 @@ importers:
         version: 0.5.16
       lodash-es:
         specifier: 'catalog:'
-        version: 4.17.22
+        version: 4.18.1
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
@@ -846,7 +843,7 @@ importers:
         version: 1.0.2
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
@@ -1038,7 +1035,7 @@ importers:
         version: 17.2.3
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1090,7 +1087,7 @@ importers:
         version: 5.5.1
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
       mobx:
         specifier: ^6.15.0
         version: 6.15.0
@@ -1248,7 +1245,7 @@ importers:
         version: 6.0.0(ink@6.5.1(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.6)(react@19.2.0))(react@19.2.0)
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.18.1
       meow:
         specifier: ^11.0.0
         version: 11.0.0
@@ -5774,11 +5771,8 @@ packages:
     resolution: {integrity: sha512-gvVijfZvn7R+2qyPX8mAuKcFGDf6Nc61GdvGafQsHL0sBIxfKzA+usWn4GFC/bk+QdwPUD4kWFJLhElipq+0VA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  lodash-es@4.17.21:
-    resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
-
-  lodash-es@4.17.22:
-    resolution: {integrity: sha512-XEawp1t0gxSi9x01glktRZ5HDy0HXqrM0x5pXQM98EaI0NxO6jVM7omDOxsuEo5UIASAnm2bRp1Jt/e0a2XU8Q==}
+  lodash-es@4.18.1:
+    resolution: {integrity: sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A==}
 
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
@@ -12114,9 +12108,7 @@ snapshots:
     dependencies:
       p-locate: 6.0.0
 
-  lodash-es@4.17.21: {}
-
-  lodash-es@4.17.22: {}
+  lodash-es@4.18.1: {}
 
   lodash.debounce@4.0.8: {}
 
