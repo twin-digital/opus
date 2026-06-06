@@ -25,6 +25,7 @@ export const makeAdventure = (partial: Partial<Adventure> = {}): Adventure => {
   const trials = partial.trials ?? [makeTrial()]
   return {
     goal: partial.goal ?? DEFAULT_GOAL,
+    optionalGoals: partial.optionalGoals ?? [],
     trials,
     outcome: partial.outcome ?? trials.at(-1)?.outcome ?? 'failure',
     ledger: partial.ledger ?? [],

@@ -2,7 +2,7 @@ import type { Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES, type Approach } from './approaches.js'
 import { generateCost } from './costs.js'
-import { generatePrimaryGoal, type Goal } from './goals.js'
+import { generateOptionalGoals, generatePrimaryGoal, type Goal, type OptionalGoal } from './goals.js'
 import { generatePrize } from './prizes.js'
 import type { ResourceDelta } from './resources.js'
 import { generateStake } from './stakes.js'
@@ -60,9 +60,11 @@ export interface LedgerEntry {
 /** One resolved adventure: its goal, the trials, the overall verdict, and the resource ledger. */
 export interface Adventure {
   readonly goal: Goal
+  /** Secondary aims, each bound to a trial whose success wins it. @see generateOptionalGoals */
+  readonly optionalGoals: readonly OptionalGoal[]
   readonly trials: readonly Trial[]
   readonly outcome: Outcome
-  /** Itemized resource movements (stakes lost, reward won), in order. @see buildLedger */
+  /** Itemized resource movements (costs, stakes, prizes, reward), in order. @see buildLedger */
   readonly ledger: readonly LedgerEntry[]
 }
 
@@ -80,13 +82,11 @@ const resolveTrial = (rng: Rng): Trial => {
   const approach = pickApproach(rng)
   const check = resolveCheck(rng)
   const stake = generateStake(rng, approach)
-  const prize = generatePrize(rng)
   const cost = generateCost(approach)
   return {
     approach,
     ...(cost ? { cost } : {}),
     ...(stake ? { stake } : {}),
-    ...(prize ? { prize } : {}),
     check,
     outcome: check.outcome,
   }
@@ -132,12 +132,16 @@ const TRIALS = APPROACH_TRIALS + 1
  */
 export const resolveAdventure = (rng: Rng): Adventure => {
   const goal = generatePrimaryGoal(rng)
+  const optionalGoals = generateOptionalGoals(rng, TRIALS)
+  const boundReward = new Map(optionalGoals.map((opt): [number, ResourceDelta] => [opt.trial, opt.reward]))
   const trials: Trial[] = []
   let outcome: Outcome = 'failure'
   for (let i = 0; i < TRIALS; i++) {
-    const trial = resolveTrial(rng)
-    trials.push(trial)
-    outcome = trial.outcome
+    const core = resolveTrial(rng)
+    // A bound optional goal supersedes the random prize on its trial.
+    const prize = boundReward.get(i) ?? generatePrize(rng)
+    trials.push(prize ? { ...core, prize } : core)
+    outcome = core.outcome
   }
-  return { goal, trials, outcome, ledger: buildLedger(goal, trials, outcome) }
+  return { goal, optionalGoals, trials, outcome, ledger: buildLedger(goal, trials, outcome) }
 }

@@ -30,6 +30,12 @@ export const GoalsConfig = z.object({
     .min(0)
     .max(1)
     .meta({ description: "Chance the primary goal isn't actually there, revealed by a trial.", examples: [0.15] }),
+  optionalCountWeights: z
+    .record(z.string(), z.number().nonnegative())
+    .meta({ description: 'Relative weights for how many optional goals an adventure has (keys are counts).' }),
+  optionalTierWeights: weights(TIERS).meta({
+    description: 'Magnitude of a fungible optional-goal reward — skewed smaller than the primary.',
+  }),
 })
 export type GoalsConfig = z.infer<typeof GoalsConfig>
 
