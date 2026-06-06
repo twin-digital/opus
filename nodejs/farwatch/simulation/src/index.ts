@@ -11,6 +11,16 @@ export {
 export { APPROACHES, type Approach } from './approaches.js'
 export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
+  skillFor,
+  AFFINITY_WORDS,
+  COMPETENCE_WORDS,
+  RATING_MIN,
+  RATING_MAX,
+  type Rating,
+  type Skill,
+  type Seeker,
+} from './seekers.js'
+export {
   costsConfig,
   goalsConfig,
   prizesConfig,
