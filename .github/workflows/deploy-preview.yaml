@@ -129,8 +129,8 @@ jobs:
     steps:
       # Record that a stage is being deployed for this PR BEFORE deploying, via the sticky
       # `preview-deployed` label. strip-preview-label.yml only ever removes `preview`, never this one,
-      # so it durably marks "this PR deployed a preview stage" — the exact signal destroy-preview.yml
-      # reads off the close event payload to decide whether a teardown is needed. Marking first means a
+      # so it durably marks "this PR initiated a preview deploy" — the exact signal destroy-preview.yml
+      # reads off the close event payload to decide whether a teardown may be needed. Marking first means a
       # partially failed deploy is still torn down. The label is keyed on the PR number (like the
       # `pr-<number>` stage itself), so the teardown decision is immune to branch reuse/rename. This
       # step is required (no `|| true`): if labeling fails we must NOT proceed to deploy, or we'd create
