@@ -5,3 +5,6 @@ terraform
 
 # automatically generated files
 **/CHANGELOG.md
+
+# pnpm lockfile — managed by pnpm; never reformat
+pnpm-lock.yaml
