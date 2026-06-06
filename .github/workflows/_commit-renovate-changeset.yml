@@ -13,10 +13,10 @@ on:
       base_ref:  { required: true, type: string }
       head_ref:  { required: true, type: string }
       pr_title:  { required: true, type: string }
-    secrets:
-      minter_role_arn:
-        description: AWS role (OIDC) permitted to kms:Sign the App JWT
-        required: true
+    # The minter role ARN is a non-sensitive identifier, so it's a repo variable
+    # (vars.GH_APP_MINTER_ROLE_ARN_RENOVATE), read directly below — no environment, so the OIDC subject
+    # is `repo:<owner>/<repo>:pull_request`, which this role's AWS trust is pinned to (with
+    # job_workflow_ref @main + actor).
 
 permissions:
   id-token: write # OIDC -> assume the AWS minter role
@@ -73,7 +73,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          role-to-assume: ${{ secrets.minter_role_arn }}
+          role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN_RENOVATE }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
 
       # NB: this JWT→kms:Sign→exchange duplicates the same block in publish.yaml (and the devcontainer

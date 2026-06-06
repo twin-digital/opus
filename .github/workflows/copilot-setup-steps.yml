@@ -29,11 +29,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      # setup tools and install dependencies
+      # setup tools and install dependencies. repo-kit's bin runs from source (it needs no build), so the
+      # install above is all the setup the agent needs to run `pnpm sync` / `pnpm update-readme`.
       - name: Setup dependencies
         uses: ./.github/actions/setup
-
-      - name: Build repo-kit
-        run: pnpm build --filter @twin-digital/repo-kit
-      - name: Create repo-kit .bin link
-        run: pnpm install --frozen-lockfile --prefer-offline
