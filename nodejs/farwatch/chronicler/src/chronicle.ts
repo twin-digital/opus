@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { Adventure, Approach, Goal, LedgerEntry, Outcome, ResourceDelta } from '@thrashplay/fw-simulation'
+import type { Adventure, Approach, Goal, Outcome, ResourceDelta } from '@thrashplay/fw-simulation'
 
 /** Per-call options a backend may honour — generic, so each backend reads what it supports. */
 export interface LlmOptions {
@@ -107,10 +107,18 @@ export const buildPrompt = (spec: PromptSpec): string => {
   return template.replace(PLACEHOLDER, (_match, key: string) => resolved[key] ?? `{{${key}}}`)
 }
 
-/** A trial as the chronicler is allowed to see it: its approach and outcome, no dice. */
+/**
+ * A trial as the chronicler is allowed to see it: its approach, outcome, and the resource movements
+ * that actually landed at *this* beat — `cost` (paid up front, win or lose), `stake` (a loss, only on
+ * a failed trial), and `prize` (a gain, only on a won trial). Keeping them on the trial gives the
+ * model the join the flat ledger could not: it knows *which* beat won the relic or cost the standing.
+ */
 interface TrialView {
   readonly approach: Approach
   readonly outcome: Outcome
+  readonly cost?: ResourceDelta
+  readonly stake?: ResourceDelta
+  readonly prize?: ResourceDelta
 }
 
 /** A secondary aim as the chronicler sees it: its reward and whether the party achieved it. */
@@ -125,7 +133,6 @@ interface AdventureView {
   readonly optionalGoals: readonly OptionalGoalView[]
   readonly trials: readonly TrialView[]
   readonly outcome: Outcome
-  readonly ledger: readonly LedgerEntry[]
 }
 
 /**
@@ -133,9 +140,15 @@ interface AdventureView {
  * mechanical numbers (`roll`, `target`) dropped. The chronicle stays clean of numbers — *expose
  * the dice, hide the genome* — and the surest way to keep dice out of the prose is to never hand
  * them to the model. The goal (the aim), each trial's approach and outcome, the overall outcome,
- * and the resource ledger (what was won and lost) all survive — none of which is dice. The
- * resolver's `roll`/`target` are dropped. As the genome grows (seekers, a defied edict's *because*)
- * those chronicle-legal facts join this view, and the template's schema section grows with it.
+ * and the resource movements (what was won and lost) all survive — none of which is dice.
+ *
+ * The movements ride *on their trial* rather than in a flat ledger, so the model knows which beat
+ * produced each gain or loss: a trial shows its `cost` (paid up front), its `stake` only when it
+ * failed (a realized loss), and its `prize` only when it won (a realized gain). The goal's `reward`
+ * is carried home exactly when the overall `outcome` is a success — the resolver's flat ledger isn't
+ * handed over, since every entry it held is now attributed to its trial, its optional, or the goal.
+ * As the genome grows (seekers, a defied edict's *because*) those facts join this view, and the
+ * template's schema section grows with it.
  */
 const chronicleView = (adventure: Adventure): AdventureView => ({
   goal: adventure.goal,
@@ -143,9 +156,14 @@ const chronicleView = (adventure: Adventure): AdventureView => ({
     reward: opt.reward,
     won: adventure.trials[opt.trial].outcome === 'success',
   })),
-  trials: adventure.trials.map((trial) => ({ approach: trial.approach, outcome: trial.outcome })),
+  trials: adventure.trials.map((trial) => ({
+    approach: trial.approach,
+    outcome: trial.outcome,
+    ...(trial.cost ? { cost: trial.cost } : {}),
+    ...(trial.stake && trial.outcome === 'failure' ? { stake: trial.stake } : {}),
+    ...(trial.prize && trial.outcome === 'success' ? { prize: trial.prize } : {}),
+  })),
   outcome: adventure.outcome,
-  ledger: adventure.ledger,
 })
 
 /** Serialize the chronicle-legal view as the JSON the template drops into `<adventure>`. */

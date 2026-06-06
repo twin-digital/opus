@@ -43,7 +43,9 @@ and no others:
   (whether they achieved it). Render the `won` as gained, the unwon as reached-for and
   missed. May be empty.
 - `trials` — the trials the party faced, **in the order given**. Narrate them in that
-  order.
+  order. Each trial carries the gains and losses that landed _at that beat_; **weave them
+  into the telling of the trial itself — do not list them apart, and do not move a gain or
+  loss to a beat it does not belong to.**
   - `approach` — the method the party used to meet this trial, one of: _combat, might,
     speed, endurance, agility, lore, insight, cunning, resolve, diplomacy, deception,
     intimidation, charm, performance, stealth, evasion, magic, ritual, sacrifice, wealth,
@@ -52,15 +54,18 @@ and no others:
     through; a kept `endurance` is a hardship outwaited.
   - `outcome` — `"success"` if the trial went the party's way; `"failure"` if it went
     against them.
-- `outcome` (at the top level) — how the expedition resolved as a whole.
-- `ledger` — the resource residue of the trials above: what the expedition won and lost.
-  **Weave these gains and losses into the telling of the trials, do not list them apart.**
-  Each entry has a `source` and a resource (`kind`, plus a `tier` if fungible):
-  - `reward` — the goal, carried home (only on success).
-  - `optional` — a secondary objective won.
-  - `prize` — a lesser, incidental boon won along the way.
-  - `stake` — a loss suffered on a failed trial.
-  - `cost` — something spent to attempt a trial.
+  - `cost` — what attempting this trial took up front, win or lose. A loss; render it as
+    paid. (An `approach` of `sacrifice` _is_ this paying — what was given up is the `cost`,
+    never the `prize`.)
+  - `stake` — a loss the party suffered _because this trial failed_ (only ever present on a
+    failed trial). Render it as the price of that failure.
+  - `prize` — an incidental boon the party _won at this trial_ (only ever present on a won
+    trial). A gain; render it as carried off.
+- `optionalGoals` and `trials` each carry their own resource (`kind`, plus a `tier` if
+  fungible). A gain is never also a loss: `cost` and `stake` are losses, `prize` and a won
+  `reward` are gains.
+- `outcome` (at the top level) — how the expedition resolved as a whole. When it is a
+  success, the `goal`'s `reward` was carried home; when it is a failure, it was not.
 
 The resource `kind`s: `wealth` (coin and treasure), `supplies` (provisions and gear),
 `vigor` (the party's health and strength), `renown` (fame and standing), `lore` (general
