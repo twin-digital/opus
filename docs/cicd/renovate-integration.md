@@ -434,3 +434,7 @@ auto-merge** has an ordered rollout, because the AWS trust must match the reusab
 4. **Make `renovate-changeset-present` a required status check**, then set `automerge: true` in
    `renovate.json` (§6.8). Order matters: enabling auto-merge before the gate is required would let a
    PR merge without its changeset.
+
+Auto-merge has a second prerequisite, tracked separately: the **supply-chain scanner** must also be a
+required check before `automerge: true`, so an auto-merged bump is inspected for malware and not only
+for a present changeset. See [`./supply-chain-scanning.md`](./supply-chain-scanning.md) (issue #118).

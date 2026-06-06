@@ -66,6 +66,15 @@ newer `main` commit can't be released/built under the just-published version tag
    `ghcr.io`.
 4. **docker-status-check** — fails the run if any image build failed.
 
+## Supply-chain scanning (dependency PRs)
+
+Dependency-update PRs are gated by a **behavioral supply-chain scanner** — the [Socket.dev](https://socket.dev)
+GitHub App — wired as a **required status check** so a bump's package contents are inspected before it
+can merge (and, transitively, before Renovate auto-merges it). This is the **detection** layer on top
+of Renovate's time-based cooldown; it catches novel install-script / runtime malware that an
+advisory-database scanner cannot. Setup, the block/warn policy, and the activation order live in
+[`cicd/supply-chain-scanning.md`](./cicd/supply-chain-scanning.md).
+
 ## Serverless services
 
 Deployable apps (e.g. `nodejs/bookify/bookify-render-api`, `nodejs/apps/discord-bot`) each own a
