@@ -70,6 +70,20 @@
       select[hidden] {
         display: none;
       }
+      .field {
+        margin-bottom: 14px;
+      }
+      .field label {
+        display: block;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+      }
+      .field select {
+        width: 100%;
+        max-width: none;
+      }
       button {
         background: var(--accent);
         color: #14171c;
@@ -161,24 +175,6 @@
       .roll b {
         color: var(--ink);
       }
-      textarea {
-        width: 100%;
-        min-height: 340px;
-        resize: vertical;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        color: var(--ink);
-        border-radius: 8px;
-        padding: 12px 14px;
-        font:
-          13px/1.6 ui-monospace,
-          monospace;
-      }
-      .editbtns {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-      }
       .note {
         font-size: 12px;
         margin-top: 12px;
@@ -187,16 +183,6 @@
         background: var(--panel);
         padding: 1px 5px;
         border-radius: 4px;
-      }
-      .tag {
-        font:
-          11px/1 ui-monospace,
-          monospace;
-        color: var(--fail);
-        border: 1px solid var(--fail);
-        border-radius: 4px;
-        padding: 2px 6px;
-        margin-left: 8px;
       }
       .dim {
         color: var(--dim);
@@ -219,31 +205,21 @@
     </header>
     <main>
       <div class="col">
+        <h2>Prompt builder</h2>
+        <div id="builder"><span class="dim">loading options…</span></div>
+        <div class="note dim">
+          Each control picks a snippet from <code>prompts/&lt;axis&gt;/</code>. <b>Register</b> is the narrator's voice;
+          <b>writing style</b> dials the prose ornament — they compose. The prompt actually sent is shown under “Prompt
+          sent”.
+        </div>
+      </div>
+      <div class="col">
         <h2>Chronicle</h2>
         <div id="verdict"></div>
         <div id="chronicle" class="chronicle dim">
           Pick a seed and hit Run. The sim is deterministic per seed; the narrative is not, so re-running the same seed
           shows how the LLM varies on a fixed fact.
         </div>
-      </div>
-      <div class="col">
-        <h2>Edit · overrides</h2>
-        <section class="block">
-          <div class="k">Prompt override</div>
-          <textarea
-            id="promptEdit"
-            spellcheck="false"
-            placeholder="(empty → the generated prompt is used)&#10;&#10;Click “Load generated” to start from the built prompt, then edit to test overrides."
-          ></textarea>
-          <div class="editbtns">
-            <button id="loadGen" class="ghost" disabled>Load generated</button>
-            <button id="clearPrompt" class="ghost">Clear</button>
-          </div>
-          <div class="note dim">
-            Empty = the default pipeline (<code>buildPrompt</code>). Type, or load-then-edit, to override — the next Run
-            sends it verbatim. The seed still rolls the result shown in the guts; only the prompt is replaced.
-          </div>
-        </section>
       </div>
       <div class="col">
         <h2>The guts (hide nothing)</h2>
@@ -256,7 +232,7 @@
           <pre id="result">—</pre>
         </section>
         <section class="block">
-          <div class="k">Prompt sent <span id="overrideTag" class="tag" hidden>OVERRIDE</span></div>
+          <div class="k">Prompt sent</div>
           <pre id="prompt">—</pre>
         </section>
         <section class="block">
@@ -272,10 +248,54 @@
       const runBtn = $('run')
       const randBtn = $('rand')
       const statusEl = $('status')
-      const promptEl = $('promptEdit')
       const modelEl = $('model')
       const modelLabel = $('modelLabel')
-      let lastGenerated = ''
+
+      // Build the prompt-builder form from the snippet axes the server discovers on disk. A `template`
+      // control appears only when there's a real choice; everything else is one dropdown per axis.
+      async function loadOptions() {
+        try {
+          const res = await fetch('/options')
+          const data = await res.json()
+          const field = (name, options, selected) => {
+            const opts = options.map((o) => `<option ${o === selected ? 'selected' : ''}>${o}</option>`).join('')
+            return `<div class="field"><label for="sel-${name}">${name.replace(/_/g, ' ')}</label><select id="sel-${name}" data-name="${name}">${opts}</select></div>`
+          }
+          const parts = []
+          if (data.templates.length > 1) {
+            parts.push(field('template', data.templates, data.defaults.template))
+          }
+          for (const ax of data.axes) {
+            parts.push(field(ax.placeholder, ax.options, data.defaults.snippets[ax.placeholder]))
+          }
+          // Examples aren't a pickable snippet — they follow the selection. The only lever is how
+          // many to include (0 = zero-shot); the ceiling is the seed-adventure count.
+          parts.push(
+            `<div class="field"><label for="sel-exampleCount">examples (count)</label><input id="sel-exampleCount" data-name="exampleCount" type="number" min="0" max="${data.maxExamples}" step="1" value="${data.defaults.exampleCount}" /></div>`,
+          )
+          $('builder').innerHTML = parts.join('')
+        } catch (err) {
+          $('builder').innerHTML = `<span class="err">could not load options: ${err.message}</span>`
+        }
+      }
+
+      // Gather the form into { template?, snippets, exampleCount } for the /run request.
+      function selections() {
+        const snippets = {}
+        let template
+        let exampleCount
+        document.querySelectorAll('#builder [data-name]').forEach((el) => {
+          const name = el.dataset.name
+          if (name === 'template') {
+            template = el.value
+          } else if (name === 'exampleCount') {
+            exampleCount = Number(el.value)
+          } else {
+            snippets[name] = el.value
+          }
+        })
+        return { template, snippets, exampleCount }
+      }
 
       // Populate the model dropdown from the server (ollama backend only). Hidden otherwise.
       async function loadModels() {
@@ -298,7 +318,6 @@
 
       async function run() {
         const seed = Number(seedEl.value)
-        const override = promptEl.value
         runBtn.disabled = true
         statusEl.textContent = 'rolling…'
         $('chronicle').classList.add('dim')
@@ -307,7 +326,7 @@
           const res = await fetch('/run', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ seed, prompt: override || undefined, model }),
+            body: JSON.stringify({ seed, selections: selections(), model }),
           })
           const data = await res.json()
           if (!res.ok || data.error) {
@@ -317,9 +336,6 @@
           const tags = [`${data.elapsedMs} ms`]
           if (data.model) {
             tags.push(data.model)
-          }
-          if (data.overridden) {
-            tags.push('override')
           }
           statusEl.textContent = tags.join(' · ')
         } catch (err) {
@@ -354,11 +370,6 @@
         $('result').textContent = JSON.stringify(adv, null, 2)
         $('prompt').textContent = d.prompt
         $('raw').textContent = d.raw
-        $('overrideTag').hidden = !d.overridden
-
-        // Remember the generated prompt for this result so "Load generated" can seed the editor.
-        lastGenerated = d.defaultPrompt
-        $('loadGen').disabled = false
       }
 
       randBtn.addEventListener('click', () => {
@@ -371,16 +382,9 @@
           run()
         }
       })
-      $('loadGen').addEventListener('click', () => {
-        promptEl.value = lastGenerated
-        promptEl.focus()
-      })
-      $('clearPrompt').addEventListener('click', () => {
-        promptEl.value = ''
-        promptEl.focus()
-      })
 
       loadModels()
+      loadOptions()
     </script>
   </body>
 </html>

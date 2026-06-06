@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { join, resolve } from 'node:path'
 
-import { buildPrompt, listOllamaModels, selectLlm } from '@thrashplay/fw-chronicler'
+import {
+  buildChroniclePrompt,
+  CHRONICLE_DEFAULTS,
+  listOllamaModels,
+  listPromptOptions,
+  selectLlm,
+} from '@thrashplay/fw-chronicler'
 import { createRng, hashSeed } from '@thrashplay/fw-core'
 import { resolveAdventure } from '@thrashplay/fw-simulation'
 
@@ -23,31 +29,36 @@ const llm = selectLlm()
 const port = Number(process.env.PORT ?? 4178)
 const pagePath = join(import.meta.dirname, 'inspector.html')
 
+/** What the inspector's prompt-builder form sends: a template, a snippet per axis, an example count. */
+interface Selections {
+  readonly template?: string
+  readonly snippets?: Record<string, string>
+  readonly exampleCount?: number
+}
+
 /**
  * Run one adventure for `seed` and return every fact the pipeline touched — hide nothing.
  *
- * `override` lets the Edit panel send a prompt verbatim instead of the generated one; an empty
- * override falls back to {@link buildPrompt}. Both the generated default and what was actually
- * sent are returned, so the page can flag whether this run was overridden.
+ * `selections` are the prompt-builder choices (template + a snippet per axis); they go to
+ * {@link buildChroniclePrompt}, which fills in {@link CHRONICLE_DEFAULTS} for anything omitted. The
+ * composed prompt is returned alongside the completion so the page can show exactly what was sent.
  */
-const run = async (seed: number, override?: string, model?: string) => {
+const run = async (seed: number, selections: Selections, model?: string) => {
   const result = resolveAdventure(createRng(hashSeed(seed)))
-  const defaultPrompt = buildPrompt(result)
-  const prompt = override && override.length > 0 ? override : defaultPrompt
+  const prompt = buildChroniclePrompt(result, selections)
   const startedAt = Date.now()
   const raw = await llm(prompt, model !== undefined && model !== '' ? { model } : undefined)
   const elapsedMs = Date.now() - startedAt
-  // `chronicle()` is just `(await llm(buildPrompt(result))).trim()`; inlined here so the page can
+  // `chronicle()` is just `(await llm(buildChroniclePrompt(result))).trim()`; inlined here so the page can
   // show the prompt and the untrimmed completion alongside the trimmed prose it would return.
   return {
     seed,
     result,
-    defaultPrompt,
     prompt,
     raw,
     chronicle: raw.trim(),
     elapsedMs,
-    overridden: prompt !== defaultPrompt,
+    selections,
     model: model ?? process.env.CHRONICLER_MODEL ?? null,
   }
 }
@@ -82,9 +93,9 @@ const server = createServer((req, res) => {
   if (url.pathname === '/run' && req.method === 'POST') {
     readBody(req)
       .then((body) => {
-        const { seed, prompt, model } = JSON.parse(body || '{}') as {
+        const { seed, selections, model } = JSON.parse(body || '{}') as {
           seed?: number
-          prompt?: string
+          selections?: Selections
           model?: string
         }
         if (typeof seed !== 'number' || !Number.isFinite(seed)) {
@@ -92,7 +103,7 @@ const server = createServer((req, res) => {
           res.end(JSON.stringify({ error: `invalid seed: ${JSON.stringify(seed)}` }))
           return
         }
-        return run(seed, prompt, model).then((payload) => {
+        return run(seed, selections ?? {}, model).then((payload) => {
           res.writeHead(200, { 'content-type': 'application/json' })
           res.end(JSON.stringify(payload))
         })
@@ -131,6 +142,15 @@ const server = createServer((req, res) => {
         )
       },
     )
+    return
+  }
+
+  if (url.pathname === '/options' && req.method === 'GET') {
+    // Powers the prompt-builder form: the templates and snippet axes discovered on disk, the default
+    // selection so the controls open on the active composition, and the example-count ceiling (the
+    // number of seed adventures the gen-examples script narrates per combo).
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ ...listPromptOptions(), defaults: CHRONICLE_DEFAULTS, maxExamples: 3 }))
     return
   }
 
