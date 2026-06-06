@@ -172,7 +172,7 @@ export const Panel = ({
       titleJustify='center'
       titles={[title ?? '']}
       borderColor={theme.border.default}
-      borderStyle={(styleProps.borderStyle ?? 'doubleSingle') as BorderStyle}
+      borderStyle={styleProps.borderStyle ?? 'doubleSingle'}
       {...styleProps}
       {...rest}
     >
