@@ -18,10 +18,11 @@ describe('resolveAdventure', () => {
     expect(resolveAdventure(fixedRng(TARGET + 0.01)).outcome).toBe('failure')
   })
 
-  it('resolves to a chain of trials whose final trial decides the adventure', () => {
+  it('resolves to a chain of trials; a viable goal lets the final trial decide', () => {
     const adventure = resolveAdventure(createRng(7))
     expect(adventure.trials).toHaveLength(4)
-    expect(adventure.outcome).toBe(adventure.trials[adventure.trials.length - 1].outcome)
+    const last = adventure.trials[adventure.trials.length - 1].outcome
+    expect(adventure.outcome).toBe(adventure.goal.viable ? last : 'failure')
     expect(adventure.trials[0].check.target).toBe(TARGET)
   })
 
@@ -41,12 +42,13 @@ describe('resolveAdventure', () => {
     expect(resolveAdventure(createRng(42))).toEqual(resolveAdventure(createRng(42)))
   })
 
-  it('lands near 50% success over many runs', () => {
+  it('the final trial lands near 50% over many runs (a fair check)', () => {
     const rng = createRng(1)
     const n = 20_000
     let wins = 0
     for (let i = 0; i < n; i++) {
-      if (resolveAdventure(rng).outcome === 'success') {
+      const trials = resolveAdventure(rng).trials
+      if (trials[trials.length - 1].outcome === 'success') {
         wins++
       }
     }

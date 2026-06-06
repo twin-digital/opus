@@ -49,7 +49,7 @@ export interface Trial {
 }
 
 /** Where a ledger movement came from. */
-export type LedgerSource = 'cost' | 'stake' | 'prize' | 'reward'
+export type LedgerSource = 'cost' | 'stake' | 'prize' | 'optional' | 'reward'
 
 /** One resource movement an adventure produced, tagged with its source (gain/loss is implied). */
 export interface LedgerEntry {
@@ -94,9 +94,15 @@ const resolveTrial = (rng: Rng): Trial => {
 
 /**
  * Assemble the itemized ledger: each trial's upfront cost (always), its stake (on a failed trial)
- * and its prize (on a won trial), plus the goal reward if the adventure was won and the goal viable.
+ * and its incidental prize (on a won trial); each optional goal won by its bound trial; and the
+ * goal reward on overall success (which already accounts for viability).
  */
-const buildLedger = (goal: Goal, trials: readonly Trial[], outcome: Outcome): LedgerEntry[] => {
+const buildLedger = (
+  goal: Goal,
+  optionalGoals: readonly OptionalGoal[],
+  trials: readonly Trial[],
+  outcome: Outcome,
+): LedgerEntry[] => {
   const ledger: LedgerEntry[] = []
   for (const trial of trials) {
     if (trial.cost) {
@@ -109,8 +115,13 @@ const buildLedger = (goal: Goal, trials: readonly Trial[], outcome: Outcome): Le
       ledger.push({ source: 'prize', delta: trial.prize })
     }
   }
-  // The reward lands only on overall success, and only if the goal was actually there to win.
-  if (outcome === 'success' && goal.viable) {
+  // An optional goal is won by succeeding at its bound trial — independent of the overall outcome.
+  for (const opt of optionalGoals) {
+    if (trials[opt.trial].outcome === 'success') {
+      ledger.push({ source: 'optional', delta: opt.reward })
+    }
+  }
+  if (outcome === 'success') {
     ledger.push({ source: 'reward', delta: goal.reward })
   }
   return ledger
@@ -133,15 +144,17 @@ const TRIALS = APPROACH_TRIALS + 1
 export const resolveAdventure = (rng: Rng): Adventure => {
   const goal = generatePrimaryGoal(rng)
   const optionalGoals = generateOptionalGoals(rng, TRIALS)
-  const boundReward = new Map(optionalGoals.map((opt): [number, ResourceDelta] => [opt.trial, opt.reward]))
+  const bound = new Set(optionalGoals.map((opt) => opt.trial))
   const trials: Trial[] = []
-  let outcome: Outcome = 'failure'
+  let lastOutcome: Outcome = 'failure'
   for (let i = 0; i < TRIALS; i++) {
     const core = resolveTrial(rng)
-    // A bound optional goal supersedes the random prize on its trial.
-    const prize = boundReward.get(i) ?? generatePrize(rng)
+    // A trial bound to an optional goal has no incidental prize — its reward is that optional.
+    const prize = bound.has(i) ? undefined : generatePrize(rng)
     trials.push(prize ? { ...core, prize } : core)
-    outcome = core.outcome
+    lastOutcome = core.outcome
   }
-  return { goal, optionalGoals, trials, outcome, ledger: buildLedger(goal, trials, outcome) }
+  // The expedition fails outright if its goal was never there to win, however the trials went.
+  const outcome: Outcome = goal.viable ? lastOutcome : 'failure'
+  return { goal, optionalGoals, trials, outcome, ledger: buildLedger(goal, optionalGoals, trials, outcome) }
 }
