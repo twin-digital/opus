@@ -238,7 +238,7 @@
           <div id="roll" class="roll dim">—</div>
         </section>
         <section class="block">
-          <div class="k">AdventureResult</div>
+          <div class="k">Adventure</div>
           <pre id="result">—</pre>
         </section>
         <section class="block">
@@ -290,18 +290,25 @@
       }
 
       function render(d) {
-        const { result } = d
+        const adv = d.result
+        const pass = adv.outcome === 'success'
         const v = $('verdict')
-        v.className = 'verdict ' + (result.success ? 'pass' : 'fail')
-        v.textContent = result.success ? 'SUCCESS' : 'FAILURE'
+        v.className = 'verdict ' + (pass ? 'pass' : 'fail')
+        v.textContent = pass ? 'SUCCESS' : 'FAILURE'
 
         const c = $('chronicle')
         c.classList.remove('dim')
         c.textContent = d.chronicle
 
-        $('roll').innerHTML =
-          `roll <b>${result.roll.toFixed(6)}</b> ` + `${result.success ? '<' : '≥'} target <b>${result.target}</b>`
-        $('result').textContent = JSON.stringify(result, null, 2)
+        $('roll').innerHTML = adv.trials
+          .map((t, i) => {
+            const ch = t.check
+            const op = ch.outcome === 'success' ? '&lt;' : '≥'
+            const verd = t.outcome === 'success' ? 'SUCCESS' : 'FAILURE'
+            return `trial ${i + 1} <b>[${t.approach}]</b> — roll <b>${ch.roll.toFixed(6)}</b> ${op} target <b>${ch.target}</b> → ${verd}`
+          })
+          .join('<br>')
+        $('result').textContent = JSON.stringify(adv, null, 2)
         $('prompt').textContent = d.prompt
         $('raw').textContent = d.raw
         $('overrideTag').hidden = !d.overridden

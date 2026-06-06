@@ -1,4 +1,13 @@
-export { resolveAdventure, TARGET, type AdventureResult } from './adventure.js'
+export {
+  APPROACHES,
+  resolveAdventure,
+  TARGET,
+  type Adventure,
+  type Approach,
+  type Check,
+  type Outcome,
+  type Trial,
+} from './adventure.js'
 
 /** A discrete-time simulation that advances in fixed steps ("ticks"). */
 export interface SimulationState {
