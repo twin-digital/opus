@@ -1,0 +1,60 @@
+name: Apply Rulesets
+
+# Branch-protection for `main` is managed as code: the desired state lives in
+# `.github/rulesets/*.json` and this workflow reconciles the live GitHub ruleset to match it.
+# Edit the JSON in a PR (the diff is the review); on merge to `main` this applies it. Without this,
+# the ruleset could only be changed by hand in the GitHub UI, silently drifting from the repo.
+
+on:
+  # Apply whenever the committed config changes on main.
+  push:
+    branches: [main]
+    paths:
+      - '.github/rulesets/**'
+      - '.github/workflows/apply-rulesets.yaml'
+  # Manual re-apply / drift correction without a code change.
+  workflow_dispatch:
+
+# Serialize: never let two applies race on the same ruleset.
+concurrency: ${{ github.workflow }}
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Reconcile the `main` ruleset to the committed config
+        env:
+          # Managing rulesets needs Administration: write, which the default GITHUB_TOKEN cannot be
+          # granted — so we use the bot token (must have repo admin / Administration: write).
+          GH_TOKEN: ${{ secrets.COCOBOT_GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CONFIG: .github/rulesets/main.json
+        run: |
+          set -euo pipefail
+
+          name=$(jq -r .name "$CONFIG")
+
+          # Resolve the ruleset by name rather than hardcoding its numeric id, so a recreated ruleset
+          # still reconciles (and we create it if it's missing entirely).
+          id=$(gh api "repos/${REPO}/rulesets" --jq ".[] | select(.name == \"${name}\") | .id")
+
+          if [[ -z "$id" ]]; then
+            echo "No ruleset named '${name}' found — creating it."
+            gh api -X POST "repos/${REPO}/rulesets" --input "$CONFIG" >/dev/null
+            echo "Created ruleset '${name}'."
+            exit 0
+          fi
+
+          echo "Reconciling ruleset '${name}' (id ${id})."
+          # Show what's there now, for the run log / audit trail.
+          gh api "repos/${REPO}/rulesets/${id}" \
+            --jq '{enforcement, rules: [.rules[].type], bypass_actors}'
+
+          gh api -X PUT "repos/${REPO}/rulesets/${id}" --input "$CONFIG" >/dev/null
+          echo "Applied ${CONFIG} to ruleset '${name}' (id ${id})."

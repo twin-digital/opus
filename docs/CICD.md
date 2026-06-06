@@ -26,6 +26,7 @@ images publish to **GHCR**.
 | `deploy-preview.yaml` | CI completion (PR runs) | Deploys the PR's **preview** stage (`pr-<number>`). |
 | `destroy-preview.yml` | PR closed | Tears down that PR's preview stage. |
 | `publish.yaml` | CI completion on `main` | changesets release to npm, then GHCR image publish. |
+| `apply-rulesets.yaml` | push to `main` touching `.github/rulesets/**`; manual | Reconciles the `main` branch ruleset to the committed config. |
 
 `deploy.yaml`, `deploy-preview.yaml`, and `publish.yaml` all chain off CI via `workflow_run`,
 so **infrastructure and releases only proceed after `ci.yaml` succeeds** — both production and
@@ -65,6 +66,23 @@ newer `main` commit can't be released/built under the just-published version tag
    `ghcr.io`.
 4. **docker-status-check** — fails the run if any image build failed.
 
+## Branch protection (ruleset as code)
+
+The `main` branch ruleset is **managed as code**, not hand-edited in the GitHub UI. The desired
+state lives in [`.github/rulesets/main.json`](../.github/rulesets/main.json) and
+`apply-rulesets.yaml` reconciles the live ruleset to it: edit the JSON in a PR (the diff is the
+review), and on merge to `main` the workflow applies it. `workflow_dispatch` re-applies on demand
+(drift correction). The workflow resolves the ruleset by name, so a recreated/missing ruleset is
+re-applied (or created) rather than silently diverging.
+
+What the ruleset enforces: PR required (1 approving review, code-owner review, squash-only);
+required status checks `lint-build-test`, `merge-checks`, `renovate-changeset-present`, and
+`Socket Security: Pull Request Alerts`; linear history; signed commits; no branch deletion; and no
+bypass actors.
+
+Managing rulesets needs **Administration: write**, which the default `GITHUB_TOKEN` cannot be
+granted — so the apply step uses `COCOBOT_GITHUB_TOKEN` (must have repo admin).
+
 ## Serverless services
 
 Deployable apps (e.g. `nodejs/bookify/bookify-render-api`, `nodejs/apps/discord-bot`) each own a
@@ -92,6 +110,6 @@ From a service directory: `pnpm deploy:dev` / `pnpm deploy:prod` (or `serverless
 | `SERVERLESS_ACCESS_KEY` | secret | Serverless Framework Dashboard auth |
 | `CHANGESETS_GITHUB_TOKEN` | secret | opening the Version Packages PR / pushing tags |
 | `NPM_TOKEN` | secret | publishing packages to npm |
-| `COCOBOT_GITHUB_TOKEN` | secret | checkout token for deploy/preview jobs |
+| `COCOBOT_GITHUB_TOKEN` | secret | checkout token for deploy/preview jobs; ruleset apply (needs repo admin) |
 
 Environments `preview` and `production` gate the corresponding deploy jobs.
