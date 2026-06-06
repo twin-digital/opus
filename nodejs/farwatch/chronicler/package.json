@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/bedrock-sdk": "^0.27.0",
+    "@anthropic-ai/bedrock-sdk": "^0.29.0",
     "@thrashplay/fw-core": "workspace:*",
     "@thrashplay/fw-simulation": "workspace:*"
   },
