@@ -11,7 +11,7 @@ export type Llm = (prompt: string) => Promise<string>
  * `chronicle.md` (tight — invents only texture, capped length) and `chronicle-loose.md` (loosened
  * — invents motive and the specifics of each approach, no length cap). Swap this one line to test.
  */
-const PROMPT_FILE = 'chronicle.md'
+const PROMPT_FILE = 'chronicle-loose.md'
 
 /**
  * The prompt template lives as plain Markdown so it can be edited without touching TypeScript.
