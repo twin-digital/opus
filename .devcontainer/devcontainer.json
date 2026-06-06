@@ -1,5 +1,4 @@
 {
-
   "containerEnv": {
     "NODE_OPTIONS": "--experimental-transform-types --no-warnings=ExperimentalWarning",
     "PW_CHROMIUM_SANDBOX": "0",
@@ -30,10 +29,7 @@
     "vscode": {
       "settings": {
         "dev.containers.dockerCredentialHelper": false,
-        "extensions": [
-          "dbaeumer.vscode-eslint",
-          "esbenp.prettier-vscode"
-        ]
+        "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
       }
     }
   },
