@@ -190,6 +190,23 @@
       .err {
         color: var(--fail);
       }
+      .gain {
+        color: var(--pass);
+      }
+      .loss {
+        color: var(--fail);
+      }
+      .spoils {
+        font:
+          13px/1.7 ui-monospace,
+          monospace;
+      }
+      .spoils .tag {
+        color: var(--dim);
+      }
+      .spoils b {
+        color: var(--ink);
+      }
     </style>
   </head>
   <body>
@@ -228,7 +245,15 @@
           <div id="roll" class="roll dim">—</div>
         </section>
         <section class="block">
-          <div class="k">Adventure</div>
+          <div class="k">Goals</div>
+          <div id="goals" class="spoils dim">—</div>
+        </section>
+        <section class="block">
+          <div class="k">Ledger</div>
+          <div id="ledger" class="spoils dim">—</div>
+        </section>
+        <section class="block">
+          <div class="k">Adventure (raw)</div>
           <pre id="result">—</pre>
         </section>
         <section class="block">
@@ -348,6 +373,42 @@
         }
       }
 
+      // A resource delta as "major wealth" / "item" — tier only present for fungible kinds.
+      const fmtDelta = (delta) => (delta.tier ? `${delta.tier} ${delta.kind}` : delta.kind)
+
+      // Goals: the primary (with viability), the known optionals (won/missed by their trial), and the
+      // unsought goals a winning trial discovered.
+      function renderGoals(adv) {
+        const lines = []
+        const viability = adv.goal.viable ? '' : ' <span class="loss">— not there</span>'
+        lines.push(`<span class="tag">primary</span> <b>${fmtDelta(adv.goal.reward)}</b>${viability}`)
+        for (const o of adv.optionalGoals) {
+          const won = adv.trials[o.trial]?.outcome === 'success'
+          const verd = won ? '<span class="gain">won</span>' : '<span class="loss">missed</span>'
+          lines.push(`<span class="tag">optional · trial ${o.trial + 1}</span> ${fmtDelta(o.reward)} — ${verd}`)
+        }
+        for (const u of adv.unknownGoals) {
+          lines.push(`<span class="tag">discovered · trial ${u.trial + 1}</span> <b>${fmtDelta(u.reward)}</b>`)
+        }
+        return lines.join('<br>')
+      }
+
+      // Ledger: itemized gains (green, +) and losses (red, −). cost/stake are losses; the rest gains.
+      const LOSS_SOURCES = new Set(['cost', 'stake'])
+      function renderLedger(adv) {
+        if (adv.ledger.length === 0) {
+          return '<span class="dim">— nothing gained or lost</span>'
+        }
+        return adv.ledger
+          .map((e) => {
+            const loss = LOSS_SOURCES.has(e.source)
+            const cls = loss ? 'loss' : 'gain'
+            const sign = loss ? '−' : '+'
+            return `<span class="${cls}">${sign} ${fmtDelta(e.delta)}</span> <span class="tag">${e.source}</span>`
+          })
+          .join('<br>')
+      }
+
       function render(d) {
         const adv = d.result
         const pass = adv.outcome === 'success'
@@ -367,6 +428,12 @@
             return `trial ${i + 1} <b>[${t.approach}]</b> — roll <b>${ch.roll.toFixed(6)}</b> ${op} target <b>${ch.target}</b> → ${verd}`
           })
           .join('<br>')
+        const goalsEl = $('goals')
+        goalsEl.classList.remove('dim')
+        goalsEl.innerHTML = renderGoals(adv)
+        const ledgerEl = $('ledger')
+        ledgerEl.classList.remove('dim')
+        ledgerEl.innerHTML = renderLedger(adv)
         $('result').textContent = JSON.stringify(adv, null, 2)
         $('prompt').textContent = d.prompt
         $('raw').textContent = d.raw
