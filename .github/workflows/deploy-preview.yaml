@@ -155,8 +155,31 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # Guard against deploying a stage for an ALREADY-CLOSED PR. Between the gate's decision and this
+      # step (a window that widens if the `preview` environment ever requires approval) the PR can be
+      # closed — its teardown event has already fired, so a stage created now would have no close event
+      # left to clean it up (an orphan). Re-check the PR state here and skip the deploy if it isn't open.
+      # This is orthogonal to the `preview-deployed` label, which handles the normal "closed AFTER
+      # deploy" case; this handles "closed BEFORE we deploy".
+      - name: Skip deploy if PR is already closed
+        id: pr_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          state=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.state')
+          if [[ "$state" != "open" ]]; then
+            echo "PR #${PR} is '${state}', not open — skipping deploy to avoid an orphaned stage."
+            echo "open=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # authenticate with AWS & deploy
       - name: Deploy
+        if: ${{ steps.pr_state.outputs.open == 'true' }}
         uses: ./.github/actions/deploy
         with:
           aws-region: ${{ vars.AWS_REGION }}
