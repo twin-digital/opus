@@ -1,0 +1,22 @@
+# Seeker generation. Weights are relative (need not sum to 1). Tune freely.
+
+# How many approaches a seeker is notable at — a sparse profile, skewed to a handful.
+skillCountWeights:
+  '2': 3
+  '3': 4
+  '4': 2
+
+# Distribution of a single affinity/competence level [-2..2]. 0 is unremarkable; a listed skill must
+# deviate on at least one axis, so a 0/0 roll is re-drawn (it would just be an unlisted approach).
+ratingWeights:
+  '-2': 1
+  '-1': 2
+  '0': 2
+  '1': 2
+  '2': 1
+
+# How many seekers go on an adventure (the party is pulled distinct from the roster).
+partySizeWeights:
+  '3': 2
+  '4': 3
+  '5': 2

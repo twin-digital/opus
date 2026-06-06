@@ -12,10 +12,15 @@ export { APPROACHES, type Approach } from './approaches.js'
 export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
   skillFor,
+  roster,
+  pickParty,
+  generateRoster,
   AFFINITY_WORDS,
   COMPETENCE_WORDS,
   RATING_MIN,
   RATING_MAX,
+  ROSTER_SEED,
+  ROSTER_SIZE,
   type Rating,
   type Skill,
   type Seeker,
@@ -24,10 +29,12 @@ export {
   costsConfig,
   goalsConfig,
   prizesConfig,
+  seekersConfig,
   stakesConfig,
   type CostsConfig,
   type GoalsConfig,
   type PrizesConfig,
+  type SeekersConfig,
   type StakesConfig,
 } from './config.js'
 export {

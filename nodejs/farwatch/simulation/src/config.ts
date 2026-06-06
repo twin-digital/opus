@@ -87,6 +87,20 @@ export const CostsConfig = z.object({
 })
 export type CostsConfig = z.infer<typeof CostsConfig>
 
+/** Seeker-generation knobs: how a sparse skill profile and a party are rolled. */
+export const SeekersConfig = z.object({
+  skillCountWeights: z.record(z.string(), z.number().nonnegative()).meta({
+    description: 'Relative weights for how many approaches a seeker is notable at (keys are counts).',
+  }),
+  ratingWeights: z.record(z.string(), z.number().nonnegative()).meta({
+    description: 'Relative weights for one affinity/competence level (keys are signed levels, -2..2).',
+  }),
+  partySizeWeights: z.record(z.string(), z.number().nonnegative()).meta({
+    description: 'Relative weights for how many seekers go on an adventure (keys are party sizes).',
+  }),
+})
+export type SeekersConfig = z.infer<typeof SeekersConfig>
+
 const CONFIG_DIR = join(import.meta.dirname, '..', 'config')
 
 const cache = new Map<string, { mtimeMs: number; value: unknown }>()
@@ -108,3 +122,4 @@ export const goalsConfig = (): GoalsConfig => load('goals.yaml', GoalsConfig)
 export const stakesConfig = (): StakesConfig => load('stakes.yaml', StakesConfig)
 export const prizesConfig = (): PrizesConfig => load('prizes.yaml', PrizesConfig)
 export const costsConfig = (): CostsConfig => load('costs.yaml', CostsConfig)
+export const seekersConfig = (): SeekersConfig => load('seekers.yaml', SeekersConfig)

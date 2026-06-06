@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest'
 
-import { AFFINITY_WORDS, COMPETENCE_WORDS, RATING_MAX, RATING_MIN, skillFor, type Seeker } from './seekers.js'
+import { createRng } from '@thrashplay/fw-core'
+
+import { APPROACHES } from './approaches.js'
+import {
+  AFFINITY_WORDS,
+  COMPETENCE_WORDS,
+  generateRoster,
+  pickParty,
+  RATING_MAX,
+  RATING_MIN,
+  roster,
+  ROSTER_SIZE,
+  skillFor,
+  type Seeker,
+} from './seekers.js'
 
 describe('skillFor', () => {
   const seeker: Seeker = {
@@ -24,6 +38,53 @@ describe('rating word scales', () => {
     for (const words of [AFFINITY_WORDS, COMPETENCE_WORDS]) {
       expect(words).toHaveLength(span)
       expect(words[0 - RATING_MIN]).toBe(words[Math.floor(span / 2)]) // index of rating 0 is the middle
+    }
+  })
+})
+
+describe('generateRoster', () => {
+  it('builds the requested number of seekers with distinct names and ids', () => {
+    const cast = generateRoster(createRng(1), ROSTER_SIZE)
+    expect(cast).toHaveLength(ROSTER_SIZE)
+    expect(new Set(cast.map((s) => s.name)).size).toBe(ROSTER_SIZE)
+    expect(new Set(cast.map((s) => s.id)).size).toBe(ROSTER_SIZE)
+  })
+
+  it('gives each seeker a sparse profile of standout skills, in range and never 0/0', () => {
+    for (const seeker of generateRoster(createRng(3), ROSTER_SIZE)) {
+      const rated = Object.entries(seeker.skills)
+      expect(rated.length).toBeGreaterThanOrEqual(1)
+      expect(rated.length).toBeLessThan(APPROACHES.length)
+      for (const [approach, skill] of rated) {
+        expect(APPROACHES).toContain(approach)
+        expect(skill.affinity === 0 && skill.competence === 0).toBe(false)
+        for (const level of [skill.affinity, skill.competence]) {
+          expect(level).toBeGreaterThanOrEqual(RATING_MIN)
+          expect(level).toBeLessThanOrEqual(RATING_MAX)
+        }
+      }
+    }
+  })
+})
+
+describe('roster', () => {
+  it('is the same fixed cast every call (so they recur across chronicles)', () => {
+    expect(roster()).toEqual(roster())
+    expect(roster()).toHaveLength(ROSTER_SIZE)
+  })
+})
+
+describe('pickParty', () => {
+  it('pulls a distinct subset of 3–5 from the roster', () => {
+    const pool = roster()
+    for (let seed = 0; seed < 100; seed++) {
+      const party = pickParty(createRng(seed), pool)
+      expect(party.length).toBeGreaterThanOrEqual(3)
+      expect(party.length).toBeLessThanOrEqual(5)
+      expect(new Set(party.map((s: Seeker) => s.id)).size).toBe(party.length)
+      for (const member of party) {
+        expect(pool).toContain(member)
+      }
     }
   })
 })

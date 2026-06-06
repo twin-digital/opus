@@ -1,6 +1,7 @@
 import type { Rng } from '@thrashplay/fw-core'
 
 import { goalsConfig } from './config.js'
+import { pickDistinct } from './random.js'
 import { isNonfungible, pickWeighted, type ResourceDelta, type Tier } from './resources.js'
 
 /** The covenant's aim for an adventure: the reward won if it succeeds. */
@@ -39,18 +40,6 @@ const generateReward = (rng: Rng, tierWeights: Partial<Record<Tier, number>>): R
 export const generatePrimaryGoal = (rng: Rng): Goal => {
   const cfg = goalsConfig()
   return { reward: generateReward(rng, cfg.rewardTierWeights), viable: rng.next() >= cfg.inviableChance }
-}
-
-/** Pick `k` distinct indices from `[0, n)` using `rng` (partial Fisher–Yates). */
-const pickDistinct = (rng: Rng, n: number, k: number): number[] => {
-  const pool = Array.from({ length: n }, (_, i) => i)
-  for (let i = 0; i < k; i++) {
-    const j = i + Math.floor(rng.next() * (n - i))
-    const tmp = pool[i]
-    pool[i] = pool[j]
-    pool[j] = tmp
-  }
-  return pool.slice(0, k)
 }
 
 /**
