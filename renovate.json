@@ -13,6 +13,11 @@
   },
   "packageRules": [
     {
+      "description": "Auto-merge non-major updates once all required checks pass (CI build/lint/test, merge-checks, the Socket supply-chain scanner, changeset-present). Majors are deliberately absent from `matchUpdateTypes`, so they never auto-merge and always get a human. The build-scripts rule below overrides this back to manual; patched-deps inherit it (they self-gate — a broken patch fails CI). Security updates auto-merge regardless via `vulnerabilityAlerts`.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
       "description": "Packages with install/build scripts (pnpm `onlyBuiltDependencies` in pnpm-workspace.yaml) run arbitrary code on install. Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label, and never auto-merge — so the script-running bump is reviewed in isolation. Keep this list in sync with `onlyBuiltDependencies`.",
       "matchPackageNames": ["esbuild", "hnswlib-node", "serverless"],
       "groupName": null,
@@ -21,10 +26,9 @@
       "commitMessageTopic": "build-script dependency {{depName}}"
     },
     {
-      "description": "Packages with a pnpm patch (`patchedDependencies` in pnpm-workspace.yaml) carry a version-pinned patch; a bump leaves the patch unapplied and breaks the lockfile relock (`pnpm install` fails). Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label, and never auto-merge — so a human re-rolls or drops the patch under review. `matchPackageNames` is kept in sync with `patchedDependencies` by repo-kit; do not edit it by hand.",
+      "description": "Packages with a pnpm patch (`patchedDependencies` in pnpm-workspace.yaml) carry a version-pinned patch; a bump usually leaves the patch unapplied and breaks the lockfile relock (`pnpm install` fails). Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label so a broken patch doesn't sink the batch — but don't force manual merge: a broken patch fails CI and waits for a human to re-roll or drop it, while a bump that still applies cleanly (e.g. an unversioned patch) rides the non-major auto-merge rule above. `matchPackageNames` is kept in sync with `patchedDependencies` by repo-kit; do not edit it by hand.",
       "matchPackageNames": ["ink", "@mishieck/ink-titled-box"],
       "groupName": null,
-      "automerge": false,
       "addLabels": ["patched-deps"],
       "commitMessageTopic": "patched dependency {{depName}}"
     },
