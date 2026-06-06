@@ -6,15 +6,36 @@ settings:
 
 catalogs:
   default:
+    '@aws-lambda-powertools/logger':
+      specifier: ^2.30.0
+      version: 2.33.1
+    '@aws-lambda-powertools/metrics':
+      specifier: ^2.30.0
+      version: 2.33.1
+    '@aws-lambda-powertools/tracer':
+      specifier: ^2.30.0
+      version: 2.33.1
     '@aws-sdk/client-bedrock-runtime':
       specifier: ^3.958.0
       version: 3.1062.0
+    '@aws-sdk/client-dynamodb':
+      specifier: ^3.958.0
+      version: 3.1057.0
     '@aws-sdk/client-s3':
       specifier: ^3.958.0
       version: 3.1062.0
+    '@aws-sdk/lib-dynamodb':
+      specifier: ^3.958.0
+      version: 3.1057.0
+    '@eslint/js':
+      specifier: ^9.29.0
+      version: 9.39.4
     '@middy/core':
       specifier: ^5.5.0
       version: 5.5.1
+    '@types/aws-lambda':
+      specifier: ^8.10.159
+      version: 8.10.161
     '@types/lodash-es':
       specifier: ^4.17.12
       version: 4.17.12
@@ -33,12 +54,27 @@ catalogs:
     chalk:
       specifier: ^5.6.2
       version: 5.6.2
+    dotenv:
+      specifier: ^17.2.3
+      version: 17.4.2
+    eslint:
+      specifier: ^9.29.0
+      version: 9.39.4
+    eslint-config-prettier:
+      specifier: ^10.1.5
+      version: 10.1.8
     execa:
       specifier: ^9.6.1
       version: 9.6.1
+    globals:
+      specifier: ^16.0.0
+      version: 16.5.0
     lodash-es:
       specifier: ^4.17.22
       version: 4.18.1
+    prettier:
+      specifier: ^3.5.3
+      version: 3.8.3
     prettier-package-json:
       specifier: ^2.8.0
       version: 2.8.0
@@ -54,6 +90,12 @@ catalogs:
     typescript:
       specifier: ^5.9.3
       version: 5.9.3
+    typescript-eslint:
+      specifier: ^8.47.0
+      version: 8.60.0
+    vitest:
+      specifier: ^4.0.12
+      version: 4.1.7
     yaml:
       specifier: ^2.8.2
       version: 2.9.0
@@ -64,9 +106,6 @@ overrides:
 packageExtensionsChecksum: sha256-qhrZDlMrQ4it1ACF4ctWNlfDpUMA1h2EPg59JbBahyE=
 
 patchedDependencies:
-  '@mishieck/ink-titled-box@0.3.0':
-    hash: cb9434940d4ee8f20ed593b0ea76471c9d5afde000a16f67ba3b2f8061bdc7d1
-    path: patches/@mishieck__ink-titled-box@0.3.0.patch
   ink:
     hash: 26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4
     path: patches/ink.patch
@@ -1184,8 +1223,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))
       '@mishieck/ink-titled-box':
-        specifier: ^0.3.0
-        version: 0.3.0(patch_hash=cb9434940d4ee8f20ed593b0ea76471c9d5afde000a16f67ba3b2f8061bdc7d1)(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+        specifier: ^0.4.0
+        version: 0.4.2(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       '@twin-digital/dolmenwood':
         specifier: workspace:*
         version: link:../dolmenwood
@@ -3122,8 +3161,8 @@ packages:
     resolution: {integrity: sha512-D7q0WXoH2HKyAqw+EN9DuKTp1j+Yr1Aup4m+ALdkyx60fZNGYOFXIx8rKO+ipPC9BBqjbig/zloyIHCZhdK0xg==}
     engines: {node: '>=18'}
 
-  '@mishieck/ink-titled-box@0.3.0':
-    resolution: {integrity: sha512-ugzVH9hixp3hwKfQ8On/qnsrdAxS3y9rTu/aGOFed4zVUvtZyGZNIR4rxAwXult8HKI4vJEh0OM8wib9NPrwUg==}
+  '@mishieck/ink-titled-box@0.4.2':
+    resolution: {integrity: sha512-4tRyg2n9dPGY66EEchpjHSs+QL5Wdv8kAjRLg/BnXVimwwIl38sLhgphw8dGCGIK2pFz+owLi4vuQBdOdJivBA==}
     peerDependencies:
       ink: ^6.0.0
       react: ^19.1.0
@@ -8755,7 +8794,7 @@ snapshots:
     dependencies:
       '@datastream/core': 0.0.38
 
-  '@mishieck/ink-titled-box@0.3.0(patch_hash=cb9434940d4ee8f20ed593b0ea76471c9d5afde000a16f67ba3b2f8061bdc7d1)(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)':
+  '@mishieck/ink-titled-box@0.4.2(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)':
     dependencies:
       ink: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
       react: 19.2.6
@@ -9401,7 +9440,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 24.12.4
       form-data: 4.0.5
 
   '@types/node@12.20.55': {}
@@ -11067,7 +11106,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.17.0(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.17.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -12177,7 +12216,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.17.0(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.17.0):
     dependencies:
       axios: 1.17.0(debug@4.4.3)
 
