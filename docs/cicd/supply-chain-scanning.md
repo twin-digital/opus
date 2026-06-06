@@ -36,7 +36,7 @@ Dependency scanners split into two kinds, and only one addresses the threat abov
   has been reported and curated — the same blind spot as the cooldown, by a different mechanism. They
   cannot see a freshly-published malicious version, and they do not inspect install scripts at all
   (Trivy's npm parser has no notion of a `scripts` field; OSV is a pure database lookup).
-- **Behavioral** (Socket.dev) inspect the package *body and manifest*: install scripts, network/shell
+- **Behavioral** (Socket.dev) inspect the package _body and manifest_: install scripts, network/shell
   access, obfuscated code, `eval`, environment-variable access, typosquatting, and AI-flagged
   malware. This is the only camp that can flag **novel / zero-day** supply-chain malware — which is
   precisely what the cooldown cannot.
@@ -52,12 +52,12 @@ legitimate dependency PR. Detection is heuristic, not a guarantee (see Limitatio
 
 The scanner is one layer of several; each covers a failure mode the others do not:
 
-| Layer | Control | Covers |
-| --- | --- | --- |
-| **Time** | `minimumReleaseAge: 5 days` cooldown | Most malicious versions are yanked before we even see them — but inspects nothing |
-| **Detection** | **Socket.dev required check** (this doc) | Novel install-script / runtime malware in the actual package |
-| **Review / blast-radius** | Build-script PR isolation (#116) | Bumps to `onlyBuiltDependencies` are split out and never auto-merged, so script-running changes get a human |
-| **Least privilege** | Per-env OIDC roles (#79) | Bounds what an exposed credential can do if a payload does run |
+| Layer                     | Control                                  | Covers                                                                                                      |
+| ------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Time**                  | `minimumReleaseAge: 5 days` cooldown     | Most malicious versions are yanked before we even see them — but inspects nothing                           |
+| **Detection**             | **Socket.dev required check** (this doc) | Novel install-script / runtime malware in the actual package                                                |
+| **Review / blast-radius** | Build-script PR isolation (#116)         | Bumps to `onlyBuiltDependencies` are split out and never auto-merged, so script-running changes get a human |
+| **Least privilege**       | Per-env OIDC roles (#79)                 | Bounds what an exposed credential can do if a payload does run                                              |
 
 The cooldown is also synergistic with the scanner: the extra days give Socket (and the wider
 community) time to flag a bad version before it is ever eligible to auto-merge.
@@ -67,7 +67,7 @@ community) time to flag a bad version before it is ever eligible to auto-merge.
 The Socket GitHub App posts **two** checks on each PR, and only one is the gate:
 
 - **`Socket Security: Pull Request Alerts`** — the **gate**. It analyzes only the dependencies a PR
-  *introduces or changes* (the diff), so a Renovate bump scans a handful of packages, not the tree.
+  _introduces or changes_ (the diff), so a Renovate bump scans a handful of packages, not the tree.
 - **`Socket Security: Project Report`** — an **informational** full-dependency-tree (SBOM) report.
   Not a merge gate.
 

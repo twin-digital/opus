@@ -51,7 +51,7 @@ Packages in this monorepo configure their `package.json` exports to provide mult
 {
   "exports": {
     ".": {
-      "source": "./src/index.ts",
+      "source": "./src/index.ts"
       // ... other exports as normal
     }
   }
@@ -88,17 +88,20 @@ export default defineConfig({
 #### Why We Use This Pattern
 
 **Development Benefits:**
+
 - **No intermediate builds**: Don't need to build dependencies before building consumers
 - **Always fresh code**: Impossible to have stale dist files causing bugs
 - **Faster iteration**: Change source → rebuild consumer → see results immediately
 - **Simpler workflow**: One build strategy for both dev and production
 
 **Monorepo Benefits:**
+
 - **Eliminates build orchestration**: No need to `pnpm build` packages in dependency order
 - **Works with watch mode**: Changes to dependencies automatically trigger rebuilds
 - **Cleaner dev scripts**: Just run watch on the package you're working on
 
 **Production Safety:**
+
 - Dev and production use the same source files (no "works in dev, breaks in prod")
 - External npm users automatically fall back to dist files (when `src/` isn't published)
 - Modern bundlers handle TypeScript efficiently, so performance impact is negligible

@@ -10,9 +10,9 @@ on:
   workflow_call:
     inputs:
       pr_number: { required: true, type: string }
-      base_ref:  { required: true, type: string }
-      head_ref:  { required: true, type: string }
-      pr_title:  { required: true, type: string }
+      base_ref: { required: true, type: string }
+      head_ref: { required: true, type: string }
+      pr_title: { required: true, type: string }
     # The minter role ARN is a non-sensitive identifier, so it's a repo variable
     # (vars.GH_APP_MINTER_ROLE_ARN_RENOVATE), read directly below — no environment, so the OIDC subject
     # is `repo:<owner>/<repo>:pull_request`, which this role's AWS trust is pinned to (with
@@ -29,7 +29,7 @@ jobs:
     env:
       # An API commit's author is the App-token identity (twin-digital-agent[bot]); it MUST equal
       # renovate.json's gitIgnoredAuthors or Renovate freezes the PR (§6.2). Asserted below.
-      EXPECTED_AUTHOR_EMAIL: "290907000+twin-digital-agent[bot]@users.noreply.github.com"
+      EXPECTED_AUTHOR_EMAIL: '290907000+twin-digital-agent[bot]@users.noreply.github.com'
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:

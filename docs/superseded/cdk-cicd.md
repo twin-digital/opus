@@ -44,7 +44,6 @@ CI pipelines fail if any PR attempts to add or modify this file.
 1. A dedicated CDK app (`context-generator/`) performs `fromLookup()` calls for environment-specific resources (e.g. VPCs, AZs).
 2. The context file is synthesized in a secure, audited pipeline (e.g., tools account CodeBuild job).
 3. The `.cdk.context.json` is:
-
    - Validated for determinism (i.e. generated multiple times and hashes compared)
    - Hashed (`SHA256`)
    - Optionally signed using KMS or GPG
@@ -101,7 +100,6 @@ Builds are rejected if:
   - Must go through PR review, even for solo operator
   - Must pass branch protection rules (no force-push, no direct commit)
 - Uses version-locked CDK toolchain:
-
   - CDK CLI version is pinned via project-local `package.json`
   - All CDK libraries are locked via `package-lock.json`
   - `.cdk.context.json` is **injected from S3**, never committed
@@ -114,7 +112,6 @@ Builds are rejected if:
       s3://cdk-artifacts-candidate/{service}/{commit_sha}/
 
 - Upload Requirements (CI Runner):
-
   - All CloudFormation templates, assets, and manifests in `cdk.out/`
   - Assets must already be uploaded to asset S3 buckets or ECR repos
   - CI is responsible for `cdk-assets publish-all`
@@ -258,14 +255,12 @@ The following architectural features enable this migration:
 When needed, a detached signer can be introduced as follows:
 
 1. **Isolated Verifier Infrastructure** (e.g., in tools account):
-
    - Receives artifacts from CI via cross-account transfer
    - Re-synthesizes CDK using locked context + pinned versions
    - Validates hashes match original manifest
    - Generates and signs a **second manifest** using an offline or tightly scoped KMS key
 
 2. **Deployment Pipeline Modification**:
-
    - Require presence of both CI and verifier signatures
    - Accept deploy only if **both signatures** validate and hashes match
 
@@ -334,13 +329,11 @@ The pipeline:
   - Emits logs to CloudWatch
   - Enforces 60-minute timeout for each phase via Step Function + CodeBuild settings
 - On deploy success:
-
   - Updates metadata:
     - `environment_states.stage.status = deployed`
     - `stage_deploy_duration_seconds`
   - Triggers CodeBuild to run service-specific tests (integration, functional, etc.)
   - On test success:
-
     - Updates metadata
       - `environment_states.stage.test_status = test_passed`
       - `stage_test_duration_seconds`
@@ -556,7 +549,6 @@ Attributes:
       }
 
 - Audit:
-
   - audit_event_ids
   - manual_override_requested
   - override_signature
@@ -565,14 +557,12 @@ Attributes:
   - integrity_verified
 
 - Additional metadata for rollback tracking:
-
   - rollback_attempts
   - rollback_attempts_exhausted (bool)
   - rollback_backoff_schedule
   - rollback_failure_reason (if known)
 
 - Additional metadata fields for execution tracking and finalizer support:
-
   - `execution_id`: Step Function execution ARN
   - `execution_started_at`: timestamp of deploy/test orchestration start
   - `execution_completed_at`: timestamp of Step Function completion
@@ -581,7 +571,6 @@ Attributes:
   - `finalizer_correction_applied`: boolean (true if metadata was updated by finalizer)
 
 - TTL configuration:
-
   - `expire_at`: UNIX epoch timestamp (set by default to 90 days from `build_time`)
     - Used by DynamoDB TTL to purge expired or abandoned metadata entries
     - Sweeper logic ensures live entries (e.g., promoted artifacts) are refreshed before TTL triggers

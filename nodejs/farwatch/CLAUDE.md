@@ -35,16 +35,16 @@ There is **no** farwatch-specific tooling. These packages follow the repo-wide c
 
 ## Commands (from the repo root)
 
-| Goal | Command |
-|------|---------|
-| Build / test / lint everything | `pnpm build` · `pnpm test` · `pnpm lint` |
-| Everything for farwatch only | `pnpm --filter "@thrashplay/*" test` |
-| One package | `pnpm --filter @thrashplay/<name> test` |
-| Watch a package | `pnpm --filter @thrashplay/<name> test:watch` |
-| Run the CLI (built) | `pnpm --filter @thrashplay/farwatch start [seed]` |
-| Run the CLI (source, dev) | `pnpm --filter @thrashplay/farwatch dev [seed]` |
-| Generate a founding | `pnpm --filter @thrashplay/fw-worldgen gen --seed 7 --count 5` |
-| Re-generate config after edits | `pnpm sync` |
+| Goal                           | Command                                                        |
+| ------------------------------ | -------------------------------------------------------------- |
+| Build / test / lint everything | `pnpm build` · `pnpm test` · `pnpm lint`                       |
+| Everything for farwatch only   | `pnpm --filter "@thrashplay/*" test`                           |
+| One package                    | `pnpm --filter @thrashplay/<name> test`                        |
+| Watch a package                | `pnpm --filter @thrashplay/<name> test:watch`                  |
+| Run the CLI (built)            | `pnpm --filter @thrashplay/farwatch start [seed]`              |
+| Run the CLI (source, dev)      | `pnpm --filter @thrashplay/farwatch dev [seed]`                |
+| Generate a founding            | `pnpm --filter @thrashplay/fw-worldgen gen --seed 7 --count 5` |
+| Re-generate config after edits | `pnpm sync`                                                    |
 
 The `app` reads an optional `.env` from the farwatch directory (`CHRONICLER_LLM`, AWS creds, etc.)
 before selecting an LLM backend; `selectLlm()` throws if `CHRONICLER_LLM` is unset.

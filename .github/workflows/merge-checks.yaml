@@ -16,7 +16,7 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
   # Block dependency install scripts (pnpm `onlyBuiltDependencies`). This job runs sync/lint/typecheck
   # and needs none of the native builds those scripts produce, and holds no deploy creds. See ci.yaml.
-  NPM_CONFIG_IGNORE_SCRIPTS: "true"
+  NPM_CONFIG_IGNORE_SCRIPTS: 'true'
 
 jobs:
   merge-checks:

@@ -651,10 +651,7 @@ Tenants never receive long-term credentials or EventBridge policies. They **assu
 {
   "Effect": "Allow",
   "Principal": {
-    "AWS": [
-      "arn:aws:iam::123456789012:role/BillingSenderRole",
-      "arn:aws:iam::123456789012:role/AccountSenderRole"
-    ]
+    "AWS": ["arn:aws:iam::123456789012:role/BillingSenderRole", "arn:aws:iam::123456789012:role/AccountSenderRole"]
   },
   "Action": "sts:AssumeRole"
 }

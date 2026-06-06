@@ -11,16 +11,16 @@ when they expire/are revoked.
 
 ## Pieces
 
-| Script | Role |
-| --- | --- |
-| `import-app-private-key` | **one-time:** import the App `.pem` into a KMS sign-only key |
-| `gh-app-token` | mint: App JWT → `kms:Sign` → scoped installation token (`<exp> <token>`) |
-| `gh-token-seed` | pre-warm the cache at session start; report failures to the hook |
-| `gh-token-get` | serve cache / re-mint when stale (fail-open) — the one place tokens are obtained |
-| `gh` (wrapper) | put a fresh token in `GH_TOKEN`, then exec real gh — authenticates `gh` **and** git (via `gh auth git-credential`) for terminal + agents |
-| `post-create.d/20-configure-git-credentials.sh` | wire the opus checkout's git credential helper (`gh auth git-credential`) — repo-local |
-| `.claude/hooks/on-session-start` | pre-warm the cache + warn if minting fails |
-| `devcontainer.json` `containerEnv` | App config (`APP_ID`/`INSTALLATION_ID`/`KMS_KEY_ID`/`AWS_REGION`/scope) — inherited by terminal **and** agents |
+| Script                                          | Role                                                                                                                                     |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `import-app-private-key`                        | **one-time:** import the App `.pem` into a KMS sign-only key                                                                             |
+| `gh-app-token`                                  | mint: App JWT → `kms:Sign` → scoped installation token (`<exp> <token>`)                                                                 |
+| `gh-token-seed`                                 | pre-warm the cache at session start; report failures to the hook                                                                         |
+| `gh-token-get`                                  | serve cache / re-mint when stale (fail-open) — the one place tokens are obtained                                                         |
+| `gh` (wrapper)                                  | put a fresh token in `GH_TOKEN`, then exec real gh — authenticates `gh` **and** git (via `gh auth git-credential`) for terminal + agents |
+| `post-create.d/20-configure-git-credentials.sh` | wire the opus checkout's git credential helper (`gh auth git-credential`) — repo-local                                                   |
+| `.claude/hooks/on-session-start`                | pre-warm the cache + warn if minting fails                                                                                               |
+| `devcontainer.json` `containerEnv`              | App config (`APP_ID`/`INSTALLATION_ID`/`KMS_KEY_ID`/`AWS_REGION`/scope) — inherited by terminal **and** agents                           |
 
 (All container scripts live in `.devcontainer/scripts/container/` and are copied to
 `/usr/local/bin` on container build.)
@@ -35,6 +35,7 @@ when they expire/are revoked.
 
 2. **Import the key into KMS** (ambient AWS creds must allow `kms:CreateKey`, `kms:CreateAlias`,
    `kms:GetParametersForImport`, `kms:ImportKeyMaterial`, `kms:DescribeKey`):
+
    ```bash
    import-app-private-key /path/to/app.pem            # prints the KMS key ARN; default alias/github-app-signer
    shred -u /path/to/app.pem                           # the key is now non-extractable in KMS
@@ -42,9 +43,9 @@ when they expire/are revoked.
 
 3. **Grant `kms:Sign`** on that key to the role the container runs as (least privilege — ideally
    a dedicated role whose only permission is this):
+
    ```json
-   { "Effect": "Allow", "Action": ["kms:Sign"],
-     "Resource": "arn:aws:kms:<region>:<acct>:key/<KEY_ID>" }
+   { "Effect": "Allow", "Action": ["kms:Sign"], "Resource": "arn:aws:kms:<region>:<acct>:key/<KEY_ID>" }
    ```
 
 4. **Configure** — set in `devcontainer.json` `containerEnv` (committed; non-secret) so both your
@@ -71,6 +72,7 @@ gh-app-token                 # "<epoch> <token>"  (signs via KMS, mints)
 gh repo view twin-digital/opus           # gh wrapper mints on demand — no GH_TOKEN needed
 git -C /workspace/opus ls-remote origin  # git over HTTPS, same token, via gh auth git-credential
 ```
+
 Works from your terminal and from agents alike, and stays working as the token rotates.
 
 ## Scopes (managed App-side)
@@ -80,8 +82,8 @@ what the App **installation** is granted — no more, no less. There's no scope 
 config; change scope by changing the App.
 
 - **View / change** the App's permissions: GitHub → Settings → Developer settings → GitHub Apps →
-  *your app* → **Permissions & events**. Adding or reducing a permission must then be **accepted by
-  each installation** (org/account → Settings → GitHub Apps → *your app* → Configure) before it
+  _your app_ → **Permissions & events**. Adding or reducing a permission must then be **accepted by
+  each installation** (org/account → Settings → GitHub Apps → _your app_ → Configure) before it
   takes effect.
 - **Confirm what a token actually gets:** every mint's API response echoes the granted set —
   `POST /app/installations/{id}/access_tokens` returns `.permissions` and `.repositories`.
@@ -151,11 +153,11 @@ use these container scripts — it inlines the JWT→`kms:Sign`→token exchange
 parts are identical. The gate there is **GitHub OIDC → a tightly-scoped AWS role**, not an SSO session.
 Config comes from repo settings (the same names the scripts read, mapped from CI-side names):
 
-| CI source | Maps to |
-| --- | --- |
-| `vars.GH_APP_ID` | `APP_ID` |
-| `vars.GH_APP_INSTALLATION_ID` | `INSTALLATION_ID` |
-| `vars.GH_APP_KMS_KEY` | `KMS_KEY_ID` |
+| CI source                     | Maps to                                 |
+| ----------------------------- | --------------------------------------- |
+| `vars.GH_APP_ID`              | `APP_ID`                                |
+| `vars.GH_APP_INSTALLATION_ID` | `INSTALLATION_ID`                       |
+| `vars.GH_APP_KMS_KEY`         | `KMS_KEY_ID`                            |
 | `vars.GH_APP_MINTER_ROLE_ARN` | role assumed via OIDC to get `kms:Sign` |
 
 See `.github/workflows/publish.yaml` and `docs/CICD.md`.
