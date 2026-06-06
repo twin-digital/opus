@@ -47,6 +47,28 @@ export const StakesConfig = z.object({
 })
 export type StakesConfig = z.infer<typeof StakesConfig>
 
+/** Prize (success-boon) generation knobs. */
+export const PrizesConfig = z.object({
+  prizeChance: z
+    .number()
+    .min(0)
+    .max(1)
+    .meta({ description: 'Chance a won trial yields a prize.', examples: [0.35] }),
+  prizeKindWeights: weights(RESOURCE_KINDS).meta({
+    description: 'Relative weights for what a prize is — any resource kind (reflects what was there to win).',
+  }),
+  prizeTierWeights: weights(TIERS).meta({ description: 'Relative weights for the magnitude of a fungible prize.' }),
+})
+export type PrizesConfig = z.infer<typeof PrizesConfig>
+
+/** Upfront-cost knobs: the price paid to attempt a trial, win or lose. */
+export const CostsConfig = z.object({
+  costs: z.partialRecord(z.enum(APPROACHES), z.object({ kind: z.enum(FUNGIBLE_KINDS), tier: z.enum(TIERS) })).meta({
+    description: 'Upfront cost of attempting a trial, by approach. Only the few pre-paying approaches appear.',
+  }),
+})
+export type CostsConfig = z.infer<typeof CostsConfig>
+
 const CONFIG_DIR = join(import.meta.dirname, '..', 'config')
 
 const cache = new Map<string, { mtimeMs: number; value: unknown }>()
@@ -66,3 +88,5 @@ const load = <T>(file: string, schema: z.ZodType<T>): T => {
 
 export const goalsConfig = (): GoalsConfig => load('goals.yaml', GoalsConfig)
 export const stakesConfig = (): StakesConfig => load('stakes.yaml', StakesConfig)
+export const prizesConfig = (): PrizesConfig => load('prizes.yaml', PrizesConfig)
+export const costsConfig = (): CostsConfig => load('costs.yaml', CostsConfig)

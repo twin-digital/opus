@@ -10,7 +10,16 @@ export {
 } from './adventure.js'
 export { APPROACHES, type Approach } from './approaches.js'
 export { type Goal } from './goals.js'
-export { goalsConfig, stakesConfig, type GoalsConfig, type StakesConfig } from './config.js'
+export {
+  costsConfig,
+  goalsConfig,
+  prizesConfig,
+  stakesConfig,
+  type CostsConfig,
+  type GoalsConfig,
+  type PrizesConfig,
+  type StakesConfig,
+} from './config.js'
 export {
   FUNGIBLE_KINDS,
   NONFUNGIBLE_KINDS,

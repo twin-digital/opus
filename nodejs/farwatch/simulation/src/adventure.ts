@@ -1,7 +1,9 @@
 import type { Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES, type Approach } from './approaches.js'
+import { generateCost } from './costs.js'
 import { generatePrimaryGoal, type Goal } from './goals.js'
+import { generatePrize } from './prizes.js'
 import type { ResourceDelta } from './resources.js'
 import { generateStake } from './stakes.js'
 
@@ -36,8 +38,12 @@ export interface Check {
 export interface Trial {
   /** The method the party used to (try to) overcome this trial. */
   readonly approach: Approach
+  /** What attempting this trial costs up front, win or lose — only a few approaches pre-pay. */
+  readonly cost?: ResourceDelta
   /** What failing this trial costs — generated from the approach; absent on most trials. */
   readonly stake?: ResourceDelta
+  /** What succeeding at this trial wins — a boon; absent on most trials. */
+  readonly prize?: ResourceDelta
   readonly check: Check
   readonly outcome: Outcome
 }
@@ -74,15 +80,33 @@ const resolveTrial = (rng: Rng): Trial => {
   const approach = pickApproach(rng)
   const check = resolveCheck(rng)
   const stake = generateStake(rng, approach)
-  return stake ? { approach, stake, check, outcome: check.outcome } : { approach, check, outcome: check.outcome }
+  const prize = generatePrize(rng)
+  const cost = generateCost(approach)
+  return {
+    approach,
+    ...(cost ? { cost } : {}),
+    ...(stake ? { stake } : {}),
+    ...(prize ? { prize } : {}),
+    check,
+    outcome: check.outcome,
+  }
 }
 
-/** Assemble the itemized ledger: stakes lost on failed trials, plus the goal reward if won. */
+/**
+ * Assemble the itemized ledger: each trial's upfront cost (always), its stake (on a failed trial)
+ * and its prize (on a won trial), plus the goal reward if the adventure was won and the goal viable.
+ */
 const buildLedger = (goal: Goal, trials: readonly Trial[], outcome: Outcome): LedgerEntry[] => {
   const ledger: LedgerEntry[] = []
   for (const trial of trials) {
+    if (trial.cost) {
+      ledger.push({ source: 'cost', delta: trial.cost })
+    }
     if (trial.stake && trial.outcome === 'failure') {
       ledger.push({ source: 'stake', delta: trial.stake })
+    }
+    if (trial.prize && trial.outcome === 'success') {
+      ledger.push({ source: 'prize', delta: trial.prize })
     }
   }
   // The reward lands only on overall success, and only if the goal was actually there to win.
