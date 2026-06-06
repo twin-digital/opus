@@ -4,8 +4,19 @@ permissions:
   id-token: write
   contents: read
 
+# SAFETY — this uses `pull_request_target` (not `pull_request`) so the teardown runs in the BASE repo
+# context and therefore receives AWS creds (`secrets.*`) and OIDC even when the PR comes from a fork.
+# `pull_request` would give fork-PR runs a read-only token and NO secrets, so a fork preview (which
+# deploy-preview deploys via its privileged `workflow_run` trigger) could never be torn down — leaking
+# the stack (the #82 cost leak). That is safe here ONLY because this workflow:
+#   - runs the trusted base-branch (main) version of this file — a fork cannot modify it;
+#   - never checks out or executes any PR/fork HEAD code: the checkout below takes the default
+#     (base-branch) ref, and the only things run are trusted base-repo composite actions and
+#     `serverless remove` against a stage selected purely by PR NUMBER (the `pr-<n>` slug);
+#   - uses the credentials solely to remove an already-deployed stage by name (no build of PR code).
+# Do NOT add a checkout of the PR head (`ref: ...head.sha/ref`) or run any PR-supplied code here.
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [closed]
 
@@ -46,8 +57,9 @@ jobs:
         id: slugify
         shell: bash
         run: |
-          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'
-          if [[ "${{ github.event_name }}" == "pull_request" ]] && \
+          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'. The glob matches both
+          # `pull_request` and `pull_request_target` (the trigger this workflow actually uses).
+          if [[ "${{ github.event_name }}" == pull_request* ]] && \
              [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
             RAW="pr-${{ github.event.pull_request.number }}"
           else
