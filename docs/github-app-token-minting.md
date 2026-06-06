@@ -156,6 +156,6 @@ Config comes from repo settings (the same names the scripts read, mapped from CI
 | `vars.GH_APP_ID` | `APP_ID` |
 | `vars.GH_APP_INSTALLATION_ID` | `INSTALLATION_ID` |
 | `vars.GH_APP_KMS_KEY` | `KMS_KEY_ID` |
-| `secrets.GH_APP_MINTER_ROLE_ARN` | role assumed via OIDC to get `kms:Sign` |
+| `vars.GH_APP_MINTER_ROLE_ARN` | role assumed via OIDC to get `kms:Sign` |
 
 See `.github/workflows/publish.yaml` and `docs/CICD.md`.

@@ -56,7 +56,8 @@ newer `main` commit can't be released/built under the just-published version tag
 
 1. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
    changesets are pending) or, when none are pending, publishes packages with
-   `pnpm publish-packages` and pushes git tags. Uses `CHANGESETS_GITHUB_TOKEN` + `NPM_TOKEN`.
+   `pnpm publish-packages` and pushes git tags. Uses an OIDC→KMS-minted GitHub App token (for the
+   GitHub side: the PR and tags) and `NPM_TOKEN` (from the `release` environment) for npm.
 2. **docker-matrix** — only after a publish (no pending changesets). `tooling/scripts/bin/docker-packages.js`
    reads the git tags on `HEAD` and selects the just-released packages that have a `Dockerfile`.
    (This is why the lookup must run on the same `head_sha` the publish job tagged.)
@@ -85,13 +86,20 @@ From a service directory: `pnpm deploy:dev` / `pnpm deploy:prod` (or `serverless
 
 ## Required secrets & variables
 
-| Name | Kind | Used for |
-| --- | --- | --- |
-| `AWS_ROLE_ARN` | secret | OIDC role assumed for all deploys |
-| `AWS_REGION` | variable | deploy region |
-| `SERVERLESS_ACCESS_KEY` | secret | Serverless Framework Dashboard auth |
-| `CHANGESETS_GITHUB_TOKEN` | secret | opening the Version Packages PR / pushing tags |
-| `NPM_TOKEN` | secret | publishing packages to npm |
-| `COCOBOT_GITHUB_TOKEN` | secret | checkout token for deploy/preview jobs |
+Secrets are **environment-scoped** (there are no repo-level secrets); non-sensitive identifiers (role
+ARNs, App/KMS ids) are **repo variables**.
 
-Environments `preview` and `production` gate the corresponding deploy jobs.
+| Name | Kind | Scope | Used for |
+| --- | --- | --- | --- |
+| `AWS_ROLE_ARN` | secret | env: development/preview/production | OIDC role assumed for deploys |
+| `SERVERLESS_ACCESS_KEY` | secret | env: preview/production | Serverless Framework Dashboard auth |
+| `NPM_TOKEN` | secret | env: release | publishing packages to npm |
+| `AWS_REGION` | variable | repo | deploy region |
+| `GH_APP_MINTER_ROLE_ARN` | variable | repo | `kms:Sign`-only OIDC role for publish's App-token mint |
+| `GH_APP_MINTER_ROLE_ARN_RENOVATE` | variable | repo | same, for the renovate-changeset mint |
+| `GH_APP_ID` / `GH_APP_INSTALLATION_ID` / `GH_APP_KMS_KEY` | variable | repo | GitHub App identity + KMS key for token minting |
+
+Environments scope their secrets to the jobs that declare them — `development`/`preview`/`production`
+for deploys, `release` for publish. `production` and `release` restrict deployments to `main`;
+`development` requires a reviewer. The deploy/preview jobs check out with the default `github.token`
+(no dedicated PAT).
