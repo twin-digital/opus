@@ -4,7 +4,6 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, it, expect } from 'vitest'
 
 import { makeSyncMapToArrayAction } from './sync-map-to-array.js'
-import type { TransformName } from '../transforms.js'
 import type { PackageMeta } from '../../workspace/package-meta.js'
 
 let dir: string
@@ -22,7 +21,7 @@ const renovateWith = (matchPackageNames: string[]) => ({
   packageRules: [{ addLabels: ['patched-deps'], matchPackageNames }],
 })
 
-const patchedAction = (opts?: { emit?: 'keys' | 'values'; transform?: TransformName; defaultValue?: unknown }) =>
+const patchedAction = (opts?: { emit?: 'keys' | 'values'; transform?: string; defaultValue?: unknown }) =>
   makeSyncMapToArrayAction({
     source: {
       file: 'pnpm-workspace.yaml',
@@ -106,5 +105,21 @@ describe('makeSyncMapToArrayAction', () => {
     writeJson('renovate.json', renovateWith(['stale']))
 
     await expect(patchedAction()(workspace)).rejects.toThrow(/expected an object/)
+  })
+
+  it('throws when emit: values yields a non-string item (the documented string-array contract)', async () => {
+    write('pnpm-workspace.yaml', 'patchedDependencies:\n  a: 1\n')
+    writeJson('renovate.json', renovateWith(['stale']))
+
+    await expect(patchedAction({ emit: 'values' })(workspace)).rejects.toThrow(/expected only string items/)
+  })
+
+  it('throws a helpful error (not an opaque TypeError) for an unknown transform name', async () => {
+    write('pnpm-workspace.yaml', 'patchedDependencies:\n  ink: a.patch\n')
+    writeJson('renovate.json', renovateWith(['stale']))
+
+    await expect(patchedAction({ transform: 'nope' })(workspace)).rejects.toThrow(
+      /unknown transform 'nope'; valid transforms: strip-package-version/,
+    )
   })
 })

@@ -22,7 +22,9 @@ export const makeSyncMapToArrayAction =
   }: {
     source: StructuredSource
     emit: 'keys' | 'values'
-    transform?: TransformName
+    // Untrusted: `.repo-kit.yml` is parsed and cast at runtime, so an unknown name can arrive here despite the
+    // `TransformName` type on the config schema — validated below.
+    transform?: string
     target: ArrayTarget
   }): SyncActionFn =>
   async (workspace) => {
@@ -32,17 +34,26 @@ export const makeSyncMapToArrayAction =
     }
 
     const record = value as Record<string, unknown>
-    let items: unknown[] = emit === 'keys' ? Object.keys(record) : Object.values(record)
+    const raw: unknown[] = emit === 'keys' ? Object.keys(record) : Object.values(record)
 
-    if (transform !== undefined) {
-      const strings = items.map((item) => {
-        if (typeof item !== 'string') {
-          throw new Error(`sync-map-to-array: transform '${transform}' requires string items at '${source.pointer}'`)
-        }
-        return item
-      })
-      items = transforms[transform](strings)
+    // Documented to produce a string array — enforce it on every path (not only when a transform runs), so
+    // `emit: values` over non-string values fails loudly instead of writing non-strings into the target.
+    const items = raw.map((item) => {
+      if (typeof item !== 'string') {
+        throw new Error(`sync-map-to-array: expected only string items at '${source.pointer}' in '${source.file}'`)
+      }
+      return item
+    })
+
+    if (transform === undefined) {
+      return writeArrayTarget(workspace.path, target, items)
     }
 
-    return writeArrayTarget(workspace.path, target, items)
+    if (!Object.hasOwn(transforms, transform)) {
+      throw new Error(
+        `sync-map-to-array: unknown transform '${transform}'; valid transforms: ${Object.keys(transforms).join(', ')}`,
+      )
+    }
+
+    return writeArrayTarget(workspace.path, target, transforms[transform as TransformName](items))
   }
