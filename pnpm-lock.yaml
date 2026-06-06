@@ -105,11 +105,6 @@ overrides:
 
 packageExtensionsChecksum: sha256-qhrZDlMrQ4it1ACF4ctWNlfDpUMA1h2EPg59JbBahyE=
 
-patchedDependencies:
-  ink:
-    hash: 26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4
-    path: patches/ink.patch
-
 importers:
 
   .:
@@ -1221,10 +1216,10 @@ importers:
     dependencies:
       '@inkjs/ui':
         specifier: ^2.0.0
-        version: 2.0.0(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))
+        version: 2.0.0(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))
       '@mishieck/ink-titled-box':
         specifier: ^0.4.0
-        version: 0.4.2(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+        version: 0.4.2(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       '@twin-digital/dolmenwood':
         specifier: workspace:*
         version: link:../dolmenwood
@@ -1239,10 +1234,10 @@ importers:
         version: 0.1.0(@types/react@19.2.15)
       ink:
         specifier: ^6.5.1
-        version: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
+        version: 6.8.0(@types/react@19.2.15)(react@19.2.6)
       ink-text-input:
         specifier: ^6.0.0
-        version: 6.0.0(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
+        version: 6.0.0(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       lodash-es:
         specifier: ^4.17.21
         version: 4.18.1
@@ -8629,13 +8624,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@inkjs/ui@2.0.0(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))':
+  '@inkjs/ui@2.0.0(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))':
     dependencies:
       chalk: 5.6.2
       cli-spinners: 3.3.0
       deepmerge: 4.3.1
       figures: 6.1.0
-      ink: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
+      ink: 6.8.0(@types/react@19.2.15)(react@19.2.6)
 
   '@inquirer/external-editor@1.0.3(@types/node@24.12.4)':
     dependencies:
@@ -8794,9 +8789,9 @@ snapshots:
     dependencies:
       '@datastream/core': 0.0.38
 
-  '@mishieck/ink-titled-box@0.4.2(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)':
+  '@mishieck/ink-titled-box@0.4.2(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)':
     dependencies:
-      ink: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
+      ink: 6.8.0(@types/react@19.2.15)(react@19.2.6)
       react: 19.2.6
       typescript: 5.9.3
 
@@ -10867,7 +10862,7 @@ snapshots:
 
   fullscreen-ink@0.1.0(@types/react@19.2.15):
     dependencies:
-      ink: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
+      ink: 6.8.0(@types/react@19.2.15)(react@19.2.6)
       react: 19.2.6
     transitivePeerDependencies:
       - '@types/react'
@@ -11150,14 +11145,14 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ink-text-input@6.0.0(ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
+  ink-text-input@6.0.0(ink@6.8.0(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
     dependencies:
       chalk: 5.6.2
-      ink: 6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6)
+      ink: 6.8.0(@types/react@19.2.15)(react@19.2.6)
       react: 19.2.6
       type-fest: 4.41.0
 
-  ink@6.8.0(patch_hash=26f954217fc1a8c79b7180df3c7071079e4b0056a4262208f00abd21fc80ede4)(@types/react@19.2.15)(react@19.2.6):
+  ink@6.8.0(@types/react@19.2.15)(react@19.2.6):
     dependencies:
       '@alcalzone/ansi-tokenize': 0.2.5
       ansi-escapes: 7.3.0

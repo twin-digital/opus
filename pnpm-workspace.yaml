@@ -41,9 +41,6 @@ onlyBuiltDependencies:
   - hnswlib-node
   - serverless
 
-patchedDependencies:
-  ink: patches/ink.patch
-
 overrides:
   '@smithy/types': 4.14.2
 

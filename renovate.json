@@ -27,7 +27,7 @@
     },
     {
       "description": "Packages with a pnpm patch (`patchedDependencies` in pnpm-workspace.yaml) carry a version-pinned patch; a bump usually leaves the patch unapplied and breaks the lockfile relock (`pnpm install` fails). Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label so a broken patch doesn't sink the batch — but don't force manual merge: a broken patch fails CI and waits for a human to re-roll or drop it, while a bump that still applies cleanly (e.g. an unversioned patch) rides the non-major auto-merge rule above. `matchPackageNames` is kept in sync with `patchedDependencies` by repo-kit; do not edit it by hand.",
-      "matchPackageNames": ["ink"],
+      "matchPackageNames": [],
       "groupName": null,
       "addLabels": ["patched-deps"],
       "commitMessageTopic": "patched dependency {{depName}}"
