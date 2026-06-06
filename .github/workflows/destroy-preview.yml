@@ -1,14 +1,8 @@
 name: Destroy Preview
 
-# Default (workflow-level) token is read-only (+ actions:read so the gate can inspect the deploy
-# workflow's job history). id-token:write (OIDC) is granted ONLY to the destroy job, so the gate that
-# decides whether a teardown is needed never holds deploy/destroy credentials and never enters the
-# `preview` environment (no parked approvals — see the gate job for why that matters).
 permissions:
+  id-token: write
   contents: read
-  actions: read
-  # No `pull-requests: read`: the gate decides purely from the deploy workflow's run/job history
-  # (actions:read) and the event payload — it never calls the pull-requests API.
 
 on:
   pull_request:
@@ -21,102 +15,23 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  # Cheap, credential-free decision: most PRs never deploy a preview (deploys are OPT-IN via the
-  # `preview` label — see deploy-preview.yaml), so most closes have nothing to tear down. This gate
-  # decides whether a stage was ever deployed WITHOUT AWS credentials and WITHOUT an `environment:`.
+  # Tear down the PR's preview stage on close — but ONLY if one was actually deployed. Preview deploys
+  # are OPT-IN (see deploy-preview.yaml), so most PRs never deploy a stage; without this guard every
+  # close would enter the `preview` environment and run a no-op `serverless remove` (issue #123).
   #
-  # Why no `environment:` here: the `preview` GitHub Environment has required reviewers. Any job that
-  # enters it queues an approval. If the destroy job entered the environment unconditionally (the old
-  # single-job design), every PR close — including the majority that never deployed — would park an
-  # approval and burn a run on a no-op `serverless remove` against a non-existent stage (issue #123).
-  # Splitting the decision into this credential-free, environment-free gate means non-teardowns exit
-  # here, silently, and never reach the environment or the credentials.
-  #
-  # SIGNAL — "was a preview stage ever deployed for this PR?". Note this answers "deployed at some
-  # point", not "exists right now": a stage that was deployed and then manually `serverless remove`d
-  # still yields should_destroy=true and a no-op teardown that briefly enters the environment. That's
-  # an accepted limitation (issue #123) — still strictly better than the status quo, where EVERY close
-  # parks an approval. We do NOT use the `preview` label as the signal: strip-preview-label.yml removes
-  # the label on every push for FORK PRs, so at close time a fork PR can have NO label yet still have a
-  # live stage deployed from an earlier labeled commit. A label check alone therefore has false
-  # negatives that would LEAK preview stacks — exactly the cost leak #82 set out to prevent. Instead we
-  # ask the deploy history directly: did the `Deploy Preview` workflow's credentialed `preview` job
-  # conclude `success` for any commit of this PR's head branch (on this PR's head REPO)? (A run-level
-  # `success` is insufficient: when the deploy gate declines, its `preview` job is SKIPPED and the run
-  # still concludes `success`. We must inspect the JOB-level conclusion of the `preview` job.) This is
-  # robust to the fork-PR label strip and to multi-commit PRs, since the deployed stage persists
-  # regardless of which commit deployed it.
-  gate:
-    if: ${{ github.event.pull_request.head.ref != 'changeset-release/main' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      should_destroy: ${{ steps.decide.outputs.should_destroy }}
-    steps:
-      - name: Decide whether a preview stage needs tearing down
-        id: decide
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          # The head branch the PR's commits live on. We look up Deploy Preview runs by this branch
-          # rather than a single SHA so a stage deployed from ANY commit of the PR is still found.
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-          # The PR's head REPOSITORY (e.g. owner/repo). Branch NAME alone is ambiguous across forks
-          # ('main', 'patch-1', etc. collide), so we additionally require the deploy run's
-          # head_repository to match — otherwise fork B's no-op close could match fork A's successful
-          # deploy by branch name and enter the `preview` environment for the wrong stage.
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-        run: |
-          set -euo pipefail
-          # Default to "no teardown"; only a confirmed successful preview deploy flips this to true.
-          # This bias is deliberate: an API failure or empty/ambiguous result fails toward NOT tearing
-          # down. We'd rather leave a (cheap to re-clean) stage than enter the `preview` environment and
-          # park an approval on every close — the no-op-teardown noise this gate exists to eliminate.
-          skip() { echo "$1"; echo "should_destroy=false" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          [[ -z "$HEAD_BRANCH" || "$HEAD_BRANCH" == "null" ]] \
-            && skip "No head branch on the event payload; nothing to tear down."
-
-          # Find Deploy Preview runs for this PR's head branch+repo. Select by the workflow display
-          # NAME ('Deploy Preview') — the stable identifier — rather than the filename, so this can't
-          # drift if the file is renamed, AND require head_repository.full_name == HEAD_REPO to
-          # disambiguate fork branches that share a name. `gh api --paginate` walks the FULL run history
-          # for the branch (deploys are opt-in, so Deploy Preview runs are a small minority of a
-          # branch's runs — we must not stop at the first page that happens to contain only other
-          # workflows' runs). jq reads HEAD_REPO from the environment via `env.HEAD_REPO`. The 5-minute
-          # job timeout bounds the walk. A successful `preview` job on ANY page confirms a deploy.
-          run_ids=$(gh api --paginate \
-            "repos/${REPO}/actions/runs?branch=${HEAD_BRANCH}&per_page=100" \
-            --jq '.workflow_runs[]
-                    | select(.name == "Deploy Preview" and .head_repository.full_name == env.HEAD_REPO)
-                    | .id')
-
-          for run_id in $run_ids; do
-            # Inspect the JOB-level conclusion of the `preview` job (the credentialed deploy job). A
-            # `success` here means a stage was actually deployed; a skipped `preview` job (gate
-            # declined) leaves the run green but the job NOT successful, so it is correctly ignored.
-            concl=$(gh api "repos/${REPO}/actions/runs/${run_id}/jobs" \
-              --jq '[.jobs[] | select(.name == "preview")][0].conclusion // empty')
-            if [[ "$concl" == "success" ]]; then
-              echo "Deploy Preview run ${run_id} deployed a stage for '${HEAD_REPO}@${HEAD_BRANCH}' → teardown needed."
-              echo "should_destroy=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-
-          skip "No successful preview deploy found for '${HEAD_REPO}@${HEAD_BRANCH}'; nothing to tear down."
-
-  # Only reached when the gate confirmed a stage exists. This job holds the destroy credentials and is
-  # the only one that enters the `preview` environment (and thus queues an approval) — by construction,
-  # only for PRs that actually have a stage to remove.
+  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it when it deploys a stage,
+  # and (unlike `preview`) strip-preview-label.yml never removes it, so its presence on the close
+  # event's `pull_request.labels` durably means "a stage was deployed for this PR". We read it straight
+  # off the event payload — no API call, no credentials — and a `false` here skips the whole job, so an
+  # un-deployed close never enters the `preview` environment. The label is keyed on the PR number, like
+  # the `pr-<number>` stage it guards, so this is immune to the branch reuse/rename ambiguity a
+  # branch-scoped deploy-history lookup would have. (Surfacing the deploy URL/details on the PR is
+  # tracked separately and intentionally out of scope here.)
   destroy:
-    needs: gate
-    if: ${{ needs.gate.outputs.should_destroy == 'true' }}
+    if: >-
+      github.event.pull_request.head.ref != 'changeset-release/main' &&
+      contains(github.event.pull_request.labels.*.name, 'preview-deployed')
     environment: preview
-    # OIDC for the AWS role lives only here, on the gated teardown.
-    permissions:
-      id-token: write
-      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
