@@ -2,6 +2,7 @@ import fsP from 'node:fs/promises'
 import path from 'node:path'
 import yaml from 'yaml'
 import type { SetMatchingPredicate } from '@twin-digital/json-patch-x'
+import type { TransformName } from '../sync/transforms.js'
 
 /**
  * Configuration for a dependency condition which matches if the package declares a dependency
@@ -196,6 +197,68 @@ export type SyncActionConfig = {
         /**
          * Where to write the value. The value is written into the element(s) of an array selected by a predicate,
          * addressing array elements by value rather than index (see `setMatching` in `@twin-digital/json-patch-x`).
+         */
+        target: {
+          /**
+           * Project-relative path of the JSON file to update.
+           */
+          file: string
+
+          /**
+           * JSON Pointer to the array within `target.file` whose elements are candidates.
+           */
+          array: string
+
+          /**
+           * Predicate selecting which element(s) of `target.array` to update.
+           */
+          where: SetMatchingPredicate
+
+          /**
+           * JSON Pointer, relative to each matched element, at which to write the value.
+           */
+          set: string
+        }
+      }
+    }
+  | {
+      action: 'sync-map-to-array'
+      options: {
+        /**
+         * Where to read the map from.
+         */
+        source: {
+          /**
+           * Project-relative path of the JSON or YAML file to read.
+           */
+          file: string
+
+          /**
+           * JSON Pointer to the (object) value within `source.file`.
+           */
+          pointer: string
+
+          /**
+           * Value to use when `source.pointer` resolves to nothing. If omitted, a missing source value is an error.
+           */
+          default?: unknown
+        }
+
+        /**
+         * Whether to emit the source object's keys or its values as the array.
+         */
+        emit: 'keys' | 'values'
+
+        /**
+         * Optional named transform applied to the derived (string) array. One of a fixed, curated set (see
+         * `transforms`); e.g. `strip-package-version` reduces each pnpm dependency selector (`pkg@1.2.3`) to its bare,
+         * scope-aware package name. A bare name today; may grow to `{ name, options }` if a transform needs parameters.
+         */
+        transform?: TransformName
+
+        /**
+         * Where to write the derived array. The array is written into the element(s) of a target array selected by a
+         * predicate, addressing array elements by value rather than index (see `setMatching`).
          */
         target: {
           /**
