@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { createRng } from '@thrashplay/fw-core'
 
-import { generateOptionalGoals } from './goals.js'
+import { generateOptionalGoals, generateUnknownGoal } from './goals.js'
 import { RESOURCE_KINDS } from './resources.js'
 
 describe('generateOptionalGoals', () => {
@@ -27,5 +27,21 @@ describe('generateOptionalGoals', () => {
         expect(generateOptionalGoals(createRng(seed), trialCount).length).toBeLessThanOrEqual(trialCount)
       }
     }
+  })
+})
+
+describe('generateUnknownGoal', () => {
+  it('mints a valid reward when it fires and undefined otherwise (rarely)', () => {
+    let minted = 0
+    for (let seed = 0; seed < 500; seed++) {
+      const reward = generateUnknownGoal(createRng(seed))
+      if (reward) {
+        minted++
+        expect(RESOURCE_KINDS).toContain(reward.kind)
+      }
+    }
+    // The spawn chance is low (~8%), so most rolls turn up nothing, but some do.
+    expect(minted).toBeGreaterThan(0)
+    expect(minted).toBeLessThan(250)
   })
 })

@@ -36,6 +36,18 @@ export const GoalsConfig = z.object({
   optionalTierWeights: weights(TIERS).meta({
     description: 'Magnitude of a fungible optional-goal reward — skewed smaller than the primary.',
   }),
+  unknownSpawnChance: z
+    .number()
+    .min(0)
+    .max(1)
+    .meta({
+      description: 'Per-won-trial chance a trial mints an unknown (unsought, discovered) goal.',
+      examples: [0.08],
+    }),
+  unknownTierWeights: weights(TIERS).meta({
+    description:
+      'Magnitude of a fungible unknown-goal reward — can skew large (a discovery worth more than the primary).',
+  }),
 })
 export type GoalsConfig = z.infer<typeof GoalsConfig>
 

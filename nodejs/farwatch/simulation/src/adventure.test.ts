@@ -42,6 +42,19 @@ describe('resolveAdventure', () => {
     expect(resolveAdventure(createRng(42))).toEqual(resolveAdventure(createRng(42)))
   })
 
+  it('only mints unknown goals on won trials, and each enters the ledger', () => {
+    let seen = 0
+    for (let seed = 0; seed < 300; seed++) {
+      const adventure = resolveAdventure(createRng(seed))
+      for (const unknown of adventure.unknownGoals) {
+        seen++
+        expect(adventure.trials[unknown.trial].outcome).toBe('success')
+        expect(adventure.ledger).toContainEqual({ source: 'unknown', delta: unknown.reward })
+      }
+    }
+    expect(seen, 'expected some adventures to discover an unknown goal').toBeGreaterThan(0)
+  })
+
   it('the final trial lands near 50% over many runs (a fair check)', () => {
     const rng = createRng(1)
     const n = 20_000

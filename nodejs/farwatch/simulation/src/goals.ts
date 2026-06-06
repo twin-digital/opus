@@ -18,6 +18,17 @@ export interface OptionalGoal {
   readonly trial: number
 }
 
+/**
+ * A goal nobody set out for: minted by a trial's success and discovered along the way, so the find
+ * has a *cause* (they pressed in, and *therefore* turned it up). Drawn from the goal table, so it is
+ * occasionally worth more than the primary — unlike a {@link OptionalGoal}, it was never known.
+ */
+export interface UnknownGoal {
+  readonly reward: ResourceDelta
+  /** Index of the trial whose success minted (discovered) this. */
+  readonly trial: number
+}
+
 /** A reward of a weighted kind, with a tier (from `tierWeights`) only if the kind is fungible. */
 const generateReward = (rng: Rng, tierWeights: Partial<Record<Tier, number>>): ResourceDelta => {
   const kind = pickWeighted(rng, goalsConfig().rewardKindWeights)
@@ -53,4 +64,17 @@ export const generateOptionalGoals = (rng: Rng, trialCount: number): OptionalGoa
     reward: generateReward(rng, cfg.optionalTierWeights),
     trial,
   }))
+}
+
+/**
+ * Roll whether a *won* trial mints an unknown goal, returning its reward or `undefined`. The chance
+ * is low and per-trial; the reward is drawn from the goal table (so its kind matches the primary's),
+ * with its own tier weights that can skew it large. The caller binds it to the trial that spawned it.
+ */
+export const generateUnknownGoal = (rng: Rng): ResourceDelta | undefined => {
+  const cfg = goalsConfig()
+  if (rng.next() >= cfg.unknownSpawnChance) {
+    return undefined
+  }
+  return generateReward(rng, cfg.unknownTierWeights)
 }

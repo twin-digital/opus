@@ -9,7 +9,7 @@ export {
   type Trial,
 } from './adventure.js'
 export { APPROACHES, type Approach } from './approaches.js'
-export { type Goal, type OptionalGoal } from './goals.js'
+export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
   costsConfig,
   goalsConfig,

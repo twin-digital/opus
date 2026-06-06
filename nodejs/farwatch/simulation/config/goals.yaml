@@ -31,3 +31,13 @@ optionalTierWeights:
   minor: 4
   moderate: 2
   major: 1
+
+# Per-won-trial chance a trial mints an unknown (unsought, discovered) goal.
+unknownSpawnChance: 0.08
+
+# Magnitude of a fungible unknown-goal reward — can skew large (a discovery worth more than the primary).
+unknownTierWeights:
+  minor: 1
+  moderate: 2
+  major: 3
+  extreme: 2

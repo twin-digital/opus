@@ -2,7 +2,14 @@ import type { Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES, type Approach } from './approaches.js'
 import { generateCost } from './costs.js'
-import { generateOptionalGoals, generatePrimaryGoal, type Goal, type OptionalGoal } from './goals.js'
+import {
+  generateOptionalGoals,
+  generatePrimaryGoal,
+  generateUnknownGoal,
+  type Goal,
+  type OptionalGoal,
+  type UnknownGoal,
+} from './goals.js'
 import { generatePrize } from './prizes.js'
 import type { ResourceDelta } from './resources.js'
 import { generateStake } from './stakes.js'
@@ -49,7 +56,7 @@ export interface Trial {
 }
 
 /** Where a ledger movement came from. */
-export type LedgerSource = 'cost' | 'stake' | 'prize' | 'optional' | 'reward'
+export type LedgerSource = 'cost' | 'stake' | 'prize' | 'optional' | 'unknown' | 'reward'
 
 /** One resource movement an adventure produced, tagged with its source (gain/loss is implied). */
 export interface LedgerEntry {
@@ -62,6 +69,8 @@ export interface Adventure {
   readonly goal: Goal
   /** Secondary aims, each bound to a trial whose success wins it. @see generateOptionalGoals */
   readonly optionalGoals: readonly OptionalGoal[]
+  /** Unsought goals minted by a winning trial, each bound to the trial that found it. */
+  readonly unknownGoals: readonly UnknownGoal[]
   readonly trials: readonly Trial[]
   readonly outcome: Outcome
   /** Itemized resource movements (costs, stakes, prizes, reward), in order. @see buildLedger */
@@ -94,12 +103,14 @@ const resolveTrial = (rng: Rng): Trial => {
 
 /**
  * Assemble the itemized ledger: each trial's upfront cost (always), its stake (on a failed trial)
- * and its incidental prize (on a won trial); each optional goal won by its bound trial; and the
- * goal reward on overall success (which already accounts for viability).
+ * and its incidental prize (on a won trial); each optional goal won by its bound trial; each unknown
+ * goal a trial discovered; and the goal reward on overall success (which already accounts for
+ * viability).
  */
 const buildLedger = (
   goal: Goal,
   optionalGoals: readonly OptionalGoal[],
+  unknownGoals: readonly UnknownGoal[],
   trials: readonly Trial[],
   outcome: Outcome,
 ): LedgerEntry[] => {
@@ -120,6 +131,10 @@ const buildLedger = (
     if (trials[opt.trial].outcome === 'success') {
       ledger.push({ source: 'optional', delta: opt.reward })
     }
+  }
+  // An unknown goal is already conditioned on its trial's success (it can only be minted by one).
+  for (const unknown of unknownGoals) {
+    ledger.push({ source: 'unknown', delta: unknown.reward })
   }
   if (outcome === 'success') {
     ledger.push({ source: 'reward', delta: goal.reward })
@@ -146,15 +161,30 @@ export const resolveAdventure = (rng: Rng): Adventure => {
   const optionalGoals = generateOptionalGoals(rng, TRIALS)
   const bound = new Set(optionalGoals.map((opt) => opt.trial))
   const trials: Trial[] = []
+  const unknownGoals: UnknownGoal[] = []
   let lastOutcome: Outcome = 'failure'
   for (let i = 0; i < TRIALS; i++) {
     const core = resolveTrial(rng)
     // A trial bound to an optional goal has no incidental prize — its reward is that optional.
     const prize = bound.has(i) ? undefined : generatePrize(rng)
     trials.push(prize ? { ...core, prize } : core)
+    // Only a won trial can turn up an unsought goal — the discovery has a cause.
+    if (core.outcome === 'success') {
+      const reward = generateUnknownGoal(rng)
+      if (reward) {
+        unknownGoals.push({ reward, trial: i })
+      }
+    }
     lastOutcome = core.outcome
   }
   // The expedition fails outright if its goal was never there to win, however the trials went.
   const outcome: Outcome = goal.viable ? lastOutcome : 'failure'
-  return { goal, optionalGoals, trials, outcome, ledger: buildLedger(goal, optionalGoals, trials, outcome) }
+  return {
+    goal,
+    optionalGoals,
+    unknownGoals,
+    trials,
+    outcome,
+    ledger: buildLedger(goal, optionalGoals, unknownGoals, trials, outcome),
+  }
 }
