@@ -1,4 +1,5 @@
-export { buildPrompt, chronicle, loadChronicleTemplate, type Llm } from './chronicle.js'
+export { buildPrompt, chronicle, loadChronicleTemplate, type Llm, type LlmOptions } from './chronicle.js'
 export { bedrock } from './bedrock.js'
 export { claudeCli } from './claude-cli.js'
+export { listOllamaModels, ollama } from './ollama.js'
 export { BACKENDS, selectLlm } from './llm.js'

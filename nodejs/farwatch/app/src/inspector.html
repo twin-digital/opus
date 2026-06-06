@@ -58,6 +58,18 @@
         padding: 6px 8px;
         font: inherit;
       }
+      select {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font: inherit;
+        max-width: 220px;
+      }
+      select[hidden] {
+        display: none;
+      }
       button {
         background: var(--accent);
         color: #14171c;
@@ -201,6 +213,8 @@
       <input id="seed" type="number" value="1" step="1" />
       <button id="run">Run</button>
       <button id="rand" class="ghost">🎲 random</button>
+      <label id="modelLabel" for="model" hidden>model</label>
+      <select id="model" hidden></select>
       <span id="status" class="dim"></span>
     </header>
     <main>
@@ -259,7 +273,28 @@
       const randBtn = $('rand')
       const statusEl = $('status')
       const promptEl = $('promptEdit')
+      const modelEl = $('model')
+      const modelLabel = $('modelLabel')
       let lastGenerated = ''
+
+      // Populate the model dropdown from the server (ollama backend only). Hidden otherwise.
+      async function loadModels() {
+        try {
+          const res = await fetch('/models')
+          const data = await res.json()
+          if (!data.models || data.models.length === 0) {
+            return // not ollama, or unreachable — leave the dropdown hidden
+          }
+          modelEl.innerHTML = data.models.map((m) => `<option value="${m}">${m}</option>`).join('')
+          if (data.active && data.models.includes(data.active)) {
+            modelEl.value = data.active
+          }
+          modelEl.hidden = false
+          modelLabel.hidden = false
+        } catch {
+          // server not answering /models yet — dropdown stays hidden, runs still work
+        }
+      }
 
       async function run() {
         const seed = Number(seedEl.value)
@@ -268,17 +303,25 @@
         statusEl.textContent = 'rolling…'
         $('chronicle').classList.add('dim')
         try {
+          const model = modelEl.hidden ? undefined : modelEl.value || undefined
           const res = await fetch('/run', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ seed, prompt: override || undefined }),
+            body: JSON.stringify({ seed, prompt: override || undefined, model }),
           })
           const data = await res.json()
           if (!res.ok || data.error) {
             throw new Error(data.error || `HTTP ${res.status}`)
           }
           render(data)
-          statusEl.textContent = `${data.elapsedMs} ms${data.overridden ? ' · override' : ''}`
+          const tags = [`${data.elapsedMs} ms`]
+          if (data.model) {
+            tags.push(data.model)
+          }
+          if (data.overridden) {
+            tags.push('override')
+          }
+          statusEl.textContent = tags.join(' · ')
         } catch (err) {
           $('verdict').innerHTML = ''
           $('chronicle').classList.remove('dim')
@@ -336,6 +379,8 @@
         promptEl.value = ''
         promptEl.focus()
       })
+
+      loadModels()
     </script>
   </body>
 </html>

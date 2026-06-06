@@ -3,8 +3,16 @@ import { join } from 'node:path'
 
 import type { Adventure, Approach, Outcome } from '@thrashplay/fw-simulation'
 
-/** Anything that turns a prompt into completion text. The seam where the LLM plugs in. */
-export type Llm = (prompt: string) => Promise<string>
+/** Per-call options a backend may honour — generic, so each backend reads what it supports. */
+export interface LlmOptions {
+  /** Override the model the backend uses (a backend-specific id/tag). */
+  readonly model?: string
+  /** Extra backend-specific generation parameters, merged over the backend's defaults. */
+  readonly params?: Record<string, unknown>
+}
+
+/** Anything that turns a prompt (and optional {@link LlmOptions}) into completion text. */
+export type Llm = (prompt: string, options?: LlmOptions) => Promise<string>
 
 /**
  * Which prompt variant the chronicler uses. Both files live in `prompts/` for A/B comparison:
@@ -68,6 +76,6 @@ const fill = (template: string, vars: Record<string, string>): string =>
 export const buildPrompt = (adventure: Adventure, template: string = loadChronicleTemplate()): string =>
   fill(template, { adventure: renderAdventure(adventure) })
 
-/** Resolve an adventure into prose via the given {@link Llm}. */
-export const chronicle = async (adventure: Adventure, llm: Llm): Promise<string> =>
-  (await llm(buildPrompt(adventure))).trim()
+/** Resolve an adventure into prose via the given {@link Llm}, forwarding any {@link LlmOptions}. */
+export const chronicle = async (adventure: Adventure, llm: Llm, options?: LlmOptions): Promise<string> =>
+  (await llm(buildPrompt(adventure), options)).trim()
