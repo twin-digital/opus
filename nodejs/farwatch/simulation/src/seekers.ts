@@ -2,6 +2,7 @@ import { createRng, type Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES, type Approach } from './approaches.js'
 import { seekersConfig, type SeekersConfig } from './config.js'
+import { PROFILES } from './profiles.js'
 import { pickDistinct } from './random.js'
 import { pickWeighted } from './resources.js'
 
@@ -40,11 +41,18 @@ export interface Skill {
  * keen/averse or able/inept at are listed; every unlisted approach is unremarkable on both scales
  * (see {@link skillFor}). The sparseness *is* the characterization — a short list of standout leanings
  * is a silhouette, where a full 22-approach matrix would be a fog.
+ *
+ * `appearance` and `temperament` are stable descriptive texture from the world's permanent record
+ * (see {@link PROFILES}) — not simulation load-bearing, but carried here so a seeker reads the same
+ * across every chronicle. Optional: a seeker built without the record (e.g. a test) simply has none,
+ * and the chronicler falls back to inventing them.
  */
 export interface Seeker {
   readonly id: string
   readonly name: string
   readonly skills: Partial<Record<Approach, Skill>>
+  readonly appearance?: string
+  readonly temperament?: string
 }
 
 /** A seeker's standing at an approach, defaulting any unrated approach to unremarkable (`0`/`0`). */
@@ -76,37 +84,12 @@ export const leadFor = (rng: Rng, party: readonly Seeker[], approach: Approach):
 }
 
 /**
- * The cast we draw from. A fixed pool of grounded, pronounceable given names — a *vocabulary*, like
- * the approaches — sampled without replacement so a roster never repeats a name. Single names are
- * deliberate: for a cast you mean to come to know, first-names-only reads like an ensemble.
+ * The cast we draw from: the names in the permanent record ({@link PROFILES}), sampled without
+ * replacement so a roster never repeats a name. The record *is* the vocabulary — every drawable name
+ * carries a profile — and single given names are deliberate: for a cast you mean to come to know,
+ * first-names-only reads like an ensemble.
  */
-const NAME_POOL = [
-  'Wren',
-  'Edra',
-  'Tomas',
-  'Sela',
-  'Garrick',
-  'Miren',
-  'Cael',
-  'Bryn',
-  'Hale',
-  'Odric',
-  'Lys',
-  'Pell',
-  'Senna',
-  'Roon',
-  'Vesna',
-  'Dain',
-  'Asha',
-  'Goss',
-  'Tamsin',
-  'Eli',
-  'Maro',
-  'Nessa',
-  'Joss',
-  'Ferro',
-  'Linn',
-] as const
+const NAME_POOL = Object.keys(PROFILES)
 
 /** The fixed roster: which seed grows the cast, and how many of them. */
 export const ROSTER_SEED = 1
@@ -129,7 +112,10 @@ const rollSkill = (rng: Rng): Skill => {
   return { affinity, competence }
 }
 
-/** Generate one seeker with the given name: a sparse handful of standout skills over the approaches. */
+/**
+ * Generate one seeker with the given name: a sparse handful of standout skills over the approaches,
+ * plus the stable descriptive texture the permanent record holds for that name.
+ */
 const generateSeeker = (rng: Rng, name: string): Seeker => {
   const count = Number(pickWeighted(rng, seekersConfig().skillCountWeights))
   const approaches = pickDistinct(rng, APPROACHES.length, Math.min(count, APPROACHES.length)).map((i) => APPROACHES[i])
@@ -137,7 +123,7 @@ const generateSeeker = (rng: Rng, name: string): Seeker => {
   for (const approach of approaches) {
     skills[approach] = rollSkill(rng)
   }
-  return { id: name.toLowerCase(), name, skills }
+  return { id: name.toLowerCase(), name, skills, ...PROFILES[name as keyof typeof PROFILES] }
 }
 
 /** Generate `size` distinct seekers (distinct names) from `rng` — the cast, built from nothing. */

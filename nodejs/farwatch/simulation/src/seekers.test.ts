@@ -51,6 +51,13 @@ describe('generateRoster', () => {
     expect(new Set(cast.map((s) => s.id)).size).toBe(ROSTER_SIZE)
   })
 
+  it('carries each seeker the permanent record’s appearance and temperament', () => {
+    for (const seeker of generateRoster(createRng(5), ROSTER_SIZE)) {
+      expect(seeker.appearance?.length).toBeGreaterThan(0)
+      expect(seeker.temperament?.length).toBeGreaterThan(0)
+    }
+  })
+
   it('gives each seeker a sparse profile of standout skills, in range and never 0/0', () => {
     for (const seeker of generateRoster(createRng(3), ROSTER_SIZE)) {
       const rated = Object.entries(seeker.skills)
