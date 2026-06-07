@@ -13,7 +13,7 @@ export const loadSchema = (name: string): AnySchema => {
   if (parsed === null || typeof parsed !== 'object') {
     throw new Error(`chronicler: schema "${name}" is not a JSON object`)
   }
-  return parsed as AnySchema
+  return parsed
 }
 
 /** Pull a JSON value out of a completion that may wrap it in prose or a ```json fence. */

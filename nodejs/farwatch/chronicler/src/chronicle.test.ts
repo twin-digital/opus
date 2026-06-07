@@ -42,27 +42,27 @@ describe('buildPrompt (composition)', () => {
   })
 
   it('throws when a template placeholder is left unfilled', () => {
-    expect(() => buildPrompt({ template: 'chronicle', snippets: { writing_style: 'plain' } })).toThrowError(
+    expect(() => buildPrompt({ template: 'chronicle', snippets: { writing_style: 'plain' } })).toThrow(
       /unfilled placeholder.*register.*invention.*examples.*adventure/s,
     )
   })
 
   it('throws when a fill has no matching placeholder (typo guard)', () => {
-    expect(() => buildPrompt({ ...fullSpec(), snippets: { ...fullSpec().snippets, bogus: 'x' } })).toThrowError(
+    expect(() => buildPrompt({ ...fullSpec(), snippets: { ...fullSpec().snippets, bogus: 'x' } })).toThrow(
       /no matching placeholder.*bogus/s,
     )
   })
 
   it('throws when a named snippet file does not exist', () => {
-    expect(() =>
-      buildPrompt({ ...fullSpec(), snippets: { ...fullSpec().snippets, writing_style: 'nope' } }),
-    ).toThrowError(/no snippet "nope".*writing-style\/nope\.md/s)
+    expect(() => buildPrompt({ ...fullSpec(), snippets: { ...fullSpec().snippets, writing_style: 'nope' } })).toThrow(
+      /no snippet "nope".*writing-style\/nope\.md/s,
+    )
   })
 
   it('throws when a placeholder is supplied by both channels', () => {
     expect(() =>
       buildPrompt({ template: 'chronicle', snippets: { adventure: 'x' }, data: { adventure: 'y' } }),
-    ).toThrowError(/both snippet and data.*adventure/s)
+    ).toThrow(/both snippet and data.*adventure/s)
   })
 })
 
@@ -180,7 +180,7 @@ describe('buildSingleTrialPrompt', () => {
   })
 
   it('throws for a trial index out of range', () => {
-    expect(() => buildSingleTrialPrompt(adv, 2, '')).toThrowError(/no trial at index 2.*has 2/s)
+    expect(() => buildSingleTrialPrompt(adv, 2, '')).toThrow(/no trial at index 2.*has 2/s)
   })
 })
 
