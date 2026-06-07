@@ -95,7 +95,7 @@ They were seen before they reached the inner arch.
 
 How it happened is a matter of some disagreement among those who returned. What is settled is that the shapes came up from the water on three sides, moving without sound, and that slipping back out the way they had come was no longer a choice the company held. They stood caught on the wrong side of the channel, in open ground, with the vault ahead and the wardens between them and the way home.
 
-What followed came from the eldest of the party, who had dealt with such things before. She told the others to set down their packs and be still. Then she unpacked the sealed vessel she had carried from the covenant house — a thing of some worth, as the covenant reckoned worth — and opened it at the water's edge and let the contents run into the black water. No word was spoken. The wardens held where they stood, and after a long moment, drew back.
+What followed came from the eldest of the party, who had dealt with such things before. She told the others to set down their packs and be still. Then she unpacked the sealed vessel she had carried from the compact house — a thing of some worth, as the compact reckoned worth — and opened it at the water's edge and let the contents run into the black water. No word was spoken. The wardens held where they stood, and after a long moment, drew back.
 
 The company retrieved what they had come for and were out before dawn.
 </chronicle>

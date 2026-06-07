@@ -1,6 +1,6 @@
 # Farwatch — Glossary
 
-The canonical vocabulary for Farwatch: the one place a concept's name and meaning are fixed, so
+The canonical vocabulary for Farwatch: the one place a concept's name and meaning are fixed,[^retired] so
 every agent and human uses the same word for the same thing.
 
 This document is a **north star**. It describes each concept as the finished design intends it, not
@@ -14,14 +14,14 @@ name)**.
 
 ## Adventure
 
-An adventure is how a covenant's striving becomes events. A party goes out to do a hard thing,
+An adventure is how a compact's striving becomes events. A party goes out to do a hard thing,
 comes through a chain of trials, and what befalls them — who pressed on, what was won, what it cost
 — is resolved and recorded here, to be read later as chronicle, questioned as testimony, or audited
 in the log.
 
 **Adventure** — One expedition's worth of events in the world: a connected region of the causal
 graph, resolved as a graph of **trials**, answering "what happened." An adventure has an overall
-**outcome** and may leave the covenant richer (a **prize**) or poorer (a loss). The adventure is
+**outcome** and may leave the compact richer (a **prize**) or poorer (a loss). The adventure is
 itself the outermost trial — the recursion below bottoms out at single **checks** and tops out at
 the adventure as a whole.
 
@@ -76,7 +76,7 @@ an ally, a place made safe. The unguarded gold is a prize, not a trial — the t
 resisting it; the prize is what is carried home. A prize is recorded as an **effect** of the trial
 that won it, distinct from the **outcome** (the verdict).
 
-**Expedition** — A party dispatched from the covenant to pursue an aim in the world: who was sent,
+**Expedition** — A party dispatched from the compact to pursue an aim in the world: who was sent,
 where, and under what **dispatch** — including limits a seeker may keep or break ("to the cold
 light, no farther"). An adventure is the resolved record of an expedition.
 
@@ -93,7 +93,7 @@ Beneath the adventure's events is a small economy: agents hold things, want chan
 to bring those changes about. Goals, stakes, and costs are all denominated in it.
 
 **Agent** — Anyone or anything that holds **resources**, forms **bonds**, and pursues **goals**: an
-individual seeker, a party, the covenant itself, a rival covenant, an outside person or faction.
+individual seeker, a party, the compact itself, a rival compact, an outside person or faction.
 Agents nest — a party is an agent made of agents — and a group's wants are not simply the sum of its
 members'.
 
@@ -169,4 +169,8 @@ the deep).
 ---
 
 _Referenced above, with sections of their own to come: Resolver · Adventure log · Edict · Dispatch ·
-Seeker · Covenant · Charter · Causal graph · Chronicle._
+Seeker · Compact · Charter · Causal graph · Chronicle._
+
+[^retired]:
+    Terms that were renamed or dropped live in [glossary-retired.md](glossary-retired.md) — the
+    single record of retired vocabulary (e.g. **Covenant**, now **Compact**).

@@ -48,7 +48,7 @@ The company slipped past the outer watch unseen and went deeper into the dark. W
 }
 </adventure>
 <chronicle>
-When the covenant's emissaries came before Lord Aldric of the Thorngate, they did not come as suppliants but as equals, and the lord heard them out and granted them passage into the disputed valley beyond his walls. There, at the crossing of the Sullen Ford, the merchants who held the bridge named their price, and the emissaries met it, silver for silver, until the toll-gate swung open. What lay on the far side was harder than any bargain: three days of driving sleet and a road that turned beneath their feet, but they held to it and did not turn back. On the fourth morning they came down into Varenholm with the compact signed and their errand done.
+When the compact's emissaries came before Lord Aldric of the Thorngate, they did not come as suppliants but as equals, and the lord heard them out and granted them passage into the disputed valley beyond his walls. There, at the crossing of the Sullen Ford, the merchants who held the bridge named their price, and the emissaries met it, silver for silver, until the toll-gate swung open. What lay on the far side was harder than any bargain: three days of driving sleet and a road that turned beneath their feet, but they held to it and did not turn back. On the fourth morning they came down into Varenholm with the compact signed and their errand done.
 </chronicle>
 </example>
 

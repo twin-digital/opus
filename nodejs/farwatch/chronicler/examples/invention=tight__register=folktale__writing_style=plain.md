@@ -69,6 +69,6 @@ When they first came before the keepers of that road, the company spoke their ca
 }
 </adventure>
 <chronicle>
-They came to the warden's crossing meaning to slip through in the grey before dawn, keeping low along the bank where the torchlight thinned — but the crossing betrayed them, a stumble in the shallows that rang out in the still air, and the wardens were at the bank before the party had reached the far side. Cornered there in the cold water with no ground left to run to, one among them drew out the thing they had sworn not to spend: a relic of the old covenant, pressed into the lead warden's hands as surety of their purpose and as the price of passage. The warden turned it over once in the torchlight, then stood aside, and what the party had gone out to do was done before the morning had fully come.
+They came to the warden's crossing meaning to slip through in the grey before dawn, keeping low along the bank where the torchlight thinned — but the crossing betrayed them, a stumble in the shallows that rang out in the still air, and the wardens were at the bank before the party had reached the far side. Cornered there in the cold water with no ground left to run to, one among them drew out the thing they had sworn not to spend: a relic of the old compact, pressed into the lead warden's hands as surety of their purpose and as the price of passage. The warden turned it over once in the torchlight, then stood aside, and what the party had gone out to do was done before the morning had fully come.
 </chronicle>
 </example>

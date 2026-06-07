@@ -35,7 +35,7 @@ export interface Skill {
 }
 
 /**
- * A seeker: a member of the covenant the chronicles can come to know. Identity is stable — the same
+ * A seeker: a member of the compact the chronicles can come to know. Identity is stable — the same
  * `id` and `name` recur across every adventure this person joins, which is what lets a reader (and us)
  * build a sense of them over time. Skills are **sparse**: only the approaches this seeker is notably
  * keen/averse or able/inept at are listed; every unlisted approach is unremarkable on both scales
@@ -131,7 +131,7 @@ export const generateRoster = (rng: Rng, size: number): Seeker[] =>
   pickDistinct(rng, NAME_POOL.length, Math.min(size, NAME_POOL.length)).map((i) => generateSeeker(rng, NAME_POOL[i]))
 
 /**
- * The covenant's standing cast: the same {@link ROSTER_SIZE} seekers every time, grown from a fixed
+ * The compact's standing cast: the same {@link ROSTER_SIZE} seekers every time, grown from a fixed
  * seed so they recur across chronicles (the point — that you come to know them). Memoized on the
  * config's identity (which `seekersConfig` swaps only when `seekers.yaml` changes on disk), so the
  * resolver's hot path doesn't re-roll the whole cast every adventure, yet tuning the YAML still

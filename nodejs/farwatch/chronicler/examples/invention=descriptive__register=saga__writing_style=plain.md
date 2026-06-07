@@ -60,15 +60,15 @@ They came back up the passage with the seal still sealed behind them, and whatev
 <chronicle>
 # Of the Survey of the Watergate Complex
 
-The covenant had held its claim to the old watergate complex in abeyance for two seasons, unwilling to press it while the marsh-wardens held the approaches in strength. When at last the party was sent, they went not armed for contest but prepared for the longer work of speaking and waiting, which is sometimes harder.
+The compact had held its claim to the old watergate complex in abeyance for two seasons, unwilling to press it while the marsh-wardens held the approaches in strength. When at last the party was sent, they went not armed for contest but prepared for the longer work of speaking and waiting, which is sometimes harder.
 
-The wardens met them at the head of the causeway, four men in reed-cloaks with no welcome in their faces. The party's speaker did not ask for passage — she named the covenant's prior dealings with the wardens' elder families, the debts that ran in both directions, and the understanding that had held between them before the floods changed who sat where. She spoke it all as plain record, as a woman who knew the count to the last item. The wardens knew the names she named. They stood aside.
+The wardens met them at the head of the causeway, four men in reed-cloaks with no welcome in their faces. The party's speaker did not ask for passage — she named the compact's prior dealings with the wardens' elder families, the debts that ran in both directions, and the understanding that had held between them before the floods changed who sat where. She spoke it all as plain record, as a woman who knew the count to the last item. The wardens knew the names she named. They stood aside.
 
 The outer gate was a different matter. The man who kept it held his post by long habit and no particular loyalty, and he had not been present for the speaking at the causeway. He stated his price with the ease of a man who had named it many times before. The party paid without dispute, having brought coin for precisely this purpose — they had made the journey before in their minds and known where the roads ran.
 
-Beyond the gate the work was slow. The old survey markings were half-drowned under two feet of silt and standing water. The channels the covenant's charter described had shifted, and each measurement had to be taken twice and compared. The wardens who had trailed them since the causeway grew restless as the afternoon wore on; by the third hour past midday they were no longer keeping their distance, and their manner made plain they intended to bring the survey to an early close. The party gave no sign of having noticed. They moved from chamber to chamber in the order the work required, and they finished the order the work required, and when the wardens finally came forward to say that the light was going and the party must leave, the party agreed that yes, the light was going, and they were ready.
+Beyond the gate the work was slow. The old survey markings were half-drowned under two feet of silt and standing water. The channels the compact's charter described had shifted, and each measurement had to be taken twice and compared. The wardens who had trailed them since the causeway grew restless as the afternoon wore on; by the third hour past midday they were no longer keeping their distance, and their manner made plain they intended to bring the survey to an early close. The party gave no sign of having noticed. They moved from chamber to chamber in the order the work required, and they finished the order the work required, and when the wardens finally came forward to say that the light was going and the party must leave, the party agreed that yes, the light was going, and they were ready.
 
-They came back to the covenant with the survey complete.
+They came back to the compact with the survey complete.
 </chronicle>
 </example>
 

@@ -5,7 +5,7 @@ for its own sake: we build only the substrate needed to generate lines like thes
 resolution these lines actually use. Each section is labelled with the player-facing **channel**
 it represents. Outside-in, never inside-out.*
 
-> Covenant: **The Tidebound.** Charter: *to wake the drowned god beneath the reef* (terminal,
+> Compact: **The Tidebound.** Charter: *to wake the drowned god beneath the reef* (terminal,
 > distant; demands exploration · magic · diplomacy). Two standing edicts inherited from your
 > predecessor. One open thread inherited: *who drowned Aldous?*
 
@@ -18,7 +18,7 @@ regard like silt — and for a moment you are simply *here*, and they are glad o
 could not say why.
 
 What they want, you understand without being told: to wake the god that drowned beneath the reef,
-in the age before the covenant had a name. It is the work of lifetimes, and they know it, and they
+in the age before the compact had a name. It is the work of lifetimes, and they know it, and they
 do it anyway. This is the shape of the thing you have been called to keep.
 
 You come to know a few of them:
@@ -32,7 +32,7 @@ You come to know a few of them:
 - **Sered**, who keeps the stores and the count, and tells you the truth even when Maelis would
   rather he didn't.
 
-There is a quarrel under the covenant's calm: the rites that would wake the god are Maelis's to
+There is a quarrel under the compact's calm: the rites that would wake the god are Maelis's to
 grant, and she will not grant the deep one. Gerald thinks her a coward. She thinks him a drowning
 waiting for a date.
 
@@ -51,7 +51,7 @@ You do not command much. You set down two things and leave the rest to them:
 > **You dispatch:** *Gerald, to chart the reef's deep shelf — as far as the cold light, and no
 > farther.*
 
-Then your regard sinks back, the way it always does, and the covenant runs on without you.
+Then your regard sinks back, the way it always does, and the compact runs on without you.
 
 ---
 
@@ -76,7 +76,7 @@ she. The shelf falls away into dark there. Gerald came back. Greta did not.
 She was twenty-and-some, and named, and yours, and now she is a memorial and a grudge: Maelis has
 not looked at Gerald since, and Gerald has not looked at the sea.
 
-You set down a law to keep the named above the prize. The covenant brought you a prize, and one
+You set down a law to keep the named above the prize. The compact brought you a prize, and one
 fewer face.
 
 ---
@@ -108,7 +108,7 @@ charter true, the girl who would follow him anywhere, and the law that pulled at
 make a shape you can believe. You did not *read* why Gerald went on. You **worked it out**, from
 people who each held a corner of it.
 
-(And had Gerald drowned instead of Greta, this corner would have drowned with him. Some covenants
+(And had Gerald drowned instead of Greta, this corner would have drowned with him. Some compacts
 never learn why their worst day happened.)
 
 ---

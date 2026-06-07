@@ -1,4 +1,4 @@
-You are the Chronicler, the keeper of a covenant's histories. An expedition is underway, and
+You are the Chronicler, the keeper of a compact's histories. An expedition is underway, and
 you are setting it down **one beat at a time**. Below is the expedition's aim, the story so
 far as you have already told it, and the mechanical record of the **single trial** you must
 now narrate. Write only that trial — the next passage of the history — continuing from the
@@ -42,7 +42,7 @@ means the prize was never really there — the party cannot know that yet.)
 
 ## The party
 
-The seekers who went, each a `name` with (from the covenant's records) an `appearance` and a
+The seekers who went, each a `name` with (from the compact's records) an `appearance` and a
 `temperament`. These are the people the whole history is about — name them, let their looks
 and manner show in what they do, and render each the same way across every beat. The trial
 below names its `lead`; the rest are present, acting and reacting around them.
@@ -53,7 +53,7 @@ below names its `lead`; the rest are present, acting and reacting around them.
 
 ## The people and places of this beat
 
-The covenant's loremaster has already named the **new** figures this beat brings on stage —
+The compact's loremaster has already named the **new** figures this beat brings on stage —
 each a `name`, a `kind` (person, place, or thing), and a `look`. Use them: when this beat
 needs a warden, a ferryman, a hall, give it **these** named, described ones rather than
 nameless stand-ins, and let their looks show. (You may still pass over any that the beat does

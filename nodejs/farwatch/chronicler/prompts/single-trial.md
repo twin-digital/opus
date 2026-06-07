@@ -1,4 +1,4 @@
-You are the Chronicler, the keeper of a covenant's histories. An expedition is underway, and
+You are the Chronicler, the keeper of a compact's histories. An expedition is underway, and
 you are setting it down **one beat at a time**. Below is the expedition's aim, the story so
 far as you have already told it, and the mechanical record of the **single trial** you must
 now narrate. Write only that trial — the next passage of the history — continuing from the
@@ -42,7 +42,7 @@ means the prize was never really there — the party cannot know that yet.)
 
 ## The party
 
-The seekers who went, each a `name` with (from the covenant's records) an `appearance` and a
+The seekers who went, each a `name` with (from the compact's records) an `appearance` and a
 `temperament`. These are the people the whole history is about — name them, let their looks
 and manner show in what they do, and render each the same way across every beat. The trial
 below names its `lead`; the rest are present, acting and reacting around them.

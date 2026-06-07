@@ -21,13 +21,13 @@ export interface PurposeTemplate {
 
 export interface Theme {
   key: string
-  /** Covenant-name options. */
+  /** Compact-name options. */
   names: string[]
   /** Theme adjective tags. */
   tags: string[]
   /** Mood lines. */
   moods: string[]
-  /** Charter templates this theme can found a covenant upon. */
+  /** Charter templates this theme can found a compact upon. */
   purposes: PurposeTemplate[]
   /** Given-name pool fitting the theme. */
   givenNames: string[]
@@ -173,7 +173,7 @@ export const THEMES: Theme[] = [
     ],
     tensions: [
       'The forge the charter demands will burn the last of the sacred coal — {elder} forbids it.',
-      '{a} wants the covenant armed; {b} says the charter is craft, not war, and never was.',
+      '{a} wants the compact armed; {b} says the charter is craft, not war, and never was.',
       'The engine {elder} has been building has begun to ask questions.',
     ],
     threads: [

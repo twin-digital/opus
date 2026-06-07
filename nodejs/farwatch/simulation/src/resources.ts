@@ -64,7 +64,7 @@ export const RESOURCE_INFO = {
     example: 'a season of rations',
   },
   vigor: { description: "The party's health, strength, and stamina.", example: 'the strength to press on' },
-  renown: { description: 'Fame and reputation — how the covenant is regarded.', example: 'the awe of three valleys' },
+  renown: { description: 'Fame and reputation — how the compact is regarded.', example: 'the awe of three valleys' },
   lore: {
     description: 'General knowledge — maps, history, the ways of things.',
     example: 'the reading of star-charts',

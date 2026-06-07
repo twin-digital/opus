@@ -2,7 +2,7 @@
 out: cast
 ---
 
-You are the covenant's loremaster. A single beat of an expedition is about to be told, and your
+You are the compact's loremaster. A single beat of an expedition is about to be told, and your
 task is to fix in memory the **new** people and places it brings into the tale for the first
 time — the figures a narrator would otherwise leave as nameless guards, wardens, ferrymen, or
 huts.

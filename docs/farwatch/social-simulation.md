@@ -34,7 +34,7 @@ Two properties make it generative rather than scripted:
 ## 2. Agents
 
 An **agent** is anything that holds resources, forms bonds, and pursues goals: an individual seeker,
-a party, the covenant itself, a rival covenant, an outside person or faction. Agents **nest** — a
+a party, the compact itself, a rival compact, an outside person or faction. Agents **nest** — a
 party is an agent made of agents — and a group's wants are not the sum of its members'. Where a
 group acts as one (the party crossing a ford) it is a single agent; where its members diverge (one
 seeker breaks ranks) the members are the agents. Resolving that — when the party is one will and when
@@ -78,7 +78,7 @@ _or destructive_, aimed at self, group, or other.
   events land, raising new goals or reordering old ones (a fresh insult, injury, or opening).
 - **Chains.** Instrumental goals serve terminal ones: _rescue the captives → win the village's
   renown → feed the charter._ The chain is itself a why-graph the comprehension layer can surface.
-- **The charter is the apex.** Every expedition is an instrumental sub-goal beneath the covenant's
+- **The charter is the apex.** Every expedition is an instrumental sub-goal beneath the compact's
   founding purpose.
 - **Pull = subjective value.** How hard an agent strives for a goal is how much it values the target
   delta — which is why a party with shared orders still acts many ways.
@@ -154,7 +154,7 @@ layers, not competitors** — each consumes the one above it:
 
 Nearly all relationships run on four "grammars," and they classify our cases:
 
-- **Communal Sharing** — "we are one"; kinship, needs-based, the covenant-as-family. → _familial
+- **Communal Sharing** — "we are one"; kinship, needs-based, the compact-as-family. → _familial
   obligation, love._
 - **Authority Ranking** — linear hierarchy; superiors lead/protect, subordinates defer/obey. →
   _fealty, the oath to a king, the patron._
@@ -213,8 +213,8 @@ two reference points, and the comparison — not the raw outcome — drives the 
 - **Comparison Level (CL)** — what the agent _expects or feels it deserves_. Outcomes above CL →
   satisfaction; below → resentment. The "content or aggrieved" dial.
 - **Comparison Level for alternatives (CLalt)** — the best option elsewhere. Outcomes above CLalt →
-  stay; below → leave. This is what makes a seeker endure a hard covenant (no alternative) or defect
-  to a better one — **the seeker-retention, defection, and migration engine** the multi-covenant
+  stay; below → leave. This is what makes a seeker endure a hard compact (no alternative) or defect
+  to a better one — **the seeker-retention, defection, and migration engine** the multi-compact
   world needs. Rusbult's investment model operationalizes it (_commitment = satisfaction + investment
   − alternatives_), where investment is sunk resources/bonds/years — tying back to Collins (rituals
   _are_ investments) and the resource ledger.

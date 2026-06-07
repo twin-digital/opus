@@ -23,7 +23,7 @@
 }
 </adventure>
 <chronicle>
-There is a vault beneath the old causeway — those who know its name, if it has one, do not say it in easy company — and it was to that place the company turned their steps when word came that something kept below it might serve the covenant's need. The marshes there have their own wardens, men who walk the fog-wrapped paths between the standing stones at the causey's end, and the company knew they could not pass those wardens openly, not with the covenant's interest over them. So they went without it.
+There is a vault beneath the old causeway — those who know its name, if it has one, do not say it in easy company — and it was to that place the company turned their steps when word came that something kept below it might serve the compact's need. The marshes there have their own wardens, men who walk the fog-wrapped paths between the standing stones at the causey's end, and the company knew they could not pass those wardens openly, not with the compact's interest over them. So they went without it.
 
 They moved through the reeds in the hour before the moon came up, when the marsh-wardens' torches were the only points of light. One by one they slipped between the pools, reading the ground for sound, choosing wet over dry when dry would creak, until they had brought themselves through the warden's ring and down to the stone stairs that descend below the causey. The wardens never turned. That much went well.
 
@@ -35,7 +35,7 @@ The inner chamber held a lock that was not a lock — not a bolt to be drawn or 
 
 They might have turned back then. They did not, because the need was real and the door was close, and people who have come so far through a marsh in the dark do not easily turn from a door that is only a door. So they tried what you try when knowing fails: one of them set his shoulder to it, and then two, and then the largest of them brought a pry-bar to the seam at the door's edge. The stone did not care. It had been made to hold against force as well as against ignorance, and the company had not the tools or the leverage to change its mind. When the pry-bar bent, they understood they were done.
 
-They came back up through the passage, past the thing they had put down, and out through the reeds in the grey of early morning — the wardens still walking their circles, still not knowing who had come and gone. The vault remained shut. Whatever the covenant had sent them to find stayed where it was, below the causeway, behind the door that would not yield, waiting for someone who could read what was written above it.
+They came back up through the passage, past the thing they had put down, and out through the reeds in the grey of early morning — the wardens still walking their circles, still not knowing who had come and gone. The vault remained shut. Whatever the compact had sent them to find stayed where it was, below the causeway, behind the door that would not yield, waiting for someone who could read what was written above it.
 
 The company did not pretend otherwise when they gave their account. They had gone as far as the lock, and no further.
 </chronicle>
@@ -95,7 +95,7 @@ They came home through the wardens' gate a second time. The wardens nodded them 
 }
 </adventure>
 <chronicle>
-There was a crossing the covenant needed, and the party went to make it.
+There was a crossing the compact needed, and the party went to make it.
 
 The way led through a tract of drowned ground — reed and black water, the causeways half-sunk and the whole of it watched over by something old that did not sleep. The party knew this. They had come prepared to move quietly, to hug the reed-line and keep their feet from the open mud and give the watching nothing to fix upon. This was the plan they had agreed upon before they set out: that you did not bargain with what kept that place, and you did not fight it either; you slipped past while its attention lay elsewhere.
 

@@ -48,7 +48,7 @@ They came to the Tharven ossuary by night and moved through its outer courts wit
 }
 </adventure>
 <chronicle>
-At the border of the contested ground the party sought leave to pass from those who held it; by measured words and the patience to sit long at an uneasy table they had it. The road beyond carried its own toll, and the brokers who named the price would not be moved by anything but coin — therefore the coin was given, and the road was opened. In the weeks that followed, when word came that the covenant's rivals were moving against the same prize, the party did not waver or turn back; and so they came first to the hall where the matter would be decided, and the decision went their way.
+At the border of the contested ground the party sought leave to pass from those who held it; by measured words and the patience to sit long at an uneasy table they had it. The road beyond carried its own toll, and the brokers who named the price would not be moved by anything but coin — therefore the coin was given, and the road was opened. In the weeks that followed, when word came that the compact's rivals were moving against the same prize, the party did not waver or turn back; and so they came first to the hall where the matter would be decided, and the decision went their way.
 </chronicle>
 </example>
 

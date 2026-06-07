@@ -1,13 +1,13 @@
 # farwatch (`@thrashplay/*`)
 
 Farwatch is a single-player, text-only game: you are a mostly-absent **patron** who governs an
-inherited **covenant of seekers** by standing edict rather than direct control, then returns to read
+inherited **compact of seekers** by standing edict rather than direct control, then returns to read
 the **saga** of what happened while you were gone — quests won or lost, seekers risen or permanently
 dead, your laws faithfully kept or comprehensibly defied by people with their own wills. The deep
 verb is *comprehension*: working out an opaque-but-fair simulation from fallible testimony. (Working
 title — see Design.)
 
-What's actually built is a thin slice of that: a seed-driven covenant generator + adventure simulator
+What's actually built is a thin slice of that: a seed-driven compact generator + adventure simulator
 that chronicles outcomes through an LLM. Repo-wide conventions (pnpm/turbo, repo-kit-generated config,
 strict ESM/NodeNext + `.js` specifiers, vitest, changesets) all apply — see the root `CLAUDE.md`; only
 farwatch-specific bits live here.
@@ -34,7 +34,7 @@ farwatch-specific bits live here.
 
 - `core` (`@thrashplay/fw-core`) — deterministic RNG and shared primitives
 - `simulation` (`@thrashplay/fw-simulation`) — adventure resolution and the simulation loop
-- `worldgen` (`@thrashplay/fw-worldgen`) — procedural covenant/world generation
+- `worldgen` (`@thrashplay/fw-worldgen`) — procedural compact/world generation
 - `chronicler` (`@thrashplay/fw-chronicler`) — pinned simulation outcomes → narrative via an LLM
 - `app` (`@thrashplay/farwatch`) — end-to-end CLI tying it together
 

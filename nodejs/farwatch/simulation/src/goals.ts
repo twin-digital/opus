@@ -4,9 +4,9 @@ import { goalsConfig } from './config.js'
 import { pickDistinct } from './random.js'
 import { isNonfungible, pickWeighted, type ResourceDelta, type Tier } from './resources.js'
 
-/** The covenant's aim for an adventure: the reward won if it succeeds. */
+/** The compact's aim for an adventure: the reward won if it succeeds. */
 export interface Goal {
-  /** What the covenant gains on success — a fungible tier or a non-fungible instance. */
+  /** What the compact gains on success — a fungible tier or a non-fungible instance. */
   readonly reward: ResourceDelta
   /** Whether the goal is actually attainable; a trial may reveal it false (the relic isn't there). */
   readonly viable: boolean

@@ -11,7 +11,7 @@
 }
 </adventure>
 <chronicle>
-The covenant had long held that the drowned vault beneath the causeway kept the bones of
+The compact had long held that the drowned vault beneath the causeway kept the bones of
 their first warden, and it was to carry those bones home that the company went out at all.
 Knowing the marsh-wardens watched the open road, they went instead by night and through the
 reed-channels, faces darkened with bog-mud, low shapes in black water; and because the
@@ -44,9 +44,9 @@ lay.
 </adventure>
 <chronicle>
 The only road to the upland shrine ran through the high passes, and those the hill-clans had
-held since before the covenant was named; so the company went not as raiders but as
+held since before the compact was named; so the company went not as raiders but as
 suppliants, and sought out the clans' winter-hall to ask leave to cross. Their eldest spoke
-the covenant's purpose plain before the grey elders and asked passage as kin-of-purpose
+the compact's purpose plain before the grey elders and asked passage as kin-of-purpose
 rather than trespassers — and because she pitched her words to the clans' pride and not to
 their fear, the elders heard her. Therefore the pass was opened to them, though not for
 nothing: the clans named a price in worked iron and winter salt, and the company paid it
@@ -70,7 +70,7 @@ bond struck that no wall could have bought.
 }
 </adventure>
 <chronicle>
-Word had come that the thing the covenant needed lay in the keeping of the marsh-drake that
+Word had come that the thing the compact needed lay in the keeping of the marsh-drake that
 hunted the lowland fens, and the company hoped to take it and be gone before the beast ever
 stirred. They went softly, keeping downwind and low among the rushes, trusting to slip past
 while it slept — but the drake's hunger woke before they had cleared its ground, and it rose

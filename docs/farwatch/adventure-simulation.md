@@ -45,14 +45,14 @@ model), not the whole picture. The fuller palette we may grow into, by scope:
 - _Mental:_ `lore` (general knowledge) · `secret` (a specific thing known) · skill / capability
 - _Volitional:_ `morale` · `faith`
 
-**Covenant-scoped** — holdings that accrue across arcs; rarely an expedition's whole reward, though
+**Compact-scoped** — holdings that accrue across arcs; rarely an expedition's whole reward, though
 one can _serve_ them:
 
 - **territory / holdings** (land, strongholds, claims)
-- **followers / vassals / members** (the covenant's people — the anonymous mass and named recruits)
+- **followers / vassals / members** (the compact's people — the anonymous mass and named recruits)
 - **political standing / influence** (with factions, rivals, powers)
-- **allies / pacts** with other covenants and factions
-- institutional **knowledge / library**; covenant **relics** (named items that become treasures)
+- **allies / pacts** with other compacts and factions
+- institutional **knowledge / library**; compact **relics** (named items that become treasures)
 
 Relational ties — love, honour, fear, allies — are **bonds**, not plain resources; they live in the
 bond model (`social-simulation.md`), even though gaining an ally _feels_ like gaining a resource.
@@ -67,7 +67,7 @@ An adventure has:
 
 A **goal's reward is a resource delta** (a fungible tier, or a non-fungible `item`/`secret`). The
 reward kind quietly sets the quest's flavor — `wealth` → a treasure-hunt, `secret` → an
-investigation, `item` → a recovery. The covenant gains the reward only if the adventure succeeds.
+investigation, `item` → a recovery. The compact gains the reward only if the adventure succeeds.
 
 How they're generated:
 
@@ -79,7 +79,7 @@ How they're generated:
   reveals it.
 
 _Deferred:_ **destructive** goals (reduce a _rival's_ resources) need a second agent, so they wait
-for the agent work. For now a goal is a gain for the covenant.
+for the agent work. For now a goal is a gain for the compact.
 
 ## Costs (upfront)
 
@@ -148,7 +148,7 @@ The ledger is the **itemized list of resource movements** an adventure produced 
 movement, each tagged with its source: a trial's upfront cost, a failed trial's stake, a won trial's
 prize, and the goal reward on overall success. It is **not** a summed net per kind — tiers stay
 discrete, and the list reads straight to the chronicler ("they spent…, lost…, came home with…").
-Aggregating into a net delta per kind waits for a persistent covenant pool to apply it against
+Aggregating into a net delta per kind waits for a persistent compact pool to apply it against
 (deferred).
 
 ## Generation rules
@@ -193,7 +193,7 @@ always attempted.
 - **Spend-to-gain rationality** — not modeled (above).
 - **Fixed vs rolled cost tier** — for the rare upfront costs, undecided; likely fixed-per-approach to
   start.
-- **Enforce vs compute** — first cut computes the ledger; depleting a persistent covenant pool (and
+- **Enforce vs compute** — first cut computes the ledger; depleting a persistent compact pool (and
   failing on exhaustion) waits for persistence.
 - **Risk known upfront / agent-chosen approaches** — today the approach is rolled at random and its
   stake tier rolled blind. Later, when agents _choose_ the approach, the risk/tier is known up front
