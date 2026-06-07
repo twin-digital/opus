@@ -13,6 +13,7 @@ export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
   skillFor,
   leadFor,
+  pickPartyApproach,
   roster,
   pickParty,
   generateRoster,

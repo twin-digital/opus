@@ -98,6 +98,15 @@ export const SeekersConfig = z.object({
   partySizeWeights: z.record(z.string(), z.number().nonnegative()).meta({
     description: 'Relative weights for how many seekers go on an adventure (keys are party sizes).',
   }),
+  offTypeChance: z
+    .number()
+    .min(0)
+    .max(1)
+    .meta({
+      description:
+        "STOP-GAP (chronicler iteration): chance a trial's approach is an off-type no party member is drawn to, vs. weighted by the party's positive affinities.",
+      examples: [0.2],
+    }),
 })
 export type SeekersConfig = z.infer<typeof SeekersConfig>
 
