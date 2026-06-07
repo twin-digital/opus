@@ -166,6 +166,102 @@ It updates from the agent's own deeds rather than another's regard, but otherwis
 bond — including raising a self-directed goal when it bottoms out (despair, recklessness, a walk into
 the deep).
 
+## Chronicler implementation
+
+The chronicler turns a resolved **adventure** into prose. Where the rest of this glossary fixes
+design intent, this section names the concrete machinery we build the chronicler _with_ —
+implementation vocabulary, kept here so prompt and pipeline work shares one set of words. It is
+distinct from **Chronicle** (the reading itself, a section still to come): this is how the reading
+gets made.
+
+### What may be said, and in what voice
+
+**Chronicle view** _(also: chronicle-legal view)_ — The dice-free projection of an **adventure**
+handed to the model: the narratively meaningful facts of what happened, with the resolver's
+mechanics (rolls, difficulties, the numbers behind a verdict) stripped out. It is the _fact_ side of
+the fact-vs-invention line — everything the chronicler may state as true, and nothing it must not
+see. What it carries grows with the design; today that includes the trials in order with their
+**approach** and **outcome**, the resource movements they realized, and the **goal** they served —
+but the line that defines the view is _outcomes and stakes, not the dice_, not any fixed list.
+
+**Few-shot example** — Exemplar narrations shown to the model to anchor it, bound to the chosen voice
+(the **register** / **writing style** / **invention** selection) so the examples match what is being
+asked rather than pulling the model toward a single prototype. Generated ahead of time, one set per
+voice combination.
+
+**Invention** — How far the chronicler fleshes out _beyond_ the **chronicle view** — the dial on the
+fact-vs-invention line, from tight (state only what the record holds) to free (name people and
+places, supply texture the record omits). What it may never do is contradict the view.
+
+**Register** — The narrator's _stance_: the fixed point of view and diction the whole chronicle is
+spoken from — a legend's exalted remove, a folktale's plainspoken warmth, a dry annalist keeping the
+record. One of the **axes** the prose composes from, orthogonal to **writing style**, so the same
+register can be rendered ornate or spare.
+
+**Writing style** — How ornate the prose is: the ornament dial, register-neutral, running from mythic
+and figured to plain and unadorned. It composes with **register** (which voice) as an independent
+**axis** (how ornate that voice sounds).
+
+### How a coherent telling gets built
+
+**Cast** — The named, motivated figures a **treatment** fixes (roles and wants, not just names), so
+the same people read consistently across a telling. Collected across the trials into a persistable
+list — a seed for **world-state** that outlasts the run, so a place or person met once can be reused
+rather than re-invented. (The simulation already fixes the **seeker** roster this way; the cast is
+the chronicler's analogue for the figures and places _it_ mints.)
+
+**Framing** — One trial's authored substance within a **treatment**: the concrete situation the
+per-trial narrator _dramatizes_ rather than inventing cold. It supplies enough for the trial to read
+as a caused event in the larger story — say, its real **obstacle**, why that bars the **goal**, how
+the trial's **approach** met it, and what the outcome changes — set against the shared **setting**
+and **cast**.
+
+**Palette** **(working name)** — A per-adventure diversity hint, rolled deterministically from the
+adventure and offered to the **treatment** as raw material to react to. It nudges along a few
+independent dimensions — a biome, a scale, the kind of inhabitants, a derived _adventure type_
+(heist, hunt, mystery, …) — to break the model's tendency to collapse every setting onto one
+prototype. Which dimensions it rolls, and how hard the hint is imposed (loose suggestion vs hard
+constraint), are tunable.
+
+**Setting** — The world a **treatment** fixes for one adventure: a geographic scale and the connected
+places its trials happen in, so every passage stands on the same ground instead of each trial
+conjuring its own.
+
+**Treatment** **(working name)** — A coherent per-adventure "bible" authored _before_ any trial is
+narrated, in one pass over the whole adventure: a fixed world and cast for the telling to draw on,
+settled up front so the chronicle coheres instead of improvising each beat in isolation. It fixes
+whatever the narration needs to stay consistent — things like the **setting**, the **cast** and what
+they want, the notable **treasures**, and a per-trial **framing** — with the exact contents following
+the design.
+
+**Zoomed narration** — Narrating an adventure one **trial** at a time, each call given the story so
+far, then distilling the passages into one finished chronicle — markedly richer than telling the
+whole adventure in a single shot. The staged authoring above (**treatment** → per-trial → stitch) is
+the matured form of this.
+
+### Compositional scaffolding
+
+**Axis** — A dimension a **snippet** varies on, named by the placeholder it fills. **Register**,
+**writing style**, and **invention** are the voice axes today; others get added as the prose gains
+dials to turn (how strongly the **palette** is imposed, for one). Axes are orthogonal — any
+combination is legal — which is what lets the voice be tuned one dimension at a time.
+
+**Pipeline** — An authored, multi-step narration: a sequence of template calls (with pure transforms
+between them) that threads named values through to build a telling — e.g. **treatment** → narrate
+each trial → stitch. The unit at which a whole narration _strategy_ is composed and compared.
+
+**Snippet** — One interchangeable filling for a template placeholder, drawn from a pool of
+alternatives on an **axis**. It is the unit that makes voice A/B-testable: swap `register` from
+legendary to folktale, hold everything else.
+
+**Structured output** — A template call constrained to return validated JSON against a schema rather
+than prose. It is how the **treatment** (and the **cast** it names) come back as data the rest of the
+**pipeline** can read and bind, not free text.
+
+**Template** — A named prompt skeleton with named placeholders: the fixed contract for one kind of
+call (the per-trial narrator, the **treatment** author, …). It is filled from two channels —
+**snippets** and runtime data (the **chronicle view**, the **few-shot examples**).
+
 ---
 
 _Referenced above, with sections of their own to come: Resolver · Adventure log · Edict · Dispatch ·
