@@ -22,12 +22,14 @@ export {
   type LoadedTemplate,
 } from './chronicle.js'
 export { requestStructured, loadSchema } from './structured.js'
+export { derivePalette, type Palette } from './palette.js'
 export {
   runPipeline,
   runPipelineByName,
   loadPipeline,
   listPipelines,
   describePipeline,
+  describePipelineNodes,
   renderValue,
   type Pipeline,
   type Step,
@@ -37,6 +39,9 @@ export {
   type TraceEntry,
   type PipelineRun,
   type PipelineConfig,
+  type PipelineNodes,
+  type NodeTemplateChoice,
+  type NodeOverride,
 } from './pipeline.js'
 export { bedrock } from './bedrock.js'
 export { claudeCli } from './claude-cli.js'

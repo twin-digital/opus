@@ -35,17 +35,22 @@ const DEFAULT_OPTIONS = {
  * `llama3.1`; the server is `OLLAMA_HOST` (a bare `host:port` is accepted; default localhost).
  * Both are read per call, since the app loads its `.env` only after this module is imported.
  * Thinking is disabled (`think: false`); `options.params` merge over the tuned
- * {@link DEFAULT_OPTIONS}. No timeout, since local models can be slow.
+ * {@link DEFAULT_OPTIONS}. When `options.schema` is set, it is passed as Ollama's `format` so
+ * generation is constrained to that JSON Schema (native structured output). No timeout, since local
+ * models can be slow.
  */
 export const ollama: Llm = async (prompt, options) => {
   const model = options?.model ?? process.env.CHRONICLER_MODEL ?? 'llama3.1'
   const url = `${ollamaHost()}/api/generate`
-  const body = {
+  const body: Record<string, unknown> = {
     model,
     prompt,
     stream: false,
     think: false,
     options: { ...DEFAULT_OPTIONS, ...(options?.params ?? {}) },
+  }
+  if (options?.schema !== undefined) {
+    body.format = options.schema
   }
   let res: Response
   try {

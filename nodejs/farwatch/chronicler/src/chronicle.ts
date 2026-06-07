@@ -11,6 +11,12 @@ export interface LlmOptions {
   readonly model?: string
   /** Extra backend-specific generation parameters, merged over the backend's defaults. */
   readonly params?: Record<string, unknown>
+  /**
+   * A JSON Schema for structured output. Backends that support it natively (ollama's `format`)
+   * constrain generation to it; others ignore it. {@link requestStructured} sets this and validates
+   * the result regardless, so native output and text-parsing both end up validated.
+   */
+  readonly schema?: unknown
 }
 
 /** Anything that turns a prompt (and optional {@link LlmOptions}) into completion text. */
@@ -465,10 +471,12 @@ export const chronicleZoomed = async (
   return { beats, summaryPrompt, summary }
 }
 
-/** Which snippet axes a single template uses, and whether it takes a few-shot example count. */
+/** Which snippet axes a single template uses, its data placeholders, and whether it takes examples. */
 export interface TemplateUse {
   /** The snippet-axis placeholders this template contains (a subset of {@link PromptOptions.axes}). */
   readonly axes: readonly string[]
+  /** The non-axis placeholders — the data the template must be given (e.g. `aims`, `trials`, `examples`). */
+  readonly data: readonly string[]
   /** Whether the template has an `{{examples}}` slot — i.e. the example-count lever applies. */
   readonly examples: boolean
 }
@@ -508,7 +516,8 @@ export const listPromptOptions = (): PromptOptions => {
     templates.map((name) => {
       const placeholders = placeholdersIn(loadTemplate(name).body)
       const used = [...axisNames].filter((axis) => placeholders.has(axis)).sort()
-      return [name, { axes: used, examples: placeholders.has('examples') }]
+      const data = [...placeholders].filter((p) => !axisNames.has(p)).sort()
+      return [name, { axes: used, data, examples: placeholders.has('examples') }]
     }),
   )
   return { templates, axes, templateUses }

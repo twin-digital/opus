@@ -1,0 +1,62 @@
+name: framing-and-texture
+# One per-adventure pre-pass (the loremaster) authors a coherent treatment — setting, treasures,
+# cast (with roles and wants), inventory, and a per-trial outline (obstacle, why it bars the way, how
+# the approach met it, the consequence into the next, what it wins). Each trial is then narrated by
+# *dramatizing* its framing against the shared setting/cast, and a light stitch joins the passages and
+# lands the closing — so the chronicle is one cohesive story with named, motivated figures and a prize
+# actually carried home, rather than disjointed gatekeeper scenes summarized into vagueness.
+in: [adventure, palette]
+out:
+  chronicle: chronicle
+  cast: treatment.cast # the authored cast, persistable as world-state
+  treatment: treatment # the whole bible, exposed for inspection
+
+config:
+  treatment: { grounding: strict } # how hard to push the model onto the palette (strict | loose)
+  trial-narrate: { register: legendary, writing_style: mythic, invention: dialogue }
+  stitch: { register: folktale, writing_style: mythic }
+
+steps:
+  - as: aims
+    derive: pick
+    from: adventure
+    fields: [goal, optionalGoals]
+
+  - as: treatment # PRE-PASS — author the whole expedition (structured → schemas/treatment.json)
+    call: treatment
+    bind:
+      aims: aims
+      party: adventure.party
+      trials: adventure.trials # all trials at once, so the plot coheres
+      outcome: adventure.outcome
+      palette: palette # the diversity hint — biome/scale/inhabitants/adventure-type
+
+  - as: pairs # pair each mechanical trial with its authored framing
+    derive: zip
+    lists: [adventure.trials, treatment.trials]
+    keys: [trial, framing]
+
+  - as: scenes
+    map: pairs
+    item: pair
+    body:
+      - as: narration # dramatize this trial's framing against the shared setting/cast
+        call: trial-narrate
+        bind:
+          aims: aims
+          party: adventure.party
+          setting: treatment.setting
+          cast: treatment.cast
+          inventory: treatment.inventory
+          treasures: treatment.treasures
+          trial: pair.trial
+          framing: pair.framing
+          adventure_so_far: prior.narration
+
+  - as: chronicle # light stitch — join the passages, preserve texture, land the closing
+    call: stitch
+    bind:
+      aims: aims
+      setting: treatment.setting
+      full_chronicle: scenes.narration
+      closing: treatment.closing

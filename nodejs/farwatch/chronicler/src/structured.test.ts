@@ -51,6 +51,16 @@ describe('requestStructured', () => {
     expect(out).toMatchObject({ entities: [{ kind: 'person' }] })
   })
 
+  it('pins a same-named array output to an exact length (count constraint)', async () => {
+    const two = '{"entities":[{"name":"a","kind":"person","look":"x"},{"name":"b","kind":"person","look":"y"}]}'
+    const out = await requestStructured(() => Promise.resolve(two), 'p', 'cast', undefined, 0, { entities: 2 })
+    expect((out as { entities: unknown[] }).entities).toHaveLength(2)
+    // VALID has a single entity → fails minItems=2, throws (no retries left).
+    await expect(
+      requestStructured(() => Promise.resolve(VALID), 'p', 'cast', undefined, 0, { entities: 2 }),
+    ).rejects.toThrow()
+  })
+
   it('throws after exhausting retries', async () => {
     await expect(
       requestStructured(() => Promise.resolve('not json at all'), 'p', 'cast', undefined, 1),

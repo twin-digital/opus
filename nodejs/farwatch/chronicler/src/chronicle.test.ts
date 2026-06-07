@@ -79,14 +79,22 @@ describe('listPromptOptions', () => {
     expect(byPlaceholder.writing_style).toEqual(expect.arrayContaining(['mythic', 'plain']))
   })
 
-  it('reports, per template, which axes it uses and whether it takes examples', () => {
+  it('reports, per template, which axes and data placeholders it uses and whether it takes examples', () => {
     const { templateUses } = listPromptOptions()
-    // chronicle: all three voice axes, plus a {{examples}} slot.
-    expect(templateUses.chronicle).toEqual({ axes: ['invention', 'register', 'writing_style'], examples: true })
-    // single-trial: the voice axes, no examples.
-    expect(templateUses['single-trial']).toEqual({ axes: ['invention', 'register', 'writing_style'], examples: false })
+    // chronicle: all three voice axes, plus the {{adventure}} + {{examples}} data slots.
+    expect(templateUses.chronicle).toEqual({
+      axes: ['invention', 'register', 'writing_style'],
+      data: ['adventure', 'examples'],
+      examples: true,
+    })
     // summary: only register + writing_style (invention would fight distillation), no examples.
-    expect(templateUses.summary).toEqual({ axes: ['register', 'writing_style'], examples: false })
+    expect(templateUses.summary).toMatchObject({ axes: ['register', 'writing_style'], examples: false })
+    // treatment is adventure-level (only standard data) → standalone-runnable via the skeleton; its
+    // one snippet axis (`grounding`) lets the palette discipline be A/B-tested.
+    expect(templateUses.treatment).toMatchObject({
+      axes: ['grounding'],
+      data: ['aims', 'outcome', 'palette', 'party', 'trials'],
+    })
   })
 })
 

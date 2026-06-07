@@ -46,8 +46,21 @@ export const requestStructured = async (
   schemaName: string,
   options?: LlmOptions,
   retries = 2,
+  arrayLengths?: Readonly<Record<string, number>>,
 ): Promise<unknown> => {
   const schema = loadSchema(schemaName)
+  // Pin a top-level array output to an exact length (e.g. one `trials` outline entry per adventure
+  // trial) so a model can't over- or under-generate it — enforced by the grammar natively, by
+  // validation + retry otherwise.
+  if (arrayLengths !== undefined) {
+    const props = (schema as { properties?: Record<string, unknown> }).properties
+    for (const [name, length] of Object.entries(arrayLengths)) {
+      const prop = props?.[name]
+      if (prop !== null && typeof prop === 'object' && (prop as { type?: unknown }).type === 'array') {
+        Object.assign(prop, { minItems: length, maxItems: length })
+      }
+    }
+  }
   const validate = ajv.compile(schema)
   const instruction = `\n\nRespond with ONLY a JSON value conforming to this JSON Schema — no prose, no explanation, no code fences:\n\n${JSON.stringify(schema, null, 2)}`
 
@@ -55,7 +68,9 @@ export const requestStructured = async (
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const repair =
       attempt === 0 ? '' : `\n\nYour previous reply was invalid (${lastError}). Return only the corrected JSON.`
-    const raw = await llm(prompt + instruction + repair, options)
+    // Pass the schema down: a backend with native structured output (ollama `format`) constrains
+    // generation to it; the rest ignore it and rely on the instruction + the validation below.
+    const raw = await llm(prompt + instruction + repair, { ...options, schema })
     let parsed: unknown
     try {
       parsed = JSON.parse(extractJson(raw))
