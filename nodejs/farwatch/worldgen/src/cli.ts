@@ -4,7 +4,7 @@ import { generateFounding } from './generate.js'
 import { renderFounding } from './render.js'
 
 /**
- * Generate and print one or more covenant foundings. Run via the package's `gen` script:
+ * Generate and print one or more compact foundings. Run via the package's `gen` script:
  *
  *   pnpm --filter @thrashplay/fw-worldgen gen --seed 7              one founding from seed 7
  *   pnpm --filter @thrashplay/fw-worldgen gen --seed 7 --count 5    five foundings, seeds 7..11

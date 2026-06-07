@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>farwatch inspector</title>
+    <style>
+      :root {
+        --bg: #14171c;
+        --panel: #1b1f26;
+        --ink: #e6e8ea;
+        --dim: #8b929c;
+        --line: #2a2f38;
+        --accent: #c9a86a;
+        --pass: #6bbf73;
+        --fail: #d2706a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          15px/1.6 system-ui,
+          sans-serif;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+      }
+      header h1 {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin: 0;
+        margin-right: auto;
+      }
+      label {
+        color: var(--dim);
+        font-size: 13px;
+      }
+      input {
+        width: 90px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font: inherit;
+      }
+      select {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font: inherit;
+        max-width: 220px;
+      }
+      select[hidden] {
+        display: none;
+      }
+      .field {
+        margin-bottom: 14px;
+      }
+      .field label {
+        display: block;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+      }
+      .field select {
+        width: 100%;
+        max-width: none;
+      }
+      .tmpl-group {
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+      .tmpl-group .k {
+        color: var(--accent);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      button {
+        background: var(--accent);
+        color: #14171c;
+        border: 0;
+        border-radius: 6px;
+        padding: 7px 14px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost {
+        background: transparent;
+        color: var(--dim);
+        border: 1px solid var(--line);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1px;
+        background: var(--line);
+        min-height: calc(100vh - 58px);
+      }
+      .col {
+        background: var(--bg);
+        padding: 22px 26px;
+        overflow: auto;
+      }
+      .col h2 {
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin: 0 0 14px;
+      }
+      .chronicle {
+        font-size: 17px;
+        line-height: 1.75;
+        white-space: pre-wrap;
+      }
+      .verdict {
+        display: inline-block;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        margin-bottom: 16px;
+        padding: 2px 10px;
+        border-radius: 5px;
+      }
+      .verdict.pass {
+        color: var(--pass);
+        border: 1px solid var(--pass);
+      }
+      .verdict.fail {
+        color: var(--fail);
+        border: 1px solid var(--fail);
+      }
+      section.block {
+        margin-bottom: 18px;
+      }
+      section.block > .k {
+        color: var(--dim);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      pre {
+        margin: 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        font:
+          13px/1.6 ui-monospace,
+          monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--ink);
+      }
+      .roll {
+        font:
+          14px/1.6 ui-monospace,
+          monospace;
+        color: var(--dim);
+      }
+      .roll b {
+        color: var(--ink);
+      }
+      .note {
+        font-size: 12px;
+        margin-top: 12px;
+      }
+      .note code {
+        background: var(--panel);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .dim {
+        color: var(--dim);
+      }
+      .err {
+        color: var(--fail);
+      }
+      .gain {
+        color: var(--pass);
+      }
+      .loss {
+        color: var(--fail);
+      }
+      .spoils {
+        font:
+          13px/1.7 ui-monospace,
+          monospace;
+      }
+      .spoils .tag {
+        color: var(--dim);
+      }
+      .spoils b {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>farwatch · inspector</h1>
+      <label for="seed">seed</label>
+      <input id="seed" type="number" value="1" step="1" />
+      <button id="run">Run</button>
+      <button id="rand" class="ghost">🎲 random</button>
+      <label id="modelLabel" for="model" hidden>model</label>
+      <select id="model" hidden></select>
+      <span id="status" class="dim"></span>
+    </header>
+    <main>
+      <div class="col">
+        <h2>Prompt builder</h2>
+        <div id="builder"><span class="dim">loading options…</span></div>
+        <div class="note dim">
+          Each control picks a snippet from <code>prompts/&lt;axis&gt;/</code>. <b>Register</b> is the narrator's voice;
+          <b>writing style</b> dials the prose ornament — they compose. The prompt actually sent is shown under “Prompt
+          sent”.
+        </div>
+      </div>
+      <div class="col">
+        <h2>Chronicle</h2>
+        <div id="verdict"></div>
+        <div id="chronicle" class="chronicle dim">
+          Pick a seed and hit Run. The sim is deterministic per seed; the narrative is not, so re-running the same seed
+          shows how the LLM varies on a fixed fact.
+        </div>
+      </div>
+      <div class="col">
+        <h2>The guts (hide nothing)</h2>
+        <section class="block">
+          <div class="k">Pinned facts</div>
+          <div id="roll" class="roll dim">—</div>
+        </section>
+        <section class="block">
+          <div class="k">Goals</div>
+          <div id="goals" class="spoils dim">—</div>
+        </section>
+        <section class="block">
+          <div class="k">Ledger</div>
+          <div id="ledger" class="spoils dim">—</div>
+        </section>
+        <section class="block">
+          <div class="k">Adventure (raw)</div>
+          <pre id="result">—</pre>
+        </section>
+        <section class="block">
+          <div class="k">Prompt sent</div>
+          <pre id="prompt">—</pre>
+        </section>
+        <section class="block">
+          <div class="k">Raw completion (untrimmed)</div>
+          <pre id="raw">—</pre>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const seedEl = $('seed')
+      const runBtn = $('run')
+      const randBtn = $('rand')
+      const statusEl = $('status')
+      const modelEl = $('model')
+      const modelLabel = $('modelLabel')
+
+      // The options the server discovered on disk, plus the live target. The form is target-aware: a
+      // target is a single template (one call) or a pipeline (multi-step). A template shows its own
+      // snippet axes (+ example count); a pipeline shows one config group per call-node — a template
+      // dropdown (the templates whose bindings that node can satisfy) plus the snippet dropdowns for
+      // the chosen template. Switching target, or a node's template, resets the affected controls.
+      let OPT = null
+      // `nodeTemplates` maps a pipeline node's `as` → the template chosen for it (defaults to authored).
+      const state = { target: null, nodeTemplates: {} } // target: "template:<name>" or "pipeline:<name>"
+
+      const splitTarget = () => {
+        const i = state.target.indexOf(':')
+        return [state.target.slice(0, i), state.target.slice(i + 1)]
+      }
+      const axisOptions = () => Object.fromEntries(OPT.axes.map((a) => [a.placeholder, a.options]))
+
+      // The snippet dropdowns for one pipeline node, given the template chosen for it: one per axis of
+      // that template, defaulting to the pipeline's authored config (then the axis's first option).
+      function nodeSnips(node, template) {
+        const choice = node.templates.find((t) => t.template === template)
+        if (!choice) return ''
+        const ax = axisOptions()
+        return choice.axes
+          .map((ph) =>
+            field(
+              `sel-${node.as}-${ph}`,
+              ph,
+              ax[ph],
+              choice.defaults[ph] ?? ax[ph][0],
+              `data-node="${node.as}" data-name="${ph}"`,
+            ),
+          )
+          .join('')
+      }
+
+      // A labelled <select>; `attrs` carries the data-* the gatherer reads.
+      const field = (id, label, options, selected, attrs) =>
+        `<div class="field"><label for="${id}">${label.replace(/_/g, ' ')}</label><select id="${id}" ${attrs}>${options
+          .map((o) => `<option ${o === selected ? 'selected' : ''}>${o}</option>`)
+          .join('')}</select></div>`
+
+      function renderTarget() {
+        const opt = (v, t) => `<option value="${v}" ${state.target === v ? 'selected' : ''}>${t}</option>`
+        const tmpls = OPT.templates.map((t) => opt('template:' + t, t)).join('')
+        const pipes = (OPT.pipelines || []).map((p) => opt('pipeline:' + p.name, p.name)).join('')
+        let html = `<div class="field"><label for="sel-target">run</label><select id="sel-target"><optgroup label="templates">${tmpls}</optgroup>${pipes ? `<optgroup label="pipelines">${pipes}</optgroup>` : ''}</select></div>`
+
+        const [kind, name] = splitTarget()
+        const ax = axisOptions()
+        if (kind === 'template') {
+          const uses = OPT.templateUses[name] || { axes: [], examples: false }
+          for (const ph of uses.axes) {
+            html += field(`sel-${ph}`, ph, ax[ph], OPT.defaults.snippets[ph] ?? ax[ph][0], `data-name="${ph}"`)
+          }
+          if (uses.examples) {
+            html += `<div class="field"><label for="sel-exampleCount">examples (count)</label><input id="sel-exampleCount" data-name="exampleCount" type="number" min="0" max="${OPT.maxExamples}" step="1" value="${OPT.defaults.exampleCount}" /></div>`
+          }
+        } else {
+          const pipe = OPT.pipelines.find((p) => p.name === name)
+          for (const node of pipe.nodes) {
+            const sel = state.nodeTemplates[node.as] ?? node.template
+            const tmplOpts = node.templates
+              .map(
+                (t) => `<option value="${t.template}" ${t.template === sel ? 'selected' : ''}>${t.template}</option>`,
+              )
+              .join('')
+            html += `<div class="tmpl-group"><div class="k">${node.as}</div>`
+            html += `<div class="field"><label for="tmpl-${node.as}">template</label><select id="tmpl-${node.as}" class="node-tmpl" data-node="${node.as}">${tmplOpts}</select></div>`
+            html += `<div class="node-snips" id="snips-${node.as}">${nodeSnips(node, sel)}</div></div>`
+          }
+        }
+        $('builder').innerHTML = html
+        $('sel-target').addEventListener('change', () => {
+          state.target = $('sel-target').value
+          state.nodeTemplates = {} // a fresh target starts from its authored templates
+          renderTarget()
+        })
+        // Changing a node's template rebuilds just that node's snippet dropdowns for the new template.
+        document.querySelectorAll('.node-tmpl').forEach((el) => {
+          el.addEventListener('change', () => {
+            const as = el.dataset.node
+            state.nodeTemplates[as] = el.value
+            const pipe = OPT.pipelines.find((p) => p.name === splitTarget()[1])
+            $(`snips-${as}`).innerHTML = nodeSnips(
+              pipe.nodes.find((n) => n.as === as),
+              el.value,
+            )
+          })
+        })
+      }
+
+      async function loadOptions() {
+        try {
+          const res = await fetch('/options')
+          OPT = await res.json()
+          state.target = 'template:' + OPT.defaults.template
+          renderTarget()
+        } catch (err) {
+          $('builder').innerHTML = `<span class="err">could not load options: ${err.message}</span>`
+        }
+      }
+
+      // Gather the form into the /run selections — a template run or a pipeline run.
+      function selections() {
+        const [kind, name] = splitTarget()
+        if (kind === 'pipeline') {
+          // One override per call-node, keyed by its `as`: the chosen template + its snippet selection.
+          const nodeOverrides = {}
+          document.querySelectorAll('#builder select.node-tmpl').forEach((el) => {
+            nodeOverrides[el.dataset.node] = { template: el.value, snippets: {} }
+          })
+          document.querySelectorAll('#builder select[data-node][data-name]').forEach((el) => {
+            const as = el.dataset.node
+            ;(nodeOverrides[as] ??= { snippets: {} }).snippets[el.dataset.name] = el.value
+          })
+          return { pipeline: name, nodeOverrides }
+        }
+        const snippets = {}
+        let exampleCount
+        document.querySelectorAll('#builder [data-name]').forEach((el) => {
+          if (el.dataset.name === 'exampleCount') exampleCount = Number(el.value)
+          else if (!el.dataset.node) snippets[el.dataset.name] = el.value
+        })
+        const out = { template: name, snippets }
+        if (exampleCount !== undefined) out.exampleCount = exampleCount
+        return out
+      }
+
+      // Populate the model dropdown from the server (ollama backend only). Hidden otherwise.
+      async function loadModels() {
+        try {
+          const res = await fetch('/models')
+          const data = await res.json()
+          if (!data.models || data.models.length === 0) {
+            return // not ollama, or unreachable — leave the dropdown hidden
+          }
+          modelEl.innerHTML = data.models.map((m) => `<option value="${m}">${m}</option>`).join('')
+          if (data.active && data.models.includes(data.active)) {
+            modelEl.value = data.active
+          }
+          modelEl.hidden = false
+          modelLabel.hidden = false
+        } catch {
+          // server not answering /models yet — dropdown stays hidden, runs still work
+        }
+      }
+
+      async function run() {
+        const seed = Number(seedEl.value)
+        runBtn.disabled = true
+        statusEl.textContent = 'rolling…'
+        $('chronicle').classList.add('dim')
+        try {
+          const model = modelEl.hidden ? undefined : modelEl.value || undefined
+          const res = await fetch('/run', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ seed, selections: selections(), model }),
+          })
+          const data = await res.json()
+          if (!res.ok || data.error) {
+            const e = new Error(data.error || `HTTP ${res.status}`)
+            e.stack = data.stack || e.stack // server returns the stack on a 500 (dev: hide nothing)
+            throw e
+          }
+          render(data)
+          const tags = [`${data.elapsedMs} ms`]
+          if (data.model) {
+            tags.push(data.model)
+          }
+          statusEl.textContent = tags.join(' · ')
+        } catch (err) {
+          // A TypeError from fetch() means no response at all — the server crashed or the model hung,
+          // and the only trace is in the terminal running the inspector (serve.ts logs the stack there).
+          const noResponse = err instanceof TypeError
+          const hint =
+            noResponse ?
+              'No response from the server — it may have crashed or the model timed out. Check the terminal running the inspector for the logged stack.'
+            : ''
+          $('verdict').innerHTML = ''
+          $('chronicle').classList.remove('dim')
+          $('chronicle').innerHTML =
+            `<span class="err">${err.message}</span>${hint ? `<div class="note dim">${hint}</div>` : ''}`
+          // Surface whatever detail we have in the guts, so a failure isn't a dead end.
+          $('raw').textContent = err.stack || err.message
+          $('prompt').textContent = '—'
+          statusEl.textContent = 'error'
+        } finally {
+          runBtn.disabled = false
+        }
+      }
+
+      // A resource delta as "major wealth" / "item" — tier only present for fungible kinds.
+      const fmtDelta = (delta) => (delta.tier ? `${delta.tier} ${delta.kind}` : delta.kind)
+
+      // Goals: the primary (with viability), the known optionals (won/missed by their trial), and the
+      // unsought goals a winning trial discovered.
+      function renderGoals(adv) {
+        const lines = []
+        const viability = adv.goal.viable ? '' : ' <span class="loss">— not there</span>'
+        lines.push(`<span class="tag">primary</span> <b>${fmtDelta(adv.goal.reward)}</b>${viability}`)
+        for (const o of adv.optionalGoals) {
+          const won = adv.trials[o.trial]?.outcome === 'success'
+          const verd = won ? '<span class="gain">won</span>' : '<span class="loss">missed</span>'
+          lines.push(`<span class="tag">optional · trial ${o.trial + 1}</span> ${fmtDelta(o.reward)} — ${verd}`)
+        }
+        for (const u of adv.unknownGoals) {
+          lines.push(`<span class="tag">discovered · trial ${u.trial + 1}</span> <b>${fmtDelta(u.reward)}</b>`)
+        }
+        return lines.join('<br>')
+      }
+
+      // Ledger: itemized gains (green, +) and losses (red, −). cost/stake are losses; the rest gains.
+      const LOSS_SOURCES = new Set(['cost', 'stake'])
+      function renderLedger(adv) {
+        if (adv.ledger.length === 0) {
+          return '<span class="dim">— nothing gained or lost</span>'
+        }
+        return adv.ledger
+          .map((e) => {
+            const loss = LOSS_SOURCES.has(e.source)
+            const cls = loss ? 'loss' : 'gain'
+            const sign = loss ? '−' : '+'
+            return `<span class="${cls}">${sign} ${fmtDelta(e.delta)}</span> <span class="tag">${e.source}</span>`
+          })
+          .join('<br>')
+      }
+
+      function render(d) {
+        const adv = d.result
+        const pass = adv.outcome === 'success'
+        const v = $('verdict')
+        v.className = 'verdict ' + (pass ? 'pass' : 'fail')
+        v.textContent = pass ? 'SUCCESS' : 'FAILURE'
+
+        const c = $('chronicle')
+        c.classList.remove('dim')
+        c.textContent = d.chronicle
+
+        $('roll').innerHTML = adv.trials
+          .map((t, i) => {
+            const ch = t.check
+            const op = ch.outcome === 'success' ? '&lt;' : '≥'
+            const verd = t.outcome === 'success' ? 'SUCCESS' : 'FAILURE'
+            return `trial ${i + 1} <b>[${t.approach}]</b> — roll <b>${ch.roll.toFixed(6)}</b> ${op} target <b>${ch.target}</b> → ${verd}`
+          })
+          .join('<br>')
+        const goalsEl = $('goals')
+        goalsEl.classList.remove('dim')
+        goalsEl.innerHTML = renderGoals(adv)
+        const ledgerEl = $('ledger')
+        ledgerEl.classList.remove('dim')
+        ledgerEl.innerHTML = renderLedger(adv)
+        $('result').textContent = JSON.stringify(adv, null, 2)
+        $('prompt').textContent = d.prompt
+        $('raw').textContent = d.raw
+      }
+
+      randBtn.addEventListener('click', () => {
+        seedEl.value = String(Math.floor(Math.random() * 1_000_000))
+        run()
+      })
+      runBtn.addEventListener('click', run)
+      seedEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          run()
+        }
+      })
+
+      loadModels()
+      loadOptions()
+    </script>
+  </body>
+</html>

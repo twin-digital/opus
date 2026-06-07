@@ -1,0 +1,6 @@
+# Upfront cost of attempting a trial, paid win or lose. Only the few approaches that pre-pay appear;
+# every other approach costs nothing to attempt. Fixed per approach (no roll) for now.
+
+costs:
+  wealth: { kind: wealth, tier: moderate } # the coin laid down to buy passage/favor
+  sacrifice: { kind: vigor, tier: major } # something precious given up

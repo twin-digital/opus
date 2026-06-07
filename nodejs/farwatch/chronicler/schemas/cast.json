@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entities"],
+  "properties": {
+    "entities": {
+      "type": "array",
+      "description": "The new people and places this beat introduces; empty if none.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "look"],
+        "properties": {
+          "name": { "type": "string", "description": "A proper name fitting the world." },
+          "kind": { "type": "string", "enum": ["person", "place", "thing"] },
+          "look": { "type": "string", "description": "A brief, concrete description — a sentence or two." }
+        }
+      }
+    }
+  }
+}

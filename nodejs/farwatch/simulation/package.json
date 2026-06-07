@@ -37,7 +37,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@thrashplay/fw-core": "workspace:*"
+    "@thrashplay/fw-core": "workspace:*",
+    "yaml": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

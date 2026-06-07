@@ -1,0 +1,35 @@
+name: zoomed
+# Reproduces the hand-coded chronicleZoomed: narrate each trial as its own beat (carrying the story
+# so far), then distil the beats into a finished chronicle. Fed the chronicle-legal adventure view
+# (no dice). The cast pass (structured output) is not here yet — that arrives with structured calls.
+in: [adventure]
+out:
+  chronicle: chronicle
+
+config:
+  single-trial: { register: legendary, writing_style: mythic, invention: descriptive }
+  summary: { register: legendary, writing_style: mythic }
+
+steps:
+  - as: aims
+    derive: pick
+    from: adventure
+    fields: [goal, optionalGoals]
+
+  - as: trials
+    map: adventure.trials
+    item: trial
+    body:
+      - as: scene
+        call: single-trial
+        bind:
+          aims: aims
+          party: adventure.party # the cast — read from the root scope (lexical inheritance)
+          trial: trial
+          adventure_so_far: prior.scene # array of {text} from earlier beats → auto-joined
+
+  - as: chronicle
+    call: summary
+    bind:
+      aims: aims
+      full_chronicle: trials.scene # array of {text} → auto-joined draft

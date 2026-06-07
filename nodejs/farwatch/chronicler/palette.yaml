@@ -1,0 +1,48 @@
+# The diversity palette fed to the `treatment` pre-pass to break each model's setting mode-collapse.
+# biome / scale / inhabitants are rolled freely (seeded deterministically off the adventure, so a
+# given adventure is stable); adventureType is derived from the goal + the trials' approaches, so it
+# stays honest to what mechanically happened. Edit these lists freely.
+
+biomes:
+  - a windswept coast of cliffs and tide-flats
+  - alpine highlands of ice and thin air
+  - deep old-growth forest
+  - a fenland of black water and reeds
+  - arid badlands and salt-pans
+  - a broad river valley of farms and ferries
+  - the deep underground
+  - open moorland under a wide grey sky
+  - glacial reaches and crevasse-fields
+  - volcanic wastes of ash and vent
+  - a rocky archipelago and the cold sea between
+  - terraced hill-country of vineyards and shrines
+
+scales:
+  - a single hold, keep, or building
+  - a town and its near surroundings, an hour's walk end to end
+  - a day's march across open country
+  - a region crossed over several days
+  - a frontier traversed over weeks
+  - a sprawling city of many districts
+
+inhabitants:
+  - a monastic order keeping to its rites
+  - a merchant company minding its trade
+  - a garrison under arms
+  - a frontier settlement scraping by
+  - a noble seat and its retainers
+  - smugglers and the people who deal with them
+  - the ruin of a people long dead
+  - no one — wilderness reclaimed
+  - a guild jealous of its craft
+  - a camp of the displaced
+  - a court thick with intrigue
+  - a kin-group of clan-folk
+
+# Keyed by the dominant approach-category of the trials (or `lore` for a secret/lore goal).
+adventureTypes:
+  force: a raid — the prize taken by force from those who hold it
+  guile: a heist — the prize taken by stealth and misdirection
+  social: a negotiation — the prize won through people and what they want
+  lore: a mystery — hidden knowledge uncovered, pieced together, and claimed
+  grit: an expedition — a hard crossing or long endurance to reach the prize

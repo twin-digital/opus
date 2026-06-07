@@ -1,7 +1,7 @@
 /** Whether a charter's purpose has an achievable end-state, or runs forever. */
 export type ArcShape = 'terminal' | 'perennial'
 
-/** A covenant's founding purpose — the charter it is sworn to. */
+/** A compact's founding purpose — the charter it is sworn to. */
 export interface Charter {
   /** The purpose as a phrase: "to wake the drowned god beneath the reef". */
   purpose: string
@@ -13,7 +13,7 @@ export interface Charter {
   domains: string[]
 }
 
-/** A named member of the covenant's seed cast. */
+/** A named member of the compact's seed cast. */
 export interface Seeker {
   name: string
   /** Optional epithet / role, e.g. "the diver", "Tidecaller". */
@@ -26,11 +26,11 @@ export interface Seeker {
   flavor?: string
 }
 
-/** A freshly generated covenant founding — the playable origin the renderer materializes. */
+/** A freshly generated compact founding — the playable origin the renderer materializes. */
 export interface Founding {
   /** The seed that produced this founding (so any founding is reproducible). */
   seed: number
-  /** Covenant name, e.g. "The Tidebound". */
+  /** Compact name, e.g. "The Tidebound". */
   name: string
   /** Theme key, e.g. "drowned". */
   theme: string

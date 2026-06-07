@@ -1,4 +1,62 @@
-export { resolveAdventure, TARGET, type AdventureResult } from './adventure.js'
+export {
+  resolveAdventure,
+  TARGET,
+  type Adventure,
+  type Check,
+  type LedgerEntry,
+  type LedgerSource,
+  type Outcome,
+  type Trial,
+} from './adventure.js'
+export { APPROACHES, type Approach } from './approaches.js'
+export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
+export {
+  skillFor,
+  leadFor,
+  roster,
+  pickParty,
+  generateRoster,
+  AFFINITY_WORDS,
+  COMPETENCE_WORDS,
+  RATING_MIN,
+  RATING_MAX,
+  ROSTER_SEED,
+  ROSTER_SIZE,
+  type Rating,
+  type Skill,
+  type Seeker,
+} from './seekers.js'
+export {
+  adventureConfig,
+  approachesConfig,
+  costsConfig,
+  goalsConfig,
+  prizesConfig,
+  seekersConfig,
+  stakesConfig,
+  type AdventureConfig,
+  type ApproachesConfig,
+  type CostsConfig,
+  type GoalsConfig,
+  type PrizesConfig,
+  type SeekersConfig,
+  type StakesConfig,
+} from './config.js'
+export {
+  FUNGIBLE_KINDS,
+  NONFUNGIBLE_KINDS,
+  RESOURCE_KINDS,
+  RESOURCE_INFO,
+  TIERS,
+  isNonfungible,
+  pickWeighted,
+  type FungibleKind,
+  type NonfungibleKind,
+  type ResourceDelta,
+  type ResourceInfo,
+  type ResourceKind,
+  type Tier,
+} from './resources.js'
 
 /** A discrete-time simulation that advances in fixed steps ("ticks"). */
 export interface SimulationState {

@@ -8,7 +8,7 @@ describe('generateFounding', () => {
     expect(generateFounding(7)).toEqual(generateFounding(7))
   })
 
-  it('different seeds usually produce different covenants', () => {
+  it('different seeds usually produce different compacts', () => {
     const signatures = new Set(
       Array.from({ length: 25 }, (_unused, i) => {
         const f = generateFounding(i)

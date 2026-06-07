@@ -21,9 +21,10 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --conditions=source src/main.ts",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "serve": "tsx watch --conditions=source src/serve.ts",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit"
   },

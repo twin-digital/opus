@@ -6,8 +6,9 @@ import { createRng, hashSeed } from '@thrashplay/fw-core'
 import { resolveAdventure } from '@thrashplay/fw-simulation'
 
 // Load the monorepo-root .env before reading any env vars (CHRONICLER_LLM, AWS_*, etc.).
-// The root is three levels up from this file, whether run from src/ or the built dist/.
-const repoRoot = resolve(import.meta.dirname, '../../..')
+// The root is four levels up from this file (app/src → app → farwatch → nodejs → repo root),
+// whether run from src/ or the built dist/.
+const repoRoot = resolve(import.meta.dirname, '../../../..')
 const envPath = join(repoRoot, '.env')
 if (existsSync(envPath)) {
   process.loadEnvFile(envPath)

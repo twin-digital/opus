@@ -20,7 +20,7 @@ const fill = (template: string, rng: Rng, castNames: string[], lostName: string)
 }
 
 /**
- * Generate a fresh covenant founding from a seed. Deterministic: same seed → same founding.
+ * Generate a fresh compact founding from a seed. Deterministic: same seed → same founding.
  *
  * The output satisfies the toy quality contract — graspable cast (5–8 named), a legible
  * charter, ≥1 live tension, ≥1 open thread — coherently themed by construction.
@@ -43,7 +43,7 @@ export const generateFounding = (seed: number): Founding => {
     domains: purpose.domains,
   }
 
-  // The charter biases who the covenant draws — its demanded domains are over-represented.
+  // The charter biases who the compact draws — its demanded domains are over-represented.
   const domainWeight = (domain: string): number => (charter.domains.includes(domain) ? 3 : 1)
 
   const castSize = rng.int(5, 8)
