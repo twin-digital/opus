@@ -119,6 +119,10 @@ Rules that hold across every surface:
   **recedes** — set down, recallable — never an unmanaged litter of windows. The player composes the
   *decision*, not the *window layout*. (Freeform drag-arrange is the deferred spatial-desktop; it solves
   comparison friction only by adding arrangement friction.)
+- **Two kinds of secondary.** Beside the primary sit either **content panes** (a summoned ledger, a docked
+  dossier — they carry content) or **affordance edges** (the receded missive pile — *content-stripped*,
+  present only to show what remains and to step to it). Both are co-present, but only **content panes** count
+  toward the ~2-slot bound; an edge is a wayfinding remnant, not a pane competing for focus.
 - **Summoned, not parked.** Panes appear for the task and dissolve when it ends (on seal, or "let it lie").
   The anti-HUD kill survives: task-scoped scaffolding is not a permanent readout.
 - **Co-present, not swapped.** No veil, no modal, no whole-view swap — the second thing lies beside the
@@ -203,21 +207,27 @@ these — not a grammar itself; see [The frame](#the-frame--attention-not-naviga
 
 ---
 
-## Responsive — reading travels, deciding wants width
+## Responsive — a minimum width, gated in-world
 
-The grammars degrade unevenly, and that draws the line: **tablet-and-up for the full system; phone is
-reading-only.**
+The deciding surfaces (Board, party-building, Dispatch) are **compare-tables**, and their whole value is
+*simultaneous* side-by-side weighing — which needs width (2-up minimum) and holds only at **tablet and up**.
+Collapsing them to a phone (swipe-one-at-a-time, comparison by memory) throws away the one decision the game
+is built around. So rather than contort the core mechanic to fit a phone, Farwatch sets a **minimum width**
+and **gates** below it. It's a game, not a form to fill out — it can ask for the screen it needs.
 
-- **Document degrades to phone.** A fact can't dock *beside* on a narrow screen, so it **unfolds inline** —
-  the artifact expands directly under the line that named it, pushing the prose down. Co-presence in
-  *reading order* is preserved and the prose-index still works. Reading travels everywhere.
-- **The compare-table does not.** Its value is *simultaneous* side-by-side weighing, which needs width and
-  honestly holds only at **tablet and up** (2-up minimum). On a phone it collapses to swipe-one-at-a-time —
-  comparison by memory — which throws away the one decision the game is built around. So the **deciding**
-  surfaces (Board, party-building, Dispatch) are **not first-class on phone**.
-- **The line:** phone gets the **reading** (the missive pile, chronicles, a fact summoned inline); the
-  **deciding** wants a real screen. Not chasing phone-comparison is deliberate — contorting the compare-table
-  to fit a phone would cost the core mechanic more than phone parity is worth.
+- **Below the minimum the game does not run — but the gate is diegetic**, not a sterile requirements error:
+  the steward turns you away in-voice ("there is no room on this small glass to lay the dossiers out, my
+  lord — this is desk-work; come back to a wider table").
+- **Minimum is tablet-width** — the 2-up compare-table floor. Phones fall below it; tablets and desktops
+  clear it.
+
+*Designed-for, deferred — reading on a phone.* The **reading** half (the missive pile, chronicles, a fact
+summoned inline) genuinely *would* travel: Document degrades cleanly — a fact can't dock *beside* on a narrow
+screen, so it **unfolds inline** under the line that named it, prose-index intact. The reason to unlock
+phone-reading later is **re-engagement** — a returned chronicle is the game's best "come back" hook, and the
+phone is where that lands. Until a "word has arrived" loop makes it worth the responsive work, one gate is
+simpler and on-brand; when it's unlocked, the gate **narrows** from *the game* to *the deciding surfaces*
+only.
 
 ---
 

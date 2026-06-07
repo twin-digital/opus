@@ -667,6 +667,10 @@ becomes reproducible. Over the alpha, it adds:
 - **Standing** (renown) and **Bonds** — and with them the decline-a-plea shadow and the **Bearing** edict
   axis.
 - **The texturizer** (seeker profiles are pre-seeded for now).
+- **Phone reading (re-engagement)** — unlock the *reading* half on phones (Document degrades via inline
+  fact-unfold) once a "word has arrived" loop makes the responsive work worthwhile; the width-gate then
+  narrows from *the whole game* to *the deciding surfaces only*. See
+  [ui-design → Responsive](ui-design.md#responsive--a-minimum-width-gated-in-world).
 
 ---
 
