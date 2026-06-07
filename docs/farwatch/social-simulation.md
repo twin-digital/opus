@@ -6,7 +6,7 @@ motivation: a small economy of **resources** and **bonds** that **agents** act o
 worked examples, and the social-science lineage the model draws on. Expect it to move._
 
 It expands the social side of the design's "tag genome," "web of influence," and "emergent
-character" pillars (see `design-deep.md` §4–6) into something concrete enough to build toward.
+character" pillars (see `game-design-deep.md` §4–6) into something concrete enough to build toward.
 
 ---
 

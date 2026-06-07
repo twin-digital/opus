@@ -1,7 +1,7 @@
 # Farwatch — Metaphysics (draft)
 
 **Draft — current thinking.** The patron's nature and the **waking cycle**, and the interface work the
-cycle implies. The settled frame lives in [design-deep.md §8 "The patron (you)"](design-deep.md) (the
+cycle implies. The settled frame lives in [game-design-deep.md §8 "The patron (you)"](game-design-deep.md) (the
 _Hollow Crown_, presence/absence as the regard, the _wheel of patrons_, fade-endings, devotion); this
 doc extends it with the present/absent vocabulary and its UI consequences. The terms are fixed in
 [glossary.md](glossary.md) — **Awake, Asleep, Seal, Fade, Called.** Deliberately thin: enough to drive
@@ -71,8 +71,8 @@ the world returns you at the next juncture that needs you.
 Because the compact self-runs while you are **Asleep**, your standing **edicts** are _what governs it in
 your absence_ — not per-trip orders but the **autopilot for the gaps**. (A **dispatch-limit** on a single
 trip — _"to the cold light, no farther"_ — is the per-trip lever, a different thing entirely; see
-[ui-design.md → Dispatch](ui-design.md).) This is the deep reason edicts persist (see
-[ui-design.md → Edicts](ui-design.md)). The longer the Sleep, the more the compact runs on
+[ux-design.md → Dispatch](ux-design.md).) This is the deep reason edicts persist (see
+[ux-design.md → Edicts](ux-design.md)). The longer the Sleep, the more the compact runs on
 your last word — which is also the hook for the eventual "the world progresses while you're away"
 behavior: a long real-world absence is simply a long Sleep.
 

@@ -2,8 +2,8 @@
 
 Visual mockups of the Farwatch player interface — standalone HTML, rendered in real tokens (type, colour,
 spacing) so candidate **moods** can be compared as *renderings*, not prose. They realise the surfaces
-specified in [../ui-design.md](../ui-design.md); the look-and-feel they explore is the parked brief at the
-end of that doc.
+specified in [../ux-design.md](../ux-design.md), through the pane-grammars and the look-and-feel brief in
+[../ui-design.md](../ui-design.md).
 
 There will be several. Each file renders the same surface(s) in a different candidate mood so the choice
 is made from real comparison.
@@ -41,4 +41,5 @@ Then open the forwarded port (VS Code Dev Containers usually auto-forwards it) a
 - One self-contained `.html` per mockup (inline CSS, system fonts; no build step).
 - Name by surface + mood, e.g. `desk-missive.austere.html`.
 - `index.html` is the landing page; `serve.sh` serves the dir.
-- Mockups are throwaway exploration; the **spec** is `ui-design.md`, not these files.
+- Mockups are throwaway exploration; the **spec** is `ux-design.md` (surfaces) + `ui-design.md`
+  (realization), not these files.
