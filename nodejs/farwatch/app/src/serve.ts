@@ -27,6 +27,23 @@ if (existsSync(envPath)) {
   process.stderr.write(`loaded env from ${envPath}\n`)
 }
 
+/**
+ * Surface every failure to the terminal running the server. The render paths can make several LLM
+ * calls (single-trial, pipelines), and an error escaping a request's promise chain would otherwise
+ * crash the process silently — the page just sees "Failed to fetch" with no trace. We log the full
+ * stack and, via the process-level handlers, keep serving rather than dying on the next stray reject.
+ */
+const logError = (where: string, error: unknown): void => {
+  const detail = error instanceof Error ? (error.stack ?? error.message) : String(error)
+  process.stderr.write(`\n[inspector] ${where} failed:\n${detail}\n`)
+}
+process.on('unhandledRejection', (reason) => {
+  logError('unhandledRejection', reason)
+})
+process.on('uncaughtException', (error) => {
+  logError('uncaughtException', error)
+})
+
 // Dev-only inspector: the same seed -> resolve -> chronicle pipeline main.ts runs, served as a
 // two-panel web page (chronicle prose | the fully-exposed guts). The LLM is selected once at
 // startup so a bad CHRONICLER_LLM fails fast, before the server binds.
@@ -186,14 +203,23 @@ const server = createServer((req, res) => {
           res.end(JSON.stringify({ error: `invalid seed: ${JSON.stringify(seed)}` }))
           return
         }
+        const label = selections?.pipeline ?? selections?.template ?? 'chronicle'
+        process.stderr.write(`[inspector] /run seed=${String(seed)} (${label})…\n`)
         return run(seed, selections ?? {}, model).then((payload) => {
+          process.stderr.write(`[inspector] /run seed=${String(seed)} ok in ${String(payload.elapsedMs)} ms\n`)
           res.writeHead(200, { 'content-type': 'application/json' })
           res.end(JSON.stringify(payload))
         })
       })
       .catch((error: unknown) => {
+        logError('/run', error)
         res.writeHead(500, { 'content-type': 'application/json' })
-        res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }))
+        res.end(
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          }),
+        )
       })
     return
   }

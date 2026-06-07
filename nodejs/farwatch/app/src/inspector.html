@@ -408,7 +408,9 @@
           })
           const data = await res.json()
           if (!res.ok || data.error) {
-            throw new Error(data.error || `HTTP ${res.status}`)
+            const e = new Error(data.error || `HTTP ${res.status}`)
+            e.stack = data.stack || e.stack // server returns the stack on a 500 (dev: hide nothing)
+            throw e
           }
           render(data)
           const tags = [`${data.elapsedMs} ms`]
@@ -417,9 +419,20 @@
           }
           statusEl.textContent = tags.join(' · ')
         } catch (err) {
+          // A TypeError from fetch() means no response at all — the server crashed or the model hung,
+          // and the only trace is in the terminal running the inspector (serve.ts logs the stack there).
+          const noResponse = err instanceof TypeError
+          const hint =
+            noResponse ?
+              'No response from the server — it may have crashed or the model timed out. Check the terminal running the inspector for the logged stack.'
+            : ''
           $('verdict').innerHTML = ''
           $('chronicle').classList.remove('dim')
-          $('chronicle').innerHTML = `<span class="err">${err.message}</span>`
+          $('chronicle').innerHTML =
+            `<span class="err">${err.message}</span>${hint ? `<div class="note dim">${hint}</div>` : ''}`
+          // Surface whatever detail we have in the guts, so a failure isn't a dead end.
+          $('raw').textContent = err.stack || err.message
+          $('prompt').textContent = '—'
           statusEl.textContent = 'error'
         } finally {
           runBtn.disabled = false
