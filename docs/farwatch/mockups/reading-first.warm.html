@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — Reading-first — warm</title>
+    <style>
+      /* ── READING-FIRST: one column, the letter is the screen. No nav rail, no parked facts.
+         Facts surface two ways: the PROSE is the index (a named phrase raises that fact), and ONE
+         steward-held door raises the standing facts as a small stack. Summoned facts are hand-laid
+         paper — askew, shadowed, in a keeper's hand — never a centered app dialog.
+         Mood: warm-dark — a lit sheet on a walnut desk, the regard's apprehension. ── */
+      :root {
+        --ink: #352714;
+        --muted: #8a7350;
+        --gold: #a9741f;
+        --loss: #7a2b20;
+        --rule: #cdb98e;
+        --sheet: #e8d6ad;
+        --card: #e6d2a0;
+        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: var(--serif);
+        color: var(--ink);
+        line-height: 1.78;
+        -webkit-font-smoothing: antialiased;
+        padding: 8vh 24px 16vh;
+        background:
+          radial-gradient(120% 80% at 50% -6%, #5c4222 0%, #2e2114 36%, #190f06 70%, #120b05 100%),
+          #120b05;
+        background-attachment: fixed;
+      }
+
+      /* the sheet — a single column of light */
+      .sheet {
+        max-width: 38rem; margin: 0 auto; position: relative;
+        background: var(--sheet);
+        background-image: radial-gradient(120% 60% at 50% -10%, rgba(255, 246, 220, 0.6) 0%, rgba(255, 246, 220, 0) 50%);
+        border-radius: 2px;
+        box-shadow: 0 60px 120px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
+        padding: 64px 60px 48px;
+      }
+
+      .steward { margin: 0 0 30px; font-style: italic; color: #6a5330; font-size: 1.02rem; }
+      /* the steward's signature is the ONE door to the standing facts */
+      .steward .who {
+        font-style: normal; color: var(--muted); font-size: 0.82rem;
+        text-decoration: none; border-bottom: 1px dotted var(--muted); cursor: pointer;
+      }
+      .steward .who:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+      .when { letter-spacing: 0.08em; color: var(--muted); margin: 0 0 26px; font-size: 0.9rem; font-style: italic; }
+      .charge { margin: 0 0 28px; }
+      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--gold); margin-bottom: 4px; }
+      .beat { margin: 0 0 22px; font-size: 1.16rem; }
+      .beat.first::first-letter { float: left; font-size: 3.6rem; line-height: 0.78; padding: 6px 12px 0 0; color: var(--loss); font-weight: 600; }
+
+      /* a phrase that names a fact is itself the reach-point — the prose is the index */
+      .fact { color: inherit; text-decoration: none; border-bottom: 1px dotted #b07d3a; cursor: pointer; }
+      .fact:hover { border-bottom-style: solid; border-bottom-color: var(--gold); }
+
+      /* the reckoning is BEHIND the page-turn */
+      .reckoning { display: none; }
+      #turn:checked ~ .sheet .reckoning { display: block; }
+      #turn:checked ~ .sheet .tease { display: none; }
+      #turn:checked ~ .sheet .turn-label { display: none; }
+      .tease { margin: 28px 0 22px; color: #6b3424; font-style: italic; }
+      .reckoning p { margin: 0 0 18px; font-size: 1.12rem; }
+      .reckoning .struck { text-decoration: line-through; text-decoration-color: var(--loss); color: #6f5a3a; }
+
+      .turn-label {
+        display: block; text-align: center; margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--rule);
+        font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.9rem; color: var(--gold); cursor: pointer;
+      }
+      .summon { position: absolute; opacity: 0; pointer-events: none; }
+
+      /* ── a summoned fact: HAND-LAID PAPER, not a dialog. Transition-driven so the rise/coalesce
+         plays in reverse on dismiss — fully symmetrical. Toggled by .is-open (JS at end of body). ── */
+      .artifact { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 6; }
+      .artifact.is-open { pointer-events: auto; }
+      .artifact .veil { position: absolute; inset: 0; background: rgba(14, 9, 3, 0.30); opacity: 0; transition: opacity 0.4s ease; }
+      .artifact.is-open .veil { opacity: 1; }
+
+      /* rise out of the dark and coalesce from mist — and the exact reverse on dismiss */
+      .stack {
+        position: relative; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; max-width: 90vw;
+        opacity: 0; filter: blur(18px); transform: translateY(16px) scale(0.6);
+        transition: opacity 0.58s, filter 0.58s, transform 0.58s;
+        transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+      }
+      .artifact.is-open .stack { opacity: 1; filter: blur(0); transform: none; }
+
+      /* the reading recedes — zooms back, dims, a touch of blur — symmetrically both ways */
+      .sheet, .caption { transition: opacity 0.58s ease, transform 0.58s ease, filter 0.58s ease; }
+      body.has-overlay .sheet, body.has-overlay .caption { opacity: 0.85; transform: scale(0.85); filter: blur(1px); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .stack, .artifact .veil, .sheet, .caption { transition: none; }
+      }
+
+      .card {
+        position: relative; width: 19rem; background: var(--card);
+        background-image: linear-gradient(118deg, rgba(255,250,235,0.35), rgba(120,84,30,0.06));
+        padding: 26px 28px 30px;
+        box-shadow: 0 28px 60px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.4);
+      }
+      .card h2 { margin: 0 0 2px; font-size: 1.04rem; font-variant: small-caps; letter-spacing: 0.05em; }
+      .card .keeper { margin: 0 0 16px; color: var(--muted); font-style: italic; font-size: 0.82rem; }
+      .card ul { list-style: none; margin: 0; padding: 0; }
+      .card li { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; border-bottom: 1px solid #cbb585; font-size: 0.94rem; }
+      .card li:last-child { border-bottom: none; }
+      .card li .v { color: #54421f; }
+      .card li.lien .v { color: var(--loss); }
+      .card p.body { margin: 0; font-size: 1.0rem; }
+      .card .wax { position: absolute; right: 16px; bottom: 14px; width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #9a3a26, #6f2418); box-shadow: inset 0 1px 2px rgba(255,255,255,0.25); }
+      /* "let it lie" — a handwritten dismissal, not an ✕ button */
+      .let-lie { display: inline-block; margin-top: 16px; font-style: italic; color: var(--muted); font-size: 0.84rem; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+      .let-lie:hover { color: var(--ink); }
+
+      .caption { max-width: 33rem; margin: 26px auto 0; color: #97825a; font-size: 0.8rem; font-style: italic; text-align: center; }
+
+      @media (max-width: 600px) { .sheet { padding: 40px 26px; } }
+    </style>
+  </head>
+  <body>
+    <!-- page-turn toggle (reveal-in-place, not an overlay) -->
+    <input type="checkbox" id="turn" class="summon" />
+
+    <article class="sheet">
+      <p class="steward">“You have been away some time, my lord. Word came back from the barrow.” <a class="who" href="#facts-stack">— the steward</a></p>
+
+      <p class="when">Farwatch · at the turn of the season</p>
+      <p class="charge"><span class="label">What you sent them to do</span> Open the barrow no frost would touch, and bring back what slept inside — <a class="fact" href="#fact-writ">to the keeping of the lamp</a>.</p>
+
+      <p class="beat first">They came to the barrow-door at dusk, where the stone stayed dry though <a class="fact" href="#fact-almanac">the fields about it lay under early white</a>. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>
+      <p class="beat">Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>
+
+      <p class="tease">What it cost, and who came home, waits on the turning of the page.</p>
+
+      <div class="reckoning">
+        <p>They brought back the sleeper’s circlet, and <a class="fact" href="#fact-ledger">the strongbox came home heavier</a> for it — though the lien still falls due at first snow, and it will not cover that.</p>
+        <p>Mirela came home. <span class="struck">Odric did not</span> — the vault kept him, as he had always feared it might.</p>
+      </div>
+
+      <label class="turn-label" for="turn">turn the page ❯</label>
+    </article>
+
+    <!-- a single fact, raised by a phrase in the prose -->
+    <div class="artifact" id="fact-ledger">
+      <a class="veil" href="#"></a>
+      <div class="stack">
+        <div class="card">
+          <h2>the ledger</h2>
+          <p class="keeper">in the quartermaster’s hand, by the last count</p>
+          <ul>
+            <li><span>coin</span><span class="v">two hundred, more or less</span></li>
+            <li><span>the sleeper’s circlet</span><span class="v">unpriced</span></li>
+            <li class="lien"><span>a lien, to the chandlers</span><span class="v">due at first snow</span></li>
+          </ul>
+          <a class="let-lie" href="#">let it lie</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="artifact" id="fact-almanac">
+      <a class="veil" href="#"></a>
+      <div class="stack">
+        <div class="card">
+          <h2>the almanac</h2>
+          <p class="keeper">kept against the season</p>
+          <p class="body">Spring, the third week. The lien falls due at first snow — some weeks yet, and fewer than you would like.</p>
+          <a class="let-lie" href="#">let it lie</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="artifact" id="fact-writ">
+      <a class="veil" href="#"></a>
+      <div class="stack">
+        <div class="card">
+          <span class="wax"></span>
+          <h2>the writ</h2>
+          <p class="keeper">sealed, older than anyone living</p>
+          <p class="body">Keep the lamp lit at Farwatch.</p>
+          <a class="let-lie" href="#">let it lie</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- the steward's one door: the standing facts as a small stack -->
+    <div class="artifact" id="facts-stack">
+      <a class="veil" href="#"></a>
+      <div class="stack">
+        <div class="card">
+          <span class="wax"></span>
+          <h2>the writ</h2>
+          <p class="keeper">sealed, older than anyone living</p>
+          <p class="body">Keep the lamp lit at Farwatch.</p>
+        </div>
+        <div class="card">
+          <h2>the ledger</h2>
+          <p class="keeper">the quartermaster’s, by the last count</p>
+          <ul>
+            <li><span>coin</span><span class="v">two hundred, more or less</span></li>
+            <li class="lien"><span>a lien</span><span class="v">due at first snow</span></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h2>the almanac</h2>
+          <p class="keeper">kept against the season</p>
+          <p class="body">Spring, the third week.</p>
+          <a class="let-lie" href="#">let them lie</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const body = document.body;
+        function closeAll() {
+          document.querySelectorAll('.artifact.is-open').forEach((a) => a.classList.remove('is-open'));
+          body.classList.remove('has-overlay');
+        }
+        function open(id) {
+          const el = document.getElementById(id);
+          if (!el) return;
+          document.querySelectorAll('.artifact.is-open').forEach((a) => { if (a !== el) a.classList.remove('is-open'); });
+          el.classList.add('is-open');
+          body.classList.add('has-overlay');
+        }
+        // a named phrase in the prose, or the steward's signature, raises a fact
+        document.querySelectorAll('a.fact, a.who').forEach((a) => {
+          a.addEventListener('click', (e) => {
+            const href = a.getAttribute('href') || '';
+            if (href.length > 1 && href.charAt(0) === '#') { e.preventDefault(); open(href.slice(1)); }
+          });
+        });
+        // the wash behind, or "let it lie", sets it back
+        document.querySelectorAll('a.veil, a.let-lie').forEach((a) => {
+          a.addEventListener('click', (e) => { e.preventDefault(); closeAll(); });
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+      })();
+    </script>
+
+    <p class="caption">The prose is the index — a named phrase (“to the keeping of the lamp”, “early white”, “came home heavier”) raises that one fact as hand-laid paper that you let lie. For facts the text doesn’t name, the steward’s signature is the single door to the standing stack. No corner glyphs, no parked strip.</p>
+  </body>
+</html>

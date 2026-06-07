@@ -219,7 +219,7 @@ Suggested order: Ruskin → Bucklew → Adams → Kreminski.
 
 - Working title **Farwatch** has prior use in-category (a "Farwatch: Mystery" mobile game on Google Play, an itch.io horror beta, a streamer handle, a WoW place-name). Fine as a placeholder; **not safe as a shipping title.**
 - Less-occupied alternatives to check: **Wardlight**, **The Long Regard**, **The Tended Dark**.
-- A word for "compact" not tied to Ars Magica is still open; shortlist leaned toward **Troth** or **Hold** (also: Bond, Tether, Charter).
+- The sworn group is the **Compact** — chosen to replace a name tied to Ars Magica, which has been retired (see [glossary-retired.md](glossary-retired.md)).
 
 ---
 

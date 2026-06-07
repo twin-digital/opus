@@ -26,15 +26,15 @@ Possible courses of action can be modelled as `Options`:
 ```typescript
 Option {
   // HARD gate: is it even available?
-  precondition: (state) => bool
+  precondition: (state) => bool       
 
   // paid regardless of outcome
   upfrontCost:  { time, resources }
-
+  
   // the Resolve roll this induces (null = auto-resolves)
   // { skill, difficulty, position/downside-cap, toll-profile }
-  check:        CheckParams | null
-
+  check:        CheckParams | null    
+               
   effect:       how progress / relationship-to-objective changes
 }
 ```

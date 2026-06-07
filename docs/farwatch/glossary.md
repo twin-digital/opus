@@ -80,6 +80,12 @@ that won it, distinct from the **outcome** (the verdict).
 where, and under what **dispatch** — including limits a seeker may keep or break ("to the cold
 light, no farther"). An adventure is the resolved record of an expedition.
 
+**Dispatch-limit** — A **per-trip** instruction set when an expedition is dispatched ("to the cold light,
+no farther"): scoped to that one expedition and gone with it, and — like any order given to autonomous
+people — one a seeker may **keep or break**. It is *not* an **edict**: an edict is a *standing* posture
+that persists across every dispatch until changed, whereas a dispatch-limit binds a single trip. Same
+conceit, different scope — _this trip_ vs. _always_.
+
 ---
 
 _Not in our vocabulary: **encounter** — its "scene around a challenge" sense is covered by **trial**,
@@ -261,6 +267,35 @@ than prose. It is how the **treatment** (and the **cast** it names) come back as
 **Template** — A named prompt skeleton with named placeholders: the fixed contract for one kind of
 call (the per-trial narrator, the **treatment** author, …). It is filled from two channels —
 **snippets** and runtime data (the **chronicle view**, the **few-shot examples**).
+
+---
+
+## The patron's waking
+
+The **patron** attends the compact only in spells and acts on the world by a single deliberate stroke.
+These name that cycle. (Patron, Compact, Dispatch, and Edict have fuller sections to come; see
+[metaphysics.md](metaphysics.md) for the workflow and its interface consequences.)
+
+**Awake** — The patron present and attending: the spells in which you read what has come and weigh what
+to send, and the compact settles around your regard. The waking state.
+
+**Asleep** — The patron absent between wakings, the regard sunk back. Time passes in the world while you
+are Asleep — by an amount neither you nor anyone can predict — and the compact runs on its standing
+**edicts** until you Awaken.
+
+**Awaken** — The patron's return to the **Awake** state at the start of a waking: the regard gathering to
+attend, the desk coalescing. A turn begins with an Awaken. (Used as a noun — "the first Awaken.")
+
+**Seal** — The stroke that commits a **dispatch**: it imparts mystical weight to your orders (the
+patron's one true lever on the world) and, in the same act, sends the patron **Asleep**. To seal is to
+end the waking.
+
+**Fade** — When a patron, once **Asleep**, never Awakens again: the end of a tenure. The regard does not
+return, and the compact, after a time, is left to **Call** another.
+
+**Called** — Brought into being by the compact's structural need to be whole: a compact without a patron
+is _unwhole_, and the vacancy a **Fade** leaves is itself the summons. A newly Called patron inherits the
+last one's standing **edicts**.
 
 ---
 

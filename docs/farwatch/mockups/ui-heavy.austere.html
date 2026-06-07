@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — Desk + Missive — austere</title>
+    <style>
+      /* ── Mood: AUSTERE / MONASTIC — cold stone, severe, hairline rules, cool greys ── */
+      :root {
+        --paper: #c5c4bc;
+        --panel: #dcdbd2;
+        --ink: #24231e;
+        --muted: #6c6f70;
+        --rule: #a9a79d;
+        --loss: #6e3b34;
+        --serif: "Hoefler Text", "Palatino Linotype", Palatino, "Iowan Old Style", Georgia, serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--paper); }
+      body {
+        font-family: var(--serif);
+        color: var(--ink);
+        line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+        padding: 40px 20px 64px;
+      }
+      .desk { max-width: 1060px; margin: 0 auto; }
+
+      .steward { border-bottom: 1px solid var(--rule); padding-bottom: 18px; margin-bottom: 26px; }
+      .steward-line { margin: 0; font-style: italic; font-size: 1.05rem; color: #34332c; }
+      .steward-line .who { font-style: normal; color: var(--muted); font-size: 0.85rem; letter-spacing: 0.06em; }
+
+      .layout { display: grid; grid-template-columns: 184px 1fr; gap: 40px; }
+
+      /* nav — framed entries, severe */
+      .nav ul { list-style: none; margin: 0; padding: 0; }
+      .nav li {
+        font-variant: small-caps; letter-spacing: 0.08em; font-size: 1.02rem;
+        padding: 9px 0; color: #3a392f; border-bottom: 1px solid var(--rule);
+        display: flex; justify-content: space-between; align-items: baseline; cursor: default;
+      }
+      .nav li.active { color: var(--ink); font-weight: 600; }
+      .nav .badge { font-variant: normal; font-size: 0.72rem; color: var(--muted); letter-spacing: 0; }
+      .nav .dispatch { margin-top: 22px; }
+      .nav .dispatch li { border: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 11px 12px; justify-content: center; color: #2c2b24; }
+
+      /* stack */
+      .stack { list-style: none; margin: 0 0 30px; padding: 0; border-top: 1px solid var(--rule); }
+      .stack li {
+        padding: 11px 2px; border-bottom: 1px solid var(--rule); font-size: 0.92rem; color: #45443a;
+        display: flex; gap: 12px; align-items: baseline;
+      }
+      .stack .kind { font-variant: small-caps; letter-spacing: 0.07em; color: var(--muted); min-width: 96px; }
+      .stack li.open { color: var(--ink); }
+      .stack li.open .kind { color: #3a392f; }
+      .stack .from { color: var(--muted); font-style: italic; margin-left: auto; }
+      .stack .dot { color: #3a392f; }
+
+      /* the missive */
+      .missive { max-width: 36rem; }
+      .when { font-variant: small-caps; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 22px; font-size: 0.9rem; }
+      .charge { margin: 0 0 26px; }
+      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.09em; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+      .beat { margin: 0 0 20px; font-size: 1.06rem; }
+      .reckoning-tease { margin: 26px 0 22px; color: #4a342f; font-style: italic; }
+      .turn { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.84rem; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; }
+
+      /* standing facts — always to hand, here a quiet footing */
+      .facts {
+        margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--rule);
+        display: flex; flex-wrap: wrap; gap: 26px; font-size: 0.86rem; color: #45443a;
+      }
+      .facts .glyph { color: var(--muted); margin-right: 6px; }
+      .facts .lien { color: var(--loss); }
+
+      @media (max-width: 720px) { .layout { grid-template-columns: 1fr; gap: 26px; } }
+    </style>
+  </head>
+  <body>
+    <div class="desk">
+      <header class="steward">
+        <p class="steward-line">
+          “You have been away some time, my lord. Word came back from the barrow.”
+          <span class="who">— the steward</span>
+        </p>
+      </header>
+
+      <div class="layout">
+        <nav class="nav">
+          <ul>
+            <li class="active">Missives <span class="badge">3 unread</span></li>
+            <li>The Board</li>
+            <li>The Roster</li>
+            <li>Counsel</li>
+          </ul>
+          <ul class="dispatch"><li>✎ Dispatch</li></ul>
+        </nav>
+
+        <main class="reading">
+          <ol class="stack">
+            <li class="open"><span class="kind">Chronicle</span> The barrow under the white fields <span class="from">the steward’s hand</span></li>
+            <li><span class="kind"><span class="dot">●</span> Tiding</span> A drover’s word from the fen</li>
+            <li><span class="kind"><span class="dot">●</span> Seeker’s word</span> Odric, on the matter of the marsh</li>
+          </ol>
+
+          <article class="missive">
+            <p class="when">Farwatch · at the turn of the season</p>
+            <p class="charge"><span class="label">What you sent them to do</span> Open the barrow no frost would touch, and bring back what slept inside.</p>
+            <p class="beat">They came to the barrow-door at dusk, where the stone stayed dry though the fields about it lay under early white. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>
+            <p class="beat">Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>
+            <p class="reckoning-tease">What it cost, and who came home, waits on the turning of the page.</p>
+            <p class="turn">turn the page ❯</p>
+          </article>
+        </main>
+      </div>
+
+      <footer class="facts">
+        <span><span class="glyph">☾</span> Spring · third week</span>
+        <span><span class="glyph">✦</span> two hundred coin, by the last count · <span class="lien">a lien at first snow</span></span>
+        <span><span class="glyph">❧</span> Charter — keep the lamp lit at Farwatch</span>
+      </footer>
+    </div>
+  </body>
+</html>
