@@ -4,6 +4,6 @@
 '@thrashplay/farwatch': minor
 ---
 
-feat(farwatch): model an adventure as an ordered run of trials (the chronicler seam).
+feat(farwatch): model an adventure as an ordered, variable-length run of trials.
 
-`resolveAdventure` now returns an `Adventure` — `{ trials, outcome }`, where each `Trial` wraps a single `Check` (`roll`/`target`/`outcome`) — instead of a flat `AdventureResult`. An adventure runs a short fixed chain of trials (`3 + 1`: a few of approach, then a deciding one) resolved in order, and its overall outcome is its final trial's. The chronicler reads the trial outcomes in order and is told to join the beats with "but"/"therefore" (never "and then"), and the inspector renders the trial chain.
+`resolveAdventure` returns an `Adventure` — `{ trials, outcome }`, where each `Trial` wraps a single `Check` (`roll`/`target`/`outcome`) — instead of a flat result. The trials resolve in order and the chain's last trial decides the overall outcome, so a longer adventure is a longer build. The trial count is a per-adventure weighted draw (`trialCountWeights` in `config/adventure.yaml`, defaulting to 3–6 skewed toward 4–5), tunable like the other generation tables. The chronicler reads the trial outcomes in order (told to join beats with "but"/"therefore", never "and then"), and the inspector renders the trial chain.
