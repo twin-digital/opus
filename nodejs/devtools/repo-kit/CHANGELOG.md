@@ -1,5 +1,28 @@
 # @twin-digital/repo-kit
 
+## 0.3.1
+
+### Patch Changes
+
+- aae566b: ci: split Renovate updates for pnpm-patched packages (`patchedDependencies`) into their own labeled, non-auto-merged PRs. A version-pinned pnpm patch stops applying on any bump and breaks the lockfile relock, so each patched dependency is isolated for a human to re-roll or drop the patch under review (mirrors the `onlyBuiltDependencies` build-script isolation). The renovate.json rule's `matchPackageNames` is kept in sync with `pnpm-workspace.yaml` by repo-kit so the two cannot drift.
+
+  repo-kit gains a generic `sync-map-to-array` action (map → array via `emit: keys | values`, with an optional curated, array-level `transform` such as `strip-package-version`), built on read/write plumbing factored out of `sync-json-value`.
+
+## 0.3.0
+
+### Minor Changes
+
+- 4858d9f: Add feature `scope` and a cross-file `sync-json-value` action.
+  - Features may now declare `scope: packages | root | all` (default `packages`). `sync` now also processes the workspace root, and a feature runs against a project only when its scope applies — so root-level config can be managed without per-package opt-outs, and existing package features (which default to `packages`) never touch the root.
+  - The `sync-json-value` action copies a value out of one JSON/YAML file into the element(s) of an array in a target JSON file, selected by a value predicate (via `setMatching`) rather than a brittle index. It is idempotent.
+  - `sync` now exits non-zero when a feature fails. Failures were already logged but the process exited 0, so a broken sync could pass the merge-checks gate. Failures are aggregated across the whole sweep — every package is still attempted before the non-zero exit — and the continue-on-error behavior is unchanged.
+
+### Patch Changes
+
+- 4858d9f: The `repo-kit` bin is now a small launcher that runs from TypeScript source when the package's `src` is present (in a checkout of this repo) and from the compiled `dist` when installed as a published package. Commands are also registered from an explicit list rather than a runtime scan of the `commands/` directory, so resolution is identical from source or `dist`. The published CLI behaves exactly as before.
+- Updated dependencies [4858d9f]
+  - @twin-digital/json-patch-x@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/fw-chronicler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Turns pinned simulation outcomes into narrative via an LLM backend.",
   "license": "ISC",
   "type": "module",
@@ -38,7 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/bedrock-sdk": "^0.27.0",
+    "@anthropic-ai/bedrock-sdk": "^0.29.0",
     "@thrashplay/fw-core": "workspace:*",
     "@thrashplay/fw-simulation": "workspace:*",
     "ajv": "catalog:",

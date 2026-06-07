@@ -2,16 +2,16 @@ services:
   opus:
     build:
       args:
-        USERNAME: "${USER}"
+        USERNAME: '${USER}'
       context: .
       dockerfile: Dockerfile
     deploy:
       resources:
         limits:
-          cpus: "6"
+          cpus: '6'
           memory: 6g
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     hostname: opus
     ipc: host
     network_mode: host

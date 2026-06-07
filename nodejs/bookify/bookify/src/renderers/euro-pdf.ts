@@ -29,5 +29,18 @@ export const makeEuroPdfRenderer =
     }
 
     const response = await fetch(url, options)
+
+    if (!response.ok) {
+      // Read the body for diagnostics, but never include `url` (it carries the API key as a query param) in the error.
+      let body: string
+      try {
+        body = await response.text()
+      } catch {
+        body = '<unable to read response body>'
+      }
+
+      throw new Error(`EuroPDF request failed with ${response.status} ${response.statusText}: ${body}`)
+    }
+
     return response.arrayBuffer()
   }

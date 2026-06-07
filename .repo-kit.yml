@@ -28,6 +28,9 @@ hooks:
   - description: Reformat package.json
     path: package.json
     run: pnpm exec prettier-package-json --write ./package.json
+  - description: Reformat renovate.json
+    path: renovate.json
+    run: pnpm exec prettier --write ./renovate.json
 
 features:
   - name: .nvmrc
@@ -98,6 +101,58 @@ features:
               dev: docker-dev
             devDependencies:
               '@twin-digital/opus-scripts': workspace:*
+  - name: renovate-built-dependencies
+    # Keep renovate's build-script PR rule in step with pnpm's `onlyBuiltDependencies`: packages that run install
+    # scripts are arbitrary code execution, and the renovate config isolates each into its own non-automerged PR
+    # (see the matching packageRule in renovate.json). This copies that package list so the two cannot drift.
+    scope: root
+    conditions:
+      - exists: renovate.json
+      - exists: pnpm-workspace.yaml
+    actions:
+      - name: Sync build-script packages into renovate's matchPackageNames
+        action: sync-json-value
+        options:
+          source:
+            file: pnpm-workspace.yaml
+            pointer: /onlyBuiltDependencies
+            default: []
+          target:
+            file: renovate.json
+            array: /packageRules
+            where:
+              pointer: /addLabels
+              contains: build-scripts
+            set: /matchPackageNames
+  - name: renovate-patched-dependencies
+    # Keep renovate's patched-dependency PR rule in step with pnpm's `patchedDependencies`: a version-pinned patch
+    # breaks on any bump (the patch stops applying and the lockfile relock fails), so the renovate config isolates
+    # each patched package into its own non-automerged PR (see the matching packageRule in renovate.json) for a human
+    # to re-roll or drop the patch. `patchedDependencies` is map-shaped and its keys may carry a version
+    # (`pkg@1.2.3`), so take the keys and strip the version to get the package names — keeping the two from drifting.
+    scope: root
+    conditions:
+      - exists: renovate.json
+      - exists: pnpm-workspace.yaml
+    actions:
+      - name: Sync patched-dependency packages into renovate's matchPackageNames
+        action: sync-map-to-array
+        options:
+          source:
+            file: pnpm-workspace.yaml
+            pointer: /patchedDependencies
+            default: {}
+          # `patchedDependencies` is a map keyed by selector (`pkg` or `pkg@version`); take the keys and reduce each to
+          # its bare package name so the result matches renovate's `matchPackageNames`.
+          emit: keys
+          transform: strip-package-version
+          target:
+            file: renovate.json
+            array: /packageRules
+            where:
+              pointer: /addLabels
+              contains: patched-deps
+            set: /matchPackageNames
   - name: engines
     actions:
       - name: Add engines specification to package.json

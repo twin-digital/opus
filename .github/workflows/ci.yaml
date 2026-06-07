@@ -25,6 +25,11 @@ env:
   CI: 1
   HUSKY: 0
   TURBO_TELEMETRY_DISABLED: 1
+  # Block dependency install scripts (pnpm `onlyBuiltDependencies`: esbuild/hnswlib-node/serverless).
+  # They run arbitrary code, and this job is ungated and holds no deploy creds. The native artifacts
+  # those scripts would produce aren't needed for build/lint/test (esbuild + hnswlib ship prebuilt),
+  # so we don't run them here; the credentialed deploy jobs, which do need them, keep scripts on.
+  NPM_CONFIG_IGNORE_SCRIPTS: 'true'
 
 jobs:
   lint-build-test:
@@ -32,7 +37,7 @@ jobs:
     timeout-minutes: 20
     steps:
       # checkout project
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       # setup tools and install dependencies
       - name: Setup dependencies

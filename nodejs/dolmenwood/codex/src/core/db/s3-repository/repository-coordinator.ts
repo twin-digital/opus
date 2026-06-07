@@ -177,7 +177,7 @@ export class RepositoryCoordinator implements RepositoryFactory {
       // Assumes each item has an 'id' property
       const recordMap: Record<string, unknown> = {}
       for (const item of items) {
-        const id = typeof item === 'object' && 'id' in item ? (item as { id: unknown }).id : undefined
+        const id = typeof item === 'object' && 'id' in item ? item.id : undefined
         if (typeof id === 'string') {
           recordMap[id] = item
         } else {

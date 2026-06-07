@@ -10,6 +10,8 @@
     "build": "turbo run build",
     "clean": "turbo run clean",
     "dev": "turbo run dev --parallel",
+    "format": "prettier --write --ignore-path .gitignore --ignore-path .prettierignore .",
+    "format:check": "prettier --check --ignore-path .gitignore --ignore-path .prettierignore .",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "lint:deps": "sherif",
@@ -35,6 +37,6 @@
     "typescript": "^5.9.3"
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.34.1",
   "lint-staged": "tooling/config/lint-staged.config.js"
 }
