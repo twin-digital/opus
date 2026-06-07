@@ -1,4 +1,4 @@
-name: cast-zoom
+name: texturized-zoom
 # The two-pass "zoom in" with a structured cast: for each beat, the loremaster first names the new
 # people and places it introduces (structured output → schemas/cast.json), then the chronicler
 # narrates the beat using that named cast. The beats are distilled into a finished chronicle, and the
