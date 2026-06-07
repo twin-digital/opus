@@ -3,7 +3,17 @@ import { describe, it, expect } from 'vitest'
 import type { Outcome } from '@thrashplay/fw-simulation'
 import { makeAdventure, makeTrial } from '@thrashplay/fw-simulation/testing'
 
-import { buildPrompt, buildChroniclePrompt, chronicle, listPromptOptions, loadExamples } from './chronicle.js'
+import {
+  buildPrompt,
+  buildChroniclePrompt,
+  buildSingleTrialPrompt,
+  buildSummaryPrompt,
+  chronicle,
+  chronicleByTrial,
+  chronicleZoomed,
+  listPromptOptions,
+  loadExamples,
+} from './chronicle.js'
 
 /** A degenerate one-trial adventure with the given overall outcome. */
 const oneTrial = (outcome: Outcome) => makeAdventure({ trials: [makeTrial({ approach: 'combat', outcome })], outcome })
@@ -16,7 +26,7 @@ const fullSpec = (adventure = '{}') => ({
 })
 
 describe('buildPrompt (composition)', () => {
-  it('fills snippet placeholders from prompts/<placeholder>/<name>.md and data placeholders verbatim', () => {
+  it('fills snippet placeholders from snippets/<placeholder>/<name>.md and data placeholders verbatim', () => {
     const prompt = buildPrompt(fullSpec('THE-ADVENTURE-JSON'))
     expect(prompt).toContain('Chronicler') // template skeleton
     expect(prompt).toContain('old sagas') // register/saga.md
@@ -27,7 +37,7 @@ describe('buildPrompt (composition)', () => {
   })
 
   it('maps placeholder names to directories by convention (_ → -)', () => {
-    // `{{writing_style}}` must resolve from `prompts/writing-style/`, not `prompts/writing_style/`.
+    // `{{writing_style}}` must resolve from `snippets/writing-style/`, not `snippets/writing_style/`.
     expect(buildPrompt(fullSpec())).toContain('Resist ornament')
   })
 
@@ -67,6 +77,16 @@ describe('listPromptOptions', () => {
     expect(byPlaceholder.register).toEqual(expect.arrayContaining(['legendary', 'saga', 'annalist']))
     // The directory `writing-style/` surfaces under the placeholder name `writing_style`.
     expect(byPlaceholder.writing_style).toEqual(expect.arrayContaining(['mythic', 'plain']))
+  })
+
+  it('reports, per template, which axes it uses and whether it takes examples', () => {
+    const { templateUses } = listPromptOptions()
+    // chronicle: all three voice axes, plus a {{examples}} slot.
+    expect(templateUses.chronicle).toEqual({ axes: ['invention', 'register', 'writing_style'], examples: true })
+    // single-trial: the voice axes, no examples.
+    expect(templateUses['single-trial']).toEqual({ axes: ['invention', 'register', 'writing_style'], examples: false })
+    // summary: only register + writing_style (invention would fight distillation), no examples.
+    expect(templateUses.summary).toEqual({ axes: ['register', 'writing_style'], examples: false })
   })
 })
 
@@ -125,6 +145,93 @@ describe('loadExamples', () => {
   it('falls back to no examples when the combo has no file (newly added / not yet generated)', () => {
     // A selection whose key has no `<key>.md` yet → zero-shot, not an error.
     expect(loadExamples({ ...DEFAULT, invention: 'ungenerated' }, 3)).toBe('')
+  })
+})
+
+describe('buildSingleTrialPrompt', () => {
+  const adv = makeAdventure({
+    trials: [
+      makeTrial({ approach: 'stealth', outcome: 'success' }),
+      makeTrial({ approach: 'might', outcome: 'failure' }),
+    ],
+    outcome: 'failure',
+  })
+
+  it('uses the single-trial template and fills the aim, the story so far, and one trial', () => {
+    const prompt = buildSingleTrialPrompt(adv, 1, 'THE-STORY-SO-FAR')
+    expect(prompt).toContain('one beat at a time') // single-trial template skeleton
+    expect(prompt).toContain('as legend') // register/legendary.md (default voice)
+    expect(prompt).toContain('THE-STORY-SO-FAR') // adventure_so_far data, verbatim
+    expect(prompt).toContain('"approach": "might"') // the trial at index 1
+    expect(prompt).not.toContain('"approach": "stealth"') // not the other trials
+    expect(prompt).toContain('"goal"') // aims block carries the goal
+  })
+
+  it('marks the first beat when there is no story yet', () => {
+    expect(buildSingleTrialPrompt(adv, 0, '')).toContain('this is the first beat')
+  })
+
+  it('throws for a trial index out of range', () => {
+    expect(() => buildSingleTrialPrompt(adv, 2, '')).toThrowError(/no trial at index 2.*has 2/s)
+  })
+})
+
+describe('chronicleByTrial', () => {
+  it('narrates one beat per trial, feeding each narrative into the next as the story so far', async () => {
+    const adv = makeAdventure({
+      trials: [makeTrial({ approach: 'stealth' }), makeTrial({ approach: 'lore' }), makeTrial({ approach: 'might' })],
+    })
+    const prompts: string[] = []
+    let n = 0
+    const llm = (prompt: string): Promise<string> => {
+      prompts.push(prompt)
+      n += 1
+      return Promise.resolve(`  beat-${String(n)}  `)
+    }
+    const beats = await chronicleByTrial(adv, llm)
+    expect(beats.map((b) => b.narrative)).toEqual(['beat-1', 'beat-2', 'beat-3']) // trimmed, in order
+    expect(beats.map((b) => b.index)).toEqual([0, 1, 2])
+    // The second and third prompts carry the prior beats as "the story so far".
+    expect(prompts[1]).toContain('beat-1')
+    expect(prompts[2]).toContain('beat-1')
+    expect(prompts[2]).toContain('beat-2')
+  })
+})
+
+describe('buildSummaryPrompt', () => {
+  const adv = makeAdventure({ trials: [makeTrial({ approach: 'stealth' })] })
+
+  it('uses the summary template with the draft and aim, in the chosen voice', () => {
+    const prompt = buildSummaryPrompt(adv, 'THE-DRAFT-PROSE', {
+      snippets: { register: 'saga', writing_style: 'plain', invention: 'tight' },
+    })
+    expect(prompt).toContain('finished chronicle') // summary template skeleton
+    expect(prompt).toContain('THE-DRAFT-PROSE') // full_chronicle data, verbatim
+    expect(prompt).toContain('old sagas') // register/saga.md
+    expect(prompt).toContain('Resist ornament') // writing-style/plain.md
+    // invention is ignored for summaries (no slot) — its content must not leak in, and it must not throw.
+    expect(prompt).not.toContain('three to five sentences')
+  })
+})
+
+describe('chronicleZoomed', () => {
+  it('narrates beat by beat, then distils the beats into a summary', async () => {
+    const adv = makeAdventure({ trials: [makeTrial({ approach: 'stealth' }), makeTrial({ approach: 'might' })] })
+    let beat = 0
+    const llm = (prompt: string): Promise<string> => {
+      // The summary call is the one whose prompt carries the assembled draft.
+      if (prompt.includes('The draft to distil')) {
+        return Promise.resolve('  THE-SUMMARY  ')
+      }
+      beat += 1
+      return Promise.resolve(`beat-${String(beat)}`)
+    }
+    const { beats, summaryPrompt, summary } = await chronicleZoomed(adv, llm)
+    expect(beats.map((b) => b.narrative)).toEqual(['beat-1', 'beat-2'])
+    expect(summary).toBe('THE-SUMMARY') // trimmed
+    // The summary's draft is the beats joined.
+    expect(summaryPrompt).toContain('beat-1')
+    expect(summaryPrompt).toContain('beat-2')
   })
 })
 

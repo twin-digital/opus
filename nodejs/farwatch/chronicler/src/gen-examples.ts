@@ -8,7 +8,7 @@ import { buildPrompt, examplesKey, listPromptOptions, renderAdventure } from './
 import { claudeCli } from './claude-cli.js'
 
 /**
- * Regenerate the few-shot example store under `prompts/examples/`.
+ * Regenerate the few-shot example store under `examples/`.
  *
  * Examples are tied to a snippet selection so the chronicler's few-shots always match the voice
  * being asked for. This script enumerates every combination of the snippet axes (discovered from
@@ -24,7 +24,7 @@ import { claudeCli } from './claude-cli.js'
  * - `--model`    generator model passed to `claude -p` (default: `sonnet`)
  */
 
-const EXAMPLES_DIR = join(import.meta.dirname, '..', 'prompts', 'examples')
+const EXAMPLES_DIR = join(import.meta.dirname, '..', 'examples')
 
 const trial = makeTrial
 

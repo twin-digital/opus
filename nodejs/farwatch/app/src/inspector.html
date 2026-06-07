@@ -84,6 +84,18 @@
         width: 100%;
         max-width: none;
       }
+      .tmpl-group {
+        margin-top: 14px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+      .tmpl-group .k {
+        color: var(--accent);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
       button {
         background: var(--accent);
         color: #14171c;
@@ -276,50 +288,91 @@
       const modelEl = $('model')
       const modelLabel = $('modelLabel')
 
-      // Build the prompt-builder form from the snippet axes the server discovers on disk. A `template`
-      // control appears only when there's a real choice; everything else is one dropdown per axis.
+      // The options the server discovered on disk, plus the live target. The form is target-aware: a
+      // target is a single template (one call) or a pipeline (multi-step). A template shows its own
+      // snippet axes (+ example count); a pipeline shows a snippet-config group per template it calls.
+      // Switching target resets its controls to their defaults.
+      let OPT = null
+      const state = { target: null } // "template:<name>" or "pipeline:<name>"
+
+      const splitTarget = () => {
+        const i = state.target.indexOf(':')
+        return [state.target.slice(0, i), state.target.slice(i + 1)]
+      }
+      const axisOptions = () => Object.fromEntries(OPT.axes.map((a) => [a.placeholder, a.options]))
+
+      // A labelled <select>; `attrs` carries the data-* the gatherer reads.
+      const field = (id, label, options, selected, attrs) =>
+        `<div class="field"><label for="${id}">${label.replace(/_/g, ' ')}</label><select id="${id}" ${attrs}>${options
+          .map((o) => `<option ${o === selected ? 'selected' : ''}>${o}</option>`)
+          .join('')}</select></div>`
+
+      function renderTarget() {
+        const opt = (v, t) => `<option value="${v}" ${state.target === v ? 'selected' : ''}>${t}</option>`
+        const tmpls = OPT.templates.map((t) => opt('template:' + t, t)).join('')
+        const pipes = (OPT.pipelines || []).map((p) => opt('pipeline:' + p.name, p.name)).join('')
+        let html = `<div class="field"><label for="sel-target">run</label><select id="sel-target"><optgroup label="templates">${tmpls}</optgroup>${pipes ? `<optgroup label="pipelines">${pipes}</optgroup>` : ''}</select></div>`
+
+        const [kind, name] = splitTarget()
+        const ax = axisOptions()
+        if (kind === 'template') {
+          const uses = OPT.templateUses[name] || { axes: [], examples: false }
+          for (const ph of uses.axes) {
+            html += field(`sel-${ph}`, ph, ax[ph], OPT.defaults.snippets[ph] ?? ax[ph][0], `data-name="${ph}"`)
+          }
+          if (uses.examples) {
+            html += `<div class="field"><label for="sel-exampleCount">examples (count)</label><input id="sel-exampleCount" data-name="exampleCount" type="number" min="0" max="${OPT.maxExamples}" step="1" value="${OPT.defaults.exampleCount}" /></div>`
+          }
+        } else {
+          const pipe = OPT.pipelines.find((p) => p.name === name)
+          for (const t of pipe.templates) {
+            html += `<div class="tmpl-group"><div class="k">${t.template}</div>`
+            for (const ph of t.axes) {
+              const id = `sel-${t.template}-${ph}`
+              html += field(id, ph, ax[ph], t.defaults[ph] ?? ax[ph][0], `data-tmpl="${t.template}" data-name="${ph}"`)
+            }
+            html += `</div>`
+          }
+        }
+        $('builder').innerHTML = html
+        $('sel-target').addEventListener('change', () => {
+          state.target = $('sel-target').value
+          renderTarget()
+        })
+      }
+
       async function loadOptions() {
         try {
           const res = await fetch('/options')
-          const data = await res.json()
-          const field = (name, options, selected) => {
-            const opts = options.map((o) => `<option ${o === selected ? 'selected' : ''}>${o}</option>`).join('')
-            return `<div class="field"><label for="sel-${name}">${name.replace(/_/g, ' ')}</label><select id="sel-${name}" data-name="${name}">${opts}</select></div>`
-          }
-          const parts = []
-          if (data.templates.length > 1) {
-            parts.push(field('template', data.templates, data.defaults.template))
-          }
-          for (const ax of data.axes) {
-            parts.push(field(ax.placeholder, ax.options, data.defaults.snippets[ax.placeholder]))
-          }
-          // Examples aren't a pickable snippet — they follow the selection. The only lever is how
-          // many to include (0 = zero-shot); the ceiling is the seed-adventure count.
-          parts.push(
-            `<div class="field"><label for="sel-exampleCount">examples (count)</label><input id="sel-exampleCount" data-name="exampleCount" type="number" min="0" max="${data.maxExamples}" step="1" value="${data.defaults.exampleCount}" /></div>`,
-          )
-          $('builder').innerHTML = parts.join('')
+          OPT = await res.json()
+          state.target = 'template:' + OPT.defaults.template
+          renderTarget()
         } catch (err) {
           $('builder').innerHTML = `<span class="err">could not load options: ${err.message}</span>`
         }
       }
 
-      // Gather the form into { template?, snippets, exampleCount } for the /run request.
+      // Gather the form into the /run selections — a template run or a pipeline run.
       function selections() {
+        const [kind, name] = splitTarget()
+        if (kind === 'pipeline') {
+          const configOverride = {}
+          document.querySelectorAll('#builder select[data-tmpl]').forEach((el) => {
+            const t = el.dataset.tmpl
+            if (!configOverride[t]) configOverride[t] = {}
+            configOverride[t][el.dataset.name] = el.value
+          })
+          return { pipeline: name, configOverride }
+        }
         const snippets = {}
-        let template
         let exampleCount
         document.querySelectorAll('#builder [data-name]').forEach((el) => {
-          const name = el.dataset.name
-          if (name === 'template') {
-            template = el.value
-          } else if (name === 'exampleCount') {
-            exampleCount = Number(el.value)
-          } else {
-            snippets[name] = el.value
-          }
+          if (el.dataset.name === 'exampleCount') exampleCount = Number(el.value)
+          else if (!el.dataset.tmpl) snippets[el.dataset.name] = el.value
         })
-        return { template, snippets, exampleCount }
+        const out = { template: name, snippets }
+        if (exampleCount !== undefined) out.exampleCount = exampleCount
+        return out
       }
 
       // Populate the model dropdown from the server (ollama backend only). Hidden otherwise.

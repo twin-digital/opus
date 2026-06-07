@@ -45,6 +45,9 @@ catalogs:
     '@vitest/coverage-istanbul':
       specifier: 4.0.12
       version: 4.0.12
+    ajv:
+      specifier: ^8.17.1
+      version: 8.20.0
     aws-sdk-client-mock:
       specifier: ^4.1.0
       version: 4.1.0
@@ -1386,6 +1389,12 @@ importers:
       '@thrashplay/fw-simulation':
         specifier: workspace:*
         version: link:../simulation
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      yaml:
+        specifier: 'catalog:'
+        version: 2.8.3
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1407,7 +1416,7 @@ importers:
         version: 24.10.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0))
+        version: 4.0.12(vitest@4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       eslint:
         specifier: 'catalog:'
         version: 9.29.0
@@ -1434,7 +1443,7 @@ importers:
         version: 8.47.0(eslint@9.29.0)(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.9.0)
+        version: 4.0.12(@types/debug@4.1.13)(@types/node@24.10.1)(jsdom@27.2.0)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   nodejs/farwatch/core:
     devDependencies:
@@ -11995,7 +12004,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.17.0(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.17.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -13145,7 +13154,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.17.0(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.17.0):
     dependencies:
       axios: 1.17.0(debug@4.4.3)
 

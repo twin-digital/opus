@@ -39,6 +39,10 @@ and no others:
   - `viable` — `true` if the prize was really there; `false` if it was never there at all —
     the expedition cannot have won it, and the overall `outcome` already reflects that (a
     failure, however the trials went). Render it as a journey to a thing that was not there.
+- `party` — the seekers who went, each a `name` with (from the covenant's records) an
+  `appearance` and a `temperament`. These are the people the account is about — name them,
+  and let their looks and manner show in what they do. They recur across chronicles, so render
+  the same person the same way each time; do not reinvent their faces or natures.
 - `optionalGoals` — secondary aims the party also pursued, each with a `reward` and `won`
   (whether they achieved it). Render the `won` as gained, the unwon as reached-for and
   missed. May be empty.
@@ -54,6 +58,12 @@ and no others:
     through; a kept `endurance` is a hardship outwaited.
   - `outcome` — `"success"` if the trial went the party's way; `"failure"` if it went
     against them.
+  - `lead` — the party member who led this trial: a `name` (one of the `party`), and their
+    `affinity` and `competence` for the method. Affinity is how willing they were to take it
+    on (eager → they pushed for it; averse → they did it grudgingly, or had to be pressed);
+    competence is how it came off in their hands (masterful → deftly; hapless → barely, or
+    messily). Make the lead the actor of the beat, and let these two color _how_ they carried
+    it — without touching whether it succeeded, which the `outcome` alone decides.
   - `cost` — what attempting this trial took up front, win or lose. A loss; render it as
     paid. (An `approach` of `sacrifice` _is_ this paying — what was given up is the `cost`,
     never the `prize`.)
@@ -61,9 +71,12 @@ and no others:
     failed trial). Render it as the price of that failure.
   - `prize` — an incidental boon the party _won at this trial_ (only ever present on a won
     trial). A gain; render it as carried off.
+  - `discovery` — an unsought thing the party _turned up at this trial_ (only on a won trial).
+    A gain they never set out for; render it as stumbled-upon _because_ this trial went well —
+    the pressing-in is what revealed it.
 - `optionalGoals` and `trials` each carry their own resource (`kind`, plus a `tier` if
-  fungible). A gain is never also a loss: `cost` and `stake` are losses, `prize` and a won
-  `reward` are gains.
+  fungible). A gain is never also a loss: `cost` and `stake` are losses, while `prize`,
+  `discovery`, a won optional, and a won `reward` are gains.
 - `outcome` (at the top level) — how the expedition resolved as a whole. When it is a
   success, the `goal`'s `reward` was carried home; when it is a failure, it was not.
 

@@ -1,0 +1,52 @@
+name: cast-zoom
+# The two-pass "zoom in" with a structured cast: for each beat, the loremaster first names the new
+# people and places it introduces (structured output → schemas/cast.json), then the chronicler
+# narrates the beat using that named cast. The beats are distilled into a finished chronicle, and the
+# casts are collected into one persistable list (`cast`) — the seed of a world that outlasts the run.
+in: [adventure]
+out:
+  chronicle: chronicle
+  cast: castList
+
+config:
+  single-trial-cast: { register: legendary, writing_style: mythic, invention: descriptive }
+  summary: { register: legendary, writing_style: mythic }
+  # cast-sketch has no voice axes (structured output) — nothing to configure.
+
+steps:
+  - as: aims
+    derive: pick
+    from: adventure
+    fields: [goal, optionalGoals]
+
+  - as: trials
+    map: adventure.trials
+    item: trial
+    body:
+      - as: cast # PASS 1 — name the new people/places this beat introduces (structured)
+        call: cast-sketch
+        bind:
+          aims: aims
+          party: adventure.party
+          trial: trial
+          scenes_so_far: prior.scene
+
+      - as: scene # PASS 2 — narrate the beat using the named cast
+        call: single-trial-cast
+        bind:
+          aims: aims
+          party: adventure.party
+          trial: trial
+          adventure_so_far: prior.scene
+          cast: cast.entities
+
+  - as: chronicle
+    call: summary
+    bind:
+      aims: aims
+      full_chronicle: trials.scene
+
+  - as: castList # collect every beat's cast into one persistable list
+    derive: flatten
+    from: trials.cast
+    path: entities
