@@ -8,10 +8,12 @@ import {
   chronicleView,
   chronicleZoomed,
   CHRONICLE_DEFAULTS,
-  describePipeline,
+  derivePalette,
+  describePipelineNodes,
   listOllamaModels,
   listPipelines,
   listPromptOptions,
+  runPipeline,
   runPipelineByName,
   selectLlm,
 } from '@thrashplay/fw-chronicler'
@@ -53,15 +55,36 @@ const pagePath = join(import.meta.dirname, 'inspector.html')
 
 /**
  * What the inspector's form sends — either a single template run (template + a snippet per axis +
- * example count) or a pipeline run (pipeline name + per-template snippet overrides).
+ * example count) or a pipeline run (pipeline name + per-call-node overrides, each keyed by the step's
+ * `as`: the template to run at that node and the snippet selection for it).
  */
 interface Selections {
   readonly template?: string
   readonly snippets?: Record<string, string>
   readonly exampleCount?: number
   readonly pipeline?: string
-  readonly configOverride?: Record<string, Record<string, string>>
+  readonly nodeOverrides?: Record<string, { template?: string; snippets?: Record<string, string> }>
 }
+
+/**
+ * The standard adventure-derived values a single-template run provides, by placeholder name. A
+ * template whose data placeholders are all drawn from here can be run on its own (the inspector wraps
+ * it in a one-call skeleton pipeline that derives these and binds them); one that needs anything else
+ * (per-trial `framing`, a prior `full_chronicle`, …) is a pipeline step, reached via its pipeline.
+ */
+const STANDARD_BINDINGS: Record<string, string> = {
+  adventure: 'adventure',
+  palette: 'palette',
+  aims: 'aims',
+  party: 'adventure.party',
+  trials: 'adventure.trials',
+  outcome: 'adventure.outcome',
+  goal: 'adventure.goal',
+  optionalGoals: 'adventure.optionalGoals',
+}
+
+/** Templates with dedicated standalone handlers in {@link run} (besides the skeleton path). */
+const HANDLED_TEMPLATES = new Set(['chronicle', 'single-trial'])
 
 /** Coerce a step's value (prose `{ text }`, or any JSON) to display text. */
 const textOf = (value: unknown): string => {
@@ -88,13 +111,16 @@ const run = async (seed: number, selections: Selections, model?: string) => {
   const result = resolveAdventure(createRng(hashSeed(seed)))
   const options = model !== undefined && model !== '' ? { model } : undefined
   const startedAt = Date.now()
+  // The standard inputs every pipeline / skeleton run is given: the dice-free view and the per-
+  // adventure diversity palette. Pipelines/templates bind whichever they declare; extras are ignored.
+  const inputs = { adventure: chronicleView(result), palette: derivePalette(result) }
 
   // A pipeline run: feed the chronicle-legal view through the authored executor, then show the
   // declared `chronicle` output and the full per-step trace (each call's prompt, every step's output).
   if (selections.pipeline !== undefined) {
-    const { out, trace } = await runPipelineByName(selections.pipeline, { adventure: chronicleView(result) }, llm, {
+    const { out, trace } = await runPipelineByName(selections.pipeline, inputs, llm, {
       options,
-      configOverride: selections.configOverride,
+      nodeOverrides: selections.nodeOverrides,
     })
     const elapsedMs = Date.now() - startedAt
     const divider = (label: string): string => `\n\n──────── ${label} ────────\n\n`
@@ -140,6 +166,47 @@ const run = async (seed: number, selections: Selections, model?: string) => {
         divider('summary · finished') +
         summary,
       chronicle: summary,
+      elapsedMs,
+      selections,
+      model: model ?? process.env.CHRONICLER_MODEL ?? null,
+    }
+  }
+
+  // Any other template: wrap it in a one-call skeleton pipeline that derives the standard adventure
+  // details and binds the template's placeholders to them — so e.g. `treatment` can be run and
+  // inspected on its own. Structured templates yield JSON (shown as the chronicle output).
+  if (selections.template !== undefined && selections.template !== 'chronicle') {
+    const template = selections.template
+    const use = listPromptOptions().templateUses[template]
+    const bind: Record<string, string> = {}
+    for (const placeholder of use.data) {
+      if (!(placeholder in STANDARD_BINDINGS)) {
+        throw new Error(
+          `template "${template}" needs "${placeholder}", which a single run can't supply — run it via its pipeline`,
+        )
+      }
+      bind[placeholder] = STANDARD_BINDINGS[placeholder]
+    }
+    const skeleton = {
+      name: `single:${template}`,
+      in: ['adventure', 'palette'],
+      out: { result: 'result' },
+      steps: [
+        { as: 'aims', derive: 'pick' as const, from: 'adventure', fields: ['goal', 'optionalGoals'] },
+        { as: 'result', call: template, bind },
+      ],
+    }
+    const { out, trace } = await runPipeline(skeleton, inputs, llm, {
+      options,
+      configOverride: { [template]: selections.snippets ?? {} },
+    })
+    const elapsedMs = Date.now() - startedAt
+    return {
+      seed,
+      result,
+      chronicle: textOf(out.result),
+      prompt: trace.find((t) => t.kind === 'call')?.prompt ?? '',
+      raw: textOf(out.result),
       elapsedMs,
       selections,
       model: model ?? process.env.CHRONICLER_MODEL ?? null,
@@ -257,11 +324,16 @@ const server = createServer((req, res) => {
   if (url.pathname === '/options' && req.method === 'GET') {
     // Powers the prompt-builder form: the templates and snippet axes discovered on disk, the default
     // selection so the controls open on the active composition, and the example-count ceiling (the
-    // number of seed adventures the gen-examples script narrates per combo). `summary` is a pipeline
-    // step of the single-trial run, not a standalone pick, so it is not offered as a template.
+    // number of seed adventures the gen-examples script narrates per combo). Only templates that can
+    // run on their own are offered — the ones with a dedicated handler, or whose data placeholders
+    // are all standard adventure values (so the skeleton run can supply them). The rest are pipeline
+    // steps (they need per-trial / prior bindings) and are reached by picking their pipeline.
     const options = listPromptOptions()
-    const templates = options.templates.filter((name) => name !== 'summary')
-    const pipelines = listPipelines().map((name) => describePipeline(name))
+    const standard = new Set(Object.keys(STANDARD_BINDINGS))
+    const templates = options.templates.filter(
+      (name) => HANDLED_TEMPLATES.has(name) || options.templateUses[name].data.every((p) => standard.has(p)),
+    )
+    const pipelines = listPipelines().map((name) => describePipelineNodes(name))
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ ...options, templates, pipelines, defaults: CHRONICLE_DEFAULTS, maxExamples: 3 }))
     return

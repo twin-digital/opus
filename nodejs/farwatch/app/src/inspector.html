@@ -290,16 +290,37 @@
 
       // The options the server discovered on disk, plus the live target. The form is target-aware: a
       // target is a single template (one call) or a pipeline (multi-step). A template shows its own
-      // snippet axes (+ example count); a pipeline shows a snippet-config group per template it calls.
-      // Switching target resets its controls to their defaults.
+      // snippet axes (+ example count); a pipeline shows one config group per call-node — a template
+      // dropdown (the templates whose bindings that node can satisfy) plus the snippet dropdowns for
+      // the chosen template. Switching target, or a node's template, resets the affected controls.
       let OPT = null
-      const state = { target: null } // "template:<name>" or "pipeline:<name>"
+      // `nodeTemplates` maps a pipeline node's `as` → the template chosen for it (defaults to authored).
+      const state = { target: null, nodeTemplates: {} } // target: "template:<name>" or "pipeline:<name>"
 
       const splitTarget = () => {
         const i = state.target.indexOf(':')
         return [state.target.slice(0, i), state.target.slice(i + 1)]
       }
       const axisOptions = () => Object.fromEntries(OPT.axes.map((a) => [a.placeholder, a.options]))
+
+      // The snippet dropdowns for one pipeline node, given the template chosen for it: one per axis of
+      // that template, defaulting to the pipeline's authored config (then the axis's first option).
+      function nodeSnips(node, template) {
+        const choice = node.templates.find((t) => t.template === template)
+        if (!choice) return ''
+        const ax = axisOptions()
+        return choice.axes
+          .map((ph) =>
+            field(
+              `sel-${node.as}-${ph}`,
+              ph,
+              ax[ph],
+              choice.defaults[ph] ?? ax[ph][0],
+              `data-node="${node.as}" data-name="${ph}"`,
+            ),
+          )
+          .join('')
+      }
 
       // A labelled <select>; `attrs` carries the data-* the gatherer reads.
       const field = (id, label, options, selected, attrs) =>
@@ -325,19 +346,35 @@
           }
         } else {
           const pipe = OPT.pipelines.find((p) => p.name === name)
-          for (const t of pipe.templates) {
-            html += `<div class="tmpl-group"><div class="k">${t.template}</div>`
-            for (const ph of t.axes) {
-              const id = `sel-${t.template}-${ph}`
-              html += field(id, ph, ax[ph], t.defaults[ph] ?? ax[ph][0], `data-tmpl="${t.template}" data-name="${ph}"`)
-            }
-            html += `</div>`
+          for (const node of pipe.nodes) {
+            const sel = state.nodeTemplates[node.as] ?? node.template
+            const tmplOpts = node.templates
+              .map(
+                (t) => `<option value="${t.template}" ${t.template === sel ? 'selected' : ''}>${t.template}</option>`,
+              )
+              .join('')
+            html += `<div class="tmpl-group"><div class="k">${node.as}</div>`
+            html += `<div class="field"><label for="tmpl-${node.as}">template</label><select id="tmpl-${node.as}" class="node-tmpl" data-node="${node.as}">${tmplOpts}</select></div>`
+            html += `<div class="node-snips" id="snips-${node.as}">${nodeSnips(node, sel)}</div></div>`
           }
         }
         $('builder').innerHTML = html
         $('sel-target').addEventListener('change', () => {
           state.target = $('sel-target').value
+          state.nodeTemplates = {} // a fresh target starts from its authored templates
           renderTarget()
+        })
+        // Changing a node's template rebuilds just that node's snippet dropdowns for the new template.
+        document.querySelectorAll('.node-tmpl').forEach((el) => {
+          el.addEventListener('change', () => {
+            const as = el.dataset.node
+            state.nodeTemplates[as] = el.value
+            const pipe = OPT.pipelines.find((p) => p.name === splitTarget()[1])
+            $(`snips-${as}`).innerHTML = nodeSnips(
+              pipe.nodes.find((n) => n.as === as),
+              el.value,
+            )
+          })
         })
       }
 
@@ -356,19 +393,22 @@
       function selections() {
         const [kind, name] = splitTarget()
         if (kind === 'pipeline') {
-          const configOverride = {}
-          document.querySelectorAll('#builder select[data-tmpl]').forEach((el) => {
-            const t = el.dataset.tmpl
-            if (!configOverride[t]) configOverride[t] = {}
-            configOverride[t][el.dataset.name] = el.value
+          // One override per call-node, keyed by its `as`: the chosen template + its snippet selection.
+          const nodeOverrides = {}
+          document.querySelectorAll('#builder select.node-tmpl').forEach((el) => {
+            nodeOverrides[el.dataset.node] = { template: el.value, snippets: {} }
           })
-          return { pipeline: name, configOverride }
+          document.querySelectorAll('#builder select[data-node][data-name]').forEach((el) => {
+            const as = el.dataset.node
+            ;(nodeOverrides[as] ??= { snippets: {} }).snippets[el.dataset.name] = el.value
+          })
+          return { pipeline: name, nodeOverrides }
         }
         const snippets = {}
         let exampleCount
         document.querySelectorAll('#builder [data-name]').forEach((el) => {
           if (el.dataset.name === 'exampleCount') exampleCount = Number(el.value)
-          else if (!el.dataset.tmpl) snippets[el.dataset.name] = el.value
+          else if (!el.dataset.node) snippets[el.dataset.name] = el.value
         })
         const out = { template: name, snippets }
         if (exampleCount !== undefined) out.exampleCount = exampleCount
