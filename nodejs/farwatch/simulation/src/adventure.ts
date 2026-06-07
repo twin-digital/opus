@@ -12,6 +12,7 @@ import {
 } from './goals.js'
 import { generatePrize } from './prizes.js'
 import type { ResourceDelta } from './resources.js'
+import { leadFor, pickParty, roster, type Seeker } from './seekers.js'
 import { generateStake } from './stakes.js'
 
 /**
@@ -51,6 +52,8 @@ export interface Trial {
   readonly stake?: ResourceDelta
   /** What succeeding at this trial wins — a boon; absent on most trials. */
   readonly prize?: ResourceDelta
+  /** The `id` of the party member who led this trial — chosen by affinity. @see leadFor */
+  readonly lead: string
   readonly check: Check
   readonly outcome: Outcome
 }
@@ -67,6 +70,8 @@ export interface LedgerEntry {
 /** One resolved adventure: its goal, the trials, the overall verdict, and the resource ledger. */
 export interface Adventure {
   readonly goal: Goal
+  /** The seekers who set out — each trial's `lead` is one of these. @see pickParty */
+  readonly party: readonly Seeker[]
   /** Secondary aims, each bound to a trial whose success wins it. @see generateOptionalGoals */
   readonly optionalGoals: readonly OptionalGoal[]
   /** Unsought goals minted by a winning trial, each bound to the trial that found it. */
@@ -87,15 +92,17 @@ const resolveCheck = (rng: Rng): Check => {
 const pickApproach = (rng: Rng): Approach => APPROACHES[Math.floor(rng.next() * APPROACHES.length)]
 
 /** Resolve a single trial — for now a leaf: one approach, one check, its outcome the trial's. */
-const resolveTrial = (rng: Rng): Trial => {
+const resolveTrial = (rng: Rng, party: readonly Seeker[]): Trial => {
   const approach = pickApproach(rng)
   const check = resolveCheck(rng)
   const stake = generateStake(rng, approach)
   const cost = generateCost(approach)
+  const lead = leadFor(rng, party, approach).id
   return {
     approach,
     ...(cost ? { cost } : {}),
     ...(stake ? { stake } : {}),
+    lead,
     check,
     outcome: check.outcome,
   }
@@ -157,6 +164,7 @@ const TRIALS = APPROACH_TRIALS + 1
  * yet; "the last one decides" is the thinnest rule that still gives the chain a spine.)
  */
 export const resolveAdventure = (rng: Rng): Adventure => {
+  const party = pickParty(rng, roster())
   const goal = generatePrimaryGoal(rng)
   const optionalGoals = generateOptionalGoals(rng, TRIALS)
   const bound = new Set(optionalGoals.map((opt) => opt.trial))
@@ -164,7 +172,7 @@ export const resolveAdventure = (rng: Rng): Adventure => {
   const unknownGoals: UnknownGoal[] = []
   let lastOutcome: Outcome = 'failure'
   for (let i = 0; i < TRIALS; i++) {
-    const core = resolveTrial(rng)
+    const core = resolveTrial(rng, party)
     // A trial bound to an optional goal has no incidental prize — its reward is that optional.
     const prize = bound.has(i) ? undefined : generatePrize(rng)
     trials.push(prize ? { ...core, prize } : core)
@@ -181,6 +189,7 @@ export const resolveAdventure = (rng: Rng): Adventure => {
   const outcome: Outcome = goal.viable ? lastOutcome : 'failure'
   return {
     goal,
+    party,
     optionalGoals,
     unknownGoals,
     trials,

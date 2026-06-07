@@ -7,6 +7,7 @@ import {
   AFFINITY_WORDS,
   COMPETENCE_WORDS,
   generateRoster,
+  leadFor,
   pickParty,
   RATING_MAX,
   RATING_MIN,
@@ -71,6 +72,30 @@ describe('roster', () => {
   it('is the same fixed cast every call (so they recur across chronicles)', () => {
     expect(roster()).toEqual(roster())
     expect(roster()).toHaveLength(ROSTER_SIZE)
+  })
+})
+
+describe('leadFor', () => {
+  const keen: Seeker = { id: 'keen', name: 'Keen', skills: { stealth: { affinity: 2, competence: 0 } } }
+  const adept: Seeker = { id: 'adept', name: 'Adept', skills: { stealth: { affinity: 1, competence: 2 } } }
+  const plain: Seeker = { id: 'plain', name: 'Plain', skills: {} }
+
+  it('picks the highest affinity for the approach (rng irrelevant when one stands out)', () => {
+    expect(leadFor(createRng(0), [plain, adept, keen], 'stealth').id).toBe('keen')
+    expect(leadFor(createRng(99), [plain, adept, keen], 'stealth').id).toBe('keen')
+  })
+
+  it('breaks an affinity tie by competence (the most able is pressed in)', () => {
+    const eager: Seeker = { id: 'eager', name: 'Eager', skills: { stealth: { affinity: 1, competence: -1 } } }
+    expect(leadFor(createRng(3), [eager, adept], 'stealth').id).toBe('adept')
+  })
+
+  it('spreads the lead across the party when no one is notable at the approach', () => {
+    const led = new Set<string>()
+    for (let seed = 0; seed < 50; seed++) {
+      led.add(leadFor(createRng(seed), [plain, keen, adept], 'combat').id) // all 0/0 at combat
+    }
+    expect(led.size).toBeGreaterThan(1) // not always the same member
   })
 })
 

@@ -4,6 +4,7 @@ import { createRng, type Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES } from './approaches.js'
 import { resolveAdventure, TARGET } from './adventure.js'
+import { skillFor } from './seekers.js'
 
 /** A stub Rng whose `next()` always returns `value`; only `next` is exercised here. */
 const fixedRng = (value: number): Rng => ({ next: () => value }) as unknown as Rng
@@ -40,6 +41,30 @@ describe('resolveAdventure', () => {
 
   it('is deterministic for a given seed', () => {
     expect(resolveAdventure(createRng(42))).toEqual(resolveAdventure(createRng(42)))
+  })
+
+  it('sends a party of seekers, and every trial is led by one of them', () => {
+    const adventure = resolveAdventure(createRng(7))
+    expect(adventure.party.length).toBeGreaterThanOrEqual(3)
+    expect(adventure.party.length).toBeLessThanOrEqual(5)
+    const ids = new Set(adventure.party.map((seeker) => seeker.id))
+    for (const trial of adventure.trials) {
+      expect(ids).toContain(trial.lead)
+    }
+  })
+
+  it("picks each trial's lead by affinity for that trial's approach", () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const adventure = resolveAdventure(createRng(seed))
+      const byId = new Map(adventure.party.map((seeker) => [seeker.id, seeker]))
+      for (const trial of adventure.trials) {
+        const leadAffinity = skillFor(byId.get(trial.lead)!, trial.approach).affinity
+        // No one in the party is keener on this approach than the chosen lead.
+        for (const member of adventure.party) {
+          expect(skillFor(member, trial.approach).affinity).toBeLessThanOrEqual(leadAffinity)
+        }
+      }
+    }
   })
 
   it('only mints unknown goals on won trials, and each enters the ledger', () => {

@@ -1,7 +1,7 @@
 import { createRng, type Rng } from '@thrashplay/fw-core'
 
 import { APPROACHES, type Approach } from './approaches.js'
-import { seekersConfig } from './config.js'
+import { seekersConfig, type SeekersConfig } from './config.js'
 import { pickDistinct } from './random.js'
 import { pickWeighted } from './resources.js'
 
@@ -50,6 +50,30 @@ export interface Seeker {
 /** A seeker's standing at an approach, defaulting any unrated approach to unremarkable (`0`/`0`). */
 export const skillFor = (seeker: Seeker, approach: Approach): Skill =>
   seeker.skills[approach] ?? { affinity: 0, competence: 0 }
+
+/**
+ * Who in a party leads a trial met with `approach`. Affinity picks the lead — whoever is most drawn
+ * to meeting it this way steps up — with competence breaking an affinity tie (when no one is keen, the
+ * most able is pressed in). Among those *still* tied — notably the common case where no one is notable
+ * at the approach and everyone sits at `0`/`0` — one is chosen at random, so the spotlight isn't
+ * always the same member. The lead's competence colors *how* the trial read; it never touches the
+ * outcome.
+ */
+export const leadFor = (rng: Rng, party: readonly Seeker[], approach: Approach): Seeker => {
+  let best = skillFor(party[0], approach)
+  let tied: Seeker[] = [party[0]]
+  for (let i = 1; i < party.length; i++) {
+    const skill = skillFor(party[i], approach)
+    const cmp = skill.affinity - best.affinity || skill.competence - best.competence
+    if (cmp > 0) {
+      best = skill
+      tied = [party[i]]
+    } else if (cmp === 0) {
+      tied.push(party[i])
+    }
+  }
+  return tied[Math.floor(rng.next() * tied.length)]
+}
 
 /**
  * The cast we draw from. A fixed pool of grounded, pronounceable given names — a *vocabulary*, like
@@ -122,10 +146,19 @@ export const generateRoster = (rng: Rng, size: number): Seeker[] =>
 
 /**
  * The covenant's standing cast: the same {@link ROSTER_SIZE} seekers every time, grown from a fixed
- * seed so they recur across chronicles (the point — that you come to know them). Regenerated per call
- * rather than memoized, so tuning `seekers.yaml` re-rolls the cast live without a restart.
+ * seed so they recur across chronicles (the point — that you come to know them). Memoized on the
+ * config's identity (which `seekersConfig` swaps only when `seekers.yaml` changes on disk), so the
+ * resolver's hot path doesn't re-roll the whole cast every adventure, yet tuning the YAML still
+ * re-rolls it live without a restart.
  */
-export const roster = (): Seeker[] => generateRoster(createRng(ROSTER_SEED), ROSTER_SIZE)
+let cachedRoster: { config: SeekersConfig; cast: Seeker[] } | undefined
+export const roster = (): Seeker[] => {
+  const config = seekersConfig()
+  if (cachedRoster?.config !== config) {
+    cachedRoster = { config, cast: generateRoster(createRng(ROSTER_SEED), ROSTER_SIZE) }
+  }
+  return cachedRoster.cast
+}
 
 /** Pull a party — a weighted-size, distinct subset — from a roster for one adventure. */
 export const pickParty = (rng: Rng, pool: readonly Seeker[]): Seeker[] => {

@@ -12,11 +12,11 @@ import type { Goal } from './goals.js'
 
 const DEFAULT_GOAL: Goal = { reward: { kind: 'item' }, viable: true }
 
-/** Build a {@link Trial}; defaults a passing `combat` check. Override any field. */
+/** Build a {@link Trial}; defaults a passing `combat` check led by `nobody`. Override any field. */
 export const makeTrial = (partial: Partial<Trial> = {}): Trial => {
   const outcome: Outcome = partial.outcome ?? partial.check?.outcome ?? 'success'
   const check = partial.check ?? { roll: outcome === 'success' ? 0.2 : 0.8, target: 0.5, outcome }
-  const base: Trial = { approach: partial.approach ?? 'combat', check, outcome }
+  const base: Trial = { approach: partial.approach ?? 'combat', lead: partial.lead ?? 'nobody', check, outcome }
   return partial.stake ? { ...base, stake: partial.stake } : base
 }
 
@@ -25,6 +25,7 @@ export const makeAdventure = (partial: Partial<Adventure> = {}): Adventure => {
   const trials = partial.trials ?? [makeTrial()]
   return {
     goal: partial.goal ?? DEFAULT_GOAL,
+    party: partial.party ?? [],
     optionalGoals: partial.optionalGoals ?? [],
     unknownGoals: partial.unknownGoals ?? [],
     trials,

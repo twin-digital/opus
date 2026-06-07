@@ -12,6 +12,7 @@ export { APPROACHES, type Approach } from './approaches.js'
 export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
   skillFor,
+  leadFor,
   roster,
   pickParty,
   generateRoster,
