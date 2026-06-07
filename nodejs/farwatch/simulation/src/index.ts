@@ -27,12 +27,14 @@ export {
   type Seeker,
 } from './seekers.js'
 export {
+  adventureConfig,
   approachesConfig,
   costsConfig,
   goalsConfig,
   prizesConfig,
   seekersConfig,
   stakesConfig,
+  type AdventureConfig,
   type ApproachesConfig,
   type CostsConfig,
   type GoalsConfig,

@@ -101,6 +101,14 @@ export const SeekersConfig = z.object({
 })
 export type SeekersConfig = z.infer<typeof SeekersConfig>
 
+/** Adventure-shape knobs: how the chain of trials is sized. */
+export const AdventureConfig = z.object({
+  trialCountWeights: z.record(z.string(), z.number().nonnegative()).meta({
+    description: 'Relative weights for how many trials an adventure runs (keys are counts; the last decides it).',
+  }),
+})
+export type AdventureConfig = z.infer<typeof AdventureConfig>
+
 /** Approach-selection knobs: how likely each method is to be the one a trial demands. */
 export const ApproachesConfig = z.object({
   approachWeights: weights(APPROACHES).meta({
@@ -131,4 +139,5 @@ export const stakesConfig = (): StakesConfig => load('stakes.yaml', StakesConfig
 export const prizesConfig = (): PrizesConfig => load('prizes.yaml', PrizesConfig)
 export const costsConfig = (): CostsConfig => load('costs.yaml', CostsConfig)
 export const seekersConfig = (): SeekersConfig => load('seekers.yaml', SeekersConfig)
+export const adventureConfig = (): AdventureConfig => load('adventure.yaml', AdventureConfig)
 export const approachesConfig = (): ApproachesConfig => load('approaches.yaml', ApproachesConfig)

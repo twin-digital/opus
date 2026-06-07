@@ -21,10 +21,23 @@ describe('resolveAdventure', () => {
 
   it('resolves to a chain of trials; a viable goal lets the final trial decide', () => {
     const adventure = resolveAdventure(createRng(7))
-    expect(adventure.trials).toHaveLength(4)
+    expect(adventure.trials.length).toBeGreaterThan(0)
     const last = adventure.trials[adventure.trials.length - 1].outcome
     expect(adventure.outcome).toBe(adventure.goal.viable ? last : 'failure')
     expect(adventure.trials[0].check.target).toBe(TARGET)
+  })
+
+  it('varies the trial count across adventures, from the weighted table', () => {
+    const counts = new Set<number>()
+    const rng = createRng(1)
+    for (let i = 0; i < 200; i++) {
+      counts.add(resolveAdventure(rng).trials.length)
+    }
+    expect(counts.size).toBeGreaterThan(1) // not a fixed length
+    for (const count of counts) {
+      expect(count).toBeGreaterThanOrEqual(3) // within the configured range
+      expect(count).toBeLessThanOrEqual(6)
+    }
   })
 
   it('has a primary goal: a reward of some kind plus a viability flag', () => {

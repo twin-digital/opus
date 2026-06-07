@@ -1,7 +1,7 @@
 import type { Rng } from '@thrashplay/fw-core'
 
 import type { Approach } from './approaches.js'
-import { approachesConfig } from './config.js'
+import { adventureConfig, approachesConfig } from './config.js'
 import { generateCost } from './costs.js'
 import {
   generateOptionalGoals,
@@ -150,29 +150,26 @@ const buildLedger = (
   return ledger
 }
 
-/**
- * The shape of an adventure: a few trials of approach, then the climactic trial that decides it.
- * Fixed for now (a chain to read), and named `3 + 1` to keep the deciding trial distinct from the
- * approach — the resolver doesn't treat it specially yet, but the chain's spine is the last beat.
- */
-const APPROACH_TRIALS = 3
-const TRIALS = APPROACH_TRIALS + 1
+/** Draw how many trials this adventure runs, from the weighted table (the last one decides it). */
+const pickTrialCount = (rng: Rng): number => Number(pickWeighted(rng, adventureConfig().trialCountWeights))
 
 /**
- * Resolve one adventure: a short chain of trials, resolved in order. The adventure's overall
- * outcome is its **final** trial's — the climactic beat the chain builds toward. (How the earlier
- * trials should bear on the whole — a tally, a sudden death — is a roll-up rule we haven't needed
- * yet; "the last one decides" is the thinnest rule that still gives the chain a spine.)
+ * Resolve one adventure: a chain of trials, resolved in order. How many is a weighted draw (see
+ * {@link pickTrialCount}), so adventures vary in length. The adventure's overall outcome is its
+ * **final** trial's — the climactic beat the chain builds toward. (How the earlier trials should bear
+ * on the whole — a tally, a sudden death — is a roll-up rule we haven't needed yet; "the last one
+ * decides" is the thinnest rule that still gives the chain a spine.)
  */
 export const resolveAdventure = (rng: Rng): Adventure => {
+  const trialCount = pickTrialCount(rng)
   const party = pickParty(rng, roster())
   const goal = generatePrimaryGoal(rng)
-  const optionalGoals = generateOptionalGoals(rng, TRIALS)
+  const optionalGoals = generateOptionalGoals(rng, trialCount)
   const bound = new Set(optionalGoals.map((opt) => opt.trial))
   const trials: Trial[] = []
   const unknownGoals: UnknownGoal[] = []
   let lastOutcome: Outcome = 'failure'
-  for (let i = 0; i < TRIALS; i++) {
+  for (let i = 0; i < trialCount; i++) {
     const core = resolveTrial(rng, party)
     // A trial bound to an optional goal has no incidental prize — its reward is that optional.
     const prize = bound.has(i) ? undefined : generatePrize(rng)
