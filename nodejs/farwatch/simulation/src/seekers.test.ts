@@ -9,7 +9,6 @@ import {
   generateRoster,
   leadFor,
   pickParty,
-  pickPartyApproach,
   RATING_MAX,
   RATING_MIN,
   roster,
@@ -104,41 +103,6 @@ describe('leadFor', () => {
       led.add(leadFor(createRng(seed), [plain, keen, adept], 'combat').id) // all 0/0 at combat
     }
     expect(led.size).toBeGreaterThan(1) // not always the same member
-  })
-})
-
-describe('pickPartyApproach', () => {
-  // A party drawn only to stealth (positive affinity); everything else is an off-type.
-  const party: Seeker[] = [
-    { id: 'a', name: 'A', skills: { stealth: { affinity: 2, competence: 0 } } },
-    {
-      id: 'b',
-      name: 'B',
-      skills: { stealth: { affinity: 1, competence: 0 }, combat: { affinity: -2, competence: 0 } },
-    },
-  ]
-
-  it('always returns a valid approach', () => {
-    for (let seed = 0; seed < 50; seed++) {
-      expect(APPROACHES).toContain(pickPartyApproach(createRng(seed), party))
-    }
-  })
-
-  it('favors the approach the party is drawn to, but still rolls off-types sometimes', () => {
-    let attuned = 0
-    const offTypes = new Set<string>()
-    for (let seed = 0; seed < 400; seed++) {
-      const approach = pickPartyApproach(createRng(seed), party)
-      if (approach === 'stealth') {
-        attuned++
-      } else {
-        offTypes.add(approach)
-      }
-    }
-    // stealth is the only attuned approach, so it should dominate (offTypeChance ~0.2)...
-    expect(attuned / 400).toBeGreaterThan(0.5)
-    // ...yet off-types (nobody's drawn to them) still surface, spread across the pool.
-    expect(offTypes.size).toBeGreaterThan(1)
   })
 })
 

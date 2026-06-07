@@ -20,7 +20,3 @@ partySizeWeights:
   '3': 2
   '4': 3
   '5': 2
-
-# STOP-GAP for chronicler iteration (not the real sim): a trial's approach is drawn from the party's
-# positive affinities, except this fraction of the time it lands on an off-type nobody is drawn to.
-offTypeChance: 0.2

@@ -1,0 +1,26 @@
+# Which approach a trial is met with. Weights are relative (need not sum to 1). Tune freely.
+# Skewed to the action/adventure-common methods; the social and esoteric ones are rarer.
+
+approachWeights:
+  combat: 8
+  stealth: 7
+  might: 6
+  agility: 5
+  cunning: 5
+  evasion: 4
+  endurance: 4
+  insight: 4
+  lore: 4
+  speed: 3
+  deception: 3
+  resolve: 3
+  intimidation: 3
+  diplomacy: 3
+  preparation: 2
+  charm: 2
+  craft: 2
+  magic: 2
+  performance: 1
+  ritual: 1
+  sacrifice: 1
+  wealth: 1

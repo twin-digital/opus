@@ -98,17 +98,16 @@ export const SeekersConfig = z.object({
   partySizeWeights: z.record(z.string(), z.number().nonnegative()).meta({
     description: 'Relative weights for how many seekers go on an adventure (keys are party sizes).',
   }),
-  offTypeChance: z
-    .number()
-    .min(0)
-    .max(1)
-    .meta({
-      description:
-        "STOP-GAP (chronicler iteration): chance a trial's approach is an off-type no party member is drawn to, vs. weighted by the party's positive affinities.",
-      examples: [0.2],
-    }),
 })
 export type SeekersConfig = z.infer<typeof SeekersConfig>
+
+/** Approach-selection knobs: how likely each method is to be the one a trial demands. */
+export const ApproachesConfig = z.object({
+  approachWeights: weights(APPROACHES).meta({
+    description: 'Relative weights for which approach a trial is met with — skewed to adventure-common methods.',
+  }),
+})
+export type ApproachesConfig = z.infer<typeof ApproachesConfig>
 
 const CONFIG_DIR = join(import.meta.dirname, '..', 'config')
 
@@ -132,3 +131,4 @@ export const stakesConfig = (): StakesConfig => load('stakes.yaml', StakesConfig
 export const prizesConfig = (): PrizesConfig => load('prizes.yaml', PrizesConfig)
 export const costsConfig = (): CostsConfig => load('costs.yaml', CostsConfig)
 export const seekersConfig = (): SeekersConfig => load('seekers.yaml', SeekersConfig)
+export const approachesConfig = (): ApproachesConfig => load('approaches.yaml', ApproachesConfig)

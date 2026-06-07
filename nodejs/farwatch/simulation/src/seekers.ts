@@ -84,40 +84,6 @@ export const leadFor = (rng: Rng, party: readonly Seeker[], approach: Approach):
 }
 
 /**
- * Pick a trial's approach from the **party's leanings** rather than at random.
- *
- * **This is a stop-gap for iterating on the chronicler, *not* the intended sim model.** In the real
- * sim a trial's approach is driven by its obstacle and the agents' choices (deferred — see the design
- * doc's "agent-chosen approaches"); tuning encounters to the roster is exactly what that design avoids.
- * But while we tune the chronicle, drawing the approach from who actually went makes the events
- * reflect the cast — and makes the chosen {@link leadFor} someone genuinely keen, so the prose shows
- * the eager/able corners instead of a fog of "indifferent".
- *
- * Each approach the party is *positively drawn to* is weighted by the summed positive affinity across
- * its members; the draw lands there — except with `offTypeChance`, when it instead falls uniformly on
- * an approach **no one is drawn to** (the party forced onto unfamiliar ground). With no positive
- * affinities at all, it is uniform across the pool.
- */
-export const pickPartyApproach = (rng: Rng, party: readonly Seeker[]): Approach => {
-  const attuned: Partial<Record<Approach, number>> = {}
-  const offTypes: Approach[] = []
-  for (const approach of APPROACHES) {
-    const drawnTo = party.reduce((sum, seeker) => sum + Math.max(0, skillFor(seeker, approach).affinity), 0)
-    if (drawnTo > 0) {
-      attuned[approach] = drawnTo
-    } else {
-      offTypes.push(approach)
-    }
-  }
-  const wild = rng.next() < seekersConfig().offTypeChance
-  if (Object.keys(attuned).length === 0 || (wild && offTypes.length > 0)) {
-    const pool = offTypes.length > 0 ? offTypes : APPROACHES
-    return pool[Math.floor(rng.next() * pool.length)]
-  }
-  return pickWeighted(rng, attuned)
-}
-
-/**
  * The cast we draw from: the names in the permanent record ({@link PROFILES}), sampled without
  * replacement so a roster never repeats a name. The record *is* the vocabulary — every drawable name
  * carries a profile — and single given names are deliberate: for a cast you mean to come to know,

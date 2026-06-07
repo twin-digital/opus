@@ -13,7 +13,6 @@ export { type Goal, type OptionalGoal, type UnknownGoal } from './goals.js'
 export {
   skillFor,
   leadFor,
-  pickPartyApproach,
   roster,
   pickParty,
   generateRoster,
@@ -28,11 +27,13 @@ export {
   type Seeker,
 } from './seekers.js'
 export {
+  approachesConfig,
   costsConfig,
   goalsConfig,
   prizesConfig,
   seekersConfig,
   stakesConfig,
+  type ApproachesConfig,
   type CostsConfig,
   type GoalsConfig,
   type PrizesConfig,

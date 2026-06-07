@@ -1,6 +1,7 @@
 import type { Rng } from '@thrashplay/fw-core'
 
 import type { Approach } from './approaches.js'
+import { approachesConfig } from './config.js'
 import { generateCost } from './costs.js'
 import {
   generateOptionalGoals,
@@ -11,8 +12,8 @@ import {
   type UnknownGoal,
 } from './goals.js'
 import { generatePrize } from './prizes.js'
-import type { ResourceDelta } from './resources.js'
-import { leadFor, pickParty, pickPartyApproach, roster, type Seeker } from './seekers.js'
+import { pickWeighted, type ResourceDelta } from './resources.js'
+import { leadFor, pickParty, roster, type Seeker } from './seekers.js'
 import { generateStake } from './stakes.js'
 
 /**
@@ -88,9 +89,12 @@ const resolveCheck = (rng: Rng): Check => {
   return { roll, target: TARGET, outcome: roll < TARGET ? 'success' : 'failure' }
 }
 
+/** Draw one approach from the weighted table (skewed to adventure-common methods). */
+const pickApproach = (rng: Rng): Approach => pickWeighted(rng, approachesConfig().approachWeights)
+
 /** Resolve a single trial — for now a leaf: one approach, one check, its outcome the trial's. */
 const resolveTrial = (rng: Rng, party: readonly Seeker[]): Trial => {
-  const approach = pickPartyApproach(rng, party)
+  const approach = pickApproach(rng)
   const check = resolveCheck(rng)
   const stake = generateStake(rng, approach)
   const cost = generateCost(approach)

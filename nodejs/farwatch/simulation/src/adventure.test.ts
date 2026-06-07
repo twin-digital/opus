@@ -39,6 +39,18 @@ describe('resolveAdventure', () => {
     }
   })
 
+  it('draws approaches from the weighted table (common methods beat rare ones)', () => {
+    const counts = new Map<string, number>()
+    const rng = createRng(1)
+    for (let i = 0; i < 4000; i++) {
+      for (const trial of resolveAdventure(rng).trials) {
+        counts.set(trial.approach, (counts.get(trial.approach) ?? 0) + 1)
+      }
+    }
+    // combat (weight 8) should clearly outnumber sacrifice (weight 1).
+    expect(counts.get('combat') ?? 0).toBeGreaterThan(counts.get('sacrifice') ?? 0)
+  })
+
   it('is deterministic for a given seed', () => {
     expect(resolveAdventure(createRng(42))).toEqual(resolveAdventure(createRng(42)))
   })
