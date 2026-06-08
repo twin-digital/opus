@@ -21,8 +21,10 @@
         --parch: #d9cca6;
         --parch-2: #d2c49c;
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
-        /* fine GRAYSCALE fractal-noise paper grain — uniform fiber, as a background layer (under text) */
-        --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='140'%20height='140'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.55'/%3E%3C/svg%3E");
+        /* paper textures, all as background layers (under text); --torn is an edge mask */
+        --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.55'/%3E%3C/svg%3E");
+        --laid: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
+        --torn: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='300'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.016'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='7'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3C/filter%3E%3Crect%20x='5'%20y='5'%20width='290'%20height='290'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -40,8 +42,16 @@
       /* worn-paper panels: faint foxing + aged darkening toward the edges; no gloss */
       .anchor, .roster, .dossier, .tray {
         background-color: var(--parch);
-        background-image: var(--grain); background-size: 140px 140px;
+        background-image: var(--grain), var(--laid); background-size: 150px 150px, 220px 150px;
         box-shadow: 0 16px 36px rgba(0,0,0,0.42), inset 0 0 34px rgba(70,50,22,0.13);
+      }
+      /* loose papers get torn edges; the structural strips (anchor/roster/tray) stay clean */
+      .dossier {
+        box-shadow: inset 0 0 34px rgba(70,50,22,0.13);
+        -webkit-mask-image: var(--torn); mask-image: var(--torn);
+        -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+        filter: drop-shadow(0 14px 30px rgba(0,0,0,0.42)) drop-shadow(0 3px 8px rgba(0,0,0,0.38));
       }
       .roster, .tray { background-color: var(--parch-2); }
 
