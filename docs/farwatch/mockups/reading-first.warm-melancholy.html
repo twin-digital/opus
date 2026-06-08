@@ -22,6 +22,8 @@
         --sheet: #d9cca6;       /* duller, worn — a ledger, not an illuminated page */
         --card: #d3c59e;
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        /* fine GRAYSCALE fractal-noise paper grain — uniform fiber, used as a background layer (always under text) */
+        --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='140'%20height='140'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'%20opacity='0.55'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -50,11 +52,9 @@
       .sheet {
         flex: 0 1 34rem; position: relative; background-color: var(--sheet);
         background-image:
-          radial-gradient(circle at 16% 22%, rgba(112,78,36,0.13) 0 1.4%, transparent 3%),
-          radial-gradient(circle at 81% 63%, rgba(112,78,36,0.10) 0 1.1%, transparent 2.4%),
-          radial-gradient(circle at 58% 13%, rgba(92,64,26,0.09) 0 1%, transparent 2%),
-          radial-gradient(circle at 33% 82%, rgba(92,64,26,0.07) 0 0.9%, transparent 1.8%),
+          var(--grain),
           radial-gradient(120% 55% at 50% -10%, rgba(255, 240, 205, 0.28) 0%, rgba(255, 240, 205, 0) 52%);
+        background-size: 140px 140px, auto;
         border-radius: 1px;
         box-shadow: 0 50px 108px rgba(0,0,0,0.5), 0 8px 22px rgba(0,0,0,0.4), inset 0 0 46px rgba(70,50,22,0.16);
         padding: 56px 52px 44px;
@@ -86,7 +86,7 @@
       .slot:not(:empty) { width: 19rem; }
       .pane {
         background-color: var(--card);
-        background-image: radial-gradient(circle at 22% 30%, rgba(110,76,34,0.10) 0 1.6%, transparent 3.2%), radial-gradient(circle at 78% 70%, rgba(92,64,26,0.08) 0 1.2%, transparent 2.6%);
+        background-image: var(--grain); background-size: 140px 140px;
         box-shadow: 0 24px 52px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.38), inset 0 0 30px rgba(70,50,22,0.12);
         padding: 22px 24px 18px; position: relative;
         animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
