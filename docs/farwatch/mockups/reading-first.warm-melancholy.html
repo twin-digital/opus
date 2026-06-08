@@ -18,6 +18,7 @@
         --ink: #2c2012;
         --muted: #897a5d;
         --voice: #4a3a22;
+        --meta: #564b30;       /* small-caps stamps — dark enough to read (~5.4:1), still quiet */
         --gold: #99713a;       /* dim; used sparingly */
         --loss: #7a2f25;
         --rule: #c3b58c;
@@ -79,9 +80,9 @@
       .steward .who { font-style: italic; color: var(--voice); font-size: 1.05rem; text-decoration: none; cursor: pointer; }
       .steward .who:hover { color: var(--gold); }
       /* Meta (small-caps) — the dateline stamp */
-      .when { font-variant: small-caps; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 24px; font-size: 0.96rem; }
+      .when { font-variant: small-caps; letter-spacing: 0.1em; color: var(--meta); margin: 0 0 24px; font-size: 1rem; }
       .charge { margin: 0 0 26px; }
-      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.1em; font-size: 0.94rem; color: var(--muted); margin-bottom: 4px; }
+      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.1em; font-size: 1rem; color: var(--meta); margin-bottom: 4px; }
       .beat { margin: 0 0 22px; font-size: 1.38rem; }
       /* a worn initial, not a gilded one — plain face, faded ink, restrained */
       .beat.first::first-letter { float: left; font-size: 3.3rem; line-height: 0.82; padding: 7px 11px 0 0; color: #6a4a30; font-weight: 600; }
