@@ -32,7 +32,7 @@
     "yaml": "catalog:"
   },
   "devDependencies": {
-    "@commander-js/extra-typings": "^14.0.0",
+    "@commander-js/extra-typings": "^15.0.0",
     "@eslint/js": "catalog:",
     "@pnpm/types": "^1000.6.0",
     "@twin-digital/eslint-config": "workspace:*",
