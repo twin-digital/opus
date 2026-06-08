@@ -26,6 +26,9 @@
         --doc: #e2d1a3; --doc-ink: #2c2012; --doc-meta: #463a22; --doc-voice: #4a3a22; --loss: #7a2f25;
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
         --torn: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='600'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.008'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='12'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3CfeGaussianBlur%20stdDeviation='0.5'/%3E%3C/filter%3E%3Crect%20x='14'%20y='14'%20width='572'%20height='572'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
+        /* handwritten checkbox — an uneven hand-drawn box; an × in the same hand when marked for dispatch */
+        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.09'%20numOctaves='2'%20seed='4'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.8'/%3E%3C/filter%3E%3Crect%20x='3.5'%20y='3.5'%20width='17'%20height='17'%20rx='1'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.5'%20filter='url(%23b)'/%3E%3C/svg%3E");
+        --xmark: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Cfilter%20id='x'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.1'%20numOctaves='2'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.6'/%3E%3C/filter%3E%3Cpath%20d='M6.5,6.5%20L17.5,17.5%20M17.5,6.5%20L6.5,17.5'%20fill='none'%20stroke='%232c2012'%20stroke-width='2'%20stroke-linecap='round'%20filter='url(%23x)'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -48,22 +51,28 @@
       .table, .caption { position: relative; z-index: 1; }
       .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
 
-      /* ── CABINET panels (cool cream, sharp) ── */
-      .anchor, .roster, .tray { background: var(--cab); box-shadow: 0 16px 34px rgba(0,0,0,0.5); }
-      .roster, .tray { background: var(--cab-2); }
-      .anchor { grid-column: 1 / -1; padding: 16px 22px; border-left: 4px solid var(--teal); }
-      .anchor .k { font-variant: small-caps; letter-spacing: 0.14em; font-weight: 500; color: var(--cab-meta); font-size: 0.76rem; }
-      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: var(--cab-ink); }
-      .anchor .hazard { color: var(--teal); }
+      /* ── DOCUMENTS (warm parchment): the charge posting + the roster checklist ── */
+      .anchor, .roster {
+        background-color: var(--doc); background-image: var(--grain); background-size: 150px 150px;
+        color: var(--doc-ink); text-shadow: 0 0 0.7px rgba(48,22,8,0.45);
+        box-shadow: 0 16px 34px rgba(0,0,0,0.5), inset 0 0 34px rgba(70,50,22,0.13);
+      }
+      .anchor { grid-column: 1 / -1; padding: 16px 22px; border-left: 4px solid var(--loss); }
+      .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82rem; }
+      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: var(--doc-ink); }
+      .anchor .hazard { color: var(--loss); }
 
       .roster { padding: 16px 0; align-self: start; }
-      .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; font-size: 0.82rem; color: var(--cab-meta); margin: 0 18px 8px; }
+      .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86rem; color: var(--doc-meta); margin: 0 18px 10px; }
       .roster ul { list-style: none; margin: 0; padding: 0; }
-      .roster li { padding: 9px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--cab-rule); font-size: 1.04rem; color: var(--cab-ink); }
-      .roster li:hover { background: rgba(29,82,76,0.1); }
-      .roster li.in-lane { font-weight: 600; }
-      .roster li .mark { font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.74rem; color: var(--cab-meta); }
-      .roster li.going .mark { color: var(--teal); }
+      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
+      /* handwritten check — marks for dispatch */
+      .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; background: var(--box) center / contain no-repeat; }
+      .roster .box.checked { background-image: var(--xmark), var(--box); }
+      .roster .name { flex: 1; cursor: pointer; }
+      .roster li.in-lane .name { font-weight: 600; }
+      .roster .name:hover { color: #6a4a30; }
+      .roster li .mark { font-style: italic; font-size: 0.8rem; color: var(--doc-meta); }
 
       .lane { display: flex; gap: 16px; align-items: start; min-height: 240px; }
       .lane .empty { color: #8a8d80; font-style: italic; align-self: center; margin: 0 auto; }
@@ -84,14 +93,13 @@
       .dossier h3 { margin: 0; font-size: 1.32rem; font-variant: small-caps; letter-spacing: 0.02em; color: var(--doc-ink); }
       .dossier .bg { margin: 3px 0 12px; color: var(--doc-meta); font-size: 0.92rem; }
       .dossier .said { font-style: italic; color: var(--doc-voice); margin: 0 0 16px; }
-      /* the action is a SYSTEM control, so it stays cabinet-teal even on the warm paper */
-      .dossier .send { font-variant: small-caps; letter-spacing: 0.08em; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--teal); color: var(--teal); background: transparent; padding: 6px 13px; display: inline-block; text-shadow: none; }
-      .dossier.going .send { color: var(--cab); background: var(--teal); border-color: var(--teal); }
+      /* a dossier is now a pure record — marking for dispatch happens in the roster checklist */
       .dossier .drop { position: absolute; top: 12px; right: 14px; color: var(--doc-meta); cursor: pointer; font-size: 0.9rem; }
+      .dossier.going { box-shadow: inset 0 0 34px rgba(70,50,22,0.15), inset 0 0 0 2px rgba(122,47,37,0.55); } /* marked: an oxblood inner edge, clipped to the torn shape */
       .dossier .drop:hover { color: var(--doc-ink); }
 
-      /* ── CABINET tray ── */
-      .tray { grid-column: 1 / -1; padding: 14px 22px; display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--cab-rule); }
+      /* ── CABINET tray (pure UI chrome — the going panel) ── */
+      .tray { grid-column: 1 / -1; padding: 14px 22px; display: flex; align-items: center; gap: 16px; background: var(--cab-2); box-shadow: 0 16px 34px rgba(0,0,0,0.5); border-top: 1px solid var(--cab-rule); }
       .tray .label { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; color: var(--cab-meta); font-size: 0.8rem; }
       .tray .going { font-size: 1.06rem; color: var(--cab-ink); }
       .tray .count { color: var(--cab-meta); margin-left: auto; font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.82rem; }
@@ -125,7 +133,7 @@
       </div>
     </div>
 
-    <p class="caption">Hybrid: cool cabinet (cream + teal/prussian) for the frame — field, roster, anchor, tray; warm parchment dossiers (the authored records) pulled into the lane. Actions stay cabinet-teal even on warm paper.</p>
+    <p class="caption">Documents are warm parchment — the charge posting, the dossiers, and the roster (a checklist for <em>this</em> dispatch, with handwritten marks). The room and the going-tray are cool UI chrome. Click a name to open its dossier; mark the box to send.</p>
 
     <script>
       (function () {
@@ -161,9 +169,13 @@
           rosterEl.innerHTML = '';
           SEEKERS.forEach((s) => {
             const li = document.createElement('li');
-            li.className = (lane.includes(s.id) ? 'in-lane ' : '') + (party.has(s.id) ? 'going' : '');
-            li.innerHTML = '<span>' + s.name + '</span><span class="mark">' + (party.has(s.id) ? '✓ going' : (lane.includes(s.id) ? 'laid in' : '')) + '</span>';
-            li.addEventListener('click', () => layIn(s.id));
+            li.className = lane.includes(s.id) ? 'in-lane' : '';
+            li.innerHTML =
+              '<span class="box' + (party.has(s.id) ? ' checked' : '') + '" title="mark for dispatch"></span>' +
+              '<span class="name" title="open the dossier">' + s.name + '</span>' +
+              '<span class="mark">' + (lane.includes(s.id) ? 'laid in' : '') + '</span>';
+            li.querySelector('.box').addEventListener('click', () => toggleParty(s.id));
+            li.querySelector('.name').addEventListener('click', () => layIn(s.id));
             rosterEl.appendChild(li);
           });
           laneEl.innerHTML = '';
@@ -178,10 +190,8 @@
                 '<span class="drop" title="set aside">✕</span>' +
                 '<h3>' + s.name + '</h3>' +
                 '<p class="bg">' + s.bg + '</p>' +
-                '<p class="said">' + s.said + '</p>' +
-                '<span class="send">' + (party.has(id) ? '✓ going' : 'send with the party') + '</span>';
+                '<p class="said">' + s.said + '</p>';
               card.querySelector('.drop').addEventListener('click', () => layIn(id));
-              card.querySelector('.send').addEventListener('click', () => toggleParty(id));
               laneEl.appendChild(card);
             });
           }
