@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Farwatch — Compare-table (party-building) — starker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
     <style>
       /* ── COLLECTION · compare-table grammar — mood: STARKER (high-contrast, reductive, heavy rules,
          large type, one oxblood accent, a light field). ── */
@@ -16,8 +19,10 @@
         --rule: #15130e;
         --panel: #f3efe4;
         --panel-2: #ece7d8;
-        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+        --display: "Playfair Display", Georgia, serif;
       }
+      .anchor .charge, .dossier h3 { font-family: var(--display); }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {

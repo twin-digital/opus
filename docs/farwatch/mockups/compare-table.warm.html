@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Farwatch — Compare-table (party-building) — warm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
     <style>
       /* ── COLLECTION · compare-table grammar (the "deciding/working" mode) ──
          Papers laid out on the desk: an ANCHOR (the charge you weigh against), a ROSTER rail you draw
@@ -20,12 +23,14 @@
         --rule: #cdb98e;
         --parch: #e7d4a4;
         --parch-2: #e1cb98;
-        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --display: "Cormorant Garamond", "EB Garamond", Georgia, serif;
       }
+      .anchor .charge, .dossier h3 { font-family: var(--display); }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {
-        font-family: var(--serif); color: var(--ink); line-height: 1.6;
+        font-family: var(--serif); color: var(--ink); line-height: 1.55; font-size: 18px;
         -webkit-font-smoothing: antialiased; padding: 5vh 24px 14vh;
         background:
           radial-gradient(130% 90% at 50% -8%, #5c4222 0%, #2e2114 38%, #190f06 72%, #120b05 100%),

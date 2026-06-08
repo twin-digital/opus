@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Farwatch — Document (reading) — warm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
     <style>
       /* ── DOCUMENT grammar (the "reading" mode), current model ──
          A primary sheet (the chronicle) with bounded secondary SLOTS beside it. A fact named in the prose
@@ -20,12 +23,15 @@
         --rule: #cdb98e;
         --sheet: #e8d6ad;
         --card: #e4d09f;
-        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --display: "Cormorant Garamond", "EB Garamond", Georgia, serif;
       }
+      .charge .label, .pane h3, .pane .tri h4 { font-family: var(--display); }
+      .beat.first::first-letter { font-family: var(--display); }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {
-        font-family: var(--serif); color: var(--ink); line-height: 1.78;
+        font-family: var(--serif); color: var(--ink); line-height: 1.72; font-size: 18px;
         -webkit-font-smoothing: antialiased; padding: 8vh 24px 16vh;
         background:
           radial-gradient(120% 80% at 50% -6%, #5c4222 0%, #2e2114 36%, #190f06 70%, #120b05 100%),
