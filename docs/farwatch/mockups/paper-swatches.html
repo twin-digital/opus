@@ -3,73 +3,87 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — paper-color swatches (warm-melancholy)</title>
+    <title>Farwatch — paper & palette swatches</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
     <style>
-      /* Pick the warm-melancholy paper tone: same text + grain on each, only the paper colour varies.
-         Current is #d9cca6; the rest warm and/or brighten it. */
+      /* Same text + grain on every swatch; each carries its own palette (set inline per .sheet), so you can
+         judge body ink, the voice italic, the small-caps stamp, oxblood, and gold all at once. */
       :root {
-        --ink: #2c2012;
-        --meta: #463a22;
-        --voice: #4a3a22;
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; }
       body {
-        font-family: var(--serif); color: #b9ab85; -webkit-font-smoothing: antialiased; padding: 5vh 4vw 12vh;
+        font-family: var(--serif); color: #c0b189; -webkit-font-smoothing: antialiased; padding: 5vh 4vw 12vh;
         background: radial-gradient(95% 65% at 50% 4%, #54401f 0%, #3c2f1b 45%, #2f2617 100%), #2a2215;
         background-attachment: fixed;
       }
-      h1 { font-size: 1.1rem; font-weight: 500; margin: 0 0 4px; color: #cdbf95; }
-      .sub { margin: 0 0 28px; font-style: italic; color: #8f815f; font-size: 0.95rem; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 28px; }
-      .cell .tag { font-size: 0.8rem; letter-spacing: 0.04em; color: #9a8c66; margin: 0 0 8px; }
-      .cell .tag b { color: #d6c89c; font-weight: 500; }
+      h1 { font-size: 1.1rem; font-weight: 500; margin: 0 0 4px; color: #d8ca9e; }
+      .sub { margin: 0 0 28px; font-style: italic; color: #9a8c66; font-size: 0.95rem; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; }
+      .cell .tag { font-size: 0.8rem; letter-spacing: 0.03em; color: #a3956d; margin: 0 0 8px; }
+      .cell .tag b { color: #e0d2a6; font-weight: 500; }
+      /* the wildcard gets a neutral, cool dark mat — its surround loses the warmth */
+      .cell.wild { background: #1b1c1d; padding: 16px; border-radius: 2px; }
+      .cell.wild .tag { color: #8c9396; }
+      .cell.wild .tag b { color: #cfd6d8; }
+
       .sheet {
         position: relative; color: var(--ink); padding: 30px 32px 28px; border-radius: 1px;
         background-image: var(--grain); background-size: 150px 150px;
         box-shadow: 0 22px 44px rgba(0,0,0,0.5), inset 0 0 40px rgba(70,50,22,0.14);
         text-shadow: 0 0 0.7px rgba(48, 22, 8, 0.5);
-        font-size: 18px; line-height: 1.66;
+        font-size: 18px; line-height: 1.62;
       }
+      .cell.wild .sheet { text-shadow: none; box-shadow: 0 18px 38px rgba(0,0,0,0.55); } /* sharper ink */
+
       .sheet .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--meta); font-size: 0.95rem; margin: 0 0 16px; }
       .sheet .h { color: var(--ink); font-size: 1.04rem; margin: 0 0 12px; border-bottom: 1.5px solid var(--ink); display: inline-block; padding-bottom: 3px; }
-      .sheet p { margin: 0 0 12px; }
-      .sheet p:last-child { margin: 0; }
-      .sheet .sig { font-style: italic; color: var(--voice); }
+      .sheet p { margin: 0 0 11px; }
+      .sheet .loss { color: var(--loss); }
+      .sheet .struck { text-decoration: line-through; text-decoration-color: var(--loss); }
+      .sheet .ctl { color: inherit; border-bottom: 1px dotted var(--gold); }
+      .sheet .turn { font-variant: small-caps; letter-spacing: 0.12em; color: var(--gold); font-size: 0.95rem; margin: 8px 0 12px; }
+      .sheet .sig { font-style: italic; color: var(--voice); margin: 0; }
     </style>
   </head>
   <body>
-    <h1>Paper colour — warm-melancholy</h1>
-    <p class="sub">Same ink, grain, and text on every swatch; only the paper tone changes. Warmer and a touch brighter, around the current #d9cca6.</p>
+    <h1>Paper &amp; palette swatches</h1>
+    <p class="sub">Same text + grain on each. Every role colour is shown: body ink, the <em>voice</em> italic, the small-caps stamp, the oxblood (loss), and the gold (control). Last one is a wildcard with its own palette.</p>
     <div class="grid" id="grid"></div>
 
     <script>
+      const DEF = { ink: '#2c2012', meta: '#463a22', voice: '#4a3a22', loss: '#7a2f25', gold: '#99713a' };
       const PAPERS = [
-        ['#d9cca6', 'current'],
-        ['#dfd0a8', 'a little brighter'],
-        ['#e2d1a3', 'warmer + brighter'],
-        ['#e5d1a0', 'warmer, more amber'],
-        ['#e3cb97', 'warm amber'],
-        ['#e8d6a4', 'bright warm'],
+        { sheet: '#d9cca6', name: 'current' },
+        { sheet: '#dfd0a8', name: 'a little brighter' },
+        { sheet: '#e2d1a3', name: 'warmer + brighter' },
+        { sheet: '#e5d1a0', name: 'warmer, more amber' },
+        { sheet: '#e3cb97', name: 'warm amber' },
+        { sheet: '#e8d6a4', name: 'bright warm' },
+        {
+          sheet: '#ece6d2', name: 'WILDCARD — cream, cool, teal accent · a cabinet/ledger, not a letter',
+          ink: '#201f18', meta: '#3a3a30', voice: '#34332a', loss: '#1d524c', gold: '#27566a', mat: true,
+        },
       ];
+      const TEXT =
+        '<p class="when">Farwatch · at the turn of the season</p>' +
+        '<p class="h">What you sent them to do</p>' +
+        '<p>They came to the barrow-door at dusk — <span class="ctl">to the keeping of the lamp</span>.</p>' +
+        '<p>The strongbox came home heavier, though <span class="loss">the lien falls due at first snow</span>.</p>' +
+        '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
+        '<p class="turn">turn the page ❯</p>' +
+        '<p class="sig">— the steward</p>';
       const grid = document.getElementById('grid');
-      PAPERS.forEach(([hex, name]) => {
+      PAPERS.forEach((o) => {
+        const p = Object.assign({}, DEF, o);
         const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.innerHTML =
-          '<p class="tag"><b>' + hex + '</b> · ' + name + '</p>' +
-          '<div class="sheet" style="background-color:' + hex + '">' +
-          '<p class="when">Farwatch · at the turn of the season</p>' +
-          '<p class="h">What you sent them to do</p>' +
-          '<p>They came to the barrow-door at dusk, where the stone stayed dry though the fields about it lay under early white.</p>' +
-          '<p>Mirela came home. Odric did not — the vault kept him, as he had always feared it might.</p>' +
-          '<p class="sig">— the steward</p>' +
-          '</div>';
+        cell.className = 'cell' + (p.mat ? ' wild' : '');
+        const vars = '--ink:' + p.ink + ';--meta:' + p.meta + ';--voice:' + p.voice + ';--loss:' + p.loss + ';--gold:' + p.gold + ';background-color:' + p.sheet;
+        cell.innerHTML = '<p class="tag"><b>' + p.sheet + '</b> · ' + p.name + '</p><div class="sheet" style="' + vars + '">' + TEXT + '</div>';
         grid.appendChild(cell);
       });
     </script>
