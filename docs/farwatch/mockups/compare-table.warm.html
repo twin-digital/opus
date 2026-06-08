@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — Compare-table (party-building) — warm</title>
+    <title>Farwatch — Compare-table (party-building) — warm (lighter, larger)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -29,12 +29,13 @@
       .anchor .charge, .dossier h3 { font-family: var(--display); }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
+      html { font-size: 19px; }
       body {
-        font-family: var(--serif); color: var(--ink); line-height: 1.55; font-size: 18px;
+        font-family: var(--serif); color: var(--ink); line-height: 1.5; font-size: 1.05rem;
         -webkit-font-smoothing: antialiased; padding: 5vh 24px 14vh;
         background:
-          radial-gradient(130% 90% at 50% -8%, #5c4222 0%, #2e2114 38%, #190f06 72%, #120b05 100%),
-          #120b05;
+          radial-gradient(130% 90% at 50% -8%, #6f5229 0%, #483521 38%, #372819 72%, #2b2013 100%),
+          #2b2013;
         background-attachment: fixed;
       }
       .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 200px 1fr; gap: 20px; }
@@ -42,16 +43,16 @@
       /* anchor — the charge you weigh against (task-parked, gone on seal) */
       .anchor {
         grid-column: 1 / -1; background: var(--parch);
-        box-shadow: 0 22px 50px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.4);
+        box-shadow: 0 22px 50px rgba(0,0,0,0.32), 0 4px 12px rgba(0,0,0,0.4);
         padding: 16px 22px; border-left: 4px solid var(--loss);
       }
       .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--muted); font-size: 0.74rem; }
-      .anchor .charge { font-size: 1.2rem; margin: 2px 0 0; }
+      .anchor .charge { font-size: 1.5rem; margin: 2px 0 0; }
       .anchor .hazard { color: var(--loss); }
 
       /* roster rail — the pool you draw from */
       .roster {
-        background: var(--parch-2); box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+        background: var(--parch-2); box-shadow: 0 18px 40px rgba(0,0,0,0.3);
         padding: 16px 0; align-self: start;
       }
       .roster h2 { font-variant: small-caps; letter-spacing: 0.1em; font-size: 0.8rem; color: var(--muted); margin: 0 18px 8px; }
@@ -70,13 +71,13 @@
       .lane .empty { color: #b7a06f; font-style: italic; align-self: center; margin: 0 auto; }
       .dossier {
         flex: 1 1 0; min-width: 0; background: var(--parch);
-        box-shadow: 0 20px 46px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.4);
+        box-shadow: 0 20px 46px rgba(0,0,0,0.32), 0 4px 10px rgba(0,0,0,0.4);
         padding: 18px 20px 16px; position: relative;
         animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both; /* per-pane coalesce; field never dims */
       }
       @keyframes lay-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
       @media (prefers-reduced-motion: reduce) { .dossier { animation: none; } }
-      .dossier h3 { margin: 0; font-size: 1.16rem; font-variant: small-caps; letter-spacing: 0.03em; }
+      .dossier h3 { margin: 0; font-size: 1.34rem; font-variant: small-caps; letter-spacing: 0.03em; }
       .dossier .bg { margin: 2px 0 12px; color: #6a5330; font-size: 0.9rem; }
       .dossier .said { font-style: italic; color: #5a4628; margin: 0 0 16px; }
       .dossier .send {

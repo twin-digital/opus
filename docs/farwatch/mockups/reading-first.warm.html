@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — Document (reading) — warm</title>
+    <title>Farwatch — Document (reading) — warm (lighter darks)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -14,7 +14,7 @@
          primary NEVER dims/blurs/scales (only the docking pane animates: per-pane coalesce). The rest of the
          missive pile recedes to a DIMMED EDGE at the margin — content-stripped, a wayfinding remnant, not a
          pane competing for focus (it doesn't count toward the ~2-slot bound).
-         Mood: warm-dark — a lit sheet on a walnut desk. ── */
+         Mood: warm-dark — a lit sheet on a lighter walnut desk. ── */
       :root {
         --ink: #352714;
         --muted: #8a7350;
@@ -34,8 +34,8 @@
         font-family: var(--serif); color: var(--ink); line-height: 1.72; font-size: 18px;
         -webkit-font-smoothing: antialiased; padding: 8vh 24px 16vh;
         background:
-          radial-gradient(120% 80% at 50% -6%, #5c4222 0%, #2e2114 36%, #190f06 70%, #120b05 100%),
-          #120b05;
+          radial-gradient(120% 80% at 50% -6%, #6f5229 0%, #483521 36%, #372819 70%, #2b2013 100%),
+          #2b2013;
         background-attachment: fixed;
       }
       .turn-toggle { position: absolute; opacity: 0; pointer-events: none; }
@@ -55,7 +55,7 @@
       .sheet {
         flex: 0 1 34rem; position: relative; background: var(--sheet);
         background-image: radial-gradient(120% 60% at 50% -10%, rgba(255, 246, 220, 0.6) 0%, rgba(255, 246, 220, 0) 50%);
-        border-radius: 2px; box-shadow: 0 60px 120px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
+        border-radius: 2px; box-shadow: 0 60px 120px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.32);
         padding: 56px 52px 44px;
       }
       .steward { margin: 0 0 28px; font-style: italic; color: #6a5330; font-size: 1.02rem; }
@@ -84,7 +84,7 @@
       .slot { flex: 0 0 auto; display: flex; flex-direction: column; gap: 14px; width: 0; }
       .slot:not(:empty) { width: 19rem; }
       .pane {
-        background: var(--card); box-shadow: 0 26px 56px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.4);
+        background: var(--card); box-shadow: 0 26px 56px rgba(0,0,0,0.32), 0 4px 10px rgba(0,0,0,0.4);
         padding: 22px 24px 18px; position: relative;
         animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
