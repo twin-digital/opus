@@ -6,7 +6,7 @@
     <title>Farwatch — Document (reading) — warm-melancholy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
     <style>
       /* ── DOCUMENT grammar — mood: WARM-MELANCHOLY ──
          "A candle in a cold room, not a hearth." Worn-ledger paper (duller, foxed) instead of gilt
@@ -46,7 +46,7 @@
       }
       .turn-toggle { position: absolute; opacity: 0; pointer-events: none; }
 
-      .reader { max-width: 62rem; margin: 0 auto; }
+      .reader { max-width: 78rem; margin: 0 auto; }
       .panes { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
 
       .pile-edge {
@@ -58,7 +58,7 @@
 
       /* worn paper: a dim glow, faint foxing, and an aged darkening toward the edges */
       .sheet {
-        flex: 0 1 34rem; position: relative; background-color: var(--sheet);
+        flex: 0 1 42.5rem; position: relative; background-color: var(--sheet);
         background-image:
           var(--grain), var(--laid),
           radial-gradient(120% 55% at 50% -10%, rgba(255, 240, 205, 0.28) 0%, rgba(255, 240, 205, 0) 52%);
@@ -76,7 +76,7 @@
       .when { letter-spacing: 0.08em; color: var(--muted); margin: 0 0 24px; font-size: 0.9rem; font-style: italic; }
       .charge { margin: 0 0 26px; }
       .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
-      .beat { margin: 0 0 22px; font-size: 1.28rem; }
+      .beat { margin: 0 0 22px; font-size: 1.28rem; font-weight: 700; }
       /* a worn initial, not a gilded one — plain face, faded ink, restrained */
       .beat.first::first-letter { float: left; font-size: 3.3rem; line-height: 0.82; padding: 7px 11px 0 0; color: #6a4a30; font-weight: 600; }
 
@@ -88,7 +88,7 @@
       .turn-toggle:checked ~ .reader .tease { display: none; }
       .turn-toggle:checked ~ .reader .turn-label { display: none; }
       .tease { margin: 26px 0 22px; color: #6b3a2c; font-style: italic; }
-      .reckoning p { margin: 0 0 18px; font-size: 1.22rem; }
+      .reckoning p { margin: 0 0 18px; font-size: 1.22rem; font-weight: 700; }
       .reckoning .struck { text-decoration: line-through; text-decoration-color: var(--loss); color: #715d3f; }
       .turn-label { display: block; text-align: center; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--rule); font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
       .turn-label:hover { color: var(--gold); }
