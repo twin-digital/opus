@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — Document (reading) — warm-melancholy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+    <style>
+      /* ── DOCUMENT grammar — mood: WARM-MELANCHOLY ──
+         "A candle in a cold room, not a hearth." Worn-ledger paper (duller, foxed) instead of gilt
+         parchment; faded sepia ink; candle-gold dialed down and used sparingly; the warmth a tight pool
+         against a COLD neutral dark, not an all-over glow. No manuscript flourish (plain Garamond) — found
+         and used, not precious. The loss carries the weight. ── */
+      :root {
+        --ink: #41331f;
+        --muted: #897a5d;
+        --gold: #99713a;       /* dim; used sparingly */
+        --loss: #7a2f25;
+        --rule: #c3b58c;
+        --sheet: #d9cca6;       /* duller, worn — a ledger, not an illuminated page */
+        --card: #d3c59e;
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: var(--serif); color: var(--ink); line-height: 1.74; font-size: 18px;
+        -webkit-font-smoothing: antialiased; padding: 8vh 24px 16vh;
+        /* a tight, dim candle-pool over a COLD neutral dark — the cold room */
+        background:
+          radial-gradient(82% 52% at 50% 8%, #4a3720 0%, #2a2620 42%, #1a1a1c 100%),
+          #181819;
+        background-attachment: fixed;
+      }
+      .turn-toggle { position: absolute; opacity: 0; pointer-events: none; }
+
+      .reader { max-width: 62rem; margin: 0 auto; }
+      .panes { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
+
+      .pile-edge {
+        flex: 0 0 18px; align-self: stretch; margin-top: 64px; cursor: pointer; opacity: 0.38;
+        background: repeating-linear-gradient(180deg, var(--sheet) 0 3px, transparent 3px 9px);
+        border-radius: 2px 0 0 2px; transition: opacity 0.2s;
+      }
+      .pile-edge:hover { opacity: 0.62; }
+
+      /* worn paper: a dim glow, faint foxing, and an aged darkening toward the edges */
+      .sheet {
+        flex: 0 1 34rem; position: relative; background-color: var(--sheet);
+        background-image:
+          radial-gradient(circle at 16% 22%, rgba(112,78,36,0.13) 0 1.4%, transparent 3%),
+          radial-gradient(circle at 81% 63%, rgba(112,78,36,0.10) 0 1.1%, transparent 2.4%),
+          radial-gradient(circle at 58% 13%, rgba(92,64,26,0.09) 0 1%, transparent 2%),
+          radial-gradient(circle at 33% 82%, rgba(92,64,26,0.07) 0 0.9%, transparent 1.8%),
+          radial-gradient(120% 55% at 50% -10%, rgba(255, 240, 205, 0.28) 0%, rgba(255, 240, 205, 0) 52%);
+        border-radius: 1px;
+        box-shadow: 0 50px 108px rgba(0,0,0,0.5), 0 8px 22px rgba(0,0,0,0.4), inset 0 0 46px rgba(70,50,22,0.16);
+        padding: 56px 52px 44px;
+      }
+      .steward { margin: 0 0 28px; font-style: italic; color: #5f4e34; font-size: 1.02rem; }
+      .steward .who { font-style: normal; color: var(--muted); font-size: 0.82rem; text-decoration: none; border-bottom: 1px dotted var(--muted); cursor: pointer; }
+      .steward .who:hover { color: var(--gold); border-bottom-color: var(--gold); }
+      .when { letter-spacing: 0.08em; color: var(--muted); margin: 0 0 24px; font-size: 0.9rem; font-style: italic; }
+      .charge { margin: 0 0 26px; }
+      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+      .beat { margin: 0 0 22px; font-size: 1.14rem; }
+      /* a worn initial, not a gilded one — plain face, faded ink, restrained */
+      .beat.first::first-letter { float: left; font-size: 3.3rem; line-height: 0.82; padding: 7px 11px 0 0; color: #6a4a30; font-weight: 600; }
+
+      .fact { color: inherit; text-decoration: none; border-bottom: 1px dotted #9a7a48; cursor: pointer; }
+      .fact:hover { border-bottom-style: solid; border-bottom-color: var(--gold); }
+
+      .reckoning { display: none; }
+      .turn-toggle:checked ~ .reader .reckoning { display: block; }
+      .turn-toggle:checked ~ .reader .tease { display: none; }
+      .turn-toggle:checked ~ .reader .turn-label { display: none; }
+      .tease { margin: 26px 0 22px; color: #6b3a2c; font-style: italic; }
+      .reckoning p { margin: 0 0 18px; font-size: 1.1rem; }
+      .reckoning .struck { text-decoration: line-through; text-decoration-color: var(--loss); color: #715d3f; }
+      .turn-label { display: block; text-align: center; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--rule); font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
+      .turn-label:hover { color: var(--gold); }
+
+      .slot { flex: 0 0 auto; display: flex; flex-direction: column; gap: 14px; width: 0; }
+      .slot:not(:empty) { width: 19rem; }
+      .pane {
+        background-color: var(--card);
+        background-image: radial-gradient(circle at 22% 30%, rgba(110,76,34,0.10) 0 1.6%, transparent 3.2%), radial-gradient(circle at 78% 70%, rgba(92,64,26,0.08) 0 1.2%, transparent 2.6%);
+        box-shadow: 0 24px 52px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.38), inset 0 0 30px rgba(70,50,22,0.12);
+        padding: 22px 24px 18px; position: relative;
+        animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+      @keyframes lay-in { from { opacity: 0; transform: translateX(-10px) scale(0.94); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .pane { animation: none; } }
+      .pane h3 { margin: 0 0 2px; font-size: 1.02rem; font-variant: small-caps; letter-spacing: 0.05em; }
+      .pane .keeper { margin: 0 0 14px; color: var(--muted); font-style: italic; font-size: 0.82rem; }
+      .pane ul { list-style: none; margin: 0; padding: 0; }
+      .pane li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #c0b184; font-size: 0.92rem; }
+      .pane li:last-of-type { border-bottom: none; }
+      .pane li .v { color: #56462a; }
+      .pane li.lien .v { color: var(--loss); }
+      .pane p.body { margin: 0; font-size: 0.98rem; }
+      .pane .wax { position: absolute; right: 14px; bottom: 12px; width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #7e2f22, #5a2016); opacity: 0.92; }
+      .pane .let-lie { display: inline-block; margin-top: 14px; font-style: italic; color: var(--muted); font-size: 0.82rem; cursor: pointer; border-bottom: 1px dotted var(--muted); }
+      .pane .let-lie:hover { color: var(--ink); }
+      .pane .tri { margin: 0 0 12px; }
+      .pane .tri:last-of-type { margin-bottom: 0; }
+      .pane .tri h4 { margin: 0; font-variant: small-caps; letter-spacing: 0.05em; font-size: 0.84rem; color: #57462b; }
+      .pane .tri p { margin: 1px 0 0; font-size: 0.9rem; }
+
+      .caption { max-width: 62rem; margin: 26px auto 0; color: #8a7a5a; font-size: 0.8rem; font-style: italic; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <input type="checkbox" id="turn" class="turn-toggle" />
+
+    <div class="reader">
+      <div class="panes">
+        <div class="pile-edge" title="the rest of the pile — set aside"></div>
+
+        <article class="sheet">
+          <p class="steward">“You have been away some time, my lord. Word came back from the barrow.” <a class="who" data-fact="facts">— the steward</a></p>
+          <p class="when">Farwatch · at the turn of the season</p>
+          <p class="charge"><span class="label">What you sent them to do</span> Open the barrow no frost would touch, and bring back what slept inside — <a class="fact" data-fact="writ">to the keeping of the lamp</a>.</p>
+
+          <p class="beat first">They came to the barrow-door at dusk, where the stone stayed dry though <a class="fact" data-fact="almanac">the fields about it lay under early white</a>. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>
+          <p class="beat">Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>
+
+          <p class="tease">What it cost, and who came home, waits on the turning of the page.</p>
+          <div class="reckoning">
+            <p>They brought back the sleeper’s circlet, and <a class="fact" data-fact="ledger">the strongbox came home heavier</a> for it — though the lien still falls due at first snow, and it will not cover that.</p>
+            <p>Mirela came home. <span class="struck">Odric did not</span> — the vault kept him, as he had always feared it might.</p>
+          </div>
+
+          <label class="turn-label" for="turn">turn the page ❯</label>
+        </article>
+
+        <div class="slot" id="slot"></div>
+      </div>
+    </div>
+
+    <p class="caption">Warm-melancholy: worn-ledger paper (duller, foxed) on a cold dark; faded ink; gold dialed down; no manuscript flourish. The same Document grammar — a fact docks beside, the sheet never moves, the pile is a dimmed edge.</p>
+
+    <script>
+      (function () {
+        const FACTS = {
+          ledger: { kind: 'list', title: 'the ledger', keeper: 'in the quartermaster’s hand, by the last count',
+            items: [['coin', 'two hundred, more or less', false], ['the sleeper’s circlet', 'unpriced', false], ['a lien, to the chandlers', 'due at first snow', true]] },
+          almanac: { kind: 'body', title: 'the almanac', keeper: 'kept against the season',
+            body: 'Spring, the third week. The lien falls due at first snow — some weeks yet, and fewer than you would like.' },
+          writ: { kind: 'writ', title: 'the writ', keeper: 'sealed, older than anyone living', body: 'Keep the lamp lit at Farwatch.' },
+          facts: { kind: 'tri', title: 'what is always true', keeper: 'the steward sets them before you', tri: [
+            ['the writ', 'Keep the lamp lit at Farwatch.'], ['the ledger', 'two hundred coin · a lien at first snow'], ['the almanac', 'Spring, the third week.'] ] },
+        };
+        const SLOT_MAX = 2;
+        const slotEl = document.getElementById('slot');
+        let slot = [];
+
+        function dock(id) {
+          if (!FACTS[id]) return;
+          if (slot.includes(id)) { slot = slot.filter((x) => x !== id); render(); return; }
+          slot.push(id);
+          if (slot.length > SLOT_MAX) slot.shift();
+          render();
+        }
+        function paneHTML(id) {
+          const f = FACTS[id];
+          let inner = '<h3>' + f.title + '</h3><p class="keeper">' + f.keeper + '</p>';
+          if (f.kind === 'list') inner += '<ul>' + f.items.map((i) => '<li class="' + (i[2] ? 'lien' : '') + '"><span>' + i[0] + '</span><span class="v">' + i[1] + '</span></li>').join('') + '</ul>';
+          else if (f.kind === 'tri') inner += f.tri.map((t) => '<div class="tri"><h4>' + t[0] + '</h4><p>' + t[1] + '</p></div>').join('');
+          else inner += '<p class="body">' + f.body + '</p>' + (f.kind === 'writ' ? '<span class="wax"></span>' : '');
+          inner += '<span class="let-lie">let it lie</span>';
+          return inner;
+        }
+        function render() {
+          slotEl.innerHTML = '';
+          slot.forEach((id) => {
+            const el = document.createElement('div');
+            el.className = 'pane';
+            el.innerHTML = paneHTML(id);
+            el.querySelector('.let-lie').addEventListener('click', () => dock(id));
+            slotEl.appendChild(el);
+          });
+        }
+        document.querySelectorAll('[data-fact]').forEach((a) => {
+          a.addEventListener('click', (e) => { e.preventDefault(); dock(a.getAttribute('data-fact')); });
+        });
+        render();
+      })();
+    </script>
+  </body>
+</html>
