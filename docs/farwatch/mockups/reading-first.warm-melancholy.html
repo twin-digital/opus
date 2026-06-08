@@ -25,6 +25,8 @@
         --sheet: #d9cca6;       /* duller, worn — a ledger, not an illuminated page */
         --card: #d3c59e;
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        /* a hand-drawn (irregular) ink underline — for written headers, like a pen stroke under a heading */
+        --underline: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='12'%20preserveAspectRatio='none'%3E%3Cfilter%20id='u'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.05'%20numOctaves='2'%20seed='3'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='3'/%3E%3C/filter%3E%3Cpath%20d='M3,7%20L237,6'%20stroke='%232c2012'%20stroke-width='2'%20fill='none'%20stroke-linecap='round'%20filter='url(%23u)'/%3E%3C/svg%3E");
         /* paper textures, all as background layers (under text); --torn is an edge mask */
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.55'/%3E%3C/svg%3E");
         --laid: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
@@ -82,7 +84,11 @@
       /* Meta (small-caps) — the dateline stamp */
       .when { font-variant: small-caps; letter-spacing: 0.1em; color: var(--meta); margin: 0 0 24px; font-size: 1rem; }
       .charge { margin: 0 0 26px; }
-      .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.1em; font-size: 1rem; color: var(--meta); margin-bottom: 4px; }
+      /* Header — a written heading in the same ink, hand-underlined (not a printed small-caps tag) */
+      .charge .label {
+        display: inline-block; color: var(--ink); font-size: 1.12rem; margin-bottom: 12px;
+        background: var(--underline) left bottom / 100% 7px no-repeat; padding-bottom: 9px;
+      }
       .beat { margin: 0 0 22px; font-size: 1.38rem; }
       /* a worn initial, not a gilded one — plain face, faded ink, restrained */
       .beat.first::first-letter { float: left; font-size: 3.3rem; line-height: 0.82; padding: 7px 11px 0 0; color: #6a4a30; font-weight: 600; }
