@@ -3,13 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — Reading-first — warm</title>
+    <title>Farwatch — Document (reading) — warm</title>
     <style>
-      /* ── READING-FIRST: one column, the letter is the screen. No nav rail, no parked facts.
-         Facts surface two ways: the PROSE is the index (a named phrase raises that fact), and ONE
-         steward-held door raises the standing facts as a small stack. Summoned facts are hand-laid
-         paper — askew, shadowed, in a keeper's hand — never a centered app dialog.
-         Mood: warm-dark — a lit sheet on a walnut desk, the regard's apprehension. ── */
+      /* ── DOCUMENT grammar (the "reading" mode), current model ──
+         A primary sheet (the chronicle) with bounded secondary SLOTS beside it. A fact named in the prose
+         (or handed by the steward) DOCKS BESIDE as a content pane — never popped over, never a swap, and the
+         primary NEVER dims/blurs/scales (only the docking pane animates: per-pane coalesce). The rest of the
+         missive pile recedes to a DIMMED EDGE at the margin — content-stripped, a wayfinding remnant, not a
+         pane competing for focus (it doesn't count toward the ~2-slot bound).
+         Mood: warm-dark — a lit sheet on a walnut desk. ── */
       :root {
         --ink: #352714;
         --muted: #8a7350;
@@ -17,235 +19,166 @@
         --loss: #7a2b20;
         --rule: #cdb98e;
         --sheet: #e8d6ad;
-        --card: #e6d2a0;
+        --card: #e4d09f;
         --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {
-        font-family: var(--serif);
-        color: var(--ink);
-        line-height: 1.78;
-        -webkit-font-smoothing: antialiased;
-        padding: 8vh 24px 16vh;
+        font-family: var(--serif); color: var(--ink); line-height: 1.78;
+        -webkit-font-smoothing: antialiased; padding: 8vh 24px 16vh;
         background:
           radial-gradient(120% 80% at 50% -6%, #5c4222 0%, #2e2114 36%, #190f06 70%, #120b05 100%),
           #120b05;
         background-attachment: fixed;
       }
+      .turn-toggle { position: absolute; opacity: 0; pointer-events: none; }
 
-      /* the sheet — a single column of light */
+      .reader { max-width: 62rem; margin: 0 auto; }
+      .panes { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
+
+      /* the receded missive pile — a DIMMED EDGE (content stripped), not a content pane */
+      .pile-edge {
+        flex: 0 0 18px; align-self: stretch; margin-top: 64px; cursor: pointer; opacity: 0.42;
+        background: repeating-linear-gradient(180deg, var(--sheet) 0 3px, transparent 3px 9px);
+        border-radius: 2px 0 0 2px; transition: opacity 0.2s;
+      }
+      .pile-edge:hover { opacity: 0.7; }
+
+      /* the primary — a single column of light; it never moves when a fact docks */
       .sheet {
-        max-width: 38rem; margin: 0 auto; position: relative;
-        background: var(--sheet);
+        flex: 0 1 34rem; position: relative; background: var(--sheet);
         background-image: radial-gradient(120% 60% at 50% -10%, rgba(255, 246, 220, 0.6) 0%, rgba(255, 246, 220, 0) 50%);
-        border-radius: 2px;
-        box-shadow: 0 60px 120px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
-        padding: 64px 60px 48px;
+        border-radius: 2px; box-shadow: 0 60px 120px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
+        padding: 56px 52px 44px;
       }
-
-      .steward { margin: 0 0 30px; font-style: italic; color: #6a5330; font-size: 1.02rem; }
-      /* the steward's signature is the ONE door to the standing facts */
-      .steward .who {
-        font-style: normal; color: var(--muted); font-size: 0.82rem;
-        text-decoration: none; border-bottom: 1px dotted var(--muted); cursor: pointer;
-      }
+      .steward { margin: 0 0 28px; font-style: italic; color: #6a5330; font-size: 1.02rem; }
+      .steward .who { font-style: normal; color: var(--muted); font-size: 0.82rem; text-decoration: none; border-bottom: 1px dotted var(--muted); cursor: pointer; }
       .steward .who:hover { color: var(--gold); border-bottom-color: var(--gold); }
-
-      .when { letter-spacing: 0.08em; color: var(--muted); margin: 0 0 26px; font-size: 0.9rem; font-style: italic; }
-      .charge { margin: 0 0 28px; }
+      .when { letter-spacing: 0.08em; color: var(--muted); margin: 0 0 24px; font-size: 0.9rem; font-style: italic; }
+      .charge { margin: 0 0 26px; }
       .charge .label { display: block; font-variant: small-caps; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--gold); margin-bottom: 4px; }
-      .beat { margin: 0 0 22px; font-size: 1.16rem; }
+      .beat { margin: 0 0 22px; font-size: 1.14rem; }
       .beat.first::first-letter { float: left; font-size: 3.6rem; line-height: 0.78; padding: 6px 12px 0 0; color: var(--loss); font-weight: 600; }
 
-      /* a phrase that names a fact is itself the reach-point — the prose is the index */
+      /* a phrase that names a fact is the reach-point — the prose is the index */
       .fact { color: inherit; text-decoration: none; border-bottom: 1px dotted #b07d3a; cursor: pointer; }
       .fact:hover { border-bottom-style: solid; border-bottom-color: var(--gold); }
 
-      /* the reckoning is BEHIND the page-turn */
       .reckoning { display: none; }
-      #turn:checked ~ .sheet .reckoning { display: block; }
-      #turn:checked ~ .sheet .tease { display: none; }
-      #turn:checked ~ .sheet .turn-label { display: none; }
-      .tease { margin: 28px 0 22px; color: #6b3424; font-style: italic; }
-      .reckoning p { margin: 0 0 18px; font-size: 1.12rem; }
+      .turn-toggle:checked ~ .reader .reckoning { display: block; }
+      .turn-toggle:checked ~ .reader .tease { display: none; }
+      .turn-toggle:checked ~ .reader .turn-label { display: none; }
+      .tease { margin: 26px 0 22px; color: #6b3424; font-style: italic; }
+      .reckoning p { margin: 0 0 18px; font-size: 1.1rem; }
       .reckoning .struck { text-decoration: line-through; text-decoration-color: var(--loss); color: #6f5a3a; }
+      .turn-label { display: block; text-align: center; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--rule); font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.9rem; color: var(--gold); cursor: pointer; }
 
-      .turn-label {
-        display: block; text-align: center; margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--rule);
-        font-variant: small-caps; letter-spacing: 0.14em; font-size: 0.9rem; color: var(--gold); cursor: pointer;
+      /* the secondary slot — docked fact panes lie BESIDE; only they animate */
+      .slot { flex: 0 0 auto; display: flex; flex-direction: column; gap: 14px; width: 0; }
+      .slot:not(:empty) { width: 19rem; }
+      .pane {
+        background: var(--card); box-shadow: 0 26px 56px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.4);
+        padding: 22px 24px 18px; position: relative;
+        animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
       }
-      .summon { position: absolute; opacity: 0; pointer-events: none; }
+      @keyframes lay-in { from { opacity: 0; transform: translateX(-10px) scale(0.94); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .pane { animation: none; } }
+      .pane h3 { margin: 0 0 2px; font-size: 1.02rem; font-variant: small-caps; letter-spacing: 0.05em; }
+      .pane .keeper { margin: 0 0 14px; color: var(--muted); font-style: italic; font-size: 0.82rem; }
+      .pane ul { list-style: none; margin: 0; padding: 0; }
+      .pane li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #cbb585; font-size: 0.92rem; }
+      .pane li:last-of-type { border-bottom: none; }
+      .pane li .v { color: #54421f; }
+      .pane li.lien .v { color: var(--loss); }
+      .pane p.body { margin: 0; font-size: 0.98rem; }
+      .pane .wax { position: absolute; right: 14px; bottom: 12px; width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #9a3a26, #6f2418); }
+      .pane .let-lie { display: inline-block; margin-top: 14px; font-style: italic; color: var(--muted); font-size: 0.82rem; cursor: pointer; border-bottom: 1px dotted var(--muted); }
+      .pane .let-lie:hover { color: var(--ink); }
+      .pane .tri { margin: 0 0 12px; }
+      .pane .tri:last-of-type { margin-bottom: 0; }
+      .pane .tri h4 { margin: 0; font-variant: small-caps; letter-spacing: 0.05em; font-size: 0.84rem; color: #5a4628; }
+      .pane .tri p { margin: 1px 0 0; font-size: 0.9rem; }
 
-      /* ── a summoned fact: HAND-LAID PAPER, not a dialog. Transition-driven so the rise/coalesce
-         plays in reverse on dismiss — fully symmetrical. Toggled by .is-open (JS at end of body). ── */
-      .artifact { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 6; }
-      .artifact.is-open { pointer-events: auto; }
-      .artifact .veil { position: absolute; inset: 0; background: rgba(14, 9, 3, 0.30); opacity: 0; transition: opacity 0.4s ease; }
-      .artifact.is-open .veil { opacity: 1; }
-
-      /* rise out of the dark and coalesce from mist — and the exact reverse on dismiss */
-      .stack {
-        position: relative; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; max-width: 90vw;
-        opacity: 0; filter: blur(18px); transform: translateY(16px) scale(0.6);
-        transition: opacity 0.58s, filter 0.58s, transform 0.58s;
-        transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
-      }
-      .artifact.is-open .stack { opacity: 1; filter: blur(0); transform: none; }
-
-      /* the reading recedes — zooms back, dims, a touch of blur — symmetrically both ways */
-      .sheet, .caption { transition: opacity 0.58s ease, transform 0.58s ease, filter 0.58s ease; }
-      body.has-overlay .sheet, body.has-overlay .caption { opacity: 0.85; transform: scale(0.85); filter: blur(1px); }
-
-      @media (prefers-reduced-motion: reduce) {
-        .stack, .artifact .veil, .sheet, .caption { transition: none; }
-      }
-
-      .card {
-        position: relative; width: 19rem; background: var(--card);
-        background-image: linear-gradient(118deg, rgba(255,250,235,0.35), rgba(120,84,30,0.06));
-        padding: 26px 28px 30px;
-        box-shadow: 0 28px 60px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.4);
-      }
-      .card h2 { margin: 0 0 2px; font-size: 1.04rem; font-variant: small-caps; letter-spacing: 0.05em; }
-      .card .keeper { margin: 0 0 16px; color: var(--muted); font-style: italic; font-size: 0.82rem; }
-      .card ul { list-style: none; margin: 0; padding: 0; }
-      .card li { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; border-bottom: 1px solid #cbb585; font-size: 0.94rem; }
-      .card li:last-child { border-bottom: none; }
-      .card li .v { color: #54421f; }
-      .card li.lien .v { color: var(--loss); }
-      .card p.body { margin: 0; font-size: 1.0rem; }
-      .card .wax { position: absolute; right: 16px; bottom: 14px; width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #9a3a26, #6f2418); box-shadow: inset 0 1px 2px rgba(255,255,255,0.25); }
-      /* "let it lie" — a handwritten dismissal, not an ✕ button */
-      .let-lie { display: inline-block; margin-top: 16px; font-style: italic; color: var(--muted); font-size: 0.84rem; text-decoration: none; border-bottom: 1px dotted var(--muted); }
-      .let-lie:hover { color: var(--ink); }
-
-      .caption { max-width: 33rem; margin: 26px auto 0; color: #97825a; font-size: 0.8rem; font-style: italic; text-align: center; }
-
-      @media (max-width: 600px) { .sheet { padding: 40px 26px; } }
+      .caption { max-width: 62rem; margin: 26px auto 0; color: #97825a; font-size: 0.8rem; font-style: italic; text-align: center; }
     </style>
   </head>
   <body>
-    <!-- page-turn toggle (reveal-in-place, not an overlay) -->
-    <input type="checkbox" id="turn" class="summon" />
+    <input type="checkbox" id="turn" class="turn-toggle" />
 
-    <article class="sheet">
-      <p class="steward">“You have been away some time, my lord. Word came back from the barrow.” <a class="who" href="#facts-stack">— the steward</a></p>
+    <div class="reader">
+      <div class="panes">
+        <div class="pile-edge" title="the rest of the pile — set aside"></div>
 
-      <p class="when">Farwatch · at the turn of the season</p>
-      <p class="charge"><span class="label">What you sent them to do</span> Open the barrow no frost would touch, and bring back what slept inside — <a class="fact" href="#fact-writ">to the keeping of the lamp</a>.</p>
+        <article class="sheet">
+          <p class="steward">“You have been away some time, my lord. Word came back from the barrow.” <a class="who" data-fact="facts">— the steward</a></p>
+          <p class="when">Farwatch · at the turn of the season</p>
+          <p class="charge"><span class="label">What you sent them to do</span> Open the barrow no frost would touch, and bring back what slept inside — <a class="fact" data-fact="writ">to the keeping of the lamp</a>.</p>
 
-      <p class="beat first">They came to the barrow-door at dusk, where the stone stayed dry though <a class="fact" href="#fact-almanac">the fields about it lay under early white</a>. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>
-      <p class="beat">Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>
+          <p class="beat first">They came to the barrow-door at dusk, where the stone stayed dry though <a class="fact" data-fact="almanac">the fields about it lay under early white</a>. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>
+          <p class="beat">Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>
 
-      <p class="tease">What it cost, and who came home, waits on the turning of the page.</p>
+          <p class="tease">What it cost, and who came home, waits on the turning of the page.</p>
+          <div class="reckoning">
+            <p>They brought back the sleeper’s circlet, and <a class="fact" data-fact="ledger">the strongbox came home heavier</a> for it — though the lien still falls due at first snow, and it will not cover that.</p>
+            <p>Mirela came home. <span class="struck">Odric did not</span> — the vault kept him, as he had always feared it might.</p>
+          </div>
 
-      <div class="reckoning">
-        <p>They brought back the sleeper’s circlet, and <a class="fact" href="#fact-ledger">the strongbox came home heavier</a> for it — though the lien still falls due at first snow, and it will not cover that.</p>
-        <p>Mirela came home. <span class="struck">Odric did not</span> — the vault kept him, as he had always feared it might.</p>
-      </div>
+          <label class="turn-label" for="turn">turn the page ❯</label>
+        </article>
 
-      <label class="turn-label" for="turn">turn the page ❯</label>
-    </article>
-
-    <!-- a single fact, raised by a phrase in the prose -->
-    <div class="artifact" id="fact-ledger">
-      <a class="veil" href="#"></a>
-      <div class="stack">
-        <div class="card">
-          <h2>the ledger</h2>
-          <p class="keeper">in the quartermaster’s hand, by the last count</p>
-          <ul>
-            <li><span>coin</span><span class="v">two hundred, more or less</span></li>
-            <li><span>the sleeper’s circlet</span><span class="v">unpriced</span></li>
-            <li class="lien"><span>a lien, to the chandlers</span><span class="v">due at first snow</span></li>
-          </ul>
-          <a class="let-lie" href="#">let it lie</a>
-        </div>
+        <div class="slot" id="slot"></div>
       </div>
     </div>
 
-    <div class="artifact" id="fact-almanac">
-      <a class="veil" href="#"></a>
-      <div class="stack">
-        <div class="card">
-          <h2>the almanac</h2>
-          <p class="keeper">kept against the season</p>
-          <p class="body">Spring, the third week. The lien falls due at first snow — some weeks yet, and fewer than you would like.</p>
-          <a class="let-lie" href="#">let it lie</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="artifact" id="fact-writ">
-      <a class="veil" href="#"></a>
-      <div class="stack">
-        <div class="card">
-          <span class="wax"></span>
-          <h2>the writ</h2>
-          <p class="keeper">sealed, older than anyone living</p>
-          <p class="body">Keep the lamp lit at Farwatch.</p>
-          <a class="let-lie" href="#">let it lie</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- the steward's one door: the standing facts as a small stack -->
-    <div class="artifact" id="facts-stack">
-      <a class="veil" href="#"></a>
-      <div class="stack">
-        <div class="card">
-          <span class="wax"></span>
-          <h2>the writ</h2>
-          <p class="keeper">sealed, older than anyone living</p>
-          <p class="body">Keep the lamp lit at Farwatch.</p>
-        </div>
-        <div class="card">
-          <h2>the ledger</h2>
-          <p class="keeper">the quartermaster’s, by the last count</p>
-          <ul>
-            <li><span>coin</span><span class="v">two hundred, more or less</span></li>
-            <li class="lien"><span>a lien</span><span class="v">due at first snow</span></li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>the almanac</h2>
-          <p class="keeper">kept against the season</p>
-          <p class="body">Spring, the third week.</p>
-          <a class="let-lie" href="#">let them lie</a>
-        </div>
-      </div>
-    </div>
+    <p class="caption">Document grammar: the chronicle is the primary; a named phrase (or the steward’s signature) docks a fact <em>beside</em> it as a content pane — the sheet never moves. The receded missive pile is the dimmed edge at left. ≤2 panes beside; a third pushes the oldest to recede.</p>
 
     <script>
       (function () {
-        const body = document.body;
-        function closeAll() {
-          document.querySelectorAll('.artifact.is-open').forEach((a) => a.classList.remove('is-open'));
-          body.classList.remove('has-overlay');
+        const FACTS = {
+          ledger: { kind: 'list', title: 'the ledger', keeper: 'in the quartermaster’s hand, by the last count',
+            items: [['coin', 'two hundred, more or less', false], ['the sleeper’s circlet', 'unpriced', false], ['a lien, to the chandlers', 'due at first snow', true]] },
+          almanac: { kind: 'body', title: 'the almanac', keeper: 'kept against the season',
+            body: 'Spring, the third week. The lien falls due at first snow — some weeks yet, and fewer than you would like.' },
+          writ: { kind: 'writ', title: 'the writ', keeper: 'sealed, older than anyone living', body: 'Keep the lamp lit at Farwatch.' },
+          facts: { kind: 'tri', title: 'what is always true', keeper: 'the steward sets them before you', tri: [
+            ['the writ', 'Keep the lamp lit at Farwatch.'], ['the ledger', 'two hundred coin · a lien at first snow'], ['the almanac', 'Spring, the third week.'] ] },
+        };
+        const SLOT_MAX = 2;
+        const slotEl = document.getElementById('slot');
+        let slot = [];
+
+        function dock(id) {
+          if (!FACTS[id]) return;
+          if (slot.includes(id)) { slot = slot.filter((x) => x !== id); render(); return; }
+          slot.push(id);
+          if (slot.length > SLOT_MAX) slot.shift();
+          render();
         }
-        function open(id) {
-          const el = document.getElementById(id);
-          if (!el) return;
-          document.querySelectorAll('.artifact.is-open').forEach((a) => { if (a !== el) a.classList.remove('is-open'); });
-          el.classList.add('is-open');
-          body.classList.add('has-overlay');
+        function paneHTML(id) {
+          const f = FACTS[id];
+          let inner = '<h3>' + f.title + '</h3><p class="keeper">' + f.keeper + '</p>';
+          if (f.kind === 'list') inner += '<ul>' + f.items.map((i) => '<li class="' + (i[2] ? 'lien' : '') + '"><span>' + i[0] + '</span><span class="v">' + i[1] + '</span></li>').join('') + '</ul>';
+          else if (f.kind === 'tri') inner += f.tri.map((t) => '<div class="tri"><h4>' + t[0] + '</h4><p>' + t[1] + '</p></div>').join('');
+          else inner += '<p class="body">' + f.body + '</p>' + (f.kind === 'writ' ? '<span class="wax"></span>' : '');
+          inner += '<span class="let-lie">let it lie</span>';
+          return inner;
         }
-        // a named phrase in the prose, or the steward's signature, raises a fact
-        document.querySelectorAll('a.fact, a.who').forEach((a) => {
-          a.addEventListener('click', (e) => {
-            const href = a.getAttribute('href') || '';
-            if (href.length > 1 && href.charAt(0) === '#') { e.preventDefault(); open(href.slice(1)); }
+        function render() {
+          slotEl.innerHTML = '';
+          slot.forEach((id) => {
+            const el = document.createElement('div');
+            el.className = 'pane';
+            el.innerHTML = paneHTML(id);
+            el.querySelector('.let-lie').addEventListener('click', () => dock(id));
+            slotEl.appendChild(el);
           });
+        }
+        document.querySelectorAll('[data-fact]').forEach((a) => {
+          a.addEventListener('click', (e) => { e.preventDefault(); dock(a.getAttribute('data-fact')); });
         });
-        // the wash behind, or "let it lie", sets it back
-        document.querySelectorAll('a.veil, a.let-lie').forEach((a) => {
-          a.addEventListener('click', (e) => { e.preventDefault(); closeAll(); });
-        });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+        render();
       })();
     </script>
-
-    <p class="caption">The prose is the index — a named phrase (“to the keeping of the lamp”, “early white”, “came home heavier”) raises that one fact as hand-laid paper that you let lie. For facts the text doesn’t name, the steward’s signature is the single door to the standing stack. No corner glyphs, no parked strip.</p>
   </body>
 </html>
