@@ -26,9 +26,9 @@
         --doc: #e2d1a3; --doc-ink: #2c2012; --doc-meta: #463a22; --doc-voice: #4a3a22; --loss: #7a2f25;
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
         --torn: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='600'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.008'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='12'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3CfeGaussianBlur%20stdDeviation='0.5'/%3E%3C/filter%3E%3Crect%20x='14'%20y='14'%20width='572'%20height='572'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
-        /* handwritten checkbox — an uneven hand-drawn box; an × in the same hand when marked for dispatch */
-        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.09'%20numOctaves='2'%20seed='4'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.8'/%3E%3C/filter%3E%3Crect%20x='3.5'%20y='3.5'%20width='17'%20height='17'%20rx='1'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.5'%20filter='url(%23b)'/%3E%3C/svg%3E");
-        --xmark: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%3E%3Cfilter%20id='x'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.1'%20numOctaves='2'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.6'/%3E%3C/filter%3E%3Cpath%20d='M6.5,6.5%20L17.5,17.5%20M17.5,6.5%20L6.5,17.5'%20fill='none'%20stroke='%232c2012'%20stroke-width='2'%20stroke-linecap='round'%20filter='url(%23x)'/%3E%3C/svg%3E");
+        /* handwritten checkbox — a clearly uneven hand-drawn box; a curved hand-drawn check when marked */
+        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.075'%20numOctaves='2'%20seed='3'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='3.2'/%3E%3C/filter%3E%3Crect%20x='5'%20y='5'%20width='16'%20height='16'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.7'%20stroke-linejoin='round'%20filter='url(%23b)'/%3E%3C/svg%3E");
+        --check: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='c'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.07'%20numOctaves='2'%20seed='6'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='2.6'/%3E%3C/filter%3E%3Cpath%20d='M5,13.5%20Q8,16.5%2010.5,18.5%20Q15,11.5%2021.5,5'%20fill='none'%20stroke='%232c2012'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%20filter='url(%23c)'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -68,7 +68,7 @@
       .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
       /* handwritten check — marks for dispatch */
       .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; background: var(--box) center / contain no-repeat; }
-      .roster .box.checked { background-image: var(--xmark), var(--box); }
+      .roster .box.checked { background-image: var(--check), var(--box); }
       .roster .name { flex: 1; cursor: pointer; }
       .roster li.in-lane .name { font-weight: 600; }
       .roster .name:hover { color: #6a4a30; }
