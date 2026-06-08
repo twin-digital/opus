@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — paper-color swatches (warm-melancholy)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <style>
+      /* Pick the warm-melancholy paper tone: same text + grain on each, only the paper colour varies.
+         Current is #d9cca6; the rest warm and/or brighten it. */
+      :root {
+        --ink: #2c2012;
+        --meta: #463a22;
+        --voice: #4a3a22;
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        font-family: var(--serif); color: #b9ab85; -webkit-font-smoothing: antialiased; padding: 5vh 4vw 12vh;
+        background: radial-gradient(90% 60% at 50% 4%, #3a2c18 0%, #221d16 45%, #18181a 100%), #161618;
+        background-attachment: fixed;
+      }
+      h1 { font-size: 1.1rem; font-weight: 500; margin: 0 0 4px; color: #cdbf95; }
+      .sub { margin: 0 0 28px; font-style: italic; color: #8f815f; font-size: 0.95rem; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 28px; }
+      .cell .tag { font-size: 0.8rem; letter-spacing: 0.04em; color: #9a8c66; margin: 0 0 8px; }
+      .cell .tag b { color: #d6c89c; font-weight: 500; }
+      .sheet {
+        position: relative; color: var(--ink); padding: 30px 32px 28px; border-radius: 1px;
+        background-image: var(--grain); background-size: 150px 150px;
+        box-shadow: 0 22px 44px rgba(0,0,0,0.5), inset 0 0 40px rgba(70,50,22,0.14);
+        text-shadow: 0 0 0.7px rgba(48, 22, 8, 0.5);
+        font-size: 18px; line-height: 1.66;
+      }
+      .sheet .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--meta); font-size: 0.95rem; margin: 0 0 16px; }
+      .sheet .h { color: var(--ink); font-size: 1.04rem; margin: 0 0 12px; border-bottom: 1.5px solid var(--ink); display: inline-block; padding-bottom: 3px; }
+      .sheet p { margin: 0 0 12px; }
+      .sheet p:last-child { margin: 0; }
+      .sheet .sig { font-style: italic; color: var(--voice); }
+    </style>
+  </head>
+  <body>
+    <h1>Paper colour — warm-melancholy</h1>
+    <p class="sub">Same ink, grain, and text on every swatch; only the paper tone changes. Warmer and a touch brighter, around the current #d9cca6.</p>
+    <div class="grid" id="grid"></div>
+
+    <script>
+      const PAPERS = [
+        ['#d9cca6', 'current'],
+        ['#dfd0a8', 'a little brighter'],
+        ['#e2d1a3', 'warmer + brighter'],
+        ['#e5d1a0', 'warmer, more amber'],
+        ['#e3cb97', 'warm amber'],
+        ['#e8d6a4', 'bright warm'],
+      ];
+      const grid = document.getElementById('grid');
+      PAPERS.forEach(([hex, name]) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML =
+          '<p class="tag"><b>' + hex + '</b> · ' + name + '</p>' +
+          '<div class="sheet" style="background-color:' + hex + '">' +
+          '<p class="when">Farwatch · at the turn of the season</p>' +
+          '<p class="h">What you sent them to do</p>' +
+          '<p>They came to the barrow-door at dusk, where the stone stayed dry though the fields about it lay under early white.</p>' +
+          '<p>Mirela came home. Odric did not — the vault kept him, as he had always feared it might.</p>' +
+          '<p class="sig">— the steward</p>' +
+          '</div>';
+        grid.appendChild(cell);
+      });
+    </script>
+  </body>
+</html>

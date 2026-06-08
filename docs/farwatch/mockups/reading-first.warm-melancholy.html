@@ -18,7 +18,7 @@
         --ink: #2c2012;
         --muted: #897a5d;
         --voice: #4a3a22;
-        --meta: #564b30;       /* small-caps stamps — dark enough to read (~5.4:1), still quiet */
+        --meta: #463a22;       /* small-caps stamps — darker now (~7:1) so they read at small size */
         --gold: #99713a;       /* dim; used sparingly */
         --loss: #7a2f25;
         --rule: #c3b58c;
@@ -26,7 +26,7 @@
         --card: #d3c59e;
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
         /* a hand-drawn (irregular) ink underline — for written headers, like a pen stroke under a heading */
-        --underline: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='18'%20preserveAspectRatio='none'%3E%3Cfilter%20id='u'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.022'%20numOctaves='2'%20seed='5'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='8'/%3E%3C/filter%3E%3Cpath%20d='M3,10%20L237,9'%20stroke='%232c2012'%20stroke-width='2.2'%20fill='none'%20stroke-linecap='round'%20filter='url(%23u)'/%3E%3C/svg%3E");
+        --underline: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='16'%3E%3Cfilter%20id='u'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.04'%20numOctaves='2'%20stitchTiles='stitch'%20seed='5'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='4'/%3E%3C/filter%3E%3Cpath%20d='M0,9%20L120,8'%20stroke='%232c2012'%20stroke-width='2.2'%20fill='none'%20filter='url(%23u)'/%3E%3C/svg%3E");
         /* paper textures, all as background layers (under text); --torn is an edge mask */
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.55'/%3E%3C/svg%3E");
         --laid: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
@@ -82,12 +82,12 @@
       .steward .who { font-style: italic; color: var(--voice); font-size: 1.05rem; text-decoration: none; cursor: pointer; }
       .steward .who:hover { color: var(--gold); }
       /* Meta (small-caps) — the dateline stamp */
-      .when { font-variant: small-caps; letter-spacing: 0.1em; color: var(--meta); margin: 0 0 24px; font-size: 1rem; }
+      .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--meta); margin: 0 0 24px; font-size: 1.05rem; }
       .charge { margin: 0 0 26px; }
       /* Header — a written heading in the same ink, hand-underlined (not a printed small-caps tag) */
       .charge .label {
-        display: inline-block; color: var(--ink); font-size: 1.12rem; margin-bottom: 12px;
-        background: var(--underline) left bottom / 100% 15px no-repeat; padding-bottom: 13px;
+        display: block; width: fit-content; color: var(--ink); font-size: 1.12rem; margin-bottom: 14px;
+        background: var(--underline) left bottom / 120px 16px repeat-x; padding-bottom: 11px;
       }
       .beat { margin: 0 0 22px; font-size: 1.38rem; }
       /* a worn initial, not a gilded one — plain face, faded ink, restrained */
