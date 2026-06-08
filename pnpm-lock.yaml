@@ -82,8 +82,8 @@ catalogs:
       specifier: ^2.8.0
       version: 2.8.0
     serverless:
-      specifier: 4.29.3
-      version: 4.29.3
+      specifier: 4.37.0
+      version: 4.37.0
     ts-node:
       specifier: ^10.9.2
       version: 10.9.2
@@ -129,7 +129,7 @@ importers:
         version: 3.8.3
       serverless:
         specifier: 'catalog:'
-        version: 4.29.3
+        version: 4.37.0
       sherif:
         specifier: ^1.11.1
         version: 1.11.1
@@ -254,7 +254,7 @@ importers:
         version: 2.8.0
       serverless:
         specifier: 'catalog:'
-        version: 4.29.3
+        version: 4.37.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -494,7 +494,7 @@ importers:
         version: 2.8.0
       serverless:
         specifier: 'catalog:'
-        version: 4.29.3
+        version: 4.37.0
       tsdown:
         specifier: 'catalog:'
         version: 0.18.3(typescript@5.9.3)
@@ -4247,9 +4247,6 @@ packages:
     resolution: {integrity: sha512-lwalRdxXRy+Sn49/vN7W507qqmBRk5Fy2o0a9U6XTjL9IV+oR5PUiiptoBrOcaYCiVuGld8OEbNqhm6wvV3m6A==}
     engines: {node: '>= 14.x'}
 
-  axios-proxy-builder@0.1.2:
-    resolution: {integrity: sha512-6uBVsBZzkB3tCC8iyx59mCjQckhB8+GQrI9Cop8eC7ybIsvs/KtnNgEBfRMSEa7GqK2VBGUzgjNYMdPIfotyPA==}
-
   axios@1.17.0:
     resolution: {integrity: sha512-J8SwNxprqqpbfenehxWYXE7CW+wM1BB4w3+N+g+/Wx40xM4rsLrfPmHHxSWIxJLYDgSY/HqlFPIYb2/S3rxafw==}
 
@@ -6470,9 +6467,6 @@ packages:
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
-  sax@1.4.1:
-    resolution: {integrity: sha512-+aWOz7yVScEGoKNd4PA10LZ8sk0A/z5+nXQG5giUO5rprX9jgYsTdov9qCchZiPIZezbZH+jRut8nPodFAX4Jg==}
-
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
@@ -6511,9 +6505,9 @@ packages:
     resolution: {integrity: sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==}
     engines: {node: '>= 18'}
 
-  serverless@4.29.3:
-    resolution: {integrity: sha512-PUyPwo1HsduTGgrHep7TVT8PAxGU5YaMlY6M8GMQlWQnayVGSPtFTiuSrG7RfpzU2gCGl1cJdLMwr1YSWwvydQ==}
-    engines: {node: '>=18.0.0'}
+  serverless@4.37.0:
+    resolution: {integrity: sha512-IX0lcW1HtxdKsEdmyXZVpsaurYopGS0yLQ5rP6ofjJkXALYLHW9y7NHw4Dy3GQpueKUfoON9Psg1opkxVdM+tg==}
+    engines: {node: '>=18.17.0'}
     hasBin: true
 
   set-blocking@2.0.0:
@@ -6946,10 +6940,6 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  tunnel@0.0.6:
-    resolution: {integrity: sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==}
-    engines: {node: '>=0.6.11 <=0.7.0 || >=0.7.3'}
-
   turbo@2.9.16:
     resolution: {integrity: sha512-NqgRQy6j6dPYcdSdv0q1g9QsZg7SWg87RERM8otw/1AtKU2yTFVClOM7cbwKzOonZr/Ek1blTBucw64L9H0Bwg==}
     hasBin: true
@@ -7042,6 +7032,10 @@ packages:
 
   undici@6.24.1:
     resolution: {integrity: sha512-sC+b0tB1whOCzbtlx20fx3WgCXwkW627p4EA9uM+/tNNPkSS+eSEld6pAs9nDv7WbY1UUljBMYPtu9BCOrCWKA==}
+    engines: {node: '>=18.17'}
+
+  undici@6.25.0:
+    resolution: {integrity: sha512-ZgpWDC5gmNiuY9CnLVXEH8rl50xhRCuLNA97fAUnKi8RRuV4E6KG31pDTsLVUKnohJE0I3XDrTeEydAXRw47xg==}
     engines: {node: '>=18.17'}
 
   unicorn-magic@0.3.0:
@@ -7303,14 +7297,6 @@ packages:
   xml-naming@0.1.0:
     resolution: {integrity: sha512-k8KO9hrMyNk6tUWqUfkTEZbezRRpONVOzUTnc97VnCvyj6Tf9lyUR9EDAIeiVLv56jsMcoXEwjW8Kv5yPY52lw==}
     engines: {node: '>=16.0.0'}
-
-  xml2js@0.6.2:
-    resolution: {integrity: sha512-T4rieHaC1EXcES0Kxxj4JWgaUQHDk+qwHcYOCFHfiwKz7tOVPLq7Hjq9dM1WCMhylqMEfP7hMcOIChvotiZegA==}
-    engines: {node: '>=4.0.0'}
-
-  xmlbuilder@11.0.1:
-    resolution: {integrity: sha512-fDlsI/kFEx7gLvbecc0/ohLG50fugQp8ryHzMTuW9vSa1GJ0XYWKnhsUx7oie3G98+r56aTQIUB4kht42R3JvA==}
-    engines: {node: '>=4.0'}
 
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
@@ -9895,10 +9881,6 @@ snapshots:
       cls-hooked: 4.2.2
       semver: 7.8.2
 
-  axios-proxy-builder@0.1.2:
-    dependencies:
-      tunnel: 0.0.6
-
   axios@1.17.0(debug@4.4.3):
     dependencies:
       follow-redirects: 1.16.0(debug@4.4.3)
@@ -11122,7 +11104,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.17.0)
+      retry-axios: 2.6.0(axios@1.17.0(debug@4.4.3))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -12232,7 +12214,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.17.0):
+  retry-axios@2.6.0(axios@1.17.0(debug@4.4.3)):
     dependencies:
       axios: 1.17.0(debug@4.4.3)
 
@@ -12353,8 +12335,6 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  sax@1.4.1: {}
-
   saxes@6.0.0:
     dependencies:
       xmlchars: 2.2.0
@@ -12402,15 +12382,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  serverless@4.29.3:
+  serverless@4.37.0:
     dependencies:
-      axios: 1.17.0(debug@4.4.3)
-      axios-proxy-builder: 0.1.2
       rimraf: 5.0.10
-      xml2js: 0.6.2
-    transitivePeerDependencies:
-      - debug
-      - supports-color
+      undici: 6.25.0
 
   set-blocking@2.0.0: {}
 
@@ -12857,8 +12832,6 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  tunnel@0.0.6: {}
-
   turbo@2.9.16:
     optionalDependencies:
       '@turbo/darwin-64': 2.9.16
@@ -12962,6 +12935,8 @@ snapshots:
   undici-types@7.16.0: {}
 
   undici@6.24.1: {}
+
+  undici@6.25.0: {}
 
   unicorn-magic@0.3.0: {}
 
@@ -13181,13 +13156,6 @@ snapshots:
     optional: true
 
   xml-naming@0.1.0: {}
-
-  xml2js@0.6.2:
-    dependencies:
-      sax: 1.4.1
-      xmlbuilder: 11.0.1
-
-  xmlbuilder@11.0.1: {}
 
   xmlchars@2.2.0:
     optional: true
