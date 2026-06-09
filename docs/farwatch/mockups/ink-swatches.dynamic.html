@@ -6,7 +6,7 @@
     <title>Farwatch — ink exploration (family · weight · bleed · size)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
@@ -84,6 +84,7 @@
       </select>
       <label for="weight-select">font weight</label>
       <select id="weight-select">
+        <option value="200">200</option>
         <option value="300">300</option>
         <option value="400" selected>400</option>
         <option value="500">500</option>
@@ -126,8 +127,8 @@
         const BLEEDS = [
           { name: 'none', blur: '0', alpha: '0' },
           { name: 'light', blur: '0.6px', alpha: '0.4' },
-          { name: 'full', blur: '1px', alpha: '0.7' },
-          { name: 'full ×11 — extreme', blur: '7px', alpha: '1' },
+          { name: 'full', blur: '0.7px', alpha: '0.5' },
+          { name: 'extreme', blur: '1.15px', alpha: '0.85' },
         ];
         const SIZES = ['0.9rem', '1rem', '1.1rem', '1.2rem', '1.35rem', '1.5rem'];
         // rem → px, using the actual root font-size (html { font-size } below) so every swatch shows its real size
