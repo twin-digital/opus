@@ -70,9 +70,9 @@
       <filter id="ink-rough" x="-6%" y="-6%" width="112%" height="112%">
         <!-- frequency = how fine the edge roughness; SMALL scale keeps it hugging the glyph (no flung speckle);
              a touch of blur reads as ink spread rather than torn pixels -->
-        <feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="1" seed="3" result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.2" xChannelSelector="R" yChannelSelector="G" result="d" />
-        <feGaussianBlur in="d" stdDeviation="0.2" />
+        <feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="1" seed="3" result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.3" xChannelSelector="R" yChannelSelector="G" result="d" />
+        <feGaussianBlur in="d" stdDeviation="0.3" />
       </filter>
     </svg>
     <header class="chrome-bar">
