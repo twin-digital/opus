@@ -474,7 +474,9 @@ turned out to sit *above* what the named presets reached:
 | `reading` | `1.1rem` | a first reading-size preset |
 | `large` | `1.22rem` | a larger reading preset |
 
-**Bleed** — the ink-soak halo (`text-shadow`); colour comes from the ink, blur + strength from here:
+**Bleed** — the ink-soak halo (`text-shadow`); colour comes from the ink, blur + strength from here. With the
+ink cycle on, these are the bloom **at full ink** (the ceiling) — the per-word reservoir level scales it down
+for dry marks (see *Ink cycle → Bloom rides the reservoir*). With the cycle off, it's a uniform halo.
 
 | slug | blur · alpha | key element |
 |---|---|---|
@@ -508,9 +510,18 @@ An optional overlay that makes the writing read as **ink from a quill** rather t
 finite reservoir: a fresh dip is dark and slightly heavy; as you write it depletes (thin + pale); at the next
 **word boundary** past capacity it re-dips. Each mark's weight/darkness depends on the running reservoir level
 — the variance has **memory**, not per-mark noise — with a small random walk for texture and a richer "blob"
-on the first mark after a dip. It maps onto two web knobs: **`text-stroke` = weight**, **`opacity` = ink
-darkness**. Canonical encoding: **[`mockups/ink-cycle.js`](mockups/ink-cycle.js)**; design surface:
+on the first mark after a dip. One reservoir level drives **three** coherent outputs: **`text-stroke` =
+weight**, **`opacity` = ink darkness**, and **`text-shadow` blur = ink bloom** (see below). Canonical
+encoding: **[`mockups/ink-cycle.js`](mockups/ink-cycle.js)**; design surface:
 **[`mockups/ink-cycle-designer.dynamic.html`](mockups/ink-cycle-designer.dynamic.html)**.
+
+**Bloom rides the reservoir.** Ink-bloom (the soak halo, an `ink-style` bleed dial) is *not* a separate
+constant overlaid on the cycle — it's the same physical variable (how much wet ink is on the nib). So the
+cycle modulates it: the bleed dial sets the bloom **at full ink** (the ceiling), and the per-word level scales
+it down for dry marks — halo **blur** ∝ level (explicit), halo **alpha** ∝ darkness (via `opacity`). Fresh
+marks bloom bigger + stronger; dry marks barely feather. (Before this, the bloom was a flat overlay and only
+got *accidentally* dimmed by the per-word opacity — the radius never responded, so wet and dry marks wrongly
+shared a halo size.)
 
 Two properties matter for the eventual game:
 - **Per word, not per character.** A per-character variant was tried — but the reservoir's memory makes letters
