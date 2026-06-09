@@ -59,9 +59,19 @@
       .reader { max-width: 44rem; padding: 46px 52px 42px; line-height: 1.62; }
       .reader p { margin: 0 0 1em; }
       .reader p.first { margin-top: 0.2em; }
+      /* "hand" treatments (applied to the reading sample only) */
+      .hand-bite { filter: url(#ink-rough); }              /* roughen glyph edges — ink, not pixels */
+      .ink-layer .g { display: inline-block; }             /* per-letter wrap for written wander */
     </style>
   </head>
   <body>
+    <!-- ink-bite: a turbulence displacement that roughens glyph edges (applied to text via filter: url(#ink-rough)) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <filter id="ink-rough" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.1" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
     <header class="chrome-bar">
       <span class="brand">Farwatch · ink exploration</span>
       <label for="paper-select">paper</label>
@@ -106,6 +116,13 @@
         <option value="light">light — blur 0.6px · α0.4</option>
         <option value="full" selected>full — blur 0.7px · α0.5</option>
         <option value="extreme">extreme — blur 1.15px · α0.85</option>
+      </select>
+      <label for="hand-select">hand (reading sample)</label>
+      <select id="hand-select">
+        <option value="none">none — clean type</option>
+        <option value="bite">ink-bite — roughened edges</option>
+        <option value="jitter">written — per-letter wander</option>
+        <option value="both">both</option>
       </select>
     </header>
 
@@ -162,14 +179,36 @@
           '<p class="sig">— the steward</p>';
         // a genuine public-domain passage for fair readability testing — George MacDonald, Phantastes (1858),
         // the acknowledged forerunner of Tolkien & Lewis. Verbatim from Project Gutenberg ebook #325.
-        const READER_TEXT =
-          '<p class="when">from Phantastes · George MacDonald · 1858</p>' +
-          '<p class="h">The Forest of Fairy Land</p>' +
-          '<p class="first">The trees, which were far apart where I entered, giving free passage to the level rays of the sun, closed rapidly as I advanced, so that ere long their crowded stems barred the sunlight out, forming as it were a thick grating between me and the East. I seemed to be advancing towards a second midnight.</p>' +
-          '<p>In the midst of the intervening twilight, however, before I entered what appeared to be the darkest portion of the forest, I saw a country maiden coming towards me from its very depths. She did not seem to observe me, for she was apparently intent upon a bunch of wild flowers which she carried in her hand.</p>' +
-          '<p>I could hardly see her face; for, though she came direct towards me, she never looked up. But when we met, instead of passing, she turned and walked alongside of me for a few yards, still keeping her face downwards, and busied with her flowers.</p>' +
-          '<p>She spoke rapidly, however, all the time, in a low tone, as if talking to herself, but evidently addressing the purport of her words to me. She seemed afraid of being observed by some lurking foe.</p>' +
-          '<p class="sig">— George MacDonald</p>';
+        const READER = {
+          source: 'from Phantastes · George MacDonald · 1858',
+          title: 'The Forest of Fairy Land',
+          paras: [
+            'The trees, which were far apart where I entered, giving free passage to the level rays of the sun, closed rapidly as I advanced, so that ere long their crowded stems barred the sunlight out, forming as it were a thick grating between me and the East. I seemed to be advancing towards a second midnight.',
+            'In the midst of the intervening twilight, however, before I entered what appeared to be the darkest portion of the forest, I saw a country maiden coming towards me from its very depths. She did not seem to observe me, for she was apparently intent upon a bunch of wild flowers which she carried in her hand.',
+            'I could hardly see her face; for, though she came direct towards me, she never looked up. But when we met, instead of passing, she turned and walked alongside of me for a few yards, still keeping her face downwards, and busied with her flowers.',
+            'She spoke rapidly, however, all the time, in a low tone, as if talking to herself, but evidently addressing the purport of her words to me. She seemed afraid of being observed by some lurking foe.',
+          ],
+          sig: '— George MacDonald',
+        };
+        // the "written" hand: wrap each glyph and give it a small random vertical shift + tilt (baseline wander)
+        function jitterText(t) {
+          let out = '';
+          for (const ch of t) {
+            if (ch === ' ') { out += ' '; continue; }
+            const dy = ((Math.random() * 2 - 1) * 0.04).toFixed(3);
+            const rot = ((Math.random() * 2 - 1) * 1.3).toFixed(2);
+            out += '<span class="g" style="transform:translateY(' + dy + 'em) rotate(' + rot + 'deg)">' + ch + '</span>';
+          }
+          return out;
+        }
+        function renderReader(hand) {
+          const wrap = (hand === 'jitter' || hand === 'both') ? jitterText : (t) => t;
+          const bite = (hand === 'bite' || hand === 'both') ? ' hand-bite' : '';
+          let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';
+          READER.paras.forEach((t, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + wrap(t) + '</p>'; });
+          inner += '<p class="sig">' + READER.sig + '</p>';
+          return '<div class="ink-layer' + bite + '">' + inner + '</div>';
+        }
 
         const app = document.getElementById('app');
         const context = document.getElementById('context');
@@ -178,6 +217,7 @@
         const famSel = document.getElementById('family-select');
         const weightSel = document.getElementById('weight-select');
         const bleedSel = document.getElementById('bleed-select');
+        const handSel = document.getElementById('hand-select');
 
         function render() {
           const ps = styleSel.value, col = colorSel.value, fam = famSel.value, wt = weightSel.value;
@@ -206,11 +246,11 @@
               '</div>'
             ).join('') +
             '</div>' +
-            '<h2 class="section">Reading sample — reader width · 1.35rem (' + pxOf('1.35rem') + ')</h2>' +
-            '<div class="paper swatch reader" style="--ink-size:1.35rem">' + READER_TEXT + '</div>';
+            '<h2 class="section">Reading sample — reader width · 1.35rem (' + pxOf('1.35rem') + ') · hand: ' + handSel.value + '</h2>' +
+            '<div class="paper swatch reader" style="--ink-size:1.35rem">' + renderReader(handSel.value) + '</div>';
         }
 
-        [styleSel, colorSel, famSel, weightSel, bleedSel].forEach((s) => s.addEventListener('change', render));
+        [styleSel, colorSel, famSel, weightSel, bleedSel, handSel].forEach((s) => s.addEventListener('change', render));
         render();
       })();
     </script>
