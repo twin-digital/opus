@@ -154,7 +154,7 @@
         ];
         const LANE_MAX = 3, PARTY_MAX = 3;
         const byId = Object.fromEntries(SEEKERS.map((s) => [s.id, s]));
-        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 11 - 5.5).toFixed(1) + 'deg'])); // a stable askew per seeker
+        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 50 - 25).toFixed(1) + 'deg'])); // a stable askew per seeker, up to ±25°
         let lane = [];
         const party = new Set();
         const rosterEl = document.getElementById('roster');
