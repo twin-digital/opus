@@ -123,8 +123,14 @@ A document is a **tuple — one option from each entity's library**:
 
 The libraries already exist as the mechanism files — `paper.css` (paper styles), `paper-color.css` (paper+ink
 colour pairs), `ink.css` (author hands), `ink-cycle.js` (occasions). The builder is the act of picking one of
-each. The per-effect designers (the ink-cycle/bloom designer) tune the *libraries*; a future **document
-composer** would pick from them to mint a document.
+each.
+
+**This model is now executable.** [`mockups/document-model.js`](mockups/document-model.js) holds the entity
+libraries as **data** (`SCHEMA` + `PRESETS`) and the resolver `compose(spec)` — which is where the derivation
+`bleed = absorbency × flow` lives, *in script, not CSS calc()*. The composer that picks one option per entity
+is [`mockups/document-designer.dynamic.html`](mockups/document-designer.dynamic.html): a tab per entity with
+per-entity save/load presets. This is the first surface built on the **data + resolver, CSS-renders** approach
+(see *ui-design.md*'s note); the older per-effect designers still drive the CSS-class libraries directly.
 
 ---
 

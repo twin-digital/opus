@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — document designer (author × occasion × paper × ink)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Newsreader:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="paper.css" />
+    <link rel="stylesheet" href="ink.css" />
+    <script src="ink-cycle.js"></script>
+    <script src="document-model.js"></script>
+    <style>
+      /* A document = author × occasion × paper × ink. One tab per entity (driven by DocModel.SCHEMA, not
+         hand-written), with per-entity save/load presets (localStorage). The preview composes the four. */
+      :root { --serif: "EB Garamond", Georgia, serif; --s-voice: #4a3a22; --s-meta: #463a22; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      html { font-size: 19px; }
+      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #c8cacc; background: #202124; -webkit-font-smoothing: antialiased; }
+
+      .bar { position: sticky; top: 0; z-index: 5; background: #1b1d1f; border-bottom: 1px solid #000; }
+      .bar .brand { padding: 10px 18px 4px; font-weight: 600; color: #e6e8ea; font-size: 13px; letter-spacing: 0.02em; }
+      .tabs { display: flex; gap: 2px; padding: 0 14px; }
+      .tabs button { font: inherit; font-size: 12.5px; background: #232527; color: #9a9ea1; border: none; border-bottom: 2px solid transparent; padding: 8px 16px; cursor: pointer; border-radius: 4px 4px 0 0; }
+      .tabs button:hover { color: #cdd0d2; }
+      .tabs button.active { background: #2c2f31; color: #e6e8ea; border-bottom-color: #6f9; }
+
+      .panels { background: #2c2f31; border-bottom: 1px solid #000; padding: 12px 18px 16px; }
+      .panel { display: none; }
+      .panel.active { display: block; }
+      .presetbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #3a3d3f; }
+      .presetbar .lbl { text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px; color: #868a8d; }
+      .presetbar input { font: inherit; font-size: 12.5px; background: #1f2123; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 5px 8px; width: 12rem; }
+      .presetbar button { font: inherit; font-size: 12.5px; background: #34503f; color: #dfeee6; border: 1px solid #3c6450; border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+      .presetbar button:hover { background: #3c6450; }
+      .params { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+      .params label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px; color: #868a8d; }
+      select { font: inherit; font-size: 12.5px; background: #1f2123; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 5px 8px; }
+      .summary { padding: 8px 18px; font-size: 11.5px; color: #7f8487; font-variant-numeric: tabular-nums; }
+      .summary b { color: #b7bbbd; font-weight: 600; }
+
+      .stage { padding: 5vh 4vw 14vh; display: flex; justify-content: center; }
+      /* the preview document */
+      .reader { max-width: 44rem; padding: 52px 56px 46px; line-height: 1.62; border-radius: 1px; font-family: var(--serif); }
+      .reader .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.62em; margin: 0 0 1.4em; }
+      .reader .h { font-size: 0.84em; margin: 0 0 1em; border-bottom: 1.5px solid currentColor; display: inline-block; padding-bottom: 3px; }
+      .reader p { margin: 0 0 1em; }
+      .reader p.first { margin-top: 0.2em; }
+      .reader .sig { font-style: italic; color: var(--s-voice); margin: 0.4em 0 0; font-size: 0.78em; }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <div class="brand">Farwatch · document designer — <span style="color:#868a8d;font-weight:400;">author × occasion × paper × ink</span></div>
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="panels" id="panels"></div>
+    <div class="summary" id="summary"></div>
+
+    <div class="stage">
+      <div class="reader paper" id="reader"></div>
+    </div>
+
+    <script>
+      (function () {
+        const KEY = 'fw.doc.presets';
+        const ENTS = ['paper', 'ink', 'author', 'occasion'];
+        const READER = {
+          source: 'from Phantastes · George MacDonald · 1858',
+          title: 'The Forest of Fairy Land',
+          paras: [
+            'The trees, which were far apart where I entered, giving free passage to the level rays of the sun, closed rapidly as I advanced, so that ere long their crowded stems barred the sunlight out, forming as it were a thick grating between me and the East. I seemed to be advancing towards a second midnight.',
+            'In the midst of the intervening twilight, however, before I entered what appeared to be the darkest portion of the forest, I saw a country maiden coming towards me from its very depths. She did not seem to observe me, for she was apparently intent upon a bunch of wild flowers which she carried in her hand.',
+            'I could hardly see her face; for, though she came direct towards me, she never looked up. But when we met, instead of passing, she turned and walked alongside of me for a few yards, still keeping her face downwards, and busied with her flowers.',
+            'She spoke rapidly, however, all the time, in a low tone, as if talking to herself, but evidently addressing the purport of her words to me. She seemed afraid of being observed by some lurking foe.',
+          ],
+          sig: '— George MacDonald',
+        };
+
+        // the working document spec + which preset each entity was loaded from
+        const state = DocModel.defaultSpec();
+        const chosen = { paper: 'worn-bright', ink: 'sepia', author: 'steward', occasion: 'measured' };
+
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const loadUser = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+        const saveUser = (u) => localStorage.setItem(KEY, JSON.stringify(u));
+        const presetsFor = (ent) => Object.assign({}, DocModel.PRESETS[ent], loadUser()[ent] || {});
+        const presetOptions = (ent, sel) => Object.keys(presetsFor(ent)).map((nm) => '<option value="' + esc(nm) + '"' + (nm === sel ? ' selected' : '') + '>' + esc(nm) + '</option>').join('');
+        const optionsHTML = (opts, cur) => opts.map(([v, l]) => '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + l + '</option>').join('');
+
+        // ── build the tabs + panels from the schema ──
+        const tabsEl = document.getElementById('tabs');
+        const panelsEl = document.getElementById('panels');
+        tabsEl.innerHTML = ENTS.map((e, i) => '<button data-ent="' + e + '"' + (i === 0 ? ' class="active"' : '') + '>' + DocModel.SCHEMA[e].label + '</button>').join('');
+        panelsEl.innerHTML = ENTS.map((e, i) => {
+          const sc = DocModel.SCHEMA[e];
+          const params = sc.params.map((p) => '<label>' + p.label + '</label><select id="f-' + e + '-' + p.key + '">' + optionsHTML(p.opts, state[e][p.key]) + '</select>').join('');
+          return '<div class="panel' + (i === 0 ? ' active' : '') + '" id="panel-' + e + '">' +
+            '<div class="presetbar"><span class="lbl">preset</span>' +
+            '<select id="preset-' + e + '">' + presetOptions(e, chosen[e]) + '</select>' +
+            '<input id="name-' + e + '" value="' + esc(chosen[e]) + '" placeholder="name" />' +
+            '<button id="save-' + e + '">save</button></div>' +
+            '<div class="params">' + params + '</div></div>';
+        }).join('');
+
+        // ── tab switching ──
+        tabsEl.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+          tabsEl.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b));
+          panelsEl.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + b.dataset.ent));
+        }));
+
+        function setPanelValues(ent) {
+          DocModel.SCHEMA[ent].params.forEach((p) => { document.getElementById('f-' + ent + '-' + p.key).value = state[ent][p.key]; });
+        }
+
+        // ── per-param listeners (edit the active config) ──
+        ENTS.forEach((ent) => {
+          DocModel.SCHEMA[ent].params.forEach((p) => {
+            document.getElementById('f-' + ent + '-' + p.key).addEventListener('change', (e) => {
+              state[ent][p.key] = e.target.value;
+              render();
+            });
+          });
+          // load a preset
+          document.getElementById('preset-' + ent).addEventListener('change', (e) => {
+            const p = presetsFor(ent)[e.target.value];
+            if (!p) return;
+            state[ent] = Object.assign({}, p);
+            chosen[ent] = e.target.value;
+            document.getElementById('name-' + ent).value = e.target.value;
+            setPanelValues(ent);
+            render();
+          });
+          // save (overwrite if the name exists, else a new preset)
+          document.getElementById('save-' + ent).addEventListener('click', () => {
+            const name = document.getElementById('name-' + ent).value.trim();
+            if (!name) return;
+            const u = loadUser(); u[ent] = u[ent] || {}; u[ent][name] = Object.assign({}, state[ent]); saveUser(u);
+            chosen[ent] = name;
+            document.getElementById('preset-' + ent).innerHTML = presetOptions(ent, name);
+          });
+        });
+
+        // ── compose + render the preview ──
+        const reader = document.getElementById('reader');
+        const summaryEl = document.getElementById('summary');
+        function render() {
+          const r = DocModel.compose(state);
+          for (const k in r.cssVars) reader.style.setProperty(k, r.cssVars[k]);
+          const bodies = r.occasion ? InkCycle.paras(READER.paras, r.occasion) : READER.paras.slice();
+          let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';
+          bodies.forEach((html, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + html + '</p>'; });
+          inner += '<p class="sig">' + READER.sig + '</p>';
+          reader.innerHTML = inner;
+          summaryEl.innerHTML = 'document: <b>' + chosen.paper + '</b> paper × <b>' + chosen.ink + '</b> ink × <b>' + chosen.author + '</b> hand × <b>' + chosen.occasion + '</b> occasion · derived bleed ceiling <b>' + r.cssVars['--ink-bloom-blur'] + ' / α' + r.cssVars['--ink-bloom-alpha'] + '</b> (absorbency × flow)';
+        }
+        render();
+      })();
+    </script>
+  </body>
+</html>
