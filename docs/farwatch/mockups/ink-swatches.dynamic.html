@@ -198,8 +198,8 @@
           let out = '';
           for (const ch of t) {
             if (ch === ' ') { out += ' '; continue; }
-            const dy = ((Math.random() * 2 - 1) * 0.04).toFixed(3);
-            const rot = ((Math.random() * 2 - 1) * 1.3).toFixed(2);
+            const dy = ((Math.random() * 2 - 1) * 0.016).toFixed(3);
+            const rot = ((Math.random() * 2 - 1) * 0.4).toFixed(2);
             out += '<span class="g" style="transform:translateY(' + dy + 'em) rotate(' + rot + 'deg)">' + ch + '</span>';
           }
           return out;
