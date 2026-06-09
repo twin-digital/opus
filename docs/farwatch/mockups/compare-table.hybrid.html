@@ -26,9 +26,9 @@
         --doc: #e2d1a3; --doc-ink: #2c2012; --doc-meta: #463a22; --doc-voice: #4a3a22; --loss: #7a2f25;
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
         --torn: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='600'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.008'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='12'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3CfeGaussianBlur%20stdDeviation='0.5'/%3E%3C/filter%3E%3Crect%20x='14'%20y='14'%20width='572'%20height='572'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
-        /* handwritten checkbox — a clearly uneven hand-drawn box; a curved hand-drawn check when marked */
-        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.075'%20numOctaves='2'%20seed='3'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='3.2'/%3E%3C/filter%3E%3Crect%20x='5'%20y='5'%20width='16'%20height='16'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.7'%20stroke-linejoin='round'%20filter='url(%23b)'/%3E%3C/svg%3E");
-        --check: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='c'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.07'%20numOctaves='2'%20seed='6'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='2.6'/%3E%3C/filter%3E%3Cpath%20d='M5,13.5%20Q8,16.5%2010.5,18.5%20Q15,11.5%2021.5,5'%20fill='none'%20stroke='%232c2012'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%20filter='url(%23c)'/%3E%3C/svg%3E");
+        /* handwritten checkbox — a genuinely uneven hand-drawn box; a bowed × (oversized + askew per JS) when marked */
+        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.07'%20numOctaves='2'%20seed='3'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='2.6'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3C/filter%3E%3Crect%20x='5'%20y='5'%20width='16'%20height='16'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.8'%20stroke-linejoin='round'%20filter='url(%23b)'/%3E%3C/svg%3E");
+        --xmark: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='30'%20height='30'%3E%3Cfilter%20id='x'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.06'%20numOctaves='2'%20seed='8'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.8'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3C/filter%3E%3Cpath%20d='M6,6%20Q15,14%2024,24%20M24,6%20Q15,16%206,24'%20fill='none'%20stroke='%232c2012'%20stroke-width='2.4'%20stroke-linecap='round'%20filter='url(%23x)'/%3E%3C/svg%3E");
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -67,8 +67,14 @@
       .roster ul { list-style: none; margin: 0; padding: 0; }
       .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
       /* handwritten check — marks for dispatch */
-      .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; background: var(--box) center / contain no-repeat; }
-      .roster .box.checked { background-image: var(--check), var(--box); }
+      .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; position: relative; background: var(--box) center / contain no-repeat; }
+      /* the × is bigger than the box and slightly askew — a human marked it, overfilling the lines */
+      .roster .box::after {
+        content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px;
+        transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+        background: var(--xmark) center / contain no-repeat; opacity: 0;
+      }
+      .roster .box.checked::after { opacity: 1; }
       .roster .name { flex: 1; cursor: pointer; }
       .roster li.in-lane .name { font-weight: 600; }
       .roster .name:hover { color: #6a4a30; }
@@ -103,7 +109,9 @@
       .tray .label { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; color: var(--cab-meta); font-size: 0.8rem; }
       .tray .going { font-size: 1.06rem; color: var(--cab-ink); }
       .tray .count { color: var(--cab-meta); margin-left: auto; font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.82rem; }
-      .tray .send-btn { font-variant: small-caps; letter-spacing: 0.1em; padding: 9px 18px; border: none; color: var(--cab); background: var(--prussian); cursor: pointer; }
+      /* dispatch rhymes with the charge — dark oxblood, the one saturated accent (was an imported teal) */
+      .tray .send-btn { font-variant: small-caps; letter-spacing: 0.1em; padding: 9px 18px; border: none; color: var(--cab); background: var(--loss); cursor: pointer; }
+      .tray .send-btn:not([disabled]):hover { background: #8a382c; }
       .tray .send-btn[disabled] { opacity: 0.4; cursor: default; }
 
       .caption { max-width: 1140px; margin: 22px auto 0; color: #8a8d80; font-size: 0.8rem; font-style: italic; text-align: center; }
@@ -146,6 +154,7 @@
         ];
         const LANE_MAX = 3, PARTY_MAX = 3;
         const byId = Object.fromEntries(SEEKERS.map((s) => [s.id, s]));
+        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 11 - 5.5).toFixed(1) + 'deg'])); // a stable askew per seeker
         let lane = [];
         const party = new Set();
         const rosterEl = document.getElementById('roster');
@@ -174,7 +183,9 @@
               '<span class="box' + (party.has(s.id) ? ' checked' : '') + '" title="mark for dispatch"></span>' +
               '<span class="name" title="open the dossier">' + s.name + '</span>' +
               '<span class="mark">' + (lane.includes(s.id) ? 'laid in' : '') + '</span>';
-            li.querySelector('.box').addEventListener('click', () => toggleParty(s.id));
+            const box = li.querySelector('.box');
+            box.style.setProperty('--rot', ROT[s.id]);
+            box.addEventListener('click', () => toggleParty(s.id));
             li.querySelector('.name').addEventListener('click', () => layIn(s.id));
             rosterEl.appendChild(li);
           });
