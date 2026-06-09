@@ -53,11 +53,11 @@
 }
 
 /* ── THE PAPER PRIMITIVE — reads its look from the inherited --paper-* slots ────────────────
-   Two independent dials feed it:
-     • STYLE  (a .paper-v-* variant) → grain, laid, glow, tear, lift, and the *geometry/strength* of
-       the edge-aging + ink-bleed.
-     • COLOUR (a .color-* combination, in paper-color.css) → the paper fill + edge-tint HUE, and the
-       ink colour + bleed HUE. Hue and strength are split so the dials don't collide.
+   Three independent dials feed it:
+     • STYLE  (a .paper-v-* variant) → grain, laid, glow, tear, lift.
+     • COLOUR (a .color-* combination, in paper-color.css) → the paper fill, the ink colour, and the
+       ink-bleed HUE.
+     • INK    (an .ink-* class, in ink.css) → face, weight, size, and the ink-bleed blur + strength.
    Defaults below keep a bare .paper looking like the worn-bright/warm-posting pairing. */
 .paper {
   position: relative;
