@@ -252,3 +252,61 @@ Captured from discussion; **not settled** — to be decided by rendering the sur
 
 Candidate mood axis to compare: **austere/monastic** (cold stone, severe) vs **warm/romantic**
 (candlelit, illuminated-manuscript) vs **starker** than either.
+
+---
+
+## Visual WIP — current values (mockup spike)
+
+**Status: WIP, not final.** Concrete values arrived at while iterating the mockups — captured so the spike
+can be picked up later. The leading direction is **hybrid**: *warm paper documents on a cool, smoke-and-stone
+room.* Authority for the live look is the mockup files, not this list; values here are a snapshot.
+
+- `mockups/compare-table.hybrid.html` — the party-building compare-table (the fullest realization).
+- `mockups/reading-first.warm-melancholy.html` — the reader (paper/ink/type reference).
+- `mockups/reading-first.hybrid-field.html` — the reader's paper set on the hybrid field (smoke + desk-pool).
+- `mockups/paper-swatches.html` — paper-tone + role-colour swatches.
+
+**Core principle — two materials, two temperatures.** *Warmth = paper (things authored in-world); cool =
+room/chrome (the system, the distance).* Anything the player or the compact wrote is warm parchment; anything
+that's apparatus (the field, the going-tray) is cool and textureless. The warmth ends exactly at the chrome.
+
+**Palette**
+- *Warm documents* — paper `#e2d1a3`; ink `#2c2012` (~10:1); meta/stamp `#463a22` (~7:1, small-caps);
+  voice `#4a3a22` (italic); loss/oxblood `#7a2f25`; gold `#99713a` (dim, sparing).
+- *Cool room/chrome* — field is a radial `#34373a → #25282b → #1a1c1e` on `#181a1b`; going-tray `#2b2e30`
+  with light text (`#d2d7d9` / meta `#8f9598`); cabinet inks (where chrome carries text) cool greys.
+- *Accent* — the dispatch action is oxblood (`--loss`), rhyming with the charge; it's the one saturated note
+  in the chrome.
+
+**Typography — four roles + a semantic.** Body = `--ink` roman; Voice = `--voice` italic (the steward, the
+said); Meta/Stamp = `--meta` small-caps (datelines, labels); Control = `--gold`, reserved for interactivity;
+Loss = `--loss` oxblood (semantic, not decorative). Face: **EB Garamond** (runs ~85% apparent size). Reader
+body 20px / line-height 1.7; documents in the denser compare-table hold line-height ~1.5. Headers are *written*
+(hand-underlined ink), not printed small-caps tags.
+
+**Paper (the full recipe — all three layers).** `--grain` (fine fractal noise, opacity ~0.55) **+** `--laid`
+(anisotropic noise, `baseFrequency 0.01 0.42` → directional fibre/laid lines, opacity ~0.26) **+** a warm
+top-glow radial. Ink "bloom" = `text-shadow: 0 0 0.7px rgba(48,22,8,0.5)`. Discretionary ligatures on. The
+laid layer is what stops paper reading as a flat tinted rectangle.
+
+**Torn edges.** A displacement-map mask (`--torn`) + `drop-shadow()` (so the shadow follows the ragged edge,
+not a rounded box). Reader sheet uses scale 14 / inset 16; the table's documents scale 12 / inset 14. Wide-
+short papers (the charge) need the mask **oversized horizontally** (`mask-size: calc(100% + 46px) 100%`,
+centered) or the ~2.3% inset eats ~26px/side. **Gotcha:** `feDisplacementMap` must set
+`xChannelSelector='R' yChannelSelector='G'` (default is alpha → near-uniform noise → glitchy displacement).
+
+**Handwritten marks (the roster checklist).** The box is a per-row **generated** bowed-pen path (jittered
+corners ±0.4px, gently bowed sides, slight overshoot at the close, stroke-width 1.5–1.85) — *not* one shared
+stamp, or it reads as a repeated glitch. The check is an oversized bowed `×` (bigger than the box, overflowing
+it), with a stable per-seeker random rotation of **±10°**. Both carry only a tiny displacement for grain;
+geometry carries the "hand."
+
+**The room — smoke field + desk-pool.** Two tileable mist layers (`--mist`/`--mist2`, different seed/freq)
+drift one tile per cycle on **different diagonals** (seamless, non-reversing, periods 102s/138s so they never
+realign). Tileability requires `stitchTiles='stitch'` **and** the filter region pinned to the box
+(`x=0 y=0 width=100% height=100%`) or the stitch period won't match the repeat period (visible breathing
+seams). Honors `prefers-reduced-motion`. A faint feathered radial **desk-pool** behind the document cluster
+grounds the papers together (a soft shadow of a surface, not a card).
+
+**Going-tray (chrome).** Belongs to the room, not the paper: dark `#2b2e30`, no drop-shadow (not floating);
+separated from the field by a near-minimum inset only (`inset 0 1px 2px rgba(0,0,0,0.14)`, no top border).
