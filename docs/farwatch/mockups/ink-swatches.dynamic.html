@@ -62,7 +62,7 @@
       /* "hand" treatments (applied to the reading sample only) */
       .hand-bite { filter: url(#ink-rough); }              /* roughen glyph edges — ink, not pixels */
       .ink-layer .w { white-space: nowrap; }               /* word stays intact (line breaks only at spaces) */
-      .ink-layer .g { display: inline-block; }             /* per-letter wrap for written wander */
+      /* glyph spans are plain inline for PRESSURE (keeps native spacing); WANDER adds inline-block inline (it needs transform) */
     </style>
   </head>
   <body>
@@ -218,7 +218,7 @@
               if (wander) {
                 const dy = ((Math.random() * 2 - 1) * 0.016).toFixed(3);
                 const rot = ((Math.random() * 2 - 1) * 0.4).toFixed(2);
-                st += 'transform:translateY(' + dy + 'em) rotate(' + rot + 'deg);';
+                st += 'display:inline-block;transform:translateY(' + dy + 'em) rotate(' + rot + 'deg);';
               }
               if (pressure) {
                 const p = Math.random(); // 0 = pen lifting (thin/pale), 1 = pressed (bold/dark)
