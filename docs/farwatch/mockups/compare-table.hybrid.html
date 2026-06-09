@@ -21,9 +21,9 @@
         --teal: #1d524c; --prussian: #27566a;
         --cab-rule: #d6cfb9;
         /* a faint, cool, wispy mist — soft low-frequency noise, alpha driven by the noise itself */
-        --mist: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.012%200.016'%20numOctaves='3'%20seed='11'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m)'%20opacity='0.5'/%3E%3C/svg%3E");
+        --mist: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.012%200.016'%20numOctaves='3'%20seed='11'%20stitchTiles='stitch'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m)'%20opacity='0.5'/%3E%3C/svg%3E");
         /* a second mist layer (different seed/frequency) — crossing the first slowly, the overlap churns like smoke */
-        --mist2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m2'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.009%200.02'%20numOctaves='3'%20seed='4'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m2)'%20opacity='0.5'/%3E%3C/svg%3E");
+        --mist2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m2'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.009%200.02'%20numOctaves='3'%20seed='4'%20stitchTiles='stitch'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m2)'%20opacity='0.5'/%3E%3C/svg%3E");
         /* document (warm parchment) */
         --doc: #e2d1a3; --doc-ink: #2c2012; --doc-meta: #463a22; --doc-voice: #4a3a22; --loss: #7a2f25;
         --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.55'/%3E%3C/svg%3E");
@@ -48,19 +48,15 @@
          field churns like slow smoke rather than sliding a static texture. The periods are coprime, so
          the two never realign and the motion never visibly repeats. */
       body::before, body::after {
-        content: ""; position: fixed; inset: -12%; z-index: 0; pointer-events: none; background-size: cover; background-position: center; background-repeat: no-repeat;
+        content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-repeat: repeat;
       }
-      body::before { background-image: var(--mist); animation: smoke-a 8s ease-in-out infinite alternate; }
-      body::after { background-image: var(--mist2); opacity: 0.72; animation: smoke-b 11s ease-in-out infinite alternate; }
-      @keyframes smoke-a {
-        from { transform: translate3d(-12%, 6%, 0) scale(1.10) rotate(0deg); }
-        to { transform: translate3d(12%, -10%, 0) scale(1.4) rotate(8deg); }
-      }
-      @keyframes smoke-b {
-        from { transform: translate3d(12%, -8%, 0) scale(1.35) rotate(0deg); }
-        to { transform: translate3d(-12%, 9%, 0) scale(1.08) rotate(-10deg); }
-      }
-      /* NOTE: prefers-reduced-motion guard temporarily removed for motion diagnosis — restore before final */
+      /* each layer drifts one tile per cycle on a different diagonal — tileable noise, so it loops seamlessly
+         and never reverses; the two crossing vectors keep the overlap churning while the field drifts upward */
+      body::before { background-image: var(--mist); background-size: 1100px 760px; animation: drift-a 34s linear infinite; }
+      body::after { background-image: var(--mist2); opacity: 0.72; background-size: 880px 620px; animation: drift-b 46s linear infinite; }
+      @keyframes drift-a { from { background-position: 0 0; } to { background-position: 1100px -760px; } }
+      @keyframes drift-b { from { background-position: 0 0; } to { background-position: -880px -620px; } }
+      @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
       .table, .caption { position: relative; z-index: 1; }
       .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
       /* a barely-there desk surface the cluster rests on — a soft feathered pool, not a card */
