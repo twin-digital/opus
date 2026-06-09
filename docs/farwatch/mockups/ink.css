@@ -18,9 +18,13 @@
 
 :root {
   /* ── FACE (font-family) options ── */
-  --face-garamond: "EB Garamond", Georgia, "Times New Roman", serif; /* the chosen humanist book-serif */
+  --face-garamond: "EB Garamond", Georgia, "Times New Roman", serif; /* the chosen humanist book-serif (no weight < 400) */
   --face-spectral: "Spectral", Georgia, "Times New Roman", serif;    /* cooler, more severe — the austere face */
-  --face-crimson: "Crimson Pro", Georgia, "Times New Roman", serif;  /* a scholarly book-serif */
+  --face-crimson: "Crimson Pro", Georgia, "Times New Roman", serif;  /* a scholarly book-serif (down to 200) */
+  /* Garamond/old-style faces that DO ship light weights — for the thin-stroke + bleed look */
+  --face-cormorant: "Cormorant Garamond", Georgia, serif;            /* a true Garamond, delicate, down to 300 */
+  --face-newsreader: "Newsreader", Georgia, serif;                   /* old-style, very readable, down to 200 */
+  --face-fraunces: "Fraunces", Georgia, serif;                       /* old-style, characterful, down to 300 */
 
   /* ── SIZE options (base paper-text size; children are em, so the block scales together) ── */
   --size-compact: 1.0rem;   /* the dense compare-table */

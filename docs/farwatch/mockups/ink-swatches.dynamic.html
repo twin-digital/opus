@@ -6,7 +6,7 @@
     <title>Farwatch — ink exploration (family · weight · bleed · size)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Newsreader:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
@@ -78,9 +78,12 @@
       </select>
       <label for="family-select">font family</label>
       <select id="family-select">
-        <option value="garamond">EB Garamond (default)</option>
-        <option value="spectral">Spectral</option>
-        <option value="crimson">Crimson Pro</option>
+        <option value="garamond">EB Garamond (default · no light)</option>
+        <option value="cormorant">Cormorant Garamond (→300)</option>
+        <option value="newsreader">Newsreader (→200)</option>
+        <option value="fraunces">Fraunces (→300)</option>
+        <option value="crimson">Crimson Pro (→200)</option>
+        <option value="spectral">Spectral (→200)</option>
       </select>
       <label for="weight-select">font weight</label>
       <select id="weight-select">
@@ -128,8 +131,8 @@
           'cabinet':      { 'paper colour': 'cream · #ece6d2', 'edge hue': '44 44 36', 'ink': 'soot · #201f18', 'bleed hue': '20 20 14' },
           'ghostly':      { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'faded · #5a4a30', 'bleed hue': '60 44 24' },
         };
-        const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)' };
-        const FAMILY_LABEL = { garamond: 'EB Garamond', spectral: 'Spectral', crimson: 'Crimson Pro' };
+        const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)', cormorant: 'var(--face-cormorant)', newsreader: 'var(--face-newsreader)', fraunces: 'var(--face-fraunces)' };
+        const FAMILY_LABEL = { garamond: 'EB Garamond', spectral: 'Spectral', crimson: 'Crimson Pro', cormorant: 'Cormorant Garamond', newsreader: 'Newsreader', fraunces: 'Fraunces' };
         // each bleed is the default single-shadow mechanism at different blur + alpha (the two tunable knobs)
         const BLEEDS = [
           { name: 'none', blur: '0', alpha: '0' },
