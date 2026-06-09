@@ -127,7 +127,10 @@
           { name: 'light', blur: '0.6px', alpha: '0.4' },
           { name: 'full', blur: '0.7px', alpha: '0.5' },
         ];
-        const SIZES = ['0.95rem', '1.1rem', '1.3rem', '1.5rem', '1.7rem', '1.9rem'];
+        const SIZES = ['0.9rem', '1rem', '1.1rem', '1.2rem', '1.35rem', '1.5rem'];
+        // rem → px, using the actual root font-size (html { font-size } below) so every swatch shows its real size
+        const ROOT_PX = parseFloat(getComputedStyle(document.documentElement).fontSize) || 19;
+        const pxOf = (rem) => (Math.round(parseFloat(rem) * ROOT_PX * 10) / 10) + 'px';
 
         function table(obj) {
           return '<table class="ptable">' + Object.keys(obj).map((k) => '<tr><th>' + k + '</th><td>' + obj[k] + '</td></tr>').join('') + '</table>';
@@ -163,9 +166,9 @@
             '<div class="grid" style="--ink-bloom-blur:' + b.blur + ';--ink-bloom-alpha:' + b.alpha + '">' +
             SIZES.map((sz) =>
               '<div class="cell">' +
-                '<p class="tag">size <b>' + sz + '</b></p>' +
+                '<p class="tag">size <b>' + sz + '</b> · ' + pxOf(sz) + '</p>' +
                 '<div class="paper swatch" style="--ink-size:' + sz + '">' + TEXT + '</div>' +
-                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz, bleed: b.name }) +
+                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: b.name }) +
               '</div>'
             ).join('') +
             '</div>'
