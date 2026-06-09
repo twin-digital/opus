@@ -439,3 +439,63 @@ One row per pairing. The selectors offer exactly these.
 Any style × any colour is valid; the named pairs are the curated, sensible ones. A paper is fully specified
 by **one style variant + one colour combination** — e.g. the table documents today are `worn-bright` ×
 `warm-posting`; the reader is `ledger` × `worn-ledger`.
+
+---
+
+## Ink style (the third dial)
+
+The non-colour properties of the writing: **face · slant · weight · size · bleed**. (The ink's *colour* +
+bleed *hue* are the second dial; this sets everything else, including the bleed's blur + strength.) Canonical
+encoding: **[`mockups/ink.css`](mockups/ink.css)** (`.ink-*` classes). The
+[dynamic table](mockups/compare-table.dynamic.html), the
+[colour swatches](mockups/paper-swatches.dynamic.html), and the dedicated
+[ink swatches](mockups/ink-swatches.dynamic.html) all carry an ink selector.
+
+Paper text is **em-relative** (every size in the document is `em`, anchored to `.paper { font-size:
+var(--ink-size) }`), so the size axis scales the whole block as a unit rather than each element separately.
+
+### Axis option libraries
+
+**Face** (font-family):
+
+| slug | family | key element |
+|---|---|---|
+| `garamond` | EB Garamond | the chosen humanist book-serif |
+| `spectral` | Spectral | cooler, more severe — the austere face |
+| `crimson` | Crimson Pro | a scholarly book-serif |
+
+**Slant** — `normal` (upright body) · `italic` (a "written by a hand" body).
+**Weight** — `400` (regular) · `500` (medium; the reverted "semibold beats" lived here).
+
+**Size** (base paper-text size; the block is em-relative so it scales together):
+
+| slug | value | key element |
+|---|---|---|
+| `compact` | `1.0rem` | the dense compare-table |
+| `reading` | `1.1rem` | the reader's reading size |
+| `large` | `1.22rem` | an extra-large reading pass |
+
+**Bleed** — the ink-soak halo (`text-shadow`); colour comes from the ink, blur + strength from here:
+
+| slug | blur · alpha | key element |
+|---|---|---|
+| `none` | — | crisp, screen-sharp ink |
+| `light` | `0.6px` · `0.4` | a faint soak |
+| `full` | `0.7px` · `0.5` | the worn-print soak (reader/table default) |
+
+### Ink variants in play
+
+One row per ink style. Cells name the option chosen on each axis.
+
+| variant | status | what it is | face | slant | weight | size | bleed |
+|---|---|---|---|---|---|---|---|
+| `chronicle` | **in play** | the reader's prose | garamond | upright | 400 | reading | full |
+| `posting` | **in play** | the table documents | garamond | upright | 400 | compact | full |
+| `scribe` | **in play** | "written by a hand" — italic body | garamond | *italic* | 400 | reading | full |
+| `monastic` | *proposed* | cooler + severe, no soak | spectral | upright | 400 | compact | none |
+| `scholar` | *proposed* | a book-serif alternative | crimson | upright | 400 | compact | light |
+| `crisp` | *proposed* | screen-sharp — medium weight, no soak (the "remove the bloom" test) | garamond | upright | 500 | compact | none |
+
+A document is now fully specified by **three dials**: a paper **style** + a colour **combination** + an ink
+**style**. Today's table documents are `worn-bright` × `warm-posting` × `posting`; the reader is `ledger` ×
+`worn-ledger` × `chronicle`.

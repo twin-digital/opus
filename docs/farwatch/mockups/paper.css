@@ -65,9 +65,15 @@
   background-image: var(--paper-grain, var(--grain-fine)), var(--paper-laid, var(--laid-fibre)), var(--paper-glow, var(--glow-candle-soft));
   background-size: 150px 150px, 220px 150px, auto;
   color: var(--paper-ink, #2c2012);
-  /* ink bleed: HUE (channels) from the ink colour, ALPHA from the style */
-  text-shadow: 0 0 0.7px rgb(var(--paper-bloom, 48 22 8) / var(--paper-bloom-alpha, 0.5));
-  /* edge aging: HUE (channels) from the paper colour, SIZE/ALPHA from the style */
+  /* writing: face / slant / weight / size from the INK STYLE dial (ink.css) — paper text is em-relative
+     so it scales as a unit with --ink-size */
+  font-family: var(--ink-family, "EB Garamond", Georgia, "Times New Roman", serif);
+  font-style: var(--ink-slant, normal);
+  font-weight: var(--ink-weight, 400);
+  font-size: var(--ink-size, 1rem);
+  /* ink bleed: HUE (channels) from the ink COLOUR; BLUR + ALPHA from the ink STYLE */
+  text-shadow: 0 0 var(--ink-bloom-blur, 0.7px) rgb(var(--paper-bloom, 48 22 8) / var(--ink-bloom-alpha, 0.5));
+  /* edge aging: HUE (channels) from the paper colour, SIZE/ALPHA from the paper style */
   box-shadow: inset 0 0 var(--paper-inset-size, 34px) rgb(var(--paper-edge, 70 50 22) / var(--paper-inset-alpha, 0.14));
   font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
   -webkit-mask-image: var(--paper-tear, var(--tear-torn)); mask-image: var(--paper-tear, var(--tear-torn));
@@ -107,9 +113,10 @@
   --paper-inset-size: 24px; --paper-inset-alpha: 0.10;
 }
 
-/* clean · baseline — flat colour, no texture, no tear, no bleed (the control) [PROPOSED] */
+/* clean · baseline — flat colour, no texture, no tear (the control) [PROPOSED]
+   (bleed is now an INK-STYLE concern, not a paper one — pair this with a no-bleed ink for a fully flat look) */
 .paper-v-clean {
   --paper-grain: none; --paper-laid: none; --paper-glow: none;
   --paper-tear: none; --paper-lift: var(--lift-low);
-  --paper-inset-alpha: 0; --paper-bloom-alpha: 0;
+  --paper-inset-alpha: 0;
 }

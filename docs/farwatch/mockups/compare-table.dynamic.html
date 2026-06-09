@@ -6,9 +6,10 @@
     <title>Farwatch — Compare-table — dynamic (switchable paper)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
+    <link rel="stylesheet" href="ink.css" />
     <style>
       /* ── DYNAMIC table mockup — the smoky-viewport hybrid, but every "paper" surface is driven by the
          shared paper.css recipe. A chrome header (system type, neutral panel — deliberately NOT in-world)
@@ -61,14 +62,14 @@
 
       /* ── paper surfaces: the SURFACE comes from paper.css (.paper); these rules are layout + text only ── */
       .anchor { grid-column: 1 / -1; padding: 18px 30px; --paper-tear-size: calc(100% + 46px) 100%; }
-      .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82rem; }
-      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: inherit; } /* follows the ink dial */
+      .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82em; }
+      .anchor .charge { font-size: 1.45em; margin: 3px 0 0; color: inherit; } /* follows the ink dial */
       .anchor .hazard { color: var(--loss); }
 
       .roster { padding: 22px 0; align-self: start; }
-      .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86rem; color: var(--doc-meta); margin: 0 18px 10px; }
+      .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86em; color: var(--doc-meta); margin: 0 18px 10px; }
       .roster ul { list-style: none; margin: 0; padding: 0; }
-      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: inherit; } /* names follow the ink dial */
+      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.05em; color: inherit; } /* names follow the ink dial */
       .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; position: relative; background: var(--box) center / contain no-repeat; }
       .roster .box::after {
         content: ""; position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
@@ -79,7 +80,7 @@
       .roster .name { flex: 1; cursor: pointer; }
       .roster li.in-lane .name { font-weight: 600; }
       .roster .name:hover { color: #6a4a30; }
-      .roster li .mark { font-style: italic; font-size: 0.8rem; color: var(--doc-meta); }
+      .roster li .mark { font-style: italic; font-size: 0.8em; color: var(--doc-meta); }
 
       .lane { display: flex; gap: 16px; align-items: start; min-height: 240px; }
       .lane .empty { color: #8a8d80; font-style: italic; align-self: center; margin: 0 auto; }
@@ -90,10 +91,10 @@
       }
       @keyframes lay-in { from { opacity: 0; transform: translateY(10px) scale(0.93); } to { opacity: 1; transform: none; } }
       @media (prefers-reduced-motion: reduce) { .dossier { animation: none; } }
-      .dossier h3 { margin: 0; font-size: 1.32rem; font-variant: small-caps; letter-spacing: 0.02em; color: inherit; } /* follows the ink dial */
-      .dossier .bg { margin: 3px 0 12px; color: var(--doc-meta); font-size: 0.92rem; }
+      .dossier h3 { margin: 0; font-size: 1.3em; font-variant: small-caps; letter-spacing: 0.02em; color: inherit; } /* follows the ink dial */
+      .dossier .bg { margin: 3px 0 12px; color: var(--doc-meta); font-size: 0.92em; }
       .dossier .said { font-style: italic; color: var(--doc-voice); margin: 0 0 16px; }
-      .dossier .drop { position: absolute; top: 12px; right: 14px; color: var(--doc-meta); cursor: pointer; font-size: 0.9rem; }
+      .dossier .drop { position: absolute; top: 12px; right: 14px; color: var(--doc-meta); cursor: pointer; font-size: 0.9em; }
       .dossier .drop:hover { color: var(--doc-ink); }
       /* marked for dispatch: an oxblood inner edge, clipped to the torn shape (overrides --paper-inset) */
       .dossier.going { box-shadow: inset 0 0 34px rgba(70,50,22,0.15), inset 0 0 0 2px rgba(122,47,37,0.55); }
@@ -130,11 +131,20 @@
         <option value="cabinet">cabinet — cream · soot</option>
         <option value="ghostly">ghostly — ledger · faded</option>
       </select>
-      <span class="note">chrome, not the game — sets paper style + colour for every paper surface below</span>
+      <label for="ink-select">ink style</label>
+      <select id="ink-select">
+        <option value="posting">posting — Garamond · compact (default)</option>
+        <option value="chronicle">chronicle — Garamond · reading</option>
+        <option value="scribe">scribe — Garamond italic</option>
+        <option value="monastic">monastic — Spectral · no bleed</option>
+        <option value="scholar">scholar — Crimson Pro</option>
+        <option value="crisp">crisp — Garamond medium · no bleed</option>
+      </select>
+      <span class="note">chrome, not the game — sets paper style · colour · ink for every paper below</span>
     </header>
 
     <div class="stage">
-      <div class="table paper-v-worn-bright color-warm-posting" id="table">
+      <div class="table paper-v-worn-bright color-warm-posting ink-posting" id="table">
         <div class="anchor paper">
           <div class="k">the charge</div>
           <p class="charge">Clear the barrow beneath the white fields — <span class="hazard">old wards, and the deep dark</span>.</p>
@@ -205,13 +215,13 @@
         const countEl = document.getElementById('count');
         const dispatchEl = document.getElementById('dispatch');
 
-        // ── paper style + colour switchers (chrome) ──
+        // ── paper style + colour + ink switchers (chrome) ──
         const tableEl = document.getElementById('table');
         const styleSel = document.getElementById('paper-select');
         const colorSel = document.getElementById('color-select');
-        function applyVariant() { tableEl.className = 'table paper-v-' + styleSel.value + ' color-' + colorSel.value; }
-        styleSel.addEventListener('change', applyVariant);
-        colorSel.addEventListener('change', applyVariant);
+        const inkSel = document.getElementById('ink-select');
+        function applyVariant() { tableEl.className = 'table paper-v-' + styleSel.value + ' color-' + colorSel.value + ' ink-' + inkSel.value; }
+        [styleSel, colorSel, inkSel].forEach((s) => s.addEventListener('change', applyVariant));
         applyVariant();
 
         function layIn(id) {
