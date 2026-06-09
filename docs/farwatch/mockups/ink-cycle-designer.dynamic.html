@@ -82,13 +82,6 @@
         <option value="700">700</option>
         <option value="800">800</option>
       </select>
-      <label for="bleed">bleed</label>
-      <select id="bleed">
-        <option value="none">none</option>
-        <option value="light">light</option>
-        <option value="full" selected>full</option>
-        <option value="extreme">extreme</option>
-      </select>
 
       <span class="sep"></span>
       <span class="grp">ink cycle ▸</span>
@@ -159,6 +152,35 @@
         <option value="0.08">0.08</option>
         <option value="0.12">0.12 — restless</option>
       </select>
+
+      <span class="grp">bloom (at full ink) ▸</span>
+      <label for="bloom-preset">preset</label>
+      <select id="bloom-preset">
+        <option value="" selected>—</option>
+        <option value="none">none</option>
+        <option value="light">light</option>
+        <option value="full">full</option>
+        <option value="extreme">extreme</option>
+      </select>
+      <label for="bloom-blur">bloom blur</label>
+      <select id="bloom-blur">
+        <option value="0px">0 — none</option>
+        <option value="0.4px">0.4px</option>
+        <option value="0.6px">0.6px</option>
+        <option value="0.7px" selected>0.7px</option>
+        <option value="0.9px">0.9px</option>
+        <option value="1.15px">1.15px</option>
+        <option value="1.5px">1.5px — wet</option>
+      </select>
+      <label for="bloom-alpha">bloom alpha</label>
+      <select id="bloom-alpha">
+        <option value="0">0 — none</option>
+        <option value="0.3">0.30</option>
+        <option value="0.4">0.40</option>
+        <option value="0.5" selected>0.50</option>
+        <option value="0.65">0.65</option>
+        <option value="0.85">0.85 — heavy</option>
+      </select>
     </header>
 
     <div class="stage">
@@ -168,7 +190,7 @@
     <script>
       (function () {
         const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)', cormorant: 'var(--face-cormorant)', newsreader: 'var(--face-newsreader)', fraunces: 'var(--face-fraunces)' };
-        const BLEEDS = { none: { blur: '0', alpha: '0' }, light: { blur: '0.6px', alpha: '0.4' }, full: { blur: '0.7px', alpha: '0.5' }, extreme: { blur: '1.15px', alpha: '0.85' } };
+        const BLOOM_PRESETS = { none: { blur: '0px', alpha: '0' }, light: { blur: '0.6px', alpha: '0.4' }, full: { blur: '0.7px', alpha: '0.5' }, extreme: { blur: '1.15px', alpha: '0.85' } };
         const READER = {
           source: 'from Phantastes · George MacDonald · 1858',
           title: 'The Forest of Fairy Land',
@@ -190,9 +212,8 @@
           reader.style.setProperty('--ink-family', FAMILY_VAR[v('family')]);
           reader.style.setProperty('--ink-weight', v('weight'));
           reader.style.setProperty('--ink-size', '1.35rem');
-          const bl = BLEEDS[v('bleed')];
-          reader.style.setProperty('--ink-bloom-blur', bl.blur);
-          reader.style.setProperty('--ink-bloom-alpha', bl.alpha);
+          reader.style.setProperty('--ink-bloom-blur', v('bloom-blur'));   // the bloom ceiling (at full ink);
+          reader.style.setProperty('--ink-bloom-alpha', v('bloom-alpha')); // the cycle scales it per word
 
           const [dipMin, dipMax] = v('dip').split('-').map(Number);
           const P = (v('gran') === 'none') ? null
@@ -223,7 +244,19 @@
           presetSel.value = '';
         });
 
-        document.querySelectorAll('.chrome-bar select:not(#preset)').forEach((s) => s.addEventListener('change', render));
+        // bloom preset loader: set the blur + alpha dials, then clear the bloom preset box
+        const bloomSel = document.getElementById('bloom-preset');
+        bloomSel.addEventListener('change', () => {
+          const b = BLOOM_PRESETS[bloomSel.value];
+          if (b) {
+            document.getElementById('bloom-blur').value = b.blur;
+            document.getElementById('bloom-alpha').value = b.alpha;
+            render();
+          }
+          bloomSel.value = '';
+        });
+
+        document.querySelectorAll('.chrome-bar select:not(#preset):not(#bloom-preset)').forEach((s) => s.addEventListener('change', render));
         render();
       })();
     </script>
