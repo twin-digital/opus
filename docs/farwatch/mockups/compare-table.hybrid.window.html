@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — Compare-table — hybrid (cabinet UI + warm documents)</title>
+    <title>Farwatch — Compare-table — hybrid · grey page, smoke window</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -40,25 +40,32 @@
       body {
         font-family: var(--serif); color: var(--cab-ink); line-height: 1.5; font-size: 1.02rem;
         -webkit-font-smoothing: antialiased; padding: 5vh 24px 14vh;
-        /* the cabinet/room — cool neutral dark, slightly lit */
-        background: radial-gradient(95% 60% at 50% 4%, #34373a 0%, #25282b 45%, #1a1c1e 100%), #181a1b;
+        /* the room is a flat, untextured cool grey (the austere-spectral reference); the smoke lives only
+           inside the "window" cut into it, not across the whole page */
+        background: radial-gradient(130% 90% at 50% -8%, #44484b 0%, #2b2e30 42%, #1b1d1f 78%, #141517 100%), #141517;
         background-attachment: fixed;
       }
-      /* two faint mist layers crossing very slowly — where they overlap the density shifts, so the
-         field churns like slow smoke rather than sliding a static texture. The periods are coprime, so
-         the two never realign and the motion never visibly repeats. */
-      body::before, body::after {
-        content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-repeat: repeat;
+      .table { max-width: 1140px; margin: 0 auto; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 18px; }
+      .caption { position: relative; z-index: 1; }
+
+      /* the WINDOW — a darker aperture cut into the grey, looking through onto the drifting smoke field.
+         The document cluster (charge · roster · lane) lives inside it; chrome (the tray) stays out on the grey. */
+      .window {
+        position: relative; isolation: isolate; display: grid; grid-template-columns: 234px 1fr; gap: 20px; padding: 22px;
+        background: radial-gradient(95% 75% at 50% 0%, #34373a 0%, #25282b 45%, #17191b 100%), #16181a;
+        box-shadow: inset 0 2px 14px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(0,0,0,0.45);
       }
-      /* each layer drifts one tile per cycle on a different diagonal — tileable noise, so it loops seamlessly
-         and never reverses; the two crossing vectors keep the overlap churning while the field drifts upward */
-      body::before { background-image: var(--mist); background-size: 1200px 800px; animation: drift-a 102s linear infinite; }
-      body::after { background-image: var(--mist2); opacity: 0.72; background-size: 900px 600px; animation: drift-b 138s linear infinite; }
+      /* two faint mist layers crossing slowly inside the window — tileable noise drifting one tile per cycle
+         on different diagonals, so the loop is seamless and the overlap churns like slow smoke. Behind the
+         documents (z-index -1, above the window's own dark field). */
+      .window::before, .window::after {
+        content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background-repeat: repeat;
+      }
+      .window::before { background-image: var(--mist); background-size: 1200px 800px; animation: drift-a 102s linear infinite; }
+      .window::after { background-image: var(--mist2); opacity: 0.72; background-size: 900px 600px; animation: drift-b 138s linear infinite; }
       @keyframes drift-a { from { background-position: 0 0; } to { background-position: 1200px -800px; } }
       @keyframes drift-b { from { background-position: 0 0; } to { background-position: -900px -600px; } }
-      @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
-      .table, .caption { position: relative; z-index: 1; }
-      .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
+      @media (prefers-reduced-motion: reduce) { .window::before, .window::after { animation: none; } }
 
       /* ── DOCUMENTS (warm parchment): the charge posting + the roster checklist ── */
       .anchor, .roster {
@@ -129,7 +136,7 @@
       /* ── CABINET tray (pure UI chrome — the going panel) ── */
       /* the tray belongs to the room, not the paper world — a dark panel recessed into the desk,
          lighter than the smoke-and-stone field but clearly the same cool family */
-      .tray { grid-column: 1 / -1; padding: 16px 22px; display: flex; align-items: center; gap: 16px; background: #2b2e30; box-shadow: inset 0 1px 2px rgba(0,0,0,0.14); }
+      .tray { padding: 16px 22px; display: flex; align-items: center; gap: 16px; background: #2b2e30; box-shadow: inset 0 1px 2px rgba(0,0,0,0.14); }
       .tray .label { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; color: #8f9598; font-size: 0.8rem; }
       .tray .going { font-size: 1.06rem; color: #d2d7d9; }
       .tray .count { color: #8f9598; margin-left: auto; font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.82rem; }
@@ -143,19 +150,21 @@
   </head>
   <body>
     <div class="table">
-      <div class="anchor">
-        <div class="k">the charge</div>
-        <p class="charge">Clear the barrow beneath the white fields — <span class="hazard">old wards, and the deep dark</span>.</p>
+      <div class="window">
+        <div class="anchor">
+          <div class="k">the charge</div>
+          <p class="charge">Clear the barrow beneath the white fields — <span class="hazard">old wards, and the deep dark</span>.</p>
+        </div>
+
+        <nav class="roster">
+          <h2>the roster</h2>
+          <ul id="roster"></ul>
+        </nav>
+
+        <section class="lane" id="lane">
+          <p class="empty">Touch a name to lay their dossier in — weigh two or three side by side.</p>
+        </section>
       </div>
-
-      <nav class="roster">
-        <h2>the roster</h2>
-        <ul id="roster"></ul>
-      </nav>
-
-      <section class="lane" id="lane">
-        <p class="empty">Touch a name to lay their dossier in — weigh two or three side by side.</p>
-      </section>
 
       <div class="tray">
         <span class="label">going</span>
@@ -165,7 +174,7 @@
       </div>
     </div>
 
-    <p class="caption">Documents are warm parchment — the charge posting, the dossiers, and the roster (a checklist for <em>this</em> dispatch, with handwritten marks). The room and the going-tray are cool UI chrome. Click a name to open its dossier; mark the box to send.</p>
+    <p class="caption">The page is flat grey; the documents sit in a <em>window</em> cut into it, looking onto the drifting smoke. Documents are warm parchment — the charge posting, the dossiers, and the roster (a checklist for <em>this</em> dispatch, with handwritten marks). The going-tray is chrome, out on the grey. Click a name to open its dossier; mark the box to send.</p>
 
     <script>
       (function () {
