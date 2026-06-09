@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="paper.css" />
+    <link rel="stylesheet" href="paper-color.css" />
     <style>
       /* ── DYNAMIC table mockup — the smoky-viewport hybrid, but every "paper" surface is driven by the
          shared paper.css recipe. A chrome header (system type, neutral panel — deliberately NOT in-world)
@@ -61,13 +62,13 @@
       /* ── paper surfaces: the SURFACE comes from paper.css (.paper); these rules are layout + text only ── */
       .anchor { grid-column: 1 / -1; padding: 18px 30px; --paper-tear-size: calc(100% + 46px) 100%; }
       .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82rem; }
-      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: var(--doc-ink); }
+      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: inherit; } /* follows the ink dial */
       .anchor .hazard { color: var(--loss); }
 
       .roster { padding: 22px 0; align-self: start; }
       .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86rem; color: var(--doc-meta); margin: 0 18px 10px; }
       .roster ul { list-style: none; margin: 0; padding: 0; }
-      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
+      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: inherit; } /* names follow the ink dial */
       .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; position: relative; background: var(--box) center / contain no-repeat; }
       .roster .box::after {
         content: ""; position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
@@ -89,7 +90,7 @@
       }
       @keyframes lay-in { from { opacity: 0; transform: translateY(10px) scale(0.93); } to { opacity: 1; transform: none; } }
       @media (prefers-reduced-motion: reduce) { .dossier { animation: none; } }
-      .dossier h3 { margin: 0; font-size: 1.32rem; font-variant: small-caps; letter-spacing: 0.02em; color: var(--doc-ink); }
+      .dossier h3 { margin: 0; font-size: 1.32rem; font-variant: small-caps; letter-spacing: 0.02em; color: inherit; } /* follows the ink dial */
       .dossier .bg { margin: 3px 0 12px; color: var(--doc-meta); font-size: 0.92rem; }
       .dossier .said { font-style: italic; color: var(--doc-voice); margin: 0 0 16px; }
       .dossier .drop { position: absolute; top: 12px; right: 14px; color: var(--doc-meta); cursor: pointer; font-size: 0.9rem; }
@@ -112,7 +113,7 @@
   <body>
     <header class="chrome-bar">
       <span class="brand">Farwatch · paper lab</span>
-      <label for="paper-select">paper variant</label>
+      <label for="paper-select">paper style</label>
       <select id="paper-select">
         <option value="worn-bright">worn-bright — table documents (default)</option>
         <option value="ledger">ledger — reader sheet</option>
@@ -120,11 +121,20 @@
         <option value="austere">austere — pruned (test)</option>
         <option value="clean">clean — flat baseline (test)</option>
       </select>
-      <span class="note">chrome, not the game — switches the active paper for every paper surface below</span>
+      <label for="color-select">colour</label>
+      <select id="color-select">
+        <option value="warm-posting">warm-posting — parchment · sepia (default)</option>
+        <option value="worn-ledger">worn-ledger — ledger · sepia</option>
+        <option value="amber-warm">amber-warm — amber · sepia</option>
+        <option value="bright-clean">bright-clean — bright · sepia</option>
+        <option value="cabinet">cabinet — cream · soot</option>
+        <option value="ghostly">ghostly — ledger · faded</option>
+      </select>
+      <span class="note">chrome, not the game — sets paper style + colour for every paper surface below</span>
     </header>
 
     <div class="stage">
-      <div class="table paper-v-worn-bright" id="table">
+      <div class="table paper-v-worn-bright color-warm-posting" id="table">
         <div class="anchor paper">
           <div class="k">the charge</div>
           <p class="charge">Clear the barrow beneath the white fields — <span class="hazard">old wards, and the deep dark</span>.</p>
@@ -195,12 +205,14 @@
         const countEl = document.getElementById('count');
         const dispatchEl = document.getElementById('dispatch');
 
-        // ── paper-variant switcher (chrome) ──
+        // ── paper style + colour switchers (chrome) ──
         const tableEl = document.getElementById('table');
-        const selectEl = document.getElementById('paper-select');
-        function applyVariant(v) { tableEl.className = 'table paper-v-' + v; }
-        selectEl.addEventListener('change', () => applyVariant(selectEl.value));
-        applyVariant(selectEl.value);
+        const styleSel = document.getElementById('paper-select');
+        const colorSel = document.getElementById('color-select');
+        function applyVariant() { tableEl.className = 'table paper-v-' + styleSel.value + ' color-' + colorSel.value; }
+        styleSel.addEventListener('change', applyVariant);
+        colorSel.addEventListener('change', applyVariant);
+        applyVariant();
 
         function layIn(id) {
           if (lane.includes(id)) { lane = lane.filter((x) => x !== id); render(); return; }

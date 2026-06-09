@@ -373,17 +373,69 @@ inset doesn't eat their width.)*
 | `lift-card` | `0 18/40 .45` + `0 4/9 .38` | a small card, lifted a touch (fact pane) |
 | `lift-high` | `0 38/70 .5` + `0 8/18 .4` | a large sheet floating well above (reader) |
 
-### Variants in play
+### Style variants in play
 
-One row per paper. Cells name the option chosen on each axis.
+One row per paper *style*. **Colour is a separate dial** (next section) — these set only texture, edge,
+and lift. Cells name the option chosen on each axis.
 
-| variant | status | what it is | colour | grain | laid | glow | tear | lift |
-|---|---|---|---|---|---|---|---|---|
-| `worn-bright` | **in play** | bright worn parchment — the table documents (charge · roster · dossiers) | `#e2d1a3` | fine | fibre | candle-soft | torn | lift-low |
-| `ledger` | **in play** | duller worn-ledger sheet — the reader's reading page | `#d9cca6` | fine | fibre | candle | deep | lift-high |
-| `card` | **in play** | small index / fact card — no warm wash, lighter lift | `#d3c59e` | fine | fibre | none | torn | lift-card |
-| `austere` | *proposed* | pruned — tooth only, straight edge, no warmth (the "remove things" test) | `#ddd0ad` | soft | none | none | none | lift-low |
-| `clean` | *proposed* | flat baseline — colour only, no texture/tear (the control) | `#e2d1a3` | none | none | none | none | lift-low |
+| style variant | status | what it is | grain | laid | glow | tear | lift |
+|---|---|---|---|---|---|---|---|
+| `worn-bright` | **in play** | bright worn-parchment surface — the table documents (charge · roster · dossiers) | fine | fibre | candle-soft | torn | lift-low |
+| `ledger` | **in play** | duller worn-ledger surface — the reader's reading page | fine | fibre | candle | deep | lift-high |
+| `card` | **in play** | small index / fact card — no warm wash, lighter lift | fine | fibre | none | torn | lift-card |
+| `austere` | *proposed* | pruned — tooth only, straight edge, no warm wash (the "remove things" test) | soft | none | none | none | lift-low |
+| `clean` | *proposed* | flat baseline — no texture/tear/bleed (the control) | none | none | none | none | lift-low |
 
 *`austere` and `clean` are deliberate test rows (not yet a rendered design) — they exist so the dynamic
 mockup can A/B "how much of the texture is actually load-bearing" against the full recipe.*
+
+---
+
+## Paper & ink colour (the second dial)
+
+Colour is split out of the paper *style* so it moves independently — but the player only ever sees **curated
+pairs** of a paper-colour and an ink-colour. Canonical encoding:
+**[`mockups/paper-color.css`](mockups/paper-color.css)** (`.color-*` classes). Both the
+[dynamic table](mockups/compare-table.dynamic.html) and the
+[dynamic swatch sheet](mockups/paper-swatches.dynamic.html) carry a colour selector. Hue and strength are
+split: the **paper** supplies the fill + edge-aging *hue*; the **ink** supplies the writing colour + bleed
+*hue*; the *strength* of edge-aging and bleed comes from the style.
+
+*(Type-role accents — voice / stamp / loss / gold — are **not** part of the paper/ink pair; they're a
+separate future "accent palette" dial, held constant for now.)*
+
+### Paper-colour options
+
+| slug | fill | edge-aging hue (rgb) | key element |
+|---|---|---|---|
+| `ledger` | `#d9cca6` | `70 50 22` | dull worn ledger — warm brown edge |
+| `parchment` | `#e2d1a3` | `70 50 22` | warm + bright parchment — warm brown edge |
+| `amber` | `#e5d1a0` | `74 52 20` | warmer, more amber — deeper amber edge |
+| `bright` | `#e8d6a4` | `70 50 22` | the brightest warm paper |
+| `card` | `#d3c59e` | `66 48 20` | a touch greyer — the index card |
+| `cream` | `#ece6d2` | `44 44 36` | cool cream — neutral (not brown) edge — the wildcard |
+
+### Ink options
+
+| slug | base | bleed hue (rgb) | key element |
+|---|---|---|---|
+| `sepia` | `#2c2012` | `48 22 8` | the standard faded sepia-brown |
+| `soot` | `#201f18` | `20 20 14` | sharper, cooler near-black — the cabinet hand |
+| `faded` | `#5a4a30` | `60 44 24` | very worn — a light, ghosted ink |
+
+### Curated combinations
+
+One row per pairing. The selectors offer exactly these.
+
+| name | paper-colour | ink | what it is |
+|---|---|---|---|
+| `warm-posting` | parchment | sepia | the table documents — bright parchment, sepia ink |
+| `worn-ledger` | ledger | sepia | the reader's reading page — duller paper, faded sepia |
+| `amber-warm` | amber | sepia | candle-flushed, warmer |
+| `bright-clean` | bright | sepia | the brightest warm paper |
+| `cabinet` | cream | soot | cool cream + sharp near-black — organized, slightly cold (the wildcard) |
+| `ghostly` | ledger | faded | very worn — faded ink on dull paper (an atmospheric extreme) |
+
+Any style × any colour is valid; the named pairs are the curated, sensible ones. A paper is fully specified
+by **one style variant + one colour combination** — e.g. the table documents today are `worn-bright` ×
+`warm-posting`; the reader is `ledger` × `worn-ledger`.

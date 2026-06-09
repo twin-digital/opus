@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — paper / ink colour swatches (dynamic)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="paper.css" />
+    <link rel="stylesheet" href="paper-color.css" />
+    <style>
+      /* Every curated paper/ink COLOUR combination, rendered with the same chosen paper STYLE.
+         The header dropdown swaps the style for all swatches at once (the colours are fixed per cell). */
+      :root {
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        /* type-role accents are NOT part of the paper/ink pair — held constant here (a future "accent" dial) */
+        --s-voice: #4a3a22; --s-meta: #463a22; --s-loss: #7a2f25; --s-gold: #99713a;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body { font-family: var(--serif); color: #c8cacc; background: #202124; -webkit-font-smoothing: antialiased; }
+
+      /* ── CHROME HEADER — mockup furniture, system sans, flat neutral ── */
+      .chrome-bar {
+        position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        padding: 9px 18px; background: #1d1f21; border-bottom: 1px solid #000;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #c7cacc;
+      }
+      .chrome-bar .brand { font-weight: 600; letter-spacing: 0.02em; color: #e6e8ea; }
+      .chrome-bar label { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; color: #868a8d; }
+      .chrome-bar select { font-family: inherit; font-size: 13px; background: #2c2f31; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 5px 9px; }
+      .chrome-bar .note { margin-left: auto; color: #6e7274; font-style: italic; }
+
+      .stage { padding: 5vh 4vw 12vh; }
+      h1 { font-family: system-ui, sans-serif; font-size: 1rem; font-weight: 600; margin: 0 0 4px; color: #e2e4e6; }
+      .sub { font-family: system-ui, sans-serif; margin: 0 0 28px; color: #8a8d90; font-size: 0.85rem; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 28px; max-width: 1240px; }
+
+      .cell .tag { font-family: system-ui, sans-serif; font-size: 0.78rem; letter-spacing: 0.02em; color: #94989b; margin: 0 0 8px; }
+      .cell .tag b { color: #d9dcde; font-weight: 600; }
+
+      /* the swatch IS a .paper (style from the grid's variant class; colour from the cell's .color-* class) */
+      .swatch { padding: 28px 30px 26px; font-size: 18px; line-height: 1.6; border-radius: 1px; }
+      .swatch .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.95rem; margin: 0 0 16px; }
+      .swatch .h { font-size: 1.04rem; margin: 0 0 12px; border-bottom: 1.5px solid currentColor; display: inline-block; padding-bottom: 3px; } /* header in ink */
+      .swatch p { margin: 0 0 11px; }
+      .swatch .loss { color: var(--s-loss); }
+      .swatch .struck { text-decoration: line-through; text-decoration-color: var(--s-loss); }
+      .swatch .ctl { border-bottom: 1px dotted var(--s-gold); } /* control reach-point */
+      .swatch .sig { font-style: italic; color: var(--s-voice); margin: 0; }
+    </style>
+  </head>
+  <body>
+    <header class="chrome-bar">
+      <span class="brand">Farwatch · colour swatches</span>
+      <label for="paper-select">paper style</label>
+      <select id="paper-select">
+        <option value="worn-bright">worn-bright — table documents (default)</option>
+        <option value="ledger">ledger — reader sheet</option>
+        <option value="card">card — index / fact card</option>
+        <option value="austere">austere — pruned (test)</option>
+        <option value="clean">clean — flat baseline (test)</option>
+      </select>
+      <span class="note">chrome — swaps the paper style under every colour combination</span>
+    </header>
+
+    <div class="stage">
+      <h1>Paper / ink colour combinations</h1>
+      <p class="sub">Each cell is one curated paper-colour × ink pairing, all on the chosen paper style. Body text is in the combination's ink; the voice / stamp / loss / gold accents are held constant (a separate dial).</p>
+      <div class="grid paper-v-worn-bright" id="grid"></div>
+    </div>
+
+    <script>
+      (function () {
+        const COMBOS = [
+          ['warm-posting', 'parchment · sepia'],
+          ['worn-ledger', 'ledger · sepia'],
+          ['amber-warm', 'amber · sepia'],
+          ['bright-clean', 'bright · sepia'],
+          ['cabinet', 'cream · soot'],
+          ['ghostly', 'ledger · faded'],
+        ];
+        const TEXT =
+          '<p class="when">Farwatch · at the turn of the season</p>' +
+          '<p class="h">What you sent them to do</p>' +
+          '<p>They came to the barrow-door at dusk — <span class="ctl">to the keeping of the lamp</span>.</p>' +
+          '<p>The strongbox came home heavier, though <span class="loss">the lien falls due at first snow</span>.</p>' +
+          '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
+          '<p class="sig">— the steward</p>';
+
+        const grid = document.getElementById('grid');
+        COMBOS.forEach(([slug, sub]) => {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.innerHTML =
+            '<p class="tag"><b>' + slug + '</b> · ' + sub + '</p>' +
+            '<div class="paper swatch color-' + slug + '">' + TEXT + '</div>';
+          grid.appendChild(cell);
+        });
+
+        // ── paper-style switcher (chrome) ──
+        const gridEl = document.getElementById('grid');
+        const styleSel = document.getElementById('paper-select');
+        function applyStyle() { gridEl.className = 'grid paper-v-' + styleSel.value; }
+        styleSel.addEventListener('change', applyStyle);
+        applyStyle();
+      })();
+    </script>
+  </body>
+</html>
