@@ -122,13 +122,12 @@
         };
         const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)' };
         const FAMILY_LABEL = { garamond: 'EB Garamond', spectral: 'Spectral', crimson: 'Crimson Pro' };
-        // each bleed supplies the CSS vars for its section; most use blur+alpha, the extreme one overrides
-        // the whole text-shadow with stacked rings of the ink colour (the paint soaking outward)
+        // each bleed is the default single-shadow mechanism at different blur + alpha (the two tunable knobs)
         const BLEEDS = [
-          { name: 'none', vars: '--ink-bloom-blur:0;--ink-bloom-alpha:0' },
-          { name: 'light', vars: '--ink-bloom-blur:0.6px;--ink-bloom-alpha:0.4' },
-          { name: 'full', vars: '--ink-bloom-blur:0.7px;--ink-bloom-alpha:0.5' },
-          { name: 'full ×11 — same mechanism, extreme', vars: '--ink-bloom-blur:7px;--ink-bloom-alpha:1' },
+          { name: 'none', blur: '0', alpha: '0' },
+          { name: 'light', blur: '0.6px', alpha: '0.4' },
+          { name: 'full', blur: '0.7px', alpha: '0.5' },
+          { name: 'full ×11 — extreme', blur: '7px', alpha: '1' },
         ];
         const SIZES = ['0.9rem', '1rem', '1.1rem', '1.2rem', '1.35rem', '1.5rem'];
         // rem → px, using the actual root font-size (html { font-size } below) so every swatch shows its real size
@@ -166,12 +165,12 @@
 
           app.innerHTML = BLEEDS.map((b) =>
             '<h2 class="section">Ink bleed — ' + b.name + '</h2>' +
-            '<div class="grid" style="' + b.vars + '">' +
+            '<div class="grid" style="--ink-bloom-blur:' + b.blur + ';--ink-bloom-alpha:' + b.alpha + '">' +
             SIZES.map((sz) =>
               '<div class="cell">' +
                 '<p class="tag">size <b>' + sz + '</b> · ' + pxOf(sz) + '</p>' +
                 '<div class="paper swatch" style="--ink-size:' + sz + '">' + TEXT + '</div>' +
-                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: b.name }) +
+                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: b.name + ' · blur ' + b.blur + ' · α' + b.alpha }) +
               '</div>'
             ).join('') +
             '</div>'
