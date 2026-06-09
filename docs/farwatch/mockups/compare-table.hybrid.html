@@ -52,8 +52,8 @@
       }
       /* each layer drifts one tile per cycle on a different diagonal — tileable noise, so it loops seamlessly
          and never reverses; the two crossing vectors keep the overlap churning while the field drifts upward */
-      body::before { background-image: var(--mist); background-size: 1200px 800px; animation: drift-a 34s linear infinite; }
-      body::after { background-image: var(--mist2); opacity: 0.72; background-size: 900px 600px; animation: drift-b 46s linear infinite; }
+      body::before { background-image: var(--mist); background-size: 1200px 800px; animation: drift-a 102s linear infinite; }
+      body::after { background-image: var(--mist2); opacity: 0.72; background-size: 900px 600px; animation: drift-b 138s linear infinite; }
       @keyframes drift-a { from { background-position: 0 0; } to { background-position: 1200px -800px; } }
       @keyframes drift-b { from { background-position: 0 0; } to { background-position: -900px -600px; } }
       @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
@@ -135,7 +135,7 @@
       /* ── CABINET tray (pure UI chrome — the going panel) ── */
       /* the tray belongs to the room, not the paper world — a dark panel recessed into the desk,
          lighter than the smoke-and-stone field but clearly the same cool family */
-      .tray { grid-column: 1 / -1; padding: 16px 22px; display: flex; align-items: center; gap: 16px; background: #2b2e30; box-shadow: inset 0 1px 4px rgba(0,0,0,0.28); border-top: 1px solid #1c1e20; }
+      .tray { grid-column: 1 / -1; padding: 16px 22px; display: flex; align-items: center; gap: 16px; background: #2b2e30; box-shadow: inset 0 1px 2px rgba(0,0,0,0.14); }
       .tray .label { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; color: #8f9598; font-size: 0.8rem; }
       .tray .going { font-size: 1.06rem; color: #d2d7d9; }
       .tray .count { color: #8f9598; margin-left: auto; font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.82rem; }
