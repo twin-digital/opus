@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — ink-cycle designer (reader view)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Newsreader:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="paper.css" />
+    <link rel="stylesheet" href="paper-color.css" />
+    <link rel="stylesheet" href="ink.css" />
+    <style>
+      /* The reading view (1.35rem) with every dial exposed — paper · colour · face · weight · bleed — plus the
+         full INK-CYCLE tuning, so the reservoir model can be designed against a real passage. */
+      :root {
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --s-voice: #4a3a22; --s-meta: #463a22; --s-loss: #7a2f25; --s-gold: #99713a; /* fixed accents */
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      html { font-size: 19px; }
+      body { font-family: var(--serif); color: #c8cacc; background: #202124; -webkit-font-smoothing: antialiased; }
+
+      .chrome-bar {
+        position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
+        padding: 9px 18px; background: #1d1f21; border-bottom: 1px solid #000;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #c7cacc;
+      }
+      .chrome-bar .brand { font-weight: 600; letter-spacing: 0.02em; color: #e6e8ea; }
+      .chrome-bar label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px; color: #868a8d; }
+      .chrome-bar select { font-family: inherit; font-size: 12.5px; background: #2c2f31; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 4px 7px; }
+      .chrome-bar .sep { flex-basis: 100%; height: 0; }                         /* force a line break in the bar */
+      .chrome-bar .grp { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #5f6469; align-self: center; }
+
+      .stage { padding: 6vh 4vw 14vh; display: flex; justify-content: center; }
+      .reader { max-width: 44rem; padding: 52px 56px 46px; line-height: 1.62; border-radius: 1px; }
+      .reader .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.62em; margin: 0 0 1.4em; }
+      .reader .h { font-size: 0.84em; margin: 0 0 1em; border-bottom: 1.5px solid currentColor; display: inline-block; padding-bottom: 3px; }
+      .reader p { margin: 0 0 1em; }
+      .reader p.first { margin-top: 0.2em; }
+      .reader .sig { font-style: italic; color: var(--s-voice); margin: 0.4em 0 0; font-size: 0.78em; }
+    </style>
+  </head>
+  <body>
+    <header class="chrome-bar">
+      <span class="brand">Farwatch · ink-cycle designer</span>
+      <label for="paper">paper</label>
+      <select id="paper">
+        <option value="worn-bright">worn-bright</option>
+        <option value="ledger">ledger</option>
+        <option value="card">card</option>
+        <option value="austere">austere</option>
+        <option value="clean">clean</option>
+      </select>
+      <label for="colour">colour</label>
+      <select id="colour">
+        <option value="warm-posting">warm-posting</option>
+        <option value="worn-ledger">worn-ledger</option>
+        <option value="amber-warm">amber-warm</option>
+        <option value="bright-clean">bright-clean</option>
+        <option value="cabinet">cabinet</option>
+        <option value="ghostly">ghostly</option>
+      </select>
+      <label for="family">face</label>
+      <select id="family">
+        <option value="garamond">EB Garamond</option>
+        <option value="cormorant">Cormorant Garamond</option>
+        <option value="newsreader">Newsreader</option>
+        <option value="fraunces">Fraunces</option>
+        <option value="crimson">Crimson Pro</option>
+        <option value="spectral">Spectral</option>
+      </select>
+      <label for="weight">weight</label>
+      <select id="weight">
+        <option value="200">200</option>
+        <option value="300">300</option>
+        <option value="400" selected>400</option>
+        <option value="500">500</option>
+        <option value="600">600</option>
+        <option value="700">700</option>
+        <option value="800">800</option>
+      </select>
+      <label for="bleed">bleed</label>
+      <select id="bleed">
+        <option value="none">none</option>
+        <option value="light">light</option>
+        <option value="full" selected>full</option>
+        <option value="extreme">extreme</option>
+      </select>
+
+      <span class="sep"></span>
+      <span class="grp">ink cycle ▸</span>
+      <label for="gran">granularity</label>
+      <select id="gran">
+        <option value="none">none (clean)</option>
+        <option value="char" selected>per character</option>
+        <option value="word">per word (kerned)</option>
+      </select>
+      <label for="dip">dip length</label>
+      <select id="dip">
+        <option value="30-50">short · 30–50</option>
+        <option value="45-80" selected>medium · 45–80</option>
+        <option value="70-110">long · 70–110</option>
+        <option value="100-160">very long · 100–160</option>
+      </select>
+      <label for="floor">floor</label>
+      <select id="floor">
+        <option value="0.2">0.20 — runs dry</option>
+        <option value="0.3">0.30</option>
+        <option value="0.42" selected>0.42</option>
+        <option value="0.55">0.55</option>
+        <option value="0.7">0.70 — stays wet</option>
+      </select>
+      <label for="stroke">weight range</label>
+      <select id="stroke">
+        <option value="0">0 — darkness only</option>
+        <option value="0.12">0.12</option>
+        <option value="0.18">0.18</option>
+        <option value="0.22" selected>0.22</option>
+        <option value="0.3">0.30</option>
+        <option value="0.4">0.40 — heavy</option>
+      </select>
+      <label for="opacity">darkness floor</label>
+      <select id="opacity">
+        <option value="0.6">0.60 — fades pale</option>
+        <option value="0.7">0.70</option>
+        <option value="0.74" selected>0.74</option>
+        <option value="0.82">0.82</option>
+        <option value="0.9">0.90</option>
+        <option value="0.96">0.96 — barely fades</option>
+      </select>
+      <label for="blobPara">para blob</label>
+      <select id="blobPara">
+        <option value="0">0</option>
+        <option value="0.1">0.10</option>
+        <option value="0.16" selected>0.16</option>
+        <option value="0.25">0.25</option>
+        <option value="0.35">0.35 — heavy re-ink</option>
+      </select>
+      <label for="blobDip">dip blob</label>
+      <select id="blobDip">
+        <option value="0">0</option>
+        <option value="0.03">0.03</option>
+        <option value="0.06" selected>0.06</option>
+        <option value="0.12">0.12</option>
+      </select>
+      <label for="walk">walk</label>
+      <select id="walk">
+        <option value="0">0 — smooth</option>
+        <option value="0.03">0.03</option>
+        <option value="0.05" selected>0.05</option>
+        <option value="0.08">0.08</option>
+        <option value="0.12">0.12 — restless</option>
+      </select>
+    </header>
+
+    <div class="stage">
+      <div class="reader paper" id="reader"></div>
+    </div>
+
+    <script>
+      (function () {
+        const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)', cormorant: 'var(--face-cormorant)', newsreader: 'var(--face-newsreader)', fraunces: 'var(--face-fraunces)' };
+        const BLEEDS = { none: { blur: '0', alpha: '0' }, light: { blur: '0.6px', alpha: '0.4' }, full: { blur: '0.7px', alpha: '0.5' }, extreme: { blur: '1.15px', alpha: '0.85' } };
+        const READER = {
+          source: 'from Phantastes · George MacDonald · 1858',
+          title: 'The Forest of Fairy Land',
+          paras: [
+            'The trees, which were far apart where I entered, giving free passage to the level rays of the sun, closed rapidly as I advanced, so that ere long their crowded stems barred the sunlight out, forming as it were a thick grating between me and the East. I seemed to be advancing towards a second midnight.',
+            'In the midst of the intervening twilight, however, before I entered what appeared to be the darkest portion of the forest, I saw a country maiden coming towards me from its very depths. She did not seem to observe me, for she was apparently intent upon a bunch of wild flowers which she carried in her hand.',
+            'I could hardly see her face; for, though she came direct towards me, she never looked up. But when we met, instead of passing, she turned and walked alongside of me for a few yards, still keeping her face downwards, and busied with her flowers.',
+            'She spoke rapidly, however, all the time, in a low tone, as if talking to herself, but evidently addressing the purport of her words to me. She seemed afraid of being observed by some lurking foe.',
+          ],
+          sig: '— George MacDonald',
+        };
+
+        // ── parameterized INK-CYCLE (same model as ink-swatches, but every knob comes from the dropdowns) ──
+        function inkCycle(paras, gran, P) {
+          const rndCap = () => P.capMin + Math.random() * (P.capMax - P.capMin);
+          let used = 0, cap = rndCap(), freshBlob = P.blobPara, walk = 0;
+          const levelNow = () => {
+            const frac = Math.min(1, used / cap);
+            const lvl = 1 - frac * (1 - P.floor);
+            walk = Math.max(-0.08, Math.min(0.08, walk + (Math.random() * 2 - 1) * P.walk));
+            return lvl + walk + freshBlob;
+          };
+          const styleFor = (lvl) => {
+            const L = Math.max(0, Math.min(1.12, lvl));
+            return '-webkit-text-stroke:' + (P.strokeMax * L).toFixed(3) + 'px currentColor;opacity:' + (P.opacityMin + (1 - P.opacityMin) * Math.min(1, L)).toFixed(3) + ';';
+          };
+          const deplete = (n) => { freshBlob = 0; used += n; };
+          const dip = (blob) => { used = 0; cap = rndCap(); freshBlob = blob; walk *= 0.4; };
+          const maybeDip = () => { if (used >= cap) dip(P.blobDip); };
+          return paras.map((t) => {
+            dip(P.blobPara);
+            let out = '';
+            for (const tok of t.split(/(\s+)/)) {
+              if (tok === '') continue;
+              if (/^\s+$/.test(tok)) { out += tok; continue; }
+              if (gran === 'word') { out += '<span style="' + styleFor(levelNow()) + '">' + tok + '</span>'; deplete(tok.length); }
+              else { for (const ch of tok) { out += '<span style="' + styleFor(levelNow()) + '">' + ch + '</span>'; deplete(1); } }
+              maybeDip();
+            }
+            return out;
+          });
+        }
+
+        const v = (id) => document.getElementById(id).value;
+        const n = (id) => parseFloat(v(id));
+        const reader = document.getElementById('reader');
+
+        function render() {
+          reader.className = 'reader paper paper-v-' + v('paper') + ' color-' + v('colour');
+          reader.style.setProperty('--ink-family', FAMILY_VAR[v('family')]);
+          reader.style.setProperty('--ink-weight', v('weight'));
+          reader.style.setProperty('--ink-size', '1.35rem');
+          const bl = BLEEDS[v('bleed')];
+          reader.style.setProperty('--ink-bloom-blur', bl.blur);
+          reader.style.setProperty('--ink-bloom-alpha', bl.alpha);
+
+          const gran = v('gran');
+          const [cmin, cmax] = v('dip').split('-').map(Number);
+          const P = { capMin: cmin, capMax: cmax, floor: n('floor'), strokeMax: n('stroke'), opacityMin: n('opacity'), blobPara: n('blobPara'), blobDip: n('blobDip'), walk: n('walk') };
+          const bodies = (gran === 'none') ? READER.paras.slice() : inkCycle(READER.paras, gran, P);
+
+          let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';
+          bodies.forEach((html, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + html + '</p>'; });
+          inner += '<p class="sig">' + READER.sig + '</p>';
+          reader.innerHTML = inner;
+        }
+
+        document.querySelectorAll('.chrome-bar select').forEach((s) => s.addEventListener('change', render));
+        render();
+      })();
+    </script>
+  </body>
+</html>

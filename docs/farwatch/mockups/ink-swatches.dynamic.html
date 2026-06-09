@@ -190,7 +190,8 @@
           floor: 0.42,              // how empty the reservoir runs before re-dipping (0 = bone dry)
           strokeMax: 0.22,          // px text-stroke at full ink (weight)
           opacityMin: 0.74,         // ink darkness when nearly dry
-          blob: 0.16,               // extra richness on the fresh-dip mark
+          blobPara: 0.16,           // extra richness on the first mark of a paragraph (a deliberate re-ink)
+          blobDip: 0.06,            // smaller richness on a mid-paragraph re-dip
           walk: 0.05,               // per-mark random-walk amplitude (texture, with memory)
         };
         const rndCap = () => INK.capMin + Math.random() * (INK.capMax - INK.capMin);
@@ -202,20 +203,18 @@
         }
         // run one continuous reservoir across all paragraphs; granularity = 'char' | 'word'
         function inkCycle(paras, granularity) {
-          let used = 0, cap = rndCap(), fresh = true, walk = 0;
+          let used = 0, cap = rndCap(), freshBlob = INK.blobPara, walk = 0;
           const levelNow = () => {
             const frac = Math.min(1, used / cap);              // 0 fresh → 1 empty
             let lvl = 1 - frac * (1 - INK.floor);               // smooth depletion to the floor
             walk = Math.max(-0.08, Math.min(0.08, walk + (Math.random() * 2 - 1) * INK.walk));
-            lvl += walk;
-            if (fresh) lvl += INK.blob;                         // fresh-dip mark is richer
-            return lvl;
+            return lvl + walk + freshBlob;                      // freshBlob is the just-dipped richness (0 once spent)
           };
-          const deplete = (n) => { fresh = false; used += n; }; // running cost (never resets mid-word)
-          const dip = () => { used = 0; cap = rndCap(); fresh = true; walk *= 0.4; };
-          const maybeDip = () => { if (used >= cap) dip(); };
+          const deplete = (n) => { freshBlob = 0; used += n; }; // running cost (never resets mid-word)
+          const dip = (blob) => { used = 0; cap = rndCap(); freshBlob = blob; walk *= 0.4; };
+          const maybeDip = () => { if (used >= cap) dip(INK.blobDip); }; // mid-paragraph re-dip: smaller blob
           return paras.map((t) => {
-            dip();                                              // a fresh dip at the start of each paragraph
+            dip(INK.blobPara);                                  // a full fresh dip at the start of each paragraph
             let out = '';
             for (const tok of t.split(/(\s+)/)) {
               if (tok === '') continue;
