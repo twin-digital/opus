@@ -187,7 +187,7 @@
         // Maps onto our two web knobs: text-stroke = weight, opacity = ink darkness.
         const INK = {
           capMin: 45, capMax: 80,   // characters a single dip writes (≈ 8–15 words)
-          floor: 0.30,              // how empty the reservoir runs before re-dipping (0 = bone dry)
+          floor: 0.42,              // how empty the reservoir runs before re-dipping (0 = bone dry)
           strokeMax: 0.22,          // px text-stroke at full ink (weight)
           opacityMin: 0.74,         // ink darkness when nearly dry
           blob: 0.16,               // extra richness on the fresh-dip mark
@@ -212,8 +212,10 @@
             return lvl;
           };
           const deplete = (n) => { fresh = false; used += n; }; // running cost (never resets mid-word)
-          const maybeDip = () => { if (used >= cap) { used = 0; cap = rndCap(); fresh = true; walk *= 0.4; } };
+          const dip = () => { used = 0; cap = rndCap(); fresh = true; walk *= 0.4; };
+          const maybeDip = () => { if (used >= cap) dip(); };
           return paras.map((t) => {
+            dip();                                              // a fresh dip at the start of each paragraph
             let out = '';
             for (const tok of t.split(/(\s+)/)) {
               if (tok === '') continue;
