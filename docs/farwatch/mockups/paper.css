@@ -71,8 +71,9 @@
   font-style: normal; /* the body is never italic; voice/signature accents set their own italic */
   font-weight: var(--ink-weight, 400);
   font-size: var(--ink-size, 1rem);
-  /* ink bleed: HUE (channels) from the ink COLOUR; BLUR + ALPHA from the ink STYLE */
-  text-shadow: 0 0 var(--ink-bloom-blur, 0.7px) rgb(var(--paper-bloom, 48 22 8) / var(--ink-bloom-alpha, 0.5));
+  /* ink bleed: HUE (channels) from the ink COLOUR; BLUR + ALPHA from the ink STYLE.
+     --ink-bloom overrides the whole text-shadow (for multi-layer "soaked" effects). */
+  text-shadow: var(--ink-bloom, 0 0 var(--ink-bloom-blur, 0.7px) rgb(var(--paper-bloom, 48 22 8) / var(--ink-bloom-alpha, 0.5)));
   /* edge aging: HUE (channels) from the paper colour, SIZE/ALPHA from the paper style */
   box-shadow: inset 0 0 var(--paper-inset-size, 34px) rgb(var(--paper-edge, 70 50 22) / var(--paper-inset-alpha, 0.14));
   font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
