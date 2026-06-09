@@ -203,7 +203,7 @@
             if (/^\s+$/.test(tok)) { out += tok; continue; }
             let word = '';
             for (const ch of tok) {
-              const dy = ((Math.random() * 2 - 1) * 0.016).toFixed(3);
+              const dy = ((Math.random() * 2 - 1) * 0.024).toFixed(3);
               const rot = ((Math.random() * 2 - 1) * 0.4).toFixed(2);
               word += '<span class="g" style="transform:translateY(' + dy + 'em) rotate(' + rot + 'deg)">' + ch + '</span>';
             }
