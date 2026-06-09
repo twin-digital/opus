@@ -54,6 +54,11 @@
       .swatch .struck { text-decoration: line-through; text-decoration-color: var(--s-loss); }
       .swatch .ctl { border-bottom: 1px dotted var(--s-gold); }
       .swatch .sig { font-style: italic; color: var(--s-voice); margin: 0; }
+
+      /* a wide reading passage at the bottom — how a real chronicle actually reads at the current settings */
+      .reader { max-width: 44rem; padding: 46px 52px 42px; line-height: 1.62; }
+      .reader p { margin: 0 0 1em; }
+      .reader p.first { margin-top: 0.2em; }
     </style>
   </head>
   <body>
@@ -155,6 +160,15 @@
           '<p>The strongbox came home heavier, though <span class="loss">the lien falls due at first snow</span>.</p>' +
           '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
           '<p class="sig">— the steward</p>';
+        const READER_TEXT =
+          '<p class="when">Farwatch · at the turn of the season</p>' +
+          '<p class="h">What you sent them to do</p>' +
+          '<p class="first">They came to the barrow-door at dusk, where the stone stayed dry though the fields about it lay under early white. Garrick set his shoulder to it and swore it would give before he did — and give it did, though it cost them an hour and the skin of his hands.</p>' +
+          '<p>Within, the air was old. Mirela went first with the lamp, reading the floor for the gaps that swallow a careless foot, and found three of them before they found her. Odric said the whole vault would come down on their heads; it did not, but he was not wrong to fear it.</p>' +
+          '<p>They brought back the sleeper&rsquo;s circlet, and <span class="ctl">the strongbox came home heavier</span> for it — though the lien still falls due at first snow, and what they carried out will not cover it. You will hear the chandlers&rsquo; man at the gate before the month is done.</p>' +
+          '<p>Mirela came home. <span class="struck">Odric did not.</span> The vault kept him, as he had always feared it might, and the others would not say in what manner — only that they had set what they could of him beneath a cairn of the same cold stone, and come away.</p>' +
+          '<p>There is a circlet in your keeping now that no one living can price, and a debt that any clerk can. I have set both before you, and the names of those who are owed, and the name of the one who is not coming back. <span class="loss">What you make of it is yours to make.</span></p>' +
+          '<p class="sig">— the steward, by a failing lamp</p>';
 
         const app = document.getElementById('app');
         const context = document.getElementById('context');
@@ -190,7 +204,9 @@
                 table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: bleedDisp }) +
               '</div>'
             ).join('') +
-            '</div>';
+            '</div>' +
+            '<h2 class="section">Reading sample — reader width · 1.35rem (' + pxOf('1.35rem') + ')</h2>' +
+            '<div class="paper swatch reader" style="--ink-size:1.35rem">' + READER_TEXT + '</div>';
         }
 
         [styleSel, colorSel, famSel, weightSel, bleedSel].forEach((s) => s.addEventListener('change', render));
