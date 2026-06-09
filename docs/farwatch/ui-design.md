@@ -311,3 +311,79 @@ grounding the cluster.)*
 
 **Going-tray (chrome).** Belongs to the room, not the paper: dark `#2b2e30`, no drop-shadow (not floating);
 separated from the field by a near-minimum inset only (`inset 0 1px 2px rgba(0,0,0,0.14)`, no top border).
+
+---
+
+## The paper recipe
+
+The single most-reused material is **warm paper** (the charge, the roster, the dossiers, the reader sheet,
+the fact cards). It had drifted into per-element copy-paste across the mockups; this codifies it. A paper is
+built from a small set of **axes**, each with a named library of **options**. A **variant** picks one option
+per axis. The canonical encoding is **[`mockups/paper.css`](mockups/paper.css)** (`.paper` + `.paper-v-*`
+classes); the live switcher is **[`mockups/compare-table.dynamic.html`](mockups/compare-table.dynamic.html)**
+(a dropdown swaps the variant for every paper at once). The tables below mirror that file — read a variant
+row left-to-right and you can rebuild it.
+
+**Base (constant across all paper):** the paper **colour** (per-variant), **ink** `#2c2012`, **ink-bloom**
+`text-shadow: 0 0 0.7px rgba(48,22,8,0.5)` (worn-print halo), **inset-darkening** `box-shadow: inset …`
+(aging toward the edges), and discretionary ligatures. The six axes below are what a variant tunes.
+
+### Axis option libraries
+
+**Grain** — fine fractal-noise paper tooth (a tiling background layer):
+
+| slug | params | key element |
+|---|---|---|
+| `none` | — | no tooth; flat colour |
+| `fine` | fractalNoise `0.8`, 2 oct, opacity **0.55** | the standard tooth |
+| `soft` | fractalNoise `0.8`, 2 oct, opacity **0.50** | the same tooth, a hair lighter |
+
+**Laid** — anisotropic noise: directional fibre / laid lines (a tiling layer):
+
+| slug | params | key element |
+|---|---|---|
+| `none` | — | no fibre |
+| `fibre` | fractalNoise `0.01 0.42`, 2 oct, opacity 0.26 | horizontal laid lines — stops paper reading as flat |
+
+**Glow** — a warm top-of-sheet light wash (a gradient layer):
+
+| slug | params | key element |
+|---|---|---|
+| `none` | — | no warm wash |
+| `candle` | radial 120%×55% @ 50% −10%, peak **0.28** | the reader's warm top light |
+| `candle-soft` | radial 120%×60% @ 50% −12%, peak **0.22** | a fainter wash (table docs) |
+
+**Tear** — a displaced edge mask (ragged "torn from a sheet" outline):
+
+| slug | params | key element |
+|---|---|---|
+| `none` | — | clean rectangular edge |
+| `torn` | displace **12**, inset 14, blur 0.50 | the table-doc tear |
+| `deep` | displace **14**, inset 16, blur 0.55 | a rangier tear (reader sheet) |
+
+*(Modifier: wide-short papers like the charge need `--paper-tear-size: calc(100% + 46px) 100%` so the ~2.3%
+inset doesn't eat their width.)*
+
+**Shadow (lift)** — elevation, as a drop-shadow filter (follows the torn edge):
+
+| slug | params | key element |
+|---|---|---|
+| `none` | — | flush; no lift |
+| `lift-low` | `0 16/30 .5` + `0 3/8 .4` | rests close to the desk (dossier) |
+| `lift-card` | `0 18/40 .45` + `0 4/9 .38` | a small card, lifted a touch (fact pane) |
+| `lift-high` | `0 38/70 .5` + `0 8/18 .4` | a large sheet floating well above (reader) |
+
+### Variants in play
+
+One row per paper. Cells name the option chosen on each axis.
+
+| variant | status | what it is | colour | grain | laid | glow | tear | lift |
+|---|---|---|---|---|---|---|---|---|
+| `worn-bright` | **in play** | bright worn parchment — the table documents (charge · roster · dossiers) | `#e2d1a3` | fine | fibre | candle-soft | torn | lift-low |
+| `ledger` | **in play** | duller worn-ledger sheet — the reader's reading page | `#d9cca6` | fine | fibre | candle | deep | lift-high |
+| `card` | **in play** | small index / fact card — no warm wash, lighter lift | `#d3c59e` | fine | fibre | none | torn | lift-card |
+| `austere` | *proposed* | pruned — tooth only, straight edge, no warmth (the "remove things" test) | `#ddd0ad` | soft | none | none | none | lift-low |
+| `clean` | *proposed* | flat baseline — colour only, no texture/tear (the control) | `#e2d1a3` | none | none | none | none | lift-low |
+
+*`austere` and `clean` are deliberate test rows (not yet a rendered design) — they exist so the dynamic
+mockup can A/B "how much of the texture is actually load-bearing" against the full recipe.*

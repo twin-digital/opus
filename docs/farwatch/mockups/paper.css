@@ -1,0 +1,112 @@
+/* ════════════════════════════════════════════════════════════════════════════════════════════
+   Farwatch — the PAPER recipe (master stylesheet)
+   Codifies the "warm paper" material that was scattered, copy-pasted, and drifting across the
+   mockups. A paper is built from six axes; each axis has a small library of named options. A
+   *variant* is one chosen option per axis. See docs/farwatch/ui-design.md → "The paper recipe"
+   for the human-readable tables.
+
+   USAGE
+     1. <link> this file.
+     2. Put a variant class on any ANCESTOR of the paper elements, e.g. <div class="table paper-v-worn-bright">.
+        The variant sets --paper-* custom properties, which inherit down.
+     3. Give each paper surface class="paper". It reads the inherited --paper-* slots.
+        Swap the ancestor's variant class (one line of JS) → every paper restyles at once.
+   ════════════════════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── GRAIN — fine fractal-noise paper tooth (a background tile) ─────────────────────────── */
+  /* fine  : the standard tooth (opacity 0.55) */
+  --grain-fine: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.55'/%3E%3C/svg%3E");
+  /* soft  : the same tooth, a hair lighter (opacity 0.50) */
+  --grain-soft: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
+  /* none  : (set --paper-grain: none) */
+
+  /* ── LAID — anisotropic noise: directional paper fibre / laid lines (a background tile) ──── */
+  /* fibre : horizontal fibre (baseFrequency 0.01 0.42, opacity 0.26) */
+  --laid-fibre: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
+  /* none  : (set --paper-laid: none) */
+
+  /* ── GLOW — a warm top-of-sheet light wash (a gradient layer) ──────────────────────────── */
+  /* candle      : the reader's warm wash (peak 0.28) */
+  --glow-candle: radial-gradient(120% 55% at 50% -10%, rgba(255,240,205,0.28) 0%, rgba(255,240,205,0) 52%);
+  /* candle-soft : a fainter wash for the table documents (peak 0.22) */
+  --glow-candle-soft: radial-gradient(120% 60% at 50% -12%, rgba(255,240,205,0.22) 0%, rgba(255,240,205,0) 55%);
+  /* none        : (set --paper-glow: none) */
+
+  /* ── TEAR — a displaced edge mask (ragged "torn from a sheet" outline) ─────────────────── */
+  /* torn  : the table-doc tear (displace scale 12, inset 14, blur 0.50) */
+  --tear-torn: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='600'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.008'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='12'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3CfeGaussianBlur%20stdDeviation='0.5'/%3E%3C/filter%3E%3Crect%20x='14'%20y='14'%20width='572'%20height='572'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
+  /* deep  : a rangier tear (scale 14, inset 16, blur 0.55) — the reader sheet */
+  --tear-deep: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='600'%20preserveAspectRatio='none'%3E%3Cfilter%20id='r'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.008'%20numOctaves='3'%20seed='7'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='14'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3CfeGaussianBlur%20stdDeviation='0.55'/%3E%3C/filter%3E%3Crect%20x='16'%20y='16'%20width='568'%20height='568'%20fill='%23fff'%20filter='url(%23r)'/%3E%3C/svg%3E");
+  /* none  : (set --paper-tear: none) — a clean rectangular edge */
+  /* NOTE: wide-short papers (the charge) need a horizontal mask-size bump so the ~2.3% inset
+     doesn't eat their width — set --paper-tear-size: calc(100% + 46px) 100% on that element. */
+
+  /* ── SHADOW (LIFT) — elevation, as a drop-shadow filter (follows the torn edge) ─────────── */
+  /* lift-low  : a sheet resting close to the desk (dossier) */
+  --lift-low: drop-shadow(0 16px 30px rgba(0,0,0,0.5)) drop-shadow(0 3px 8px rgba(0,0,0,0.4));
+  /* lift-card : a small card lifted a touch more (fact pane) */
+  --lift-card: drop-shadow(0 18px 40px rgba(0,0,0,0.45)) drop-shadow(0 4px 9px rgba(0,0,0,0.38));
+  /* lift-high : a large sheet floating well above the desk (reader sheet) */
+  --lift-high: drop-shadow(0 38px 70px rgba(0,0,0,0.5)) drop-shadow(0 8px 18px rgba(0,0,0,0.4));
+  /* none      : (set --paper-lift: none) */
+}
+
+/* ── THE PAPER PRIMITIVE — reads its look from the inherited --paper-* slots ────────────────
+   The defaults below = the "worn-bright" table document, so a bare .paper still looks right. */
+.paper {
+  position: relative;
+  background-color: var(--paper-color, #e2d1a3);
+  background-image: var(--paper-grain, var(--grain-fine)), var(--paper-laid, var(--laid-fibre)), var(--paper-glow, var(--glow-candle-soft));
+  background-size: 150px 150px, 220px 150px, auto;
+  color: var(--paper-ink, #2c2012);
+  text-shadow: var(--paper-bloom, 0 0 0.7px rgba(48,22,8,0.5));     /* ink bloom (worn print) */
+  box-shadow: var(--paper-inset, inset 0 0 34px rgba(70,50,22,0.14)); /* aged darkening toward edges */
+  font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
+  -webkit-mask-image: var(--paper-tear, var(--tear-torn)); mask-image: var(--paper-tear, var(--tear-torn));
+  -webkit-mask-size: var(--paper-tear-size, 100% 100%); mask-size: var(--paper-tear-size, 100% 100%);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  filter: var(--paper-lift, var(--lift-low));
+}
+
+/* ════════════ VARIANTS — one named option per axis (mirror of the ui-design table) ════════════ */
+
+/* worn-bright · bright worn parchment — the table documents (charge, roster, dossiers) [IN PLAY] */
+.paper-v-worn-bright {
+  --paper-color: #e2d1a3; --paper-ink: #2c2012;
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle-soft);
+  --paper-tear: var(--tear-torn); --paper-lift: var(--lift-low);
+}
+
+/* ledger · duller worn-ledger sheet — the reader's reading page [IN PLAY] */
+.paper-v-ledger {
+  --paper-color: #d9cca6; --paper-ink: #2c2012;
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle);
+  --paper-tear: var(--tear-deep); --paper-lift: var(--lift-high);
+  --paper-inset: inset 0 0 50px rgba(70,50,22,0.16);
+}
+
+/* card · small index/fact card — no warm wash, a lighter lift [IN PLAY] */
+.paper-v-card {
+  --paper-color: #d3c59e; --paper-ink: #2c2012;
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: none;
+  --paper-tear: var(--tear-torn); --paper-lift: var(--lift-card);
+  --paper-inset: inset 0 0 30px rgba(70,50,22,0.12);
+}
+
+/* austere · pruned — tooth only, straight edge, no warmth (the "remove things" test) [PROPOSED] */
+.paper-v-austere {
+  --paper-color: #ddd0ad; --paper-ink: #2c2012;
+  --paper-grain: var(--grain-soft); --paper-laid: none; --paper-glow: none;
+  --paper-tear: none; --paper-lift: var(--lift-low);
+  --paper-inset: inset 0 0 24px rgba(70,50,22,0.10);
+}
+
+/* clean · baseline — flat colour, no texture, no tear, plain lift (the control) [PROPOSED] */
+.paper-v-clean {
+  --paper-color: #e2d1a3; --paper-ink: #2c2012;
+  --paper-grain: none; --paper-laid: none; --paper-glow: none;
+  --paper-tear: none; --paper-lift: var(--lift-low);
+  --paper-bloom: none; --paper-inset: none;
+}

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farwatch — Compare-table — dynamic (switchable paper)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="paper.css" />
+    <style>
+      /* ── DYNAMIC table mockup — the smoky-viewport hybrid, but every "paper" surface is driven by the
+         shared paper.css recipe. A chrome header (system type, neutral panel — deliberately NOT in-world)
+         carries a dropdown that swaps the paper variant for the whole document cluster at once. ── */
+      :root {
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --cab: #ece6d2; --cab-ink: #232219;
+        /* document text roles (the paper SURFACE itself comes from paper.css) */
+        --doc-ink: #2c2012; --doc-meta: #463a22; --doc-voice: #4a3a22; --loss: #7a2f25;
+        /* drifting smoke field */
+        --mist: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m'%20x='0'%20y='0'%20width='100%25'%20height='100%25'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.012%200.016'%20numOctaves='3'%20seed='11'%20stitchTiles='stitch'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m)'%20opacity='0.5'/%3E%3C/svg%3E");
+        --mist2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%20preserveAspectRatio='none'%3E%3Cfilter%20id='m2'%20x='0'%20y='0'%20width='100%25'%20height='100%25'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.009%200.02'%20numOctaves='3'%20seed='4'%20stitchTiles='stitch'%20result='t'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200.6%200%200%200%200%200.66%200%200%200%200%200.72%200.55%200%200%200%20-0.22'/%3E%3C/filter%3E%3Crect%20width='600'%20height='400'%20filter='url(%23m2)'%20opacity='0.5'/%3E%3C/svg%3E");
+        /* handwritten checkbox marks */
+        --box: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='26'%20height='26'%3E%3Cfilter%20id='b'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.09'%20numOctaves='2'%20seed='3'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.2'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3C/filter%3E%3Cpath%20d='M5.5,6%20Q13,4.5%2020.5,5.5%20Q22,13%2020.5,20.5%20Q13,22%205,20.5%20Q3.8,13%206,5'%20fill='none'%20stroke='%232c2012'%20stroke-width='1.7'%20stroke-linecap='round'%20stroke-linejoin='round'%20filter='url(%23b)'/%3E%3C/svg%3E");
+        --xmark: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='30'%20height='30'%3E%3Cfilter%20id='x'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.06'%20numOctaves='2'%20seed='8'%20result='t'/%3E%3CfeDisplacementMap%20in='SourceGraphic'%20in2='t'%20scale='1.8'%20xChannelSelector='R'%20yChannelSelector='G'/%3E%3C/filter%3E%3Cpath%20d='M6,6%20Q15,14%2024,24%20M24,6%20Q15,16%206,24'%20fill='none'%20stroke='%232c2012'%20stroke-width='2.4'%20stroke-linecap='round'%20filter='url(%23x)'/%3E%3C/svg%3E");
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      html { font-size: 19px; }
+      body {
+        font-family: var(--serif); color: var(--cab-ink); line-height: 1.5; font-size: 1.02rem;
+        -webkit-font-smoothing: antialiased;
+        background: radial-gradient(95% 60% at 50% 4%, #34373a 0%, #25282b 45%, #1a1c1e 100%), #181a1b;
+        background-attachment: fixed;
+      }
+      /* the drifting smoke field (whole page, behind everything) */
+      body::before, body::after {
+        content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-repeat: repeat;
+      }
+      body::before { background-image: var(--mist); background-size: 1200px 800px; animation: drift-a 102s linear infinite; }
+      body::after { background-image: var(--mist2); opacity: 0.72; background-size: 900px 600px; animation: drift-b 138s linear infinite; }
+      @keyframes drift-a { from { background-position: 0 0; } to { background-position: 1200px -800px; } }
+      @keyframes drift-b { from { background-position: 0 0; } to { background-position: -900px -600px; } }
+      @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
+
+      /* ── CHROME HEADER — mockup furniture, NOT the game: flat neutral panel, system sans ── */
+      .chrome-bar {
+        position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        padding: 9px 18px; background: #1d1f21; border-bottom: 1px solid #000;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #c7cacc;
+      }
+      .chrome-bar .brand { font-weight: 600; letter-spacing: 0.02em; color: #e6e8ea; }
+      .chrome-bar label { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; color: #868a8d; }
+      .chrome-bar select { font-family: inherit; font-size: 13px; background: #2c2f31; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 5px 9px; }
+      .chrome-bar .note { margin-left: auto; color: #6e7274; font-style: italic; }
+
+      .stage { padding: 5vh 24px 14vh; }
+      .table { max-width: 1140px; margin: 0 auto; position: relative; z-index: 1; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
+      .caption { position: relative; z-index: 1; }
+
+      /* ── paper surfaces: the SURFACE comes from paper.css (.paper); these rules are layout + text only ── */
+      .anchor { grid-column: 1 / -1; padding: 18px 30px; --paper-tear-size: calc(100% + 46px) 100%; }
+      .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82rem; }
+      .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: var(--doc-ink); }
+      .anchor .hazard { color: var(--loss); }
+
+      .roster { padding: 22px 0; align-self: start; }
+      .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86rem; color: var(--doc-meta); margin: 0 18px 10px; }
+      .roster ul { list-style: none; margin: 0; padding: 0; }
+      .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
+      .roster .box { flex: 0 0 22px; width: 22px; height: 22px; cursor: pointer; position: relative; background: var(--box) center / contain no-repeat; }
+      .roster .box::after {
+        content: ""; position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
+        transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+        background: var(--xmark) center / contain no-repeat; opacity: 0;
+      }
+      .roster .box.checked::after { opacity: 1; }
+      .roster .name { flex: 1; cursor: pointer; }
+      .roster li.in-lane .name { font-weight: 600; }
+      .roster .name:hover { color: #6a4a30; }
+      .roster li .mark { font-style: italic; font-size: 0.8rem; color: var(--doc-meta); }
+
+      .lane { display: flex; gap: 16px; align-items: start; min-height: 240px; }
+      .lane .empty { color: #8a8d80; font-style: italic; align-self: center; margin: 0 auto; }
+
+      .dossier {
+        flex: 1 1 0; min-width: 0; padding: 18px 20px 16px;
+        animation: lay-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+      @keyframes lay-in { from { opacity: 0; transform: translateY(10px) scale(0.93); } to { opacity: 1; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .dossier { animation: none; } }
+      .dossier h3 { margin: 0; font-size: 1.32rem; font-variant: small-caps; letter-spacing: 0.02em; color: var(--doc-ink); }
+      .dossier .bg { margin: 3px 0 12px; color: var(--doc-meta); font-size: 0.92rem; }
+      .dossier .said { font-style: italic; color: var(--doc-voice); margin: 0 0 16px; }
+      .dossier .drop { position: absolute; top: 12px; right: 14px; color: var(--doc-meta); cursor: pointer; font-size: 0.9rem; }
+      .dossier .drop:hover { color: var(--doc-ink); }
+      /* marked for dispatch: an oxblood inner edge, clipped to the torn shape (overrides --paper-inset) */
+      .dossier.going { box-shadow: inset 0 0 34px rgba(70,50,22,0.15), inset 0 0 0 2px rgba(122,47,37,0.55); }
+
+      /* ── CABINET tray (cool chrome — never paper) ── */
+      .tray { grid-column: 1 / -1; padding: 16px 22px; display: flex; align-items: center; gap: 16px; background: #2b2e30; box-shadow: inset 0 1px 2px rgba(0,0,0,0.14); }
+      .tray .label { font-variant: small-caps; letter-spacing: 0.12em; font-weight: 500; color: #8f9598; font-size: 0.8rem; }
+      .tray .going { font-size: 1.06rem; color: #d2d7d9; }
+      .tray .count { color: #8f9598; margin-left: auto; font-variant: small-caps; letter-spacing: 0.06em; font-size: 0.82rem; }
+      .tray .send-btn { font-variant: small-caps; letter-spacing: 0.1em; padding: 9px 18px; border: none; color: var(--cab); background: var(--loss); cursor: pointer; }
+      .tray .send-btn:not([disabled]):hover { background: #8a382c; }
+      .tray .send-btn[disabled] { opacity: 0.4; cursor: default; }
+
+      .caption { max-width: 1140px; margin: 22px auto 0; color: #8a8d80; font-size: 0.8rem; font-style: italic; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <header class="chrome-bar">
+      <span class="brand">Farwatch · paper lab</span>
+      <label for="paper-select">paper variant</label>
+      <select id="paper-select">
+        <option value="worn-bright">worn-bright — table documents (default)</option>
+        <option value="ledger">ledger — reader sheet</option>
+        <option value="card">card — index / fact card</option>
+        <option value="austere">austere — pruned (test)</option>
+        <option value="clean">clean — flat baseline (test)</option>
+      </select>
+      <span class="note">chrome, not the game — switches the active paper for every paper surface below</span>
+    </header>
+
+    <div class="stage">
+      <div class="table paper-v-worn-bright" id="table">
+        <div class="anchor paper">
+          <div class="k">the charge</div>
+          <p class="charge">Clear the barrow beneath the white fields — <span class="hazard">old wards, and the deep dark</span>.</p>
+        </div>
+
+        <nav class="roster paper">
+          <h2>the roster</h2>
+          <ul id="roster"></ul>
+        </nav>
+
+        <section class="lane" id="lane">
+          <p class="empty">Touch a name to lay their dossier in — weigh two or three side by side.</p>
+        </section>
+
+        <div class="tray">
+          <span class="label">going</span>
+          <span class="going" id="going">— no one yet —</span>
+          <span class="count" id="count">0 of 3</span>
+          <button class="send-btn" id="dispatch" disabled>to dispatch ▸</button>
+        </div>
+      </div>
+
+      <p class="caption">Every <em>paper</em> surface (charge · roster · dossiers) is driven by <code>paper.css</code>; the header dropdown swaps the variant for all of them at once. The room, the going-tray, and the header are chrome — never paper.</p>
+    </div>
+
+    <script>
+      (function () {
+        const SEEKERS = [
+          { id: 'garrick', name: 'Garrick', bg: 'soldiered the marches · carries a blade', said: '“Old wards? I break doors.”' },
+          { id: 'mirela', name: 'Mirela', bg: 'reads the old script · keeps a set of picks', said: '“Wards are my trade.”' },
+          { id: 'odric', name: 'Odric', bg: 'ten winters at the watch · a careful hand', said: '“The deep dark has swallowed better than us.”' },
+          { id: 'sera', name: 'Sera', bg: 'ranged the fenlands · sharp-eyed', said: '“I’ll find the way the wards don’t watch.”' },
+          { id: 'toller', name: 'Toller', bg: 'a smith’s son · strong, untried', said: '“Tell me where to put my shoulder.”' },
+        ];
+        const LANE_MAX = 3, PARTY_MAX = 3;
+        const byId = Object.fromEntries(SEEKERS.map((s) => [s.id, s]));
+        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 20 - 10).toFixed(1) + 'deg'])); // a stable askew per seeker, up to ±10°
+        // a unique hand-drawn box per seeker: jittered corners + gently bowed sides + a slight overshoot at the close
+        function genBox() {
+          const j = (n) => (Math.random() * 2 - 1) * n;
+          const f = (n) => n.toFixed(1);
+          const tl = [5.5 + j(0.4), 5.5 + j(0.4)], tr = [20.5 + j(0.4), 5.5 + j(0.4)];
+          const br = [20.5 + j(0.4), 20.5 + j(0.4)], bl = [5.5 + j(0.4), 20.5 + j(0.4)];
+          const mid = (a, b, dx, dy) => [(a[0] + b[0]) / 2 + j(dx), (a[1] + b[1]) / 2 + j(dy)];
+          const cT = mid(tl, tr, 0.3, 0.55), cR = mid(tr, br, 0.55, 0.3);
+          const cB = mid(br, bl, 0.3, 0.55), cL = mid(bl, tl, 0.55, 0.3);
+          const close = [tl[0] + j(0.7), tl[1] - 0.3 + j(0.5)];
+          const d = 'M' + f(tl[0]) + ',' + f(tl[1]) +
+            ' Q' + f(cT[0]) + ',' + f(cT[1]) + ' ' + f(tr[0]) + ',' + f(tr[1]) +
+            ' Q' + f(cR[0]) + ',' + f(cR[1]) + ' ' + f(br[0]) + ',' + f(br[1]) +
+            ' Q' + f(cB[0]) + ',' + f(cB[1]) + ' ' + f(bl[0]) + ',' + f(bl[1]) +
+            ' Q' + f(cL[0]) + ',' + f(cL[1]) + ' ' + f(close[0]) + ',' + f(close[1]);
+          const seed = Math.floor(Math.random() * 100);
+          const sw = (1.5 + Math.random() * 0.35).toFixed(2);
+          const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26'>" +
+            "<filter id='b'><feTurbulence type='fractalNoise' baseFrequency='0.12' numOctaves='1' seed='" + seed +
+            "' result='t'/><feDisplacementMap in='SourceGraphic' in2='t' scale='0.6' xChannelSelector='R' yChannelSelector='G'/></filter>" +
+            "<path d='" + d + "' fill='none' stroke='#2c2012' stroke-width='" + sw +
+            "' stroke-linecap='round' stroke-linejoin='round' filter='url(#b)'/></svg>";
+          return 'data:image/svg+xml,' + encodeURIComponent(svg);
+        }
+        const BOX = Object.fromEntries(SEEKERS.map((s) => [s.id, genBox()]));
+        let lane = [];
+        const party = new Set();
+        const rosterEl = document.getElementById('roster');
+        const laneEl = document.getElementById('lane');
+        const goingEl = document.getElementById('going');
+        const countEl = document.getElementById('count');
+        const dispatchEl = document.getElementById('dispatch');
+
+        // ── paper-variant switcher (chrome) ──
+        const tableEl = document.getElementById('table');
+        const selectEl = document.getElementById('paper-select');
+        function applyVariant(v) { tableEl.className = 'table paper-v-' + v; }
+        selectEl.addEventListener('change', () => applyVariant(selectEl.value));
+        applyVariant(selectEl.value);
+
+        function layIn(id) {
+          if (lane.includes(id)) { lane = lane.filter((x) => x !== id); render(); return; }
+          lane.push(id);
+          if (lane.length > LANE_MAX) lane.shift();
+          render();
+        }
+        function toggleParty(id) {
+          if (party.has(id)) party.delete(id);
+          else if (party.size < PARTY_MAX) party.add(id);
+          render();
+        }
+        function render() {
+          rosterEl.innerHTML = '';
+          SEEKERS.forEach((s) => {
+            const li = document.createElement('li');
+            li.className = lane.includes(s.id) ? 'in-lane' : '';
+            li.innerHTML =
+              '<span class="box' + (party.has(s.id) ? ' checked' : '') + '" title="mark for dispatch"></span>' +
+              '<span class="name" title="open the dossier">' + s.name + '</span>' +
+              '<span class="mark">' + (lane.includes(s.id) ? 'laid in' : '') + '</span>';
+            const box = li.querySelector('.box');
+            box.style.setProperty('--rot', ROT[s.id]);
+            box.style.backgroundImage = 'url("' + BOX[s.id] + '")';
+            box.addEventListener('click', () => toggleParty(s.id));
+            li.querySelector('.name').addEventListener('click', () => layIn(s.id));
+            rosterEl.appendChild(li);
+          });
+          laneEl.innerHTML = '';
+          if (lane.length === 0) {
+            laneEl.innerHTML = '<p class="empty">Touch a name to lay their dossier in — weigh two or three side by side.</p>';
+          } else {
+            lane.forEach((id) => {
+              const s = byId[id];
+              const card = document.createElement('article');
+              card.className = 'dossier paper' + (party.has(id) ? ' going' : '');
+              card.innerHTML =
+                '<span class="drop" title="set aside">✕</span>' +
+                '<h3>' + s.name + '</h3>' +
+                '<p class="bg">' + s.bg + '</p>' +
+                '<p class="said">' + s.said + '</p>';
+              card.querySelector('.drop').addEventListener('click', () => layIn(id));
+              laneEl.appendChild(card);
+            });
+          }
+          const names = [...party].map((id) => byId[id].name);
+          goingEl.textContent = names.length ? names.join(' · ') : '— no one yet —';
+          countEl.textContent = party.size + ' of ' + PARTY_MAX;
+          dispatchEl.disabled = party.size === 0;
+        }
+        render();
+      })();
+    </script>
+  </body>
+</html>
