@@ -499,3 +499,44 @@ shortlist worth naming.
 A document is now fully specified by **three dials**: a paper **style** + a colour **combination** + an ink
 **style**. Today's table documents are `worn-bright` × `warm-posting` × `posting`; the reader is `ledger` ×
 `worn-ledger` × `chronicle`.
+
+---
+
+## Ink cycle (the hand)
+
+An optional overlay that makes the writing read as **ink from a quill** rather than rendered type. It models a
+finite reservoir: a fresh dip is dark and slightly heavy; as you write it depletes (thin + pale); at the next
+**word boundary** past capacity it re-dips. Each mark's weight/darkness depends on the running reservoir level
+— the variance has **memory**, not per-mark noise — with a small random walk for texture and a richer "blob"
+on the first mark after a dip. It maps onto two web knobs: **`text-stroke` = weight**, **`opacity` = ink
+darkness**. Canonical encoding: **[`mockups/ink-cycle.js`](mockups/ink-cycle.js)**; design surface:
+**[`mockups/ink-cycle-designer.dynamic.html`](mockups/ink-cycle-designer.dynamic.html)**.
+
+Two properties matter for the eventual game:
+- **Per word, not per character.** A per-character variant was tried — but the reservoir's memory makes letters
+  within a word nearly identical, so per-character looked the same as per-word *and* cost the font's kerning
+  (each letter its own span). Dropped. Word granularity keeps kerning.
+- **Deterministic.** The RNG is **seeded from the text**, so a given passage always inks the same way every
+  render — otherwise the same document would look different each time it's opened.
+
+### Parameters
+
+| param | what it does |
+|---|---|
+| `dip length` | characters a dip writes before re-dipping — the sawtooth wavelength (randomised in a range) |
+| `floor` | how empty the reservoir runs before re-dipping (lower = more dramatic fade) |
+| `weight range` | `text-stroke` max (px) at full ink |
+| `darkness floor` | `opacity` when nearly dry |
+| `para blob` | extra richness on the first mark of each paragraph (a deliberate re-ink) |
+| `dip blob` | smaller extra richness on a mid-paragraph re-dip |
+| `walk` | per-mark random-walk amplitude (texture, with memory) |
+
+### Presets
+
+| preset | dip length | floor | weight range | darkness floor | para blob | dip blob | walk |
+|---|---|---|---|---|---|---|---|
+| `Light` | 45–80 | 0.30 | 0.30 | 0.90 | 0.16 | 0 | 0.03 |
+| `Heavy` | 45–80 | 0.30 | 0.22 | 0.90 | 0.35 | 0 | 0.03 |
+
+The preset dropdown (none / Light / Heavy) is offered on the dynamic table and the swatch pages; the full
+parameter set is tunable in the **ink-cycle designer**, which can also load a preset as a starting point.

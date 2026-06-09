@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
+    <script src="ink-cycle.js"></script>
     <style>
       /* ── DYNAMIC table mockup — the smoky-viewport hybrid, but every "paper" surface is driven by the
          shared paper.css recipe. A chrome header (system type, neutral panel — deliberately NOT in-world)
@@ -139,7 +140,13 @@
         <option value="scholar">scholar — Crimson Pro</option>
         <option value="crisp">crisp — Garamond medium · no bleed</option>
       </select>
-      <span class="note">chrome, not the game — sets paper style · colour · ink for every paper below</span>
+      <label for="cycle-select">ink cycle</label>
+      <select id="cycle-select">
+        <option value="none">none</option>
+        <option value="light">Light</option>
+        <option value="heavy">Heavy</option>
+      </select>
+      <span class="note">chrome, not the game — sets paper style · colour · ink · cycle for every paper below</span>
     </header>
 
     <div class="stage">
@@ -219,8 +226,12 @@
         const styleSel = document.getElementById('paper-select');
         const colorSel = document.getElementById('color-select');
         const inkSel = document.getElementById('ink-select');
+        const cycleSel = document.getElementById('cycle-select');
+        const chargeEl = document.querySelector('.anchor .charge');
+        const chargeOrig = chargeEl.innerHTML;                  // captured once; re-inked on each render
         function applyVariant() { tableEl.className = 'table paper-v-' + styleSel.value + ' color-' + colorSel.value + ' ink-' + inkSel.value; }
         [styleSel, colorSel, inkSel].forEach((s) => s.addEventListener('change', applyVariant));
+        cycleSel.addEventListener('change', render);            // the cycle rewrites the document text
         applyVariant();
 
         function layIn(id) {
@@ -235,13 +246,15 @@
           render();
         }
         function render() {
+          const P = InkCycle.get(cycleSel.value);               // null when 'none'
+          chargeEl.innerHTML = InkCycle.block(chargeOrig, P);
           rosterEl.innerHTML = '';
           SEEKERS.forEach((s) => {
             const li = document.createElement('li');
             li.className = lane.includes(s.id) ? 'in-lane' : '';
             li.innerHTML =
               '<span class="box' + (party.has(s.id) ? ' checked' : '') + '" title="mark for dispatch"></span>' +
-              '<span class="name" title="open the dossier">' + s.name + '</span>' +
+              '<span class="name" title="open the dossier">' + InkCycle.block(s.name, P) + '</span>' +
               '<span class="mark">' + (lane.includes(s.id) ? 'laid in' : '') + '</span>';
             const box = li.querySelector('.box');
             box.style.setProperty('--rot', ROT[s.id]);
@@ -260,9 +273,9 @@
               card.className = 'dossier paper' + (party.has(id) ? ' going' : '');
               card.innerHTML =
                 '<span class="drop" title="set aside">✕</span>' +
-                '<h3>' + s.name + '</h3>' +
-                '<p class="bg">' + s.bg + '</p>' +
-                '<p class="said">' + s.said + '</p>';
+                '<h3>' + InkCycle.block(s.name, P) + '</h3>' +
+                '<p class="bg">' + InkCycle.block(s.bg, P) + '</p>' +
+                '<p class="said">' + InkCycle.block(s.said, P) + '</p>';
               card.querySelector('.drop').addEventListener('click', () => layIn(id));
               laneEl.appendChild(card);
             });

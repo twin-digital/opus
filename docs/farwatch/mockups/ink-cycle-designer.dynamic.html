@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
+    <script src="ink-cycle.js"></script>
     <style>
       /* The reading view (1.35rem) with every dial exposed — paper · colour · face · weight · bleed — plus the
          full INK-CYCLE tuning, so the reservoir model can be designed against a real passage. */
@@ -91,11 +92,16 @@
 
       <span class="sep"></span>
       <span class="grp">ink cycle ▸</span>
-      <label for="gran">granularity</label>
+      <label for="preset">preset</label>
+      <select id="preset">
+        <option value="" selected>—</option>
+        <option value="light">Light</option>
+        <option value="heavy">Heavy</option>
+      </select>
+      <label for="gran">cycle</label>
       <select id="gran">
-        <option value="none">none (clean)</option>
-        <option value="char" selected>per character</option>
-        <option value="word">per word (kerned)</option>
+        <option value="none">off</option>
+        <option value="word" selected>on (per word)</option>
       </select>
       <label for="dip">dip length</label>
       <select id="dip">
@@ -153,14 +159,6 @@
         <option value="0.08">0.08</option>
         <option value="0.12">0.12 — restless</option>
       </select>
-      <label for="grain">char grain</label>
-      <select id="grain">
-        <option value="0">0 — = per word</option>
-        <option value="0.05">0.05</option>
-        <option value="0.09" selected>0.09</option>
-        <option value="0.14">0.14</option>
-        <option value="0.2">0.20 — noisy</option>
-      </select>
     </header>
 
     <div class="stage">
@@ -183,38 +181,6 @@
           sig: '— George MacDonald',
         };
 
-        // ── parameterized INK-CYCLE (same model as ink-swatches, but every knob comes from the dropdowns) ──
-        function inkCycle(paras, gran, P) {
-          const rndCap = () => P.capMin + Math.random() * (P.capMax - P.capMin);
-          let used = 0, cap = rndCap(), freshBlob = P.blobPara, walk = 0;
-          const levelNow = () => {
-            const frac = Math.min(1, used / cap);
-            const lvl = 1 - frac * (1 - P.floor);
-            walk = Math.max(-0.08, Math.min(0.08, walk + (Math.random() * 2 - 1) * P.walk));
-            return lvl + walk + freshBlob;
-          };
-          const styleFor = (lvl) => {
-            const L = Math.max(0, Math.min(1.12, lvl));
-            return '-webkit-text-stroke:' + (P.strokeMax * L).toFixed(3) + 'px currentColor;opacity:' + (P.opacityMin + (1 - P.opacityMin) * Math.min(1, L)).toFixed(3) + ';';
-          };
-          const deplete = (n) => { freshBlob = 0; used += n; };
-          const dip = (blob) => { used = 0; cap = rndCap(); freshBlob = blob; walk *= 0.4; };
-          const maybeDip = () => { if (used >= cap) dip(P.blobDip); };
-          return paras.map((t) => {
-            dip(P.blobPara);
-            let out = '';
-            for (const tok of t.split(/(\s+)/)) {
-              if (tok === '') continue;
-              if (/^\s+$/.test(tok)) { out += tok; continue; }
-              if (gran === 'word') { out += '<span style="' + styleFor(levelNow()) + '">' + tok + '</span>'; deplete(tok.length); }
-              // per-character adds a small independent grain ON TOP of the cycle, so letters within a word differ
-              else { for (const ch of tok) { out += '<span style="' + styleFor(levelNow() + (Math.random() * 2 - 1) * P.grain) + '">' + ch + '</span>'; deplete(1); } }
-              maybeDip();
-            }
-            return out;
-          });
-        }
-
         const v = (id) => document.getElementById(id).value;
         const n = (id) => parseFloat(v(id));
         const reader = document.getElementById('reader');
@@ -228,10 +194,10 @@
           reader.style.setProperty('--ink-bloom-blur', bl.blur);
           reader.style.setProperty('--ink-bloom-alpha', bl.alpha);
 
-          const gran = v('gran');
-          const [cmin, cmax] = v('dip').split('-').map(Number);
-          const P = { capMin: cmin, capMax: cmax, floor: n('floor'), strokeMax: n('stroke'), opacityMin: n('opacity'), blobPara: n('blobPara'), blobDip: n('blobDip'), walk: n('walk'), grain: n('grain') };
-          const bodies = (gran === 'none') ? READER.paras.slice() : inkCycle(READER.paras, gran, P);
+          const [dipMin, dipMax] = v('dip').split('-').map(Number);
+          const P = (v('gran') === 'none') ? null
+            : { dipMin, dipMax, floor: n('floor'), strokeMax: n('stroke'), opacityMin: n('opacity'), blobPara: n('blobPara'), blobDip: n('blobDip'), walk: n('walk') };
+          const bodies = InkCycle.paras(READER.paras, P);
 
           let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';
           bodies.forEach((html, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + html + '</p>'; });
@@ -239,7 +205,25 @@
           reader.innerHTML = inner;
         }
 
-        document.querySelectorAll('.chrome-bar select').forEach((s) => s.addEventListener('change', render));
+        // preset loader: set every param dropdown to the preset's values, then clear the preset box
+        const presetSel = document.getElementById('preset');
+        presetSel.addEventListener('change', () => {
+          const P = InkCycle.get(presetSel.value);
+          if (P) {
+            document.getElementById('gran').value = 'word';
+            document.getElementById('dip').value = P.dipMin + '-' + P.dipMax;
+            document.getElementById('floor').value = String(P.floor);
+            document.getElementById('stroke').value = String(P.strokeMax);
+            document.getElementById('opacity').value = String(P.opacityMin);
+            document.getElementById('blobPara').value = String(P.blobPara);
+            document.getElementById('blobDip').value = String(P.blobDip);
+            document.getElementById('walk').value = String(P.walk);
+            render();
+          }
+          presetSel.value = '';
+        });
+
+        document.querySelectorAll('.chrome-bar select:not(#preset)').forEach((s) => s.addEventListener('change', render));
         render();
       })();
     </script>

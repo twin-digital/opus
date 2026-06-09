@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
+    <script src="ink-cycle.js"></script>
     <style>
       /* Every curated paper/ink COLOUR combination, rendered with the same chosen paper STYLE.
          The header dropdown swaps the style for all swatches at once (the colours are fixed per cell). */
@@ -81,7 +82,13 @@
         <option value="scholar">scholar — Crimson Pro</option>
         <option value="crisp">crisp — Garamond medium · no bleed</option>
       </select>
-      <span class="note">chrome — swaps the paper style + ink under every colour combination</span>
+      <label for="cycle-select">ink cycle</label>
+      <select id="cycle-select">
+        <option value="none">none</option>
+        <option value="light">Light</option>
+        <option value="heavy">Heavy</option>
+      </select>
+      <span class="note">chrome — swaps the paper style + ink + cycle under every colour combination</span>
     </header>
 
     <div class="stage">
@@ -134,30 +141,30 @@
           '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
           '<p class="sig">— the steward</p>';
 
-        // swatches: one per colour combo, each with its colour parameter table beneath
-        const grid = document.getElementById('grid');
-        COMBO_ORDER.forEach((slug) => {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.innerHTML =
-            '<p class="tag"><b>' + slug + '</b> · ' + COMBO_SUB[slug] + '</p>' +
-            '<div class="paper swatch color-' + slug + '">' + TEXT + '</div>' +
-            table(COLORS[slug]);
-          grid.appendChild(cell);
-        });
-
-        // ── paper-style + ink switchers (chrome) + the active-dial read-out tables ──
+        // ── paper-style + ink + cycle switchers (chrome) + the active-dial read-out tables ──
         const gridEl = document.getElementById('grid');
         const dialsEl = document.getElementById('dials');
         const styleSel = document.getElementById('paper-select');
         const inkSel = document.getElementById('ink-select');
+        const cycleSel = document.getElementById('cycle-select');
+        // swatches: one per colour combo (the selected ink cycle is applied to each sample), with its colour table
+        function renderGrid() {
+          const P = InkCycle.get(cycleSel.value);
+          gridEl.innerHTML = COMBO_ORDER.map((slug) =>
+            '<div class="cell">' +
+              '<p class="tag"><b>' + slug + '</b> · ' + COMBO_SUB[slug] + '</p>' +
+              '<div class="paper swatch color-' + slug + '">' + InkCycle.block(TEXT, P) + '</div>' +
+              table(COLORS[slug]) +
+            '</div>'
+          ).join('');
+        }
         function renderDials() {
           dialsEl.innerHTML =
             '<div class="cell"><p class="tag">paper style — <b>' + styleSel.value + '</b></p>' + table(PAPER_STYLES[styleSel.value]) + '</div>' +
             '<div class="cell"><p class="tag">ink style — <b>' + inkSel.value + '</b></p>' + table(INKS[inkSel.value]) + '</div>';
         }
-        function apply() { gridEl.className = 'grid paper-v-' + styleSel.value + ' ink-' + inkSel.value; renderDials(); }
-        [styleSel, inkSel].forEach((s) => s.addEventListener('change', apply));
+        function apply() { gridEl.className = 'grid paper-v-' + styleSel.value + ' ink-' + inkSel.value; renderGrid(); renderDials(); }
+        [styleSel, inkSel, cycleSel].forEach((s) => s.addEventListener('change', apply));
         apply();
       })();
     </script>

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
+    <script src="ink-cycle.js"></script>
     <style>
       /* Ink exploration: pick a face + weight (dropdowns) on a chosen paper style + colour; each BLEED gets
          its own section, and within a section a row of font SIZES. (Slant removed — no italics for the body.) */
@@ -107,11 +108,11 @@
         <option value="full" selected>full — blur 0.7px · α0.5</option>
         <option value="extreme">extreme — blur 1.15px · α0.85</option>
       </select>
-      <label for="hand-select">ink cycle (reading sample)</label>
+      <label for="hand-select">ink cycle</label>
       <select id="hand-select">
-        <option value="none">none — clean type</option>
-        <option value="cycle-char" selected>ink cycle — per character</option>
-        <option value="cycle-word">ink cycle — per word (keeps kerning)</option>
+        <option value="none">none</option>
+        <option value="light" selected>Light</option>
+        <option value="heavy">Heavy</option>
       </select>
     </header>
 
@@ -179,62 +180,9 @@
           ],
           sig: '— George MacDonald',
         };
-        // ── INK-CYCLE model ──────────────────────────────────────────────────────────────────────
-        // A quill holds a finite reservoir. Fresh after a dip → dark + slightly heavy; it depletes as you
-        // write → strokes fade thin + pale; at the next WORD boundary past capacity you dip and reset (with
-        // a richer "fresh-dip" first mark). The state has MEMORY — each mark depends on the reservoir's
-        // running level, not an independent random roll. A small random walk adds per-mark texture.
-        // Maps onto our two web knobs: text-stroke = weight, opacity = ink darkness.
-        const INK = {
-          capMin: 45, capMax: 80,   // characters a single dip writes (≈ 8–15 words)
-          floor: 0.42,              // how empty the reservoir runs before re-dipping (0 = bone dry)
-          strokeMax: 0.22,          // px text-stroke at full ink (weight)
-          opacityMin: 0.74,         // ink darkness when nearly dry
-          blobPara: 0.16,           // extra richness on the first mark of a paragraph (a deliberate re-ink)
-          blobDip: 0.06,            // smaller richness on a mid-paragraph re-dip
-          walk: 0.05,               // per-mark random-walk amplitude (texture, with memory)
-        };
-        const rndCap = () => INK.capMin + Math.random() * (INK.capMax - INK.capMin);
-        function inkStyle(level) {
-          const L = Math.max(0, Math.min(1.12, level));
-          const stroke = (INK.strokeMax * L).toFixed(3);
-          const op = (INK.opacityMin + (1 - INK.opacityMin) * Math.min(1, L)).toFixed(3);
-          return '-webkit-text-stroke:' + stroke + 'px currentColor;opacity:' + op + ';';
-        }
-        // run one continuous reservoir across all paragraphs; granularity = 'char' | 'word'
-        function inkCycle(paras, granularity) {
-          let used = 0, cap = rndCap(), freshBlob = INK.blobPara, walk = 0;
-          const levelNow = () => {
-            const frac = Math.min(1, used / cap);              // 0 fresh → 1 empty
-            let lvl = 1 - frac * (1 - INK.floor);               // smooth depletion to the floor
-            walk = Math.max(-0.08, Math.min(0.08, walk + (Math.random() * 2 - 1) * INK.walk));
-            return lvl + walk + freshBlob;                      // freshBlob is the just-dipped richness (0 once spent)
-          };
-          const deplete = (n) => { freshBlob = 0; used += n; }; // running cost (never resets mid-word)
-          const dip = (blob) => { used = 0; cap = rndCap(); freshBlob = blob; walk *= 0.4; };
-          const maybeDip = () => { if (used >= cap) dip(INK.blobDip); }; // mid-paragraph re-dip: smaller blob
-          return paras.map((t) => {
-            dip(INK.blobPara);                                  // a full fresh dip at the start of each paragraph
-            let out = '';
-            for (const tok of t.split(/(\s+)/)) {
-              if (tok === '') continue;
-              if (/^\s+$/.test(tok)) { out += tok; continue; }  // a space — never inside a styled span
-              if (granularity === 'word') {
-                out += '<span style="' + inkStyle(levelNow()) + '">' + tok + '</span>';
-                deplete(tok.length);
-              } else {
-                // per-character adds a small independent grain on top of the cycle (letters within a word differ)
-                for (const ch of tok) { out += '<span style="' + inkStyle(levelNow() + (Math.random() * 2 - 1) * 0.09) + '">' + ch + '</span>'; deplete(1); }
-              }
-              maybeDip();                                       // dips only land at word boundaries
-            }
-            return out;
-          });
-        }
+        // the ink cycle is the shared, seeded model (ink-cycle.js); the dropdown picks a preset
         function renderReader(hand) {
-          const bodies = (hand === 'cycle-char') ? inkCycle(READER.paras, 'char')
-            : (hand === 'cycle-word') ? inkCycle(READER.paras, 'word')
-            : READER.paras.slice();
+          const bodies = InkCycle.paras(READER.paras, InkCycle.get(hand));
           let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';
           bodies.forEach((html, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + html + '</p>'; });
           inner += '<p class="sig">' + READER.sig + '</p>';
@@ -265,6 +213,7 @@
             '<div class="cell"><p class="tag">paper style — <b>' + ps + '</b></p>' + table(PAPER_STYLES[ps]) + '</div>' +
             '<div class="cell"><p class="tag">colour — <b>' + col + '</b></p>' + table(COLORS[col]) + '</div>';
 
+          const inkP = InkCycle.get(handSel.value);              // null when 'none'
           // one section, all font sizes, at the selected bleed
           app.innerHTML =
             '<h2 class="section">Font sizes — ink bleed: ' + bleedDisp + '</h2>' +
@@ -272,12 +221,12 @@
             SIZES.map((sz) =>
               '<div class="cell">' +
                 '<p class="tag">size <b>' + sz + '</b> · ' + pxOf(sz) + '</p>' +
-                '<div class="paper swatch" style="--ink-size:' + sz + '">' + TEXT + '</div>' +
+                '<div class="paper swatch" style="--ink-size:' + sz + '">' + InkCycle.block(TEXT, inkP) + '</div>' +
                 table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: bleedDisp }) +
               '</div>'
             ).join('') +
             '</div>' +
-            '<h2 class="section">Reading sample — reader width · 1.35rem (' + pxOf('1.35rem') + ') · hand: ' + handSel.value + '</h2>' +
+            '<h2 class="section">Reading sample — reader width · 1.35rem (' + pxOf('1.35rem') + ') · ink cycle: ' + handSel.value + '</h2>' +
             '<div class="paper swatch reader" style="--ink-size:1.35rem">' + renderReader(handSel.value) + '</div>';
         }
 
