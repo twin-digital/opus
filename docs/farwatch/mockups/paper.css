@@ -42,19 +42,16 @@
   /* NOTE: wide-short papers (the charge) need a horizontal mask-size bump so the ~2.3% inset
      doesn't eat their width — set --paper-tear-size: calc(100% + 46px) 100% on that element. */
 
-  /* ── SHADOW (LIFT) — elevation, as a drop-shadow filter (follows the torn edge) ─────────── */
-  /* lift-low  : a sheet resting close to the desk (dossier) */
+  /* ── SHADOW (LIFT) — PARKED: elevation/drop-shadow is not currently applied by .paper (tune later).
+     Tokens kept so re-adding is one line (filter: var(--paper-lift) on .paper + --paper-lift on a variant). */
   --lift-low: drop-shadow(0 16px 30px rgba(0,0,0,0.5)) drop-shadow(0 3px 8px rgba(0,0,0,0.4));
-  /* lift-card : a small card lifted a touch more (fact pane) */
   --lift-card: drop-shadow(0 18px 40px rgba(0,0,0,0.45)) drop-shadow(0 4px 9px rgba(0,0,0,0.38));
-  /* lift-high : a large sheet floating well above the desk (reader sheet) */
   --lift-high: drop-shadow(0 38px 70px rgba(0,0,0,0.5)) drop-shadow(0 8px 18px rgba(0,0,0,0.4));
-  /* none      : (set --paper-lift: none) */
 }
 
 /* ── THE PAPER PRIMITIVE — reads its look from the inherited --paper-* slots ────────────────
    Three independent dials feed it:
-     • STYLE  (a .paper-v-* variant) → grain, laid, glow, tear, lift.
+     • STYLE  (a .paper-v-* variant) → grain, laid, glow, tear. (lift/elevation is parked — tune later.)
      • COLOUR (a .color-* combination, in paper-color.css) → the paper fill, the ink colour, and the
        ink-bleed HUE.
      • INK    (an .ink-* class, in ink.css) → face, weight, size, and the ink-bleed blur + strength.
@@ -79,38 +76,37 @@
   -webkit-mask-size: var(--paper-tear-size, 100% 100%); mask-size: var(--paper-tear-size, 100% 100%);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
-  filter: var(--paper-lift, var(--lift-low));
 }
 
-/* ════════════ STYLE VARIANTS — texture/edge/lift only; NO colour (that's paper-color.css) ════════════ */
+/* ════════════ STYLE VARIANTS — texture + edge only; NO colour (paper-color.css), NO lift (parked) ════════════ */
 
 /* worn-bright · bright worn parchment surface — the table documents [IN PLAY] */
 .paper-v-worn-bright {
   --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle-soft);
-  --paper-tear: var(--tear-torn); --paper-lift: var(--lift-low);
+  --paper-tear: var(--tear-torn);
 }
 
 /* ledger · duller worn-ledger surface — the reader's reading page [IN PLAY] */
 .paper-v-ledger {
   --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle);
-  --paper-tear: var(--tear-deep); --paper-lift: var(--lift-high);
+  --paper-tear: var(--tear-deep);
 }
 
-/* card · small index/fact card — no warm wash, a lighter lift [IN PLAY] */
+/* card · small index/fact card — no warm wash [IN PLAY] */
 .paper-v-card {
   --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: none;
-  --paper-tear: var(--tear-torn); --paper-lift: var(--lift-card);
+  --paper-tear: var(--tear-torn);
 }
 
 /* austere · pruned — tooth only, straight edge, no warm wash (the "remove things" test) [PROPOSED] */
 .paper-v-austere {
   --paper-grain: var(--grain-soft); --paper-laid: none; --paper-glow: none;
-  --paper-tear: none; --paper-lift: var(--lift-low);
+  --paper-tear: none;
 }
 
 /* clean · baseline — flat colour, no texture, no tear (the control) [PROPOSED]
    (bleed is now an INK-STYLE concern, not a paper one — pair this with a no-bleed ink for a fully flat look) */
 .paper-v-clean {
   --paper-grain: none; --paper-laid: none; --paper-glow: none;
-  --paper-tear: none; --paper-lift: var(--lift-low);
+  --paper-tear: none;
 }

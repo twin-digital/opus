@@ -365,27 +365,21 @@ its edges, which read as a colour shift rather than the aging it was meant to su
 *(Modifier: wide-short papers like the charge need `--paper-tear-size: calc(100% + 46px) 100%` so the ~2.3%
 inset doesn't eat their width.)*
 
-**Shadow (lift)** — elevation, as a drop-shadow filter (follows the torn edge):
-
-| slug | params | key element |
-|---|---|---|
-| `none` | — | flush; no lift |
-| `lift-low` | `0 16/30 .5` + `0 3/8 .4` | rests close to the desk (dossier) |
-| `lift-card` | `0 18/40 .45` + `0 4/9 .38` | a small card, lifted a touch (fact pane) |
-| `lift-high` | `0 38/70 .5` + `0 8/18 .4` | a large sheet floating well above (reader) |
+*(**Shadow / lift** — the paper's elevation drop-shadow — is **parked**, not currently applied by any style;
+the `--lift-*` tokens are kept in `paper.css` so it's a one-line re-add when we tune elevation later.)*
 
 ### Style variants in play
 
-One row per paper *style*. **Colour is a separate dial** (next section) — these set only texture, edge,
-and lift. Cells name the option chosen on each axis.
+One row per paper *style*. **Colour is a separate dial** (next section) — these set only texture and edge.
+Cells name the option chosen on each axis.
 
-| style variant | status | what it is | grain | laid | glow | tear | lift |
-|---|---|---|---|---|---|---|---|
-| `worn-bright` | **in play** | bright worn-parchment surface — the table documents (charge · roster · dossiers) | fine | fibre | candle-soft | torn | lift-low |
-| `ledger` | **in play** | duller worn-ledger surface — the reader's reading page | fine | fibre | candle | deep | lift-high |
-| `card` | **in play** | small index / fact card — no warm wash, lighter lift | fine | fibre | none | torn | lift-card |
-| `austere` | *proposed* | pruned — tooth only, straight edge, no warm wash (the "remove things" test) | soft | none | none | none | lift-low |
-| `clean` | *proposed* | flat baseline — no texture/tear/bleed (the control) | none | none | none | none | lift-low |
+| style variant | status | what it is | grain | laid | glow | tear |
+|---|---|---|---|---|---|---|
+| `worn-bright` | **in play** | bright worn-parchment surface — the table documents (charge · roster · dossiers) | fine | fibre | candle-soft | torn |
+| `ledger` | **in play** | duller worn-ledger surface — the reader's reading page | fine | fibre | candle | deep |
+| `card` | **in play** | small index / fact card — no warm wash | fine | fibre | none | torn |
+| `austere` | *proposed* | pruned — tooth only, straight edge, no warm wash (the "remove things" test) | soft | none | none | none |
+| `clean` | *proposed* | flat baseline — no texture/tear (the control) | none | none | none | none |
 
 *`austere` and `clean` are deliberate test rows (not yet a rendered design) — they exist so the dynamic
 mockup can A/B "how much of the texture is actually load-bearing" against the full recipe.*
