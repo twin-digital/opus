@@ -99,19 +99,19 @@
       (function () {
         // ── resolved-parameter data (mirrors paper.css / paper-color.css / ink.css) ──
         const PAPER_STYLES = {
-          'worn-bright': { grain: 'fine', laid: 'fibre', glow: 'candle-soft', tear: 'torn', lift: 'lift-low', 'edge soak': '34px · α.14' },
-          'ledger':      { grain: 'fine', laid: 'fibre', glow: 'candle', tear: 'deep', lift: 'lift-high', 'edge soak': '50px · α.16' },
-          'card':        { grain: 'fine', laid: 'fibre', glow: 'none', tear: 'torn', lift: 'lift-card', 'edge soak': '30px · α.12' },
-          'austere':     { grain: 'soft', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low', 'edge soak': '24px · α.10' },
-          'clean':       { grain: 'none', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low', 'edge soak': 'α0' },
+          'worn-bright': { grain: 'fine', laid: 'fibre', glow: 'candle-soft', tear: 'torn', lift: 'lift-low' },
+          'ledger':      { grain: 'fine', laid: 'fibre', glow: 'candle', tear: 'deep', lift: 'lift-high' },
+          'card':        { grain: 'fine', laid: 'fibre', glow: 'none', tear: 'torn', lift: 'lift-card' },
+          'austere':     { grain: 'soft', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low' },
+          'clean':       { grain: 'none', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low' },
         };
         const COLORS = {
-          'warm-posting': { 'paper colour': 'parchment · #e2d1a3', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
-          'worn-ledger':  { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
-          'amber-warm':   { 'paper colour': 'amber · #e5d1a0', 'edge hue': '74 52 20', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
-          'bright-clean': { 'paper colour': 'bright · #e8d6a4', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
-          'cabinet':      { 'paper colour': 'cream · #ece6d2', 'edge hue': '44 44 36', 'ink': 'soot · #201f18', 'bleed hue': '20 20 14' },
-          'ghostly':      { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'faded · #5a4a30', 'bleed hue': '60 44 24' },
+          'warm-posting': { 'paper colour': 'parchment · #e2d1a3', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'worn-ledger':  { 'paper colour': 'ledger · #d9cca6', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'amber-warm':   { 'paper colour': 'amber · #e5d1a0', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'bright-clean': { 'paper colour': 'bright · #e8d6a4', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'cabinet':      { 'paper colour': 'cream · #ece6d2', 'ink': 'soot · #201f18', 'bleed hue': '20 20 14' },
+          'ghostly':      { 'paper colour': 'ledger · #d9cca6', 'ink': 'faded · #5a4a30', 'bleed hue': '60 44 24' },
         };
         const INKS = {
           'chronicle': { face: 'EB Garamond', slant: 'upright', weight: '400', size: 'reading · 1.1rem', bleed: 'full · 0.7px α.5' },

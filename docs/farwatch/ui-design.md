@@ -324,9 +324,10 @@ classes); the live switcher is **[`mockups/compare-table.dynamic.html`](mockups/
 (a dropdown swaps the variant for every paper at once). The tables below mirror that file — read a variant
 row left-to-right and you can rebuild it.
 
-**Base (constant across all paper):** the paper **colour** (per-variant), **ink** `#2c2012`, **ink-bloom**
-`text-shadow: 0 0 0.7px rgba(48,22,8,0.5)` (worn-print halo), **inset-darkening** `box-shadow: inset …`
-(aging toward the edges), and discretionary ligatures. The six axes below are what a variant tunes.
+**Base (constant across all paper):** the paper **colour** + **ink** (from the colour pairing), the
+**ink-bloom** halo (now an ink-style concern), and discretionary ligatures. The axes below are what a paper
+*style* variant tunes. *(An "edge-soak" inset-darkening was tried and removed — it shaded the paper toward
+its edges, which read as a colour shift rather than the aging it was meant to suggest.)*
 
 ### Axis option libraries
 
@@ -398,22 +399,22 @@ pairs** of a paper-colour and an ink-colour. Canonical encoding:
 **[`mockups/paper-color.css`](mockups/paper-color.css)** (`.color-*` classes). Both the
 [dynamic table](mockups/compare-table.dynamic.html) and the
 [dynamic swatch sheet](mockups/paper-swatches.dynamic.html) carry a colour selector. Hue and strength are
-split: the **paper** supplies the fill + edge-aging *hue*; the **ink** supplies the writing colour + bleed
-*hue*; the *strength* of edge-aging and bleed comes from the style.
+split: the **paper** supplies the fill; the **ink** supplies the writing colour + bleed *hue*; the bleed
+*strength* comes from the ink style.
 
 *(Type-role accents — voice / stamp / loss / gold — are **not** part of the paper/ink pair; they're a
 separate future "accent palette" dial, held constant for now.)*
 
 ### Paper-colour options
 
-| slug | fill | edge-aging hue (rgb) | key element |
-|---|---|---|---|
-| `ledger` | `#d9cca6` | `70 50 22` | dull worn ledger — warm brown edge |
-| `parchment` | `#e2d1a3` | `70 50 22` | warm + bright parchment — warm brown edge |
-| `amber` | `#e5d1a0` | `74 52 20` | warmer, more amber — deeper amber edge |
-| `bright` | `#e8d6a4` | `70 50 22` | the brightest warm paper |
-| `card` | `#d3c59e` | `66 48 20` | a touch greyer — the index card |
-| `cream` | `#ece6d2` | `44 44 36` | cool cream — neutral (not brown) edge — the wildcard |
+| slug | fill | key element |
+|---|---|---|
+| `ledger` | `#d9cca6` | dull worn ledger |
+| `parchment` | `#e2d1a3` | warm + bright parchment |
+| `amber` | `#e5d1a0` | warmer, more amber |
+| `bright` | `#e8d6a4` | the brightest warm paper |
+| `card` | `#d3c59e` | a touch greyer — the index card |
+| `cream` | `#ece6d2` | cool cream — the wildcard |
 
 ### Ink options
 

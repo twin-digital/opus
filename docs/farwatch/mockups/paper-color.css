@@ -5,7 +5,6 @@
 
    Slots this sets (read by .paper in paper.css):
      --paper-color : the paper fill
-     --paper-edge  : edge-aging HUE as space-separated rgb channels (strength comes from the style)
      --paper-ink   : the writing colour
      --paper-bloom : ink-bleed HUE as space-separated rgb channels (strength comes from the style)
 
@@ -17,13 +16,13 @@
    ════════════════════════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── PAPER-COLOUR options — fill (--pc-*) + edge-aging hue channels (--pe-*) ── */
-  --pc-ledger: #d9cca6;    --pe-ledger: 70 50 22;     /* dull worn ledger — warm brown edge */
-  --pc-parchment: #e2d1a3; --pe-parchment: 70 50 22;  /* warm + bright parchment — warm brown edge */
-  --pc-amber: #e5d1a0;     --pe-amber: 74 52 20;      /* warmer, more amber — deeper amber edge */
-  --pc-bright: #e8d6a4;    --pe-bright: 70 50 22;     /* the brightest warm paper */
-  --pc-card: #d3c59e;      --pe-card: 66 48 20;       /* a touch greyer — the index card */
-  --pc-cream: #ece6d2;     --pe-cream: 44 44 36;      /* cool cream — neutral (not brown) edge */
+  /* ── PAPER-COLOUR options — fill (--pc-*) ── */
+  --pc-ledger: #d9cca6;    /* dull worn ledger */
+  --pc-parchment: #e2d1a3; /* warm + bright parchment */
+  --pc-amber: #e5d1a0;     /* warmer, more amber */
+  --pc-bright: #e8d6a4;    /* the brightest warm paper */
+  --pc-card: #d3c59e;      /* a touch greyer — the index card */
+  --pc-cream: #ece6d2;     /* cool cream — the wildcard */
 
   /* ── INK options — base colour (--ik-*) + bleed hue channels (--ib-*) ── */
   --ik-sepia: #2c2012;     --ib-sepia: 48 22 8;       /* the standard faded sepia-brown */
@@ -34,19 +33,19 @@
 /* ════════════ CURATED COMBINATIONS — one paper-colour × one ink ════════════ */
 
 /* warm-posting · bright parchment + sepia — the table documents */
-.color-warm-posting { --paper-color: var(--pc-parchment); --paper-edge: var(--pe-parchment); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-warm-posting { --paper-color: var(--pc-parchment); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
 
 /* worn-ledger · dull ledger + sepia — the reader's reading page */
-.color-worn-ledger { --paper-color: var(--pc-ledger); --paper-edge: var(--pe-ledger); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-worn-ledger { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
 
 /* amber-warm · amber paper + sepia — candle-flushed, warmer */
-.color-amber-warm { --paper-color: var(--pc-amber); --paper-edge: var(--pe-amber); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-amber-warm { --paper-color: var(--pc-amber); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
 
 /* bright-clean · brightest warm paper + sepia */
-.color-bright-clean { --paper-color: var(--pc-bright); --paper-edge: var(--pe-bright); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-bright-clean { --paper-color: var(--pc-bright); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
 
 /* cabinet · cool cream + sharp soot — organized, slightly cold (the wildcard) */
-.color-cabinet { --paper-color: var(--pc-cream); --paper-edge: var(--pe-cream); --paper-ink: var(--ik-soot); --paper-bloom: var(--ib-soot); }
+.color-cabinet { --paper-color: var(--pc-cream); --paper-ink: var(--ik-soot); --paper-bloom: var(--ib-soot); }
 
 /* ghostly · dull ledger + faded ink — very worn, an atmospheric extreme */
-.color-ghostly { --paper-color: var(--pc-ledger); --paper-edge: var(--pe-ledger); --paper-ink: var(--ik-faded); --paper-bloom: var(--ib-faded); }
+.color-ghostly { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-faded); --paper-bloom: var(--ib-faded); }
