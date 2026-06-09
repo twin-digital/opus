@@ -42,6 +42,15 @@
       .cell .tag { font-family: system-ui, sans-serif; font-size: 0.78rem; letter-spacing: 0.02em; color: #94989b; margin: 0 0 8px; }
       .cell .tag b { color: #d9dcde; font-weight: 600; }
 
+      /* parameter read-out tables (chrome) — one under each swatch, and one per dropdown up top */
+      .section { font-family: system-ui, sans-serif; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #7f8487; margin: 30px 0 12px; }
+      .section:first-of-type { margin-top: 6px; }
+      .ptable { width: 100%; border-collapse: collapse; font-family: system-ui, -apple-system, sans-serif; font-size: 11.5px; margin-top: 10px; }
+      .ptable th { text-align: left; font-weight: 500; color: #7f8487; padding: 3px 10px 3px 0; white-space: nowrap; vertical-align: top; }
+      .ptable td { text-align: right; color: #cdd0d2; padding: 3px 0; font-variant-numeric: tabular-nums; }
+      .ptable tr + tr th, .ptable tr + tr td { border-top: 1px solid #2b2e30; }
+      .dials .cell { background: #1a1c1e; border: 1px solid #2b2e30; border-radius: 4px; padding: 12px 14px; }
+
       /* the swatch IS a .paper (style from the grid's variant class; colour from the cell's .color-* class) */
       .swatch { padding: 28px 30px 26px; line-height: 1.6; border-radius: 1px; } /* size/face come from the ink dial */
       .swatch .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.95em; margin: 0 0 16px; }
@@ -79,19 +88,46 @@
     <div class="stage">
       <h1>Paper / ink colour combinations</h1>
       <p class="sub">Each cell is one curated paper-colour × ink pairing, all on the chosen paper style. Body text is in the combination's ink; the voice / stamp / loss / gold accents are held constant (a separate dial).</p>
+
+      <h2 class="section">Active dials (from the dropdowns above)</h2>
+      <div class="grid dials" id="dials"></div>
+
+      <h2 class="section">Colour combinations — one per swatch</h2>
       <div class="grid paper-v-worn-bright ink-posting" id="grid"></div>
     </div>
 
     <script>
       (function () {
-        const COMBOS = [
-          ['warm-posting', 'parchment · sepia'],
-          ['worn-ledger', 'ledger · sepia'],
-          ['amber-warm', 'amber · sepia'],
-          ['bright-clean', 'bright · sepia'],
-          ['cabinet', 'cream · soot'],
-          ['ghostly', 'ledger · faded'],
-        ];
+        // ── resolved-parameter data (mirrors paper.css / paper-color.css / ink.css) ──
+        const PAPER_STYLES = {
+          'worn-bright': { grain: 'fine', laid: 'fibre', glow: 'candle-soft', tear: 'torn', lift: 'lift-low', 'edge soak': '34px · α.14' },
+          'ledger':      { grain: 'fine', laid: 'fibre', glow: 'candle', tear: 'deep', lift: 'lift-high', 'edge soak': '50px · α.16' },
+          'card':        { grain: 'fine', laid: 'fibre', glow: 'none', tear: 'torn', lift: 'lift-card', 'edge soak': '30px · α.12' },
+          'austere':     { grain: 'soft', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low', 'edge soak': '24px · α.10' },
+          'clean':       { grain: 'none', laid: 'none', glow: 'none', tear: 'none', lift: 'lift-low', 'edge soak': 'α0' },
+        };
+        const COLORS = {
+          'warm-posting': { 'paper colour': 'parchment · #e2d1a3', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'worn-ledger':  { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'amber-warm':   { 'paper colour': 'amber · #e5d1a0', 'edge hue': '74 52 20', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'bright-clean': { 'paper colour': 'bright · #e8d6a4', 'edge hue': '70 50 22', 'ink': 'sepia · #2c2012', 'bleed hue': '48 22 8' },
+          'cabinet':      { 'paper colour': 'cream · #ece6d2', 'edge hue': '44 44 36', 'ink': 'soot · #201f18', 'bleed hue': '20 20 14' },
+          'ghostly':      { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'faded · #5a4a30', 'bleed hue': '60 44 24' },
+        };
+        const INKS = {
+          'chronicle': { face: 'EB Garamond', slant: 'upright', weight: '400', size: 'reading · 1.1rem', bleed: 'full · 0.7px α.5' },
+          'posting':   { face: 'EB Garamond', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'full · 0.7px α.5' },
+          'scribe':    { face: 'EB Garamond', slant: 'italic', weight: '400', size: 'reading · 1.1rem', bleed: 'full · 0.7px α.5' },
+          'monastic':  { face: 'Spectral', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'none' },
+          'scholar':   { face: 'Crimson Pro', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'light · 0.6px α.4' },
+          'crisp':     { face: 'EB Garamond', slant: 'upright', weight: '500 (medium)', size: 'compact · 1.0rem', bleed: 'none' },
+        };
+        const COMBO_ORDER = ['warm-posting', 'worn-ledger', 'amber-warm', 'bright-clean', 'cabinet', 'ghostly'];
+        const COMBO_SUB = { 'warm-posting': 'parchment · sepia', 'worn-ledger': 'ledger · sepia', 'amber-warm': 'amber · sepia', 'bright-clean': 'bright · sepia', 'cabinet': 'cream · soot', 'ghostly': 'ledger · faded' };
+
+        function table(obj) {
+          return '<table class="ptable">' + Object.keys(obj).map((k) => '<tr><th>' + k + '</th><td>' + obj[k] + '</td></tr>').join('') + '</table>';
+        }
         const TEXT =
           '<p class="when">Farwatch · at the turn of the season</p>' +
           '<p class="h">What you sent them to do</p>' +
@@ -100,23 +136,31 @@
           '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
           '<p class="sig">— the steward</p>';
 
+        // swatches: one per colour combo, each with its colour parameter table beneath
         const grid = document.getElementById('grid');
-        COMBOS.forEach(([slug, sub]) => {
+        COMBO_ORDER.forEach((slug) => {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.innerHTML =
-            '<p class="tag"><b>' + slug + '</b> · ' + sub + '</p>' +
-            '<div class="paper swatch color-' + slug + '">' + TEXT + '</div>';
+            '<p class="tag"><b>' + slug + '</b> · ' + COMBO_SUB[slug] + '</p>' +
+            '<div class="paper swatch color-' + slug + '">' + TEXT + '</div>' +
+            table(COLORS[slug]);
           grid.appendChild(cell);
         });
 
-        // ── paper-style + ink switchers (chrome) ──
+        // ── paper-style + ink switchers (chrome) + the active-dial read-out tables ──
         const gridEl = document.getElementById('grid');
+        const dialsEl = document.getElementById('dials');
         const styleSel = document.getElementById('paper-select');
         const inkSel = document.getElementById('ink-select');
-        function applyStyle() { gridEl.className = 'grid paper-v-' + styleSel.value + ' ink-' + inkSel.value; }
-        [styleSel, inkSel].forEach((s) => s.addEventListener('change', applyStyle));
-        applyStyle();
+        function renderDials() {
+          dialsEl.innerHTML =
+            '<div class="cell"><p class="tag">paper style — <b>' + styleSel.value + '</b></p>' + table(PAPER_STYLES[styleSel.value]) + '</div>' +
+            '<div class="cell"><p class="tag">ink style — <b>' + inkSel.value + '</b></p>' + table(INKS[inkSel.value]) + '</div>';
+        }
+        function apply() { gridEl.className = 'grid paper-v-' + styleSel.value + ' ink-' + inkSel.value; renderDials(); }
+        [styleSel, inkSel].forEach((s) => s.addEventListener('change', apply));
+        apply();
       })();
     </script>
   </body>
