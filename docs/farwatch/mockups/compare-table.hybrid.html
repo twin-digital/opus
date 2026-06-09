@@ -50,17 +50,17 @@
       body::before, body::after {
         content: ""; position: fixed; inset: -12%; z-index: 0; pointer-events: none; background-size: cover; background-position: center; background-repeat: no-repeat;
       }
-      body::before { background-image: var(--mist); animation: smoke-a 13s ease-in-out infinite alternate; }
-      body::after { background-image: var(--mist2); opacity: 0.72; animation: smoke-b 17s ease-in-out infinite alternate; }
+      body::before { background-image: var(--mist); animation: smoke-a 8s ease-in-out infinite alternate; }
+      body::after { background-image: var(--mist2); opacity: 0.72; animation: smoke-b 11s ease-in-out infinite alternate; }
       @keyframes smoke-a {
-        from { transform: translate3d(-2%, 1%, 0) scale(1.10) rotate(0deg); }
-        to { transform: translate3d(3%, -2.5%, 0) scale(1.22) rotate(3deg); }
+        from { transform: translate3d(-12%, 6%, 0) scale(1.10) rotate(0deg); }
+        to { transform: translate3d(12%, -10%, 0) scale(1.4) rotate(8deg); }
       }
       @keyframes smoke-b {
-        from { transform: translate3d(2.5%, -1.5%, 0) scale(1.20) rotate(0deg); }
-        to { transform: translate3d(-3%, 2%, 0) scale(1.08) rotate(-4deg); }
+        from { transform: translate3d(12%, -8%, 0) scale(1.35) rotate(0deg); }
+        to { transform: translate3d(-12%, 9%, 0) scale(1.08) rotate(-10deg); }
       }
-      @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
+      /* NOTE: prefers-reduced-motion guard temporarily removed for motion diagnosis — restore before final */
       .table, .caption { position: relative; z-index: 1; }
       .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
       /* a barely-there desk surface the cluster rests on — a soft feathered pool, not a card */
