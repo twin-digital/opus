@@ -92,11 +92,18 @@
         <option value="700">700</option>
         <option value="800">800</option>
       </select>
+      <label for="bleed-select">ink bleed</label>
+      <select id="bleed-select">
+        <option value="none">none — blur 0 · α0</option>
+        <option value="light">light — blur 0.6px · α0.4</option>
+        <option value="full" selected>full — blur 0.7px · α0.5</option>
+        <option value="extreme">extreme — blur 1.15px · α0.85</option>
+      </select>
     </header>
 
     <div class="stage">
       <h1>Ink exploration — face · weight · bleed · size</h1>
-      <p class="sub">Pick a face + weight on a chosen paper + colour. Each ink-bleed level is its own section; within it, a range of font sizes. Voice / stamp / loss / gold accents are held constant (a separate dial).</p>
+      <p class="sub">Pick a face + weight + ink-bleed on a chosen paper + colour; the grid shows a range of font sizes at those settings. Voice / stamp / loss / gold accents are held constant (a separate dial).</p>
 
       <h2 class="section">Active context (paper + colour)</h2>
       <div class="grid dials" id="context"></div>
@@ -152,33 +159,38 @@
         const colorSel = document.getElementById('color-select');
         const famSel = document.getElementById('family-select');
         const weightSel = document.getElementById('weight-select');
+        const bleedSel = document.getElementById('bleed-select');
 
         function render() {
           const ps = styleSel.value, col = colorSel.value, fam = famSel.value, wt = weightSel.value;
-          // paper style + colour set --paper-* on #app; face + weight set as inline --ink-* (inherited by swatches)
+          const b = BLEEDS.find((x) => x.name === bleedSel.value) || BLEEDS[2];
+          const bleedDisp = b.name + ' · blur ' + b.blur + ' · α' + b.alpha;
+          // paper style + colour set --paper-* on #app; face / weight / bleed set as inline --ink-* (inherited)
           app.className = 'paper-v-' + ps + ' color-' + col;
           app.style.setProperty('--ink-family', FAMILY_VAR[fam]);
           app.style.setProperty('--ink-weight', wt);
+          app.style.setProperty('--ink-bloom-blur', b.blur);
+          app.style.setProperty('--ink-bloom-alpha', b.alpha);
 
           context.innerHTML =
             '<div class="cell"><p class="tag">paper style — <b>' + ps + '</b></p>' + table(PAPER_STYLES[ps]) + '</div>' +
             '<div class="cell"><p class="tag">colour — <b>' + col + '</b></p>' + table(COLORS[col]) + '</div>';
 
-          app.innerHTML = BLEEDS.map((b) =>
-            '<h2 class="section">Ink bleed — ' + b.name + '</h2>' +
-            '<div class="grid" style="--ink-bloom-blur:' + b.blur + ';--ink-bloom-alpha:' + b.alpha + '">' +
+          // one section, all font sizes, at the selected bleed
+          app.innerHTML =
+            '<h2 class="section">Font sizes — ink bleed: ' + bleedDisp + '</h2>' +
+            '<div class="grid">' +
             SIZES.map((sz) =>
               '<div class="cell">' +
                 '<p class="tag">size <b>' + sz + '</b> · ' + pxOf(sz) + '</p>' +
                 '<div class="paper swatch" style="--ink-size:' + sz + '">' + TEXT + '</div>' +
-                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: b.name + ' · blur ' + b.blur + ' · α' + b.alpha }) +
+                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz + ' · ' + pxOf(sz), bleed: bleedDisp }) +
               '</div>'
             ).join('') +
-            '</div>'
-          ).join('');
+            '</div>';
         }
 
-        [styleSel, colorSel, famSel, weightSel].forEach((s) => s.addEventListener('change', render));
+        [styleSel, colorSel, famSel, weightSel, bleedSel].forEach((s) => s.addEventListener('change', render));
         render();
       })();
     </script>
