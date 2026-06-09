@@ -261,6 +261,11 @@ Candidate mood axis to compare: **austere/monastic** (cold stone, severe) vs **w
 can be picked up later. The leading direction is **hybrid**: *warm paper documents on a cool, smoke-and-stone
 room.* Authority for the live look is the mockup files, not this list; values here are a snapshot.
 
+> The sections below catalogue the **mechanisms** (the CSS recipes and tokens). The **entity model** they
+> assemble into — *document = author × occasion × paper × ink* — is its own document:
+> **[document-styling.md](document-styling.md)**. Read that for *what owns what*; read here for *how each
+> piece is built*.
+
 - `mockups/compare-table.hybrid.html` — the party-building compare-table (the fullest realization).
 - `mockups/reading-first.warm-melancholy.html` — the reader (paper/ink/type reference).
 - `mockups/reading-first.hybrid-field.html` — the reader's paper set on the hybrid field (smoke + desk-pool).

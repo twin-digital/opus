@@ -42,7 +42,7 @@ const InkCycle = (function () {
         const op = (P.opacityMin + (1 - P.opacityMin) * Math.min(1, L)).toFixed(3); // darkness (also dims the halo's alpha)
         // bloom rides the reservoir too: halo BLUR = the ink-bleed dial's blur × level (the alpha tracks via opacity).
         // The bleed dial (--ink-bloom-blur/alpha) is the bloom at FULL ink; this scales it down for dry marks.
-        const bloom = '0 0 calc(var(--ink-bloom-blur, 0.7px) * ' + L.toFixed(3) + ') rgb(var(--paper-bloom, 48 22 8) / var(--ink-bloom-alpha, 0.5))';
+        const bloom = '0 0 calc(var(--ink-bloom-blur, 0.7px) * ' + L.toFixed(3) + ') rgb(var(--ink-bleed-hue, 48 22 8) / var(--ink-bloom-alpha, 0.5))';
         return '-webkit-text-stroke:' + stroke + 'px currentColor;opacity:' + op + ';text-shadow:' + bloom + ';';
       },
       deplete(n) { freshBlob = 0; used += n; },

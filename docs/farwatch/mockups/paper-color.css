@@ -6,7 +6,7 @@
    Slots this sets (read by .paper in paper.css):
      --paper-color : the paper fill
      --paper-ink   : the writing colour
-     --paper-bloom : ink-bleed HUE as space-separated rgb channels (strength comes from the style)
+     --ink-bleed-hue : ink-bleed HUE as space-separated rgb channels (strength comes from the style)
 
    USAGE: put a .color-<slug> class on the same ancestor that carries the .paper-v-<style> class;
    both inherit down to every .paper descendant. See docs/farwatch/ui-design.md → "Paper & ink colour".
@@ -33,19 +33,19 @@
 /* ════════════ CURATED COMBINATIONS — one paper-colour × one ink ════════════ */
 
 /* warm-posting · bright parchment + sepia — the table documents */
-.color-warm-posting { --paper-color: var(--pc-parchment); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-warm-posting { --paper-color: var(--pc-parchment); --paper-ink: var(--ik-sepia); --ink-bleed-hue: var(--ib-sepia); }
 
 /* worn-ledger · dull ledger + sepia — the reader's reading page */
-.color-worn-ledger { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-worn-ledger { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-sepia); --ink-bleed-hue: var(--ib-sepia); }
 
 /* amber-warm · amber paper + sepia — candle-flushed, warmer */
-.color-amber-warm { --paper-color: var(--pc-amber); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-amber-warm { --paper-color: var(--pc-amber); --paper-ink: var(--ik-sepia); --ink-bleed-hue: var(--ib-sepia); }
 
 /* bright-clean · brightest warm paper + sepia */
-.color-bright-clean { --paper-color: var(--pc-bright); --paper-ink: var(--ik-sepia); --paper-bloom: var(--ib-sepia); }
+.color-bright-clean { --paper-color: var(--pc-bright); --paper-ink: var(--ik-sepia); --ink-bleed-hue: var(--ib-sepia); }
 
 /* cabinet · cool cream + sharp soot — organized, slightly cold (the wildcard) */
-.color-cabinet { --paper-color: var(--pc-cream); --paper-ink: var(--ik-soot); --paper-bloom: var(--ib-soot); }
+.color-cabinet { --paper-color: var(--pc-cream); --paper-ink: var(--ik-soot); --ink-bleed-hue: var(--ib-soot); }
 
 /* ghostly · dull ledger + faded ink — very worn, an atmospheric extreme */
-.color-ghostly { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-faded); --paper-bloom: var(--ib-faded); }
+.color-ghostly { --paper-color: var(--pc-ledger); --paper-ink: var(--ik-faded); --ink-bleed-hue: var(--ib-faded); }
