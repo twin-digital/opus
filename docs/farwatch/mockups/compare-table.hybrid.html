@@ -59,12 +59,6 @@
       @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
       .table, .caption { position: relative; z-index: 1; }
       .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
-      /* a barely-there desk surface the cluster rests on — a soft feathered pool, not a card */
-      .table::before {
-        content: ""; position: absolute; z-index: -1; inset: -34px -30px -46px;
-        background: radial-gradient(105% 95% at 50% 42%, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.18) 48%, rgba(0,0,0,0) 74%);
-        filter: blur(6px);
-      }
 
       /* ── DOCUMENTS (warm parchment): the charge posting + the roster checklist ── */
       .anchor, .roster {

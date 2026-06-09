@@ -305,8 +305,9 @@ geometry carries the "hand."
 drift one tile per cycle on **different diagonals** (seamless, non-reversing, periods 102s/138s so they never
 realign). Tileability requires `stitchTiles='stitch'` **and** the filter region pinned to the box
 (`x=0 y=0 width=100% height=100%`) or the stitch period won't match the repeat period (visible breathing
-seams). Honors `prefers-reduced-motion`. A faint feathered radial **desk-pool** behind the document cluster
-grounds the papers together (a soft shadow of a surface, not a card).
+seams). Honors `prefers-reduced-motion`. *(A faint feathered radial **desk-pool** behind the document cluster
+was tried as a way to tie the papers together, but read as distracting — removed, pending a better idea for
+grounding the cluster.)*
 
 **Going-tray (chrome).** Belongs to the room, not the paper: dark `#2b2e30`, no drop-shadow (not floating);
 separated from the field by a near-minimum inset only (`inset 0 1px 2px rgba(0,0,0,0.14)`, no top border).

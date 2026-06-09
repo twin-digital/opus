@@ -59,12 +59,6 @@
       .turn-toggle { position: absolute; opacity: 0; pointer-events: none; }
 
       .reader { max-width: 78rem; margin: 0 auto; position: relative; z-index: 1; }
-      /* a barely-there desk surface the sheet rests on — a soft feathered pool, not a card */
-      .reader::before {
-        content: ""; position: absolute; z-index: -1; inset: 24px -28px -40px;
-        background: radial-gradient(95% 92% at 50% 44%, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.17) 50%, rgba(0,0,0,0) 76%);
-        filter: blur(7px);
-      }
       .panes { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
 
       .pile-edge {
