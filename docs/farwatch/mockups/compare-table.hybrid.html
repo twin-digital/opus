@@ -49,20 +49,26 @@
       @keyframes drift { from { transform: translate3d(0, 0, 0) scale(1.08); } to { transform: translate3d(-3%, -2.5%, 0) scale(1.14); } }
       @media (prefers-reduced-motion: reduce) { body::before { animation: none; transform: scale(1.08); } }
       .table, .caption { position: relative; z-index: 1; }
-      .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
+      .table { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 234px 1fr; gap: 20px; }
 
       /* ── DOCUMENTS (warm parchment): the charge posting + the roster checklist ── */
       .anchor, .roster {
+        position: relative;
         background-color: var(--doc); background-image: var(--grain); background-size: 150px 150px;
-        color: var(--doc-ink); text-shadow: 0 0 0.7px rgba(48,22,8,0.45);
-        box-shadow: 0 16px 34px rgba(0,0,0,0.5), inset 0 0 34px rgba(70,50,22,0.13);
+        color: var(--doc-ink); text-shadow: 0 0 0.7px rgba(48,22,8,0.5);
+        font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
+        box-shadow: inset 0 0 34px rgba(70,50,22,0.13);
+        /* torn from a larger sheet — same paper grammar as the dossiers */
+        -webkit-mask-image: var(--torn); mask-image: var(--torn);
+        -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+        filter: drop-shadow(0 16px 30px rgba(0,0,0,0.5)) drop-shadow(0 3px 8px rgba(0,0,0,0.4));
       }
-      .anchor { grid-column: 1 / -1; padding: 16px 22px; border-left: 4px solid var(--loss); }
+      .anchor { grid-column: 1 / -1; padding: 18px 30px; }
       .anchor .k { font-variant: small-caps; letter-spacing: 0.12em; color: var(--doc-meta); font-size: 0.82rem; }
       .anchor .charge { font-size: 1.46rem; margin: 3px 0 0; color: var(--doc-ink); }
       .anchor .hazard { color: var(--loss); }
 
-      .roster { padding: 16px 0; align-self: start; }
+      .roster { padding: 22px 0; align-self: start; }
       .roster h2 { font-variant: small-caps; letter-spacing: 0.12em; font-size: 0.86rem; color: var(--doc-meta); margin: 0 18px 10px; }
       .roster ul { list-style: none; margin: 0; padding: 0; }
       .roster li { padding: 8px 18px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #d2bc8c; font-size: 1.06rem; color: var(--doc-ink); }
@@ -88,7 +94,8 @@
         flex: 1 1 0; min-width: 0; position: relative; padding: 18px 20px 16px; color: var(--doc-ink);
         background-color: var(--doc); background-image: var(--grain); background-size: 150px 150px;
         box-shadow: inset 0 0 34px rgba(70,50,22,0.15);
-        text-shadow: 0 0 0.7px rgba(48,22,8,0.45);
+        text-shadow: 0 0 0.7px rgba(48,22,8,0.5);
+        font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
         -webkit-mask-image: var(--torn); mask-image: var(--torn);
         -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
         filter: drop-shadow(0 16px 30px rgba(0,0,0,0.5)) drop-shadow(0 3px 8px rgba(0,0,0,0.4));
@@ -154,18 +161,18 @@
         ];
         const LANE_MAX = 3, PARTY_MAX = 3;
         const byId = Object.fromEntries(SEEKERS.map((s) => [s.id, s]));
-        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 30 - 15).toFixed(1) + 'deg'])); // a stable askew per seeker, up to ±15°
+        const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 20 - 10).toFixed(1) + 'deg'])); // a stable askew per seeker, up to ±10°
         // a unique hand-drawn box per seeker: jittered corners + gently bowed sides + a slight overshoot at the
         // close, so no two are alike. Geometry carries the imperfection; displacement is tiny (just pen grain).
         function genBox() {
           const j = (n) => (Math.random() * 2 - 1) * n;
           const f = (n) => n.toFixed(1);
-          const tl = [5.5 + j(0.7), 5.5 + j(0.7)], tr = [20.5 + j(0.7), 5.5 + j(0.7)];
-          const br = [20.5 + j(0.7), 20.5 + j(0.7)], bl = [5.5 + j(0.7), 20.5 + j(0.7)];
+          const tl = [5.5 + j(0.4), 5.5 + j(0.4)], tr = [20.5 + j(0.4), 5.5 + j(0.4)];
+          const br = [20.5 + j(0.4), 20.5 + j(0.4)], bl = [5.5 + j(0.4), 20.5 + j(0.4)];
           const mid = (a, b, dx, dy) => [(a[0] + b[0]) / 2 + j(dx), (a[1] + b[1]) / 2 + j(dy)];
-          const cT = mid(tl, tr, 0.5, 0.9), cR = mid(tr, br, 0.9, 0.5);
-          const cB = mid(br, bl, 0.5, 0.9), cL = mid(bl, tl, 0.9, 0.5);
-          const close = [tl[0] + j(1.1), tl[1] - 0.4 + j(0.7)]; // pen overshoots the start
+          const cT = mid(tl, tr, 0.3, 0.55), cR = mid(tr, br, 0.55, 0.3);
+          const cB = mid(br, bl, 0.3, 0.55), cL = mid(bl, tl, 0.55, 0.3);
+          const close = [tl[0] + j(0.7), tl[1] - 0.3 + j(0.5)]; // pen overshoots the start
           const d = 'M' + f(tl[0]) + ',' + f(tl[1]) +
             ' Q' + f(cT[0]) + ',' + f(cT[1]) + ' ' + f(tr[0]) + ',' + f(tr[1]) +
             ' Q' + f(cR[0]) + ',' + f(cR[1]) + ' ' + f(br[0]) + ',' + f(br[1]) +
