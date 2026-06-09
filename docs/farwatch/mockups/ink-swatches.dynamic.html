@@ -222,7 +222,7 @@
               }
               if (pressure) {
                 const p = Math.random(); // 0 = pen lifting (thin/pale), 1 = pressed (bold/dark)
-                st += '-webkit-text-stroke:' + (p * 0.3).toFixed(3) + 'px currentColor;opacity:' + (0.84 + p * 0.16).toFixed(3) + ';';
+                st += '-webkit-text-stroke:' + (p * 0.2).toFixed(3) + 'px currentColor;opacity:' + (0.9 + p * 0.1).toFixed(3) + ';';
               }
               word += '<span class="g" style="' + st + '">' + ch + '</span>';
             }
