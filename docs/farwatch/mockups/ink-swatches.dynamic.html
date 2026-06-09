@@ -61,6 +61,7 @@
       .reader p.first { margin-top: 0.2em; }
       /* "hand" treatments (applied to the reading sample only) */
       .hand-bite { filter: url(#ink-rough); }              /* roughen glyph edges — ink, not pixels */
+      .ink-layer .w { white-space: nowrap; }               /* word stays intact (line breaks only at spaces) */
       .ink-layer .g { display: inline-block; }             /* per-letter wrap for written wander */
     </style>
   </head>
@@ -193,14 +194,20 @@
           ],
           sig: '— George MacDonald',
         };
-        // the "written" hand: wrap each glyph and give it a small random vertical shift + tilt (baseline wander)
+        // the "written" hand: wrap each glyph (small random vertical shift + tilt = baseline wander), grouped
+        // into word spans so line breaks happen only at spaces — never mid-word
         function jitterText(t) {
           let out = '';
-          for (const ch of t) {
-            if (ch === ' ') { out += ' '; continue; }
-            const dy = ((Math.random() * 2 - 1) * 0.016).toFixed(3);
-            const rot = ((Math.random() * 2 - 1) * 0.4).toFixed(2);
-            out += '<span class="g" style="transform:translateY(' + dy + 'em) rotate(' + rot + 'deg)">' + ch + '</span>';
+          for (const tok of t.split(/(\s+)/)) {
+            if (tok === '') continue;
+            if (/^\s+$/.test(tok)) { out += tok; continue; }
+            let word = '';
+            for (const ch of tok) {
+              const dy = ((Math.random() * 2 - 1) * 0.016).toFixed(3);
+              const rot = ((Math.random() * 2 - 1) * 0.4).toFixed(2);
+              word += '<span class="g" style="transform:translateY(' + dy + 'em) rotate(' + rot + 'deg)">' + ch + '</span>';
+            }
+            out += '<span class="w">' + word + '</span>';
           }
           return out;
         }
