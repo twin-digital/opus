@@ -3,21 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Farwatch — ink-style swatches (dynamic)</title>
+    <title>Farwatch — ink exploration (family · weight · bleed · size)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300..800;1,400&family=EB+Garamond:ital,wght@0,400..800;1,400&family=Spectral:ital,wght@0,300..800;1,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="paper.css" />
     <link rel="stylesheet" href="paper-color.css" />
     <link rel="stylesheet" href="ink.css" />
     <style>
-      /* Every INK-STYLE variant (face / slant / weight / size / bleed), rendered on a chosen paper
-         style + colour. The header dropdowns swap the paper style and the colour for all cells at once;
-         each cell holds a different ink style. */
+      /* Ink exploration: pick a face + weight (dropdowns) on a chosen paper style + colour; each BLEED gets
+         its own section, and within a section a row of font SIZES. (Slant removed — no italics for the body.) */
       :root {
         --serif: "EB Garamond", Georgia, "Times New Roman", serif;
-        /* type-role accents are a separate dial — held constant here */
-        --s-voice: #4a3a22; --s-meta: #463a22; --s-loss: #7a2f25; --s-gold: #99713a;
+        --s-voice: #4a3a22; --s-meta: #463a22; --s-loss: #7a2f25; --s-gold: #99713a; /* fixed accents */
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
@@ -25,14 +23,13 @@
       body { font-family: var(--serif); color: #c8cacc; background: #202124; -webkit-font-smoothing: antialiased; }
 
       .chrome-bar {
-        position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
         padding: 9px 18px; background: #1d1f21; border-bottom: 1px solid #000;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px; color: #c7cacc;
       }
       .chrome-bar .brand { font-weight: 600; letter-spacing: 0.02em; color: #e6e8ea; }
       .chrome-bar label { text-transform: uppercase; letter-spacing: 0.07em; font-size: 11px; color: #868a8d; }
       .chrome-bar select { font-family: inherit; font-size: 13px; background: #2c2f31; color: #e6e8ea; border: 1px solid #414547; border-radius: 4px; padding: 5px 9px; }
-      .chrome-bar .note { margin-left: auto; color: #6e7274; font-style: italic; }
 
       .stage { padding: 5vh 4vw 12vh; }
       h1 { font-family: system-ui, sans-serif; font-size: 1rem; font-weight: 600; margin: 0 0 4px; color: #e2e4e6; }
@@ -42,20 +39,17 @@
       .cell .tag { font-family: system-ui, sans-serif; font-size: 0.78rem; letter-spacing: 0.02em; color: #94989b; margin: 0 0 8px; }
       .cell .tag b { color: #d9dcde; font-weight: 600; }
 
-      /* parameter read-out tables (chrome) — one under each swatch, and one per dropdown up top */
-      .section { font-family: system-ui, sans-serif; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #7f8487; margin: 30px 0 12px; }
-      .section:first-of-type { margin-top: 6px; }
+      .section { font-family: system-ui, sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #7f8487; margin: 34px 0 12px; }
       .ptable { width: 100%; border-collapse: collapse; font-family: system-ui, -apple-system, sans-serif; font-size: 11.5px; margin-top: 10px; }
       .ptable th { text-align: left; font-weight: 500; color: #7f8487; padding: 3px 10px 3px 0; white-space: nowrap; vertical-align: top; }
       .ptable td { text-align: right; color: #cdd0d2; padding: 3px 0; font-variant-numeric: tabular-nums; }
       .ptable tr + tr th, .ptable tr + tr td { border-top: 1px solid #2b2e30; }
       .dials .cell { background: #1a1c1e; border: 1px solid #2b2e30; border-radius: 4px; padding: 12px 14px; }
 
-      /* the swatch IS a .paper — style + colour from the grid; the INK style from the cell's .ink-* class */
-      .swatch { padding: 28px 30px 26px; line-height: 1.6; border-radius: 1px; }
-      .swatch .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.95em; margin: 0 0 16px; }
-      .swatch .h { font-size: 1.04em; margin: 0 0 12px; border-bottom: 1.5px solid currentColor; display: inline-block; padding-bottom: 3px; }
-      .swatch p { margin: 0 0 11px; }
+      .swatch { padding: 26px 28px 24px; line-height: 1.55; border-radius: 1px; }
+      .swatch .when { font-variant: small-caps; letter-spacing: 0.1em; font-weight: 500; color: var(--s-meta); font-size: 0.9em; margin: 0 0 14px; }
+      .swatch .h { font-size: 1.04em; margin: 0 0 10px; border-bottom: 1.5px solid currentColor; display: inline-block; padding-bottom: 3px; }
+      .swatch p { margin: 0 0 9px; }
       .swatch .loss { color: var(--s-loss); }
       .swatch .struck { text-decoration: line-through; text-decoration-color: var(--s-loss); }
       .swatch .ctl { border-bottom: 1px dotted var(--s-gold); }
@@ -64,8 +58,8 @@
   </head>
   <body>
     <header class="chrome-bar">
-      <span class="brand">Farwatch · ink-style swatches</span>
-      <label for="paper-select">paper style</label>
+      <span class="brand">Farwatch · ink exploration</span>
+      <label for="paper-select">paper</label>
       <select id="paper-select">
         <option value="worn-bright">worn-bright (default)</option>
         <option value="ledger">ledger</option>
@@ -75,30 +69,42 @@
       </select>
       <label for="color-select">colour</label>
       <select id="color-select">
-        <option value="warm-posting">warm-posting — parchment · sepia (default)</option>
-        <option value="worn-ledger">worn-ledger — ledger · sepia</option>
-        <option value="amber-warm">amber-warm — amber · sepia</option>
-        <option value="bright-clean">bright-clean — bright · sepia</option>
-        <option value="cabinet">cabinet — cream · soot</option>
-        <option value="ghostly">ghostly — ledger · faded</option>
+        <option value="warm-posting">warm-posting (default)</option>
+        <option value="worn-ledger">worn-ledger</option>
+        <option value="amber-warm">amber-warm</option>
+        <option value="bright-clean">bright-clean</option>
+        <option value="cabinet">cabinet</option>
+        <option value="ghostly">ghostly</option>
       </select>
-      <span class="note">chrome — sets the paper style + colour under every ink style</span>
+      <label for="family-select">font family</label>
+      <select id="family-select">
+        <option value="garamond">EB Garamond (default)</option>
+        <option value="spectral">Spectral</option>
+        <option value="crimson">Crimson Pro</option>
+      </select>
+      <label for="weight-select">font weight</label>
+      <select id="weight-select">
+        <option value="300">300</option>
+        <option value="400" selected>400</option>
+        <option value="500">500</option>
+        <option value="600">600</option>
+        <option value="700">700</option>
+        <option value="800">800</option>
+      </select>
     </header>
 
     <div class="stage">
-      <h1>Ink-style combinations</h1>
-      <p class="sub">Each cell is one ink style (face · slant · weight · size · bleed), all on the chosen paper style + colour. Voice / stamp / loss / gold accents are held constant (a separate dial).</p>
+      <h1>Ink exploration — face · weight · bleed · size</h1>
+      <p class="sub">Pick a face + weight on a chosen paper + colour. Each ink-bleed level is its own section; within it, a range of font sizes. Voice / stamp / loss / gold accents are held constant (a separate dial).</p>
 
-      <h2 class="section">Active dials (from the dropdowns above)</h2>
-      <div class="grid dials" id="dials"></div>
+      <h2 class="section">Active context (paper + colour)</h2>
+      <div class="grid dials" id="context"></div>
 
-      <h2 class="section">Ink styles — one per swatch</h2>
-      <div class="grid paper-v-worn-bright color-warm-posting" id="grid"></div>
+      <div id="app"></div>
     </div>
 
     <script>
       (function () {
-        // ── resolved-parameter data (mirrors paper.css / paper-color.css / ink.css) ──
         const PAPER_STYLES = {
           'worn-bright': { grain: 'fine', laid: 'fibre', glow: 'candle-soft', tear: 'torn', lift: 'lift-low', 'edge soak': '34px · α.14' },
           'ledger':      { grain: 'fine', laid: 'fibre', glow: 'candle', tear: 'deep', lift: 'lift-high', 'edge soak': '50px · α.16' },
@@ -114,16 +120,14 @@
           'cabinet':      { 'paper colour': 'cream · #ece6d2', 'edge hue': '44 44 36', 'ink': 'soot · #201f18', 'bleed hue': '20 20 14' },
           'ghostly':      { 'paper colour': 'ledger · #d9cca6', 'edge hue': '70 50 22', 'ink': 'faded · #5a4a30', 'bleed hue': '60 44 24' },
         };
-        const INKS = {
-          'chronicle': { face: 'EB Garamond', slant: 'upright', weight: '400', size: 'reading · 1.1rem', bleed: 'full · 0.7px α.5' },
-          'posting':   { face: 'EB Garamond', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'full · 0.7px α.5' },
-          'scribe':    { face: 'EB Garamond', slant: 'italic', weight: '400', size: 'reading · 1.1rem', bleed: 'full · 0.7px α.5' },
-          'monastic':  { face: 'Spectral', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'none' },
-          'scholar':   { face: 'Crimson Pro', slant: 'upright', weight: '400', size: 'compact · 1.0rem', bleed: 'light · 0.6px α.4' },
-          'crisp':     { face: 'EB Garamond', slant: 'upright', weight: '500 (medium)', size: 'compact · 1.0rem', bleed: 'none' },
-        };
-        const INK_ORDER = ['chronicle', 'posting', 'scribe', 'monastic', 'scholar', 'crisp'];
-        const INK_SUB = { 'chronicle': 'Garamond · reading · bleed', 'posting': 'Garamond · compact · bleed', 'scribe': 'Garamond · ITALIC · reading', 'monastic': 'Spectral · no bleed', 'scholar': 'Crimson Pro', 'crisp': 'Garamond medium · no bleed' };
+        const FAMILY_VAR = { garamond: 'var(--face-garamond)', spectral: 'var(--face-spectral)', crimson: 'var(--face-crimson)' };
+        const FAMILY_LABEL = { garamond: 'EB Garamond', spectral: 'Spectral', crimson: 'Crimson Pro' };
+        const BLEEDS = [
+          { name: 'none', blur: '0', alpha: '0' },
+          { name: 'light', blur: '0.6px', alpha: '0.4' },
+          { name: 'full', blur: '0.7px', alpha: '0.5' },
+        ];
+        const SIZES = ['0.95rem', '1.1rem', '1.3rem', '1.5rem', '1.7rem', '1.9rem'];
 
         function table(obj) {
           return '<table class="ptable">' + Object.keys(obj).map((k) => '<tr><th>' + k + '</th><td>' + obj[k] + '</td></tr>').join('') + '</table>';
@@ -136,31 +140,40 @@
           '<p>Mirela came home. <span class="struck">Odric did not.</span></p>' +
           '<p class="sig">— the steward</p>';
 
-        // swatches: one per ink style, each with its ink parameter table beneath
-        const grid = document.getElementById('grid');
-        INK_ORDER.forEach((slug) => {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.innerHTML =
-            '<p class="tag"><b>' + slug + '</b> · ' + INK_SUB[slug] + '</p>' +
-            '<div class="paper swatch ink-' + slug + '">' + TEXT + '</div>' +
-            table(INKS[slug]);
-          grid.appendChild(cell);
-        });
-
-        // ── paper-style + colour switchers (chrome) + the active-dial read-out tables ──
-        const gridEl = document.getElementById('grid');
-        const dialsEl = document.getElementById('dials');
+        const app = document.getElementById('app');
+        const context = document.getElementById('context');
         const styleSel = document.getElementById('paper-select');
         const colorSel = document.getElementById('color-select');
-        function renderDials() {
-          dialsEl.innerHTML =
-            '<div class="cell"><p class="tag">paper style — <b>' + styleSel.value + '</b></p>' + table(PAPER_STYLES[styleSel.value]) + '</div>' +
-            '<div class="cell"><p class="tag">colour — <b>' + colorSel.value + '</b></p>' + table(COLORS[colorSel.value]) + '</div>';
+        const famSel = document.getElementById('family-select');
+        const weightSel = document.getElementById('weight-select');
+
+        function render() {
+          const ps = styleSel.value, col = colorSel.value, fam = famSel.value, wt = weightSel.value;
+          // paper style + colour set --paper-* on #app; face + weight set as inline --ink-* (inherited by swatches)
+          app.className = 'paper-v-' + ps + ' color-' + col;
+          app.style.setProperty('--ink-family', FAMILY_VAR[fam]);
+          app.style.setProperty('--ink-weight', wt);
+
+          context.innerHTML =
+            '<div class="cell"><p class="tag">paper style — <b>' + ps + '</b></p>' + table(PAPER_STYLES[ps]) + '</div>' +
+            '<div class="cell"><p class="tag">colour — <b>' + col + '</b></p>' + table(COLORS[col]) + '</div>';
+
+          app.innerHTML = BLEEDS.map((b) =>
+            '<h2 class="section">Ink bleed — ' + b.name + '</h2>' +
+            '<div class="grid" style="--ink-bloom-blur:' + b.blur + ';--ink-bloom-alpha:' + b.alpha + '">' +
+            SIZES.map((sz) =>
+              '<div class="cell">' +
+                '<p class="tag">size <b>' + sz + '</b></p>' +
+                '<div class="paper swatch" style="--ink-size:' + sz + '">' + TEXT + '</div>' +
+                table({ family: FAMILY_LABEL[fam], weight: wt, size: sz, bleed: b.name }) +
+              '</div>'
+            ).join('') +
+            '</div>'
+          ).join('');
         }
-        function applyGlobal() { gridEl.className = 'grid paper-v-' + styleSel.value + ' color-' + colorSel.value; renderDials(); }
-        [styleSel, colorSel].forEach((s) => s.addEventListener('change', applyGlobal));
-        applyGlobal();
+
+        [styleSel, colorSel, famSel, weightSel].forEach((s) => s.addEventListener('change', render));
+        render();
       })();
     </script>
   </body>

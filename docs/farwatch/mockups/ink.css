@@ -1,11 +1,11 @@
 /* ════════════════════════════════════════════════════════════════════════════════════════════
    Farwatch — INK STYLE (the non-colour writing dial)
-   Everything about the writing EXCEPT its colour: face, slant, weight, size, and the ink-bleed effect.
+   Everything about the writing EXCEPT its colour: face, weight, size, and the ink-bleed effect.
+   (Slant was dropped — the body is never italic; the voice/signature italic is a type-role accent.)
    (The ink's *colour* + bleed hue live in paper-color.css; this sets the bleed's blur + strength.)
 
    Slots this sets (read by .paper in paper.css):
      --ink-family      : font-family
-     --ink-slant       : font-style (normal | italic)
      --ink-weight      : font-weight
      --ink-size        : base paper-text size (paper text is em-relative, so it scales as a unit)
      --ink-bloom-blur  : ink-bleed text-shadow blur
@@ -31,19 +31,16 @@
 /* ════════════ INK VARIANTS — curated face × slant × weight × size × bleed ════════════ */
 
 /* chronicle · the reader's prose — Garamond, upright, reading size, soft bleed [IN PLAY] */
-.ink-chronicle { --ink-family: var(--face-garamond); --ink-slant: normal; --ink-weight: 400; --ink-size: var(--size-reading); --ink-bloom-blur: 0.7px; --ink-bloom-alpha: 0.5; }
+.ink-chronicle { --ink-family: var(--face-garamond); --ink-weight: 400; --ink-size: var(--size-reading); --ink-bloom-blur: 0.7px; --ink-bloom-alpha: 0.5; }
 
 /* posting · the table documents — Garamond, upright, compact, soft bleed [IN PLAY] */
-.ink-posting { --ink-family: var(--face-garamond); --ink-slant: normal; --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0.7px; --ink-bloom-alpha: 0.5; }
-
-/* scribe · "written by a hand" — Garamond ITALIC body, reading size, soft bleed [IN PLAY] */
-.ink-scribe { --ink-family: var(--face-garamond); --ink-slant: italic; --ink-weight: 400; --ink-size: var(--size-reading); --ink-bloom-blur: 0.7px; --ink-bloom-alpha: 0.5; }
+.ink-posting { --ink-family: var(--face-garamond); --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0.7px; --ink-bloom-alpha: 0.5; }
 
 /* monastic · cooler + severe — Spectral, upright, compact, NO bleed [PROPOSED] */
-.ink-monastic { --ink-family: var(--face-spectral); --ink-slant: normal; --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0; --ink-bloom-alpha: 0; }
+.ink-monastic { --ink-family: var(--face-spectral); --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0; --ink-bloom-alpha: 0; }
 
 /* scholar · a book-serif — Crimson Pro, upright, compact, light bleed [PROPOSED] */
-.ink-scholar { --ink-family: var(--face-crimson); --ink-slant: normal; --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0.6px; --ink-bloom-alpha: 0.4; }
+.ink-scholar { --ink-family: var(--face-crimson); --ink-weight: 400; --ink-size: var(--size-compact); --ink-bloom-blur: 0.6px; --ink-bloom-alpha: 0.4; }
 
 /* crisp · screen-sharp — Garamond, upright, MEDIUM weight, NO bleed (the "remove the bloom" test) [PROPOSED] */
-.ink-crisp { --ink-family: var(--face-garamond); --ink-slant: normal; --ink-weight: 500; --ink-size: var(--size-compact); --ink-bloom-blur: 0; --ink-bloom-alpha: 0; }
+.ink-crisp { --ink-family: var(--face-garamond); --ink-weight: 500; --ink-size: var(--size-compact); --ink-bloom-blur: 0; --ink-bloom-alpha: 0; }

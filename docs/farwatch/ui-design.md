@@ -464,16 +464,20 @@ var(--ink-size) }`), so the size axis scales the whole block as a unit rather th
 | `spectral` | Spectral | cooler, more severe — the austere face |
 | `crimson` | Crimson Pro | a scholarly book-serif |
 
-**Slant** — `normal` (upright body) · `italic` (a "written by a hand" body).
-**Weight** — `400` (regular) · `500` (medium; the reverted "semibold beats" lived here).
+**Slant** — *dropped.* The body is never italic; the only italics are the **voice / signature** type-role
+accent, which is independent of the ink dial.
+**Weight** — explored across `300`–`800` (100 steps) in the ink-swatch grid. (EB Garamond has no 300, so it
+falls back to 400 there; Spectral and Crimson Pro carry the full range.)
 
-**Size** (base paper-text size; the block is em-relative so it scales together):
+**Size** (base paper-text size; the block is em-relative so it scales together). The named anchors below are
+the early presets; the ink-swatch grid sweeps a wider range (`0.95`–`1.9rem`), since the settled reading size
+turned out to sit *above* what the named presets reached:
 
 | slug | value | key element |
 |---|---|---|
 | `compact` | `1.0rem` | the dense compare-table |
-| `reading` | `1.1rem` | the reader's reading size |
-| `large` | `1.22rem` | an extra-large reading pass |
+| `reading` | `1.1rem` | a first reading-size preset |
+| `large` | `1.22rem` | a larger reading preset |
 
 **Bleed** — the ink-soak halo (`text-shadow`); colour comes from the ink, blur + strength from here:
 
@@ -485,16 +489,17 @@ var(--ink-size) }`), so the size axis scales the whole block as a unit rather th
 
 ### Ink variants in play
 
-One row per ink style. Cells name the option chosen on each axis.
+Named presets, one row per ink style (face × weight × size × bleed). The
+[ink-swatch grid](mockups/ink-swatches.dynamic.html) sweeps face/weight/bleed/size freely; these are the
+shortlist worth naming.
 
-| variant | status | what it is | face | slant | weight | size | bleed |
-|---|---|---|---|---|---|---|---|
-| `chronicle` | **in play** | the reader's prose | garamond | upright | 400 | reading | full |
-| `posting` | **in play** | the table documents | garamond | upright | 400 | compact | full |
-| `scribe` | **in play** | "written by a hand" — italic body | garamond | *italic* | 400 | reading | full |
-| `monastic` | *proposed* | cooler + severe, no soak | spectral | upright | 400 | compact | none |
-| `scholar` | *proposed* | a book-serif alternative | crimson | upright | 400 | compact | light |
-| `crisp` | *proposed* | screen-sharp — medium weight, no soak (the "remove the bloom" test) | garamond | upright | 500 | compact | none |
+| variant | status | what it is | face | weight | size | bleed |
+|---|---|---|---|---|---|---|
+| `chronicle` | **in play** | the reader's prose | garamond | 400 | reading | full |
+| `posting` | **in play** | the table documents | garamond | 400 | compact | full |
+| `monastic` | *proposed* | cooler + severe, no soak | spectral | 400 | compact | none |
+| `scholar` | *proposed* | a book-serif alternative | crimson | 400 | compact | light |
+| `crisp` | *proposed* | screen-sharp — medium weight, no soak (the "remove the bloom" test) | garamond | 500 | compact | none |
 
 A document is now fully specified by **three dials**: a paper **style** + a colour **combination** + an ink
 **style**. Today's table documents are `worn-bright` × `warm-posting` × `posting`; the reader is `ledger` ×

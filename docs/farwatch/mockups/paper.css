@@ -68,7 +68,6 @@
   /* writing: face / slant / weight / size from the INK STYLE dial (ink.css) — paper text is em-relative
      so it scales as a unit with --ink-size */
   font-family: var(--ink-family, "EB Garamond", Georgia, "Times New Roman", serif);
-  font-style: var(--ink-slant, normal);
   font-weight: var(--ink-weight, 400);
   font-size: var(--ink-size, 1rem);
   /* ink bleed: HUE (channels) from the ink COLOUR; BLUR + ALPHA from the ink STYLE */
