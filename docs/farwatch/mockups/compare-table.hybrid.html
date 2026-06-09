@@ -155,6 +155,32 @@
         const LANE_MAX = 3, PARTY_MAX = 3;
         const byId = Object.fromEntries(SEEKERS.map((s) => [s.id, s]));
         const ROT = Object.fromEntries(SEEKERS.map((s) => [s.id, (Math.random() * 30 - 15).toFixed(1) + 'deg'])); // a stable askew per seeker, up to ±15°
+        // a unique hand-drawn box per seeker: jittered corners + gently bowed sides + a slight overshoot at the
+        // close, so no two are alike. Geometry carries the imperfection; displacement is tiny (just pen grain).
+        function genBox() {
+          const j = (n) => (Math.random() * 2 - 1) * n;
+          const f = (n) => n.toFixed(1);
+          const tl = [5.5 + j(0.7), 5.5 + j(0.7)], tr = [20.5 + j(0.7), 5.5 + j(0.7)];
+          const br = [20.5 + j(0.7), 20.5 + j(0.7)], bl = [5.5 + j(0.7), 20.5 + j(0.7)];
+          const mid = (a, b, dx, dy) => [(a[0] + b[0]) / 2 + j(dx), (a[1] + b[1]) / 2 + j(dy)];
+          const cT = mid(tl, tr, 0.5, 0.9), cR = mid(tr, br, 0.9, 0.5);
+          const cB = mid(br, bl, 0.5, 0.9), cL = mid(bl, tl, 0.9, 0.5);
+          const close = [tl[0] + j(1.1), tl[1] - 0.4 + j(0.7)]; // pen overshoots the start
+          const d = 'M' + f(tl[0]) + ',' + f(tl[1]) +
+            ' Q' + f(cT[0]) + ',' + f(cT[1]) + ' ' + f(tr[0]) + ',' + f(tr[1]) +
+            ' Q' + f(cR[0]) + ',' + f(cR[1]) + ' ' + f(br[0]) + ',' + f(br[1]) +
+            ' Q' + f(cB[0]) + ',' + f(cB[1]) + ' ' + f(bl[0]) + ',' + f(bl[1]) +
+            ' Q' + f(cL[0]) + ',' + f(cL[1]) + ' ' + f(close[0]) + ',' + f(close[1]);
+          const seed = Math.floor(Math.random() * 100);
+          const sw = (1.5 + Math.random() * 0.35).toFixed(2);
+          const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26'>" +
+            "<filter id='b'><feTurbulence type='fractalNoise' baseFrequency='0.12' numOctaves='1' seed='" + seed +
+            "' result='t'/><feDisplacementMap in='SourceGraphic' in2='t' scale='0.6' xChannelSelector='R' yChannelSelector='G'/></filter>" +
+            "<path d='" + d + "' fill='none' stroke='#2c2012' stroke-width='" + sw +
+            "' stroke-linecap='round' stroke-linejoin='round' filter='url(#b)'/></svg>";
+          return 'data:image/svg+xml,' + encodeURIComponent(svg);
+        }
+        const BOX = Object.fromEntries(SEEKERS.map((s) => [s.id, genBox()]));
         let lane = [];
         const party = new Set();
         const rosterEl = document.getElementById('roster');
@@ -185,6 +211,7 @@
               '<span class="mark">' + (lane.includes(s.id) ? 'laid in' : '') + '</span>';
             const box = li.querySelector('.box');
             box.style.setProperty('--rot', ROT[s.id]);
+            box.style.backgroundImage = 'url("' + BOX[s.id] + '")';
             box.addEventListener('click', () => toggleParty(s.id));
             li.querySelector('.name').addEventListener('click', () => layIn(s.id));
             rosterEl.appendChild(li);
