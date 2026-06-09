@@ -153,6 +153,14 @@
         <option value="0.08">0.08</option>
         <option value="0.12">0.12 — restless</option>
       </select>
+      <label for="grain">char grain</label>
+      <select id="grain">
+        <option value="0">0 — = per word</option>
+        <option value="0.05">0.05</option>
+        <option value="0.09" selected>0.09</option>
+        <option value="0.14">0.14</option>
+        <option value="0.2">0.20 — noisy</option>
+      </select>
     </header>
 
     <div class="stage">
@@ -199,7 +207,8 @@
               if (tok === '') continue;
               if (/^\s+$/.test(tok)) { out += tok; continue; }
               if (gran === 'word') { out += '<span style="' + styleFor(levelNow()) + '">' + tok + '</span>'; deplete(tok.length); }
-              else { for (const ch of tok) { out += '<span style="' + styleFor(levelNow()) + '">' + ch + '</span>'; deplete(1); } }
+              // per-character adds a small independent grain ON TOP of the cycle, so letters within a word differ
+              else { for (const ch of tok) { out += '<span style="' + styleFor(levelNow() + (Math.random() * 2 - 1) * P.grain) + '">' + ch + '</span>'; deplete(1); } }
               maybeDip();
             }
             return out;
@@ -221,7 +230,7 @@
 
           const gran = v('gran');
           const [cmin, cmax] = v('dip').split('-').map(Number);
-          const P = { capMin: cmin, capMax: cmax, floor: n('floor'), strokeMax: n('stroke'), opacityMin: n('opacity'), blobPara: n('blobPara'), blobDip: n('blobDip'), walk: n('walk') };
+          const P = { capMin: cmin, capMax: cmax, floor: n('floor'), strokeMax: n('stroke'), opacityMin: n('opacity'), blobPara: n('blobPara'), blobDip: n('blobDip'), walk: n('walk'), grain: n('grain') };
           const bodies = (gran === 'none') ? READER.paras.slice() : inkCycle(READER.paras, gran, P);
 
           let inner = '<p class="when">' + READER.source + '</p><p class="h">' + READER.title + '</p>';

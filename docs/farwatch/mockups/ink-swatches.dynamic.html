@@ -223,7 +223,8 @@
                 out += '<span style="' + inkStyle(levelNow()) + '">' + tok + '</span>';
                 deplete(tok.length);
               } else {
-                for (const ch of tok) { out += '<span style="' + inkStyle(levelNow()) + '">' + ch + '</span>'; deplete(1); }
+                // per-character adds a small independent grain on top of the cycle (letters within a word differ)
+                for (const ch of tok) { out += '<span style="' + inkStyle(levelNow() + (Math.random() * 2 - 1) * 0.09) + '">' + ch + '</span>'; deplete(1); }
               }
               maybeDip();                                       // dips only land at word boundaries
             }
