@@ -349,7 +349,7 @@ its edges, which read as a colour shift rather than the aging it was meant to su
 | slug | params | key element |
 |---|---|---|
 | `none` | — | no fibre |
-| `fibre` | fractalNoise `0.01 0.42`, opacity 0.26 | close, slightly-irregular **laid** lines (turbulence). Two strengths (`fibre` / `faint`) |
+| `fibre` | fractalNoise `0.01 0.42`, opacity 0.26, **`background-blend-mode: overlay`** | close, slightly-irregular **laid** lines (turbulence). Overlay so the grey noise adds warm light/dark lines, *not* a cooling grey veil (50% grey = no-op). Two strengths (`fibre` / `faint`) |
 
 The perpendicular **chain** lines (the thicker cross-wires) are a **separate layer** on `.paper` —
 a `repeating-linear-gradient` driven by `--paper-chain-alpha` (off at `0`) and `--paper-chain-gap` (spacing).

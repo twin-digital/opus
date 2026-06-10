@@ -67,6 +67,9 @@
     repeating-linear-gradient(90deg, rgb(70 58 34 / var(--paper-chain-alpha, 0)) 0 1.3px, transparent 1.3px var(--paper-chain-gap, 55px)),
     var(--paper-glow, var(--glow-candle-soft));
   background-size: 150px 150px, 220px 150px, auto, auto;
+  /* laid = OVERLAY so its grey noise adds warm light/dark lines instead of a cooling grey veil (50% grey is a
+     no-op; only deviations show, multiplying/screening the warm fill so the hue is preserved) */
+  background-blend-mode: normal, overlay, normal, normal;
   color: var(--paper-ink, #2c2012);
   /* writing: face / slant / weight / size from the INK STYLE dial (ink.css) — paper text is em-relative
      so it scales as a unit with --ink-size */
