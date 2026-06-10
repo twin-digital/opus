@@ -61,16 +61,19 @@ What it was written *with*.
 
 | param | what it is | status |
 |---|---|---|
-| `color` | the **fresh** writing colour | **[wired]** `--paper-ink` |
+| `color` | the **settled** writing colour (ageing is the Condition layer, not here) | **[wired]** `--paper-ink` |
 | `bleed hue` | the soak-halo colour (the ink, soaking) | **[wired]** `--ink-bleed-hue` *(renamed from the mislabeled `--paper-bloom`)*; could auto-derive from `color` |
 | `flow` | how readily *this ink* wants to spread (thin/watery ↔ thick) | **[wired]** — feeds `bleed = absorbency × flow` in the resolver |
 | `fades` | whether the ink ages (iron-gall fades to brown; carbon doesn't) | **[wired]** — read by the Condition layer's `weather()` |
 
-**Historically grounded.** The ink presets are the real families: **iron-gall** (`fresh` blue-black →
-`matured` brown-black — the canonical Western ink for a millennium, *fades* to brown with age), **carbon /
-lampblack** (dense matte black, a *pigment* — colour-stable, low feather, `fades: no`), and **rubric (red)**
-(vermilion — the headings/emphasis tradition that our oxblood accent descends from). `color` is the **fresh**
-ink; the browning/fading is the **Condition** layer below, applied only when `fades` is set.
+**Historically grounded — one ink each, *not* age variants.** The families are **iron-gall** (settled
+brown-black — the canonical Western ink for a millennium; *fades* to brown with age), **carbon / lampblack**
+(dense matte black *pigment* — colour-stable, low feather, `fades: no`), and **rubric (red)** (vermilion — the
+headings/emphasis tradition our oxblood accent descends from). `color` is the **settled** ink; the
+browning/fading is the **Condition** layer, applied only when `fades` is set — so there is **no `fresh` /
+`matured` / `faded` ink preset** (that would re-bake age into the ink). *(Iron-gall's transient blue-black
+"just-inked" state is a **fast curing** process — hours, not centuries — and if wanted belongs as a future
+**wet** condition at the young end, not as an ink.)*
 
 **Not ink:** *weight*. Ink has no stroke width — the pen and the hand do. Stroke weight is the author's face
 (font-weight) plus the occasion's pressure (the cycle). It does **not** live here. And *fading* is **not** ink

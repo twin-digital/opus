@@ -21,10 +21,10 @@ const DocModel = (function () {
       { key: 'tear', label: 'edge', opts: [['var(--tear-torn)', 'deckle'], ['var(--tear-deep)', 'frayed'], ['none', 'trimmed']] },
       { key: 'absorbency', label: 'absorbency (sizing)', opts: [['0.1', 'vellum · 0.10'], ['0.2', 'hard-sized · 0.20'], ['0.35', 'sized · 0.35'], ['0.5', '0.50'], ['0.65', 'soft · 0.65'], ['0.8', 'unsized · 0.80'], ['1', 'blotter · 1.0']] },
     ] },
-    // colour is the FRESH ink; ageing (fade → brown) is the Condition layer, applied only if `fades`.
+    // colour is the SETTLED ink; ageing (fade → brown) is the Condition layer, applied only if `fades`.
     ink: { label: 'Ink', params: [
-      { key: 'color', label: 'colour (fresh)', opts: [['#1e2530', 'iron-gall · fresh blue-black'], ['#2c2012', 'iron-gall · matured brown-black'], ['#201f18', 'carbon · near-black'], ['#7a2f25', 'rubric · red']] },
-      { key: 'bleedHue', label: 'bleed hue', opts: [['30 37 48', 'blue-black'], ['48 22 8', 'brown-black'], ['20 20 14', 'soot'], ['90 40 30', 'red']] },
+      { key: 'color', label: 'colour', opts: [['#2c2012', 'iron-gall · brown-black'], ['#201f18', 'carbon · near-black'], ['#7a2f25', 'rubric · red'], ['#1e2530', 'just-inked · blue-black (wet)']] },
+      { key: 'bleedHue', label: 'bleed hue', opts: [['48 22 8', 'brown-black'], ['20 20 14', 'soot'], ['90 40 30', 'red'], ['30 37 48', 'blue-black']] },
       { key: 'flow', label: 'flow', opts: [['0.2', 'stiff · 0.2'], ['0.35', 'carbon · 0.35'], ['0.5', '0.50'], ['0.6', 'iron-gall · 0.6'], ['0.8', 'watery · 0.8']] },
       { key: 'fades', label: 'fades with age', opts: [['1', 'yes — iron gall'], ['0', 'no — carbon / pigment']] },
     ] },
@@ -59,10 +59,10 @@ const DocModel = (function () {
       'field (cheap rag)': { fill: '#cfc3a0', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.8' },      // poor/unsized — grey, feathers, frayed; a hasty report
       'cabinet (cool)': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.35' },                     // a cool, refined fine stock — the cabinet wildcard
     },
-    // FRESH inks — ageing is the Condition layer, not a separate ink. iron gall fades to brown; carbon doesn't.
+    // each ink is ONE ink — its colour is the settled, as-used colour. Ageing (iron-gall fading to brown) is the
+    // Condition layer, not a variant. (The transient blue-black "just-inked" state is a future *wet* condition.)
     ink: {
-      'iron-gall (matured)': { color: '#2c2012', bleedHue: '48 22 8', flow: '0.5', fades: '1' },   // the everyday brown-black; the canonical document ink
-      'iron-gall (fresh)': { color: '#1e2530', bleedHue: '30 37 48', flow: '0.6', fades: '1' },     // freshly written — cool blue-black; ages toward brown
+      'iron-gall': { color: '#2c2012', bleedHue: '48 22 8', flow: '0.5', fades: '1' },              // settled brown-black; the canonical document ink — age fades it to brown
       'carbon (lampblack)': { color: '#201f18', bleedHue: '20 20 14', flow: '0.35', fades: '0' },   // dense matte black; pigment — colour-stable, low feather
       'rubric (red)': { color: '#7a2f25', bleedHue: '90 40 30', flow: '0.5', fades: '0' },          // vermilion/red-lead — headings & emphasis (the accent tradition)
     },
@@ -137,7 +137,7 @@ const DocModel = (function () {
   function defaultSpec() {
     return {
       paper: Object.assign({}, PRESETS.paper['chronicle (laid rag)']),
-      ink: Object.assign({}, PRESETS.ink['iron-gall (matured)']),
+      ink: Object.assign({}, PRESETS.ink['iron-gall']),
       author: Object.assign({}, PRESETS.author['steward']),
       occasion: Object.assign({}, PRESETS.occasion['measured']),
       condition: Object.assign({}, PRESETS.condition['fresh']),
