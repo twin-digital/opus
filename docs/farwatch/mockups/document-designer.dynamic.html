@@ -66,7 +66,7 @@
     <script>
       (function () {
         const KEY = 'fw.doc.presets';
-        const ENTS = ['paper', 'ink', 'author', 'occasion'];
+        const ENTS = ['paper', 'ink', 'author', 'occasion', 'condition'];
         const READER = {
           source: 'from Phantastes · George MacDonald · 1858',
           title: 'The Forest of Fairy Land',
@@ -81,7 +81,7 @@
 
         // the working document spec + which preset each entity was loaded from
         const state = DocModel.defaultSpec();
-        const chosen = { paper: 'chronicle (laid rag)', ink: 'sepia', author: 'steward', occasion: 'measured' };
+        const chosen = { paper: 'chronicle (laid rag)', ink: 'iron-gall (matured)', author: 'steward', occasion: 'measured', condition: 'fresh' };
 
         const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const loadUser = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -154,7 +154,7 @@
           bodies.forEach((html, i) => { inner += '<p' + (i === 0 ? ' class="first"' : '') + '>' + html + '</p>'; });
           inner += '<p class="sig">' + READER.sig + '</p>';
           reader.innerHTML = inner;
-          summaryEl.innerHTML = 'document: <b>' + chosen.paper + '</b> paper × <b>' + chosen.ink + '</b> ink × <b>' + chosen.author + '</b> hand × <b>' + chosen.occasion + '</b> occasion · derived bleed ceiling <b>' + r.cssVars['--ink-bloom-blur'] + ' / α' + r.cssVars['--ink-bloom-alpha'] + '</b> (absorbency × flow)';
+          summaryEl.innerHTML = 'document: <b>' + chosen.paper + '</b> paper × <b>' + chosen.ink + '</b> ink × <b>' + chosen.author + '</b> hand × <b>' + chosen.occasion + '</b> occasion, weathered <b>' + chosen.condition + '</b> · derived bleed <b>' + r.cssVars['--ink-bloom-blur'] + ' / α' + r.cssVars['--ink-bloom-alpha'] + '</b> · aged ink <b>' + r.cssVars['--paper-ink'] + '</b> on paper <b>' + r.cssVars['--paper-color'] + '</b>';
         }
         render();
       })();

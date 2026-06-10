@@ -14,17 +14,19 @@
 const DocModel = (function () {
   const SCHEMA = {
     paper: { label: 'Paper', params: [
-      { key: 'fill', label: 'fill', opts: [['#ece4cb', 'vellum · pale'], ['#e2d1a3', 'parchment'], ['#d9cca6', 'rag · cream'], ['#cfc3a0', 'dun · cheap'], ['#d2bf90', 'aged · amber'], ['#ece6d2', 'cream · cool']] },
+      { key: 'fill', label: 'fill', opts: [['#ece4cb', 'vellum · pale'], ['#e2d1a3', 'parchment'], ['#d9cca6', 'rag · cream'], ['#cfc3a0', 'dun · cheap'], ['#d2bf90', 'amber'], ['#ece6d2', 'cream · cool']] },
       { key: 'grain', label: 'grain', opts: [['var(--grain-fine)', 'fine'], ['var(--grain-soft)', 'soft'], ['none', 'none']] },
       { key: 'laid', label: 'laid (rag only — skin & wove have none)', opts: [['var(--laid-fibre)', 'fibre'], ['none', 'none']] },
       { key: 'glow', label: 'glow', opts: [['var(--glow-candle)', 'candle'], ['var(--glow-candle-soft)', 'candle-soft'], ['none', 'none']] },
       { key: 'tear', label: 'edge', opts: [['var(--tear-torn)', 'deckle'], ['var(--tear-deep)', 'frayed'], ['none', 'trimmed']] },
       { key: 'absorbency', label: 'absorbency (sizing)', opts: [['0.1', 'vellum · 0.10'], ['0.2', 'hard-sized · 0.20'], ['0.35', 'sized · 0.35'], ['0.5', '0.50'], ['0.65', 'soft · 0.65'], ['0.8', 'unsized · 0.80'], ['1', 'blotter · 1.0']] },
     ] },
+    // colour is the FRESH ink; ageing (fade → brown) is the Condition layer, applied only if `fades`.
     ink: { label: 'Ink', params: [
-      { key: 'color', label: 'colour', opts: [['#2c2012', 'sepia'], ['#201f18', 'soot'], ['#5a4a30', 'faded']] },
-      { key: 'bleedHue', label: 'bleed hue', opts: [['48 22 8', 'sepia (48 22 8)'], ['20 20 14', 'soot (20 20 14)'], ['60 44 24', 'faded (60 44 24)']] },
-      { key: 'flow', label: 'flow', opts: [['0.2', 'stiff · 0.2'], ['0.35', '0.35'], ['0.5', '0.50'], ['0.65', '0.65'], ['0.8', 'watery · 0.8']] },
+      { key: 'color', label: 'colour (fresh)', opts: [['#1e2530', 'iron-gall · fresh blue-black'], ['#2c2012', 'iron-gall · matured brown-black'], ['#201f18', 'carbon · near-black'], ['#7a2f25', 'rubric · red']] },
+      { key: 'bleedHue', label: 'bleed hue', opts: [['30 37 48', 'blue-black'], ['48 22 8', 'brown-black'], ['20 20 14', 'soot'], ['90 40 30', 'red']] },
+      { key: 'flow', label: 'flow', opts: [['0.2', 'stiff · 0.2'], ['0.35', 'carbon · 0.35'], ['0.5', '0.50'], ['0.6', 'iron-gall · 0.6'], ['0.8', 'watery · 0.8']] },
+      { key: 'fades', label: 'fades with age', opts: [['1', 'yes — iron gall'], ['0', 'no — carbon / pigment']] },
     ] },
     author: { label: 'Author', params: [
       { key: 'face', label: 'face', opts: [['var(--face-garamond)', 'EB Garamond'], ['var(--face-cormorant)', 'Cormorant Garamond'], ['var(--face-newsreader)', 'Newsreader'], ['var(--face-fraunces)', 'Fraunces'], ['var(--face-crimson)', 'Crimson Pro'], ['var(--face-spectral)', 'Spectral']] },
@@ -41,6 +43,10 @@ const DocModel = (function () {
       { key: 'blobDip', label: 'dip blob', opts: [['0', '0'], ['0.06', '0.06'], ['0.12', '0.12']] },
       { key: 'walk', label: 'walk', opts: [['0', '0'], ['0.03', '0.03'], ['0.05', '0.05'], ['0.08', '0.08'], ['0.12', '0.12']] },
     ] },
+    // CONDITION — the second layer: not an ingredient, a modifier applied AFTER composition (see weather()).
+    condition: { label: 'Condition', params: [
+      { key: 'age', label: 'age', opts: [['0', 'fresh'], ['0.33', 'a few years'], ['0.66', 'decades'], ['1', 'ancient']] },
+    ] },
   };
 
   const PRESETS = {
@@ -51,13 +57,14 @@ const DocModel = (function () {
       'chronicle (laid rag)': { fill: '#e2d1a3', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.35' }, // good sized rag — the steward's dispatch
       'ledger (hard rag)': { fill: '#d9cca6', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.2' },     // hard-sized so numbers stay crisp
       'field (cheap rag)': { fill: '#cfc3a0', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.8' },      // poor/unsized — grey, feathers, frayed; a hasty report
-      'aged (worn)': { fill: '#d2bf90', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.65' },           // browned, sizing degraded → more absorbent; an old record
       'cabinet (cool)': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.35' },                     // a cool, refined fine stock — the cabinet wildcard
     },
+    // FRESH inks — ageing is the Condition layer, not a separate ink. iron gall fades to brown; carbon doesn't.
     ink: {
-      'sepia': { color: '#2c2012', bleedHue: '48 22 8', flow: '0.5' },
-      'soot': { color: '#201f18', bleedHue: '20 20 14', flow: '0.35' },
-      'faded': { color: '#5a4a30', bleedHue: '60 44 24', flow: '0.65' },
+      'iron-gall (matured)': { color: '#2c2012', bleedHue: '48 22 8', flow: '0.5', fades: '1' },   // the everyday brown-black; the canonical document ink
+      'iron-gall (fresh)': { color: '#1e2530', bleedHue: '30 37 48', flow: '0.6', fades: '1' },     // freshly written — cool blue-black; ages toward brown
+      'carbon (lampblack)': { color: '#201f18', bleedHue: '20 20 14', flow: '0.35', fades: '0' },   // dense matte black; pigment — colour-stable, low feather
+      'rubric (red)': { color: '#7a2f25', bleedHue: '90 40 30', flow: '0.5', fades: '0' },          // vermilion/red-lead — headings & emphasis (the accent tradition)
     },
     author: {
       'steward': { face: 'var(--face-garamond)', weight: '400', size: '1.1rem' },
@@ -73,22 +80,46 @@ const DocModel = (function () {
       'hasty': { cycle: 'on', dip: '30-55', floor: '0.2', stroke: '0.22', opacity: '0.8', blobPara: '0.35', blobDip: '0.06', walk: '0.08' },
       'clean (no cycle)': { cycle: 'off', dip: '45-80', floor: '0.3', stroke: '0.22', opacity: '0.9', blobPara: '0.16', blobDip: '0', walk: '0.03' },
     },
+    condition: {
+      'fresh': { age: '0' },
+      'a few years': { age: '0.33' },
+      'old': { age: '0.66' },
+      'ancient': { age: '1' },
+    },
   };
 
-  // resolve the four entity value-maps → CSS custom properties + the ink-cycle params (or null)
+  // ── colour helpers (the weathering maths lives in script, not CSS) ──
+  const hexToRgb = (h) => { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
+  const rgbToHex = (r) => '#' + r.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('');
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const lerpHex = (hex, rgb2, k) => { const a = hexToRgb(hex); return rgbToHex([lerp(a[0], rgb2[0], k), lerp(a[1], rgb2[1], k), lerp(a[2], rgb2[2], k)]); };
+  const lerpChan = (str, rgb2, k) => { const a = str.split(' ').map(Number); return [lerp(a[0], rgb2[0], k), lerp(a[1], rgb2[1], k), lerp(a[2], rgb2[2], k)].map((x) => Math.round(x)).join(' '); };
+  const PAPER_BROWN = [125, 96, 56];  // where paper drifts with age (an aged tan)
+  const INK_BROWN = [90, 74, 48];     // where fade-prone (iron-gall) ink drifts (warm brown)
+
+  // resolve composition → CSS vars + ink-cycle params, THEN weather by the Condition layer (age).
+  // Age is a modifier applied AFTER composition; its effect is conditional on the materials
+  // (iron-gall fades, carbon doesn't; sizing degrades so absorbency creeps up; the edge frays).
   function compose(vals) {
-    const absorb = parseFloat(vals.paper.absorbency), flow = parseFloat(vals.ink.flow);
-    const bleed = Math.max(0, absorb * flow);                 // DERIVED: bleed ceiling = absorbency × flow
+    const age = parseFloat((vals.condition && vals.condition.age) || '0');
+    const fades = vals.ink.fades === '1';
+    // weather the materials
+    const fill = lerpHex(vals.paper.fill, PAPER_BROWN, age * 0.4);                 // paper browns
+    const inkColor = fades ? lerpHex(vals.ink.color, INK_BROWN, age * 0.55) : vals.ink.color; // iron-gall fades
+    const bleedHue = fades ? lerpChan(vals.ink.bleedHue, INK_BROWN, age * 0.55) : vals.ink.bleedHue;
+    const absorb = Math.min(1, parseFloat(vals.paper.absorbency) + age * 0.2);     // sizing degrades → more absorbent
+    const tear = (age >= 0.66 && vals.paper.tear !== 'none') ? 'var(--tear-deep)' : vals.paper.tear; // frays with age
+    const bleed = Math.max(0, absorb * parseFloat(vals.ink.flow));                 // DERIVED: ceiling = absorbency × flow
     const cssVars = {
-      '--paper-color': vals.paper.fill,
+      '--paper-color': fill,
       '--paper-grain': vals.paper.grain,
       '--paper-laid': vals.paper.laid,
       '--paper-glow': vals.paper.glow,
-      '--paper-tear': vals.paper.tear,
-      '--paper-ink': vals.ink.color,
-      '--ink-bleed-hue': vals.ink.bleedHue,
-      '--ink-bloom-blur': (bleed * 1.6).toFixed(2) + 'px',    // ceiling → blur
-      '--ink-bloom-alpha': (bleed * 0.9).toFixed(3),          // ceiling → alpha
+      '--paper-tear': tear,
+      '--paper-ink': inkColor,
+      '--ink-bleed-hue': bleedHue,
+      '--ink-bloom-blur': (bleed * 1.6).toFixed(2) + 'px',
+      '--ink-bloom-alpha': (bleed * 0.9).toFixed(3),
       '--ink-family': vals.author.face,
       '--ink-weight': vals.author.weight,
       '--ink-size': vals.author.size,
@@ -99,16 +130,17 @@ const DocModel = (function () {
       floor: parseFloat(o.floor), strokeMax: parseFloat(o.stroke), opacityMin: parseFloat(o.opacity),
       blobPara: parseFloat(o.blobPara), blobDip: parseFloat(o.blobDip), walk: parseFloat(o.walk),
     };
-    return { cssVars, occasion, bleed };
+    return { cssVars, occasion, bleed, age };
   }
 
   // a sensible starting document (one preset per entity), deep-copied
   function defaultSpec() {
     return {
       paper: Object.assign({}, PRESETS.paper['chronicle (laid rag)']),
-      ink: Object.assign({}, PRESETS.ink['sepia']),
+      ink: Object.assign({}, PRESETS.ink['iron-gall (matured)']),
       author: Object.assign({}, PRESETS.author['steward']),
       occasion: Object.assign({}, PRESETS.occasion['measured']),
+      condition: Object.assign({}, PRESETS.condition['fresh']),
     };
   }
 

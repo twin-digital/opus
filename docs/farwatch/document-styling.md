@@ -47,10 +47,11 @@ would move if we ever modelled the room's light as its own thing.*
 **The paper presets are historically grounded, not arbitrary** — each is a real surface type, with its look
 flowing from how it was actually made: **skin** (`charter`/vellum — pale, smooth, *no laid*, trimmed edge,
 very low absorbency, the writ/charter) vs **sized laid rag** (`chronicle`, `ledger` — cream, laid lines,
-deckle edge, absorbency set by the *sizing*) vs **cheap/aged rag** (`field`, `aged` — greyer/browned,
-unsized → feathers, frayed). The decisive in-world lever is **sizing → `absorbency`**: a scribe chose
-hard-sized stock for a fair copy (crisp) and tolerated blotter-y stock for a scrap. *(A wax **seal** is
-deliberately **not** a paper property — it's an authority/document-kind concern for a future axis.)*
+deckle edge, absorbency set by the *sizing*) vs **cheap rag** (`field` — greyer, unsized → feathers, rough).
+The decisive in-world lever is **sizing → `absorbency`**: a scribe chose hard-sized stock for a fair copy
+(crisp) and tolerated blotter-y stock for a scrap. *(Browning/fraying with age is the **Condition** layer, not
+a paper type — there is no "aged paper" preset. And a wax **seal** is deliberately **not** a paper property —
+it's an authority/document-kind concern for a future axis.)*
 
 ---
 
@@ -60,12 +61,20 @@ What it was written *with*.
 
 | param | what it is | status |
 |---|---|---|
-| `color` | the writing colour | **[wired]** `--paper-ink` |
+| `color` | the **fresh** writing colour | **[wired]** `--paper-ink` |
 | `bleed hue` | the soak-halo colour (the ink, soaking) | **[wired]** `--ink-bleed-hue` *(renamed from the mislabeled `--paper-bloom`)*; could auto-derive from `color` |
-| `flow` | how readily *this ink* wants to spread (thin/watery ↔ thick) | **[target]** — today folded into the single `bleed` dial; should become an ink property |
+| `flow` | how readily *this ink* wants to spread (thin/watery ↔ thick) | **[wired]** — feeds `bleed = absorbency × flow` in the resolver |
+| `fades` | whether the ink ages (iron-gall fades to brown; carbon doesn't) | **[wired]** — read by the Condition layer's `weather()` |
+
+**Historically grounded.** The ink presets are the real families: **iron-gall** (`fresh` blue-black →
+`matured` brown-black — the canonical Western ink for a millennium, *fades* to brown with age), **carbon /
+lampblack** (dense matte black, a *pigment* — colour-stable, low feather, `fades: no`), and **rubric (red)**
+(vermilion — the headings/emphasis tradition that our oxblood accent descends from). `color` is the **fresh**
+ink; the browning/fading is the **Condition** layer below, applied only when `fades` is set.
 
 **Not ink:** *weight*. Ink has no stroke width — the pen and the hand do. Stroke weight is the author's face
-(font-weight) plus the occasion's pressure (the cycle). It does **not** live here.
+(font-weight) plus the occasion's pressure (the cycle). It does **not** live here. And *fading* is **not** ink
+either — it's a condition (see below); the ink only declares whether it's *fade-prone*.
 
 ---
 
@@ -107,14 +116,42 @@ different here and only here. This is **the ink cycle** ([`ink-cycle.js`](mockup
 
 ---
 
+## Condition — what happened since (the second layer)
+
+The four entities above are **composition** — the *ingredients*, fixed at the moment the pen lifted. **Condition**
+is a different *kind* of axis: a **modifier applied to the finished document** — what time and handling did to
+it *afterward*. The model is two layers:
+
+> **document = weather( compose(paper × ink × author × occasion), condition )**
+
+| param | what it is | status |
+|---|---|---|
+| `age` | how long ago it was written (fresh → ancient) | **[wired]** — `weather()` in `document-model.js` |
+| `wear` / `damage` | handling, creases, water-stains, foxing, ink-burn | **[target]** — siblings of `age`, same layer |
+
+**Why it can't live on an entity:** age is *cross-cutting* (it browns the paper, frays the edge, degrades the
+sizing → raises absorbency, **and** fades the ink) and its effect is *conditional on the materials* — **iron-gall
+fades, carbon doesn't**; a hard-sized sheet resists, a cheap one degrades. A property that has to *inspect other
+entities to know what it does* is a layer above them, not one of them. `weather(resolved, age)` therefore runs
+**after** `compose()`: it lerps the paper fill toward a tan, fades fade-prone ink toward brown, nudges absorbency
+up, and frays the edge — all proportional to `age`.
+
+This is why there is **no "aged paper" preset and no "faded ink" preset** — those baked a *condition* into a
+*material*. An old record is `chronicle (laid rag)` × `iron-gall` × **`age: ancient`**. (It also keeps *fading*
+distinct from *dilution*: a pale mark is either weak ink — a creation-time `flow`/concentration choice — or old
+iron-gall — `age`. Same look, different cause.)
+
+---
+
 ## Derived — bleed (owned by no one)
 
 Bleed is the clean example of a property that is *composed*, not owned:
 
 ```
-bloom ceiling (at full ink) = paper.absorbency × ink.flow      [target]  (today: a single bleed blur+alpha dial)
+bloom ceiling (at full ink) = paper.absorbency × ink.flow      [wired]   (compose() in document-model.js)
+                              (age raises absorbency first → an old sheet feathers more)
 per-mark bloom              = ceiling × occasion.cycle-level    [wired]   (ink-cycle.js scales it per word)
-bloom hue                   = ink.bleed-hue                     [wired]   (--ink-bleed-hue)
+bloom hue                   = ink.bleed-hue                     [wired]   (--ink-bleed-hue; ages with the ink)
 ```
 
 So "this ink on that paper" *should* produce the right feathering automatically (absorbency × flow), with the
