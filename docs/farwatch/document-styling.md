@@ -136,8 +136,13 @@ it *afterward*. The model is two layers:
 sizing → raises absorbency, **and** fades the ink) and its effect is *conditional on the materials* — **iron-gall
 fades, carbon doesn't**; a hard-sized sheet resists, a cheap one degrades. A property that has to *inspect other
 entities to know what it does* is a layer above them, not one of them. `weather(resolved, age)` therefore runs
-**after** `compose()`: it lerps the paper fill toward a tan, fades fade-prone ink toward brown, nudges absorbency
-up, and frays the edge — all proportional to `age`.
+**after** `compose()` (`age` = *time since written*): it lerps the paper fill toward a tan, fades fade-prone ink
+toward brown, frays the edge, and — for fade-prone (acidic iron-gall) ink at advanced age — corrodes the page
+with **ink burn**: a rusty halo bleeding from the strokes (the writing destroying its own page; carbon never
+burns). **Feathering is *not* aged** — it was locked in at write-time, on the paper as it was *then* (an old
+document feathered on then-fresh paper). Raising absorbency would model *writing on already-old paper* — a
+different scenario, a future "paper age at writing" control. *(Ink-burn's cracks/holes — the eating-through —
+are not yet modelled; this is the stain halo only.)*
 
 This is why there is **no "aged paper" preset and no "faded ink" preset** — those baked a *condition* into a
 *material*. An old record is `chronicle (laid rag)` × `iron-gall` × **`age: ancient`**. (It also keeps *fading*
@@ -151,10 +156,10 @@ iron-gall — `age`. Same look, different cause.)
 Bleed is the clean example of a property that is *composed*, not owned:
 
 ```
-bloom ceiling (at full ink) = paper.absorbency × ink.flow      [wired]   (compose() in document-model.js)
-                              (age raises absorbency first → an old sheet feathers more)
+bloom ceiling (at full ink) = paper.absorbency × ink.flow      [wired]   (compose() — write-time; NOT aged)
 per-mark bloom              = ceiling × occasion.cycle-level    [wired]   (ink-cycle.js scales it per word)
 bloom hue                   = ink.bleed-hue                     [wired]   (--ink-bleed-hue; ages with the ink)
+ink burn (halo)             = fades × advanced age             [wired]   (--ink-burn; corrosion from the strokes)
 ```
 
 So "this ink on that paper" *should* produce the right feathering automatically (absorbency × flow), with the

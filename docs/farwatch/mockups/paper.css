@@ -70,7 +70,7 @@
   font-size: var(--ink-size, 1rem);
   /* ink bleed: HUE (channels) from the ink COLOUR; BLUR + ALPHA from the ink STYLE.
      --ink-bloom overrides the whole text-shadow (for multi-layer "soaked" effects). */
-  text-shadow: var(--ink-bloom, 0 0 var(--ink-bloom-blur, 0.7px) rgb(var(--ink-bleed-hue, 48 22 8) / var(--ink-bloom-alpha, 0.5)));
+  text-shadow: var(--ink-bloom, 0 0 var(--ink-bloom-blur, 0.7px) rgb(var(--ink-bleed-hue, 48 22 8) / var(--ink-bloom-alpha, 0.5))), var(--ink-burn, 0 0 0 transparent);
   font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
   -webkit-mask-image: var(--paper-tear, var(--tear-torn)); mask-image: var(--paper-tear, var(--tear-torn));
   -webkit-mask-size: var(--paper-tear-size, 100% 100%); mask-size: var(--paper-tear-size, 100% 100%);

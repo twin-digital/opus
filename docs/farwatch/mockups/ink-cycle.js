@@ -43,7 +43,8 @@ const InkCycle = (function () {
         // bloom rides the reservoir too: halo BLUR = the ink-bleed dial's blur × level (the alpha tracks via opacity).
         // The bleed dial (--ink-bloom-blur/alpha) is the bloom at FULL ink; this scales it down for dry marks.
         const bloom = '0 0 calc(var(--ink-bloom-blur, 0.7px) * ' + L.toFixed(3) + ') rgb(var(--ink-bleed-hue, 48 22 8) / var(--ink-bloom-alpha, 0.5))';
-        return '-webkit-text-stroke:' + stroke + 'px currentColor;opacity:' + op + ';text-shadow:' + bloom + ';';
+        // append the document's ink-burn halo (a Condition effect, inherited via --ink-burn; transparent when none)
+        return '-webkit-text-stroke:' + stroke + 'px currentColor;opacity:' + op + ';text-shadow:' + bloom + ', var(--ink-burn, 0 0 0 transparent);';
       },
       deplete(n) { freshBlob = 0; used += n; },
       dip(blob) { used = 0; cap = rndCap(); freshBlob = blob; walk *= 0.4; },

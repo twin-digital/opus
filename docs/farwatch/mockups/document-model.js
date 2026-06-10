@@ -101,15 +101,24 @@ const DocModel = (function () {
   // Age is a modifier applied AFTER composition; its effect is conditional on the materials
   // (iron-gall fades, carbon doesn't; sizing degrades so absorbency creeps up; the edge frays).
   function compose(vals) {
-    const age = parseFloat((vals.condition && vals.condition.age) || '0');
+    const age = parseFloat((vals.condition && vals.condition.age) || '0');   // age = time SINCE WRITTEN
     const fades = vals.ink.fades === '1';
-    // weather the materials
-    const fill = lerpHex(vals.paper.fill, PAPER_BROWN, age * 0.4);                 // paper browns
-    const inkColor = fades ? lerpHex(vals.ink.color, INK_BROWN, age * 0.55) : vals.ink.color; // iron-gall fades
+    // weather the materials. NOTE on absorbency: feathering is locked in at WRITE-TIME (the ink fed into the
+    // paper as it was then), so age does NOT raise it — an old document feathered on then-fresh paper. (Writing
+    // *new* ink on already-old paper is a separate scenario — a future "paper age at writing" control.)
+    const fill = lerpHex(vals.paper.fill, PAPER_BROWN, age * 0.4);                 // paper browns over time
+    const inkColor = fades ? lerpHex(vals.ink.color, INK_BROWN, age * 0.55) : vals.ink.color; // iron-gall fades to brown
     const bleedHue = fades ? lerpChan(vals.ink.bleedHue, INK_BROWN, age * 0.55) : vals.ink.bleedHue;
-    const absorb = Math.min(1, parseFloat(vals.paper.absorbency) + age * 0.2);     // sizing degrades → more absorbent
     const tear = (age >= 0.66 && vals.paper.tear !== 'none') ? 'var(--tear-deep)' : vals.paper.tear; // frays with age
-    const bleed = Math.max(0, absorb * parseFloat(vals.ink.flow));                 // DERIVED: ceiling = absorbency × flow
+    const bleed = Math.max(0, parseFloat(vals.paper.absorbency) * parseFloat(vals.ink.flow));  // ceiling = absorbency × flow (write-time)
+    // INK BURN — acidic iron-gall corroding its own page: a rusty halo bleeding from the strokes. Gated on
+    // fades × ADVANCED age (carbon never burns; corrosion is a long-timescale process). Eating-through
+    // (cracks/holes) is not yet modelled — this is the stain halo only.
+    const burnK = fades ? Math.max(0, Math.min(1, (age - 0.3) / 0.7)) : 0;
+    const burn = burnK <= 0 ? '0 0 0 transparent'
+      : '0 0 ' + (0.8 + burnK).toFixed(2) + 'px rgba(58,28,10,' + (burnK * 0.75).toFixed(2) + '), '
+        + '0 0 ' + (2.5 + burnK * 3).toFixed(1) + 'px rgba(78,42,18,' + (burnK * 0.5).toFixed(2) + '), '
+        + '0 0 ' + (5 + burnK * 7).toFixed(1) + 'px rgba(86,52,26,' + (burnK * 0.28).toFixed(2) + ')';
     const cssVars = {
       '--paper-color': fill,
       '--paper-grain': vals.paper.grain,
@@ -120,6 +129,7 @@ const DocModel = (function () {
       '--ink-bleed-hue': bleedHue,
       '--ink-bloom-blur': (bleed * 1.6).toFixed(2) + 'px',
       '--ink-bloom-alpha': (bleed * 0.9).toFixed(3),
+      '--ink-burn': burn,
       '--ink-family': vals.author.face,
       '--ink-weight': vals.author.weight,
       '--ink-size': vals.author.size,
