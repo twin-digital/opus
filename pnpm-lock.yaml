@@ -64,8 +64,8 @@ catalogs:
       specifier: ^9.6.1
       version: 9.6.1
     globals:
-      specifier: ^16.0.0
-      version: 16.5.0
+      specifier: ^17.0.0
+      version: 17.6.0
     lodash-es:
       specifier: ^4.17.22
       version: 4.18.1
@@ -178,7 +178,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -233,7 +233,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -309,7 +309,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -379,7 +379,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -473,7 +473,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -540,7 +540,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -607,7 +607,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -656,7 +656,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -701,7 +701,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -731,7 +731,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: '>= 3'
         version: 3.5.3
@@ -790,7 +790,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -881,7 +881,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -930,7 +930,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -985,7 +985,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1052,7 +1052,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1113,7 +1113,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1192,7 +1192,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1295,7 +1295,7 @@ importers:
         version: 4.6.2(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1350,7 +1350,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1414,7 +1414,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1465,7 +1465,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1523,7 +1523,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1575,7 +1575,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1623,7 +1623,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1669,7 +1669,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1718,7 +1718,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -1764,7 +1764,7 @@ importers:
         version: 10.1.8(eslint@9.39.4)
       globals:
         specifier: 'catalog:'
-        version: 16.5.0
+        version: 17.6.0
       prettier:
         specifier: 'catalog:'
         version: 3.8.3
@@ -5106,8 +5106,8 @@ packages:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
 
-  globals@16.5.0:
-    resolution: {integrity: sha512-c/c15i26VrJ4IRt5Z89DnIzCGDn9EcebibhAOjw5ibqEHsE1wLUgkPn9RDmNcUKyU87GeaL633nyJ+pplFR2ZQ==}
+  globals@17.6.0:
+    resolution: {integrity: sha512-sepffkT8stwnIYbsMBpoCHJuJM5l98FUF2AnE07hfvE0m/qp3R586hw4jF4uadbhvg1ooIdzuu7CsfD2jzCaNA==}
     engines: {node: '>=18'}
 
   globalthis@1.0.4:
@@ -10963,7 +10963,7 @@ snapshots:
 
   globals@14.0.0: {}
 
-  globals@16.5.0: {}
+  globals@17.6.0: {}
 
   globalthis@1.0.4:
     dependencies:
