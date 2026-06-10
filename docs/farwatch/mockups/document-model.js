@@ -115,10 +115,12 @@ const DocModel = (function () {
     // fades × ADVANCED age (carbon never burns; corrosion is a long-timescale process). Eating-through
     // (cracks/holes) is not yet modelled — this is the stain halo only.
     const burnK = fades ? Math.max(0, Math.min(1, (age - 0.3) / 0.7)) : 0;
+    // a DIFFUSE stain over the inked region — no tight inner ring (which would trace each glyph); large soft
+    // radii merge between strokes into a brown haze. The ink fill stays sharp (text-shadow doesn't touch it).
     const burn = burnK <= 0 ? '0 0 0 transparent'
-      : '0 0 ' + (0.8 + burnK).toFixed(2) + 'px rgba(58,28,10,' + (burnK * 0.75).toFixed(2) + '), '
-        + '0 0 ' + (2.5 + burnK * 3).toFixed(1) + 'px rgba(78,42,18,' + (burnK * 0.5).toFixed(2) + '), '
-        + '0 0 ' + (5 + burnK * 7).toFixed(1) + 'px rgba(86,52,26,' + (burnK * 0.28).toFixed(2) + ')';
+      : '0 0 ' + (4 + burnK * 5).toFixed(1) + 'px rgba(80,44,20,' + (burnK * 0.30).toFixed(2) + '), '
+        + '0 0 ' + (10 + burnK * 12).toFixed(1) + 'px rgba(88,54,28,' + (burnK * 0.20).toFixed(2) + '), '
+        + '0 0 ' + (20 + burnK * 22).toFixed(1) + 'px rgba(94,60,34,' + (burnK * 0.12).toFixed(2) + ')';
     const cssVars = {
       '--paper-color': fill,
       '--paper-grain': vals.paper.grain,
