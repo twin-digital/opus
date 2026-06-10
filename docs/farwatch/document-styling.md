@@ -44,6 +44,14 @@ What was written *on*. "What was to hand" when the document was made.
 *\*`glow` is really a property of the **scene's lighting**, not the paper — it just renders on the sheet. It
 would move if we ever modelled the room's light as its own thing.*
 
+**The paper presets are historically grounded, not arbitrary** — each is a real surface type, with its look
+flowing from how it was actually made: **skin** (`charter`/vellum — pale, smooth, *no laid*, trimmed edge,
+very low absorbency, the writ/charter) vs **sized laid rag** (`chronicle`, `ledger` — cream, laid lines,
+deckle edge, absorbency set by the *sizing*) vs **cheap/aged rag** (`field`, `aged` — greyer/browned,
+unsized → feathers, frayed). The decisive in-world lever is **sizing → `absorbency`**: a scribe chose
+hard-sized stock for a fair copy (crisp) and tolerated blotter-y stock for a scrap. *(A wax **seal** is
+deliberately **not** a paper property — it's an authority/document-kind concern for a future axis.)*
+
 ---
 
 ## Ink — the medium
@@ -119,7 +127,7 @@ occasion's reservoir modulating it per mark. Today the ceiling is set directly b
 
 A document is a **tuple — one option from each entity's library**:
 
-> `worn-bright` paper × `warm-posting` colour × `chronicle` author-hand × `Light` occasion
+> `chronicle (laid rag)` paper × `sepia` ink × `steward` hand × `measured` occasion
 
 The libraries already exist as the mechanism files — `paper.css` (paper styles), `paper-color.css` (paper+ink
 colour pairs), `ink.css` (author hands), `ink-cycle.js` (occasions). The builder is the act of picking one of

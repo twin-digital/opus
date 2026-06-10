@@ -81,7 +81,7 @@
 
         // the working document spec + which preset each entity was loaded from
         const state = DocModel.defaultSpec();
-        const chosen = { paper: 'worn-bright', ink: 'sepia', author: 'steward', occasion: 'measured' };
+        const chosen = { paper: 'chronicle (laid rag)', ink: 'sepia', author: 'steward', occasion: 'measured' };
 
         const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const loadUser = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };

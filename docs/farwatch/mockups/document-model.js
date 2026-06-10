@@ -14,12 +14,12 @@
 const DocModel = (function () {
   const SCHEMA = {
     paper: { label: 'Paper', params: [
-      { key: 'fill', label: 'fill', opts: [['#e2d1a3', 'parchment'], ['#d9cca6', 'ledger'], ['#e5d1a0', 'amber'], ['#e8d6a4', 'bright'], ['#d3c59e', 'card'], ['#ece6d2', 'cream']] },
+      { key: 'fill', label: 'fill', opts: [['#ece4cb', 'vellum · pale'], ['#e2d1a3', 'parchment'], ['#d9cca6', 'rag · cream'], ['#cfc3a0', 'dun · cheap'], ['#d2bf90', 'aged · amber'], ['#ece6d2', 'cream · cool']] },
       { key: 'grain', label: 'grain', opts: [['var(--grain-fine)', 'fine'], ['var(--grain-soft)', 'soft'], ['none', 'none']] },
-      { key: 'laid', label: 'laid', opts: [['var(--laid-fibre)', 'fibre'], ['none', 'none']] },
+      { key: 'laid', label: 'laid (rag only — skin & wove have none)', opts: [['var(--laid-fibre)', 'fibre'], ['none', 'none']] },
       { key: 'glow', label: 'glow', opts: [['var(--glow-candle)', 'candle'], ['var(--glow-candle-soft)', 'candle-soft'], ['none', 'none']] },
-      { key: 'tear', label: 'tear', opts: [['var(--tear-torn)', 'torn'], ['var(--tear-deep)', 'deep'], ['none', 'none']] },
-      { key: 'absorbency', label: 'absorbency', opts: [['0.15', 'sized · 0.15'], ['0.4', '0.40'], ['0.6', '0.60'], ['0.8', '0.80'], ['1', 'blotter · 1.0']] },
+      { key: 'tear', label: 'edge', opts: [['var(--tear-torn)', 'deckle'], ['var(--tear-deep)', 'frayed'], ['none', 'trimmed']] },
+      { key: 'absorbency', label: 'absorbency (sizing)', opts: [['0.1', 'vellum · 0.10'], ['0.2', 'hard-sized · 0.20'], ['0.35', 'sized · 0.35'], ['0.5', '0.50'], ['0.65', 'soft · 0.65'], ['0.8', 'unsized · 0.80'], ['1', 'blotter · 1.0']] },
     ] },
     ink: { label: 'Ink', params: [
       { key: 'color', label: 'colour', opts: [['#2c2012', 'sepia'], ['#201f18', 'soot'], ['#5a4a30', 'faded']] },
@@ -44,12 +44,15 @@ const DocModel = (function () {
   };
 
   const PRESETS = {
+    // historically grounded: skin (vellum, no laid, low absorbency) vs sized laid rag (everyday) vs cheap/aged.
+    // See docs/farwatch/document-styling.md → "Paper" and the paper-history discussion.
     paper: {
-      'worn-bright': { fill: '#e2d1a3', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.6' },
-      'ledger': { fill: '#d9cca6', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle)', tear: 'var(--tear-deep)', absorbency: '0.8' },
-      'card': { fill: '#d3c59e', grain: 'var(--grain-fine)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.4' },
-      'cabinet-cream': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.4' },
-      'clean': { fill: '#e2d1a3', grain: 'none', laid: 'none', glow: 'none', tear: 'none', absorbency: '0.4' },
+      'charter (vellum)': { fill: '#ece4cb', grain: 'var(--grain-soft)', laid: 'none', glow: 'var(--glow-candle-soft)', tear: 'none', absorbency: '0.1' },        // skin — pale, smooth, crisp ink, trimmed edge; the writ/charter
+      'chronicle (laid rag)': { fill: '#e2d1a3', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.35' }, // good sized rag — the steward's dispatch
+      'ledger (hard rag)': { fill: '#d9cca6', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.2' },     // hard-sized so numbers stay crisp
+      'field (cheap rag)': { fill: '#cfc3a0', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.8' },      // poor/unsized — grey, feathers, frayed; a hasty report
+      'aged (worn)': { fill: '#d2bf90', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.65' },           // browned, sizing degraded → more absorbent; an old record
+      'cabinet (cool)': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.35' },                     // a cool, refined fine stock — the cabinet wildcard
     },
     ink: {
       'sepia': { color: '#2c2012', bleedHue: '48 22 8', flow: '0.5' },
@@ -102,7 +105,7 @@ const DocModel = (function () {
   // a sensible starting document (one preset per entity), deep-copied
   function defaultSpec() {
     return {
-      paper: Object.assign({}, PRESETS.paper['worn-bright']),
+      paper: Object.assign({}, PRESETS.paper['chronicle (laid rag)']),
       ink: Object.assign({}, PRESETS.ink['sepia']),
       author: Object.assign({}, PRESETS.author['steward']),
       occasion: Object.assign({}, PRESETS.occasion['measured']),
