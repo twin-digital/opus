@@ -1,0 +1,2797 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grinbox style guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+      body {
+        font-family:
+          'Inter',
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      .mono {
+        font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+      }
+
+      /* Tag chip hash palette (8 colors). Light then dark variants. */
+      .chip-c0 {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .chip-c1 {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .chip-c2 {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .chip-c3 {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .chip-c4 {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+      .chip-c5 {
+        background: #fce7f3;
+        color: #9d174d;
+      }
+      .chip-c6 {
+        background: #ccfbf1;
+        color: #115e59;
+      }
+      .chip-c7 {
+        background: #ffedd5;
+        color: #9a3412;
+      }
+
+      .dark .chip-c0 {
+        background: rgba(239, 68, 68, 0.18);
+        color: #fca5a5;
+      }
+      .dark .chip-c1 {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fcd34d;
+      }
+      .dark .chip-c2 {
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+      }
+      .dark .chip-c3 {
+        background: rgba(59, 130, 246, 0.18);
+        color: #93c5fd;
+      }
+      .dark .chip-c4 {
+        background: rgba(139, 92, 246, 0.18);
+        color: #c4b5fd;
+      }
+      .dark .chip-c5 {
+        background: rgba(236, 72, 153, 0.18);
+        color: #f9a8d4;
+      }
+      .dark .chip-c6 {
+        background: rgba(20, 184, 166, 0.18);
+        color: #5eead4;
+      }
+      .dark .chip-c7 {
+        background: rgba(249, 115, 22, 0.18);
+        color: #fdba74;
+      }
+
+      .part-header {
+        padding-top: 2.5rem;
+        border-top: 1px solid;
+      }
+      .part-eyebrow {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <header
+      class="sticky top-0 z-20 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/85 dark:bg-zinc-950/85 backdrop-blur"
+    >
+      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-7 h-7 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-sm font-semibold"
+          >
+            G
+          </div>
+          <span class="font-semibold">Grinbox style guide</span>
+        </div>
+        <button
+          id="theme-toggle"
+          class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          <i data-lucide="sun-moon" class="w-4 h-4"></i>
+          Toggle theme
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10 space-y-12">
+      <section>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl">
+          Visual reference for
+          <span class="mono text-xs px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800"
+            >apps/grinbox/docs/ui-design.md</span
+          >. Two-layer structure: primitives first (configurable building blocks), then compositions (real surfaces
+          built from them). Toggle the theme to verify light and dark.
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 1 — FOUNDATIONS
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 1</p>
+        <h2 class="text-2xl font-semibold mt-1">Foundations</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Color and type — the variables every other section depends on.
+        </p>
+      </section>
+
+      <!-- ─────────────  Colors  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Colors</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Zinc neutrals · Violet primary · Tailwind red / amber / emerald for status.
+        </p>
+
+        <div class="space-y-7">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Neutrals — Zinc</h4>
+            <div class="grid grid-cols-11 gap-1 text-[10px]">
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-50 ring-1 ring-zinc-200"></div>
+                <div class="text-center text-zinc-500">50</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-100"></div>
+                <div class="text-center text-zinc-500">100</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-200"></div>
+                <div class="text-center text-zinc-500">200</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-300"></div>
+                <div class="text-center text-zinc-500">300</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-400"></div>
+                <div class="text-center text-zinc-500">400</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-500"></div>
+                <div class="text-center text-zinc-500">500</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-600"></div>
+                <div class="text-center text-zinc-500">600</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-700"></div>
+                <div class="text-center text-zinc-500">700</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-800"></div>
+                <div class="text-center text-zinc-500">800</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-900"></div>
+                <div class="text-center text-zinc-500">900</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-12 rounded bg-zinc-950"></div>
+                <div class="text-center text-zinc-500">950</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Primary — Violet (<span class="mono">--primary</span>)
+            </h4>
+            <div class="grid grid-cols-5 gap-2 max-w-xl text-[11px]">
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-violet-400"></div>
+                <div class="text-center text-zinc-500">400</div>
+              </div>
+              <div class="space-y-1">
+                <div
+                  class="h-14 rounded bg-violet-500 ring-2 ring-violet-500 ring-offset-2 ring-offset-zinc-50 dark:ring-offset-zinc-950"
+                ></div>
+                <div class="text-center text-zinc-500">500 · light</div>
+              </div>
+              <div class="space-y-1">
+                <div
+                  class="h-14 rounded bg-violet-600 ring-2 ring-violet-600 ring-offset-2 ring-offset-zinc-50 dark:ring-offset-zinc-950"
+                ></div>
+                <div class="text-center text-zinc-500">600 · dark</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-violet-700"></div>
+                <div class="text-center text-zinc-500">700</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-violet-800"></div>
+                <div class="text-center text-zinc-500">800</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Status</h4>
+            <div class="grid grid-cols-4 gap-3 max-w-2xl text-[11px]">
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-emerald-500"></div>
+                <div class="text-center text-zinc-500">emerald-500 · completed</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-amber-500"></div>
+                <div class="text-center text-zinc-500">amber-500 · partial / limit</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-red-500"></div>
+                <div class="text-center text-zinc-500">red-500 · failed / destructive</div>
+              </div>
+              <div class="space-y-1">
+                <div class="h-14 rounded bg-zinc-400"></div>
+                <div class="text-center text-zinc-500">zinc-400 · running / neutral</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Typography  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Typography</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Inter for sans · JetBrains Mono for code, Tag values, IDs.
+        </p>
+
+        <div class="space-y-4">
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-3xl semibold</code>
+            <p class="text-3xl font-semibold">Inbox</p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-xl semibold</code>
+            <p class="text-xl font-semibold">Pipeline detail</p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-base semibold</code>
+            <p class="text-base font-semibold">Operator: Urgency rules</p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-sm medium</code>
+            <p class="text-sm font-medium">Field label</p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-sm (body)</code>
+            <p class="text-sm">
+              Body copy. The latest Triage produced 4 Tags across 2 Operators. Hover any chip to see provenance.
+            </p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">text-xs muted</code>
+            <p class="text-xs text-zinc-500">Helper text · timestamps · provenance lines</p>
+          </div>
+          <div class="grid grid-cols-[140px_1fr] gap-4 items-baseline">
+            <code class="mono text-xs text-zinc-500">mono text-xs</code>
+            <p class="mono text-xs text-zinc-700 dark:text-zinc-300">urgency=high · msg_8f4a2c · op_v3</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 2 — FORM PRIMITIVES
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 2</p>
+        <h2 class="text-2xl font-semibold mt-1">Form primitives</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Buttons, inputs, code. Each is configurable along a small axis (variant / size / state) and composes
+          everywhere downstream.
+        </p>
+      </section>
+
+      <!-- ─────────────  Buttons  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Buttons</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Variants × sizes × optional leading icon. shadcn defaults with violet primary and red destructive.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Variants</h4>
+            <div class="flex flex-wrap gap-3 items-center">
+              <button
+                class="px-4 py-2 text-sm font-medium rounded-md bg-violet-500 hover:bg-violet-600 text-white dark:bg-violet-600 dark:hover:bg-violet-500"
+              >
+                Primary
+              </button>
+              <button
+                class="px-4 py-2 text-sm font-medium rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Secondary
+              </button>
+              <button class="px-4 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                Ghost
+              </button>
+              <button class="px-4 py-2 text-sm font-medium rounded-md bg-red-500 hover:bg-red-600 text-white">
+                Destructive
+              </button>
+              <button
+                class="px-4 py-2 text-sm font-medium rounded-md bg-violet-500 text-white opacity-50 cursor-not-allowed"
+              >
+                Disabled
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Sizes &amp; icon</h4>
+            <div class="flex flex-wrap gap-3 items-center">
+              <button class="px-3 py-1.5 text-xs font-medium rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+                Small
+              </button>
+              <button class="px-4 py-2 text-sm font-medium rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+                Default
+              </button>
+              <button class="px-5 py-2.5 text-base font-medium rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+                Large
+              </button>
+              <button
+                class="px-3 py-1.5 text-sm font-medium rounded-md bg-violet-500 hover:bg-violet-600 text-white inline-flex items-center gap-1.5"
+              >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>With icon
+              </button>
+              <button class="p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500" title="Icon-only">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Inputs  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Inputs</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Text, textarea, select, segmented control, search. Focus ring is violet-500; error state swaps in red-500.
+          Inline error message below the field on blur (TanStack Form + Zod).
+        </p>
+
+        <div class="grid grid-cols-2 gap-6 max-w-3xl">
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Text</label>
+              <input
+                type="text"
+                value="Personal mail v2"
+                class="w-full text-sm px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Text — error</label>
+              <input
+                type="text"
+                value="0"
+                class="w-full text-sm px-3 py-2 rounded-md border border-red-500 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+              <p class="text-xs text-red-500 mt-1.5 flex items-center gap-1.5">
+                <i data-lucide="alert-circle" class="w-3 h-3"></i>Must be at least 60 seconds.
+              </p>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Search</label>
+              <div class="relative">
+                <i
+                  data-lucide="search"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400"
+                ></i>
+                <input
+                  type="text"
+                  placeholder="Search from / subject / snippet…"
+                  class="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Select</label>
+              <select
+                class="w-full text-sm px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option>per_window</option>
+                <option>per_message</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-2 block">Segmented control</label>
+              <div class="inline-flex border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden text-sm">
+                <button class="px-3 py-1.5 bg-violet-500 text-white inline-flex items-center gap-2">
+                  Haiku <span class="text-[10px] uppercase px-1.5 rounded bg-white/20">fast</span>
+                </button>
+                <button class="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-2">
+                  Sonnet <span class="text-[10px] uppercase px-1.5 rounded bg-zinc-200 dark:bg-zinc-700">capable</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium mb-1.5 block">Textarea (mono variant)</label>
+              <textarea
+                rows="3"
+                class="mono w-full text-xs px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              >
+Subject: {{subject}}
+From: {{from}}</textarea
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Code blocks  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Code blocks</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          JetBrains Mono. Inline tokens use a zinc tint; block code uses a panel; error blocks use the red status tint.
+        </p>
+        <div class="space-y-4 max-w-2xl">
+          <div class="text-sm">
+            Inline reference like
+            <code class="mono text-xs px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800"
+              >message.subject contains "invoice"</code
+            >, or an ID like
+            <code class="mono text-xs px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800">tri_8f4a2c</code>.
+          </div>
+          <pre
+            class="mono text-xs p-3 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-x-auto"
+          ><code>match: subject contains "approval" and from in vip_list
+output: high
+
+match: from.domain in trusted_domains
+output: normal
+
+match: "*"
+output: low</code></pre>
+          <pre
+            class="mono text-xs p-3 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 overflow-x-auto"
+          ><code>RateLimitExceeded: pushover_api.send_notification
+  limit:    per_window 10/600s
+  current:  10 (window expires in 247s)</code></pre>
+        </div>
+      </section>
+
+      <!-- ─────────────  Drag handle  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Drag handle</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Lucide <span class="mono text-xs">grip-vertical</span>, zinc-400 idle, zinc-600 hover, cursor: grab. Used in
+          any reorderable list (Rule editor, Operator list).
+        </p>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="cursor-grab text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            ><i data-lucide="grip-vertical" class="w-4 h-4"></i
+          ></span>
+          <span class="text-zinc-500 text-xs">idle</span>
+          <span class="cursor-grab text-zinc-600 dark:text-zinc-300"
+            ><i data-lucide="grip-vertical" class="w-4 h-4"></i
+          ></span>
+          <span class="text-zinc-500 text-xs">hover</span>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 3 — DISPLAY PRIMITIVES
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 3</p>
+        <h2 class="text-2xl font-semibold mt-1">Display primitives</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Chips, indicators, and async-state shapes. Used in every list, table, and surface that shows live data.
+        </p>
+      </section>
+
+      <!-- ─────────────  Tag chips  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Tag chips</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Pill shape · <span class="mono text-xs">key: value</span> · color from
+          <span class="mono text-xs">hash(key) % 8</span>. Dense rows show 3 highest-priority +
+          <span class="mono text-xs">+N</span>.
+        </p>
+
+        <div class="space-y-6">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Hash palette (8 buckets)</h4>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+                ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                ><span class="opacity-70 mr-1">category:</span><span class="font-medium">bills</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c3"
+                ><span class="opacity-70 mr-1">sentiment:</span><span class="font-medium">positive</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c4"
+                ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">request</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c5"
+                ><span class="opacity-70 mr-1">project:</span><span class="font-medium">apollo</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c6"
+                ><span class="opacity-70 mr-1">thread:</span><span class="font-medium">root</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c7"
+                ><span class="opacity-70 mr-1">followup:</span><span class="font-medium">expected</span></span
+              >
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Dense row (3 + overflow)</h4>
+            <div class="flex items-center gap-1.5 max-w-lg">
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+                ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                ><span class="opacity-70 mr-1">category:</span><span class="font-medium">bills</span></span
+              >
+              <span
+                class="inline-flex items-center text-xs px-2 py-1 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                >+3</span
+              >
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Hover (provenance preview)
+            </h4>
+            <div class="inline-flex items-start gap-3">
+              <span
+                class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0 ring-2 ring-offset-1 ring-zinc-300 dark:ring-zinc-700 dark:ring-offset-zinc-950"
+                ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+              >
+              <div class="text-xs bg-zinc-900 dark:bg-zinc-800 text-zinc-100 px-3 py-2 rounded-md shadow-xl max-w-xs">
+                <p class="mono text-[11px] text-zinc-400">Produced by</p>
+                <p class="text-xs font-medium mt-0.5">Urgency rules · v3</p>
+                <p class="mono text-[11px] text-zinc-400 mt-1">
+                  Triage <span class="text-zinc-100">tri_8f4a2c</span> · 2m ago
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Filter chips  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Filter chips</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Dashed outline when available; solid fill with <span class="mono text-xs">×</span> when applied. Distinct from
+          Tag chips: filters are user-applied query state, Tags are produced data.
+        </p>
+        <div class="space-y-4 max-w-2xl">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Unapplied (available filters)
+            </h4>
+            <div class="flex flex-wrap gap-2">
+              <button
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              >
+                <i data-lucide="plus" class="w-3 h-3"></i>Account
+              </button>
+              <button
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              >
+                <i data-lucide="plus" class="w-3 h-3"></i>Pipeline
+              </button>
+              <button
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              >
+                <i data-lucide="plus" class="w-3 h-3"></i>Tag
+              </button>
+              <button
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              >
+                <i data-lucide="plus" class="w-3 h-3"></i>Status
+              </button>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Applied</h4>
+            <div class="flex flex-wrap gap-2">
+              <span
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
+                >Account: Personal<button class="hover:opacity-70"><i data-lucide="x" class="w-3 h-3"></i></button
+              ></span>
+              <span
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
+                >Tag: <span class="mono">urgency=high</span
+                ><button class="hover:opacity-70"><i data-lucide="x" class="w-3 h-3"></i></button
+              ></span>
+              <span
+                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
+                >Status: completed<button class="hover:opacity-70"><i data-lucide="x" class="w-3 h-3"></i></button
+              ></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Status indicators  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Status indicators</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Colored dot + label for Triage and Operator-run status.
+        </p>
+
+        <div class="flex flex-wrap gap-x-6 gap-y-2 items-center text-sm">
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-emerald-500"></span>completed</span
+          >
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-amber-500"></span>partial</span
+          >
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-red-500"></span>failed</span
+          >
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-zinc-400 animate-pulse"></span>running</span
+          >
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>pending</span
+          >
+          <span class="inline-flex items-center gap-2"
+            ><span class="w-2 h-2 rounded-full border border-zinc-400 dark:border-zinc-500"></span>skipped</span
+          >
+        </div>
+      </section>
+
+      <!-- ─────────────  Skeleton loader  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Skeleton loader</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          First load only (TanStack Query <span class="mono text-xs">isPending</span>). Refetches (<span
+            class="mono text-xs"
+            >isFetching</span
+          >) are silent. Shapes mirror the final layout so nothing shifts.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
+          <div class="divide-y divide-zinc-200 dark:divide-zinc-800">
+            <div class="p-3 flex items-center gap-3 animate-pulse">
+              <div class="w-32 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="flex-1 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="w-16 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+            </div>
+            <div class="p-3 flex items-center gap-3 animate-pulse">
+              <div class="w-28 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="flex-1 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="w-12 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+            </div>
+            <div class="p-3 flex items-center gap-3 animate-pulse">
+              <div class="w-36 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="flex-1 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+              <div class="w-16 h-3 rounded bg-zinc-200 dark:bg-zinc-800"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Empty state  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Empty state</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Quietly helpful with one warm beat. Eyebrow (<span class="mono">:)</span>) + title + one-line guidance +
+          primary action.
+        </p>
+
+        <div class="border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg py-14 text-center max-w-xl">
+          <div class="text-2xl mb-3 text-zinc-400">:)</div>
+          <p class="text-sm font-medium">No Triages yet.</p>
+          <p class="text-xs text-zinc-500 mt-1.5 mb-4">Add an Account and Grinbox will start watching mail.</p>
+          <button class="px-3 py-1.5 text-sm rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+            Add Account
+          </button>
+        </div>
+      </section>
+
+      <!-- ─────────────  Toasts  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Toast notifications</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Bottom-right via <span class="mono text-xs">sonner</span>. Auto-dismiss; close on hover. Severity icon left;
+          optional inline action in the body.
+        </p>
+
+        <div class="space-y-2 max-w-md">
+          <div
+            class="flex items-start gap-3 p-3 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg"
+          >
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"></i>
+            <div class="flex-1">
+              <p class="text-sm font-medium">Pipeline saved</p>
+              <p class="text-xs text-zinc-500 mt-0.5">
+                2 Operators updated. Triages will use the new version on the next poll.
+              </p>
+            </div>
+            <button class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div
+            class="flex items-start gap-3 p-3 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg"
+          >
+            <i data-lucide="alert-circle" class="w-4 h-4 text-red-500 mt-0.5 shrink-0"></i>
+            <div class="flex-1">
+              <p class="text-sm font-medium">Couldn't reach Gmail</p>
+              <p class="text-xs text-zinc-500 mt-0.5">
+                Last poll attempt failed. <button class="underline">Retry</button>
+              </p>
+            </div>
+            <button class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 4 — LAYOUT PRIMITIVES
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 4</p>
+        <h2 class="text-2xl font-semibold mt-1">Layout primitives</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Containers — cards, tabs, tables, modals — that hold content. Specified as configurable shells, composed many
+          times downstream.
+        </p>
+      </section>
+
+      <!-- ─────────────  Cards  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Cards</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          A card is a bordered, rounded container. Compose, don't proliferate variants — the FE team should build the
+          card they need from these rules, not request a new specimen for each surface.
+        </p>
+
+        <div class="space-y-6">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Anatomy</h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div
+                class="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
+              >
+                <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <p class="text-xs text-zinc-500 uppercase tracking-wider">Eyebrow</p>
+                    <p class="text-base font-semibold mt-0.5">Title</p>
+                  </div>
+                  <button class="text-zinc-400 hover:text-zinc-600">
+                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                  </button>
+                </div>
+                <div class="p-4 text-sm text-zinc-600 dark:text-zinc-400">
+                  Body content. Use whatever shape fits — prose, table, chips, key/value list.
+                </div>
+                <div
+                  class="px-4 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex justify-end gap-2"
+                >
+                  <button class="px-3 py-1.5 text-sm rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    Cancel
+                  </button>
+                  <button class="px-3 py-1.5 text-sm rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+                    Action
+                  </button>
+                </div>
+              </div>
+              <div class="text-xs text-zinc-500 mt-1 space-y-2">
+                <p class="font-medium text-zinc-700 dark:text-zinc-300">Optional regions</p>
+                <ul class="list-disc list-inside space-y-1 leading-relaxed">
+                  <li>
+                    <strong>Eyebrow</strong> — <code class="mono">text-xs uppercase tracking-wider text-zinc-500</code>.
+                    Use for label categories ("Alerts", "Triages last 24h").
+                  </li>
+                  <li>
+                    <strong>Title</strong> — <code class="mono">text-base semibold</code>. Skip when the body content (a
+                    big number, a chart) is itself the headline.
+                  </li>
+                  <li>
+                    <strong>Action slot</strong> — top-right of the header; menu (<code class="mono"
+                      >more-horizontal</code
+                    >) or a single button.
+                  </li>
+                  <li>
+                    <strong>Body</strong> — <code class="mono">p-4</code> default, <code class="mono">p-3</code> dense,
+                    <code class="mono">p-5</code> spacious.
+                  </li>
+                  <li>
+                    <strong>Footer</strong> — only when the card carries an action; tinted bg (<code class="mono"
+                      >bg-zinc-50 dark:bg-zinc-900/50</code
+                    >) + top border.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Variants</h4>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Default</p>
+                <p class="text-sm mt-2">Neutral container. Use for everything that isn't semantically loaded.</p>
+              </div>
+              <div class="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30">
+                <p class="text-xs font-medium uppercase tracking-wider text-red-700 dark:text-red-400">Alert</p>
+                <p class="text-sm mt-2 text-red-700 dark:text-red-400">
+                  Tinted border + bg. Pick the status color that matches (red / amber / emerald).
+                </p>
+              </div>
+              <div class="p-4 rounded-lg bg-zinc-100 dark:bg-zinc-900">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Muted</p>
+                <p class="text-sm mt-2">No border, tinted fill. For grouping content inside a larger card or panel.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Composition rules</h4>
+            <div class="text-sm text-zinc-600 dark:text-zinc-400 space-y-2 max-w-2xl">
+              <p>
+                Cards stack with <code class="mono text-xs">gap-4</code> in columns or
+                <code class="mono text-xs">grid grid-cols-N gap-4</code> in grids. Match column count to viewport;
+                collapse to one column below <code class="mono text-xs">md</code>.
+              </p>
+              <p>
+                For number-dominated cards (Dashboard tiles), use a small uppercase eyebrow and let the value (<code
+                  class="mono text-xs"
+                  >text-3xl semibold</code
+                >) be the headline. No title.
+              </p>
+              <p>
+                For action cards (forms, configuration panels), use the full header + body + footer pattern with the
+                action footer tinted.
+              </p>
+              <p>
+                For alert cards, render <em>only</em> when non-zero. An always-on red card normalizes alarm and stops
+                being scannable.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Tabs  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Tabs</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Underline style. Active tab uses the violet accent; counts render in a muted pill on the right of the label.
+        </p>
+        <div class="border-b border-zinc-200 dark:border-zinc-800 max-w-2xl flex gap-6">
+          <button
+            class="px-1 py-2.5 text-sm font-medium border-b-2 border-violet-500 text-violet-600 dark:text-violet-400 -mb-px"
+          >
+            Overview
+          </button>
+          <button
+            class="px-1 py-2.5 text-sm border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Tags <span class="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">12</span>
+          </button>
+          <button
+            class="px-1 py-2.5 text-sm border-b-2 border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Triage history <span class="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">4</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ─────────────  Tables  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Tables</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          TanStack Table. Column headers double as sort buttons. Comfortable density (~48px row, 15–20 rows above the
+          fold at 1080p). Pagination lives in the footer.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Column-header sort affordance
+            </h4>
+            <div class="flex items-center gap-6 text-[11px] uppercase tracking-wider text-zinc-500">
+              <button class="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-300">
+                From <i data-lucide="chevrons-up-down" class="w-3 h-3 text-zinc-300 dark:text-zinc-700"></i>
+              </button>
+              <button class="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-300">
+                Subject <i data-lucide="chevrons-up-down" class="w-3 h-3 text-zinc-300 dark:text-zinc-700"></i>
+              </button>
+              <button class="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+                Time <i data-lucide="arrow-down" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <p class="text-xs text-zinc-500 mt-2">
+              Idle: <code class="mono">chevrons-up-down</code>, zinc-300/700. Active asc:
+              <code class="mono">arrow-up</code> in violet. Active desc: <code class="mono">arrow-down</code> in violet.
+            </p>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Pagination footer</h4>
+            <div class="flex items-center justify-between text-sm max-w-2xl">
+              <span class="text-xs text-zinc-500">Showing 1–20 of 187</span>
+              <div class="flex items-center gap-1">
+                <button class="p-1.5 rounded-md text-zinc-300 dark:text-zinc-700 cursor-not-allowed" disabled>
+                  <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button class="w-8 h-8 text-xs rounded-md bg-violet-500 text-white">1</button>
+                <button class="w-8 h-8 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">2</button>
+                <button class="w-8 h-8 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">3</button>
+                <span class="px-1 text-zinc-500">…</span>
+                <button class="w-8 h-8 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">10</button>
+                <button class="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500">
+                  <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Modal & Sheet  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Modal &amp; Sheet</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Non-destructive surfaces. <span class="mono text-xs">Dialog</span> for short forms;
+          <span class="mono text-xs">Sheet</span> (slide-in from right) for long content such as Add Operator config.
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Dialog</h4>
+            <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg p-5 bg-white dark:bg-zinc-900 shadow-xl">
+              <h3 class="text-base font-semibold mb-1">Re-authorize Account</h3>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                Gmail's token has expired. You'll be redirected to Google.
+              </p>
+              <div class="flex justify-end gap-2">
+                <button
+                  class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <button class="px-3 py-1.5 text-sm rounded-md bg-violet-500 hover:bg-violet-600 text-white">
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Sheet (slide-in from right)
+            </h4>
+            <div
+              class="border-l-4 border-zinc-300 dark:border-zinc-700 rounded-r-lg bg-white dark:bg-zinc-900 shadow-xl"
+            >
+              <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                <p class="text-sm font-semibold">Add Operator</p>
+                <button class="text-zinc-400 hover:text-zinc-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+              </div>
+              <div class="p-4 space-y-2">
+                <p class="text-xs text-zinc-500 mb-2">Pick a type</p>
+                <button
+                  class="w-full text-left p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                >
+                  <div class="font-medium text-sm">Rule-based Tagger</div>
+                  <div class="text-xs text-zinc-500 mt-0.5">Deterministic; emits one Tag.</div>
+                </button>
+                <button
+                  class="w-full text-left p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                >
+                  <div class="font-medium text-sm">LLM Tagger</div>
+                  <div class="text-xs text-zinc-500 mt-0.5">One LLM call; many Tags from declared enums.</div>
+                </button>
+                <button
+                  class="w-full text-left p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                >
+                  <div class="font-medium text-sm">Notify</div>
+                  <div class="text-xs text-zinc-500 mt-0.5">Push via Pushover when triggered.</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Confirmation dialog  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Confirmation dialog</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          shadcn <span class="mono text-xs">AlertDialog</span>. Destructive actions only (delete Operator / Pipeline /
+          Account).
+        </p>
+
+        <div
+          class="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 max-w-md bg-white dark:bg-zinc-900 shadow-xl"
+        >
+          <h3 class="text-base font-semibold mb-1">Delete this Operator?</h3>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+            <span class="font-medium text-zinc-700 dark:text-zinc-300">Urgency rules</span> produces the
+            <span class="mono text-xs">urgency</span> Tag. Deleting it will reject the Pipeline save if any downstream
+            Operator depends on this Tag.
+          </p>
+          <div class="flex justify-end gap-2">
+            <button
+              class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Cancel
+            </button>
+            <button class="px-3 py-1.5 text-sm rounded-md bg-red-500 hover:bg-red-600 text-white">
+              Delete Operator
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 5 — APP SHELL
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 5</p>
+        <h2 class="text-2xl font-semibold mt-1">App shell</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Persistent chrome — sidebar on the left, content on the right, no top bar. Sticky save footer appears inside
+          editor panes when dirty.
+        </p>
+      </section>
+
+      <!-- ─────────────  Sidebar  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Sidebar</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          240px expanded · 56px icon-only. Auto-collapses below <span class="mono text-xs">md</span> (768px). Footer
+          holds collapse toggle (left) and theme toggle (right).
+        </p>
+
+        <div class="flex gap-4 items-start">
+          <nav
+            class="w-60 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 flex flex-col h-[400px]"
+          >
+            <div class="p-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
+              <div
+                class="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-semibold"
+              >
+                G
+              </div>
+              <span class="font-semibold text-sm">Grinbox</span>
+            </div>
+            <ul class="flex-1 p-3 space-y-0.5 text-sm">
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  ><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 font-medium cursor-pointer"
+                  ><i data-lucide="inbox" class="w-4 h-4"></i>Inbox</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  ><i data-lucide="workflow" class="w-4 h-4"></i>Pipelines</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  ><i data-lucide="mail" class="w-4 h-4"></i>Accounts</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  ><i data-lucide="activity" class="w-4 h-4"></i>Activity Log</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  ><i data-lucide="settings" class="w-4 h-4"></i>Settings</a
+                >
+              </li>
+              <li>
+                <a
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md text-zinc-500 dark:text-zinc-500 cursor-not-allowed"
+                  ><i data-lucide="bar-chart-3" class="w-4 h-4"></i>Metrics<span
+                    class="ml-auto text-[10px] uppercase tracking-wide"
+                    >soon</span
+                  ></a
+                >
+              </li>
+            </ul>
+            <div class="p-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+              <button class="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500" title="Collapse">
+                <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+              </button>
+              <button
+                class="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+                title="Toggle theme"
+              >
+                <i data-lucide="sun-moon" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </nav>
+
+          <nav class="w-14 border border-zinc-200 dark:border-zinc-800 rounded-lg p-2 bg-white dark:bg-zinc-900">
+            <div
+              class="w-7 h-7 mx-auto rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-xs font-semibold mb-3"
+            >
+              G
+            </div>
+            <ul class="space-y-1">
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Dashboard"
+                  ><i data-lucide="layout-dashboard" class="w-4 h-4"></i
+                ></a>
+              </li>
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 cursor-pointer"
+                  title="Inbox"
+                  ><i data-lucide="inbox" class="w-4 h-4"></i
+                ></a>
+              </li>
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Pipelines"
+                  ><i data-lucide="workflow" class="w-4 h-4"></i
+                ></a>
+              </li>
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Accounts"
+                  ><i data-lucide="mail" class="w-4 h-4"></i
+                ></a>
+              </li>
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Activity Log"
+                  ><i data-lucide="activity" class="w-4 h-4"></i
+                ></a>
+              </li>
+              <li>
+                <a
+                  class="flex items-center justify-center w-9 h-9 rounded-md mx-auto hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Settings"
+                  ><i data-lucide="settings" class="w-4 h-4"></i
+                ></a>
+              </li>
+            </ul>
+          </nav>
+
+          <div class="flex-1 text-xs text-zinc-500 mt-1 space-y-3">
+            <p>
+              Active item:
+              <code class="mono text-[11px] px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800"
+                >bg-violet-50 / dark:bg-violet-500/15</code
+              >
+              + violet text, font-medium.
+            </p>
+            <p>
+              Hover:
+              <code class="mono text-[11px] px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800"
+                >bg-zinc-100 / dark:bg-zinc-800</code
+              >.
+            </p>
+            <p class="mono text-[11px] leading-relaxed">
+              Lucide icons:<br />
+              Dashboard&nbsp;&nbsp;→ layout-dashboard<br />
+              Inbox&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ inbox<br />
+              Pipelines&nbsp;&nbsp;&nbsp;→ workflow<br />
+              Accounts&nbsp;&nbsp;&nbsp;&nbsp;→ mail<br />
+              Activity&nbsp;&nbsp;&nbsp;&nbsp;→ activity<br />
+              Settings&nbsp;&nbsp;&nbsp;&nbsp;→ settings<br />
+              Metrics&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ bar-chart-3
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Sticky save footer  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Sticky save footer</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Appears when an editor pane has unsaved changes. Pinned to the bottom of the editor container, not the
+          viewport.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
+          <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold">Urgency rules</p>
+              <p class="text-xs text-zinc-500 mt-0.5">Rule-based Tagger · produces <span class="mono">urgency</span></p>
+            </div>
+            <span class="text-xs text-zinc-500">v3</span>
+          </div>
+          <div class="p-4 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <p>Rule list editor (drag-to-reorder)…</p>
+            <p>Live preview pane (right side)…</p>
+          </div>
+          <div
+            class="px-4 py-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-between"
+          >
+            <span class="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Unsaved changes
+            </span>
+            <div class="flex gap-2">
+              <button
+                class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button class="px-3 py-1.5 text-sm rounded-md bg-violet-500 hover:bg-violet-600 text-white">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 6 — INBOX & MESSAGES
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 6</p>
+        <h2 class="text-2xl font-semibold mt-1">Inbox &amp; Messages</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          The centerpiece. Inbox is the cross-Account browse surface; Message detail is "why did Grinbox do that?" with
+          three tabs (Overview, Tags, Triage history).
+        </p>
+      </section>
+
+      <!-- ─────────────  Inbox header  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Inbox header</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Search input + applied filter chips + available filter chips, on a single row above the table.
+        </p>
+
+        <div class="space-y-3 max-w-3xl">
+          <div class="flex items-center gap-3">
+            <div class="relative flex-1 max-w-md">
+              <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400"></i>
+              <input
+                type="text"
+                placeholder="Search from / subject / snippet…"
+                class="w-full pl-8 pr-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              />
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <span
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900"
+              >Account: Personal<button class="hover:opacity-70"><i data-lucide="x" class="w-3 h-3"></i></button
+            ></span>
+            <button
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+            >
+              <i data-lucide="plus" class="w-3 h-3"></i>Pipeline
+            </button>
+            <button
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+            >
+              <i data-lucide="plus" class="w-3 h-3"></i>Tag
+            </button>
+            <button
+              class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+            >
+              <i data-lucide="plus" class="w-3 h-3"></i>Status
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Account badge & picker  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Account badge &amp; picker</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Per-account display badge — a glyph (default <span class="mono text-xs">mail</span>) in a Tag-palette color —
+          marks a Message's source account in the Inbox hanging indent and the account list. Set per account in settings
+          via an icon grid + a color row (with a neutral option); colors reuse the Tag-chip hues. Selected option
+          carries a ring.
+        </p>
+
+        <div class="space-y-6">
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Badge — icon / color combos
+            </h4>
+            <div class="flex flex-wrap items-center gap-2">
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                title="Neutral · mail"
+              >
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300"
+                title="Sky · briefcase"
+              >
+                <i data-lucide="briefcase" class="w-4 h-4"></i>
+              </div>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                title="Amber · star"
+              >
+                <i data-lucide="star" class="w-4 h-4"></i>
+              </div>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                title="Violet · code"
+              >
+                <i data-lucide="code" class="w-4 h-4"></i>
+              </div>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                title="Emerald · home"
+              >
+                <i data-lucide="home" class="w-4 h-4"></i>
+              </div>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                title="Rose · heart"
+              >
+                <i data-lucide="heart" class="w-4 h-4"></i>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Icon picker (briefcase selected)
+            </h4>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="mail" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="inbox" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-violet-500 ring-1 ring-violet-500 p-0.5">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="user" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="home" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="star" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="bell" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="building" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="code" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="flag" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="heart" class="w-4 h-4"></i>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Color picker (sky selected · briefcase glyph)
+            </h4>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                title="Neutral"
+              >
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-violet-500 ring-1 ring-violet-500 p-0.5" title="sky">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="violet">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="emerald">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="amber">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="rose">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="fuchsia">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="teal">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+              <button class="rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5" title="indigo">
+                <div
+                  class="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"
+                >
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Inbox row  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Inbox row</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          A per-Message <strong>account icon</strong> sits in a hanging indent on the far left — top-aligned so it spans
+          the metadata <em>and</em> the tag row, marking the source account at a glance when multiple accounts
+          interleave in one list. It defaults to a mail glyph; the icon + color are set per-account in account settings.
+          To its right: the primary row (From · Subject · Status · Time; default sort Time/received desc), then Tags on
+          their own full-width wrapping row with a bit of breathing room above. Messages with no Tags show only the
+          primary row. The two accounts below (neutral vs. violet) show how interleaved rows stay scannable.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
+          <div
+            class="px-3 py-2 text-[11px] uppercase tracking-wider text-zinc-500 flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800"
+          >
+            <div class="w-7 shrink-0"></div>
+            <div class="flex-1 grid grid-cols-[180px_1fr_120px_64px] gap-3">
+              <button class="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-300 text-left">
+                From <i data-lucide="chevrons-up-down" class="w-3 h-3 text-zinc-300 dark:text-zinc-700"></i>
+              </button>
+              <button class="inline-flex items-center gap-1 hover:text-zinc-700 dark:hover:text-zinc-300 text-left">
+                Subject <i data-lucide="chevrons-up-down" class="w-3 h-3 text-zinc-300 dark:text-zinc-700"></i>
+              </button>
+              <div>Status</div>
+              <button class="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 justify-end">
+                Time <i data-lucide="arrow-down" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+          <div class="divide-y divide-zinc-200 dark:divide-zinc-800 text-sm">
+            <!-- Heavily-tagged · account A (default mail glyph) · Tags wrap on their own row -->
+            <div class="px-3 py-2.5 flex items-start gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+              <div
+                class="mt-0.5 w-7 h-7 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center"
+                title="Account: Personal Gmail"
+              >
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="grid grid-cols-[180px_1fr_120px_64px] gap-3 items-center">
+                  <div class="truncate">Sarah Chen</div>
+                  <div class="truncate font-medium">Q3 budget approval needed</div>
+                  <span class="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>completed</span
+                  >
+                  <div class="text-xs text-zinc-500 text-right">2m</div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1">
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c0 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c1 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c2 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">category:</span><span class="font-medium">bills</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c3 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">sentiment:</span><span class="font-medium">neutral</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c4 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">request</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c5 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">project:</span><span class="font-medium">apollo</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c6 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">thread:</span><span class="font-medium">root</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c7 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">followup:</span><span class="font-medium">expected</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c0 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">domain:</span><span class="font-medium">finance</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c2 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">assignee:</span><span class="font-medium">sean</span></span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- A couple of Tags · account B (violet) shows interleaving -->
+            <div class="px-3 py-2.5 flex items-start gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+              <div
+                class="mt-0.5 w-7 h-7 shrink-0 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center"
+                title="Account: Work"
+              >
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="grid grid-cols-[180px_1fr_120px_64px] gap-3 items-center">
+                  <div class="truncate">Mark Foster</div>
+                  <div class="truncate">Re: launch retro notes</div>
+                  <span class="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>partial</span
+                  >
+                  <div class="text-xs text-zinc-500 text-right">1h</div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1">
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c5 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">project:</span><span class="font-medium">apollo</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c4 whitespace-nowrap"
+                    ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">discussion</span></span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- No Tags · account A · primary row only -->
+            <div class="px-3 py-2.5 flex items-start gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+              <div
+                class="mt-0.5 w-7 h-7 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center"
+                title="Account: Personal Gmail"
+              >
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="grid grid-cols-[180px_1fr_120px_64px] gap-3 items-center">
+                  <div class="truncate text-zinc-500">GitHub</div>
+                  <div class="truncate">Security alert: dependabot</div>
+                  <span class="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                    ><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>failed</span
+                  >
+                  <div class="text-xs text-zinc-500 text-right">3h</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Message detail header  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Message detail header</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Subject as page title (<code class="mono text-xs">text-xl semibold</code>) · from + date + thread context
+          muted below · primary action (Replay) on the right · compact Tag summary as the final row.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <h1 class="text-xl font-semibold">Q3 budget approval needed</h1>
+              <div class="mt-1.5 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-500">
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">Sarah Chen</span>
+                <span class="mono">&lt;sarah@example.com&gt;</span>
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span>May 29, 2026 · 14:23</span>
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span class="inline-flex items-center gap-1"
+                  ><i data-lucide="messages-square" class="w-3 h-3"></i>thread of 4</span
+                >
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span class="mono">msg_8f4a2c</span>
+              </div>
+            </div>
+            <button
+              class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1.5 shrink-0"
+            >
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>Replay
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+              ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+            >
+            <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+              ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+            >
+            <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+              ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+            >
+            <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c4"
+              ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">request</span></span
+            >
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Overview tab  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Overview tab — Tags grouped by provenance</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Current Tags from the latest settled Triage, grouped by the Operator that produced each. Section header
+          carries Operator type icon + name + version + Triage ID.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 p-4">
+          <div class="space-y-3">
+            <div>
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">Classify</span>
+                <span class="mono">v4</span>
+                <span class="text-zinc-400">·</span>
+                <span class="mono">tri_8f4a2c</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pl-5">
+                <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                  ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                >
+                <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c4"
+                  ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">request</span></span
+                >
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
+                <i data-lucide="filter" class="w-3 h-3"></i>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">Urgency rules</span>
+                <span class="mono">v3</span>
+                <span class="text-zinc-400">·</span>
+                <span class="mono">tri_8f4a2c</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pl-5">
+                <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                  ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+                >
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
+                <i data-lucide="filter" class="w-3 h-3"></i>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">VIP rules</span>
+                <span class="mono">v2</span>
+                <span class="text-zinc-400">·</span>
+                <span class="mono">tri_8f4a2c</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pl-5">
+                <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+                  ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Tags tab  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Tags tab — cross-Triage history</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Every Tag every Triage produced, newest Triage first. Distinct from Overview (current Tags only). Each
+          Operator name links to the exact version (<code class="mono text-xs">v3</code>) that produced the Tag.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 p-4">
+          <div class="space-y-5">
+            <div class="border-l-2 border-violet-500 pl-4">
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-2.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">2m ago · live</span>
+                <span class="mono">tri_8f4a2c</span>
+                <span class="ml-auto text-[10px] uppercase tracking-wider text-violet-600 dark:text-violet-400"
+                  >current</span
+                >
+              </div>
+              <div class="space-y-1.5 text-sm">
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Classify <span class="mono">v4</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                    ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c4"
+                    ><span class="opacity-70 mr-1">intent:</span><span class="font-medium">request</span></span
+                  >
+                </div>
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Urgency rules <span class="mono">v3</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                    ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">high</span></span
+                  >
+                </div>
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >VIP rules <span class="mono">v2</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+                    ><span class="opacity-70 mr-1">is_vip:</span><span class="font-medium">yes</span></span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="border-l-2 border-zinc-200 dark:border-zinc-800 pl-4">
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-2.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">1h ago · replay</span>
+                <span class="mono">tri_3b91f7</span>
+              </div>
+              <div class="space-y-1.5 text-sm">
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Classify <span class="mono">v3</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                    ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                  >
+                </div>
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Urgency rules <span class="mono">v3</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                    ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">med</span></span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="border-l-2 border-zinc-200 dark:border-zinc-800 pl-4">
+              <div class="flex items-center gap-2 text-xs text-zinc-500 mb-2.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span class="font-medium text-zinc-700 dark:text-zinc-300">3h ago · live</span>
+                <span class="mono">tri_7d2e09</span>
+              </div>
+              <div class="space-y-1.5 text-sm">
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Classify <span class="mono">v3</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                    ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                  >
+                </div>
+                <div class="flex items-center gap-3">
+                  <a
+                    class="text-xs text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 w-36 truncate flex-none"
+                    >Urgency rules <span class="mono">v2</span></a
+                  >
+                  <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                    ><span class="opacity-70 mr-1">urgency:</span><span class="font-medium">med</span></span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Triage history tab  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Triage history tab — master-detail</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          List of Triages on the left (latest selected by default); selected Triage's Operator runs + event log on the
+          right.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+          <div class="grid grid-cols-[240px_1fr] gap-0 min-h-[280px]">
+            <div
+              class="border-r border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-800 text-sm"
+            >
+              <button class="w-full text-left p-3 bg-violet-50 dark:bg-violet-500/10 border-l-2 border-violet-500">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span
+                  ><span class="font-medium">2m ago · live</span>
+                </div>
+                <div class="text-xs text-zinc-500 mt-0.5 mono">tri_8f4a2c</div>
+              </button>
+              <button class="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>1h ago · replay</span>
+                </div>
+                <div class="text-xs text-zinc-500 mt-0.5 mono">tri_3b91f7</div>
+              </button>
+              <button class="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>3h ago · live</span>
+                </div>
+                <div class="text-xs text-zinc-500 mt-0.5 mono">tri_7d2e09</div>
+              </button>
+              <button class="w-full text-left p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span><span>1d ago · live</span>
+                </div>
+                <div class="text-xs text-zinc-500 mt-0.5 mono">tri_4a8c11</div>
+              </button>
+            </div>
+            <div class="p-4 space-y-4">
+              <div>
+                <h5 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Operator runs</h5>
+                <div class="space-y-1.5">
+                  <div
+                    class="grid grid-cols-[1fr_60px_80px] gap-2 items-center text-xs px-2 py-1.5 rounded bg-zinc-50 dark:bg-zinc-800/50"
+                  >
+                    <span class="font-medium">Classify (LLM)</span><span class="text-zinc-500">1.2s</span
+                    ><span class="text-zinc-500 mono text-right">412 tok</span>
+                  </div>
+                  <div
+                    class="grid grid-cols-[1fr_60px_80px] gap-2 items-center text-xs px-2 py-1.5 rounded bg-zinc-50 dark:bg-zinc-800/50"
+                  >
+                    <span class="font-medium">Urgency rules</span><span class="text-zinc-500">3ms</span
+                    ><span class="text-zinc-500 text-right">—</span>
+                  </div>
+                  <div
+                    class="grid grid-cols-[1fr_60px_80px] gap-2 items-center text-xs px-2 py-1.5 rounded bg-zinc-50 dark:bg-zinc-800/50"
+                  >
+                    <span class="font-medium">VIP rules</span><span class="text-zinc-500">2ms</span
+                    ><span class="text-zinc-500 text-right">—</span>
+                  </div>
+                  <div
+                    class="grid grid-cols-[1fr_60px_80px] gap-2 items-center text-xs px-2 py-1.5 rounded bg-zinc-50 dark:bg-zinc-800/50"
+                  >
+                    <span class="font-medium">Notify on high urgency</span><span class="text-zinc-500">98ms</span
+                    ><span class="text-zinc-500 text-right">1 call</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h5 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Event log</h5>
+                <div class="space-y-1 text-xs mono">
+                  <div class="flex gap-3">
+                    <span class="text-zinc-400">14:23:09</span
+                    ><span>Tag set <span class="text-emerald-600 dark:text-emerald-400">urgency=high</span></span>
+                  </div>
+                  <div class="flex gap-3">
+                    <span class="text-zinc-400">14:23:09</span
+                    ><span>Tag set <span class="text-emerald-600 dark:text-emerald-400">is_vip=yes</span></span>
+                  </div>
+                  <div class="flex gap-3">
+                    <span class="text-zinc-400">14:23:10</span
+                    ><span
+                      >Resource op
+                      <span class="text-zinc-700 dark:text-zinc-300">pushover_api.send_notification</span>
+                      succeeded</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 7 — PIPELINES & OPERATORS
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 7</p>
+        <h2 class="text-2xl font-semibold mt-1">Pipelines &amp; Operators</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Configuration surfaces. The Operator editor is the second most-used surface after Inbox.
+        </p>
+      </section>
+
+      <!-- ─────────────  Pipeline list  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Pipeline list</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Index view. Table layout (same primitives as Inbox); click a row → Pipeline detail.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900">
+          <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold">Pipelines</h3>
+              <p class="text-xs text-zinc-500 mt-0.5">3 total</p>
+            </div>
+            <button
+              class="text-sm px-3 py-1.5 rounded-md bg-violet-500 hover:bg-violet-600 text-white inline-flex items-center gap-1.5"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>New Pipeline
+            </button>
+          </div>
+          <div
+            class="px-3 py-2 text-[11px] uppercase tracking-wider text-zinc-500 grid grid-cols-[1fr_90px_90px_120px_110px] gap-3 border-b border-zinc-200 dark:border-zinc-800"
+          >
+            <div>Name</div>
+            <div class="text-right">Accounts</div>
+            <div class="text-right">Operators</div>
+            <div>Last edited</div>
+            <div>Status</div>
+          </div>
+          <div class="divide-y divide-zinc-200 dark:divide-zinc-800 text-sm">
+            <a
+              class="px-3 py-2.5 grid grid-cols-[1fr_90px_90px_120px_110px] gap-3 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+            >
+              <div class="font-medium">Personal mail v2</div>
+              <div class="text-right text-zinc-500">2</div>
+              <div class="text-right text-zinc-500">5</div>
+              <div class="text-xs text-zinc-500">2d ago</div>
+              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>healthy</span
+              >
+            </a>
+            <a
+              class="px-3 py-2.5 grid grid-cols-[1fr_90px_90px_120px_110px] gap-3 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+            >
+              <div class="font-medium">Archive flow</div>
+              <div class="text-right text-zinc-500">1</div>
+              <div class="text-right text-zinc-500">3</div>
+              <div class="text-xs text-zinc-500">2w ago</div>
+              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                ><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>2 limit hits</span
+              >
+            </a>
+            <a
+              class="px-3 py-2.5 grid grid-cols-[1fr_90px_90px_120px_110px] gap-3 items-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+            >
+              <div class="font-medium">Newsletter triage</div>
+              <div class="text-right text-zinc-500">0</div>
+              <div class="text-right text-zinc-500">2</div>
+              <div class="text-xs text-zinc-500">1mo ago</div>
+              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-500">unassigned</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Pipeline detail  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Pipeline detail</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Topologically ordered Operator list. Mutually-independent Operators cluster under a violet vertical rule +
+          "Independent" label. Read-only Tag-key registry at the bottom.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-900 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-semibold">Personal mail v2</h3>
+              <p class="text-xs text-zinc-500 mt-0.5">active on 2 Accounts · 5 Operators</p>
+            </div>
+            <button
+              class="text-sm px-3 py-1.5 rounded-md bg-violet-500 hover:bg-violet-600 text-white inline-flex items-center gap-1.5"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>Add Operator
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div
+              class="flex items-center gap-2 p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+            >
+              <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+              <i data-lucide="sparkles" class="w-4 h-4 text-zinc-500"></i>
+              <div class="flex-1">
+                <div class="text-sm font-medium">Classify</div>
+                <div class="text-xs text-zinc-500">
+                  LLM Tagger · produces <span class="mono">category</span>, <span class="mono">intent</span>
+                </div>
+              </div>
+              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-500"
+                ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>healthy</span
+              >
+            </div>
+
+            <div class="flex items-stretch gap-3">
+              <div class="w-1 bg-violet-300 dark:bg-violet-600 rounded-full flex-none"></div>
+              <div class="flex-1">
+                <div class="text-[10px] uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-1.5">
+                  Independent — runs in parallel
+                </div>
+                <div class="space-y-2">
+                  <div
+                    class="flex items-center gap-2 p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+                    <i data-lucide="filter" class="w-4 h-4 text-zinc-500"></i>
+                    <div class="flex-1">
+                      <div class="text-sm font-medium">Urgency rules</div>
+                      <div class="text-xs text-zinc-500">Rule-based · produces <span class="mono">urgency</span></div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 text-xs text-zinc-500"
+                      ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>healthy</span
+                    >
+                  </div>
+                  <div
+                    class="flex items-center gap-2 p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  >
+                    <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+                    <i data-lucide="filter" class="w-4 h-4 text-zinc-500"></i>
+                    <div class="flex-1">
+                      <div class="text-sm font-medium">VIP rules</div>
+                      <div class="text-xs text-zinc-500">Rule-based · produces <span class="mono">is_vip</span></div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 text-xs text-zinc-500"
+                      ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>healthy</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="flex items-center gap-2 p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+            >
+              <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+              <i data-lucide="bell" class="w-4 h-4 text-zinc-500"></i>
+              <div class="flex-1">
+                <div class="text-sm font-medium">Notify on high urgency</div>
+                <div class="text-xs text-zinc-500">
+                  Action · consumes <span class="mono">urgency=high</span>, <span class="mono">is_vip=yes</span>
+                </div>
+              </div>
+              <span class="inline-flex items-center gap-1.5 text-xs text-zinc-500"
+                ><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>2 limit hits today</span
+              >
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Tag-key registry
+              <span class="text-zinc-400 normal-case font-normal">(read-only · derived from Operator outputs)</span>
+            </h4>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c2"
+                ><span class="font-medium">category</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c4"
+                ><span class="font-medium">intent</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c0"
+                ><span class="font-medium">urgency</span></span
+              >
+              <span class="inline-flex items-center text-xs px-2.5 py-1 rounded-full chip-c1"
+                ><span class="font-medium">is_vip</span></span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  Rule editor + diff marker  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Rule editor + diff marker</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Editor (left) and side-by-side live preview (right). Preview marks affected Messages with a 4px colored left
+          border — amber when the new value is higher-urgency, emerald when lower.
+        </p>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+            <div
+              class="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 text-xs font-semibold uppercase tracking-wider text-zinc-500"
+            >
+              Rules · output → <span class="mono normal-case font-normal">urgency</span>
+            </div>
+            <div class="divide-y divide-zinc-200 dark:divide-zinc-800 text-sm">
+              <div class="p-2.5 grid grid-cols-[20px_1fr_16px_auto_24px] gap-2 items-center">
+                <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i></span>
+                <input
+                  type="text"
+                  value='subject contains "approval"'
+                  class="mono text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+                <span class="text-zinc-400 text-center">→</span>
+                <select class="text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-transparent">
+                  <option>high</option>
+                  <option>med</option>
+                  <option>low</option>
+                </select>
+                <button class="text-zinc-400 hover:text-red-500">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <div class="p-2.5 grid grid-cols-[20px_1fr_16px_auto_24px] gap-2 items-center">
+                <span class="cursor-grab text-zinc-400"><i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i></span>
+                <input
+                  type="text"
+                  value="from.domain in trusted_domains"
+                  class="mono text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+                <span class="text-zinc-400 text-center">→</span>
+                <select class="text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-transparent">
+                  <option>med</option>
+                </select>
+                <button class="text-zinc-400 hover:text-red-500">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <div
+                class="p-2.5 grid grid-cols-[20px_1fr_16px_auto_24px] gap-2 items-center bg-zinc-50/60 dark:bg-zinc-900/40"
+              >
+                <span class="text-zinc-300 dark:text-zinc-700"><i data-lucide="lock" class="w-3.5 h-3.5"></i></span>
+                <span class="mono text-xs px-2 py-1 text-zinc-500">catch-all</span>
+                <span class="text-zinc-400 text-center">→</span>
+                <select class="text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-transparent">
+                  <option>low</option>
+                </select>
+                <span></span>
+              </div>
+            </div>
+            <div class="px-3 py-2 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+              <button
+                class="text-xs text-violet-600 dark:text-violet-400 hover:underline inline-flex items-center gap-1"
+              >
+                <i data-lucide="plus" class="w-3 h-3"></i>Add rule
+              </button>
+            </div>
+          </div>
+
+          <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+            <div
+              class="px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 text-xs font-semibold uppercase tracking-wider text-zinc-500"
+            >
+              Preview · would change
+              <span class="text-zinc-700 dark:text-zinc-300 normal-case font-normal">3 Messages</span>
+            </div>
+            <div class="divide-y divide-zinc-200 dark:divide-zinc-800 text-sm">
+              <div class="p-2.5 flex items-center gap-3 border-l-4 border-amber-500">
+                <div class="flex-1 truncate">
+                  <span class="text-zinc-500 text-xs mr-2">Sarah Chen</span>Q3 budget approval
+                </div>
+                <span class="text-xs mono text-zinc-500 line-through">med</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 text-zinc-400"></i>
+                <span class="text-xs mono font-medium text-amber-700 dark:text-amber-400">high</span>
+              </div>
+              <div class="p-2.5 flex items-center gap-3 border-l-4 border-amber-500">
+                <div class="flex-1 truncate">
+                  <span class="text-zinc-500 text-xs mr-2">Tim K.</span>Approval needed for Q3 budget
+                </div>
+                <span class="text-xs mono text-zinc-500 line-through">low</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 text-zinc-400"></i>
+                <span class="text-xs mono font-medium text-amber-700 dark:text-amber-400">high</span>
+              </div>
+              <div class="p-2.5 flex items-center gap-3 border-l-4 border-emerald-500">
+                <div class="flex-1 truncate"><span class="text-zinc-500 text-xs mr-2">Stripe</span>Invoice paid</div>
+                <span class="text-xs mono text-zinc-500 line-through">med</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 text-zinc-400"></i>
+                <span class="text-xs mono font-medium text-emerald-700 dark:text-emerald-400">low</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  LLM Tagger editor  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">LLM Tagger editor</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Model picker as a segmented control with tier badges (Haiku = fast default; Sonnet reserved for low-volume
+          generative work). Mono prompt textarea. Output Tag enum values render as inline-removable chips. Sample Tags
+          from recent runs preview at the bottom.
+        </p>
+
+        <div
+          class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 p-4 space-y-4 max-w-2xl"
+        >
+          <div>
+            <label class="text-sm font-medium mb-2 block">Model</label>
+            <div class="inline-flex border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden text-sm">
+              <button class="px-3 py-1.5 bg-violet-500 text-white inline-flex items-center gap-2">
+                Claude Haiku <span class="text-[10px] uppercase px-1.5 rounded bg-white/20">fast</span>
+              </button>
+              <button class="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-2">
+                Claude Sonnet
+                <span class="text-[10px] uppercase px-1.5 rounded bg-zinc-200 dark:bg-zinc-700">capable</span>
+              </button>
+            </div>
+            <p class="text-xs text-zinc-500 mt-2">
+              Haiku is the default for per-Message Tagging. Reserve Sonnet for Digest delivery and other low-volume
+              generative work.
+            </p>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium mb-1.5 block">Prompt template</label>
+            <textarea
+              rows="4"
+              class="mono w-full text-xs px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            >
+Classify this Message.
+
+Subject: {{subject}}
+From: {{from}}
+Snippet: {{snippet}}</textarea
+            >
+          </div>
+
+          <div>
+            <label class="text-sm font-medium mb-1.5 block">Output Tags</label>
+            <div class="space-y-2 text-sm">
+              <div class="grid grid-cols-[120px_1fr_24px] gap-2 items-center">
+                <input
+                  value="category"
+                  class="mono text-xs px-2 py-1.5 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+                <div
+                  class="flex flex-wrap gap-1 items-center px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700"
+                >
+                  <span
+                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    >bills<button class="text-zinc-400 hover:text-zinc-600">
+                      <i data-lucide="x" class="w-2.5 h-2.5"></i></button
+                  ></span>
+                  <span
+                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    >work<button class="text-zinc-400 hover:text-zinc-600">
+                      <i data-lucide="x" class="w-2.5 h-2.5"></i></button
+                  ></span>
+                  <span
+                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    >personal<button class="text-zinc-400 hover:text-zinc-600">
+                      <i data-lucide="x" class="w-2.5 h-2.5"></i></button
+                  ></span>
+                  <span
+                    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    >other<button class="text-zinc-400 hover:text-zinc-600">
+                      <i data-lucide="x" class="w-2.5 h-2.5"></i></button
+                  ></span>
+                  <input
+                    class="text-xs px-1 flex-1 min-w-[60px] bg-transparent focus:outline-none"
+                    placeholder="+ value"
+                  />
+                </div>
+                <button class="text-zinc-400 hover:text-red-500">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+            <button
+              class="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-2 inline-flex items-center gap-1"
+            >
+              <i data-lucide="plus" class="w-3 h-3"></i>Add output Tag
+            </button>
+          </div>
+
+          <div class="pt-3 border-t border-zinc-200 dark:border-zinc-800">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
+              Sample outputs (last 5 runs)
+            </h4>
+            <div class="space-y-1 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-zinc-500 truncate flex-1">Q3 budget approval (Sarah Chen)</span
+                ><span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c2"
+                  ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                >
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-zinc-500 truncate flex-1">Invoice paid INV-44819 (Stripe)</span
+                ><span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c2"
+                  ><span class="opacity-70 mr-1">category:</span><span class="font-medium">bills</span></span
+                >
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-zinc-500 truncate flex-1">Re: launch retro (Mark Foster)</span
+                ><span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full chip-c2"
+                  ><span class="opacity-70 mr-1">category:</span><span class="font-medium">work</span></span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 8 — ACCOUNTS & OAUTH
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 8</p>
+        <h2 class="text-2xl font-semibold mt-1">Accounts &amp; OAuth</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Account list shows OAuth health per row. OAuth flow uses a Dialog with a waiting state for the popup-pending
+          window.
+        </p>
+      </section>
+
+      <!-- ─────────────  Account list row  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Account list row</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Status dot for OAuth health. "No Pipeline assigned" surfaces as an amber warning chip in the Pipeline column.
+        </p>
+        <div
+          class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800 text-sm"
+        >
+          <div class="p-3 grid grid-cols-[24px_1fr_130px_160px_80px] gap-3 items-center">
+            <i data-lucide="mail" class="w-4 h-4 text-zinc-400"></i>
+            <div>
+              <div class="font-medium">sean@example.com</div>
+              <div class="text-xs text-zinc-500">Gmail</div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-xs"
+              ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>connected</span
+            >
+            <span class="text-xs text-zinc-500">Personal mail v2</span>
+            <span class="text-xs text-zinc-500 text-right">2m ago</span>
+          </div>
+          <div class="p-3 grid grid-cols-[24px_1fr_130px_160px_80px] gap-3 items-center">
+            <i data-lucide="mail" class="w-4 h-4 text-zinc-400"></i>
+            <div>
+              <div class="font-medium">work@example.com</div>
+              <div class="text-xs text-zinc-500">Gmail</div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-xs"
+              ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>connected</span
+            >
+            <span
+              class="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 w-fit"
+              ><i data-lucide="alert-triangle" class="w-3 h-3"></i>no Pipeline</span
+            >
+            <span class="text-xs text-zinc-500 text-right">14m ago</span>
+          </div>
+          <div class="p-3 grid grid-cols-[24px_1fr_130px_160px_80px] gap-3 items-center">
+            <i data-lucide="mail" class="w-4 h-4 text-zinc-400"></i>
+            <div>
+              <div class="font-medium">archive@example.com</div>
+              <div class="text-xs text-zinc-500">Gmail</div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-xs"
+              ><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>re-auth needed</span
+            >
+            <span class="text-xs text-zinc-500">Archive flow</span>
+            <button class="text-xs px-2 py-1 rounded-md bg-violet-500 hover:bg-violet-600 text-white">Re-auth</button>
+          </div>
+          <div class="p-3 grid grid-cols-[24px_1fr_130px_160px_80px] gap-3 items-center">
+            <i data-lucide="mail" class="w-4 h-4 text-zinc-400"></i>
+            <div>
+              <div class="font-medium">old@example.com</div>
+              <div class="text-xs text-zinc-500">Gmail</div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-xs"
+              ><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>auth failed</span
+            >
+            <span class="text-xs text-zinc-500">—</span>
+            <span class="text-xs text-zinc-500 text-right">2d ago</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────  OAuth in-flight  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">OAuth in-flight</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          After clicking "Add Account," a popup opens Google's consent screen and a Dialog stays open with a waiting
+          state. Success → close + toast; failure → close + error toast.
+        </p>
+
+        <div
+          class="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 max-w-md bg-white dark:bg-zinc-900 shadow-xl"
+        >
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-5 h-5 rounded-full border-2 border-violet-500 border-t-transparent animate-spin"></div>
+            <h3 class="text-base font-semibold">Waiting on Google…</h3>
+          </div>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+            Complete the authorization in the popup window. Grinbox will detect it automatically.
+          </p>
+          <div class="flex justify-end">
+            <button
+              class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 9 — ACTIVITY LOG
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 9</p>
+        <h2 class="text-2xl font-semibold mt-1">Activity Log</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Operational events about Grinbox itself — fetch errors, limit hits, retries, scheduler info. Distinct from
+          Triage events on Message detail.
+        </p>
+      </section>
+
+      <!-- ─────────────  Activity Log row  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Activity Log row</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Time · severity icon · message · Resource. Severity borrows the status palette; limit-hits tint the whole row
+          amber.
+        </p>
+        <div
+          class="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800 text-sm"
+        >
+          <div class="p-3 grid grid-cols-[80px_24px_1fr_140px] gap-3 items-center">
+            <div class="text-xs text-zinc-500 mono">14:23:09</div>
+            <i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+            <div>Gmail fetch failed — <span class="mono text-xs">connection reset</span></div>
+            <div class="text-xs text-zinc-500 text-right mono">gmail_api.list</div>
+          </div>
+          <div class="p-3 grid grid-cols-[80px_24px_1fr_140px] gap-3 items-center bg-amber-50/40 dark:bg-amber-950/15">
+            <div class="text-xs text-zinc-500 mono">14:22:51</div>
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+            <div>Pushover <span class="mono text-xs">send_notification</span> limited — 4× in past hour</div>
+            <div class="text-xs text-zinc-500 text-right mono">pushover_api</div>
+          </div>
+          <div class="p-3 grid grid-cols-[80px_24px_1fr_140px] gap-3 items-center">
+            <div class="text-xs text-zinc-500 mono">14:21:30</div>
+            <i data-lucide="info" class="w-4 h-4 text-zinc-400"></i>
+            <div>Poll completed — 12 new Messages Triaged</div>
+            <div class="text-xs text-zinc-500 text-right mono">scheduler</div>
+          </div>
+          <div class="p-3 grid grid-cols-[80px_24px_1fr_140px] gap-3 items-center">
+            <div class="text-xs text-zinc-500 mono">14:20:02</div>
+            <i data-lucide="alert-circle" class="w-4 h-4 text-red-500"></i>
+            <div>Operator <span class="font-medium">Urgency rules</span> failed — rule parse error at line 4</div>
+            <div class="text-xs text-zinc-500 text-right mono">pipeline</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 10 — DASHBOARD
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 10</p>
+        <h2 class="text-2xl font-semibold mt-1">Dashboard</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Compositions of the Card primitive. Each tile applies the rules in Part 4: small uppercase eyebrow when the
+          body is a number; alert variant only when non-zero.
+        </p>
+      </section>
+
+      <!-- ─────────────  Dashboard cards  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Tile examples</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          FE team: build new tiles by composing the Card primitive rather than requesting per-tile specs.
+        </p>
+
+        <div class="grid grid-cols-3 gap-4">
+          <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <p class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Triages last 24h</p>
+            <p class="text-3xl font-semibold mt-2">187</p>
+            <p class="mono text-xs text-zinc-500 mt-2">▁▂▃▅▆▅▄▃▅▇▅▃</p>
+          </div>
+          <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <p class="text-xs font-medium text-zinc-500 uppercase tracking-wider">Notifications sent today</p>
+            <p class="text-3xl font-semibold mt-2">12</p>
+            <p class="text-xs text-zinc-500 mt-2">9 Personal · 3 Work</p>
+          </div>
+          <div class="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30">
+            <p
+              class="text-xs font-medium text-red-700 dark:text-red-400 uppercase tracking-wider inline-flex items-center gap-1.5"
+            >
+              <i data-lucide="alert-triangle" class="w-3 h-3"></i> Alerts
+            </p>
+            <p class="text-3xl font-semibold mt-2 text-red-700 dark:text-red-400">2</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-2">Gmail fetch errors · Pushover limit hit</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════════════
+         PART 11 — SETTINGS
+         ════════════════════════════════════════════════════════════════ -->
+      <section class="part-header border-zinc-300 dark:border-zinc-700">
+        <p class="part-eyebrow text-violet-600 dark:text-violet-400">Part 11</p>
+        <h2 class="text-2xl font-semibold mt-1">Settings</h2>
+        <p class="text-sm text-zinc-500 mt-2 max-w-2xl">
+          Secondary internal sidebar lives inside the Settings route. Secret fields render masked with reveal + rotate
+          affordances.
+        </p>
+      </section>
+
+      <!-- ─────────────  Settings inner nav + forms  ───────────── -->
+      <section>
+        <h3 class="text-xl font-semibold">Inner nav + Limits + Credentials</h3>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 mb-6">
+          Same shape as the main sidebar but no collapse toggle.
+        </p>
+
+        <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+          <div class="grid grid-cols-[200px_1fr]">
+            <nav class="border-r border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/50 dark:bg-zinc-900/50">
+              <ul class="space-y-0.5 text-sm">
+                <li>
+                  <a
+                    class="block px-2 py-1.5 rounded-md bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 font-medium cursor-pointer"
+                    >Limits</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="block px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >Notification credentials</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="block px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                    >About</a
+                  >
+                </li>
+              </ul>
+            </nav>
+            <div class="p-5 space-y-6">
+              <div>
+                <h3 class="text-base font-semibold">Limits</h3>
+                <p class="text-xs text-zinc-500 mt-0.5">
+                  Backstops on Resource operation frequency. Per-Message scope is how cross-Triage dedupe works.
+                </p>
+              </div>
+              <div class="space-y-2">
+                <div
+                  class="grid grid-cols-[1fr_110px_70px_100px_24px] gap-3 items-center text-[10px] uppercase tracking-wider text-zinc-500"
+                >
+                  <div>Resource.op</div>
+                  <div>Scope</div>
+                  <div>Cap</div>
+                  <div>Window</div>
+                  <div></div>
+                </div>
+                <div class="grid grid-cols-[1fr_110px_70px_100px_24px] gap-3 items-center text-sm">
+                  <span class="mono text-xs">pushover_api.send_notification</span>
+                  <select class="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent">
+                    <option>per_window</option>
+                  </select>
+                  <input
+                    value="10"
+                    class="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  />
+                  <input
+                    value="600s"
+                    class="mono text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  />
+                  <button class="text-zinc-400 hover:text-red-500">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                <div class="grid grid-cols-[1fr_110px_70px_100px_24px] gap-3 items-center text-sm">
+                  <span class="mono text-xs">pushover_api.send_notification</span>
+                  <select class="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent">
+                    <option>per_message</option>
+                  </select>
+                  <input
+                    value="1"
+                    class="text-xs px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  />
+                  <input
+                    value="—"
+                    disabled
+                    class="mono text-xs px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-400 w-full"
+                  />
+                  <button class="text-zinc-400 hover:text-red-500">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                <button
+                  class="text-xs text-violet-600 dark:text-violet-400 hover:underline mt-1 inline-flex items-center gap-1"
+                >
+                  <i data-lucide="plus" class="w-3 h-3"></i>Add Limit
+                </button>
+              </div>
+
+              <div class="pt-5 border-t border-zinc-200 dark:border-zinc-800">
+                <h4 class="text-sm font-semibold mb-3">Pushover credentials</h4>
+                <div class="space-y-3 max-w-md">
+                  <div>
+                    <label class="text-xs font-medium mb-1 block">App token</label>
+                    <div class="flex gap-2">
+                      <input
+                        type="password"
+                        value="••••••••••••azGq"
+                        readonly
+                        class="mono flex-1 text-xs px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900"
+                      />
+                      <button
+                        class="px-2.5 py-2 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        title="Reveal"
+                      >
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button
+                        class="px-2.5 py-2 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        title="Rotate"
+                      >
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                    <p class="text-xs text-zinc-500 mt-1">Last rotated 38 days ago.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-8">End of style guide.</div>
+    </main>
+
+    <script>
+      lucide.createIcons()
+      const toggle = document.getElementById('theme-toggle')
+      const root = document.documentElement
+      const stored = localStorage.getItem('grinbox-style-guide-theme')
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (stored === 'dark' || (!stored && prefersDark)) root.classList.add('dark')
+      toggle.addEventListener('click', () => {
+        root.classList.toggle('dark')
+        localStorage.setItem('grinbox-style-guide-theme', root.classList.contains('dark') ? 'dark' : 'light')
+      })
+    </script>
+  </body>
+</html>

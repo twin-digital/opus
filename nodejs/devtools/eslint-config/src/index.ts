@@ -10,12 +10,19 @@ const DisabledRules = [
 ]
 
 const DisabledRulesInTests = [
+  // mocks routinely produce and consume `any` values
   '@typescript-eslint/no-explicit-any',
   '@typescript-eslint/no-non-null-assertion',
   '@typescript-eslint/no-unsafe-argument',
   '@typescript-eslint/no-unsafe-assignment',
+  '@typescript-eslint/no-unsafe-call',
+  '@typescript-eslint/no-unsafe-member-access',
+  '@typescript-eslint/no-unsafe-return',
   '@typescript-eslint/no-unused-vars',
   '@typescript-eslint/unbound-method',
+  // mocks implementing async interfaces are sync bodies behind an async signature
+  '@typescript-eslint/no-empty-function',
+  '@typescript-eslint/require-await',
 ]
 
 const config: ReturnType<(typeof tsLint)['config']> = defineConfig(

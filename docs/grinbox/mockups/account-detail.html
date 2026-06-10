@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sean@example.com · Grinbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+    </script>
+    <link rel="stylesheet" href="assets/shared.css" />
+  </head>
+  <body data-active="accounts" class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div class="flex">
+      <div id="sidebar-mount"></div>
+      <main class="flex-1 min-w-0">
+        <div class="max-w-3xl mx-auto px-8 py-8 space-y-6">
+          <a
+            href="accounts.html"
+            class="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            ><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>Back to Accounts</a
+          >
+
+          <!-- Identity header -->
+          <div
+            class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 p-5 flex items-start gap-4"
+          >
+            <div class="w-10 h-10 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+              <i data-lucide="mail" class="w-5 h-5 text-zinc-500"></i>
+            </div>
+            <div class="flex-1">
+              <h1 class="text-xl font-semibold">sean@example.com</h1>
+              <div class="mt-1 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-500">
+                <span>Gmail</span>
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span class="inline-flex items-center gap-1.5"
+                  ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>connected</span
+                >
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span>token granted 18 days ago</span>
+                <span class="text-zinc-300 dark:text-zinc-700">·</span>
+                <span class="mono">acct_3b91</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pipeline assignment -->
+          <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+            <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+              <p class="text-base font-semibold">Pipeline</p>
+              <p class="text-xs text-zinc-500 mt-0.5">
+                Pick which Pipeline Triages new Messages on this Account. Swap freely — change applies on the next poll.
+              </p>
+            </div>
+            <div class="p-5">
+              <label class="text-sm font-medium mb-1.5 block">Active Pipeline</label>
+              <select
+                class="w-full text-sm px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option>Personal mail v2</option>
+                <option>Archive flow</option>
+                <option>Newsletter triage</option>
+                <option>— none —</option>
+              </select>
+              <p class="text-xs text-zinc-500 mt-2">
+                Currently
+                <a href="pipeline-detail.html" class="text-violet-600 dark:text-violet-400 hover:underline"
+                  >Personal mail v2</a
+                >
+                · 5 Operators · last edited 2d ago.
+              </p>
+            </div>
+          </div>
+
+          <!-- Poll cadence -->
+          <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+            <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+              <p class="text-base font-semibold">Polling</p>
+              <p class="text-xs text-zinc-500 mt-0.5">
+                How often the Daemon checks Gmail for new Messages on this Account.
+              </p>
+            </div>
+            <div class="p-5 space-y-4">
+              <div>
+                <label class="text-sm font-medium mb-1.5 block">Poll cadence</label>
+                <div class="flex items-center gap-2 max-w-xs">
+                  <input
+                    type="text"
+                    value="120"
+                    class="text-sm px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500 w-24"
+                  />
+                  <span class="text-sm text-zinc-500">seconds</span>
+                </div>
+                <p class="text-xs text-zinc-500 mt-1.5">Minimum 60s. Default 120s.</p>
+              </div>
+              <div class="text-xs text-zinc-500">
+                Last poll: <span class="mono text-zinc-700 dark:text-zinc-300">2m ago</span> · 4 new Messages, all
+                Triaged.
+              </div>
+            </div>
+          </div>
+
+          <!-- OAuth -->
+          <div class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden">
+            <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+              <p class="text-base font-semibold">Authorization</p>
+              <p class="text-xs text-zinc-500 mt-0.5">Gmail scopes Grinbox holds for this Account.</p>
+            </div>
+            <div class="p-5 space-y-3">
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 mono"
+                  >gmail.readonly</span
+                >
+                <span
+                  class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 mono"
+                  >gmail.modify</span
+                >
+              </div>
+              <div
+                class="flex items-center justify-between text-xs text-zinc-500 pt-2 border-t border-zinc-200 dark:border-zinc-800"
+              >
+                <span>Refresh token healthy. Expires never.</span>
+                <button
+                  class="text-sm px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1.5"
+                >
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>Re-authorize
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sticky save -->
+          <div
+            class="border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 px-5 py-3 flex items-center justify-between"
+          >
+            <span class="text-xs text-zinc-500">No unsaved changes.</span>
+            <div class="flex gap-2">
+              <button
+                class="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-red-500 inline-flex items-center gap-1.5"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete Account
+              </button>
+              <button
+                class="px-3 py-1.5 text-sm rounded-md bg-violet-500 text-white opacity-50 cursor-not-allowed"
+                disabled
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="assets/shell.js"></script>
+  </body>
+</html>

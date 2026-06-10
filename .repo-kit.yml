@@ -376,6 +376,7 @@ features:
         conditions:
           - exists: src/**/*.test.ts
           - exists: src/**/*.tsx
+          - notExists: src/test/setup.ts
         options:
           file: vitest.config.ts
           content: |
@@ -387,6 +388,27 @@ features:
               defineConfig({
                 test: {
                   environment: 'jsdom',
+                },
+              }),
+            )
+      - name: Create vitest config (React support, with setup file)
+        action: write-file
+        conditions:
+          - exists: src/**/*.test.ts
+          - exists: src/**/*.tsx
+          - exists: src/test/setup.ts
+        options:
+          file: vitest.config.ts
+          content: |
+            import { defineConfig, mergeConfig } from 'vitest/config'
+            import { sharedConfig } from '@twin-digital/vitest-config'
+
+            export default mergeConfig(
+              sharedConfig,
+              defineConfig({
+                test: {
+                  environment: 'jsdom',
+                  setupFiles: ['./src/test/setup.ts'],
                 },
               }),
             )

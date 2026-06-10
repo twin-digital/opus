@@ -31,19 +31,19 @@
     "meow": "^11.0.0",
     "mobx": "^6.15.0",
     "mobx-react-lite": "^4.1.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@testing-library/react": "^16.1.0",
+    "@testing-library/react": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "catalog:",
-    "@types/react": "^19.2.6",
+    "@types/react": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
     "chalk": "catalog:",
     "eslint": "catalog:",

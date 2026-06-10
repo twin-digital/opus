@@ -1,0 +1,59 @@
+# Grinbox Daemon — single Node process owning the HTTP server, scheduler,
+# executor, and State DB (see apps/grinbox/docs/architecture.md "Process model").
+#
+# Deploy artifact: installed by the grinbox Ansible role (not yet built).
+# Secrets reach the Daemon as a vTPM-sealed bundle, never a plaintext file on
+# the guest's own disk — per docs/decisions/grinbox-secret-delivery.md §5.
+# systemd unseals /etc/grinbox/bundle.cred via the guest vTPM into a
+# unit-private ramfs ($CREDENTIALS_DIRECTORY); run-grinbox.sh sources it into
+# the environment and execs the Daemon, so the app's "config from process.env"
+# contract is unchanged. Both the sealed blob and the plaintext EnvironmentFile
+# carry NO usable secret off-host: the blob is inert without this VM's vTPM, and
+# the env file holds non-secret config only.
+
+[Unit]
+Description=Grinbox Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/grinbox
+
+# Deployer-managed secret bundle, sealed to the guest vTPM at provision time
+# (re-sealed on every rebuild — destroy-and-recreate gives a fresh vTPM; the
+# token-encryption key's master copy is escrowed in LastPass, decision §6).
+# systemd unseals it into $CREDENTIALS_DIRECTORY/grinbox-bundle — a non-swappable
+# ramfs file torn down when the unit stops. Consumed by run-grinbox.sh.
+LoadCredentialEncrypted=grinbox-bundle:/etc/grinbox/bundle.cred
+
+# Non-secret config only: GRINBOX_DB_PATH (on the data-VM mount, so it survives
+# recreate), GRINBOX_HTTP_PORT/_HOST, GRINBOX_BEDROCK_REGION,
+# GRINBOX_OAUTH_REDIRECT_URI, the timing knobs. No secret lives here, so it is
+# safe on disk and in backups.
+EnvironmentFile=/etc/grinbox/grinbox.env
+
+# Launch wrapper: source the unsealed bundle into the environment, then exec the
+# Daemon. Keeps the app reading process.env while ensuring no plaintext secret
+# is ever written to the guest's own disk.
+ExecStart=/opt/grinbox/bin/run-grinbox.sh
+
+# Crash-loop prevention (pipeline-runtime.md "Crash-loop prevention"): always
+# restart, with a delay between attempts so a failing startup doesn't spin.
+Restart=always
+RestartSec=5
+
+# Graceful shutdown: the daemon handles SIGTERM (stop HTTP, close DB, exit 0).
+KillSignal=SIGTERM
+TimeoutStopSec=45
+
+# Hardening. Do NOT add MemoryDenyWriteExecute= — it breaks V8's JIT and the
+# Daemon will fail to start. ProtectSystem=strict is recommended once the deploy
+# layout is fixed; it requires granting the State DB's directory explicitly,
+# e.g. `ReadWritePaths=/var/lib/grinbox` (the data-VM mount that holds the DB).
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -32,6 +32,10 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
+- [@twin-digital/grinbox-cli](./nodejs/grinbox/cli): Command-line interface for Grinbox.
+- [@twin-digital/grinbox-server](./nodejs/grinbox/server): Grinbox daemon: HTTP API, pipeline runtime, and mail polling.
+- [@twin-digital/grinbox-shared](./nodejs/grinbox/shared): Shared schemas, contracts, and helpers for Grinbox.
+- [@twin-digital/grinbox-web](./nodejs/grinbox/web): Grinbox web UI (React SPA served by the Grinbox server).
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.
 

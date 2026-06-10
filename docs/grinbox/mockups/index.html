@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grinbox mockups</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+    </script>
+    <link rel="stylesheet" href="assets/shared.css" />
+  </head>
+  <body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <header
+      class="sticky top-0 z-20 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/85 dark:bg-zinc-950/85 backdrop-blur"
+    >
+      <div class="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-7 h-7 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-white text-sm font-semibold"
+          >
+            G
+          </div>
+          <span class="font-semibold">Grinbox mockups</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <a
+            href="../docs/style-guide.html"
+            class="px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >Style guide</a
+          >
+          <button
+            id="theme-toggle"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            <i data-lucide="sun-moon" class="w-4 h-4"></i>Toggle theme
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-10 space-y-12">
+      <section>
+        <h1 class="text-3xl font-semibold">Static mockups</h1>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-2 max-w-2xl">
+          One HTML file per route, sharing the app shell defined in
+          <code class="mono text-xs px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800">assets/shell.js</code>. Visual
+          conventions follow
+          <a class="text-violet-600 dark:text-violet-400 hover:underline" href="../docs/style-guide.html"
+            >style-guide.html</a
+          >; routing and feature scope follow
+          <a class="text-violet-600 dark:text-violet-400 hover:underline" href="../docs/ui-design.md">ui-design.md</a>.
+          Sidebar links are live — click anywhere to jump between surfaces.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Top-level routes</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <a
+            href="dashboard.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="layout-dashboard" class="w-4 h-4 text-violet-500"></i>Dashboard
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">First-run checklist + tile grid.</p>
+          </a>
+          <a
+            href="inbox.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="inbox" class="w-4 h-4 text-violet-500"></i>Inbox
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Cross-Account message browser.</p>
+          </a>
+          <a
+            href="pipelines.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="workflow" class="w-4 h-4 text-violet-500"></i>Pipelines
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Pipeline index.</p>
+          </a>
+          <a
+            href="accounts.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="mail" class="w-4 h-4 text-violet-500"></i>Accounts
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Connected mailboxes + OAuth health.</p>
+          </a>
+          <a
+            href="activity-log.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="activity" class="w-4 h-4 text-violet-500"></i>Activity Log
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Daemon-level events.</p>
+          </a>
+          <a
+            href="settings-limits.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium">
+              <i data-lucide="settings" class="w-4 h-4 text-violet-500"></i>Settings
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Limits · credentials · About.</p>
+          </a>
+          <a
+            href="metrics.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="flex items-center gap-2 text-sm font-medium text-zinc-500">
+              <i data-lucide="bar-chart-3" class="w-4 h-4"></i>Metrics
+            </div>
+            <p class="text-xs text-zinc-500 mt-1.5">Placeholder — "coming soon" empty state.</p>
+          </a>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Message detail (tabbed)</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <a
+            href="message-overview.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Overview tab</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Current Tags grouped by provenance.</p>
+          </a>
+          <a
+            href="message-tags.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Tags tab</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Cross-Triage history.</p>
+          </a>
+          <a
+            href="message-triage.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Triage history tab</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Master-detail runs + event log.</p>
+          </a>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Pipelines &amp; Operators</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <a
+            href="pipeline-detail.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Pipeline detail</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Topological list with Independent group.</p>
+          </a>
+          <a
+            href="operator-rule.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Operator editor — Rule</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Editor + side-by-side diff preview.</p>
+          </a>
+          <a
+            href="operator-llm.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Operator editor — LLM</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Model picker + prompt + output Tags.</p>
+          </a>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+          Accounts &amp; Settings sub-routes
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <a
+            href="account-detail.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Account detail</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Thin per-Account settings.</p>
+          </a>
+          <a
+            href="accounts-oauth.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Accounts — OAuth in-flight</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Dialog with waiting state overlaid on Accounts.</p>
+          </a>
+          <a
+            href="settings-credentials.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Settings → Credentials</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Pushover + Bedrock secret fields.</p>
+          </a>
+          <a
+            href="settings-about.html"
+            class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+          >
+            <div class="text-sm font-medium">Settings → About</div>
+            <p class="text-xs text-zinc-500 mt-1.5">Build info, DB stats, links.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script src="assets/shell.js"></script>
+  </body>
+</html>

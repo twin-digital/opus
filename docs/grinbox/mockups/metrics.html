@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Metrics · Grinbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+    </script>
+    <link rel="stylesheet" href="assets/shared.css" />
+  </head>
+  <body data-active="metrics" class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div class="flex">
+      <div id="sidebar-mount"></div>
+      <main class="flex-1 min-w-0">
+        <div class="max-w-5xl mx-auto px-8 py-8 space-y-6">
+          <header>
+            <h1 class="text-3xl font-semibold">Metrics</h1>
+            <p class="text-sm text-zinc-500 mt-1">Placeholder at MVP.</p>
+          </header>
+
+          <div class="border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg py-20 text-center">
+            <div class="text-3xl mb-4 text-zinc-400">:)</div>
+            <p class="text-base font-medium">Coming soon.</p>
+            <p class="text-sm text-zinc-500 mt-2 max-w-md mx-auto">
+              Cost &amp; usage dashboards land once Grinbox has enough run-time to make the numbers meaningful. Until
+              then, the
+              <a href="dashboard.html" class="text-violet-600 dark:text-violet-400 hover:underline">Dashboard</a> alerts
+              and the
+              <a href="activity-log.html" class="text-violet-600 dark:text-violet-400 hover:underline">Activity Log</a>
+              cover operational visibility.
+            </p>
+
+            <div class="mt-8 grid grid-cols-3 gap-3 max-w-md mx-auto opacity-50">
+              <div class="p-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <p class="text-[10px] uppercase tracking-wider text-zinc-500">LLM cost</p>
+                <p class="text-base font-semibold mt-1">—</p>
+              </div>
+              <div class="p-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <p class="text-[10px] uppercase tracking-wider text-zinc-500">Triages / hr</p>
+                <p class="text-base font-semibold mt-1">—</p>
+              </div>
+              <div class="p-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <p class="text-[10px] uppercase tracking-wider text-zinc-500">p95 latency</p>
+                <p class="text-base font-semibold mt-1">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="assets/shell.js"></script>
+  </body>
+</html>
