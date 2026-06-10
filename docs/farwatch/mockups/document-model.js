@@ -44,8 +44,9 @@ const DocModel = (function () {
       { key: 'walk', label: 'walk', opts: [['0', '0'], ['0.03', '0.03'], ['0.05', '0.05'], ['0.08', '0.08'], ['0.12', '0.12']] },
     ] },
     // CONDITION — the second layer: not an ingredient, a modifier applied AFTER composition (see weather()).
+    // age is NON-LINEAR in time — iron-gall degradation front-loads, so a few centuries already shows "a lot".
     condition: { label: 'Condition', params: [
-      { key: 'age', label: 'age', opts: [['0', 'fresh'], ['0.33', 'a few years'], ['0.66', 'decades'], ['1', 'ancient']] },
+      { key: 'age', label: 'age', opts: [['0', 'fresh'], ['0.12', 'a few years'], ['0.38', 'decades · ~75y'], ['0.72', 'centuries · ~350y'], ['1', 'ancient · 1000y+']] },
     ] },
   };
 
@@ -82,8 +83,9 @@ const DocModel = (function () {
     },
     condition: {
       'fresh': { age: '0' },
-      'a few years': { age: '0.33' },
-      'old': { age: '0.66' },
+      'a few years': { age: '0.12' },
+      'decades': { age: '0.38' },
+      'centuries': { age: '0.72' },
       'ancient': { age: '1' },
     },
   };
@@ -94,8 +96,8 @@ const DocModel = (function () {
   const lerp = (a, b, k) => a + (b - a) * k;
   const lerpHex = (hex, rgb2, k) => { const a = hexToRgb(hex); return rgbToHex([lerp(a[0], rgb2[0], k), lerp(a[1], rgb2[1], k), lerp(a[2], rgb2[2], k)]); };
   const lerpChan = (str, rgb2, k) => { const a = str.split(' ').map(Number); return [lerp(a[0], rgb2[0], k), lerp(a[1], rgb2[1], k), lerp(a[2], rgb2[2], k)].map((x) => Math.round(x)).join(' '); };
-  const PAPER_BROWN = [125, 96, 56];  // where paper drifts with age (an aged tan)
-  const INK_BROWN = [90, 74, 48];     // where fade-prone (iron-gall) ink drifts (warm brown)
+  const PAPER_BROWN = [162, 110, 56];  // where paper drifts with age — an amber-orange (foxed/oxidised)
+  const INK_BROWN = [120, 92, 56];     // where fade-prone iron-gall drifts — a clear mid-brown (not near-black)
 
   // resolve composition → CSS vars + ink-cycle params, THEN weather by the Condition layer (age).
   // Age is a modifier applied AFTER composition; its effect is conditional on the materials
@@ -106,15 +108,15 @@ const DocModel = (function () {
     // weather the materials. NOTE on absorbency: feathering is locked in at WRITE-TIME (the ink fed into the
     // paper as it was then), so age does NOT raise it — an old document feathered on then-fresh paper. (Writing
     // *new* ink on already-old paper is a separate scenario — a future "paper age at writing" control.)
-    const fill = lerpHex(vals.paper.fill, PAPER_BROWN, age * 0.4);                 // paper browns over time
-    const inkColor = fades ? lerpHex(vals.ink.color, INK_BROWN, age * 0.55) : vals.ink.color; // iron-gall fades to brown
-    const bleedHue = fades ? lerpChan(vals.ink.bleedHue, INK_BROWN, age * 0.55) : vals.ink.bleedHue;
-    const tear = (age >= 0.66 && vals.paper.tear !== 'none') ? 'var(--tear-deep)' : vals.paper.tear; // frays with age
+    const fill = lerpHex(vals.paper.fill, PAPER_BROWN, age * 0.5);                 // paper oranges over time
+    const inkColor = fades ? lerpHex(vals.ink.color, INK_BROWN, age * 0.7) : vals.ink.color;  // iron-gall fades to brown
+    const bleedHue = fades ? lerpChan(vals.ink.bleedHue, INK_BROWN, age * 0.7) : vals.ink.bleedHue;
+    const tear = (age >= 0.65 && vals.paper.tear !== 'none') ? 'var(--tear-deep)' : vals.paper.tear; // frays by centuries
     const bleed = Math.max(0, parseFloat(vals.paper.absorbency) * parseFloat(vals.ink.flow));  // ceiling = absorbency × flow (write-time)
     // INK BURN — acidic iron-gall corroding its own page: a rusty halo bleeding from the strokes. Gated on
     // fades × ADVANCED age (carbon never burns; corrosion is a long-timescale process). Eating-through
     // (cracks/holes) is not yet modelled — this is the stain halo only.
-    const burnK = fades ? Math.max(0, Math.min(1, (age - 0.3) / 0.7)) : 0;
+    const burnK = fades ? Math.max(0, Math.min(1, (age - 0.25) / 0.75)) : 0;  // faint by decades, strong by centuries
     // a DIFFUSE stain over the inked region — no tight inner ring (which would trace each glyph); large soft
     // radii merge between strokes into a brown haze. The ink fill stays sharp (text-shadow doesn't touch it).
     const burn = burnK <= 0 ? '0 0 0 transparent'

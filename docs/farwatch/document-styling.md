@@ -129,7 +129,7 @@ it *afterward*. The model is two layers:
 
 | param | what it is | status |
 |---|---|---|
-| `age` | how long ago it was written (fresh → ancient) | **[wired]** — `weather()` in `document-model.js` |
+| `age` | time since written — `fresh` / `a few years` / `decades (~75y)` / `centuries (~350y)` / `ancient (1000y+)`. **Non-linear**: iron-gall degradation front-loads, so a few centuries already shows a lot (oranged paper, browned ink, burn underway) | **[wired]** — `weather()` in `document-model.js` |
 | `wear` / `damage` | handling, creases, water-stains, foxing, ink-burn | **[target]** — siblings of `age`, same layer |
 
 **Why it can't live on an entity:** age is *cross-cutting* (it browns the paper, frays the edge, degrades the
