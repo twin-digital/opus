@@ -21,9 +21,10 @@
   --grain-soft: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
   /* none  : (set --paper-grain: none) */
 
-  /* ── LAID — anisotropic noise: directional paper fibre / laid lines (a background tile) ──── */
-  /* fibre : horizontal fibre (baseFrequency 0.01 0.42, opacity 0.26) */
-  --laid-fibre: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
+  /* ── LAID — the laid-paper mould grid (a background tile): close, slightly-irregular LAID lines (turbulence,
+     horizontal) + widely-spaced rigid CHAIN lines (the thicker cross-wires, vertical, every ~55px). Both come
+     from the same mould, so they're one token. (Wove paper has neither.) ──── */
+  --laid-fibre: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3Cg%20fill='%23463a22'%20opacity='0.06'%3E%3Crect%20x='0'%20width='1.3'%20height='150'/%3E%3Crect%20x='55'%20width='1.3'%20height='150'/%3E%3Crect%20x='110'%20width='1.3'%20height='150'/%3E%3Crect%20x='165'%20width='1.3'%20height='150'/%3E%3C/g%3E%3C/svg%3E");
   /* none  : (set --paper-laid: none) */
 
   /* ── GLOW — a warm top-of-sheet light wash (a gradient layer) ──────────────────────────── */

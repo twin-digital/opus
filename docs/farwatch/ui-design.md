@@ -349,7 +349,7 @@ its edges, which read as a colour shift rather than the aging it was meant to su
 | slug | params | key element |
 |---|---|---|
 | `none` | — | no fibre |
-| `fibre` | fractalNoise `0.01 0.42`, 2 oct, opacity 0.26 | horizontal laid lines — stops paper reading as flat |
+| `fibre` | fractalNoise `0.01 0.42`, opacity 0.26 **+** rigid vertical **chain lines** every ~55px (opacity 0.06) | the full hand-mould grid: close, slightly-irregular **laid** lines (turbulence) crossed by widely-spaced **chain** lines (the thicker cross-wires) — both from the same mould, so one token |
 
 **Glow** — a warm top-of-sheet light wash (a gradient layer):
 
