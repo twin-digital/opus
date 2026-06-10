@@ -46,6 +46,9 @@ code/**/tsconfig.tsbuildinfo
 # Project-specific
 ########################################################################################################################
 
+# scratch area
+tmp
+
 # build outputs
 .out
 
