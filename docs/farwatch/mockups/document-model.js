@@ -118,9 +118,9 @@ const DocModel = (function () {
     // a DIFFUSE stain over the inked region — no tight inner ring (which would trace each glyph); large soft
     // radii merge between strokes into a brown haze. The ink fill stays sharp (text-shadow doesn't touch it).
     const burn = burnK <= 0 ? '0 0 0 transparent'
-      : '0 0 ' + (4 + burnK * 5).toFixed(1) + 'px rgba(80,44,20,' + (burnK * 0.30).toFixed(2) + '), '
-        + '0 0 ' + (10 + burnK * 12).toFixed(1) + 'px rgba(88,54,28,' + (burnK * 0.20).toFixed(2) + '), '
-        + '0 0 ' + (20 + burnK * 22).toFixed(1) + 'px rgba(94,60,34,' + (burnK * 0.12).toFixed(2) + ')';
+      : '0 0 ' + (5 + burnK * 5).toFixed(1) + 'px rgba(80,44,20,' + (burnK * 0.65).toFixed(2) + '), '
+        + '0 0 ' + (12 + burnK * 12).toFixed(1) + 'px rgba(88,54,28,' + (burnK * 0.45).toFixed(2) + '), '
+        + '0 0 ' + (24 + burnK * 22).toFixed(1) + 'px rgba(94,60,34,' + (burnK * 0.26).toFixed(2) + ')';
     const cssVars = {
       '--paper-color': fill,
       '--paper-grain': vals.paper.grain,
