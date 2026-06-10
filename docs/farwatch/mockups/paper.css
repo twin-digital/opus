@@ -21,10 +21,12 @@
   --grain-soft: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='150'%20height='150'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.8'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23g)'%20opacity='0.5'/%3E%3C/svg%3E");
   /* none  : (set --paper-grain: none) */
 
-  /* ── LAID — the laid-paper mould grid (a background tile): close, slightly-irregular LAID lines (turbulence,
-     horizontal) + widely-spaced rigid CHAIN lines (the thicker cross-wires, vertical, every ~55px). Both come
-     from the same mould, so they're one token. (Wove paper has neither.) ──── */
-  --laid-fibre: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3Cg%20fill='%23463a22'%20opacity='0.06'%3E%3Crect%20x='0'%20width='1.3'%20height='150'/%3E%3Crect%20x='55'%20width='1.3'%20height='150'/%3E%3Crect%20x='110'%20width='1.3'%20height='150'/%3E%3Crect%20x='165'%20width='1.3'%20height='150'/%3E%3C/g%3E%3C/svg%3E");
+  /* ── LAID — the close, slightly-irregular laid lines ONLY (horizontal turbulence). The perpendicular CHAIN
+     cross-wires are a SEPARATE layer rendered on .paper, driven by --paper-chain-alpha / --paper-chain-gap —
+     so laid and chain tune independently, while presets keep them coupled in presence (same mould). Two
+     laid strengths. ──── */
+  --laid-fibre: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.26'/%3E%3C/svg%3E");
+  --laid-faint: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='220'%20height='150'%3E%3Cfilter%20id='l'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.01%200.42'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23l)'%20opacity='0.16'/%3E%3C/svg%3E");
   /* none  : (set --paper-laid: none) */
 
   /* ── GLOW — a warm top-of-sheet light wash (a gradient layer) ──────────────────────────── */
@@ -60,8 +62,11 @@
 .paper {
   position: relative;
   background-color: var(--paper-color, #e2d1a3);
-  background-image: var(--paper-grain, var(--grain-fine)), var(--paper-laid, var(--laid-fibre)), var(--paper-glow, var(--glow-candle-soft));
-  background-size: 150px 150px, 220px 150px, auto;
+  /* layers: grain · laid lines · CHAIN cross-lines (own gradient, off when --paper-chain-alpha is 0) · glow */
+  background-image: var(--paper-grain, var(--grain-fine)), var(--paper-laid, var(--laid-fibre)),
+    repeating-linear-gradient(90deg, rgb(70 58 34 / var(--paper-chain-alpha, 0)) 0 1.3px, transparent 1.3px var(--paper-chain-gap, 55px)),
+    var(--paper-glow, var(--glow-candle-soft));
+  background-size: 150px 150px, 220px 150px, auto, auto;
   color: var(--paper-ink, #2c2012);
   /* writing: face / slant / weight / size from the INK STYLE dial (ink.css) — paper text is em-relative
      so it scales as a unit with --ink-size */
@@ -83,19 +88,19 @@
 
 /* worn-bright · bright worn parchment surface — the table documents [IN PLAY] */
 .paper-v-worn-bright {
-  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle-soft);
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-chain-alpha: 0.06; --paper-glow: var(--glow-candle-soft);
   --paper-tear: var(--tear-torn);
 }
 
 /* ledger · duller worn-ledger surface — the reader's reading page [IN PLAY] */
 .paper-v-ledger {
-  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: var(--glow-candle);
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-chain-alpha: 0.06; --paper-glow: var(--glow-candle);
   --paper-tear: var(--tear-deep);
 }
 
 /* card · small index/fact card — no warm wash [IN PLAY] */
 .paper-v-card {
-  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-glow: none;
+  --paper-grain: var(--grain-fine); --paper-laid: var(--laid-fibre); --paper-chain-alpha: 0.06; --paper-glow: none;
   --paper-tear: var(--tear-torn);
 }
 

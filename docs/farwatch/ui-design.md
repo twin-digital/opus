@@ -349,7 +349,12 @@ its edges, which read as a colour shift rather than the aging it was meant to su
 | slug | params | key element |
 |---|---|---|
 | `none` | — | no fibre |
-| `fibre` | fractalNoise `0.01 0.42`, opacity 0.26 **+** rigid vertical **chain lines** every ~55px (opacity 0.06) | the full hand-mould grid: close, slightly-irregular **laid** lines (turbulence) crossed by widely-spaced **chain** lines (the thicker cross-wires) — both from the same mould, so one token |
+| `fibre` | fractalNoise `0.01 0.42`, opacity 0.26 | close, slightly-irregular **laid** lines (turbulence). Two strengths (`fibre` / `faint`) |
+
+The perpendicular **chain** lines (the thicker cross-wires) are a **separate layer** on `.paper` —
+a `repeating-linear-gradient` driven by `--paper-chain-alpha` (off at `0`) and `--paper-chain-gap` (spacing).
+Laid and chain thus tune *independently in strength*, though presets keep them *coupled in presence* (same
+mould — vellum & wove have neither).
 
 **Glow** — a warm top-of-sheet light wash (a gradient layer):
 

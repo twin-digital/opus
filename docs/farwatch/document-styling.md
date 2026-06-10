@@ -35,7 +35,7 @@ What was written *on*. "What was to hand" when the document was made.
 |---|---|---|
 | `color` | the paper fill | **[wired]** `--paper-color` (paper-color.css) |
 | `grain` | fine fractal-noise tooth | **[wired]** `--paper-grain` (paper.css) |
-| `laid` | the hand-mould grid: close **laid** lines + widely-spaced perpendicular **chain** lines (skin & wove have neither) | **[wired]** `--paper-laid` (both line sets are in the one `fibre` token) |
+| `laid` / `chain` | the hand-mould grid — close **laid** lines + widely-spaced perpendicular **chain** cross-wires (skin & wove have neither) | **[wired]** `--paper-laid` (turbulence) + a **separate** chain layer (`--paper-chain-alpha` / `--paper-chain-gap`); independently tunable in strength, coupled in presence by the presets |
 | `glow` | warm top-of-sheet light wash* | **[wired]** `--paper-glow` |
 | `tear` | ragged torn edge | **[wired]** `--paper-tear` |
 | `absorbency` | how readily ink spreads in this stock (blotter ↔ vellum) | **[target]** — today folded into the single `bleed` dial; should become a paper property |

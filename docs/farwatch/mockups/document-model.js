@@ -16,7 +16,9 @@ const DocModel = (function () {
     paper: { label: 'Paper', params: [
       { key: 'fill', label: 'fill', opts: [['#ece4cb', 'vellum · pale'], ['#e2d1a3', 'parchment'], ['#d9cca6', 'rag · cream'], ['#cfc3a0', 'dun · cheap'], ['#d2bf90', 'amber'], ['#ece6d2', 'cream · cool']] },
       { key: 'grain', label: 'grain', opts: [['var(--grain-fine)', 'fine'], ['var(--grain-soft)', 'soft'], ['none', 'none']] },
-      { key: 'laid', label: 'laid (rag only — skin & wove have none)', opts: [['var(--laid-fibre)', 'fibre'], ['none', 'none']] },
+      { key: 'laid', label: 'laid lines', opts: [['var(--laid-fibre)', 'fibre'], ['var(--laid-faint)', 'faint'], ['none', 'none']] },
+      { key: 'chain', label: 'chain lines', opts: [['0', 'none'], ['0.04', 'faint'], ['0.06', 'normal'], ['0.09', 'bold']] },
+      { key: 'chainGap', label: 'chain spacing', opts: [['40px', 'close · 40'], ['55px', '55'], ['75px', 'wide · 75']] },
       { key: 'glow', label: 'glow', opts: [['var(--glow-candle)', 'candle'], ['var(--glow-candle-soft)', 'candle-soft'], ['none', 'none']] },
       { key: 'tear', label: 'edge', opts: [['var(--tear-torn)', 'deckle'], ['var(--tear-deep)', 'frayed'], ['none', 'trimmed']] },
       { key: 'absorbency', label: 'absorbency (sizing)', opts: [['0.1', 'vellum · 0.10'], ['0.2', 'hard-sized · 0.20'], ['0.35', 'sized · 0.35'], ['0.5', '0.50'], ['0.65', 'soft · 0.65'], ['0.8', 'unsized · 0.80'], ['1', 'blotter · 1.0']] },
@@ -54,11 +56,11 @@ const DocModel = (function () {
     // historically grounded: skin (vellum, no laid, low absorbency) vs sized laid rag (everyday) vs cheap/aged.
     // See docs/farwatch/document-styling.md → "Paper" and the paper-history discussion.
     paper: {
-      'charter (vellum)': { fill: '#ece4cb', grain: 'var(--grain-soft)', laid: 'none', glow: 'var(--glow-candle-soft)', tear: 'none', absorbency: '0.1' },        // skin — pale, smooth, crisp ink, trimmed edge; the writ/charter
-      'chronicle (laid rag)': { fill: '#e2d1a3', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.35' }, // good sized rag — the steward's dispatch
-      'ledger (hard rag)': { fill: '#d9cca6', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.2' },     // hard-sized so numbers stay crisp
-      'field (cheap rag)': { fill: '#cfc3a0', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.8' },      // poor/unsized — grey, feathers, frayed; a hasty report
-      'cabinet (cool)': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.35' },                     // a cool, refined fine stock — the cabinet wildcard
+      'charter (vellum)': { fill: '#ece4cb', grain: 'var(--grain-soft)', laid: 'none', chain: '0', chainGap: '55px', glow: 'var(--glow-candle-soft)', tear: 'none', absorbency: '0.1' },        // skin — no mould, no laid/chain; the writ/charter
+      'chronicle (laid rag)': { fill: '#e2d1a3', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', chain: '0.06', chainGap: '55px', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.35' }, // good sized rag — full mould grid
+      'ledger (hard rag)': { fill: '#d9cca6', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', chain: '0.06', chainGap: '55px', glow: 'var(--glow-candle-soft)', tear: 'var(--tear-torn)', absorbency: '0.2' },     // hard-sized so numbers stay crisp
+      'field (cheap rag)': { fill: '#cfc3a0', grain: 'var(--grain-fine)', laid: 'var(--laid-fibre)', chain: '0.06', chainGap: '40px', glow: 'none', tear: 'var(--tear-deep)', absorbency: '0.8' },      // poor/unsized — coarse close mould; a hasty report
+      'cabinet (cool)': { fill: '#ece6d2', grain: 'var(--grain-soft)', laid: 'none', chain: '0', chainGap: '55px', glow: 'none', tear: 'var(--tear-torn)', absorbency: '0.35' },                     // a cool, refined fine stock — the cabinet wildcard
     },
     // each ink is ONE ink — its colour is the settled, as-used colour. Ageing (iron-gall fading to brown) is the
     // Condition layer, not a variant. (The transient blue-black "just-inked" state is a future *wet* condition.)
@@ -127,6 +129,8 @@ const DocModel = (function () {
       '--paper-color': fill,
       '--paper-grain': vals.paper.grain,
       '--paper-laid': vals.paper.laid,
+      '--paper-chain-alpha': vals.paper.chain || '0',          // chain is its own layer, independent of laid
+      '--paper-chain-gap': vals.paper.chainGap || '55px',
       '--paper-glow': vals.paper.glow,
       '--paper-tear': tear,
       '--paper-ink': inkColor,
