@@ -24,7 +24,7 @@
     "@pnpm/find-workspace-dir": "^1000.1.0",
     "@twin-digital/json-patch-x": "workspace:*",
     "chalk": "catalog:",
-    "commander": "^14.0.0",
+    "commander": "^15.0.0",
     "execa": "catalog:",
     "gray-matter": "^4.0.3",
     "json-merge-patch": "^1.0.2",
