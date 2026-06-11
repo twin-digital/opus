@@ -4,7 +4,6 @@
     "checkJs": true,
     "declaration": true,
     "declarationMap": true,
-    "downlevelIteration": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,

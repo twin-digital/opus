@@ -1,5 +1,5 @@
 import castArray from 'lodash-es/castArray.js'
-import { observable, reaction, runInAction, type IReactionDisposer } from 'mobx'
+import { observable, ObservableMap, reaction, runInAction, type IReactionDisposer } from 'mobx'
 
 export interface SerializableState<T extends object = object> {
   /**
@@ -53,7 +53,7 @@ export abstract class AbstractStore<
   /**
    * Map of all items managed by this store, keyed by the item ID.
    */
-  private _items: Map<string, T> = observable.map(new Map<string, T>())
+  private _items: ObservableMap<string, T> = observable.map(new Map<string, T>())
 
   /**
    * Flag indicating if we are performing a bulk load operation. Callbacks are disabled during this time.

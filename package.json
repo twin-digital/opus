@@ -34,7 +34,7 @@
     "serverless": "catalog:",
     "sherif": "^1.11.1",
     "turbo": "^2.6.1",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.0"
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
   "packageManager": "pnpm@10.34.1",
