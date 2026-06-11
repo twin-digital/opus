@@ -2,7 +2,7 @@
 
 All GitHub access — interactive and CI — uses short-lived (~1h), scoped **GitHub App
 installation tokens**. The App private key lives in **AWS KMS** (imported, non-extractable);
-nothing ever holds a long-lived GitHub credential. What varies is *who may ask KMS to sign*:
+nothing ever holds a long-lived GitHub credential. What varies is _who may ask KMS to sign_:
 
 - **Workspace (terminal + agents):** tokens are **vended** by the privileged admin sidecar onto
   a read-only shelf (`/creds/github/opus`, format `<exp_epoch> <token>`). The `gh` wrapper
