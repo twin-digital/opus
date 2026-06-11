@@ -28,7 +28,7 @@ jobs:
   mint-and-commit:
     # Renovate's in-repo PRs only. The actor gate is also enforced in the AWS trust policy (§7).
     if: ${{ startsWith(github.head_ref, 'renovate/') && github.actor == 'renovate[bot]' }}
-    uses: twin-digital/opus/.github/workflows/_commit-renovate-changeset.yml@main
+    uses: twin-digital/opus/.github/workflows/_commit-renovate-changeset.yml@713799c2bee70b934fbecc5086adb303bf62ff1e # main
     permissions:
       id-token: write
       contents: write
