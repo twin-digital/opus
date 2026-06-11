@@ -853,8 +853,8 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.4.1)
       '@pnpm/types':
-        specifier: ^1000.6.0
-        version: 1000.9.0
+        specifier: ^1101.0.0
+        version: 1101.3.1
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
@@ -3311,9 +3311,9 @@ packages:
     resolution: {integrity: sha512-r1WzYXBD8cqlglOi4ilN9BphX74mJmH2hhiogzYbcNCHhtXnG7tw/9Iq54UGZ+cpDkgGHjL0xLwj9QLUoKJxmg==}
     engines: {node: '>=18.12'}
 
-  '@pnpm/types@1000.9.0':
-    resolution: {integrity: sha512-UvDTCxnbyqkTg2X0dBOuZ4IdFJ8g4UFu0Ybv/5/cZAxCWVhNl1hC/Xc9hR4tZrlBL0NRFePLRhO/iw9LmA1lbw==}
-    engines: {node: '>=18.12'}
+  '@pnpm/types@1101.3.1':
+    resolution: {integrity: sha512-DWx1obQvKH1Juo31FFd4q3hPcDey4YhjfZK/CVA4216lH9AihOI4KLrSy7sEFkIit6GOgenw1Zx6bEWkCJtOaA==}
+    engines: {node: '>=22.13'}
 
   '@quansync/fs@1.0.0':
     resolution: {integrity: sha512-4TJ3DFtlf1L5LDMaM6CanJ/0lckGNtJcMjQ1NAV6zDmA0tEHKZtxNKin8EgPaVX1YzljbxckyT2tJrpQKAtngQ==}
@@ -8878,7 +8878,7 @@ snapshots:
       '@pnpm/error': 1000.1.0
       find-up: 5.0.0
 
-  '@pnpm/types@1000.9.0': {}
+  '@pnpm/types@1101.3.1': {}
 
   '@quansync/fs@1.0.0':
     dependencies:
@@ -11050,7 +11050,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.17.0(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.17.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -12154,7 +12154,7 @@ snapshots:
 
   ret@0.5.0: {}
 
-  retry-axios@2.6.0(axios@1.17.0(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.17.0):
     dependencies:
       axios: 1.17.0(debug@4.4.3)
 

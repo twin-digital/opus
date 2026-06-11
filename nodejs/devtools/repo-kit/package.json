@@ -34,7 +34,7 @@
   "devDependencies": {
     "@commander-js/extra-typings": "^15.0.0",
     "@eslint/js": "catalog:",
-    "@pnpm/types": "^1000.6.0",
+    "@pnpm/types": "^1101.0.0",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
