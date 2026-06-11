@@ -20,6 +20,14 @@ const DisabledRulesInTests = [
 
 const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
   {
+    // Flag any `eslint-disable` directive that no longer suppresses anything. ESLint defaults this to
+    // "warn", which is easy to miss; promoting it to "error" keeps disable annotations honest as rules
+    // evolve (e.g. ESLint v10's JSX reference tracking can make older no-unused-vars suppressions stale).
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
+  {
     files: ['**/*.{js,mjs,cjs,ts,mts,jsx,tsx}'],
     languageOptions: {
       globals: {
