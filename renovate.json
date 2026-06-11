@@ -13,6 +13,12 @@
   },
   "packageRules": [
     {
+      "description": "Never digest-pin the self-referential reusable workflow in renovate-changeset.yml. It is invoked `@main` on purpose: the reusable job's OIDC `job_workflow_ref` claim must equal the AWS minter role's StringEquals-pinned `…@refs/heads/main` (docs/cicd/renovate-integration.md §7). `helpers:pinGitHubActionDigests` would rewrite it to a commit SHA, breaking `sts:AssumeRoleWithWebIdentity` so minting fails on every Renovate PR (this happened in #152). This is an in-repo self-reference on a protected branch, so SHA immutability buys nothing here.",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["twin-digital/opus"],
+      "enabled": false
+    },
+    {
       "description": "Auto-merge non-major updates once all required checks pass (CI build/lint/test, merge-checks, the Socket supply-chain scanner, changeset-present). Majors are deliberately absent from `matchUpdateTypes`, so they never auto-merge and always get a human. The build-scripts rule below overrides this back to manual; patched-deps inherit it (they self-gate — a broken patch fails CI). Security updates auto-merge regardless via `vulnerabilityAlerts`.",
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
