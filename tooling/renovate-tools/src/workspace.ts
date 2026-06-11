@@ -21,7 +21,7 @@ export const findManifestPaths = (root: string, groups: string[] = ['nodejs', 't
         continue
       }
       const full = join(dir, entry)
-      let isDir = false
+      let isDir: boolean
       try {
         isDir = statSync(full).isDirectory()
       } catch {

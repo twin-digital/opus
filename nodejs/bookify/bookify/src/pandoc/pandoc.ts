@@ -82,8 +82,10 @@ let pandocAvailable: boolean | undefined
 const checkPandocInstallation = async () => {
   try {
     await $`pandoc --version`
-  } catch (_) {
-    throw new Error('Pandoc is not installed or not available in PATH. Please install pandoc to continue.')
+  } catch (error) {
+    throw new Error('Pandoc is not installed or not available in PATH. Please install pandoc to continue.', {
+      cause: error,
+    })
   }
 }
 
