@@ -1,12 +1,15 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { $ } from '../lib/shell.js'
+import { requireDocker } from '../lib/require-docker.js'
 
 const contextPath = process.cwd()
 const dockerfilePath = path.join(process.cwd(), 'Dockerfile')
 const hasDockerfile = fs.existsSync(dockerfilePath)
 
 if (hasDockerfile) {
+  requireDocker()
+
   const outDir = path.join(process.cwd(), '.out')
   const iidFile = path.join(outDir, 'image.iid')
   const archive = path.join(outDir, 'container-image.tar.gz')
