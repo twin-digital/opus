@@ -56,7 +56,6 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vite": "^7.3.0",
     "vitest": "catalog:"
   },
   "engines": {
