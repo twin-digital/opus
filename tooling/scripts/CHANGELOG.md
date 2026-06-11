@@ -1,5 +1,11 @@
 # @twin-digital/opus-scripts
 
+## 0.3.2
+
+### Patch Changes
+
+- 4ab24c0: `artifact` and `docker-dev` now fail fast with a pointer to #164 when no Docker daemon is reachable (the workspace devcontainer no longer mounts the host Docker socket).
+
 ## 0.3.1
 
 ### Patch Changes

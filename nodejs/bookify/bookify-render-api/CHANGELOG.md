@@ -1,5 +1,16 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.7
+
+### Patch Changes
+
+- 713799c: chore(deps): drop the explicit `vite` devDependency from bookify-render-api. Vite is a peer of vitest and is auto-installed by pnpm (as it already is for every other vitest-using package), so the manual declaration was redundant. This also retires the standalone Renovate update for it.
+- Updated dependencies [6a71063]
+- Updated dependencies [16681f3]
+- Updated dependencies [729a6a6]
+  - @twin-digital/bookify@0.4.2
+  - @twin-digital/observability-lib@0.0.3
+
 ## 0.1.6
 
 ### Patch Changes

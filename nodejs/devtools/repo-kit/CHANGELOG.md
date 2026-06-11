@@ -1,5 +1,12 @@
 # @twin-digital/repo-kit
 
+## 0.3.2
+
+### Patch Changes
+
+- 060e675: fix(deps): update dependency commander to v15. Commander 15 is ESM-only and requires Node.js ≥ 22.12.0; repo-kit is already ESM on Node 24 and uses no negated (`--no-*`) options, so the v15 breaking changes don't affect it.
+  - @twin-digital/json-patch-x@0.3.0
+
 ## 0.3.1
 
 ### Patch Changes
