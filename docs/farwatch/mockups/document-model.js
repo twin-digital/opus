@@ -151,6 +151,61 @@ const DocModel = (function () {
     return { cssVars, occasion, bleed, age };
   }
 
+  // ════════════════ CATEGORIES — a category is a DISTRIBUTION; a preset is just a width-0 one ════════════════
+  // The uniform library model: where PRESETS pin one value per param, a CATEGORY gives each param a SAMPLER, and
+  // sample(entity, category, seed) draws a concrete option-set (the same shape compose() eats). This is the
+  // SEPARATE STAGE in front of the resolver — sampling (category + seed → spec) then compose(spec) → CSS, both
+  // unchanged. A "pinned" param is just a constant sampler, so presets are the degenerate case of categories.
+  //
+  // A param's sampler is, by shape:
+  //   constant            → used as-is (a pinned axis)
+  //   { range:[a,b], unit?, dp? } → CONTINUOUS float (absorbency, chain alpha/gap) — formatted to a string
+  //   { pick:{ value: weight, … } }   → DISCRETE weighted choice (grain/laid/tear) — keys are the CSS values
+  //   { color:'#hex', h?, s?, l? }    → fill jittered in HSL by ±h/±s/±l (tone wander, hue ~stable — NOT raw-RGB
+  //                                      jitter, which drifts muddy/green)
+  // Same seed → same draw: an FNV-1a hash seeds mulberry32, and params are drawn IN KEY ORDER, so a document's id
+  // as the seed makes that document look identical every open while no two in the world match.
+  const CATEGORIES = {
+    paper: {
+      // ~one artisan-batch of hard-sized ledger stock: the 'ledger (hard rag)' preset opened into a band.
+      'ledger (hard rag)': {
+        fill: { color: '#d9cca6', h: 0.012, s: 0.05, l: 0.05 },   // small tone wander; hue near-fixed (warm cream)
+        grain: { pick: { 'var(--grain-fine)': 0.7, 'var(--grain-soft)': 0.3 } },
+        laid: { pick: { 'var(--laid-fibre)': 0.7, 'var(--laid-faint)': 0.3 } },
+        chain: { range: [0.04, 0.07], dp: 3 },
+        chainGap: { range: [50, 60], unit: 'px', dp: 0 },
+        glow: 'var(--glow-candle-soft)',
+        tear: { pick: { 'var(--tear-torn)': 0.8, 'var(--tear-deep)': 0.2 } },
+        absorbency: { range: [0.15, 0.26], dp: 2 },
+      },
+    },
+  };
+
+  // ── seeded sampling machinery (mirrors ink-cycle.js: FNV-1a → mulberry32, deterministic per seed) ──
+  const hashSeed = (str) => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; };
+  const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const rgbToHsl = ([r, g, b]) => { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0, s = 0; const l = (mx + mn) / 2; if (d) { s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; } return [h, s, l]; };
+  const hslToRgb = ([h, s, l]) => { if (!s) return [l * 255, l * 255, l * 255]; const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; const hk = (t) => { t = ((t % 1) + 1) % 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; }; return [hk(h + 1 / 3) * 255, hk(h) * 255, hk(h - 1 / 3) * 255]; };
+  const weightedPick = (obj, rng) => { const ks = Object.keys(obj); let tot = 0; for (const k of ks) tot += obj[k]; let r = rng() * tot; for (const k of ks) { r -= obj[k]; if (r <= 0) return k; } return ks[ks.length - 1]; };
+  function drawParam(spec, rng) {
+    if (spec && typeof spec === 'object' && !Array.isArray(spec)) {
+      if ('range' in spec) { const [a, b] = spec.range; const v = a + (b - a) * rng(); return spec.unit ? v.toFixed(spec.dp ?? 2) + spec.unit : v.toFixed(spec.dp ?? 2); }
+      if ('pick' in spec) return weightedPick(spec.pick, rng);
+      if ('color' in spec) { const c = rgbToHsl(hexToRgb(spec.color)); const j = (r) => (rng() * 2 - 1) * (r || 0); return rgbToHex(hslToRgb([c[0] + j(spec.h), clamp01(c[1] + j(spec.s)), clamp01(c[2] + j(spec.l))])); }
+    }
+    return spec; // constant → a pinned axis
+  }
+  // sample(entity, categoryName, seed) → a concrete option-set for that entity (or null if no such category).
+  function sample(entity, name, seed) {
+    const cat = CATEGORIES[entity] && CATEGORIES[entity][name];
+    if (!cat) return null;
+    const rng = mulberry32(hashSeed(entity + '/' + name + '/' + seed));
+    const out = {};
+    for (const key of Object.keys(cat)) out[key] = drawParam(cat[key], rng); // key order = stable draw order
+    return out;
+  }
+
   // a sensible starting document (one preset per entity), deep-copied
   function defaultSpec() {
     return {
@@ -162,5 +217,5 @@ const DocModel = (function () {
     };
   }
 
-  return { SCHEMA, PRESETS, compose, defaultSpec };
+  return { SCHEMA, PRESETS, CATEGORIES, compose, sample, defaultSpec };
 })();
