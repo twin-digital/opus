@@ -1,5 +1,11 @@
 # @twin-digital/tsconfig
 
+## 0.2.1
+
+### Patch Changes
+
+- e95e6a5: Support TypeScript 6. Drop the deprecated `downlevelIteration` compiler option from the shared tsconfig (a no-op at the configured ES2024 target, and an error under TS 6), and type the refbash store's items map as `ObservableMap` so it satisfies TS 6's updated `Map` lib definitions (`getOrInsert`/`getOrInsertComputed`).
+
 ## 0.2.0
 
 ### Minor Changes

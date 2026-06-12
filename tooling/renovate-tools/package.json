@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/renovate-tools",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.",
   "type": "module",
   "exports": {
