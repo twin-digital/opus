@@ -1,3 +1,7 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+
 import type { VendConfig } from './types.js'
 
 export interface RenderedAwsConfig {
@@ -76,3 +80,14 @@ export const renderAwsConfig = (cfg: VendConfig): RenderedAwsConfig => {
 
 /** The signer profile name for a github-app provider (must match what renderAwsConfig writes). */
 export const signerProfileName = (accountId: string, role: string): string => `${accountId}-${role}`
+
+export const awsConfigPath = (): string => process.env.AWS_CONFIG_FILE ?? join(homedir(), '.aws', 'config')
+
+/** Render and write `~/.aws/config`, returning the shelf vend-profile list. */
+export const writeAwsConfig = (cfg: VendConfig): string[] => {
+  const { config, vendProfiles } = renderAwsConfig(cfg)
+  const path = awsConfigPath()
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, config, { mode: 0o600 })
+  return vendProfiles
+}
