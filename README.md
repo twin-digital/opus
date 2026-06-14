@@ -15,6 +15,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/observability-lib](./nodejs/core-aws/observability-lib): AWS Lambda observability utilities with Powertools integration (logging, tracing, metrics)
 - [@twin-digital/cli-lib](./nodejs/core/cli-lib): Utilities for building CLI applications with oclif.
 - [@twin-digital/logger-lib](./nodejs/core/logger-lib): Generic logging interface and implementations for TypeScript applications
+- [@twin-digital/credential-shelf](./nodejs/devcontainer/credential-shelf): Consolidated credential vendor sidecar — vends scoped, short-lived AWS and GitHub App credentials onto a read-only /creds shelf.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI that keeps per-package config across the monorepo in sync with a single declarative source of truth.
