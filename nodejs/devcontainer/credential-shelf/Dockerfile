@@ -55,7 +55,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 # Unprivileged vendor account at uid/gid 1000 — that uid (not the name) is the contract: it
 # must match the consumer's uid so the 0600 shelf files are readable on the read-only mount.
-RUN groupadd -g 1000 credential-vendor \
+# node:24 ships a `node` user/group at 1000, so drop it first to free the uid/gid.
+RUN userdel -r node 2>/dev/null || true; groupdel node 2>/dev/null || true; \
+    groupadd -g 1000 credential-vendor \
   && useradd -m -u 1000 -g 1000 -s /bin/bash credential-vendor \
   && mkdir -p /creds && chown credential-vendor /creds
 

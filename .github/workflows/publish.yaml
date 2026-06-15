@@ -118,7 +118,11 @@ jobs:
   # Prepare matrix of Docker packages to build
   docker-matrix:
     needs: publish
-    if: needs.publish.outputs.hasChangesets == 'false'
+    # Run on a release (publish succeeded, hasChangesets=false) AND when publish FAILED — an
+    # npm-publish failure of unrelated packages shouldn't block image builds, which are gated
+    # on their own tag detection below (docker-packages.js only emits packages tagged at HEAD).
+    # Skips the "create Version Packages PR" runs (publish success + hasChangesets=true).
+    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -209,7 +213,7 @@ jobs:
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
     needs: [publish, docker-matrix, docker-build-publish]
-    if: always() && needs.publish.outputs.hasChangesets == 'false' && needs.docker-matrix.outputs.has-packages == 'true'
+    if: always() && needs.docker-matrix.outputs.has-packages == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
