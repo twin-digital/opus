@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/workspace",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dev container image — security hardening (no sudo, VS Code channel scrub, credential shims) plus common tooling.",
   "type": "module",
   "scripts": {

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/farwatch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Farwatch end-to-end CLI: simulate an adventure and chronicle the outcome.",
   "license": "ISC",
   "type": "module",
