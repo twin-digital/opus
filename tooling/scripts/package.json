@@ -22,7 +22,7 @@
     "chalk": "catalog:",
     "chokidar": "^4.0.3",
     "execa": "catalog:",
-    "globby": "^15.0.0"
+    "globby": "^16.0.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
