@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------------------------------------------------------
 # Base image with pnpm/corepack
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 ENV DO_NOT_TRACK=1
 ENV HUSKY=0
@@ -63,7 +63,7 @@ RUN pnpm deploy --filter @twin-digital/codex --legacy --prod /app
 
 # ----------------------------------------------------------------------------------------------------------------------
 # RUNTIME: small image with only prod deps + built bundle
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 
