@@ -1,5 +1,11 @@
 # @thrashplay/fw-chronicler
 
+## 0.1.1
+
+### Patch Changes
+
+- e449922: fix(deps): update all non-major dependencies
+
 ## 0.1.0
 
 ### Minor Changes
