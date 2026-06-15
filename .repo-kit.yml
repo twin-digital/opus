@@ -1,4 +1,14 @@
 packages:
+  '@twin-digital/workspace':
+    # Dockerfile-only image package (no TS source) — keep only the docker/engines/.nvmrc rules.
+    rules:
+      clean: false
+      eslint: false
+      eslint-config-bootstrap: false
+      typescript: false
+      typescript-dependencies: false
+      typescript-scripts-and-dependencies: false
+      typescript-with-options: false
   '@twin-digital/eslint-config':
     rules:
       eslint: false
