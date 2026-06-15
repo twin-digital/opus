@@ -1,5 +1,12 @@
 # @twin-digital/observability-lib
 
+## 0.0.3
+
+### Patch Changes
+
+- 729a6a6: chore(deps): update middy-js monorepo to v7
+  - @twin-digital/logger-lib@0.0.1
+
 ## 0.0.2
 
 ### Patch Changes
