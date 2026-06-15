@@ -55,8 +55,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 # Unprivileged vendor account at uid/gid 1000 — that uid (not the name) is the contract: it
 # must match the consumer's uid so the 0600 shelf files are readable on the read-only mount.
-RUN groupadd -g 1000 credential-vendor \
-  && useradd -m -u 1000 -g 1000 -s /bin/bash credential-vendor \
+# Drop ALL pre-made users at uid >= 1000 (node:24 ships `node` at 1000) so credential-vendor
+# can take 1000 — same approach as the workspace image.
+RUN getent passwd \
+    | awk -F: '($3 >= 1000) && ($1 != "nobody") {print $1}' \
+    | xargs -r -n 1 userdel -r \
+  && rm -rf /etc/sudoers.d/* \
+  && { groupadd --gid 1000 credential-vendor || true; } \
+  && useradd -s /bin/bash -m -u 1000 -g 1000 credential-vendor \
   && mkdir -p /creds && chown credential-vendor /creds
 
 # Baked default config (idle). Override in a derived image, NOT a /workspace bind-mount.
