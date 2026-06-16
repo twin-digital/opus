@@ -1,4 +1,4 @@
-# credential-shelf — consolidated credential vendor sidecar.
+# credential-shelf — the credential vendor sidecar.
 #
 # Build context is the MONOREPO ROOT (see opus-scripts/bin/artifact.js) so `turbo prune` can
 # see the full workspace; this Dockerfile lives in the package dir. Debian (not Alpine) base
@@ -55,8 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 # Unprivileged vendor account at uid/gid 1000 — that uid (not the name) is the contract: it
 # must match the consumer's uid so the 0600 shelf files are readable on the read-only mount.
-# Drop ALL pre-made users at uid >= 1000 (node:24 ships `node` at 1000) so credential-vendor
-# can take 1000 — same approach as the workspace image.
+# The base image ships a `node` user/group at 1000, so drop all pre-made uid >= 1000 users
+# first to free the uid/gid.
 RUN getent passwd \
     | awk -F: '($3 >= 1000) && ($1 != "nobody") {print $1}' \
     | xargs -r -n 1 userdel -r \

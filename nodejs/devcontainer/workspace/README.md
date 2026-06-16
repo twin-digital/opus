@@ -1,8 +1,8 @@
 # @twin-digital/workspace
 
-The dev container image — **security hardening + common tooling** in one image (the former
-`base` + `default`, folded together). Most devcontainers run this directly or build `FROM`
-it. Published as `ghcr.io/twin-digital/workspace`.
+The dev container image — **security hardening + common tooling** in one image. Most
+devcontainers run this directly or build `FROM` it. Published as
+`ghcr.io/twin-digital/workspace`.
 
 A Dockerfile-only package: no source, no build — the monorepo publish workflow builds and
 pushes the image (`pnpm artifact` → a plain `docker build`).

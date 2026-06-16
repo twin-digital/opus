@@ -1,15 +1,11 @@
-# workspace — the dev container image: security hardening + common tooling.
-#
-# Folds the former base+default split AND the devcontainer.json `features` (aws-cli, gh,
-# node/nvm, python, terraform) into one prebuilt image, so a devcontainer rebuild just pulls
-# cached layers instead of re-running feature installs every time.
+# workspace — the dev container image: security hardening + the toolchains a devcontainer
+# uses (aws-cli, gh, node/nvm, python, terraform), prebuilt so a rebuild pulls cached layers.
 #
 # Layer order is stable→volatile for cache reuse: base apt packages first, then each pinned
 # tool in its own layer (bumping one version rebuilds only that layer + below), and the
 # occasionally-edited rootfs/credential block LAST so editing a shim never reinstalls a
-# toolchain. Build context is the monorepo ROOT (opus-scripts/bin/artifact.js).
-#
-# Pinned versions are starting points — confirm/bump on first build (override with --build-arg).
+# toolchain. Build context is the monorepo ROOT (opus-scripts/bin/artifact.js). Tool versions
+# are pinned via ARG — override with --build-arg.
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 USER root
@@ -17,7 +13,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # ─── system packages (stable) ───────────────────────────────────────────────────────────────
 # Hardening: remove sudo (no setuid privilege-escalation path). Plus the base toolchain and
-# python (the former `python` feature): one apt layer, one update, lists cleaned in-layer.
+# python: one apt layer, one update, lists cleaned in-layer.
 RUN export SUDO_FORCE_REMOVE=yes \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -46,7 +42,7 @@ RUN arch="$(dpkg --print-architecture)" \
   && curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${arch}.zip" -o /tmp/tf.zip \
   && unzip -q /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip && chmod 0755 /usr/local/bin/terraform
 
-# GitHub CLI. Install the real binary to /usr/bin/gh — the base ships a devcred wrapper at
+# GitHub CLI. Install the real binary to /usr/bin/gh — the rootfs ships a devcred wrapper at
 # /usr/local/bin/gh (earlier on PATH) that injects the vended token and execs this one.
 ARG GH_VERSION=2.63.2
 RUN arch="$(dpkg --print-architecture)" \
@@ -55,8 +51,8 @@ RUN arch="$(dpkg --print-architecture)" \
   && install -m 0755 "/tmp/gh_${GH_VERSION}_linux_${arch}/bin/gh" /usr/bin/gh \
   && rm -rf /tmp/gh.tgz "/tmp/gh_${GH_VERSION}_linux_${arch}"
 
-# node via nvm (kept by choice — the user manages extra versions with nvm). NVM_DIR is shared
-# and owned by the unprivileged user so `nvm install <other>` works at runtime; the default
+# node via nvm, so extra versions can be managed at runtime. NVM_DIR is shared and owned by
+# the unprivileged user so `nvm install <other>` works at runtime; the default
 # version's bin is on PATH non-interactively (scripts, postCreate), and nvm.sh is sourced for
 # interactive shells. corepack provides the pnpm/yarn shims the monorepo uses.
 ENV NVM_DIR=/usr/local/share/nvm
