@@ -1,0 +1,8 @@
+{
+  "app": "pnpm exec tsx src/app.ts",
+  "output": "cdk.out",
+  "watch": {
+    "include": ["src/**"],
+    "exclude": ["**/*.test.ts"]
+  }
+}
