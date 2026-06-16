@@ -1,4 +1,4 @@
-# Secrets & credential brokering (base)
+# Secrets & credential brokering (workspace image)
 
 The workspace is **untrusted** (agents, build scripts, packages all run as our uid).
 Powerful credentials must therefore live in a _different_ trust domain. This image
@@ -16,8 +16,12 @@ Design goals:
 - **Provider-agnostic.** The workspace never encodes _how_ a secret is produced
   (SSO, a GitHub App, a static file, a future broker) — only how to _ask_ for it.
 
-> **Status:** this document is the **v1 contract**. It is the spec the base image
-> implements; treat the wire/format/precedence rules here as authoritative.
+> **Status:** the **v1 contract** the workspace image's `devcred` + adapters implement.
+> What ships today is the **file shelf** (transports 3–5 in §4: file / env / none) with the
+> `{value, expires_at}` payload and the AWS native-file exception below. The **broker**
+> socket/tcp transports (§4 rows 1–2, [CREDENTIAL-BROKER.md](./CREDENTIAL-BROKER.md)) and the
+> v2 `SIGN` verb (§7) are designed here but **not yet implemented**. Treat the file-shelf
+> wire/format/precedence rules as authoritative.
 
 ---
 
@@ -121,25 +125,25 @@ Detection precedence (first match wins):
 
 Override: `DEVCRED_SOURCE=unix:/run/devcred.sock | tcp:host:port | file:/creds | env | none`.
 
-Brokered transports (1–2) speak the §3 protocol and reserve the verb slot;
-non-brokered transports (3–4) are fetch-only by construction. Only `GET` ships in
-v1 regardless.
+Brokered transports (1–2) are the **broker** design ([CREDENTIAL-BROKER.md](./CREDENTIAL-BROKER.md))
+and are **not yet implemented** — today `devcred` resolves file / env / none (3–5). Non-brokered
+transports (3–4) are fetch-only by construction; only `GET` ships.
 
 ---
 
-## 5. Consumer adapters (what's wired in base)
+## 5. Consumer adapters (what's wired in the workspace image)
 
-All adapters live in base, are **wired but inert** (they no-op cleanly when
+All adapters live in the workspace image, are **wired but inert** (they no-op cleanly when
 `devcred` returns none), and are **runtime-toggleable** — there are no build-arg
 variants and no separate images to compose. (Rationale: the helpers are tiny and
 harmless when idle; gating them at build time would fork the single workspace
 image, which we explicitly don't want.)
 
-| Consumer | Interface used                                                            | How it resolves                                                                                                                                                                              | Runtime opt-out          |
-| -------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| **git**  | credential helper (`credential.https://github.com.helper`, `useHttpPath`) | helper → `devcred get github/<org>` (org = request path)                                                                                                                                     | `DEVCRED_GIT_HELPER=off` |
-| **gh**   | `GH_TOKEN` via a PATH wrapper                                             | wrapper → `devcred get github/<org>` (org = `-R`/cwd/`GH_ORG`)                                                                                                                               | `DEVCRED_GH_WRAPPER=off` |
-| **AWS**  | native: shared credentials file / `credential_process`                    | file case: sidecar writes the AWS creds file, base points `AWS_SHARED_CREDENTIALS_FILE` at it; socket case: `credential_process = devcred get aws/<account>` (emits the SDK's expected JSON) | use a profile without it |
+| Consumer | Interface used                                                            | How it resolves                                                                                                                                                                                             | Runtime opt-out          |
+| -------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| **git**  | credential helper (`credential.https://github.com.helper`, `useHttpPath`) | helper → `devcred get github/<org>` (org = request path)                                                                                                                                                    | `DEVCRED_GIT_HELPER=off` |
+| **gh**   | `GH_TOKEN` via a PATH wrapper                                             | wrapper → `devcred get github/<org>` (org = `-R`/cwd/`GH_ORG`)                                                                                                                                              | `DEVCRED_GH_WRAPPER=off` |
+| **AWS**  | native: shared credentials file / `credential_process`                    | file case: sidecar writes the AWS creds file, the workspace image points `AWS_SHARED_CREDENTIALS_FILE` at it; socket case: `credential_process = devcred get aws/<account>` (emits the SDK's expected JSON) | use a profile without it |
 
 AWS deliberately leans on the SDK's **native** mechanisms rather than a bespoke
 adapter — they already give on-demand fetch and structured creds. `devcred`'s
@@ -159,7 +163,9 @@ presenting **one** transport:
 - **No sidecar** → detection lands on env/none. A working container with zero
   secrets — the right default for someone pulling this off the shelf.
 - **A shelf sidecar** → writes `/creds/<name>` payload files (the simplest provider;
-  can even be a static file with no daemon). Fetch-only.
+  can even be a static file with no daemon), plus a `/creds/status/<name>` health stamp
+  (`ok expires=…` / `stalled …`) per vend loop. Fetch-only. (This is what `credential-shelf`
+  is — see [its README](../credential-shelf/README.md).)
 - **A broker sidecar** → listens on `/run/devcred.sock` (or tcp), mints on demand,
   can scope/expire/audit per request, and is where v2 operations (signing) will
   live. Nothing at rest.
@@ -182,8 +188,8 @@ SIGN <sign/key> <bytes>   →  signature        # v2, brokered transports only
 The key stays in the sidecar; the workspace sends bytes and gets a signature, via
 git's native replaceable signer hook (`gpg.ssh.program`). The file shelf cannot
 serve it (no request channel). Until v2 lands, commit signing remains whatever the
-_specialized_ layer on top of this image configures (e.g. a mounted key) — base
-ships nothing for it. The v1 verb slot is what lets `SIGN` arrive without a
+_specialized_ layer on top of this image configures (e.g. a mounted key) — the workspace
+image ships nothing for it. The v1 verb slot is what lets `SIGN` arrive without a
 breaking protocol change.
 
 ---
