@@ -79,5 +79,10 @@ per loop, or `stalled …`).
 ## Commands
 
 `credential-shelf start` (default / `ENTRYPOINT`) supervises the vend loops; `credential-shelf
-refresh` does the recurring SSO login. The one-time GitHub App key → KMS import tool is a
-separate step (see the deployment docs).
+refresh` does the recurring SSO login. `import-app-private-key <app-key.pem>` is the one-time
+setup that imports the GitHub App's RSA key into KMS as a non-extractable signing key — run it
+once (with KMS-create perms) and set its alias as the `github-app` provider's `kms_key_id`.
+
+The `/creds` shelf wire contract, the security model, and the future broker design live in
+[docs/devcontainer/](../../../docs/devcontainer/) (`SECRETS.md`, `SECURITY.md`,
+`CREDENTIAL-BROKER.md`).

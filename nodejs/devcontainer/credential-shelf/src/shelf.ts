@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 /** Root of the credentials shelf (overridable for tests). */
 export const shelfDir = (): string => process.env.VEND_SHELF_DIR ?? '/creds'
 
-/** The docs/SECRETS.md token payload. */
+/** The docs/devcontainer/SECRETS.md token payload. */
 export interface ShelfPayload {
   value: string
   expires_at: number | null

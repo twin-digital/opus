@@ -6,7 +6,7 @@
 # (fail-open, exit 0) with a stderr breadcrumb, so callers (git/gh) are simply
 # unauthenticated rather than wedged. Transports, in precedence: the file shelf (a
 # credential sidecar's read-only /creds), then ambient env, then none. The socket/tcp
-# (broker) transports are reserved — see docs/SECRETS.md.
+# (broker) transports are reserved — see docs/devcontainer/SECRETS.md.
 #
 set -euo pipefail
 

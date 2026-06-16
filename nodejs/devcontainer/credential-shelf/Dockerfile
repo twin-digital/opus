@@ -43,9 +43,9 @@ ENV NODE_ENV=production
 ENV DO_NOT_TRACK=1
 ENV TURBO_TELEMETRY_DISABLED=1
 
-# AWS CLI v2 (glibc-only; the vend loops shell to it for STS export + KMS sign), openssl
+# AWS CLI v2 (glibc-only; the vend loops shell to it for STS export + KMS sign), openssl + jq
 # (the one-time GitHub App key import), and ca-certificates for TLS.
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl openssl unzip \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl jq openssl unzip \
   && arch="$(dpkg --print-architecture)" \
   && case "$arch" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) echo "unsupported arch: $arch" >&2; exit 1 ;; esac \
   && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-${a}.zip" -o /tmp/awscli.zip \
@@ -70,7 +70,10 @@ COPY nodejs/devcontainer/credential-shelf/vend.yaml /etc/credential-shelf/vend.y
 
 WORKDIR /app
 COPY --from=builder --chown=credential-vendor:credential-vendor /app ./
-RUN chmod 0755 /app/bin/run.js && ln -s /app/bin/run.js /usr/local/bin/credential-shelf
+# `credential-shelf` (the vend supervisor) + `import-app-private-key` (one-time KMS key import).
+RUN chmod 0755 /app/bin/run.js /app/bin/import-app-private-key \
+  && ln -s /app/bin/run.js /usr/local/bin/credential-shelf \
+  && ln -s /app/bin/import-app-private-key /usr/local/bin/import-app-private-key
 
 USER credential-vendor
 # `credential-shelf start` (default) supervises the vend loops; `refresh` does the SSO login.
