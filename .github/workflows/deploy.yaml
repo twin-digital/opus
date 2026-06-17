@@ -57,4 +57,4 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Pending CDK deploy
-        run: echo "CDK deploy not yet wired (account/role selection TBD; first target: lock-link → saas-apps). No-op."
+        run: echo "CDK deploy not yet wired (account/role selection TBD; first target is lock-link in saas-apps). No-op."
