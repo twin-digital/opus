@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@twin-digital/lynx-lodgify-sync",
+  "name": "@twin-digital/lock-link",
   "version": "0.0.0",
   "description": "Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.",
   "type": "module",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-lambda-powertools/logger": "catalog:",
+    "@twin-digital/observability-lib": "workspace:*",
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.4.2"
   },

@@ -10,7 +10,7 @@ import type { Construct } from 'constructs'
 // Runtime handler lives in src/ (infra → src dependency); never the reverse.
 const syncEntry = fileURLToPath(new URL('../src/functions/sync.ts', import.meta.url))
 
-export class LynxLodgifySyncStack extends Stack {
+export class LockLinkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
@@ -19,6 +19,11 @@ export class LynxLodgifySyncStack extends Stack {
       handler: 'handler',
       runtime: Runtime.NODEJS_22_X,
       timeout: Duration.seconds(30),
+      bundling: {
+        // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
+        // condition, matching the monorepo's source-first model so synth needs no prebuilt dist.
+        esbuildArgs: { '--conditions': 'source' },
+      },
     })
 
     // Placeholder cadence — tighten once the real sync logic lands.

@@ -8,7 +8,7 @@ Repository of all public works developed by Twin Digital.
 
 - [@twin-digital/context-server](./nodejs/apps/context-server): Web service providing contextual information for LLM queries.
 - [@twin-digital/discord-bot](./nodejs/apps/discord-bot): Discord Bot providing server presence and message utilities for Twin Digital applications.
-- [@twin-digital/lynx-lodgify-sync](./nodejs/apps/lynx-lodgify-sync): Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.
+- [@twin-digital/lock-link](./nodejs/apps/lock-link): Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.
 - [@twin-digital/bookify](./nodejs/bookify/bookify): Core logic and models for the Bookify platform
 - [@twin-digital/bookify-cli](./nodejs/bookify/bookify-cli): CLI toolkit for interacting with the Bookify publishing engine.
 - [@twin-digital/bookify-render-api](./nodejs/bookify/bookify-render-api): Serverless API for Bookify rendering platform
