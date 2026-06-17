@@ -46,15 +46,32 @@ jobs:
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           stage: prod
 
-  # Deploys CDK apps via `turbo run deploy:cdk`, assuming each app's account-specific OIDC role
-  # (which can assume that account's cdk-* bootstrap roles). How an app maps to an account/role is
-  # still TBD. NO-OP placeholder for now — its job today is to reserve the structure and keep CDK
-  # packages out of the serverless deploy above (that job runs `deploy:serverless`, which CDK apps
-  # don't define).
+  # Deploys CDK apps via `turbo run deploy:cdk` (runs only for packages that define it — kept out of
+  # the serverless deploy above). Assumes the account's CDK OIDC role, which can assume that account's
+  # cdk-* bootstrap roles. Today there's one target (lock-link → saas-apps) under one role; when a CDK
+  # app needs a different account, split this into per-account jobs (derive them from the deploy:cdk
+  # dry-run rather than a hand-maintained list).
   cdk:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
+    environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
-      - name: Pending CDK deploy
-        run: echo "CDK deploy not yet wired (account/role selection TBD; first target is lock-link in saas-apps). No-op."
+      # checkout the exact commit CI validated (not whatever main points at now)
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # OIDC into the account's CDK deploy role, which can assume that account's cdk-* bootstrap roles
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_CDK_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # deploy:cdk runs only for packages that define it; non-interactive for CI
+      - name: Deploy CDK apps
+        run: pnpm exec turbo run deploy:cdk -- --all --require-approval never
