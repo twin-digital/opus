@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 
 import base from '@twin-digital/eslint-config'
 
@@ -8,7 +8,7 @@ import base from '@twin-digital/eslint-config'
 const overridesDir = new URL('./eslint.config.d/', import.meta.url)
 
 const overrides = []
-try {
+if (existsSync(overridesDir)) {
   const files = readdirSync(overridesDir)
     .filter((file) => file.endsWith('.js'))
     .sort()
@@ -16,8 +16,6 @@ try {
     const fragment = await import(new URL(file, overridesDir).href)
     overrides.push(...[fragment.default].flat())
   }
-} catch {
-  // no eslint.config.d/ directory present
 }
 
 export default [...base, ...overrides]
