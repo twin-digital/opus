@@ -45,3 +45,16 @@ jobs:
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           stage: prod
+
+  # Deploys CDK apps via `turbo run deploy:cdk`, assuming each app's account-specific OIDC role
+  # (which can assume that account's cdk-* bootstrap roles). How an app maps to an account/role is
+  # still TBD. NO-OP placeholder for now — its job today is to reserve the structure and keep CDK
+  # packages out of the serverless deploy above (that job runs `deploy:serverless`, which CDK apps
+  # don't define).
+  cdk:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Pending CDK deploy
+        run: echo "CDK deploy not yet wired (account/role selection TBD; first target is lock-link in saas-apps). No-op."

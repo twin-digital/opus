@@ -11,10 +11,10 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "deploy": "serverless deploy",
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
-    "destroy": "serverless remove",
+    "deploy:serverless": "serverless deploy",
+    "destroy:serverless": "serverless remove",
     "dev": "pnpm exec sls-dev-tools generate | docker-dev -",
     "lint": "lint",
     "lint:fix": "lint_fix",

@@ -22,14 +22,23 @@
     "clean": {
       "cache": false
     },
-    "deploy": {
+    "deploy:serverless": {
       "cache": false,
-      "dependsOn": ["build", "^deploy"],
+      "dependsOn": ["build", "^deploy:serverless"],
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
     },
-    "destroy": {
+    "deploy:cdk": {
+      "cache": false,
+      "dependsOn": ["build", "^deploy:cdk"],
+      "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"]
+    },
+    "destroy:serverless": {
       "cache": false,
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "SERVERLESS_ACCESS_KEY"]
+    },
+    "destroy:cdk": {
+      "cache": false,
+      "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"]
     },
     "lint": {
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
