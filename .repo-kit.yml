@@ -228,10 +228,10 @@ features:
           file: package.json
           patch: |
             scripts:
-              deploy: serverless deploy
+              'deploy:serverless': serverless deploy
               'deploy:dev': serverless deploy --stage dev
               'deploy:prod': serverless deploy --stage prod
-              destroy: serverless remove
+              'destroy:serverless': serverless remove
               dev: pnpm exec sls-dev-tools generate | docker-dev -
             devDependencies:
               '@twin-digital/serverless-dev-tools': workspace:*
@@ -508,8 +508,8 @@ features:
           patch: |
             scripts:
               synth: cdk synth
-              deploy: cdk deploy
-              destroy: cdk destroy
+              'deploy:cdk': cdk deploy
+              'destroy:cdk': cdk destroy
       - name: Create CDK runtime/infra eslint override fragment
         action: write-file
         conditions:

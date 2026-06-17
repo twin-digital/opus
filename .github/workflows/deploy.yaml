@@ -45,3 +45,15 @@ jobs:
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           stage: prod
+
+  # CDK apps deploy to their own account (saas-apps) via an OIDC role that can assume the cdk-*
+  # bootstrap roles. NO-OP placeholder until that role lands in twin-digital/aws — its purpose for
+  # now is to reserve the structure and document that CDK packages are intentionally NOT swept into
+  # the serverless deploy above (that job runs `deploy:serverless`, which CDK apps don't define).
+  cdk:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Pending CDK deploy
+        run: echo "CDK deploy not yet wired — pending the saas-apps OIDC role (twin-digital/aws). No-op."
