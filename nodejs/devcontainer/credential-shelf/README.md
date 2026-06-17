@@ -84,4 +84,4 @@ setup that imports the GitHub App's RSA key into KMS as a non-extractable signin
 once (with KMS-create perms) and set its alias as the `github-app` provider's `kms_key_id`.
 
 The `/creds` shelf wire contract, the security model, and the future broker design live in
-[../docs/](../docs/) (`SECRETS.md`, `SECURITY.md`, `CREDENTIAL-BROKER.md`).
+[docs/](./docs/) (`SECRETS.md`, `SECURITY.md`, `CREDENTIAL-BROKER.md`).

@@ -1,7 +1,5 @@
 packages:
   - nodejs/*/*
-  # docs, not a package — exclude so `nodejs/*/*` doesn't treat it as one.
-  - '!nodejs/devcontainer/docs'
   - tooling/scripts
   - tooling/renovate-tools
 
