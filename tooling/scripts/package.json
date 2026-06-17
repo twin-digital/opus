@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "chalk": "catalog:",
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "execa": "catalog:",
     "globby": "^15.0.0"
   },
