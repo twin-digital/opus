@@ -14,6 +14,9 @@ export class LockLinkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
+    // NOTE: once there's a second CDK app, extract a shared base construct that pre-fills these
+    // bundling defaults (runtime, source condition, lockfile) so they can't drift between apps.
+    // Not worth the indirection for a single app yet.
     const syncFunction = new NodejsFunction(this, 'SyncFunction', {
       entry: syncEntry,
       handler: 'handler',

@@ -1,28 +1,23 @@
+import { readdirSync } from 'node:fs'
+
 import base from '@twin-digital/eslint-config'
 
-const infraMessage = 'Runtime code (src/) must not import infrastructure libraries.'
+// Project overrides: any 'eslint.config.d/*.js' config fragments (composed in filename
+// order) extend the shared base. repo-kit features and packages drop fragments there
+// instead of editing this file.
+const overridesDir = new URL('./eslint.config.d/', import.meta.url)
 
-const srcImportBans = {
-  paths: [
-    { name: 'aws-cdk-lib', message: infraMessage },
-    { name: 'constructs', message: infraMessage },
-  ],
-  patterns: [
-    { group: ['aws-cdk-lib/*'], message: infraMessage },
-    {
-      group: ['**/infra/**'],
-      message: 'Runtime code (src/) must not import from infra/ — infra depends on src, never the reverse.',
-    },
-  ],
+const overrides = []
+try {
+  const files = readdirSync(overridesDir)
+    .filter((file) => file.endsWith('.js'))
+    .sort()
+  for (const file of files) {
+    const fragment = await import(new URL(file, overridesDir).href)
+    overrides.push(...[fragment.default].flat())
+  }
+} catch {
+  // no eslint.config.d/ directory present
 }
 
-export default [
-  // cdk.out holds synthesized templates and the bundled Lambda — generated artifacts, not source.
-  { ignores: ['cdk.out'] },
-  ...base,
-  // Enforce the one-directional boundary: infra/ may depend on src/, never the reverse.
-  {
-    files: ['src/**/*.ts'],
-    rules: { 'no-restricted-imports': ['error', srcImportBans] },
-  },
-]
+export default [...base, ...overrides]

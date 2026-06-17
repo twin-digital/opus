@@ -179,9 +179,29 @@ features:
         options:
           file: eslint.config.js
           content: |
+            import { readdirSync } from 'node:fs'
+
             import base from '@twin-digital/eslint-config'
 
-            export default base
+            // Project overrides: any 'eslint.config.d/*.js' config fragments (composed in filename
+            // order) extend the shared base. repo-kit features and packages drop fragments there
+            // instead of editing this file.
+            const overridesDir = new URL('./eslint.config.d/', import.meta.url)
+
+            const overrides = []
+            try {
+              const files = readdirSync(overridesDir)
+                .filter((file) => file.endsWith('.js'))
+                .sort()
+              for (const file of files) {
+                const fragment = await import(new URL(file, overridesDir).href)
+                overrides.push(...[fragment.default].flat())
+              }
+            } catch {
+              // no eslint.config.d/ directory present
+            }
+
+            export default [...base, ...overrides]
 
       - action: json-merge-patch
         options:
@@ -492,15 +512,14 @@ features:
               synth: cdk synth
               deploy: cdk deploy
               destroy: cdk destroy
-      - name: Create CDK eslint.config.js (runtime/infra import ban)
+      - name: Create CDK runtime/infra eslint override fragment
         action: write-file
         conditions:
           - dependency: aws-cdk
         options:
-          file: eslint.config.js
+          file: eslint.config.d/50-runtime-infra-ban.js
           content: |
-            import base from '@twin-digital/eslint-config'
-
+            // Composed onto the shared base by the generated eslint.config.js (eslint.config.d/*.js).
             const infraMessage = 'Runtime code (src/) must not import infrastructure libraries.'
 
             const srcImportBans = {
@@ -517,11 +536,10 @@ features:
               ],
             }
 
+            // Enforce the one-directional boundary: infra/ may depend on src/, never the reverse.
             export default [
               // cdk.out holds synthesized templates and the bundled Lambda — generated artifacts, not source.
               { ignores: ['cdk.out'] },
-              ...base,
-              // Enforce the one-directional boundary: infra/ may depend on src/, never the reverse.
               {
                 files: ['src/**/*.ts'],
                 rules: { 'no-restricted-imports': ['error', srcImportBans] },
