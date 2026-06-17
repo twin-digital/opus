@@ -2,5 +2,6 @@
   "extends": ["@twin-digital/tsconfig/tsconfig.json"],
   "compilerOptions": {
     "customConditions": ["source"]
-  }
+  },
+  "exclude": ["node_modules", "dist", "cdk.out"]
 }

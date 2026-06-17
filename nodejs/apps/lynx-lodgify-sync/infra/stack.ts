@@ -7,7 +7,8 @@ import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import type { Construct } from 'constructs'
 
-const syncEntry = fileURLToPath(new URL('./functions/sync.ts', import.meta.url))
+// Runtime handler lives in src/ (infra → src dependency); never the reverse.
+const syncEntry = fileURLToPath(new URL('../src/functions/sync.ts', import.meta.url))
 
 export class LynxLodgifySyncStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
