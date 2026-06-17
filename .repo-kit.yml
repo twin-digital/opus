@@ -461,3 +461,69 @@ features:
               '@twin-digital/tsconfig': workspace:*
               '@types/node': 'catalog:'
               typescript: 'catalog:'
+  # CDK applications: keyed on the `aws-cdk` CLI dependency (apps synth/deploy; construct *libraries*
+  # depend on aws-cdk-lib/constructs but not the CLI, so they don't match — and must not get the
+  # runtime/infra import ban, since their src legitimately imports aws-cdk-lib).
+  - name: cdk
+    actions:
+      - name: Create cdk.json
+        action: write-file
+        conditions:
+          - dependency: aws-cdk
+        options:
+          file: cdk.json
+          content: |
+            {
+              "app": "pnpm exec tsx infra/app.ts",
+              "output": "cdk.out",
+              "watch": {
+                "include": ["src/**"],
+                "exclude": ["**/*.test.ts"]
+              }
+            }
+      - name: Add CDK app scripts
+        action: json-merge-patch
+        conditions:
+          - dependency: aws-cdk
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              synth: cdk synth
+              deploy: cdk deploy
+              destroy: cdk destroy
+      - name: Create CDK eslint.config.js (runtime/infra import ban)
+        action: write-file
+        conditions:
+          - dependency: aws-cdk
+        options:
+          file: eslint.config.js
+          content: |
+            import base from '@twin-digital/eslint-config'
+
+            const infraMessage = 'Runtime code (src/) must not import infrastructure libraries.'
+
+            const srcImportBans = {
+              paths: [
+                { name: 'aws-cdk-lib', message: infraMessage },
+                { name: 'constructs', message: infraMessage },
+              ],
+              patterns: [
+                { group: ['aws-cdk-lib/*'], message: infraMessage },
+                {
+                  group: ['**/infra/**'],
+                  message: 'Runtime code (src/) must not import from infra/ — infra depends on src, never the reverse.',
+                },
+              ],
+            }
+
+            export default [
+              // cdk.out holds synthesized templates and the bundled Lambda — generated artifacts, not source.
+              { ignores: ['cdk.out'] },
+              ...base,
+              // Enforce the one-directional boundary: infra/ may depend on src/, never the reverse.
+              {
+                files: ['src/**/*.ts'],
+                rules: { 'no-restricted-imports': ['error', srcImportBans] },
+              },
+            ]

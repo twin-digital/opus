@@ -1,17 +1,19 @@
 import base from '@twin-digital/eslint-config'
 
-const cdkImportBan = {
+const infraMessage = 'Runtime code (src/) must not import infrastructure libraries.'
+
+const srcImportBans = {
   paths: [
+    { name: 'aws-cdk-lib', message: infraMessage },
+    { name: 'constructs', message: infraMessage },
+  ],
+  patterns: [
+    { group: ['aws-cdk-lib/*'], message: infraMessage },
     {
-      name: 'aws-cdk-lib',
-      message: 'Runtime code (src/) must not import infrastructure libraries.',
-    },
-    {
-      name: 'constructs',
-      message: 'Runtime code (src/) must not import infrastructure libraries.',
+      group: ['**/infra/**'],
+      message: 'Runtime code (src/) must not import from infra/ — infra depends on src, never the reverse.',
     },
   ],
-  patterns: ['aws-cdk-lib/*'],
 }
 
 export default [
@@ -21,6 +23,6 @@ export default [
   // Enforce the one-directional boundary: infra/ may depend on src/, never the reverse.
   {
     files: ['src/**/*.ts'],
-    rules: { 'no-restricted-imports': ['error', cdkImportBan] },
+    rules: { 'no-restricted-imports': ['error', srcImportBans] },
   },
 ]
