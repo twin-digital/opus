@@ -1,7 +1,7 @@
 # @twin-digital/credential-shelf
 
-The consolidated **credential vendor sidecar** — one image, N vend loops. It reads a unified
-`vend.yaml` and runs an AWS loop if any `aws-sso` provider is configured and a GitHub loop
+The **credential vendor sidecar** — one image, N vend loops. It reads a unified `vend.yaml`
+and runs an AWS loop if any `aws-sso` provider is configured and a GitHub loop
 per `github-app` grant, writing short-lived, scoped credentials onto a read-only `/creds`
 shelf that consumers (a dev container, an agent) mount. The full SSO session and `kms:Sign`
 stay in this container; only the vended roles' ≤1h creds / scoped tokens reach the shelf.
@@ -79,5 +79,9 @@ per loop, or `stalled …`).
 ## Commands
 
 `credential-shelf start` (default / `ENTRYPOINT`) supervises the vend loops; `credential-shelf
-refresh` does the recurring SSO login. The one-time GitHub App key → KMS import tool is a
-separate step (see the deployment docs).
+refresh` does the recurring SSO login. `import-app-private-key <app-key.pem>` is the one-time
+setup that imports the GitHub App's RSA key into KMS as a non-extractable signing key — run it
+once (with KMS-create perms) and set its alias as the `github-app` provider's `kms_key_id`.
+
+The `/creds` shelf wire contract, the security model, and the future broker design live in
+[docs/](./docs/) (`SECRETS.md`, `SECURITY.md`, `CREDENTIAL-BROKER.md`).

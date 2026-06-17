@@ -4,7 +4,7 @@
 # git-extension IPC sockets so untrusted code in the container can't reach them, then runs
 # the container's command. Wire it as the compose `entrypoint:` with `overrideCommand: false`
 # in devcontainer.json (so VS Code keeps it instead of its own keep-alive). See
-# docs/SECURITY.md §5 (the IPC-socket residual + reaper).
+# nodejs/devcontainer/credential-shelf/docs/SECURITY.md §5 (the IPC-socket residual + reaper).
 #
 # Reaps:  /tmp/vscode-ipc-*.sock  (the `code` CLI channel — incl. --install-extension)
 #         /tmp/vscode-git-*.sock  (the git askpass/OAuth + git-editor IPC)
