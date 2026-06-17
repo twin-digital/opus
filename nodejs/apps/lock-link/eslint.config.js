@@ -4,13 +4,11 @@ const cdkImportBan = {
   paths: [
     {
       name: 'aws-cdk-lib',
-      message:
-        'Runtime code (src/) must not import CDK/infra libraries — it bloats the Lambda bundle. Keep CDK in infra/.',
+      message: 'Runtime code (src/) must not import infrastructure libraries.',
     },
     {
       name: 'constructs',
-      message:
-        'Runtime code (src/) must not import CDK/infra libraries — it bloats the Lambda bundle. Keep CDK in infra/.',
+      message: 'Runtime code (src/) must not import infrastructure libraries.',
     },
   ],
   patterns: ['aws-cdk-lib/*'],

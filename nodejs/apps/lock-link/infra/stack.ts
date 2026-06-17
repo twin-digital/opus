@@ -17,7 +17,7 @@ export class LockLinkStack extends Stack {
     const syncFunction = new NodejsFunction(this, 'SyncFunction', {
       entry: syncEntry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
