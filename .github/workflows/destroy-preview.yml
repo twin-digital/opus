@@ -4,8 +4,19 @@ permissions:
   id-token: write
   contents: read
 
+# SAFETY — this uses `pull_request_target` (not `pull_request`) so the teardown runs in the BASE repo
+# context and therefore receives AWS creds (`secrets.*`) and OIDC even when the PR comes from a fork.
+# `pull_request` would give fork-PR runs a read-only token and NO secrets, so a fork preview (which
+# deploy-preview deploys via its privileged `workflow_run` trigger) could never be torn down — leaking
+# the stack (the #82 cost leak). That is safe here ONLY because this workflow:
+#   - runs the trusted base-branch (main) version of this file — a fork cannot modify it;
+#   - never checks out or executes any PR/fork HEAD code: the checkout below takes the default
+#     (base-branch) ref, and the only things run are trusted base-repo composite actions and
+#     `serverless remove` against a stage selected purely by PR NUMBER (the `pr-<n>` slug);
+#   - uses the credentials solely to remove an already-deployed stage by name (no build of PR code).
+# Do NOT add a checkout of the PR head (`ref: ...head.sha/ref`) or run any PR-supplied code here.
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [closed]
 
@@ -15,8 +26,23 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
+  # Tear down the PR's preview stage on close — but ONLY if one was actually deployed. Preview deploys
+  # are OPT-IN (see deploy-preview.yaml), so most PRs never deploy a stage; without this guard every
+  # close would enter the `preview` environment and run a no-op `serverless remove` (issue #123).
+  #
+  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it when it starts a stage
+  # deploy, and (unlike `preview`) strip-preview-label.yml never removes it, so its presence on the
+  # close event's `pull_request.labels` durably means “this PR initiated a preview deploy” (and teardown
+  # may be needed — a no-op `serverless remove` if no stage was actually created). We read it straight
+  # off the event payload — no API call, no credentials — and a `false` here skips the whole job, so an
+  # un-deployed close never enters the `preview` environment. The label is keyed on the PR number, like
+  # the `pr-<number>` stage it guards, so this is immune to the branch reuse/rename ambiguity a
+  # branch-scoped deploy-history lookup would have. (Surfacing the deploy URL/details on the PR is
+  # tracked separately and intentionally out of scope here.)
   destroy:
-    if: ${{ github.event.pull_request.head.ref != 'changeset-release/main' }}
+    if: >-
+      github.event.pull_request.head.ref != 'changeset-release/main' &&
+      contains(github.event.pull_request.labels.*.name, 'preview-deployed')
     environment: preview
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -31,8 +57,9 @@ jobs:
         id: slugify
         shell: bash
         run: |
-          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'
-          if [[ "${{ github.event_name }}" == "pull_request" ]] && \
+          # For PRs use `pr-<number>` as the stage; otherwise use 'preview'. The glob matches both
+          # `pull_request` and `pull_request_target` (the trigger this workflow actually uses).
+          if [[ "${{ github.event_name }}" == pull_request* ]] && \
              [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
             RAW="pr-${{ github.event.pull_request.number }}"
           else
