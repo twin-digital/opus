@@ -15,12 +15,27 @@ catalogs:
     '@aws-lambda-powertools/tracer':
       specifier: ^2.30.0
       version: 2.33.1
+    '@aws-sdk/client-bedrock-runtime':
+      specifier: ^3.958.0
+      version: 3.1069.0
+    '@aws-sdk/client-dynamodb':
+      specifier: ^3.958.0
+      version: 3.1066.0
+    '@aws-sdk/client-s3':
+      specifier: ^3.958.0
+      version: 3.1066.0
+    '@aws-sdk/lib-dynamodb':
+      specifier: ^3.958.0
+      version: 3.1066.0
     '@eslint/js':
       specifier: ^10.0.0
       version: 10.0.1
     '@middy/core':
       specifier: ^7.0.0
       version: 7.6.7
+    '@types/aws-lambda':
+      specifier: ^8.10.159
+      version: 8.10.162
     '@types/lodash-es':
       specifier: ^4.17.12
       version: 4.17.12
@@ -36,6 +51,9 @@ catalogs:
     aws-sdk-client-mock:
       specifier: ^4.1.0
       version: 4.1.0
+    aws-sdk-client-mock-vitest:
+      specifier: ^7.0.1
+      version: 7.1.0
     chalk:
       specifier: ^5.6.2
       version: 5.6.2
@@ -57,6 +75,9 @@ catalogs:
     lodash-es:
       specifier: ^4.17.22
       version: 4.18.1
+    prettier:
+      specifier: ^3.5.3
+      version: 3.8.4
     prettier-package-json:
       specifier: ^2.8.0
       version: 2.8.0
@@ -72,6 +93,9 @@ catalogs:
     typescript:
       specifier: ^6.0.0
       version: 6.0.3
+    typescript-eslint:
+      specifier: ^8.47.0
+      version: 8.61.0
     vitest:
       specifier: ^4.0.12
       version: 4.1.8
@@ -247,8 +271,8 @@ importers:
         specifier: ^8.17.1
         version: 8.20.0
       chokidar:
-        specifier: ^4.0.3
-        version: 4.0.3
+        specifier: ^5.0.0
+        version: 5.0.0
       execa:
         specifier: 'catalog:'
         version: 9.6.1
@@ -1180,7 +1204,7 @@ importers:
     dependencies:
       '@aws-sdk/client-bedrock-runtime':
         specifier: 'catalog:'
-        version: 3.1066.0
+        version: 3.1069.0
       '@aws-sdk/client-s3':
         specifier: 'catalog:'
         version: 3.1066.0
@@ -1645,7 +1669,7 @@ importers:
     devDependencies:
       '@aws-sdk/client-bedrock-runtime':
         specifier: 'catalog:'
-        version: 3.1066.0
+        version: 3.1069.0
       '@eslint/js':
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.4.1)
@@ -1790,8 +1814,8 @@ importers:
         specifier: 'catalog:'
         version: 5.6.2
       chokidar:
-        specifier: ^4.0.3
-        version: 4.0.3
+        specifier: ^5.0.0
+        version: 5.0.0
       execa:
         specifier: 'catalog:'
         version: 9.6.1
@@ -1921,10 +1945,6 @@ packages:
 
   '@aws-sdk/checksums@3.1000.6':
     resolution: {integrity: sha512-RMCrCteiUwYTEv2G9zfP/BEuKHv57665vVieJyp9cf8VgilWxP/KrWVtMdfdDlIH8nFhvu3rIMc29z3ebGEZ1w==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/client-bedrock-runtime@3.1066.0':
-    resolution: {integrity: sha512-eBMfMBWbjc8ER92INYxpLIM8Zk6Od9vbEE7zgkeOpxXUVpHpPH5ERBeM7H3SShT5ZFM4EzWe3M/C/uZWTpR3vw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-bedrock-runtime@3.1069.0':
@@ -2067,10 +2087,6 @@ packages:
 
   '@aws-sdk/token-providers@3.1063.0':
     resolution: {integrity: sha512-nYDaWWdzjKiDP5xj8k4oUgcYd4WPgzfAOgdU5vJsaqH/07Dfvm7ffisHCFJ+NEl7kUC9JEIUxh0kznvenbo3NQ==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/token-providers@3.1066.0':
-    resolution: {integrity: sha512-UqEUJq7dqa44hneLDUcX7UJy95cg8YqEWyakRpvIPnrNS3Mq+UlQHgCDGu5pvwAPtlIW4qcYbvW6reG6++FyvA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/token-providers@3.1069.0':
@@ -4422,9 +4438,9 @@ packages:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
 
-  chokidar@4.0.3:
-    resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
-    engines: {node: '>= 14.16.0'}
+  chokidar@5.0.0:
+    resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
+    engines: {node: '>= 20.19.0'}
 
   clean-stack@3.0.1:
     resolution: {integrity: sha512-lR9wNiMRcVQjSB3a7xXGLuz4cr4wJuuXlaAEbRutGowQTmlp7R72/DOgN21e8jdwblMWl9UOJMJXarX94pzKdg==}
@@ -6348,9 +6364,9 @@ packages:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
 
-  readdirp@4.1.2:
-    resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
-    engines: {node: '>= 14.18.0'}
+  readdirp@5.0.0:
+    resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
+    engines: {node: '>= 20.19.0'}
 
   real-require@0.2.0:
     resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
@@ -7550,23 +7566,6 @@ snapshots:
       '@smithy/types': 4.14.3
       tslib: 2.8.1
 
-  '@aws-sdk/client-bedrock-runtime@3.1066.0':
-    dependencies:
-      '@aws-crypto/sha256-browser': 5.2.0
-      '@aws-crypto/sha256-js': 5.2.0
-      '@aws-sdk/core': 3.974.21
-      '@aws-sdk/credential-provider-node': 3.972.56
-      '@aws-sdk/eventstream-handler-node': 3.972.22
-      '@aws-sdk/middleware-eventstream': 3.972.18
-      '@aws-sdk/middleware-websocket': 3.972.29
-      '@aws-sdk/token-providers': 3.1066.0
-      '@aws-sdk/types': 3.973.13
-      '@smithy/core': 3.25.0
-      '@smithy/fetch-http-handler': 5.5.0
-      '@smithy/node-http-handler': 4.8.0
-      '@smithy/types': 4.14.3
-      tslib: 2.8.1
-
   '@aws-sdk/client-bedrock-runtime@3.1069.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
@@ -7579,7 +7578,7 @@ snapshots:
       '@aws-sdk/token-providers': 3.1069.0
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
-      '@smithy/fetch-http-handler': 5.4.6
+      '@smithy/fetch-http-handler': 5.5.0
       '@smithy/node-http-handler': 4.8.0
       '@smithy/types': 4.14.3
       tslib: 2.8.1
@@ -7592,7 +7591,7 @@ snapshots:
       '@aws-sdk/credential-provider-node': 3.972.56
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
-      '@smithy/fetch-http-handler': 5.4.6
+      '@smithy/fetch-http-handler': 5.5.0
       '@smithy/node-http-handler': 4.8.0
       '@smithy/types': 4.14.3
       tslib: 2.8.1
@@ -7642,7 +7641,7 @@ snapshots:
 
   '@aws-sdk/credential-provider-cognito-identity@3.972.41':
     dependencies:
-      '@aws-sdk/nested-clients': 3.997.17
+      '@aws-sdk/nested-clients': 3.997.21
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
       '@smithy/types': 4.14.3
@@ -7669,7 +7668,7 @@ snapshots:
       '@aws-sdk/core': 3.974.21
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
-      '@smithy/fetch-http-handler': 5.4.6
+      '@smithy/fetch-http-handler': 5.5.0
       '@smithy/node-http-handler': 4.8.0
       '@smithy/types': 4.14.3
       tslib: 2.8.1
@@ -7687,16 +7686,16 @@ snapshots:
   '@aws-sdk/credential-provider-ini@3.972.50':
     dependencies:
       '@aws-sdk/core': 3.974.21
-      '@aws-sdk/credential-provider-env': 3.972.44
-      '@aws-sdk/credential-provider-http': 3.972.46
-      '@aws-sdk/credential-provider-login': 3.972.49
-      '@aws-sdk/credential-provider-process': 3.972.44
-      '@aws-sdk/credential-provider-sso': 3.972.49
-      '@aws-sdk/credential-provider-web-identity': 3.972.49
-      '@aws-sdk/nested-clients': 3.997.17
+      '@aws-sdk/credential-provider-env': 3.972.47
+      '@aws-sdk/credential-provider-http': 3.972.49
+      '@aws-sdk/credential-provider-login': 3.972.53
+      '@aws-sdk/credential-provider-process': 3.972.47
+      '@aws-sdk/credential-provider-sso': 3.972.53
+      '@aws-sdk/credential-provider-web-identity': 3.972.53
+      '@aws-sdk/nested-clients': 3.997.21
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
-      '@smithy/credential-provider-imds': 4.3.8
+      '@smithy/credential-provider-imds': 4.4.0
       '@smithy/types': 4.14.3
       tslib: 2.8.1
 
@@ -7719,7 +7718,7 @@ snapshots:
   '@aws-sdk/credential-provider-login@3.972.49':
     dependencies:
       '@aws-sdk/core': 3.974.21
-      '@aws-sdk/nested-clients': 3.997.17
+      '@aws-sdk/nested-clients': 3.997.21
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
       '@smithy/types': 4.14.3
@@ -7767,7 +7766,7 @@ snapshots:
   '@aws-sdk/credential-provider-sso@3.972.49':
     dependencies:
       '@aws-sdk/core': 3.974.21
-      '@aws-sdk/nested-clients': 3.997.17
+      '@aws-sdk/nested-clients': 3.997.21
       '@aws-sdk/token-providers': 3.1063.0
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
@@ -7787,7 +7786,7 @@ snapshots:
   '@aws-sdk/credential-provider-web-identity@3.972.49':
     dependencies:
       '@aws-sdk/core': 3.974.21
-      '@aws-sdk/nested-clients': 3.997.17
+      '@aws-sdk/nested-clients': 3.997.21
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
       '@smithy/types': 4.14.3
@@ -7897,7 +7896,7 @@ snapshots:
       '@aws-sdk/signature-v4-multi-region': 3.996.35
       '@aws-sdk/types': 3.973.13
       '@smithy/core': 3.25.0
-      '@smithy/fetch-http-handler': 5.4.6
+      '@smithy/fetch-http-handler': 5.5.0
       '@smithy/node-http-handler': 4.8.0
       '@smithy/types': 4.14.3
       tslib: 2.8.1
@@ -7923,15 +7922,6 @@ snapshots:
       tslib: 2.8.1
 
   '@aws-sdk/token-providers@3.1063.0':
-    dependencies:
-      '@aws-sdk/core': 3.974.21
-      '@aws-sdk/nested-clients': 3.997.17
-      '@aws-sdk/types': 3.973.13
-      '@smithy/core': 3.25.0
-      '@smithy/types': 4.14.3
-      tslib: 2.8.1
-
-  '@aws-sdk/token-providers@3.1066.0':
     dependencies:
       '@aws-sdk/core': 3.974.21
       '@aws-sdk/nested-clients': 3.997.21
@@ -9386,7 +9376,7 @@ snapshots:
 
   '@types/chokidar@2.1.7':
     dependencies:
-      chokidar: 4.0.3
+      chokidar: 5.0.0
 
   '@types/cls-hooked@4.3.9':
     dependencies:
@@ -9442,7 +9432,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 24.13.1
       form-data: 4.0.6
 
   '@types/node@12.20.55': {}
@@ -10036,9 +10026,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  chokidar@4.0.3:
+  chokidar@5.0.0:
     dependencies:
-      readdirp: 4.1.2
+      readdirp: 5.0.0
 
   clean-stack@3.0.1:
     dependencies:
@@ -12138,7 +12128,7 @@ snapshots:
     dependencies:
       picomatch: 2.3.2
 
-  readdirp@4.1.2: {}
+  readdirp@5.0.0: {}
 
   real-require@0.2.0: {}
 
