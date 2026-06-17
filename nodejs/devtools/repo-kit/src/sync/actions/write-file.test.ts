@@ -44,4 +44,13 @@ describe('makeWriteFileAction', () => {
     expect(result).toEqual({ result: 'ok', changedFiles: ['.nvmrc'] })
     expect(fs.readFileSync(path.join(dir, '.nvmrc'), 'utf-8')).toBe('lts/krypton\n')
   })
+
+  it('creates parent directories for nested paths', async () => {
+    const action = makeWriteFileAction({ file: 'eslint.config.d/50-rule.js', content: 'export default []\n' })
+
+    const result = await action(workspace)
+
+    expect(result).toEqual({ result: 'ok', changedFiles: ['eslint.config.d/50-rule.js'] })
+    expect(fs.readFileSync(path.join(dir, 'eslint.config.d/50-rule.js'), 'utf-8')).toBe('export default []\n')
+  })
 })

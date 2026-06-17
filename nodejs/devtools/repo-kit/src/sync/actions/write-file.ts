@@ -28,6 +28,7 @@ export const makeWriteFileAction =
     const changed = previousContent === undefined || previousContent !== content
 
     if (changed) {
+      await fsP.mkdir(path.dirname(filePath), { recursive: true })
       await fsP.writeFile(filePath, content, 'utf-8')
       return {
         changedFiles: [file],
