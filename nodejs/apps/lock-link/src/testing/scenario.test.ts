@@ -33,7 +33,7 @@ describe('lynx + lodgify scenario', () => {
   it('fills a Lodgify gap from the code Lynx serves under the joined confirmationCode', async () => {
     // 1. Lodgify gap set: a Booked booking with an empty key_code.
     const bookings = bookingSetSchema.parse(await (await lodgifyGet('/v2/reservations/bookings')).json())
-    const gap = bookings.items.find((b) => b.rooms.some((r) => r.key_code === ''))
+    const gap = bookings.items.find((b) => (b.rooms ?? []).some((r) => r.key_code === ''))
     expect(gap?.id).toBe(20559349)
 
     // 2. Lynx code for that booking, found by the confirmationCode join.
@@ -53,7 +53,7 @@ describe('lynx + lodgify scenario', () => {
     expect(ready).toBe(true)
 
     // 3. Write it to Lodgify.
-    const roomTypeId = gap?.rooms[0]?.room_type_id
+    const roomTypeId = gap?.rooms?.[0]?.room_type_id
     await fetch(`${lodgify.baseUrl}/v2/reservations/bookings/${String(gap?.id)}/keyCodes`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json', 'x-apikey': world.lodgifyApiKey },
@@ -62,6 +62,6 @@ describe('lynx + lodgify scenario', () => {
 
     // 4. Converged: a second pass sees no gaps.
     const after = bookingSetSchema.parse(await (await lodgifyGet('/v2/reservations/bookings')).json())
-    expect(after.items.filter((b) => b.rooms.some((r) => r.key_code === ''))).toHaveLength(0)
+    expect(after.items.filter((b) => (b.rooms ?? []).some((r) => r.key_code === ''))).toHaveLength(0)
   })
 })

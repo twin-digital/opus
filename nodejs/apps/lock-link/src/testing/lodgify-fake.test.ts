@@ -32,24 +32,24 @@ describe('lodgify fake', () => {
   it('lists seeded bookings, surfacing the empty key_code gap', async () => {
     const set = bookingSetSchema.parse(await (await get('/v2/reservations/bookings')).json())
     expect(set.count).toBe(1)
-    expect(set.items[0]?.rooms[0]?.key_code).toBe('')
+    expect(set.items[0]?.rooms?.[0]?.key_code).toBe('')
   })
 
   it('reflects a written key code on the next read (stateful, not replay)', async () => {
     const put = await putCode(20559349, 501, '9234')
     expect(put.status).toBe(200)
     // 200 echoes the updated booking — confirm the write without a separate GET.
-    expect(bookingSchema.parse(await put.json()).rooms[0]?.key_code).toBe('9234')
+    expect(bookingSchema.parse(await put.json()).rooms?.[0]?.key_code).toBe('9234')
 
     const after = await get('/v2/reservations/bookings/20559349')
-    expect(bookingSchema.parse(await after.json()).rooms[0]?.key_code).toBe('9234')
-    expect(world.bookings.get(20559349)?.rooms[0]?.key_code).toBe('9234')
+    expect(bookingSchema.parse(await after.json()).rooms?.[0]?.key_code).toBe('9234')
+    expect(world.bookings.get(20559349)?.rooms?.[0]?.key_code).toBe('9234')
   })
 
   it('models a converged second pass: the gap is gone after one write', async () => {
     await putCode(20559349, 501, '9234')
     const set = bookingSetSchema.parse(await (await get('/v2/reservations/bookings')).json())
-    expect(set.items.filter((b) => b.rooms.some((r) => r.key_code === ''))).toHaveLength(0)
+    expect(set.items.filter((b) => (b.rooms ?? []).some((r) => r.key_code === ''))).toHaveLength(0)
   })
 
   it('404s an unknown booking and an unknown room_type_id', async () => {

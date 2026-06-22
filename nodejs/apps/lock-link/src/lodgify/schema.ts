@@ -13,8 +13,8 @@ import { z } from 'zod'
 /** A booking's room and its (possibly empty) door code — the gap signal + write target. */
 export const roomSchema = z.object({
   room_type_id: z.number().int(),
-  /** Empty string when no code has been written yet — i.e. a gap to fill. */
-  key_code: z.string(),
+  /** Empty string or `null` when no code has been written yet — i.e. a gap to fill. */
+  key_code: z.string().nullable(),
 })
 export type Room = z.infer<typeof roomSchema>
 
@@ -28,7 +28,10 @@ export const bookingSchema = z.object({
   departure: z.string(),
   status: bookingStatusSchema,
   is_deleted: z.boolean(),
-  /** Channel code (e.g. OTA); free-form across channels. */
+  /**
+   * Channel the booking came through (a `SourceEnum`: Expedia, BookingCom, Airbnb, …).
+   * Modeled as a plain string so a new channel value can't break parsing.
+   */
   source: z.string().nullable(),
   /** Real OTA reference (e.g. an Expedia confirmation), distinct from `source`. */
   source_text: z.string().nullable(),
@@ -36,7 +39,8 @@ export const bookingSchema = z.object({
     name: z.string().nullable(),
     email: z.string().nullable(),
   }),
-  rooms: z.array(roomSchema),
+  /** Nullable in the API; a booking with no rooms has nothing to write to. */
+  rooms: z.array(roomSchema).nullable(),
 })
 export type Booking = z.infer<typeof bookingSchema>
 

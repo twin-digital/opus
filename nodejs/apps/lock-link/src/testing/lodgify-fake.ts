@@ -41,7 +41,7 @@ export const startLodgifyFake = (world: World): Promise<Fake> =>
       }
       const body = putKeyCodesRequestSchema.parse(await readBody(req))
       for (const update of body.rooms) {
-        const room = booking.rooms.find((r) => r.room_type_id === update.room_type_id)
+        const room = booking.rooms?.find((r) => r.room_type_id === update.room_type_id)
         if (!room) {
           sendError(res, 404, 'NotFound', `room_type_id ${String(update.room_type_id)} not on booking ${String(id)}`)
           return
