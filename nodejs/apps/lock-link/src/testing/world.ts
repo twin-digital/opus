@@ -1,0 +1,173 @@
+import { type Booking } from '../lodgify/schema.js'
+import { type Property, type Reservation, type ReservationType, type SmartLock } from '../lynx/schema.js'
+
+/**
+ * A single seed shared by both fakes. Lynx and Lodgify are independent systems joined
+ * only by `confirmationCode`, so the fakes don't share mutable state — but their seed
+ * data must agree (a Lodgify booking's gap is the same reservation Lynx has a code for).
+ * `addReservation` declares that linkage once and writes consistent records to both
+ * sides, so a test reads as one scenario rather than two hand-synced fixtures.
+ *
+ * The Lodgify slice (`bookings`) is mutated by `PUT keyCodes`; the Lynx slice is
+ * read-only reference data.
+ */
+
+const DEFAULT_LOCK_NAMES = ['Dalton Door', '4th Street Lofts', 'Front Door']
+
+export interface ReservationSpec {
+  /** Lodgify numeric booking id; also the leading run of `confirmationCode`. */
+  readonly bookingId: number
+  readonly propertyId?: number
+  readonly roomTypeId?: number
+  readonly guest?: { firstName?: string; lastName?: string; email?: string }
+  readonly checkInTimestamp?: number
+  readonly checkOutTimestamp?: number
+  readonly bookingSource?: number
+  /** The property's full lock set; defaults to the three real locks. */
+  readonly lockNames?: readonly string[]
+  /** Guest door code in Lynx. Omit to model a reservation with no code yet. */
+  readonly code?: string
+  /** `true` → `syncToLockStatus: success` (live); `false` → `scheduled` (pending). */
+  readonly synced?: boolean
+  /** Which locks already have an access code; defaults to the whole lock set. */
+  readonly coveredLocks?: readonly string[]
+  /** The Lodgify booking's current `key_code` (`''` = a gap to fill). */
+  readonly lodgifyKeyCode?: string
+  readonly type?: ReservationType
+  readonly status?: Booking['status']
+}
+
+/** A Lynx reservation tagged with the property + poll bucket it belongs to. */
+export interface SeededReservation {
+  readonly propertyId: number
+  readonly type: ReservationType
+  readonly reservation: Reservation
+}
+
+export interface RequestLog {
+  readonly method: string
+  readonly path: string
+  /** The Lynx dashboard action (last path segment), when applicable. */
+  readonly action?: string
+}
+
+export interface World {
+  readonly accountId: number
+  readonly credentials: { username: string; password: string }
+  /** Bearer token the Lynx login issues and the other endpoints require. */
+  readonly token: string
+  /** Key the Lodgify fake requires in `X-ApiKey`. */
+  readonly lodgifyApiKey: string
+  readonly properties: Map<number, Property>
+  readonly locksByProperty: Map<number, SmartLock[]>
+  readonly reservations: SeededReservation[]
+  readonly bookings: Map<number, Booking>
+  readonly lynxRequests: RequestLog[]
+  readonly lodgifyRequests: RequestLog[]
+  addProperty: (spec: { propertyId: number; name?: string; lockNames?: readonly string[] }) => void
+  addReservation: (spec: ReservationSpec) => void
+}
+
+const aLock = (lockName: string): SmartLock => ({
+  lockName,
+  connectivityStatus: 'ONLINE',
+  batteryLevel: 90,
+  isJammed: false,
+  provisionStatus: 'PROVISIONED',
+  lockModelUniqueName: 'SCHLAGE_ENCODE',
+})
+
+export interface WorldOptions {
+  readonly accountId?: number
+  readonly credentials?: { username: string; password: string }
+  readonly token?: string
+  readonly lodgifyApiKey?: string
+}
+
+export const createWorld = (options: WorldOptions = {}): World => {
+  const accountId = options.accountId ?? 222262
+
+  const world: World = {
+    accountId,
+    credentials: options.credentials ?? { username: 'lynx-user', password: 'lynx-pass' },
+    token: options.token ?? 'fake-lynx-jwt',
+    lodgifyApiKey: options.lodgifyApiKey ?? 'test-api-key',
+    properties: new Map(),
+    locksByProperty: new Map(),
+    reservations: [],
+    bookings: new Map(),
+    lynxRequests: [],
+    lodgifyRequests: [],
+
+    addProperty: ({ propertyId, name, lockNames = DEFAULT_LOCK_NAMES }) => {
+      world.properties.set(propertyId, {
+        uniquePropertyId: propertyId,
+        name: name ?? `Property ${String(propertyId)}`,
+        timeZone: 'America/Chicago',
+        propertyStatus: 'ACTIVE',
+      })
+      world.locksByProperty.set(propertyId, lockNames.map(aLock))
+    },
+
+    addReservation: (spec) => {
+      const propertyId = spec.propertyId ?? 72230
+      const roomTypeId = spec.roomTypeId ?? 501
+      const lockNames = spec.lockNames ?? DEFAULT_LOCK_NAMES
+      const checkInTimestamp = spec.checkInTimestamp ?? 1781557200
+      const checkOutTimestamp = spec.checkOutTimestamp ?? 1781625600
+      const synced = spec.synced ?? true
+      const status = spec.status ?? 'Booked'
+
+      if (!world.properties.has(propertyId)) {
+        world.addProperty({ propertyId, lockNames })
+      }
+
+      const covered = spec.coveredLocks ?? lockNames
+      const accessCodes =
+        spec.code === undefined || spec.type === 'past' ?
+          []
+        : covered.map((lockName) => ({
+            lockName,
+            code: spec.code ?? '',
+            isCodeSet: synced ? 1 : 0,
+            isHubCommunicated: 1,
+            syncToLockStatus: synced ? 'success' : 'scheduled',
+            syncToCloudStatus: 'success',
+          }))
+
+      world.reservations.push({
+        propertyId,
+        type: spec.type ?? 'upcoming',
+        reservation: {
+          bookingId: 10_000_000 + spec.bookingId,
+          confirmationCode: `${String(spec.bookingId)}VK${String(accountId)}`,
+          guestFirstName: spec.guest?.firstName ?? 'Jordan',
+          guestLastName: spec.guest?.lastName ?? 'Rivers',
+          guestEmail: spec.guest?.email ?? `guest-${String(spec.bookingId)}@example.com`,
+          checkInTimestamp,
+          checkOutTimestamp,
+          bookingSource: spec.bookingSource ?? 12,
+          accessCodes,
+        },
+      })
+
+      world.bookings.set(spec.bookingId, {
+        id: spec.bookingId,
+        property_id: propertyId,
+        arrival: new Date(checkInTimestamp * 1000).toISOString(),
+        departure: new Date(checkOutTimestamp * 1000).toISOString(),
+        status,
+        is_deleted: false,
+        source: String(spec.bookingSource ?? 12),
+        source_text: null,
+        guest: {
+          name: `${spec.guest?.firstName ?? 'Jordan'} ${spec.guest?.lastName ?? 'Rivers'}`,
+          email: spec.guest?.email ?? `guest-${String(spec.bookingId)}@example.com`,
+        },
+        rooms: [{ room_type_id: roomTypeId, key_code: spec.lodgifyKeyCode ?? '' }],
+      })
+    },
+  }
+
+  return world
+}
