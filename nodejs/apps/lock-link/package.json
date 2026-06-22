@@ -7,8 +7,8 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "deploy": "cdk deploy",
-    "destroy": "cdk destroy",
+    "deploy:cdk": "cdk deploy",
+    "destroy:cdk": "cdk destroy",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "synth": "cdk synth",

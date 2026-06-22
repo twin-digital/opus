@@ -29,7 +29,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.7",
     "@twin-digital/repo-kit": "workspace:*",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.0",
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "serverless": "catalog:",
@@ -38,6 +38,6 @@
     "typescript": "^6.0.0"
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
-  "packageManager": "pnpm@10.34.2",
+  "packageManager": "pnpm@10.34.3",
   "lint-staged": "tooling/config/lint-staged.config.js"
 }
