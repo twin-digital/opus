@@ -11,15 +11,39 @@ import {
 /**
  * Lynx dashboard client — the read-only source side. Endpoints are POSTs (a read modeled
  * as a query-in-body POST) under a Bearer token minted by `login`, whose JWT comes back
- * in the `x-auth-token` *header*. The token is cached and re-minted on a 401 (it lasts
- * ~95 days, so logging in rarely is also the lowest-profile behaviour). Responses are
- * parsed through the zod schema so contract drift surfaces as a parse error. The base URL
- * is injectable for tests/canary.
+ * in the `x-auth-token` *header*. The token is read from / written to an injected
+ * `TokenCache` and re-minted on a 401 (it lasts ~95 days, so logging in rarely is also
+ * the lowest-profile behaviour). Responses are parsed through the zod schema so contract
+ * drift surfaces as a parse error. The base URL is injectable for tests/canary.
  */
 
 const DEFAULT_BASE_URL = 'https://api.getlynx.co'
 const PREFIX = '/ProdV1.1'
 const PER_PAGE = 50
+/** Safety bound on the pagination loop, in case the API misreports its total. */
+const MAX_PAGES = 1000
+
+/**
+ * Where the Lynx JWT lives between runs. The in-memory default only survives a warm
+ * Lambda container, so production injects a durable store (Secrets Manager, DynamoDB, …)
+ * behind this interface — async so those stores fit. Picking one is a future PR.
+ */
+export interface TokenCache {
+  get: () => Promise<string | undefined>
+  set: (token: string) => Promise<void>
+}
+
+/** Process-memory token cache — the default; fine for tests and warm-container reuse. */
+export const inMemoryTokenCache = (): TokenCache => {
+  let token: string | undefined
+  return {
+    get: () => Promise.resolve(token),
+    set: (value) => {
+      token = value
+      return Promise.resolve()
+    },
+  }
+}
 
 export interface LynxClientOptions {
   readonly username: string
@@ -28,6 +52,8 @@ export interface LynxClientOptions {
   readonly userId: string
   /** Override for tests/canary; defaults to the production API. */
   readonly baseUrl?: string
+  /** Durable token store; defaults to in-memory (see `TokenCache`). */
+  readonly cache?: TokenCache
 }
 
 export class LynxApiError extends Error {
@@ -45,20 +71,23 @@ export class LynxClient {
   private readonly password: string
   private readonly userId: string
   private readonly baseUrl: string
-  private token: string | undefined
+  private readonly cache: TokenCache
+  /** Coalesces concurrent logins so parallel calls mint at most one token. */
+  private inflightLogin: Promise<string> | undefined
 
   constructor(options: LynxClientOptions) {
     this.username = options.username
     this.password = options.password
     this.userId = options.userId
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '')
+    this.cache = options.cache ?? inMemoryTokenCache()
   }
 
   /** All reservations for a property in a poll bucket (paginated under the hood). */
   async listReservations(propertyId: number, type: ReservationType): Promise<Reservation[]> {
     return this.paginate('getReservationsByProperty', { propertyId, type }, (json) => {
       const parsed = reservationsResponseSchema.parse(json)
-      return { items: parsed.data.reservations, totalPages: parsed.paginationInfo.totalPages }
+      return { items: parsed.data.reservations, total: parsed.paginationInfo.total }
     })
   }
 
@@ -69,7 +98,7 @@ export class LynxClient {
       { propertyId, isHubAndLockStatusRequired: true, provisioningInfo: true, skipDeviceStatusApiCall: false },
       (json) => {
         const parsed = smartLocksResponseSchema.parse(json)
-        return { items: parsed.data.smartLocksInfo, totalPages: parsed.paginationInfo.totalPages }
+        return { items: parsed.data.smartLocksInfo, total: parsed.paginationInfo.total }
       },
     )
   }
@@ -81,7 +110,7 @@ export class LynxClient {
       { searchKey: '', sortBy: { by: 'name', order: 'asc' }, filters: {} },
       (json) => {
         const parsed = propertiesResponseSchema.parse(json)
-        return { items: parsed.data.properties, totalPages: parsed.paginationInfo.totalPages }
+        return { items: parsed.data.properties, total: parsed.paginationInfo.total }
       },
     )
   }
@@ -89,39 +118,65 @@ export class LynxClient {
   private async paginate<T>(
     action: string,
     baseBody: Record<string, unknown>,
-    parsePage: (json: unknown) => { items: T[]; totalPages: number },
+    parsePage: (json: unknown) => { items: T[]; total: number },
   ): Promise<T[]> {
     const all: T[] = []
-    let page = 1
-    for (;;) {
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
       const json = await this.dashboard(action, { ...baseBody, page: String(page), perPage: PER_PAGE })
-      const { items, totalPages } = parsePage(json)
+      const { items, total } = parsePage(json)
       all.push(...items)
-      if (page >= totalPages) {
-        return all
+      // Stop on the authoritative record count or an empty page — not on totalPages, which
+      // is wrong if the API caps or ignores the requested perPage.
+      if (items.length === 0 || all.length >= total) {
+        break
       }
-      page += 1
     }
+    return all
   }
 
-  /** POST a dashboard action with the cached token, re-minting once on a 401. */
+  /**
+   * POST a Lynx dashboard endpoint. `action` is the endpoint name —
+   * `getReservationsByProperty` / `getSmartLocksByPropertyWithStatus` /
+   * `getPropertiesWithDeviceFiltersNew` — which all share this auth + `hostId`/
+   * `loggedInUserId` envelope and the 401 re-mint, so the public methods don't repeat it.
+   */
   private async dashboard(action: string, body: Record<string, unknown>): Promise<unknown> {
     const path = `${PREFIX}/dashboard/${action}`
     const payload = { hostId: this.userId, loggedInUserId: this.userId, ...body }
     let res = await this.post(path, payload, await this.authToken())
     if (res.status === 401) {
-      this.token = undefined
-      res = await this.post(path, payload, await this.authToken())
+      // Cached token rejected (expired/invalidated) — mint a fresh one and retry once.
+      res = await this.post(path, payload, await this.authToken(true))
     }
+    const text = await res.text()
     if (!res.ok) {
       throw new LynxApiError(res.status, `Lynx ${action} failed: HTTP ${String(res.status)}`)
     }
-    return res.json()
+    try {
+      return JSON.parse(text)
+    } catch {
+      throw new LynxApiError(res.status, `Lynx ${action} returned a non-JSON body`)
+    }
   }
 
-  private async authToken(): Promise<string> {
-    this.token ??= await this.login()
-    return this.token
+  /** A token from the cache, minting + caching a fresh one when absent or forced (401). */
+  private async authToken(forceRefresh = false): Promise<string> {
+    if (!forceRefresh) {
+      const cached = await this.cache.get()
+      if (cached !== undefined) {
+        return cached
+      }
+    }
+    // Coalesce concurrent mints; clear on settle so a failed login can be retried.
+    this.inflightLogin ??= this.login()
+      .then(async (token) => {
+        await this.cache.set(token)
+        return token
+      })
+      .finally(() => {
+        this.inflightLogin = undefined
+      })
+    return this.inflightLogin
   }
 
   /** Mint a JWT; it arrives in the `x-auth-token` response header, not the body. */

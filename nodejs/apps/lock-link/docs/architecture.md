@@ -163,8 +163,9 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 - `PUT https://api.lodgify.com/v2/reservations/bookings/{id}/keyCodes`
 - `{id}` = the numeric booking number from the join rule (int32).
 - Body: `{ "rooms": [ { "room_type_id": <int>, "key_code": "<code>" } ] }`
-- Returns **200** with the updated booking DTO → read back `rooms[].key_code` to confirm the
-  write (no separate GET needed).
+- Returns **200** with a rooms-only echo (`BookingKeyCodeDto = { rooms: [{ room_type_id,
+key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read back
+  `rooms[].key_code` to confirm the write (no separate GET needed).
 - Errors → notify sink: **404** booking/room not found (stale parsed id / room_type_id); **400**
   typed `code` (`ValidationError`/`ArgumentError`/…) + `message` + `correlation_id`; **401** bad key.
 - One code per reservation maps cleanly to a single-room booking. (Lynx's 3 locks are physical

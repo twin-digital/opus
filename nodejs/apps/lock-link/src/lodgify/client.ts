@@ -1,4 +1,12 @@
-import { bookingSchema, bookingSetSchema, type Booking, type BookingSet, type PutKeyCodesRequest } from './schema.js'
+import {
+  bookingSchema,
+  bookingSetSchema,
+  keyCodesSchema,
+  type Booking,
+  type BookingSet,
+  type KeyCodes,
+  type PutKeyCodesRequest,
+} from './schema.js'
 
 /**
  * Lodgify public API v2 client — the destination side of the sync. Every response is
@@ -79,9 +87,14 @@ export class LodgifyClient {
     return bookingSchema.parse(await this.request('GET', `/v2/reservations/bookings/${String(id)}`))
   }
 
-  /** `PUT /v2/reservations/bookings/{id}/keyCodes` — returns the updated booking (200 echo). */
-  async putKeyCodes(id: number, rooms: PutKeyCodesRequest['rooms']): Promise<Booking> {
-    return bookingSchema.parse(await this.request('PUT', `/v2/reservations/bookings/${String(id)}/keyCodes`, { rooms }))
+  /**
+   * `PUT /v2/reservations/bookings/{id}/keyCodes`. Lodgify echoes only the updated rooms
+   * (not a full booking) on 200 — read back `rooms[].key_code` to confirm the write.
+   */
+  async putKeyCodes(id: number, rooms: PutKeyCodesRequest['rooms']): Promise<KeyCodes> {
+    return keyCodesSchema.parse(
+      await this.request('PUT', `/v2/reservations/bookings/${String(id)}/keyCodes`, { rooms }),
+    )
   }
 
   private async request(method: string, path: string, body?: unknown): Promise<unknown> {
@@ -94,8 +107,15 @@ export class LodgifyClient {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     })
+    // Tolerant parse: a proxy/CDN 5xx or text/plain error body isn't JSON, but the failure
+    // must still surface as a LodgifyApiError carrying the status (not an opaque SyntaxError).
     const text = await res.text()
-    const json: unknown = text.length === 0 ? undefined : JSON.parse(text)
+    let json: unknown
+    try {
+      json = text.length === 0 ? undefined : JSON.parse(text)
+    } catch {
+      json = undefined
+    }
     if (!res.ok) {
       const envelope = (json ?? {}) as { code?: string; message?: string; correlation_id?: string }
       throw new LodgifyApiError(
@@ -104,6 +124,9 @@ export class LodgifyClient {
         envelope.code,
         envelope.correlation_id,
       )
+    }
+    if (json === undefined) {
+      throw new LodgifyApiError(res.status, `Lodgify returned a ${String(res.status)} with a non-JSON body`)
     }
     return json
   }

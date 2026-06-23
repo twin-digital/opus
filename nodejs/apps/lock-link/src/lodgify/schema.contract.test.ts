@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
-import { bookingSchema, bookingStatusSchema, roomSchema } from './schema.js'
+import { bookingSchema, bookingStatusSchema, keyCodesSchema, roomSchema } from './schema.js'
 import { LODGIFY_OPERATIONS } from './openapi-source.js'
 
 /**
@@ -102,5 +102,19 @@ describe('lodgify openapi contract', () => {
     for (const value of status.enum ?? []) {
       expect(bookingStatusSchema.safeParse(value).success, `status "${value}" rejected`).toBe(true)
     }
+  })
+
+  it('models the keyCodes PUT echo as rooms-only, not a full booking', () => {
+    // Regression guard: the keyCodes 200 echo is BookingKeyCodeDto ({ rooms }), NOT a full
+    // booking. Parsing it through bookingSchema would throw against the real API.
+    const json =
+      spec.paths['/v2/reservations/bookings/{id}/keyCodes']?.put?.responses?.['200']?.content?.['application/json']
+    if (!json?.schema) {
+      throw new Error('no 200 application/json schema for PUT keyCodes')
+    }
+    const echo = deref(json.schema)
+    expect(Object.keys(echo.properties ?? {})).toEqual(['rooms'])
+    expect(keyCodesSchema.safeParse({ rooms: [{ room_type_id: 1, key_code: null }] }).success).toBe(true)
+    expect(keyCodesSchema.safeParse({ rooms: null }).success).toBe(true)
   })
 })

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { type Fake } from '../testing/http.js'
 import { startLynxFake } from '../testing/lynx-fake.js'
 import { createWorld, type World } from '../testing/world.js'
-import { LynxApiError, LynxClient } from './client.js'
+import { LynxApiError, LynxClient, type TokenCache } from './client.js'
 
 describe('lynx client', () => {
   let world: World
@@ -56,5 +56,33 @@ describe('lynx client', () => {
       userId: '232753',
     })
     await expect(bad.listProperties()).rejects.toBeInstanceOf(LynxApiError)
+  })
+
+  it('uses a token from the injected cache without logging in', async () => {
+    const cache: TokenCache = { get: () => Promise.resolve(world.token), set: () => Promise.resolve() }
+    // Deliberately wrong credentials: a login would fail, proving the cached token is used.
+    const cached = new LynxClient({ baseUrl: fake.baseUrl, username: 'x', password: 'y', userId: '232753', cache })
+    await cached.listProperties()
+    expect(world.lynxRequests.filter((r) => r.path.endsWith('/api/v1/auth/login'))).toHaveLength(0)
+  })
+
+  it('writes a freshly minted token to the injected cache', async () => {
+    let stored: string | undefined
+    const cache: TokenCache = {
+      get: () => Promise.resolve(stored),
+      set: (token) => {
+        stored = token
+        return Promise.resolve()
+      },
+    }
+    const fresh = new LynxClient({
+      baseUrl: fake.baseUrl,
+      username: world.credentials.username,
+      password: world.credentials.password,
+      userId: '232753',
+      cache,
+    })
+    await fresh.listProperties()
+    expect(stored).toBe(world.token)
   })
 })
