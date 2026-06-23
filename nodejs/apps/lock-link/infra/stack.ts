@@ -22,6 +22,16 @@ export class LockLinkStack extends Stack {
       handler: 'handler',
       runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
+      // Operational config the handler reads + validates via loadConfig() (src/config.ts).
+      // Tunable without a code change. Secrets (Lynx creds, Lodgify key) are NOT here —
+      // they're read from SSM SecureString at runtime so they stay encrypted/rotatable.
+      environment: {
+        LOCK_LINK_ACCOUNT_ID: '222262', // Lynx umbrella account id
+        LOCK_LINK_USER_ID: '232753', // Lynx per-user (automation) id
+        LOCK_LINK_HORIZON_DAYS: '14', // fill gaps arriving within 2 weeks
+        LOCK_LINK_SLA_HOURS: '48', // escalate if still bare within 48h of arrival
+        LOCK_LINK_GRACE_MINUTES: '30', // ...but not for bookings under 30m old
+      },
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
         // condition, matching the monorepo's source-first model so synth needs no prebuilt dist.
