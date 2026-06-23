@@ -1,5 +1,12 @@
 # @twin-digital/repo-kit
 
+## 0.3.3
+
+### Patch Changes
+
+- d3f7b5f: The write-file sync action now creates missing parent directories, so features can write into subdirectories (e.g. `eslint.config.d/`).
+  - @twin-digital/json-patch-x@0.3.0
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.8
+
+### Patch Changes
+
+- 348c15a: Split the deploy/destroy scripts into tool-typed turbo tasks (`deploy:serverless` / `deploy:cdk`) so CI can deploy each tool to its own account and role. Membership is implicit — `turbo run deploy:serverless` runs only packages defining it, `deploy:cdk` only CDK apps. No change to what is deployed.
+- Updated dependencies [d3f7b5f]
+  - @twin-digital/observability-lib@0.0.4
+  - @twin-digital/bookify@0.4.2
+
 ## 0.1.7
 
 ### Patch Changes
