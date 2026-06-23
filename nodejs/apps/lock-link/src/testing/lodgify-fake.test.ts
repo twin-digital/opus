@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { bookingSetSchema, bookingSchema } from '../lodgify/schema.js'
+import { bookingSetSchema, bookingSchema, keyCodesSchema } from '../lodgify/schema.js'
 import { type Fake } from './http.js'
 import { startLodgifyFake } from './lodgify-fake.js'
 import { createWorld, type World } from './world.js'
@@ -38,8 +38,8 @@ describe('lodgify fake', () => {
   it('reflects a written key code on the next read (stateful, not replay)', async () => {
     const put = await putCode(20559349, 501, '9234')
     expect(put.status).toBe(200)
-    // 200 echoes the updated booking — confirm the write without a separate GET.
-    expect(bookingSchema.parse(await put.json()).rooms?.[0]?.key_code).toBe('9234')
+    // 200 echoes the rooms-only keyCodes DTO — confirm the write without a separate GET.
+    expect(keyCodesSchema.parse(await put.json()).rooms?.[0]?.key_code).toBe('9234')
 
     const after = await get('/v2/reservations/bookings/20559349')
     expect(bookingSchema.parse(await after.json()).rooms?.[0]?.key_code).toBe('9234')

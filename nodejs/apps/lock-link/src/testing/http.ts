@@ -27,10 +27,10 @@ export const readBody = async (req: IncomingMessage): Promise<unknown> => {
  * that becomes a 500 so a fake bug surfaces as a failed assertion, not a hung socket.
  */
 export const startServer = async (
-  handle: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
+  handle: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>,
 ): Promise<Fake> => {
   const server: Server = createServer((req, res) => {
-    void handle(req, res).catch((err: unknown) => {
+    void Promise.resolve(handle(req, res)).catch((err: unknown) => {
       sendJson(res, 500, { error: err instanceof Error ? err.message : String(err) })
     })
   })

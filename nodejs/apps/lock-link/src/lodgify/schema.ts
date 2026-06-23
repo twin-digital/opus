@@ -61,3 +61,20 @@ export const putKeyCodesRequestSchema = z.object({
   ),
 })
 export type PutKeyCodesRequest = z.infer<typeof putKeyCodesRequestSchema>
+
+/**
+ * `PUT /v2/reservations/bookings/{id}/keyCodes` 200 echo. Lodgify returns only the
+ * updated rooms (`BookingKeyCodeDto`), NOT a full booking — read back `rooms[].key_code`
+ * to confirm the write.
+ */
+export const keyCodesSchema = z.object({
+  rooms: z
+    .array(
+      z.object({
+        room_type_id: z.number().int(),
+        key_code: z.string().nullable(),
+      }),
+    )
+    .nullable(),
+})
+export type KeyCodes = z.infer<typeof keyCodesSchema>

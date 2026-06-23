@@ -1,6 +1,6 @@
 import { type IncomingMessage, type ServerResponse } from 'node:http'
 
-import { bookingSchema, bookingSetSchema, putKeyCodesRequestSchema } from '../lodgify/schema.js'
+import { bookingSchema, bookingSetSchema, keyCodesSchema, putKeyCodesRequestSchema } from '../lodgify/schema.js'
 import { readBody, sendJson, startServer, type Fake } from './http.js'
 import { type World } from './world.js'
 
@@ -48,7 +48,14 @@ export const startLodgifyFake = (world: World): Promise<Fake> =>
         }
         room.key_code = update.key_code
       }
-      sendJson(res, 200, bookingSchema.parse(booking))
+      // Lodgify echoes only the updated rooms (BookingKeyCodeDto), not a full booking.
+      sendJson(
+        res,
+        200,
+        keyCodesSchema.parse({
+          rooms: (booking.rooms ?? []).map((r) => ({ room_type_id: r.room_type_id, key_code: r.key_code })),
+        }),
+      )
       return
     }
 
