@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { type Fake } from '../testing/http.js'
+import { startServer, type Fake } from '../testing/http.js'
 import { startLynxFake } from '../testing/lynx-fake.js'
 import { createWorld, type World } from '../testing/world.js'
 import { LynxApiError, LynxClient, type TokenCache } from './client.js'
@@ -84,5 +84,67 @@ describe('lynx client', () => {
     })
     await fresh.listProperties()
     expect(stored).toBe(world.token)
+  })
+
+  it('coalesces concurrent first-calls into a single login', async () => {
+    // Both calls start with an empty cache; the in-flight login promise must be shared.
+    await Promise.all([client.listProperties(), client.listSmartLocks(72230)])
+    expect(world.lynxRequests.filter((r) => r.path.endsWith('/api/v1/auth/login'))).toHaveLength(1)
+  })
+
+  it('auto-paginates, collecting records across multiple pages', async () => {
+    // PER_PAGE is 50; seed enough to force a second page (plus the one from beforeEach).
+    for (let booking = 1; booking <= 60; booking += 1) {
+      world.addReservation({ bookingId: booking, propertyId: 72230, code: '9234' })
+    }
+    expect(await client.listReservations(72230, 'upcoming')).toHaveLength(61)
+  })
+
+  it('throws LynxApiError (not a SyntaxError) on a non-JSON dashboard body', async () => {
+    const cache: TokenCache = { get: () => Promise.resolve('tok'), set: () => Promise.resolve() }
+    const maintenance = await startServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'text/html' })
+      res.end('<html>maintenance</html>')
+    })
+    try {
+      const c = new LynxClient({ baseUrl: maintenance.baseUrl, username: 'u', password: 'p', userId: '1', cache })
+      await expect(c.listProperties()).rejects.toBeInstanceOf(LynxApiError)
+    } finally {
+      await maintenance.close()
+    }
+  })
+
+  it('re-mints the token and retries once on a 401', async () => {
+    let dashboardCalls = 0
+    let logins = 0
+    const okBody = JSON.stringify({
+      status: true,
+      errorCodeId: 0,
+      errorMessage: '',
+      data: { properties: [] },
+      paginationInfo: { perPage: 50, page: 1, total: 0, totalPages: 1 },
+    })
+    const server = await startServer((req, res) => {
+      const path = new URL(req.url ?? '/', 'http://x').pathname
+      if (path.endsWith('/api/v1/auth/login')) {
+        logins += 1
+        res.setHeader('x-auth-token', 'tok')
+        res.writeHead(200, { 'content-type': 'application/json' })
+        res.end('{}')
+        return
+      }
+      dashboardCalls += 1
+      // First dashboard call rejects the token; the client must re-mint and retry.
+      res.writeHead(dashboardCalls === 1 ? 401 : 200, { 'content-type': 'application/json' })
+      res.end(dashboardCalls === 1 ? '{}' : okBody)
+    })
+    try {
+      const c = new LynxClient({ baseUrl: server.baseUrl, username: 'u', password: 'p', userId: '1' })
+      await expect(c.listProperties()).resolves.toEqual([])
+      expect(dashboardCalls).toBe(2)
+      expect(logins).toBe(2)
+    } finally {
+      await server.close()
+    }
   })
 })

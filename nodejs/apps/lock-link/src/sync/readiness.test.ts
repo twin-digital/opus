@@ -16,6 +16,9 @@ const seed = (spec: Parameters<ReturnType<typeof createWorld>['addReservation']>
 describe('checkReadiness', () => {
   it('is ready when every lock is covered, all success, one code', () => {
     const { reservation, lockSet } = seed({ bookingId: 1, code: '9234' })
+    // The default property has a 3-lock set, all covered — a genuine multi-lock reservation.
+    expect(lockSet).toHaveLength(3)
+    expect(reservation.accessCodes).toHaveLength(3)
     const result = checkReadiness(reservation, lockSet)
     expect(result.ready).toBe(true)
     expect(result.code).toBe('9234')
@@ -50,5 +53,28 @@ describe('checkReadiness', () => {
     const result = checkReadiness(reservation, lockSet)
     expect(result.ready).toBe(false)
     expect(result.reasons.some((r) => r.includes('no access code'))).toBe(true)
+  })
+
+  it('is not ready when one of several locks is still scheduled (partial provisioning)', () => {
+    const { reservation, lockSet } = seed({ bookingId: 1, code: '9234' })
+    expect(lockSet).toHaveLength(3)
+    // Two locks live, one still scheduled — the eventually-consistent middle state.
+    reservation.accessCodes[2].syncToLockStatus = 'scheduled'
+    const result = checkReadiness(reservation, lockSet)
+    expect(result.ready).toBe(false)
+    const syncReasons = result.reasons.filter((r) => r.includes('not "success"'))
+    expect(syncReasons).toEqual([expect.stringContaining('Front Door')])
+  })
+
+  it('requires every lock in a multi-lock set to be covered', () => {
+    const { reservation, lockSet } = seed({
+      bookingId: 1,
+      code: '9234',
+      coveredLocks: ['Dalton Door', '4th Street Lofts'],
+    })
+    expect(lockSet).toHaveLength(3)
+    const result = checkReadiness(reservation, lockSet)
+    expect(result.ready).toBe(false)
+    expect(result.reasons).toContainEqual(expect.stringContaining('Front Door'))
   })
 })
