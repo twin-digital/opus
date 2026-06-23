@@ -22,6 +22,8 @@ export interface ReservationSpec {
   readonly guest?: { firstName?: string; lastName?: string; email?: string }
   readonly checkInTimestamp?: number
   readonly checkOutTimestamp?: number
+  /** Lodgify booking creation time (unix seconds); defaults to 7 days before check-in. */
+  readonly createdAtTimestamp?: number
   readonly bookingSource?: number
   /** The property's full lock set; defaults to the three real locks. */
   readonly lockNames?: readonly string[]
@@ -115,6 +117,7 @@ export const createWorld = (options: WorldOptions = {}): World => {
       const lockNames = spec.lockNames ?? DEFAULT_LOCK_NAMES
       const checkInTimestamp = spec.checkInTimestamp ?? 1781557200
       const checkOutTimestamp = spec.checkOutTimestamp ?? 1781625600
+      const createdAtTimestamp = spec.createdAtTimestamp ?? checkInTimestamp - 7 * 86400
       const synced = spec.synced ?? true
       const status = spec.status ?? 'Booked'
 
@@ -158,8 +161,9 @@ export const createWorld = (options: WorldOptions = {}): World => {
         departure: new Date(checkOutTimestamp * 1000).toISOString(),
         status,
         is_deleted: false,
-        source: String(spec.bookingSource ?? 12),
+        source: 'Expedia',
         source_text: null,
+        created_at: new Date(createdAtTimestamp * 1000).toISOString(),
         guest: {
           name: `${spec.guest?.firstName ?? 'Jordan'} ${spec.guest?.lastName ?? 'Rivers'}`,
           email: spec.guest?.email ?? `guest-${String(spec.bookingId)}@example.com`,

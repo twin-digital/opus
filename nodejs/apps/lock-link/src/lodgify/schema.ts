@@ -35,6 +35,8 @@ export const bookingSchema = z.object({
   source: z.string().nullable(),
   /** Real OTA reference (e.g. an Expedia confirmation), distinct from `source`. */
   source_text: z.string().nullable(),
+  /** Booking creation time (ISO). Used for the escalation GRACE window. */
+  created_at: z.string(),
   guest: z.object({
     name: z.string().nullable(),
     email: z.string().nullable(),
