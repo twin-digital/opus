@@ -8,6 +8,7 @@ const validEnv = {
   LOCK_LINK_HORIZON_DAYS: '14',
   LOCK_LINK_SLA_HOURS: '48',
   LOCK_LINK_GRACE_MINUTES: '30',
+  LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:444705667097:lock-link-alerts',
 }
 
 describe('loadConfig', () => {
@@ -18,7 +19,12 @@ describe('loadConfig', () => {
       horizonDays: 14,
       slaHours: 48,
       graceMinutes: 30,
+      alertTopicArn: 'arn:aws:sns:us-east-1:444705667097:lock-link-alerts',
     })
+  })
+
+  it('rejects an alert topic ARN that is not an SNS ARN', () => {
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' })).toThrow()
   })
 
   it('throws when a required value is absent', () => {

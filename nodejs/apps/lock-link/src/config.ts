@@ -16,6 +16,8 @@ import { type SyncConfig } from './sync/sync.js'
 export interface LockLinkConfig extends SyncConfig {
   /** Lynx per-user id sent as `hostId`/`loggedInUserId` (NOT the account id). */
   readonly userId: string
+  /** SNS topic the escalation Notifier publishes to. */
+  readonly alertTopicArn: string
 }
 
 // Env vars are strings; coerce to numbers and validate every value (all required).
@@ -25,6 +27,7 @@ const envSchema = z.object({
   LOCK_LINK_HORIZON_DAYS: z.coerce.number().int().positive(),
   LOCK_LINK_SLA_HOURS: z.coerce.number().positive(),
   LOCK_LINK_GRACE_MINUTES: z.coerce.number().nonnegative(),
+  LOCK_LINK_ALERT_TOPIC_ARN: z.string().regex(/^arn:aws:sns:/, 'must be an SNS topic ARN'),
 })
 
 /**
@@ -39,5 +42,6 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): LockLinkConfig
     horizonDays: parsed.LOCK_LINK_HORIZON_DAYS,
     slaHours: parsed.LOCK_LINK_SLA_HOURS,
     graceMinutes: parsed.LOCK_LINK_GRACE_MINUTES,
+    alertTopicArn: parsed.LOCK_LINK_ALERT_TOPIC_ARN,
   }
 }
