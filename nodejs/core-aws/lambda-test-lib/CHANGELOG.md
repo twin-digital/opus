@@ -1,5 +1,12 @@
 # @twin-digital/lambda-test-lib
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [d3f7b5f]
+  - @twin-digital/observability-lib@0.0.4
+
 ## 0.1.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/eslint-config",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Twin Digital's preferred eslint rules.",
   "type": "module",
   "exports": {
