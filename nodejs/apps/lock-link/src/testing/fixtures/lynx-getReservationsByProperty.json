@@ -1,0 +1,97 @@
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "reservations": [
+      {
+        "bookingId": 10490339,
+        "confirmationCode": "20559349VK222262",
+        "accessCodeStatus": "DEFAULT",
+        "guestFirstName": "Jordan",
+        "guestLastName": "Rivers",
+        "guestEmail": "guest-20559349@example.com",
+        "guestPhone": "+1 5555550100",
+        "checkInTime": "15 Jun 2026 04:00 PM",
+        "checkInTimestamp": 1781557200,
+        "checkOutTime": "16 Jun 2026 11:00 AM",
+        "checkOutTimestamp": 1781625600,
+        "rentalMarketPlace": "LODGIFY",
+        "entryType": "Auto",
+        "bookingSource": 12,
+        "accessCodes": [
+          {
+            "lockName": "Dalton Door",
+            "lockTypeId": 1104,
+            "code": "9234",
+            "slotNumber": "0",
+            "accessStart": 1781550000,
+            "accessEnd": 1781629200,
+            "guestAccessCodeId": 20034958,
+            "isHubCommunicated": 1,
+            "isCodeSet": 1,
+            "refreshAt": null,
+            "refeshWaitingTime": null,
+            "isEditable": true,
+            "accessStartDateTime": "15 Jun 2026 02:00 PM",
+            "accessEndDateTime": "16 Jun 2026 12:00 PM",
+            "syncToCloudStatus": "success",
+            "syncToCloudMessage": "Access code status is enabled and pushed to the cloud",
+            "syncToLockStatus": "success",
+            "syncToLockMessage": "Access code status is enabled and code is created on the lock",
+            "accessCodeInstructionTypeId": 31
+          },
+          {
+            "lockName": "4th Street Lofts",
+            "lockTypeId": 1104,
+            "code": "9234",
+            "slotNumber": "0",
+            "accessStart": 1781550000,
+            "accessEnd": 1781629200,
+            "guestAccessCodeId": 20034959,
+            "isHubCommunicated": 1,
+            "isCodeSet": 1,
+            "refreshAt": null,
+            "refeshWaitingTime": null,
+            "isEditable": true,
+            "accessStartDateTime": "15 Jun 2026 02:00 PM",
+            "accessEndDateTime": "16 Jun 2026 12:00 PM",
+            "syncToCloudStatus": "success",
+            "syncToCloudMessage": "Access code status is enabled and pushed to the cloud",
+            "syncToLockStatus": "success",
+            "syncToLockMessage": "Access code status is enabled and code is created on the lock",
+            "accessCodeInstructionTypeId": 31
+          },
+          {
+            "lockName": "Front Door",
+            "lockTypeId": 4,
+            "code": "9234",
+            "slotNumber": "0",
+            "accessStart": 1781550000,
+            "accessEnd": 1781629200,
+            "guestAccessCodeId": 20034960,
+            "isHubCommunicated": 1,
+            "isCodeSet": 1,
+            "refreshAt": null,
+            "refeshWaitingTime": null,
+            "isEditable": true,
+            "accessStartDateTime": "15 Jun 2026 02:00 PM",
+            "accessEndDateTime": "16 Jun 2026 12:00 PM",
+            "syncToCloudStatus": "success",
+            "syncToCloudMessage": "Access code status is enabled and pushed to the cloud",
+            "syncToLockStatus": "success",
+            "syncToLockMessage": "Access code status is enabled and code is created on the lock",
+            "accessCodeInstructionTypeId": 19
+          }
+        ],
+        "isBookingFromLynxAPI": false
+      }
+    ]
+  },
+  "paginationInfo": {
+    "perPage": 5,
+    "totalPages": 1,
+    "page": 1,
+    "total": 1
+  }
+}

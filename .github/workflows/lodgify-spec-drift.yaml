@@ -1,0 +1,98 @@
+name: Lodgify Spec Drift
+
+# Nightly check that Lodgify's documented OpenAPI hasn't drifted away from the schema the
+# sync relies on. Regenerates the vendored `lodgify.openapi.json` from Lodgify's docs,
+# re-runs the offline contract test against the fresh spec, and — if the vendored file
+# changed — opens a PR with the diff for review.
+#
+# This is the ONLY place that touches Lodgify's site; every PR/CI run reads the committed
+# spec, so normal CI never depends on Lodgify being up. The doc host bot-filters Node's
+# fetch, so the pull tool shells out to curl (present on the runner).
+
+on:
+  schedule:
+    - cron: '37 6 * * *' # nightly, ~06:37 UTC
+  workflow_dispatch: {} # allow manual runs
+
+concurrency:
+  group: lodgify-spec-drift
+  cancel-in-progress: false
+
+env:
+  CI: 1
+  HUSKY: 0
+  TURBO_TELEMETRY_DISABLED: 1
+  # Block dependency install lifecycle scripts (pnpm `onlyBuiltDependencies`); this job needs
+  # none of their native builds (esbuild ships prebuilt; tsx/vitest need no scripts). See ci.yaml.
+  NPM_CONFIG_IGNORE_SCRIPTS: 'true'
+
+# Branch push + PR creation only. (Requires the repo setting "Allow GitHub Actions to create
+# and approve pull requests".) PRs opened by GITHUB_TOKEN do NOT auto-trigger required CI — the
+# drift is already validated inline below, and a maintainer can push a commit to get a CI run.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Regenerate vendored Lodgify spec
+        run: pnpm --filter @twin-digital/lock-link exec tsx src/lodgify/pull-spec.ts
+
+      - name: Detect drift
+        id: detect
+        run: |
+          set -euo pipefail
+          spec=nodejs/apps/lock-link/src/lodgify/lodgify.openapi.json
+          if git diff --quiet -- "$spec"; then
+            echo "No Lodgify spec drift."
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Lodgify spec changed:"
+            git --no-pager diff --stat -- "$spec"
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open drift PR
+        if: steps.detect.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          spec=nodejs/apps/lock-link/src/lodgify/lodgify.openapi.json
+          branch="chore/lodgify-spec-drift-${{ github.run_id }}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          # Empty changeset: refreshing a vendored doc fixture changes no shipped code.
+          pnpm exec changeset add --empty
+          git add "$spec" .changeset
+          git commit -m 'chore(lock-link): refresh vendored Lodgify OpenAPI spec'
+          git push -u origin "$branch"
+          # Unquoted heredoc: ${vars} expand, backticks escaped to stay literal.
+          cat > /tmp/pr-body.md <<EOF
+          Automated nightly refresh of \`lodgify.openapi.json\` from Lodgify's docs.
+
+          Review the diff for changes to fields the sync depends on. The schema contract test ran against this spec in the [nightly run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+
+          Note: PRs opened by GITHUB_TOKEN do not auto-trigger required CI — push a commit (or re-run CI) before merging.
+          EOF
+          gh pr create --base main --head "$branch" \
+            --title 'chore(lock-link): refresh vendored Lodgify OpenAPI spec' \
+            --body-file /tmp/pr-body.md
+
+      - name: Validate schema against the fresh spec
+        if: steps.detect.outputs.drift == 'true'
+        run: |
+          set -euo pipefail
+          # vitest.config.ts imports @twin-digital/vitest-config, whose dist is built by `build`.
+          pnpm build --filter @twin-digital/lock-link
+          pnpm --filter @twin-digital/lock-link run typecheck
+          pnpm --filter @twin-digital/lock-link test

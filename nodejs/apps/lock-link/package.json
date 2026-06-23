@@ -12,20 +12,25 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "synth": "cdk synth",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@twin-digital/observability-lib": "workspace:*",
     "aws-cdk-lib": "^2.260.0",
-    "constructs": "^10.6.0"
+    "constructs": "^10.6.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "aws-cdk": "^2.1127.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
@@ -34,7 +39,8 @@
     "prettier-package-json": "catalog:",
     "tsx": "^4.19.2",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",
