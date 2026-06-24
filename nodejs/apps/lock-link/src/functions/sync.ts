@@ -2,19 +2,36 @@ import { withObservability } from '@twin-digital/observability-lib'
 import type { ScheduledEvent } from 'aws-lambda'
 
 import { loadConfig } from '../config.js'
+import { LodgifyClient } from '../lodgify/client.js'
+import { LynxClient } from '../lynx/client.js'
+import { loadSecrets } from '../secrets.js'
+import { createSnsNotifier } from '../sync/sns-notifier.js'
+import { runSync } from '../sync/sync.js'
 
 /**
- * Scheduled entrypoint for the Lynx→Lodgify sync. Loads + validates operational config
- * from the environment (set by CDK) so a misconfigured deploy fails fast at cold start.
- *
- * Remaining wiring (next PR): build the Lynx + Lodgify clients from SSM SecureString
- * secrets and a concrete Notifier, then `runSync({ ...config, lynx, lodgify, notify, now:
- * Date.now() })`. Secrets are read at runtime (not env) so they stay encrypted/rotatable.
+ * Scheduled entrypoint for the Lynx→Lodgify sync. On each tick: validate env config,
+ * decrypt the SSM SecureString secrets (Powertools caches across warm invocations),
+ * build the clients + SNS notifier, and run the gap-fill loop. Misconfiguration fails
+ * fast at cold start — better than discovering it mid-run.
  */
 export const handler = withObservability(
-  (event: ScheduledEvent, context) => {
+  async (event: ScheduledEvent, context) => {
     const config = loadConfig()
-    context.logger.info('lock-link tick', { scheduledTime: event.time, config })
+    const secrets = await loadSecrets(config)
+
+    const lynx = new LynxClient({
+      username: secrets.lynxUsername,
+      password: secrets.lynxPassword,
+      userId: config.userId,
+    })
+    const lodgify = new LodgifyClient({ apiKey: secrets.lodgifyApiKey })
+    const notify = createSnsNotifier({ topicArn: config.alertTopicArn })
+
+    const result = await runSync({ lynx, lodgify, notify, config, now: Date.parse(event.time) })
+
+    // Per obs-lib guidance, log business events — gaps found, codes written, escalations
+    // raised — not generic invocation noise.
+    context.logger.info('lock-link sync complete', result)
   },
   { serviceName: 'lock-link' },
 )

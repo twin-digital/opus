@@ -18,6 +18,12 @@ export interface LockLinkConfig extends SyncConfig {
   readonly userId: string
   /** SNS topic the escalation Notifier publishes to. */
   readonly alertTopicArn: string
+  /** SSM SecureString parameter names. Values stay in SSM, names live in config. */
+  readonly secretNames: {
+    readonly lynxUsername: string
+    readonly lynxPassword: string
+    readonly lodgifyApiKey: string
+  }
 }
 
 // Env vars are strings; coerce to numbers and validate every value (all required).
@@ -28,6 +34,9 @@ const envSchema = z.object({
   LOCK_LINK_SLA_HOURS: z.coerce.number().positive(),
   LOCK_LINK_GRACE_MINUTES: z.coerce.number().nonnegative(),
   LOCK_LINK_ALERT_TOPIC_ARN: z.string().regex(/^arn:aws:sns:/, 'must be an SNS topic ARN'),
+  LOCK_LINK_LYNX_USERNAME_PARAM: z.string().min(1),
+  LOCK_LINK_LYNX_PASSWORD_PARAM: z.string().min(1),
+  LOCK_LINK_LODGIFY_API_KEY_PARAM: z.string().min(1),
 })
 
 /**
@@ -43,5 +52,10 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): LockLinkConfig
     slaHours: parsed.LOCK_LINK_SLA_HOURS,
     graceMinutes: parsed.LOCK_LINK_GRACE_MINUTES,
     alertTopicArn: parsed.LOCK_LINK_ALERT_TOPIC_ARN,
+    secretNames: {
+      lynxUsername: parsed.LOCK_LINK_LYNX_USERNAME_PARAM,
+      lynxPassword: parsed.LOCK_LINK_LYNX_PASSWORD_PARAM,
+      lodgifyApiKey: parsed.LOCK_LINK_LODGIFY_API_KEY_PARAM,
+    },
   }
 }

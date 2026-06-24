@@ -9,6 +9,9 @@ const validEnv = {
   LOCK_LINK_SLA_HOURS: '48',
   LOCK_LINK_GRACE_MINUTES: '30',
   LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:444705667097:lock-link-alerts',
+  LOCK_LINK_LYNX_USERNAME_PARAM: '/lock-link/lynx-username',
+  LOCK_LINK_LYNX_PASSWORD_PARAM: '/lock-link/lynx-password',
+  LOCK_LINK_LODGIFY_API_KEY_PARAM: '/lock-link/lodgify-api-key',
 }
 
 describe('loadConfig', () => {
@@ -20,7 +23,16 @@ describe('loadConfig', () => {
       slaHours: 48,
       graceMinutes: 30,
       alertTopicArn: 'arn:aws:sns:us-east-1:444705667097:lock-link-alerts',
+      secretNames: {
+        lynxUsername: '/lock-link/lynx-username',
+        lynxPassword: '/lock-link/lynx-password',
+        lodgifyApiKey: '/lock-link/lodgify-api-key',
+      },
     })
+  })
+
+  it('rejects an empty secret-parameter name', () => {
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '' })).toThrow()
   })
 
   it('rejects an alert topic ARN that is not an SNS ARN', () => {
