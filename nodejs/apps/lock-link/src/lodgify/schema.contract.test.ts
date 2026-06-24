@@ -72,6 +72,7 @@ describe('lodgify openapi contract', () => {
       'status',
       'source',
       'source_text',
+      'created_at',
       'guest',
       'rooms',
       'is_deleted',
