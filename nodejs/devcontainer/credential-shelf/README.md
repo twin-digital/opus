@@ -70,6 +70,27 @@ remember) and vends AWS once; the GitHub loops re-mint on their own once the sig
 is back. Re-run it whenever a session lapses. Health: `cat /creds/status/*` (`ok expires=…`
 per loop, or `stalled …`).
 
+### (c) Remote refresh — the trigger primitive (optional)
+
+To make that login **remotely triggerable** without a host shell, set
+`REFRESH_LISTENER_SOCKET` to a Unix-socket path on a volume shared with a network-facing
+trigger. `start` then also binds a listener exposing exactly one powerful operation:
+
+- `POST /refresh` — start a device-code authorization for the baked session(s), return the
+  `user_code` + `verification_uri`, then background-poll and vend on approval. It takes **no
+  request arguments** (the session comes from this sidecar's own config, never the caller),
+  is single-flight (a second call while one is pending returns the same code, never spawns a
+  second login), and cannot mint, exfiltrate, or run commands — it only _initiates_ the
+  existing AWS-operated device-code login.
+- `GET /status` — the current SSO-session + vended-credential expiry, so the operator knows
+  when a refresh is due.
+
+This is the sidecar's only inbound surface, preserving the tier-3 "vend-only, no shells"
+invariant. Front it with the separate, minimal
+[`credential-shelf-trigger`](../credential-shelf-trigger) container (auth + rate-limit +
+audit; no AWS identity) — never expose the socket to untrusted code. See
+[docs/SECURITY.md](./docs/SECURITY.md).
+
 ## Vends
 
 - `/creds/aws/credentials` — `[default]` + a section per `aws-sso` grant.
@@ -78,7 +99,8 @@ per loop, or `stalled …`).
 
 ## Commands
 
-`credential-shelf start` (default / `ENTRYPOINT`) supervises the vend loops; `credential-shelf
+`credential-shelf start` (default / `ENTRYPOINT`) supervises the vend loops — and, when
+`REFRESH_LISTENER_SOCKET` is set, the remote-refresh listener (above). `credential-shelf
 refresh` does the recurring SSO login. `import-app-private-key <app-key.pem>` is the one-time
 setup that imports the GitHub App's RSA key into KMS as a non-extractable signing key — run it
 once (with KMS-create perms) and set its alias as the `github-app` provider's `kms_key_id`.

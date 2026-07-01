@@ -355,6 +355,28 @@ shorter-TTL_ grant than the dev — and removing the at-rest exposure — is the
 separate design, not yet the shipping baseline — see
 [CREDENTIAL-BROKER.md](./CREDENTIAL-BROKER.md).
 
+**Remote-refresh trigger (optional inbound primitive).** An SSO session lapses ~daily and,
+by default, is revived only by a **host** shell (`credential-shelf refresh`). Setting
+`REFRESH_LISTENER_SOCKET` binds one narrow inbound handler on a Unix socket — the sidecar's
+_only_ inbound surface — that lets a network-facing peer _initiate_ the existing device-code
+login remotely. It preserves the tier-3 "vend-only, no shells" invariant by construction:
+
+- **It only initiates; it never completes a login.** AWS Identity Center (+MFA) stays the
+  minter. The handler starts a device authorization, returns the `user_code` +
+  `verification_uri`, and vends only after the operator approves in a browser.
+- **No caller arguments.** The sso-session comes from the sidecar's own baked config, not the
+  request — so the primitive can't be steered to a different IdP or coerced into minting,
+  exfiltrating, or running commands. Worst case for whoever reaches the socket is a
+  **login-prompt DoS, not a credential mint** (rate-limit it upstream — repeated triggers can
+  hit AWS device-authorization limits and _block_ the real refresh).
+- **Front it, don't expose it.** The socket must be reachable only by a **separate, minimal**
+  network container (auth + rate-limit + audit; no AWS identity, no `admin-home`, no Docker
+  socket) — [`credential-shelf-trigger`](../../credential-shelf-trigger). Never place the
+  socket on a volume a consumer mounts.
+- **Operator-initiated approval is load-bearing.** The device grant doesn't bind approver to
+  initiator; surfacing the `user_code` lets the operator approve **only a code they just
+  initiated** and refuse unsolicited prompts.
+
 ---
 
 ## 11. Layer 3 · Why still vend creds to the _dev_ container

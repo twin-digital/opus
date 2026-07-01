@@ -6,6 +6,11 @@ import type { VendConfig } from './types.js'
 
 const PREFIX = 'refresh-credentials'
 
+/** The distinct `[sso-session]` names across all aws-sso providers (device-code login targets). */
+export const distinctAwsSessions = (cfg: VendConfig): string[] => [
+  ...new Set(cfg.providers.filter((p) => p.kind === 'aws-sso').map((p) => p.session)),
+]
+
 /**
  * Log in to every distinct aws-sso session (device-code flow — no profile name to
  * remember) and vend AWS once, so fresh creds hit the shelf immediately; the GitHub loops
@@ -15,7 +20,7 @@ const PREFIX = 'refresh-credentials'
 export const refresh = async (cfg: VendConfig): Promise<void> => {
   const vendProfiles = writeAwsConfig(cfg)
 
-  const sessions = [...new Set(cfg.providers.filter((p) => p.kind === 'aws-sso').map((p) => p.session))]
+  const sessions = distinctAwsSessions(cfg)
   if (sessions.length === 0) {
     log(PREFIX, 'no aws-sso providers configured; nothing to log in')
     process.exitCode = 1

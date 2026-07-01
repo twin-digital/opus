@@ -1,6 +1,7 @@
 import { signerProfileName, writeAwsConfig } from './aws-config.js'
 import { runAwsLoop } from './aws.js'
 import { runGithubLoop } from './github.js'
+import { runRefreshListener } from './refresh-listener.js'
 import { log } from './shelf.js'
 import type { VendConfig } from './types.js'
 
@@ -35,6 +36,14 @@ export const start = async (cfg: VendConfig): Promise<void> => {
         }),
       )
     }
+  }
+
+  // Optional: the remote refresh-listener — a Unix-socket primitive the network-facing trigger
+  // container drives to start a device-code login remotely. Off unless a socket path is set.
+  const refreshSocket = process.env.REFRESH_LISTENER_SOCKET
+  if (refreshSocket !== undefined && refreshSocket.length > 0) {
+    log(PREFIX, `refresh-listener: enabled on ${refreshSocket}`)
+    loops.push(runRefreshListener(cfg, refreshSocket))
   }
 
   if (loops.length === 0) {
