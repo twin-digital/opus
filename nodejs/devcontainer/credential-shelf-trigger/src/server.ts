@@ -5,6 +5,7 @@ import { isAuthorized } from './auth.js'
 import { audit as defaultAudit } from './audit.js'
 import type { Auditor } from './audit.js'
 import type { TriggerConfig } from './config.js'
+import { INDEX_HTML } from './page.js'
 import { createRateLimiter } from './rate-limit.js'
 import type { RateLimiter } from './rate-limit.js'
 import { createUpstreamClient } from './upstream.js'
@@ -42,6 +43,14 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
     const method = req.method ?? 'GET'
     const path = (req.url ?? '/').split('?')[0]
     req.resume() // we accept no request body
+
+    // The operator page (no secrets — the token is entered client-side and kept in localStorage,
+    // then sent as a Bearer header). Unauthenticated by design so a phone can load the shell.
+    if (method === 'GET' && (path === '/' || path === '/index.html')) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      res.end(INDEX_HTML)
+      return
+    }
 
     // Unauthenticated liveness probe — carries no secrets.
     if (method === 'GET' && path === '/healthz') {

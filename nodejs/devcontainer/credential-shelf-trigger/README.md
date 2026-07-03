@@ -28,6 +28,11 @@ not a credential mint.
 
 ## Endpoints
 
+- `GET /` (and `/index.html`) — a small **operator page** for phones. Enter the token once (kept
+  in the device's `localStorage`, never in a URL); tap **Refresh** to start a device-code login
+  and get the `user_code` + a tappable approval link, or **Check status** for session expiry. The
+  page ships no secret and adds the token as a Bearer header on each call, so it works over a
+  plain LAN bookmark without exposing the token.
 - `POST /refresh` — **authenticated + rate-limited.** Triggers a device-code refresh; returns
   `{ prompts: [{ session, user_code, verification_uri, verification_uri_complete? }] }`. Match
   the `user_code` against the AWS approval screen and **approve only a code you just
