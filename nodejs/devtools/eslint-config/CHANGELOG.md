@@ -1,5 +1,11 @@
 # @twin-digital/eslint-config
 
+## 0.4.0
+
+### Minor Changes
+
+- d3f7b5f: Relax the type-aware "unsafe any" rules for eslint config files (`eslint.config.*`) and `eslint.config.d/*` fragments, which are untyped tooling glue (dynamic imports, spreads of the shared base array).
+
 ## 0.3.0
 
 ### Minor Changes
