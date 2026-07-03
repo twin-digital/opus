@@ -47,13 +47,13 @@ secret material.
 
 ## Configure (environment)
 
-| Var                               | Default                              | Meaning                                                                                                                                               |
-| --------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRIGGER_TOKEN`                   | — (**required**)                     | Shared bearer secret. The service refuses to start without it (fails closed).                                                                         |
-| `TRIGGER_LISTEN`                  | `0.0.0.0:8770`                       | `host:port` to bind inside the container. Restrict reachability with the **consumer's port mapping** — bind it to the LAN, not public, not a tailnet. |
-| `TRIGGER_UPSTREAM_SOCKET`         | `/run/credential-shelf/refresh.sock` | The sidecar's refresh socket (a volume shared **only** with the sidecar).                                                                             |
-| `TRIGGER_RATE_LIMIT_INTERVAL_SEC` | `30`                                 | Seconds to refill one trigger token.                                                                                                                  |
-| `TRIGGER_RATE_LIMIT_BURST`        | `1`                                  | Token-bucket capacity.                                                                                                                                |
+| Var                               | Default                              | Meaning                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRIGGER_TOKEN`                   | — (**required to serve**)            | Shared bearer secret. Without it the container stays **disabled and idle** (never serves) — so it's safe to define as an always-on service and enable later by setting the token. |
+| `TRIGGER_LISTEN`                  | `0.0.0.0:8770`                       | `host:port` to bind inside the container. Restrict reachability with the **consumer's port mapping** — bind it to the LAN, not public, not a tailnet.                             |
+| `TRIGGER_UPSTREAM_SOCKET`         | `/run/credential-shelf/refresh.sock` | The sidecar's refresh socket (a volume shared **only** with the sidecar).                                                                                                         |
+| `TRIGGER_RATE_LIMIT_INTERVAL_SEC` | `30`                                 | Seconds to refill one trigger token.                                                                                                                                              |
+| `TRIGGER_RATE_LIMIT_BURST`        | `1`                                  | Token-bucket capacity.                                                                                                                                                            |
 
 Auth is a **shared bearer token** (v1). Passkey/WebAuthn is a possible later upgrade.
 
