@@ -46,8 +46,20 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
 
     // The operator page (no secrets — the token is entered client-side and kept in localStorage,
     // then sent as a Bearer header). Unauthenticated by design so a phone can load the shell.
+    // Hardened: a tight CSP (own inline script/style only, same-origin fetch, no framing), plus
+    // nosniff / no-referrer — the page holds a bearer token, so shrink the injection/clickjacking
+    // blast radius.
     if (method === 'GET' && (path === '/' || path === '/index.html')) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+        'content-security-policy':
+          "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+          "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+        'x-frame-options': 'DENY',
+      })
       res.end(INDEX_HTML)
       return
     }

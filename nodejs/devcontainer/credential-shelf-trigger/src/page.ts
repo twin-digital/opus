@@ -49,6 +49,9 @@ export const INDEX_HTML = `<!doctype html>
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   }); };
+  // Only ever link an http(s) URL — never a javascript:/data: scheme, even if the upstream
+  // response were tampered with (it must not become a token-exfiltration click).
+  var safeUrl = function (u) { return /^https?:\\/\\//i.test(String(u == null ? '' : u)) ? u : ''; };
   var show = function () {
     var t = token();
     $('setup').classList.toggle('hidden', !!t);
@@ -73,10 +76,13 @@ export const INDEX_HTML = `<!doctype html>
       if (!r.ok) { out('<p class="err">Trigger failed (' + r.status + ').</p>'); return; }
       return r.json().then(function (d) {
         var html = (d.prompts || []).map(function (p) {
-          var link = p.verification_uri_complete || p.verification_uri;
+          var link = safeUrl(p.verification_uri_complete) || safeUrl(p.verification_uri);
+          var approve = link
+            ? '<a class="approve" href="' + esc(link) + '" target="_blank" rel="noopener">Open approval page</a>'
+            : '<div class="muted">Approval URL: ' + esc(p.verification_uri || '(none)') + '</div>';
           return '<div class="card"><div class="muted">Enter this code at the AWS page:</div>'
             + '<div class="code">' + esc(p.user_code) + '</div>'
-            + '<a class="approve" href="' + esc(link) + '" target="_blank" rel="noopener">Open approval page</a>'
+            + approve
             + '<p class="muted">Approve only this code — it came from this tap.</p></div>';
         }).join('');
         out(html || '<p class="err">No prompt returned.</p>');
