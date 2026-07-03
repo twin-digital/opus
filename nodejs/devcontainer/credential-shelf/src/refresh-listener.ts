@@ -12,7 +12,13 @@ import { log, shelfDir } from './shelf.js'
 import type { VendConfig } from './types.js'
 
 const PREFIX = 'refresh-listener'
-const PROMPT_TIMEOUT_MS = Number(process.env.REFRESH_PROMPT_TIMEOUT_MS ?? '30000')
+
+/** Parse a positive-finite-number env var, falling back to the default for NaN/≤0/unset. */
+const positiveNumberEnv = (raw: string | undefined, fallback: number): number => {
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+const PROMPT_TIMEOUT_MS = positiveNumberEnv(process.env.REFRESH_PROMPT_TIMEOUT_MS, 30_000)
 
 const errMsg = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 

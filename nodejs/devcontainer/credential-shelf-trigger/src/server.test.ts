@@ -78,6 +78,7 @@ describe('createTriggerServer', () => {
     harness = await start()
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
     expect(res.status).toBe(200)
+    expect(res.headers.get('cache-control')).toBe('no-store') // secrets must not be cached
     expect(await res.json()).toEqual({ prompts: [{ user_code: 'WXYZ-1234' }] })
     expect(harness.upstream).toHaveBeenCalledWith('POST', '/refresh')
     expect(harness.audits).toContainEqual({
@@ -111,6 +112,20 @@ describe('createTriggerServer', () => {
     expect(harness.upstream).toHaveBeenCalledWith('GET', '/status')
   })
 
+  it('audits a status upstream non-200 as an error, not ok', async () => {
+    harness = await start({
+      upstream: vi.fn((): Promise<UpstreamResponse> => Promise.resolve({ status: 500, body: undefined })),
+    })
+    const res = await fetch(`${harness.base}/status`, { headers: auth })
+    expect(res.status).toBe(502)
+    expect(harness.audits).toContainEqual({
+      event: 'status',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'upstream_error',
+    })
+  })
+
   it('maps an upstream failure to 502', async () => {
     harness = await start({
       upstream: vi.fn((): Promise<UpstreamResponse> => Promise.reject(new Error('socket gone'))),
@@ -129,5 +144,7 @@ describe('createTriggerServer', () => {
     harness = await start()
     expect((await fetch(`${harness.base}/nope`)).status).toBe(404)
     expect((await fetch(`${harness.base}/refresh`)).status).toBe(404) // GET /refresh is not the trigger
+    // /status is GET-only — POST is not accepted (it isn't authenticated as a status call).
+    expect((await fetch(`${harness.base}/status`, { method: 'POST', headers: auth })).status).toBe(404)
   })
 })

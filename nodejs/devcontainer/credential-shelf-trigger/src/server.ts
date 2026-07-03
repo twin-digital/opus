@@ -19,7 +19,9 @@ export interface ServerDeps {
 }
 
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
-  res.writeHead(status, { 'content-type': 'application/json' })
+  // no-store: a /refresh response carries the device user_code + verification URL; keep any
+  // intermediary (reverse proxy, browser) from caching it.
+  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
   res.end(JSON.stringify(body))
 }
 
@@ -49,7 +51,7 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
 
     const event =
       method === 'POST' && path === '/refresh' ? 'refresh'
-      : path === '/status' ? 'status'
+      : method === 'GET' && path === '/status' ? 'status'
       : null
     if (event === null) {
       sendJson(res, 404, { error: 'not found' })
@@ -67,8 +69,9 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
       deps
         .upstream('GET', '/status')
         .then((r) => {
-          audit({ event, source, authorized: true, outcome: 'ok' })
-          sendJson(res, r.status === 200 ? 200 : 502, r.status === 200 ? r.body : { error: 'upstream error' })
+          const ok = r.status === 200
+          audit({ event, source, authorized: true, outcome: ok ? 'ok' : 'upstream_error' })
+          sendJson(res, ok ? 200 : 502, ok ? r.body : { error: 'upstream error' })
         })
         .catch(() => {
           audit({ event, source, authorized: true, outcome: 'upstream_error' })
