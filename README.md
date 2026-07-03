@@ -17,6 +17,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/cli-lib](./nodejs/core/cli-lib): Utilities for building CLI applications with oclif.
 - [@twin-digital/logger-lib](./nodejs/core/logger-lib): Generic logging interface and implementations for TypeScript applications
 - [@twin-digital/credential-shelf](./nodejs/devcontainer/credential-shelf): Credential vendor sidecar — vends scoped, short-lived AWS and GitHub App credentials onto a read-only /creds shelf.
+- [@twin-digital/credential-shelf-trigger](./nodejs/devcontainer/credential-shelf-trigger): Network-facing trigger for the credential-shelf remote refresh — an authenticated, rate-limited, LAN-local endpoint that drives the sidecar's device-code refresh primitive over a Unix socket. Holds no AWS identity.
 - [@twin-digital/workspace](./nodejs/devcontainer/workspace): Dev container image — security hardening (no sudo, VS Code channel scrub, credential shims) plus common tooling.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
