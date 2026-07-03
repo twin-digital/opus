@@ -1,5 +1,11 @@
 # @twin-digital/discord-bot
 
+## 0.1.3
+
+### Patch Changes
+
+- 348c15a: Split the deploy/destroy scripts into tool-typed turbo tasks (`deploy:serverless` / `deploy:cdk`) so CI can deploy each tool to its own account and role. Membership is implicit — `turbo run deploy:serverless` runs only packages defining it, `deploy:cdk` only CDK apps. No change to what is deployed.
+
 ## 0.1.2
 
 ### Patch Changes

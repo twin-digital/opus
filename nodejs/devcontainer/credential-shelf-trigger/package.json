@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/credential-shelf-trigger",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Network-facing trigger for the credential-shelf remote refresh — an authenticated, rate-limited, LAN-local endpoint that drives the sidecar's device-code refresh primitive over a Unix socket. Holds no AWS identity.",
   "type": "module",
   "exports": {
