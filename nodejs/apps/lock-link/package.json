@@ -4,6 +4,19 @@
   "version": "0.0.0",
   "description": "Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.",
   "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
   "scripts": {
     "build": "build",
     "clean": "clean",
