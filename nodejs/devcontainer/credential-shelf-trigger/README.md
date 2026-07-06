@@ -28,6 +28,11 @@ not a credential mint.
 
 ## Endpoints
 
+- `GET /` (and `/index.html`) — a small **operator page** for phones. Enter the token once (kept
+  in the device's `localStorage`, never in a URL); tap **Refresh** to start a device-code login
+  and get the `user_code` + a tappable approval link, or **Check status** for session expiry. The
+  page ships no secret and adds the token as a Bearer header on each call, so it works over a
+  plain LAN bookmark without exposing the token.
 - `POST /refresh` — **authenticated + rate-limited.** Triggers a device-code refresh; returns
   `{ prompts: [{ session, user_code, verification_uri, verification_uri_complete? }] }`. Match
   the `user_code` against the AWS approval screen and **approve only a code you just
@@ -42,13 +47,13 @@ secret material.
 
 ## Configure (environment)
 
-| Var                               | Default                              | Meaning                                                                                                                                               |
-| --------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRIGGER_TOKEN`                   | — (**required**)                     | Shared bearer secret. The service refuses to start without it (fails closed).                                                                         |
-| `TRIGGER_LISTEN`                  | `0.0.0.0:8770`                       | `host:port` to bind inside the container. Restrict reachability with the **consumer's port mapping** — bind it to the LAN, not public, not a tailnet. |
-| `TRIGGER_UPSTREAM_SOCKET`         | `/run/credential-shelf/refresh.sock` | The sidecar's refresh socket (a volume shared **only** with the sidecar).                                                                             |
-| `TRIGGER_RATE_LIMIT_INTERVAL_SEC` | `30`                                 | Seconds to refill one trigger token.                                                                                                                  |
-| `TRIGGER_RATE_LIMIT_BURST`        | `1`                                  | Token-bucket capacity.                                                                                                                                |
+| Var                               | Default                              | Meaning                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRIGGER_TOKEN`                   | — (**required to serve**)            | Shared bearer secret. Without it the container stays **disabled and idle** (never serves) — so it's safe to define as an always-on service and enable later by setting the token. |
+| `TRIGGER_LISTEN`                  | `0.0.0.0:8770`                       | `host:port` to bind inside the container. Restrict reachability with the **consumer's port mapping** — bind it to the LAN, not public, not a tailnet.                             |
+| `TRIGGER_UPSTREAM_SOCKET`         | `/run/credential-shelf/refresh.sock` | The sidecar's refresh socket (a volume shared **only** with the sidecar).                                                                                                         |
+| `TRIGGER_RATE_LIMIT_INTERVAL_SEC` | `30`                                 | Seconds to refill one trigger token.                                                                                                                                              |
+| `TRIGGER_RATE_LIMIT_BURST`        | `1`                                  | Token-bucket capacity.                                                                                                                                                            |
 
 Auth is a **shared bearer token** (v1). Passkey/WebAuthn is a possible later upgrade.
 

@@ -53,6 +53,24 @@ afterEach(async () => {
 const auth = { authorization: `Bearer ${TOKEN}` }
 
 describe('createTriggerServer', () => {
+  it('serves the operator page at / and /index.html without auth, carrying no token', async () => {
+    harness = await start()
+    for (const path of ['/', '/index.html']) {
+      const res = await fetch(`${harness.base}${path}`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toContain('text/html')
+      // Hardening: a page holding a bearer token gets a CSP, no framing, nosniff, no referrer.
+      expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'")
+      expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+      expect(res.headers.get('x-frame-options')).toBe('DENY')
+      const body = await res.text()
+      expect(body).toContain('AWS session refresh')
+      expect(body).not.toContain(TOKEN) // the page ships no secret; the token is entered client-side
+      expect(body).toContain('^https?') // approval links are scheme-restricted to http(s)
+    }
+    expect(harness.upstream).not.toHaveBeenCalled()
+  })
+
   it('serves /healthz without auth and leaks nothing', async () => {
     harness = await start()
     const res = await fetch(`${harness.base}/healthz`)
