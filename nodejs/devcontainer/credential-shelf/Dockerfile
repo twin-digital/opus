@@ -57,13 +57,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 # must match the consumer's uid so the 0600 shelf files are readable on the read-only mount.
 # The base image ships a `node` user/group at 1000, so drop all pre-made uid >= 1000 users
 # first to free the uid/gid.
+#
+# Pre-create + chown /creds and /run/credential-shelf (the refresh-listener's default socket dir)
+# so that a fresh named volume mounted on either inherits uid-1000 ownership — Docker seeds an
+# empty volume from the image dir's ownership. Without this the socket dir would be root-owned and
+# the uid-1000 listener gets EACCES binding its Unix socket.
 RUN getent passwd \
     | awk -F: '($3 >= 1000) && ($1 != "nobody") {print $1}' \
     | xargs -r -n 1 userdel -r \
   && rm -rf /etc/sudoers.d/* \
   && { groupadd --gid 1000 credential-vendor || true; } \
   && useradd -s /bin/bash -m -u 1000 -g 1000 credential-vendor \
-  && mkdir -p /creds && chown credential-vendor /creds
+  && mkdir -p /creds /run/credential-shelf \
+  && chown credential-vendor /creds /run/credential-shelf
 
 # Baked default config (idle). Override in a derived image, NOT a /workspace bind-mount.
 COPY nodejs/devcontainer/credential-shelf/vend.yaml /etc/credential-shelf/vend.yaml
