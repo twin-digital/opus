@@ -43,6 +43,20 @@ export const handler = withObservability(
 
       const result = await runSync({ lynx, lodgify, notify, config, now })
 
+      // Snapshot logs — one line per Lodgify booking the sync considered, categorized so
+      // an operator can trace any bookingId. Answers "why didn't booking X get a code?"
+      // without needing to reproduce a run: filter on bookingId to see BOTH the
+      // `considered` line (category = gap / code-set / out-of-horizon / not-booked /
+      // deleted) AND any matching `written` / `skipped` / `escalated` outcome below.
+      for (const b of result.snapshot) {
+        context.logger.info(`lock-link considered ${b.category}`, {
+          bookingId: b.bookingId,
+          arrival: b.arrival,
+          category: b.category,
+          status: b.status,
+        })
+      }
+
       // Per-outcome logs — one line per gap the sync touched, easily grouped in
       // CloudWatch Logs Insights (`filter action = "written"` etc.). Covers the "where
       // did the code go?" question a run summary alone can't answer.

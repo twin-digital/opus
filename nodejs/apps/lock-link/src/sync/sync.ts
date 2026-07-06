@@ -49,36 +49,69 @@ export interface Outcome {
   readonly reasons?: readonly string[]
 }
 
+/** Categories partition every Lodgify booking the sync considered — `gap` flows into
+ * the gap-fill logic; the other four are the reasons a booking was excluded. */
+export type BookingCategory = 'gap' | 'code-set' | 'out-of-horizon' | 'not-booked' | 'deleted'
+
+export interface BookingSnapshot {
+  readonly bookingId: number
+  /** Raw Lodgify `arrival` string — retained as-is so an unparseable value logs verbatim. */
+  readonly arrival: string
+  readonly category: BookingCategory
+  /** Lodgify booking status — carried on `not-booked` so logs show WHY it was excluded. */
+  readonly status?: string
+}
+
 export interface SyncResult {
   readonly gaps: number
   readonly written: number
   readonly escalated: number
   readonly skipped: number
   readonly outcomes: readonly Outcome[]
+  /** Every booking Lodgify returned, categorized before the gap filter — the "here's what
+   * the sync saw" trace that pairs with `outcomes` for full per-booking observability. */
+  readonly snapshot: readonly BookingSnapshot[]
 }
 
 /** Rooms still missing a code (empty string or null) — the per-room gap signal. */
 const roomsNeedingCode = (booking: Booking) =>
   (booking.rooms ?? []).filter((room) => room.key_code === null || room.key_code === '')
 
+/** Assign one category per Lodgify booking; exhaustive over the exclusion reasons so the
+ * snapshot log answers "why didn't booking X get a code?" without a code archaeology dive. */
+const categorize = (booking: Booking, horizonCutoff: number): BookingCategory => {
+  if (booking.is_deleted) {
+    return 'deleted'
+  }
+  if (booking.status !== 'Booked') {
+    return 'not-booked'
+  }
+  const arrival = Date.parse(booking.arrival)
+  if (!Number.isNaN(arrival) && arrival > horizonCutoff) {
+    return 'out-of-horizon'
+  }
+  return roomsNeedingCode(booking).length > 0 ? 'gap' : 'code-set'
+}
+
 export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   const { lynx, lodgify, notify, config, now } = deps
   const horizonCutoff = now + config.horizonDays * DAY_MS
 
-  // 1. Lodgify gap set: Booked, in-horizon, at least one room without a code.
+  // 1. Snapshot every Lodgify booking with a category — `gap` is the subset the sync
+  //    will try to fill; the other four are the reasons a booking was excluded (logged
+  //    per-booking in the handler so an operator can trace any bookingId).
   const bookings = await lodgify.listBookings({ stayFilter: 'Upcoming' })
-  const gaps = bookings.items.filter((booking) => {
-    if (booking.status !== 'Booked' || booking.is_deleted) {
-      return false
-    }
-    const arrival = Date.parse(booking.arrival)
-    const inHorizon = Number.isNaN(arrival) || arrival <= horizonCutoff
-    return inHorizon && roomsNeedingCode(booking).length > 0
-  })
+  const snapshot: BookingSnapshot[] = bookings.items.map((booking) => ({
+    bookingId: booking.id,
+    arrival: booking.arrival,
+    category: categorize(booking, horizonCutoff),
+    status: booking.status,
+  }))
+  const gaps = bookings.items.filter((booking) => categorize(booking, horizonCutoff) === 'gap')
 
   // 2. Steady state: no gaps → never touch Lynx.
   if (gaps.length === 0) {
-    return { gaps: 0, written: 0, escalated: 0, skipped: 0, outcomes: [] }
+    return { gaps: 0, written: 0, escalated: 0, skipped: 0, outcomes: [], snapshot }
   }
 
   // 3. Index Lynx reservations (upcoming + current) by the joined Lodgify booking id, and
@@ -192,7 +225,7 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   for (const o of outcomes) {
     counts[o.action] += 1
   }
-  return { gaps: gaps.length, ...counts, outcomes }
+  return { gaps: gaps.length, ...counts, outcomes, snapshot }
 }
 
 /** Overdue = within the SLA window of arrival AND past the grace period since booking. */

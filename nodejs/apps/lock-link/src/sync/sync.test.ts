@@ -187,4 +187,27 @@ describe('runSync (gap-fill orchestration)', () => {
     await run(ARRIVAL_MS - 100 * HOURS)
     expect(events.some((e) => e.reason.includes('multiple properties'))).toBe(true)
   })
+
+  it('snapshot categorizes every Lodgify booking the sync sees', async () => {
+    // One booking per category the fake surfaces. `deleted` is defensive on the sync
+    // side but unreachable through Lodgify's Upcoming filter — the fake mirrors that
+    // by excluding is_deleted at the list endpoint, so no assertion for it here.
+    world.addReservation({ bookingId: 1, code: '9234' }) // gap: Booked, in-horizon, missing code
+    world.addReservation({ bookingId: 2, code: '9234', lodgifyKeyCode: '9234' }) // code-set: filled
+    world.addReservation({ bookingId: 3, code: '9234', checkInTimestamp: ARRIVAL + 30 * 86400 }) // 30d out
+    world.addReservation({ bookingId: 4, code: '9234', status: 'Tentative' }) // not-booked
+
+    // Override horizonDays down from the suite default (365d) so the 30d-out booking
+    // actually falls out of horizon.
+    const result = await run(ARRIVAL_MS - 100 * HOURS, { horizonDays: 14 })
+
+    const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
+    expect(byId.get(1)?.category).toBe('gap')
+    expect(byId.get(2)?.category).toBe('code-set')
+    expect(byId.get(3)?.category).toBe('out-of-horizon')
+    expect(byId.get(4)?.category).toBe('not-booked')
+    // Snapshot is the full Lodgify list, not just gaps — the "here's what the sync saw"
+    // trace that pairs with `outcomes` for full per-booking observability.
+    expect(result.snapshot).toHaveLength(4)
+  })
 })
