@@ -126,7 +126,7 @@ const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
     ),
   },
   {
-    ignores: ['dist', 'node_modules', '**/node_modules', '**/CHANGELOG.md'],
+    ignores: ['dist', 'coverage', 'node_modules', '**/node_modules', '**/coverage', '**/CHANGELOG.md'],
   },
 )
 
