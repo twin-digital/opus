@@ -65,4 +65,14 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_HORIZON_DAYS: '' })).toThrow()
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_ACCOUNT_ID: '' })).toThrow()
   })
+
+  it('rejects whitespace-only string envs (would flow to Lynx hostId / SSM parameter names)', () => {
+    // Bare `z.string().min(1)` accepts `'   '`; whitespace user id would become a Lynx
+    // hostId of `'   '` on every request, and whitespace param names would only fail at
+    // SSM GetParameter with a less-clear error.
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_USER_ID: '   ' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_USERNAME_PARAM: '   ' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '   ' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LODGIFY_API_KEY_PARAM: '   ' })).toThrow()
+  })
 })

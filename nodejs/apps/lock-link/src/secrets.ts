@@ -16,9 +16,11 @@ export interface LockLinkSecrets {
 }
 
 // 2 hours: comfortably above the hourly schedule cadence so a warm container reuses the
-// cached value across scheduled invocations. A rotation propagates within one TTL without
-// redeploy, and the 401 re-mint paths on Lynx / typed error paths on Lodgify catch stale
-// values before the TTL expires anyway.
+// cached value across scheduled invocations. A rotation propagates within one TTL; until
+// then, every invocation authenticates with the stale value and Lynx/Lodgify calls will
+// fail (the 401 re-mint path re-issues the JWT with the SAME cached username/password —
+// nothing here invalidates the Powertools cache on a downstream auth error). To shorten
+// the window on demand, force a cold start (redeploy or bump an env var).
 const TTL_SECONDS = 7200
 
 /**

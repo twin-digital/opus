@@ -26,25 +26,26 @@ export interface LockLinkConfig extends SyncConfig {
   }
 }
 
-// Empty/whitespace-only env values reject before coercion. Without this, `Number('')` is
-// `0` — passing `nonnegative()` on `GRACE_MINUTES` — so a misconfigured deploy would
-// silently degrade the grace window instead of failing fast at cold start. Applied
-// uniformly to keep the numeric envs symmetric.
-const numericEnv = z.string().trim().min(1).pipe(z.coerce.number())
+// Empty/whitespace-only env values reject before use. For numeric envs, `Number('')` is
+// `0` — a misconfigured `GRACE_MINUTES` would have silently degraded the grace window;
+// for string envs, whitespace would flow through to Lynx as `hostId` or to SSM as a
+// parameter name, failing later with a less-clear error. Applied uniformly.
+const stringEnv = z.string().trim().min(1)
+const numericEnv = stringEnv.pipe(z.coerce.number())
 
 // Env vars are strings; coerce to numbers and validate every value (all required).
 const envSchema = z.object({
   LOCK_LINK_ACCOUNT_ID: numericEnv.pipe(z.number().int().positive()),
-  LOCK_LINK_USER_ID: z.string().min(1),
+  LOCK_LINK_USER_ID: stringEnv,
   LOCK_LINK_HORIZON_DAYS: numericEnv.pipe(z.number().int().positive()),
   LOCK_LINK_SLA_HOURS: numericEnv.pipe(z.number().positive()),
   LOCK_LINK_GRACE_MINUTES: numericEnv.pipe(z.number().nonnegative()),
   LOCK_LINK_ALERT_TOPIC_ARN: z
     .string()
     .regex(/^arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+$/, 'must be an SNS topic ARN'),
-  LOCK_LINK_LYNX_USERNAME_PARAM: z.string().min(1),
-  LOCK_LINK_LYNX_PASSWORD_PARAM: z.string().min(1),
-  LOCK_LINK_LODGIFY_API_KEY_PARAM: z.string().min(1),
+  LOCK_LINK_LYNX_USERNAME_PARAM: stringEnv,
+  LOCK_LINK_LYNX_PASSWORD_PARAM: stringEnv,
+  LOCK_LINK_LODGIFY_API_KEY_PARAM: stringEnv,
 })
 
 /**
