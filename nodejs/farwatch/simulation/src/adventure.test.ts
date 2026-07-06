@@ -117,5 +117,7 @@ describe('resolveAdventure', () => {
     }
     const rate = wins / n
     expect(Math.abs(rate - 0.5), `expected ~0.5, got ${rate}`).toBeLessThan(0.02)
-  })
+    // 20k iterations is inherently slow (a few seconds); raise the timeout above
+    // vitest's 5s default so it doesn't flake on slow or loaded machines.
+  }, 20_000)
 })
