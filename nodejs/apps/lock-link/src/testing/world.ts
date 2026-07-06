@@ -102,6 +102,9 @@ export const createWorld = (options: WorldOptions = {}): World => {
     lodgifyRequests: [],
 
     addProperty: ({ propertyId, name, lockNames = DEFAULT_LOCK_NAMES }) => {
+      if (world.properties.has(propertyId)) {
+        throw new Error(`world.addProperty: propertyId ${String(propertyId)} already exists`)
+      }
       world.properties.set(propertyId, {
         uniquePropertyId: propertyId,
         name: name ?? `Property ${String(propertyId)}`,
@@ -112,6 +115,13 @@ export const createWorld = (options: WorldOptions = {}): World => {
     },
 
     addReservation: (spec) => {
+      // One Lodgify booking per bookingId. Overwriting the Lodgify record while
+      // appending a Lynx reservation (the previous behaviour) modelled a state real
+      // systems can't produce; require callers to be explicit instead.
+      if (world.bookings.has(spec.bookingId)) {
+        throw new Error(`world.addReservation: duplicate bookingId ${String(spec.bookingId)}`)
+      }
+
       const propertyId = spec.propertyId ?? 72230
       const roomTypeId = spec.roomTypeId ?? 501
       const lockNames = spec.lockNames ?? DEFAULT_LOCK_NAMES
@@ -121,7 +131,18 @@ export const createWorld = (options: WorldOptions = {}): World => {
       const synced = spec.synced ?? true
       const status = spec.status ?? 'Booked'
 
-      if (!world.properties.has(propertyId)) {
+      if (world.properties.has(propertyId)) {
+        // A later reservation with different lockNames would silently disagree with the
+        // property's already-fixed lock set — a state real Lynx can't produce. Surface it.
+        const existing = (world.locksByProperty.get(propertyId) ?? []).map((l) => l.lockName).sort()
+        const requested = [...lockNames].sort()
+        if (existing.join('|') !== requested.join('|')) {
+          throw new Error(
+            `world.addReservation: property ${String(propertyId)} already has lock set [${existing.join(', ')}]; ` +
+              `cannot add a reservation covering [${requested.join(', ')}]`,
+          )
+        }
+      } else {
         world.addProperty({ propertyId, lockNames })
       }
 
