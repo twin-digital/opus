@@ -68,8 +68,10 @@ export const smartLockSchema = z.object({
   /** ONLINE | OFFLINE */
   connectivityStatus: z.string(),
   batteryLevel: z.number().nullable(),
-  isJammed: z.boolean(),
-  provisionStatus: z.string(),
+  /** Numeric flag on the wire (0/1), not a boolean. */
+  isJammed: z.number(),
+  /** Numeric status code on the wire (not a string like `PROVISIONED`). */
+  provisionStatus: z.number(),
   /** e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`. */
   lockModelUniqueName: z.string(),
 })

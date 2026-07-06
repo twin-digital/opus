@@ -74,8 +74,8 @@ const aLock = (lockName: string): SmartLock => ({
   lockName,
   connectivityStatus: 'ONLINE',
   batteryLevel: 90,
-  isJammed: false,
-  provisionStatus: 'PROVISIONED',
+  isJammed: 0,
+  provisionStatus: 1,
   lockModelUniqueName: 'SCHLAGE_ENCODE',
 })
 

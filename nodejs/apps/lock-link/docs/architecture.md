@@ -74,8 +74,9 @@ returns them as plaintext** — so no scraping or OCR is needed.
 - Body: `{ hostId, loggedInUserId, propertyId, page, perPage, isHubAndLockStatusRequired: true, provisioningInfo: true, skipDeviceStatusApiCall: false }`
 - Returns `data.smartLocksInfo[]` — **the property's full lock set** (`paginationInfo.total` = lock
   count; property `72230` has **3**: Dalton Door, 4th Street Lofts, Front Door) plus per-lock health:
-  `provisionStatus`, `connectivityStatus` (ONLINE/OFFLINE), `batteryLevel`, `isJammed`,
-  `provisioningInfo`, `syncToLockStatus`, `lockModelUniqueName` (e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`).
+  `provisionStatus` (int status code, **not** the string `PROVISIONED`), `connectivityStatus`
+  (`ONLINE`/`OFFLINE`), `batteryLevel`, `isJammed` (int `0`/`1`, not boolean), `provisioningInfo`,
+  `syncToLockStatus`, `lockModelUniqueName` (e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`).
 - This gives the **denominator** for "all locks ready" (how many locks a reservation must cover) and
   the health context for escalation messages.
 - A lock's `erCode` here is its **base/default** code, **not** the per-reservation guest code (which
