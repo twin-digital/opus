@@ -53,11 +53,26 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(first).toMatchObject({ gaps: 1, written: 1, escalated: 0 })
     expect(events).toEqual([])
     expect(world.bookings.get(20559349)?.rooms?.[0]?.key_code).toBe('9234')
+    // Per-outcome detail — one written entry with the code + room + confirmation code.
+    expect(first.outcomes).toEqual([
+      {
+        bookingId: 20559349,
+        action: 'written',
+        code: '9234',
+        roomTypeIds: [501],
+        confirmationCode: '20559349VK222262',
+      },
+    ])
 
-    // Second pass: no gap left, so Lynx is never touched.
+    // Second pass: no gap left, so Lynx is never touched — but the snapshot still
+    // categorizes the (now-filled) booking. Pinning `snapshot` on the healthy no-gap
+    // path guards the "trace any bookingId" contract on the most-frequent runtime path.
     const lynxCallsBefore = world.lynxRequests.length
     const second = await run(ARRIVAL_MS - 71 * HOURS)
-    expect(second).toMatchObject({ gaps: 0, written: 0 })
+    expect(second).toMatchObject({ gaps: 0, written: 0, outcomes: [] })
+    expect(second.snapshot).toEqual([
+      { bookingId: 20559349, arrival: expect.any(String), category: 'code-set', status: 'Booked' },
+    ])
     expect(world.lynxRequests.length).toBe(lynxCallsBefore)
   })
 
@@ -70,6 +85,15 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({ severity: 'warning', bookingId: 20559349 })
     expect(events[0]?.details?.some((d) => d.includes('scheduled'))).toBe(true)
+    // Outcome carries the reasons so a human reading logs can see WHY it escalated.
+    // Includes confirmationCode — the distinguishing field from the no-Lynx-entry branch
+    // (which has no reservation to source it from).
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'escalated',
+      confirmationCode: '20559349VK222262',
+    })
+    expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
   })
 
   it('skips a not-ready code that is still outside the SLA window', async () => {
@@ -78,6 +102,30 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 100 * HOURS) // > 48h to arrival
     expect(result).toMatchObject({ written: 0, escalated: 0, skipped: 1 })
     expect(events).toEqual([])
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'skipped',
+      confirmationCode: '20559349VK222262',
+    })
+    expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
+  })
+
+  it('skips a no-Lynx-entry gap outside the SLA window (not-overdue no-entry branch)', async () => {
+    // A Lodgify booking with no matching Lynx reservation. Well outside the SLA window,
+    // so isOverdue is false → skipped, not escalated. Guards against an inverted-guard
+    // regression that would silently escalate every no-entry gap on every tick.
+    world.addReservation({ bookingId: 20559349, code: '9234' })
+    world.reservations.length = 0 // drop the Lynx side; keep the Lodgify booking
+
+    const result = await run(ARRIVAL_MS - 200 * HOURS) // far outside SLA
+    expect(result).toMatchObject({ written: 0, escalated: 0, skipped: 1 })
+    expect(events).toEqual([])
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'skipped',
+      reasons: ['no Lynx reservation for booking'],
+    })
+    expect(result.outcomes[0]?.confirmationCode).toBeUndefined()
   })
 
   it('suppresses escalation for a brand-new booking inside the grace period', async () => {
@@ -94,6 +142,10 @@ describe('runSync (gap-fill orchestration)', () => {
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
     expect(result).toMatchObject({ gaps: 0 })
+    // Snapshot is preserved on the no-gap early-return path — losing it here would
+    // strip the trace for the most-frequent runtime path.
+    expect(result.snapshot).toHaveLength(1)
+    expect(result.snapshot[0]).toMatchObject({ bookingId: 20559349, category: 'code-set' })
     expect(world.lynxRequests).toEqual([])
   })
 
@@ -119,6 +171,14 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 100 * HOURS)
     expect(result).toMatchObject({ escalated: 1, skipped: 0 })
     expect(events.some((e) => e.reason.includes('no Lynx reservation'))).toBe(true)
+    // Pin the outcome shape for this branch — a regression that flipped action to
+    // 'skipped' while still firing notify would otherwise still pass the count check.
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'escalated',
+      reasons: ['no Lynx reservation for booking'],
+    })
+    expect(result.outcomes[0]?.confirmationCode).toBeUndefined()
   })
 
   it('escalates when the same bookingId resolves under two different properties', async () => {
@@ -135,5 +195,37 @@ describe('runSync (gap-fill orchestration)', () => {
 
     await run(ARRIVAL_MS - 100 * HOURS)
     expect(events.some((e) => e.reason.includes('multiple properties'))).toBe(true)
+  })
+
+  it('snapshot categorizes every Lodgify booking the sync sees', async () => {
+    // One booking per category the fake surfaces. `deleted` is defensive on the sync
+    // side but unreachable through Lodgify's Upcoming filter — the fake mirrors that
+    // by excluding is_deleted at the list endpoint, so no assertion for it here.
+    world.addReservation({ bookingId: 1, code: '9234' }) // gap: Booked, in-horizon, missing code
+    world.addReservation({ bookingId: 2, code: '9234', lodgifyKeyCode: '9234' }) // code-set: filled
+    world.addReservation({ bookingId: 3, code: '9234', checkInTimestamp: ARRIVAL + 30 * 86400 }) // 30d out
+    world.addReservation({ bookingId: 4, code: '9234', status: 'Tentative' }) // not-booked
+    // rooms.nullable() is in the Lodgify wire schema. A null-rooms booking has nothing
+    // to fill, so it categorizes as code-set. Pinning this so a refactor that drops the
+    // `?? []` guard NPEs a test instead of production.
+    world.addReservation({ bookingId: 5, code: '9234' })
+    const nullRooms = world.bookings.get(5)
+    if (nullRooms) {
+      Object.assign(nullRooms, { rooms: null })
+    }
+
+    // Override horizonDays down from the suite default (365d) so the 30d-out booking
+    // actually falls out of horizon.
+    const result = await run(ARRIVAL_MS - 100 * HOURS, { horizonDays: 14 })
+
+    const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
+    expect(byId.get(1)?.category).toBe('gap')
+    expect(byId.get(2)?.category).toBe('code-set')
+    expect(byId.get(3)?.category).toBe('out-of-horizon')
+    expect(byId.get(4)?.category).toBe('not-booked')
+    expect(byId.get(5)?.category).toBe('code-set')
+    // Snapshot is the full Lodgify list, not just gaps — the "here's what the sync saw"
+    // trace that pairs with `outcomes` for full per-booking observability.
+    expect(result.snapshot).toHaveLength(5)
   })
 })

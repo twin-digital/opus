@@ -5,7 +5,7 @@ import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
 import { Alias } from 'aws-cdk-lib/aws-kms'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
+import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
@@ -59,6 +59,9 @@ export class LockLinkStack extends Stack {
       handler: 'handler',
       runtime: Runtime.NODEJS_24_X,
       timeout: Duration.seconds(30),
+      // Powertools Tracer emits ColdStart / subsegment annotations; ACTIVE tracing lets
+      // those land in X-Ray (and stops the "cannot annotate the main segment" warning).
+      tracing: Tracing.ACTIVE,
       // Operational config the handler reads + validates via loadConfig() (src/config.ts).
       // Tunable without a code change. Secrets (Lynx creds, Lodgify key) are NOT here —
       // they're read from SSM SecureString at runtime so they stay encrypted/rotatable.
