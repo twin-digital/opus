@@ -13,8 +13,19 @@ import { startServer } from './server.js'
 const main = async (): Promise<void> => {
   if ((process.env.TRIGGER_TOKEN ?? '') === '') {
     process.stdout.write('credential-shelf-trigger: TRIGGER_TOKEN not set — remote refresh disabled; idling.\n')
-    await new Promise(() => {
-      /* idle forever; nothing to serve */
+    // Idle without serving. A bare unsettled Promise does NOT keep Node's event loop alive (the
+    // process would exit immediately → a restart loop under `restart: unless-stopped`), so hold a
+    // ref'd timer and resolve on a termination signal so `docker stop` still exits promptly.
+    await new Promise<void>((resolve) => {
+      const keepAlive = setInterval(() => {
+        /* ref'd no-op handle to keep the loop alive */
+      }, 1 << 30)
+      for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+        process.once(sig, () => {
+          clearInterval(keepAlive)
+          resolve()
+        })
+      }
     })
     return
   }
