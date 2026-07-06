@@ -1,5 +1,11 @@
 import { type Booking } from '../lodgify/schema.js'
-import { type Property, type Reservation, type ReservationType, type SmartLock } from '../lynx/schema.js'
+import {
+  type AccessCode,
+  type Property,
+  type Reservation,
+  type ReservationType,
+  type SmartLock,
+} from '../lynx/schema.js'
 
 /**
  * A single seed shared by both fakes. Lynx and Lodgify are independent systems joined
@@ -149,14 +155,16 @@ export const createWorld = (
       const accessCodes =
         spec.code === undefined || spec.type === 'past' ?
           []
-        : covered.map((lockName) => ({
-            lockName,
-            code: spec.code ?? '',
-            isCodeSet: synced ? 1 : 0,
-            isHubCommunicated: 1,
-            syncToLockStatus: synced ? 'success' : 'scheduled',
-            syncToCloudStatus: 'success',
-          }))
+        : covered.map(
+            (lockName): AccessCode => ({
+              lockName,
+              code: spec.code ?? '',
+              isCodeSet: synced ? 1 : 0,
+              isHubCommunicated: 1,
+              syncToLockStatus: synced ? 'success' : 'scheduled',
+              syncToCloudStatus: 'success',
+            }),
+          )
 
       world.reservations.push({
         propertyId,
