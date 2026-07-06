@@ -29,6 +29,8 @@ export interface LockLinkConfig extends SyncConfig {
 // Trim and require at least one character before use. `z.coerce.number()` would accept
 // `""` as `0` (passing `nonnegative()` for `GRACE_MINUTES`), and whitespace strings would
 // flow into Lynx as `hostId` or SSM as parameter names — reject both at cold start.
+// (`z.coerce.number()` already rejects `Infinity` / `1e999` in zod v4+ by default; see
+// the regression rows in `config.test.ts`.)
 const stringEnv = z.string().trim().min(1)
 const numericEnv = stringEnv.pipe(z.coerce.number())
 

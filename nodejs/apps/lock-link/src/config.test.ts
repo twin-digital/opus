@@ -53,6 +53,11 @@ describe('loadConfig', () => {
     ['ARN not well-formed', { LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' }],
     ['ARN prefix only', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:' }],
     ['ARN bad account id', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:foo:topic' }],
+    // Infinity would silently disable the SLA / grace guards (positive/nonnegative accept it).
+    ['SLA_HOURS Infinity literal', { LOCK_LINK_SLA_HOURS: 'Infinity' }],
+    ['SLA_HOURS 1e999 overflow', { LOCK_LINK_SLA_HOURS: '1e999' }],
+    ['GRACE_MINUTES Infinity literal', { LOCK_LINK_GRACE_MINUTES: 'Infinity' }],
+    ['GRACE_MINUTES 1e999 overflow', { LOCK_LINK_GRACE_MINUTES: '1e999' }],
   ])('rejects %s', (_, override) => {
     expect(() => loadConfig({ ...validEnv, ...override })).toThrow()
   })
