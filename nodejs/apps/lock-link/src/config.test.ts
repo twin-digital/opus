@@ -12,6 +12,7 @@ const validEnv = {
   LOCK_LINK_LYNX_USERNAME_PARAM: '/lock-link/lynx-username',
   LOCK_LINK_LYNX_PASSWORD_PARAM: '/lock-link/lynx-password',
   LOCK_LINK_LODGIFY_API_KEY_PARAM: '/lock-link/lodgify-api-key',
+  LOCK_LINK_LYNX_TOKEN_PARAM: '/lock-link/lynx-token',
 }
 
 describe('loadConfig', () => {
@@ -28,6 +29,7 @@ describe('loadConfig', () => {
         lynxPassword: '/lock-link/lynx-password',
         lodgifyApiKey: '/lock-link/lodgify-api-key',
       },
+      tokenParamName: '/lock-link/lynx-token',
     })
   })
 
@@ -49,7 +51,9 @@ describe('loadConfig', () => {
     ['whitespace string — LYNX_USERNAME_PARAM', { LOCK_LINK_LYNX_USERNAME_PARAM: '   ' }],
     ['whitespace string — LYNX_PASSWORD_PARAM', { LOCK_LINK_LYNX_PASSWORD_PARAM: '   ' }],
     ['whitespace string — LODGIFY_API_KEY_PARAM', { LOCK_LINK_LODGIFY_API_KEY_PARAM: '   ' }],
+    ['whitespace string — LYNX_TOKEN_PARAM', { LOCK_LINK_LYNX_TOKEN_PARAM: '   ' }],
     ['empty secret-parameter name', { LOCK_LINK_LYNX_PASSWORD_PARAM: '' }],
+    ['empty token-parameter name', { LOCK_LINK_LYNX_TOKEN_PARAM: '' }],
     ['ARN not well-formed', { LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' }],
     ['ARN prefix only', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:' }],
     ['ARN bad account id', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:foo:topic' }],
