@@ -53,11 +53,21 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(first).toMatchObject({ gaps: 1, written: 1, escalated: 0 })
     expect(events).toEqual([])
     expect(world.bookings.get(20559349)?.rooms?.[0]?.key_code).toBe('9234')
+    // Per-outcome detail — one written entry with the code + room + confirmation code.
+    expect(first.outcomes).toEqual([
+      {
+        bookingId: 20559349,
+        action: 'written',
+        code: '9234',
+        roomTypeIds: [501],
+        confirmationCode: '20559349VK222262',
+      },
+    ])
 
     // Second pass: no gap left, so Lynx is never touched.
     const lynxCallsBefore = world.lynxRequests.length
     const second = await run(ARRIVAL_MS - 71 * HOURS)
-    expect(second).toMatchObject({ gaps: 0, written: 0 })
+    expect(second).toMatchObject({ gaps: 0, written: 0, outcomes: [] })
     expect(world.lynxRequests.length).toBe(lynxCallsBefore)
   })
 
@@ -70,6 +80,9 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({ severity: 'warning', bookingId: 20559349 })
     expect(events[0]?.details?.some((d) => d.includes('scheduled'))).toBe(true)
+    // Outcome carries the reasons so a human reading logs can see WHY it escalated.
+    expect(result.outcomes[0]?.action).toBe('escalated')
+    expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
   })
 
   it('skips a not-ready code that is still outside the SLA window', async () => {
@@ -78,6 +91,8 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 100 * HOURS) // > 48h to arrival
     expect(result).toMatchObject({ written: 0, escalated: 0, skipped: 1 })
     expect(events).toEqual([])
+    expect(result.outcomes[0]?.action).toBe('skipped')
+    expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
   })
 
   it('suppresses escalation for a brand-new booking inside the grace period', async () => {

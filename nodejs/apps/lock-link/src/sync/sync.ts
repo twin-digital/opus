@@ -33,11 +33,28 @@ export interface SyncDeps {
   readonly now: number
 }
 
+export type OutcomeAction = 'written' | 'escalated' | 'skipped'
+
+/** What happened to one identified gap during a run — the unit of per-run logging. */
+export interface Outcome {
+  readonly bookingId: number
+  readonly action: OutcomeAction
+  /** The Lynx confirmation code when a Lynx entry was found — the join key back. */
+  readonly confirmationCode?: string
+  /** For `written`: the code pushed to Lodgify. */
+  readonly code?: string
+  /** For `written`: the Lodgify room_type_ids that received the code. */
+  readonly roomTypeIds?: readonly number[]
+  /** For `skipped` / `escalated`: why. Multiple lines for multi-cause readiness misses. */
+  readonly reasons?: readonly string[]
+}
+
 export interface SyncResult {
   readonly gaps: number
   readonly written: number
   readonly escalated: number
   readonly skipped: number
+  readonly outcomes: readonly Outcome[]
 }
 
 /** Rooms still missing a code (empty string or null) — the per-room gap signal. */
@@ -61,7 +78,7 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
 
   // 2. Steady state: no gaps → never touch Lynx.
   if (gaps.length === 0) {
-    return { gaps: 0, written: 0, escalated: 0, skipped: 0 }
+    return { gaps: 0, written: 0, escalated: 0, skipped: 0, outcomes: [] }
   }
 
   // 3. Index Lynx reservations (upcoming + current) by the joined Lodgify booking id, and
@@ -114,22 +131,17 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   }
 
   // 4. Resolve each gap: write when ready, escalate when overdue, else leave for next run.
-  let written = 0
-  let escalated = 0
-  let skipped = 0
+  const outcomes: Outcome[] = []
   for (const gap of gaps) {
     const entry = byBookingId.get(gap.id)
 
     if (!entry) {
+      const reason = 'no Lynx reservation for booking'
       if (isOverdue(Date.parse(gap.arrival), gap.created_at, now, config)) {
-        await notify({
-          severity: severityFor(Date.parse(gap.arrival), now),
-          reason: 'no Lynx reservation for booking',
-          bookingId: gap.id,
-        })
-        escalated += 1
+        await notify({ severity: severityFor(Date.parse(gap.arrival), now), reason, bookingId: gap.id })
+        outcomes.push({ bookingId: gap.id, action: 'escalated', reasons: [reason] })
       } else {
-        skipped += 1
+        outcomes.push({ bookingId: gap.id, action: 'skipped', reasons: [reason] })
       }
       continue
     }
@@ -137,11 +149,15 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
     const readiness = checkReadiness(entry.reservation, lockSets.get(entry.propertyId) ?? [])
     if (readiness.ready && readiness.code !== undefined) {
       const code = readiness.code
-      await lodgify.putKeyCodes(
-        gap.id,
-        roomsNeedingCode(gap).map((room) => ({ room_type_id: room.room_type_id, key_code: code })),
-      )
-      written += 1
+      const rooms = roomsNeedingCode(gap).map((room) => ({ room_type_id: room.room_type_id, key_code: code }))
+      await lodgify.putKeyCodes(gap.id, rooms)
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'written',
+        confirmationCode: entry.reservation.confirmationCode,
+        code,
+        roomTypeIds: rooms.map((r) => r.room_type_id),
+      })
       continue
     }
 
@@ -154,13 +170,26 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
         confirmationCode: entry.reservation.confirmationCode,
         details: readiness.reasons,
       })
-      escalated += 1
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'escalated',
+        confirmationCode: entry.reservation.confirmationCode,
+        reasons: readiness.reasons,
+      })
     } else {
-      skipped += 1
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'skipped',
+        confirmationCode: entry.reservation.confirmationCode,
+        reasons: readiness.reasons,
+      })
     }
   }
 
-  return { gaps: gaps.length, written, escalated, skipped }
+  const written = outcomes.filter((o) => o.action === 'written').length
+  const escalated = outcomes.filter((o) => o.action === 'escalated').length
+  const skipped = outcomes.filter((o) => o.action === 'skipped').length
+  return { gaps: gaps.length, written, escalated, skipped, outcomes }
 }
 
 /** Overdue = within the SLA window of arrival AND past the grace period since booking. */

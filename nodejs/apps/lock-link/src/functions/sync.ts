@@ -1,4 +1,4 @@
-import { withObservability } from '@twin-digital/observability-lib'
+import { MetricUnit, withObservability } from '@twin-digital/observability-lib'
 import type { ScheduledEvent } from 'aws-lambda'
 
 import { loadConfig } from '../config.js'
@@ -42,9 +42,35 @@ export const handler = withObservability(
       const lodgify = new LodgifyClient({ apiKey: secrets.lodgifyApiKey })
 
       const result = await runSync({ lynx, lodgify, notify, config, now })
-      // Per obs-lib guidance, log business events — gaps found, codes written, escalations
-      // raised — not generic invocation noise.
-      context.logger.info('lock-link sync complete', result)
+
+      // Per-outcome logs — one line per gap the sync touched, easily grouped in
+      // CloudWatch Logs Insights (`filter action = "written"` etc.). Covers the "where
+      // did the code go?" question a run summary alone can't answer.
+      for (const outcome of result.outcomes) {
+        context.logger.info(`lock-link ${outcome.action}`, {
+          bookingId: outcome.bookingId,
+          action: outcome.action,
+          code: outcome.code,
+          roomTypeIds: outcome.roomTypeIds,
+          confirmationCode: outcome.confirmationCode,
+          reasons: outcome.reasons,
+        })
+      }
+
+      // EMF metrics — dashboard/alarm surface. `GapsFound == 0` for a long window signals
+      // a healthy steady state; `Escalated > 0` mirrors the SNS event. Also silences the
+      // Powertools "No application metrics to publish" warning.
+      context.metrics.addMetric('GapsFound', MetricUnit.Count, result.gaps)
+      context.metrics.addMetric('CodesWritten', MetricUnit.Count, result.written)
+      context.metrics.addMetric('Escalated', MetricUnit.Count, result.escalated)
+      context.metrics.addMetric('Skipped', MetricUnit.Count, result.skipped)
+
+      context.logger.info('lock-link sync complete', {
+        gaps: result.gaps,
+        written: result.written,
+        escalated: result.escalated,
+        skipped: result.skipped,
+      })
     } catch (error) {
       // Best-effort escalation on whole-run failure. Swallow a secondary notify failure so
       // the original error is what surfaces to the operator (via the Lambda's error
