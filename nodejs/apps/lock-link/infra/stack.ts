@@ -12,16 +12,25 @@ import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
 import type { Construct } from 'constructs'
 
 /**
- * SSM SecureString parameter names. The values are populated **out-of-band** (initial
- * setup; AWS Console or `aws ssm put-parameter --type SecureString`) and rotatable
- * without redeploy — CFN never sees the secret material. CDK only grants read access by
- * name and tells the handler where to look (env).
+ * SSM SecureString parameter names. Values are populated **out-of-band** (initial setup;
+ * AWS Console or `aws ssm put-parameter --type SecureString`) and rotatable without
+ * redeploy — CFN never sees the secret material. CDK only grants read access by name and
+ * tells the handler where to look (env).
  */
 const SECRET_PARAMS = {
   lynxUsername: '/lock-link/lynx-username',
   lynxPassword: '/lock-link/lynx-password',
   lodgifyApiKey: '/lock-link/lodgify-api-key',
 }
+
+/**
+ * SSM SecureString parameter for the durable Lynx JWT cache. Distinct from `SECRET_PARAMS`
+ * because the Lambda writes it itself: on first-ever run it doesn't exist (the client
+ * mints a fresh JWT and `PutParameter` creates it); thereafter cold starts read it and
+ * skip `login`. Needs `ssm:GetParameter` + `ssm:PutParameter`, and `kms:GenerateDataKey`
+ * on the AWS-managed SSM key (the "via-service" grant below covers this).
+ */
+const TOKEN_PARAM = '/lock-link/lynx-token'
 
 // Runtime handler lives in src/ (infra → src dependency); never the reverse.
 const syncEntry = fileURLToPath(new URL('../src/functions/sync.ts', import.meta.url))
@@ -63,6 +72,7 @@ export class LockLinkStack extends Stack {
         LOCK_LINK_LYNX_USERNAME_PARAM: SECRET_PARAMS.lynxUsername,
         LOCK_LINK_LYNX_PASSWORD_PARAM: SECRET_PARAMS.lynxPassword,
         LOCK_LINK_LODGIFY_API_KEY_PARAM: SECRET_PARAMS.lodgifyApiKey,
+        LOCK_LINK_LYNX_TOKEN_PARAM: TOKEN_PARAM,
       },
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
@@ -72,24 +82,30 @@ export class LockLinkStack extends Stack {
     })
     alertTopic.grantPublish(syncFunction)
 
-    // Least-privilege read on the three secret parameters + decrypt with the AWS-managed
-    // SSM key (the default for SecureString). The parameter resources themselves are not
-    // in this stack — values are managed out-of-band so secret material never enters CFN.
-    const parameterArns = Object.values(SECRET_PARAMS).map((name) =>
-      Arn.format({ service: 'ssm', resource: 'parameter', resourceName: name.replace(/^\//, '') }, this),
+    // SSM parameter grants. Least-privilege: read-only on the three creds (values live in
+    // SSM, populated out-of-band); read+write on the token cache param (Lambda-managed).
+    // The parameter resources themselves are not in this stack — the token param is
+    // created on first `PutParameter` call, and the creds are populated out-of-band.
+    const paramArn = (name: string) =>
+      Arn.format({ service: 'ssm', resource: 'parameter', resourceName: name.replace(/^\//, '') }, this)
+    const secretParamArns = Object.values(SECRET_PARAMS).map(paramArn)
+    const tokenParamArn = paramArn(TOKEN_PARAM)
+    syncFunction.addToRolePolicy(
+      new PolicyStatement({ actions: ['ssm:GetParameter'], resources: [...secretParamArns, tokenParamArn] }),
     )
-    syncFunction.addToRolePolicy(new PolicyStatement({ actions: ['ssm:GetParameter'], resources: parameterArns }))
+    syncFunction.addToRolePolicy(new PolicyStatement({ actions: ['ssm:PutParameter'], resources: [tokenParamArn] }))
     // KMS authorization runs against the underlying CMK ARN, not the alias — and the
     // AWS-managed CMK ARN isn't predictable at synth time. Scope by service instead:
     // `kms:ViaService` restricts each grant to calls originating from that service in
-    // this region, so `resources: ['*']` is still least-privilege.
+    // this region, so `resources: ['*']` is still least-privilege. SSM SecureString
+    // WRITES need `kms:GenerateDataKey` in addition to `Decrypt` for reads.
     const viaService = (service: string, actions: string[]) =>
       new PolicyStatement({
         actions,
         resources: ['*'],
         conditions: { StringEquals: { 'kms:ViaService': `${service}.${this.region}.amazonaws.com` } },
       })
-    syncFunction.addToRolePolicy(viaService('ssm', ['kms:Decrypt']))
+    syncFunction.addToRolePolicy(viaService('ssm', ['kms:Decrypt', 'kms:GenerateDataKey']))
     syncFunction.addToRolePolicy(viaService('sns', ['kms:GenerateDataKey', 'kms:Decrypt']))
 
     new Rule(this, 'Schedule', {

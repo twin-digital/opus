@@ -213,9 +213,13 @@ key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read ba
 - **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, SLA,
   grace, alert topic ARN, and the SSM parameter names. Validated at cold start
   (see the Configuration table below).
-- **SSM SecureString** (read at runtime via Powertools, cached ~2 h): Lynx username,
-  Lynx password, Lodgify API key. Values are populated out-of-band so they stay
+- **SSM SecureString — credentials** (read at runtime via Powertools, cached ~2 h): Lynx
+  username, Lynx password, Lodgify API key. Values are populated out-of-band so they stay
   encrypted at rest and rotatable without redeploy.
+- **SSM SecureString — Lynx JWT cache** (`LOCK_LINK_LYNX_TOKEN_PARAM`, read+write at
+  runtime): the Lambda persists the minted JWT so cold starts don't repeatedly call
+  `login`. The JWT is valid ~95 days; a 401 forces a re-mint and write-back. Zero setup —
+  the first-ever run mints normally and creates the parameter.
 
 ### Notify / escalation (single sink)
 
@@ -255,8 +259,9 @@ cross-workload channel with no code change.
 
 ## Module layout
 
-- `lynx/` — client (`login` + `TokenCache`, `listProperties`, `listReservations` for
-  `upcoming`/`current`, `listSmartLocks` for the lock set) and zod schemas.
+- `lynx/` — client (`login` + `TokenCache` seam, `listProperties`, `listReservations` for
+  `upcoming`/`current`, `listSmartLocks` for the lock set), zod schemas, and
+  `createSsmTokenCache` (durable JWT cache backed by SSM SecureString).
 - `lodgify/` — client (`listBookings`, `getBooking`, `putKeyCodes`), zod schemas, the
   vendored OpenAPI (`lodgify.openapi.json`), and the `pull-spec` refresh tool.
 - `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (all locks `success`,
@@ -283,6 +288,7 @@ Operational config (all required, validated at cold start):
 | `LOCK_LINK_LYNX_USERNAME_PARAM`   | SSM SecureString name — Lynx username              |
 | `LOCK_LINK_LYNX_PASSWORD_PARAM`   | SSM SecureString name — Lynx password              |
 | `LOCK_LINK_LODGIFY_API_KEY_PARAM` | SSM SecureString name — Lodgify API key            |
+| `LOCK_LINK_LYNX_TOKEN_PARAM`      | SSM SecureString name — durable Lynx JWT cache     |
 
 SSM SecureString **values** are populated out-of-band on initial setup (CFN never sees
 secret material); the stack grants the Lambda `ssm:GetParameter` on the named parameters

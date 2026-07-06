@@ -24,6 +24,14 @@ export interface LockLinkConfig extends SyncConfig {
     readonly lynxPassword: string
     readonly lodgifyApiKey: string
   }
+  /**
+   * SSM SecureString parameter that holds the durable Lynx JWT. Distinct from
+   * `secretNames` because this one is written by the Lambda itself: on cold start the
+   * cache reads it (skipping login when a valid token is there) and on 401 / first-mint
+   * it writes a fresh token back. No out-of-band setup — the first-ever run mints
+   * normally and populates the parameter.
+   */
+  readonly tokenParamName: string
 }
 
 // Trim and require at least one character before use. `z.coerce.number()` would accept
@@ -47,6 +55,7 @@ const envSchema = z
     LOCK_LINK_LYNX_USERNAME_PARAM: stringEnv,
     LOCK_LINK_LYNX_PASSWORD_PARAM: stringEnv,
     LOCK_LINK_LODGIFY_API_KEY_PARAM: stringEnv,
+    LOCK_LINK_LYNX_TOKEN_PARAM: stringEnv,
   })
   .transform<LockLinkConfig>((p) => ({
     accountId: p.LOCK_LINK_ACCOUNT_ID,
@@ -60,6 +69,7 @@ const envSchema = z
       lynxPassword: p.LOCK_LINK_LYNX_PASSWORD_PARAM,
       lodgifyApiKey: p.LOCK_LINK_LODGIFY_API_KEY_PARAM,
     },
+    tokenParamName: p.LOCK_LINK_LYNX_TOKEN_PARAM,
   }))
 
 /** Read + validate config from the environment; throws fast on cold start otherwise. */
