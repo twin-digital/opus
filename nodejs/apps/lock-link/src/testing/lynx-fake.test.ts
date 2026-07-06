@@ -17,7 +17,8 @@ describe('lynx fake', () => {
     fetch(`${fake.baseUrl}${PREFIX}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(world.credentials),
+      // Wire field is `email` — Lynx accounts use email addresses as the identifier.
+      body: JSON.stringify({ email: world.credentials.username, password: world.credentials.password }),
     })
 
   const dashboard = (action: string, payload: Record<string, unknown>, token = world.token) =>
@@ -42,11 +43,22 @@ describe('lynx fake', () => {
     expect(res.headers.get('x-auth-token')).toBe(world.token)
   })
 
+  it('400s a login body missing the `email` field (real Lynx behavior)', async () => {
+    // Pin the 400 — the field is `email`, not `username`. Without this guard,
+    // client-side wrong-field-name regressions would look like invalid credentials.
+    const bad = await fetch(`${fake.baseUrl}${PREFIX}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: world.credentials.username, password: world.credentials.password }),
+    })
+    expect(bad.status).toBe(400)
+  })
+
   it('401s wrong credentials, and 401s dashboard calls with a stale token', async () => {
     const bad = await fetch(`${fake.baseUrl}${PREFIX}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: 'x', password: 'y' }),
+      body: JSON.stringify({ email: 'x@example.com', password: 'y' }),
     })
     expect(bad.status).toBe(401)
 

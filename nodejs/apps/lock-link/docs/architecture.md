@@ -47,7 +47,9 @@ returns them as plaintext** — so no scraping or OCR is needed.
 ### Auth
 
 - `POST https://api.getlynx.co/ProdV1.1/api/v1/auth/login`
-- Body: plaintext JSON `{ "username": "...", "password": "..." }`
+- Body: plaintext JSON `{ "email": "...", "password": "..." }` (the Lynx account
+  identifier is an email address — the `LOCK_LINK_LYNX_USERNAME_PARAM` env var
+  historically names it `username`, but the wire field is `email`).
 - Response: a **JWT in the `x-auth-token` response header** (not the body). `exp ≈ 95 days`.
 - Use as `Authorization: Bearer <token>` on subsequent calls.
 - **Cache the token** (it lasts ~3 months); **re-mint on `401`**. Logging in rarely is also the

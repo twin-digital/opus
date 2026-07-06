@@ -56,8 +56,14 @@ export const startLynxFake = (world: World): Promise<Fake> =>
     const body = method === 'POST' ? await readBody(req) : undefined
 
     if (path === `${PREFIX}/api/v1/auth/login` && method === 'POST') {
-      const creds = (body ?? {}) as { username?: string; password?: string }
-      if (creds.username !== world.credentials.username || creds.password !== world.credentials.password) {
+      // Real Lynx expects the account identifier on the wire as `email`. A missing
+      // `email` field (or wrong body field name) returns 400, not 401 — matches prod.
+      const creds = (body ?? {}) as { email?: string; password?: string }
+      if (typeof creds.email !== 'string' || typeof creds.password !== 'string') {
+        sendJson(res, 400, { status: false, errorCodeId: 400, errorMessage: 'Bad request' })
+        return
+      }
+      if (creds.email !== world.credentials.username || creds.password !== world.credentials.password) {
         sendJson(res, 401, { status: false, errorCodeId: 401, errorMessage: 'Invalid credentials' })
         return
       }
