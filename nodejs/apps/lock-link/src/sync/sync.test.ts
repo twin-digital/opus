@@ -7,7 +7,8 @@ import { startLynxFake } from '../testing/lynx-fake.js'
 import { createWorld, type World } from '../testing/world.js'
 import { LynxClient } from '../lynx/client.js'
 import { type NotifyEvent, type Notifier } from './notify.js'
-import { runSync, type SyncConfig } from './sync.js'
+import { mergeBookings, runSync, type SyncConfig } from './sync.js'
+import { type Booking } from '../lodgify/schema.js'
 
 const ARRIVAL = 1_781_557_200 // unix seconds; the seeded reservation's check-in
 const ARRIVAL_MS = ARRIVAL * 1000
@@ -238,10 +239,10 @@ describe('runSync (gap-fill orchestration)', () => {
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
-    // Sync must issue BOTH stayFilter queries — the whole point of the fix.
-    const { upcoming, current } = listingCallsByFilter()
-    expect(upcoming.length).toBeGreaterThanOrEqual(1)
-    expect(current.length).toBeGreaterThanOrEqual(1)
+    // Sync must issue BOTH stayFilter queries — the whole point of the fix. Exact
+    // page counts pin the terminator too: two bookings well under `size=50`, one
+    // page per filter, no retries.
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1], current: [1] })
     // Both bookings surface in the snapshot; a Current-only booking is no longer invisible.
     const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
     expect(byId.get(1)?.category).toBe('gap')
@@ -285,6 +286,43 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
   })
 
+  it('mergeBookings: Current wins on same-id collision (fresher state)', () => {
+    // Direct test of the dedup contract. Feed two Booking objects with the SAME id but
+    // materially different `status` values, and assert the surviving Booking is the
+    // Current-side variant. A regression that inverted merge order — the exact bug the
+    // contract prevents — would flip the surviving status.
+    const base: Omit<Booking, 'status'> = {
+      id: 1,
+      property_id: 72230,
+      arrival: '2026-06-15T21:00:00Z',
+      departure: '2026-06-16T16:00:00Z',
+      is_deleted: false,
+      source: 'Expedia',
+      source_text: null,
+      created_at: '2026-06-01T00:00:00Z',
+      guest: { name: 'Guest', email: 'g@example.com' },
+      rooms: [{ room_type_id: 501, key_code: '' }],
+    }
+    const upcoming: Booking = { ...base, status: 'Tentative' } // stale
+    const current: Booking = { ...base, status: 'Booked' } // fresher
+
+    const merged = mergeBookings([upcoming], [current])
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.status).toBe('Booked') // Current-variant survived
+  })
+
+  it('mergeBookings: preserves ordering and does not clone', () => {
+    // Non-collision case — every input survives, order = upcoming then non-collided current.
+    const a: Booking = { id: 1 } as Booking
+    const b: Booking = { id: 2 } as Booking
+    const c: Booking = { id: 3 } as Booking
+    const merged = mergeBookings([a, b], [c])
+    expect(merged).toEqual([a, b, c])
+    // Reference preserved — merge doesn't clone Booking objects.
+    expect(merged[0]).toBe(a)
+    expect(merged[2]).toBe(c)
+  })
+
   it('walks one extra page at the exact size boundary — 50 bookings → 2 Upcoming pages', async () => {
     // Boundary case: a page returns exactly `size` items, so we can't tell from the
     // response alone whether there's a page 2 or not. Under a short-page terminator we
@@ -299,25 +337,5 @@ describe('runSync (gap-fill orchestration)', () => {
 
     expect(result.snapshot).toHaveLength(50)
     expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
-  })
-
-  it('dedupes a booking that appears in both Upcoming and Current buckets', async () => {
-    // Transition race: at check-in-time a booking can briefly appear in both buckets.
-    // `runSync` merges via `Map<id, Booking>` in insertion order Upcoming → Current, so
-    // Current wins on collision (fresher state). Without this test, the whole
-    // dedup contract sits unexercised.
-    world.addReservation({ bookingId: 1, code: '9234', stayCategory: 'Upcoming' })
-    world.stayCategoriesByBookingId.get(1)?.add('Current') // also visible in Current
-
-    const result = await run(ARRIVAL_MS - 24 * HOURS)
-
-    // Fake really did serve the booking twice (once per filter query).
-    const { upcoming, current } = listingCallsByFilter()
-    expect(upcoming).toEqual([1])
-    expect(current).toEqual([1])
-    // …but the sync processes it exactly once.
-    expect(result.snapshot.filter((s) => s.bookingId === 1)).toHaveLength(1)
-    expect(result.gaps).toBe(1)
-    expect(result.written).toBe(1)
   })
 })

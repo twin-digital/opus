@@ -77,6 +77,21 @@ export interface SyncResult {
 const roomsNeedingCode = (booking: Booking) =>
   (booking.rooms ?? []).filter((room) => room.key_code === null || room.key_code === '')
 
+/**
+ * Dedupe two Lodgify listings by booking id. Insertion order is Upcoming → Current, so
+ * `Map.set` overwrites the Upcoming copy — `Current` wins on collision (its state is
+ * fresher). Extracted so the "Current wins" rule is testable directly with distinguishable
+ * Booking objects, rather than through a fake that can't naturally produce two per-id
+ * variants.
+ */
+export const mergeBookings = (upcoming: readonly Booking[], current: readonly Booking[]): Booking[] => {
+  const byId = new Map<number, Booking>()
+  for (const b of [...upcoming, ...current]) {
+    byId.set(b.id, b)
+  }
+  return [...byId.values()]
+}
+
 /** Assign one category per Lodgify booking; exhaustive over the exclusion reasons so the
  * snapshot log answers "why didn't booking X get a code?" without a code archaeology dive. */
 const categorize = (booking: Booking, horizonCutoff: number): BookingCategory => {
@@ -110,11 +125,7 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
     lodgify.listAllBookings({ stayFilter: 'Upcoming' }),
     lodgify.listAllBookings({ stayFilter: 'Current' }),
   ])
-  const byId = new Map<number, Booking>()
-  for (const b of [...upcoming, ...current]) {
-    byId.set(b.id, b)
-  }
-  const bookings = [...byId.values()]
+  const bookings = mergeBookings(upcoming, current)
   const snapshot: BookingSnapshot[] = bookings.map((booking) => ({
     bookingId: booking.id,
     arrival: booking.arrival,
