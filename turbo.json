@@ -44,6 +44,10 @@
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
     },
+    "@twin-digital/credential-shelf-trigger#lint": {
+      "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps", "build"],
+      "inputs": ["eslint.config.js", "package.json", "src/**", "bin/**"]
+    },
     "lint:fix": {
       "cache": false,
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build"]
@@ -64,6 +68,16 @@
     "typecheck": {
       "dependsOn": ["upstream-sources"],
       "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**"],
+      "outputs": []
+    },
+    "@twin-digital/credential-shelf#typecheck": {
+      "dependsOn": ["upstream-sources", "build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
+      "outputs": []
+    },
+    "@twin-digital/credential-shelf-trigger#typecheck": {
+      "dependsOn": ["upstream-sources", "build"],
+      "inputs": ["package.json", "tsconfig.json", "tsconfig.*.json", "src/**", "bin/**"],
       "outputs": []
     },
     "upstream-sources": {
