@@ -1,5 +1,13 @@
 # @twin-digital/bookify
 
+## 0.4.2
+
+### Patch Changes
+
+- 6a71063: chore: satisfy new `eslint:recommended` rules introduced in ESLint v10. The pandoc/WeasyPrint "not installed" errors now attach the underlying spawn failure as `cause` (`preserve-caught-error`), and a redundant `let isDir = false` initializer in the workspace walker was dropped (`no-useless-assignment`).
+- 16681f3: fix(bookify): check fetch `response.ok` in the EuroPDF renderer and throw an error with the HTTP status and response body (without leaking the API key) on failure
+  - @twin-digital/logger-lib@0.0.1
+
 ## 0.4.1
 
 ### Patch Changes

@@ -49,7 +49,7 @@ const checkWeasyprintInstallation = async (executable: string) => {
           `  To upgrade: pip install --upgrade weasyprint\n`,
       )
     }
-  } catch (_) {
+  } catch (error) {
     throw new Error(
       `WeasyPrint is not installed or not available in PATH.\n\n` +
         `To install WeasyPrint:\n` +
@@ -57,6 +57,7 @@ const checkWeasyprintInstallation = async (executable: string) => {
         `  - macOS:   brew install weasyprint\n` +
         `  - Ubuntu:  apt install weasyprint  (may be outdated, pip recommended)\n\n` +
         `See https://doc.courtbouillon.org/weasyprint/stable/first_steps.html for more options.`,
+      { cause: error },
     )
   }
 }

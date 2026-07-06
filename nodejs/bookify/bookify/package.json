@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/bookify",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Core logic and models for the Bookify platform",
   "type": "module",
   "exports": {
@@ -40,7 +40,7 @@
   "dependencies": {
     "@twin-digital/logger-lib": "workspace:*",
     "ajv": "^8.17.1",
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "execa": "catalog:",
     "lodash-es": "^4.17.21",
     "postcss": "^8.4.0",
@@ -67,6 +67,6 @@
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
+    "pnpm": "11.x"
   }
 }

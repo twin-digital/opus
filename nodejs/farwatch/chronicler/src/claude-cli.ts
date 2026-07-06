@@ -16,11 +16,18 @@ const run = promisify(execFile)
  * The CLI is run in a fresh empty temp dir under the OS temp root — outside the repo — so it
  * has no project files as context and won't walk up into the repo's CLAUDE.md. Otherwise the
  * surrounding code leaks into the generated prose (it once named the world "Farwatch").
+ *
+ * `options.model` maps to `--model` (e.g. `sonnet`, `opus`); omitted, the CLI's default is used.
  */
-export const claudeCli: Llm = async (prompt) => {
+export const claudeCli: Llm = async (prompt, options) => {
   const dir = await mkdtemp(join(tmpdir(), 'farwatch-chronicler-'))
   try {
-    const { stdout } = await run('claude', ['-p', prompt], {
+    const args = ['-p']
+    if (options?.model !== undefined && options.model !== '') {
+      args.push('--model', options.model)
+    }
+    args.push(prompt)
+    const { stdout } = await run('claude', args, {
       cwd: dir,
       maxBuffer: 8 * 1024 * 1024,
     })

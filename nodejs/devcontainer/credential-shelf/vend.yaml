@@ -1,0 +1,36 @@
+# vend.yaml — what this sidecar vends to the shelf.
+#
+# Baked into the image, NOT a /workspace bind-mount, so changing vend scope is a reviewed
+# rebuild. A list of providers; each is a `kind` + `options` (how to reach the source) +
+# `grants` (what to mint). The baked default below is empty (the sidecar idles) — override
+# by deriving an image:
+#
+#   FROM ghcr.io/twin-digital/credential-shelf:latest
+#   COPY vend.yaml /etc/credential-shelf/vend.yaml
+#
+# Example:
+#   providers:
+#     - kind: aws-sso
+#       options:
+#         start_url: https://d-xxxxxxxxxx.awsapps.com/start/
+#         region: us-east-1          # optional, default us-east-1
+#         session: sso               # optional, default "sso" ([sso-session] name)
+#       grants:                      # → /creds/aws/credentials; first = [default]
+#         - account_id: "084828590319"
+#           role: developer-ai-agent
+#           # name: developer        # optional, default <account_id>-<role>
+#
+#     - kind: github-app             # one provider == one App (its installations are grants)
+#       options:
+#         app_id: "3967552"
+#         kms_key_id: alias/github-app-signer
+#         region: us-east-1          # optional, KMS region
+#         signer:                    # aws identity holding kms:Sign (config-only, never shelved)
+#           account_id: "253490790167"
+#           role: developer-tool-user
+#       grants:                      # → /creds/github/<name>, one per installation
+#         - name: myorg
+#           installation_id: "139694269"
+#           # repos: [app, infra]    # optional (omit => all installed)
+#           # perms: { contents: read }  # optional (omit => App's full grant)
+providers: []

@@ -18,7 +18,25 @@ const DisabledRulesInTests = [
   '@typescript-eslint/unbound-method',
 ]
 
+// eslint config files (and 'eslint.config.d/*' fragments) are untyped tooling glue — dynamic imports
+// and spreads of the shared base array read as `any`, so the type-aware "unsafe any" rules are noise.
+const DisabledRulesInConfigFiles = [
+  '@typescript-eslint/no-unsafe-argument',
+  '@typescript-eslint/no-unsafe-assignment',
+  '@typescript-eslint/no-unsafe-call',
+  '@typescript-eslint/no-unsafe-member-access',
+  '@typescript-eslint/no-unsafe-return',
+]
+
 const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
+  {
+    // Flag any `eslint-disable` directive that no longer suppresses anything. ESLint defaults this to
+    // "warn", which is easy to miss; promoting it to "error" keeps disable annotations honest as rules
+    // evolve (e.g. ESLint v10's JSX reference tracking can make older no-unused-vars suppressions stale).
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,jsx,tsx}'],
     languageOptions: {
@@ -97,7 +115,18 @@ const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
     ),
   },
   {
-    ignores: ['dist', 'node_modules', '**/node_modules', '**/CHANGELOG.md'],
+    // eslint config files compose the shared base and may dynamically import config.d/* fragments
+    files: ['**/eslint.config.{js,mjs,cjs}', '**/eslint.config.d/**/*.{js,mjs,cjs}'],
+    rules: DisabledRulesInConfigFiles.reduce(
+      (result, rule) => ({
+        ...result,
+        [rule]: 'off',
+      }),
+      {},
+    ),
+  },
+  {
+    ignores: ['dist', 'coverage', 'node_modules', '**/node_modules', '**/coverage', '**/CHANGELOG.md'],
   },
 )
 

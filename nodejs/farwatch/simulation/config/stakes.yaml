@@ -1,0 +1,35 @@
+# Stake (failure-cost) generation. Weights are relative. Starter values — tune by reading chronicles.
+
+# Chance a failed trial costs a permanent resource at all (most failures cost nothing lasting).
+stakeChance: 0.4
+
+# How grave a stake is when one lands (permanent "extreme" losses wait for weightier mechanics).
+stakeTierWeights:
+  minor: 5
+  moderate: 3
+  major: 1
+
+# Per approach: what a *failed* trial of that method can cost, weighted by likelihood.
+stakeKinds:
+  agility: { vigor: 5, supplies: 2 }
+  charm: { renown: 5, wealth: 1 }
+  combat: { vigor: 6, renown: 2, wealth: 1 }
+  craft: { supplies: 5, renown: 1 }
+  cunning: { renown: 4, supplies: 2 }
+  deception: { renown: 6, wealth: 1 }
+  diplomacy: { renown: 4, wealth: 3 }
+  endurance: { vigor: 5, supplies: 3 }
+  evasion: { vigor: 4, supplies: 3 }
+  insight: { renown: 3, vigor: 2 }
+  intimidation: { renown: 5, vigor: 2 }
+  lore: { renown: 3, supplies: 2 }
+  magic: { vigor: 5, renown: 2 }
+  might: { vigor: 5, supplies: 2 }
+  performance: { renown: 6, supplies: 1 }
+  preparation: { supplies: 6, wealth: 1 }
+  resolve: { vigor: 4, renown: 2 }
+  ritual: { vigor: 4, renown: 3 }
+  sacrifice: { wealth: 4, vigor: 3 }
+  speed: { vigor: 4, supplies: 3 }
+  stealth: { renown: 4, vigor: 3 }
+  wealth: { wealth: 7 }

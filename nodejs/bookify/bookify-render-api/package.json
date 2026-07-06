@@ -1,17 +1,17 @@
 {
   "private": true,
   "name": "@twin-digital/bookify-render-api",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "description": "Serverless API for Bookify rendering platform",
   "type": "module",
   "scripts": {
     "artifact": "artifact",
     "build": "build",
     "clean": "clean",
-    "deploy": "serverless deploy",
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
-    "destroy": "serverless remove",
+    "deploy:serverless": "serverless deploy",
+    "destroy:serverless": "serverless remove",
     "dev": "pnpm exec sls-dev-tools generate | docker-dev -",
     "invoke": "serverless invoke -f render-html",
     "lint": "lint",
@@ -56,16 +56,10 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vite": "^7.3.0",
     "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
-  },
-  "pnpm": {
-    "overrides": {
-      "@smithy/types": "^4.11.0"
-    }
+    "pnpm": "11.x"
   }
 }

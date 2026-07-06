@@ -1,6 +1,6 @@
 /**
  * A small, fast, deterministic PRNG (mulberry32). Same seed → same stream.
- * Worldgen must be reproducible: `--seed 7` should always yield the same covenant.
+ * Worldgen must be reproducible: `--seed 7` should always yield the same compact.
  */
 export interface Rng {
   /** Next float in [0, 1). */

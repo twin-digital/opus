@@ -31,11 +31,11 @@ emit() {
   exit 0
 }
 
-# Pre-warm the cache + surface mint failures now (e.g. expired AWS creds, missing kms:Sign).
+# Surface credential problems now (vend loop stalled, sidecar down) instead of mid-task.
 if err="$(/usr/local/bin/gh-token-seed 2>&1)"; then
-  emit "" "gh and git (HTTPS) authenticate on demand via the gh wrapper (KMS-minted App token), valid while your AWS session is. Use gh/git normally; for a raw token in a script, run: gh-token-get."
+  emit "" "gh and git (HTTPS) authenticate on demand via the gh wrapper, serving the pre-scoped App token the admin sidecar vends to /creds. Use gh/git normally; for a raw token in a script, run: gh-token-get."
 else
   emit \
-    "⚠️ GitHub token mint FAILED — gh/git HTTPS auth will not work this session. ${err}" \
-    "GitHub token minting is failing (${err}); gh and git-over-HTTPS will be unauthenticated this session. Warn the user before any operation that needs GitHub access. Likely cause: expired AWS/SSO credentials or missing kms:Sign."
+    "⚠️ GitHub shelf token unavailable — gh/git HTTPS auth will not work until vending resumes. ${err}" \
+    "No vended GitHub token is available (${err}); gh and git-over-HTTPS will be unauthenticated. Warn the user before any operation that needs GitHub access. Likely cause: the vend loop stalled — a human must refresh SSO in the admin sidecar (see /workspace/.devcontainer/README.md)."
 fi

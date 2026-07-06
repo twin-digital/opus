@@ -1,0 +1,3913 @@
+{
+  "components": {
+    "schemas": {
+      "Lodgify.Api.Properties.Models.v2.AmenityDto": {
+        "additionalProperties": false,
+        "properties": {
+          "bracket": { "nullable": true, "type": "string" },
+          "name": { "nullable": true, "type": "string" },
+          "prefix": { "nullable": true, "type": "string" },
+          "text": { "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.ContactInfoDto": {
+        "additionalProperties": false,
+        "properties": { "spoken_languages": { "items": { "type": "string" }, "nullable": true, "type": "array" } },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.DescribedImageDto": {
+        "additionalProperties": false,
+        "properties": { "text": { "nullable": true, "type": "string" }, "url": { "nullable": true, "type": "string" } },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.PropertyDto": {
+        "additionalProperties": false,
+        "description": "Object that retuns information for a property",
+        "properties": {
+          "address": { "description": "Address of the property", "nullable": true, "type": "string" },
+          "agreement_text": { "nullable": true, "type": "string" },
+          "agreement_url": { "nullable": true, "type": "string" },
+          "city": { "description": "City name where the property is located", "nullable": true, "type": "string" },
+          "contact": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.ContactInfoDto" },
+          "country": {
+            "description": "Country name where the property is located",
+            "nullable": true,
+            "type": "string"
+          },
+          "country_code": {
+            "description": "Two Letters Country Code where the property is located",
+            "nullable": true,
+            "type": "string"
+          },
+          "created_at": { "description": "DateTime of creation", "format": "date-time", "type": "string" },
+          "currency_code": { "nullable": true, "type": "string" },
+          "description": { "description": "Description of the property", "nullable": true, "type": "string" },
+          "has_addons": { "description": "Boolean indicating if the property has available addons", "type": "boolean" },
+          "has_agreement": { "type": "boolean" },
+          "hide_address": { "description": "Owner requested to hide address from public", "type": "boolean" },
+          "id": { "description": "property identifier", "format": "int32", "type": "integer" },
+          "image_url": { "description": "Image Url", "nullable": true, "type": "string" },
+          "in_out": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.Search.ResultSearchInOutDto" },
+          "in_out_max_date": { "format": "date-time", "type": "string" },
+          "internal_name": { "description": "Internal name of property", "nullable": true, "type": "string" },
+          "is_active": {
+            "description": "Boolean indicating ig the property is active or not (meaning if is linked to a valid website)",
+            "type": "boolean"
+          },
+          "latitude": { "description": "Latitude coordinate of the house", "format": "double", "type": "number" },
+          "longitude": { "description": "Longitude coordinate of the house", "format": "double", "type": "number" },
+          "max_price": { "format": "double", "type": "number" },
+          "min_price": { "format": "double", "type": "number" },
+          "name": { "description": "Name of the property", "nullable": true, "type": "string" },
+          "original_max_price": { "format": "double", "type": "number" },
+          "original_min_price": { "format": "double", "type": "number" },
+          "price_unit_in_days": {
+            "description": "Price unit in days. This field indicates the number of days of stay the MinPrice and MaxPrice are\r\nSo if we have a 30 PriceUnitInDays, it means the MinPrice and MaxPrice are Monthly prices\r\nIf multiple prices per diferent periods are defined it will return daily prices",
+            "format": "int32",
+            "type": "integer"
+          },
+          "rating": { "format": "double", "type": "number" },
+          "rooms": {
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.RoomSummaryDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "state": { "description": "Region name where the property is located", "nullable": true, "type": "string" },
+          "subscription_plans": {
+            "description": "Subscription plans",
+            "items": { "type": "string" },
+            "nullable": true,
+            "type": "array"
+          },
+          "updated_at": { "description": "Last update datetime", "format": "date-time", "type": "string" },
+          "zip": { "description": "Zip code for the property", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.PropertyListDto": {
+        "additionalProperties": false,
+        "description": "Paged list of Properties Object.",
+        "properties": {
+          "count": {
+            "description": "Total number of items available. Only returned if includeCount = true",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "items": {
+            "description": "List of properties for current page",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.RoomDetailsDto": {
+        "additionalProperties": false,
+        "properties": {
+          "adults_only": {
+            "description": "A boolean value indicating if the property is only available for adults.",
+            "type": "boolean"
+          },
+          "amenities": {
+            "additionalProperties": {
+              "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.AmenityDto" },
+              "nullable": true,
+              "type": "array"
+            },
+            "description": "List of amenities available of the room",
+            "nullable": true,
+            "type": "object"
+          },
+          "area": {
+            "description": "This value indicates how many meters/feet the unit has; the value is given in the unit of measure set in the parameter area_unit.",
+            "format": "double",
+            "type": "number"
+          },
+          "area_unit": {
+            "description": "This value indicates if the area is given in square feet(sqf) or square meters(sqm).",
+            "nullable": true,
+            "type": "string"
+          },
+          "bathrooms": { "description": "Number of bathrooms in the room.", "format": "int32", "type": "integer" },
+          "bedrooms": { "description": "Number of bedrooms in the room.", "format": "int32", "type": "integer" },
+          "breakfast_included": {
+            "description": "A boolean value indicating if the breakfast is included in the price of the booking.",
+            "type": "boolean"
+          },
+          "description": { "description": "A description of a room.", "nullable": true, "type": "string" },
+          "has_meal_plan": {
+            "description": "A boolean value indicating if the property has a meal plan available.",
+            "type": "boolean"
+          },
+          "has_parking": {
+            "description": "A boolean value indicating if there is a parking spot available.",
+            "type": "boolean"
+          },
+          "has_wifi": {
+            "description": "A boolean value indicating if the property has wifi available.",
+            "type": "boolean"
+          },
+          "id": { "description": "Room identifier.", "format": "int32", "type": "integer" },
+          "image_url": { "description": "URL address of the image of the room.", "nullable": true, "type": "string" },
+          "images": {
+            "description": "List of images associated with this room",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.DescribedImageDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "max_people": {
+            "description": "Maximum number of people the room can host.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_price": {
+            "description": "Maximum price the booking will cost; this parameter is always given in euros.",
+            "format": "double",
+            "type": "number"
+          },
+          "min_price": {
+            "description": "Minimal price the booking will cost; this parameter is always given in euros.",
+            "format": "double",
+            "type": "number"
+          },
+          "name": { "description": "Name of the room.", "nullable": true, "type": "string" },
+          "original_max_price": {
+            "description": "This parameter is the same as max_price (maximum price the booking will cost) but given in the currency of the owner - any currency that can be passed to the system.\r\nA list of all available currencies can be found in the section CurrenciesApi.The currency used here is specified by the parameters in “currency”.",
+            "format": "double",
+            "type": "number"
+          },
+          "original_min_price": {
+            "description": "This parameter is the same as min_price (minimal price the booking will cost) but given in the currency of the owner - any currency that can be passed to the system.\r\nA list of all available currencies can be found in the section CurrenciesApi.The currency used here is specified by the parameters in “currency”.",
+            "format": "double",
+            "type": "number"
+          },
+          "pets_allowed": {
+            "description": "A boolean value indicating if the property allows pets.",
+            "nullable": true,
+            "type": "boolean"
+          },
+          "price_unit_in_days": {
+            "description": "Price unit in days.\r\nThis field indicates the number of days of stay the min_price and max_price are.So if we have a 30 price_unit_in_days, it means the min_price and max_price are Monthly prices.If multiple prices per different periods are defined it will return daily prices",
+            "format": "int32",
+            "type": "integer"
+          },
+          "show_additional_key_facts": { "type": "boolean" },
+          "units": {
+            "description": "Number of units (same room type) that this room has.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.RoomSummaryDto": {
+        "additionalProperties": false,
+        "properties": {
+          "id": { "description": "Identifier of the roomtype", "format": "int32", "type": "integer" },
+          "name": { "description": "Name of the roomtype", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.Search.ResultSearchInOutDto": {
+        "additionalProperties": false,
+        "properties": {
+          "check_in": {
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.Search.ResultSearchItemDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "check_out": {
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.Search.ResultSearchItemDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "is_restricted": { "type": "boolean" },
+          "not_available": {
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.Search.ResultSearchItemDto" },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Properties.Models.v2.Search.ResultSearchItemDto": {
+        "additionalProperties": false,
+        "properties": {
+          "date": { "format": "date-time", "type": "string" },
+          "for": { "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Infrastructure.Models.Error": {
+        "additionalProperties": false,
+        "properties": {
+          "code": { "$ref": "#/components/schemas/Lodgify.Api.Types.ApiErrorCode1" },
+          "correlation_id": { "nullable": true, "type": "string" },
+          "event_id": { "nullable": true, "type": "string" },
+          "message": { "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto": {
+        "additionalProperties": false,
+        "description": "Represents the amount to be paid through the website",
+        "properties": {
+          "amount": { "description": "Amount to request", "format": "double", "minimum": 0.01, "type": "number" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v1_2.GuestBreakdownDto": {
+        "additionalProperties": false,
+        "description": "The breakdown of guests for the booking or enquiry",
+        "properties": {
+          "adults": {
+            "description": "The number of adults",
+            "format": "int32",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "children": {
+            "description": "The number of children",
+            "format": "int32",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "infants": {
+            "description": "The number of infants",
+            "format": "int32",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pets": {
+            "description": "The number of pets",
+            "format": "int32",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkCreatedDto": {
+        "additionalProperties": false,
+        "description": "Represents the result of a request to create a payment link.",
+        "properties": {
+          "succeeded": {
+            "description": "Indicates whether the payment link was successfully created.\r\nReturns true if the link was created with the specified amount.\r\nReturns false if creation failed, for example due to a pending scheduled payment or if the requested amount could not be enforced.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkDto": {
+        "additionalProperties": false,
+        "description": "Represents a generated payment link for a booking.",
+        "properties": {
+          "url": {
+            "description": "The URL address of the payment page where the transaction can be completed.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Availability.BookingAvailabilityDto": {
+        "additionalProperties": false,
+        "description": "Represents the availability status of a booking.",
+        "properties": {
+          "id": { "description": "The unique identifier of the booking.", "format": "int32", "type": "integer" },
+          "status": { "description": "The current status of the booking.", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto": {
+        "additionalProperties": false,
+        "description": "Represents calendar availability data for a specific room type.",
+        "properties": {
+          "periods": {
+            "description": "A collection of availability periods for the calendar.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.PeriodDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "property_id": {
+            "description": "The unique identifier of the property.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "room_type_id": {
+            "description": "The unique identifier of the room type.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "user_id": {
+            "description": "The unique identifier of the user who owns the property.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Availability.ChannelCalendarAvailabilityDto": {
+        "additionalProperties": false,
+        "description": "Represents the availability details for a channel calendar.",
+        "properties": {
+          "id": {
+            "description": "The unique identifier for the channel calendar availability.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Availability.ClosedPeriodAvailabilityDto": {
+        "additionalProperties": false,
+        "description": "Represents the availability details for a closed period.",
+        "properties": {
+          "id": {
+            "description": "The unique identifier for the closed period availability.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Availability.PeriodDto": {
+        "additionalProperties": false,
+        "description": "Represents a specific time period with availability and booking details.",
+        "properties": {
+          "available": {
+            "description": "Number of available units for this period.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "bookings": {
+            "description": "Collection of bookings associated with this period.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.BookingAvailabilityDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "channel_calendars": {
+            "description": "Collection of channel calendar availability details for this period.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.ChannelCalendarAvailabilityDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "closed_period": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.ClosedPeriodAvailabilityDto"
+          },
+          "end": { "description": "End date of the period.", "type": "string" },
+          "start": { "description": "Start date of the period.", "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.AddOnParamDto": {
+        "additionalProperties": false,
+        "description": "Represents the parameters for selecting an add-on in a quote calculation.",
+        "properties": {
+          "id": { "description": "The unique identifier of the add-on.", "format": "int32", "type": "integer" },
+          "units": {
+            "description": "The number of units selected for the add-on, if applicable.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.FeeType": {
+        "enum": [
+          "Cleaning",
+          "Miscellaneous",
+          "DamageProtectionInsurance",
+          "ManagementFee",
+          "ServiceFee",
+          "Wood",
+          "DrinkingWater",
+          "WaterCraftMooring",
+          "WaterCraft",
+          "Water",
+          "Vehicle",
+          "FoodUtensils",
+          "UtensilsCleaning",
+          "Transportation",
+          "Tour",
+          "Toiletries",
+          "Spa",
+          "Resort",
+          "Rent",
+          "Parking",
+          "Phone",
+          "OnSitePaymentMethod",
+          "Oil",
+          "LinensBed",
+          "LinensBath",
+          "Linens",
+          "Laundry",
+          "Labor",
+          "Internet",
+          "TravelInsurance",
+          "HotTub",
+          "HighChair",
+          "Heating",
+          "Gas",
+          "Gardening",
+          "Food",
+          "Equipment",
+          "Electricity",
+          "Concierge",
+          "PoolHeating",
+          "Pool",
+          "Class",
+          "BabyBed",
+          "PropertyAssociation",
+          "AirConditioning",
+          "AdditionalBed",
+          "PetFee",
+          "ServiceCharge",
+          "GratuityFee",
+          "DamageWaiver",
+          "Community"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteAddOnDto": {
+        "additionalProperties": false,
+        "description": "Represents an add-on included in a quote calculation.",
+        "properties": {
+          "add_on_id": { "description": "The unique identifier for the add-on.", "format": "int32", "type": "integer" },
+          "amount": {
+            "description": "The total monetary amount for this add-on.",
+            "format": "double",
+            "type": "number"
+          },
+          "name": { "description": "The name of the add-on.", "nullable": true, "type": "string" },
+          "units": {
+            "description": "The number of units of the add-on selected.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteDto": {
+        "additionalProperties": false,
+        "description": "Represents a quote calculation for a specific property and period, including pricing, dates, and policy details.",
+        "properties": {
+          "add_ons": {
+            "description": "The list of add-ons included in the quote.",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteAddOnDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "add_ons_subtotal": {
+            "description": "The subtotal amount for all selected add-ons.",
+            "format": "double",
+            "type": "number"
+          },
+          "amount_gross": { "description": "The gross amount for the quote.", "format": "double", "type": "number" },
+          "cancellation_policy_text": {
+            "description": "The text description of the cancellation policy.",
+            "nullable": true,
+            "type": "string"
+          },
+          "currency_code": {
+            "description": "The ISO currency code (e.g., USD, EUR) used for the quote.",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_arrival": { "description": "The scheduled arrival date.", "format": "date-time", "type": "string" },
+          "date_departure": { "description": "The scheduled departure date.", "format": "date-time", "type": "string" },
+          "is_verification": {
+            "description": "Indicates whether this quote requires a credit card verification before creating a reservation.",
+            "type": "boolean"
+          },
+          "other_items": {
+            "description": "The list of other miscellaneous items included in the quote.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteOtherItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "property_id": {
+            "description": "The unique identifier of the property associated with the quote.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "rate_policy_user_id": {
+            "description": "The identifier of the rate policy.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "rental_agreement": {
+            "description": "The unique identifier for the rental agreement.",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "room_types": {
+            "description": "The list of room types included in the quote.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteRoomTypeDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "scheduled_damage_protection": {
+            "description": "The list of scheduled damage protection transactions.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteScheduledTransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "scheduled_payments": {
+            "description": "The list of scheduled payment transactions.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteScheduledTransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "security_deposit": {
+            "description": "The amount required for the security deposit.",
+            "format": "double",
+            "type": "number"
+          },
+          "security_deposit_text": {
+            "description": "The text description of the security deposit requirements.",
+            "nullable": true,
+            "type": "string"
+          },
+          "total_excluding_vat": {
+            "description": "The total amount excluding Value Added Tax (VAT).",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "total_including_vat": {
+            "description": "The total amount including Value Added Tax (VAT).",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "total_scheduled_payments": {
+            "description": "The total amount of all scheduled payments.",
+            "format": "double",
+            "type": "number"
+          },
+          "total_to_collect_manually": {
+            "description": "The total amount that needs to be collected manually.",
+            "format": "double",
+            "type": "number"
+          },
+          "total_vat": {
+            "description": "The total Value Added Tax (VAT) amount.",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteItemType": {
+        "enum": ["RoomRate", "Promotion", "Fee", "AddOn", "Tax", "Other"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteOtherItemDto": {
+        "additionalProperties": false,
+        "description": "Represents a miscellaneous item included in a quote calculation.",
+        "properties": {
+          "amount": { "description": "The monetary value of the item.", "format": "double", "type": "number" },
+          "description": { "description": "A description of the item.", "nullable": true, "type": "string" },
+          "type": { "description": "The category or type of the item.", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuotePriceDto": {
+        "additionalProperties": false,
+        "description": "Represents a specific price component or line item within a quote.",
+        "properties": {
+          "amount": {
+            "description": "The monetary amount associated with this item.",
+            "format": "double",
+            "type": "number"
+          },
+          "description": {
+            "description": "A textual description of the price item.",
+            "nullable": true,
+            "type": "string"
+          },
+          "fee_type": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.FeeType" },
+          "room_rate_type": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.RoomRateType"
+          },
+          "uid": { "description": "The unique identifier for the price item.", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuotePriceTypeDto": {
+        "additionalProperties": false,
+        "description": "Represents a category of price items within a quote, grouping related costs or discounts.",
+        "properties": {
+          "description": {
+            "description": "A description of the price type category.",
+            "nullable": true,
+            "type": "string"
+          },
+          "is_negative": {
+            "description": "Indicates whether the amount is negative (e.g., a discount).",
+            "type": "boolean"
+          },
+          "prices": {
+            "description": "A collection of detailed price items under this category.",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuotePriceDto" },
+            "nullable": true,
+            "type": "array"
+          },
+          "subtotal": {
+            "description": "The aggregated total amount for this price category.",
+            "format": "double",
+            "type": "number"
+          },
+          "type": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteItemType" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteRoomTypeDto": {
+        "additionalProperties": false,
+        "description": "Represents the details of a specific room type included in a quote calculation.",
+        "properties": {
+          "name": { "description": "The name of the room type.", "nullable": true, "type": "string" },
+          "people": {
+            "description": "The number of people (guests) assigned to this room type.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "price_types": {
+            "description": "The list of price components (e.g., base rate, fees) associated with this room type.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuotePriceTypeDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "room_type_id": {
+            "description": "The unique identifier for the room type.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "subtotal": {
+            "description": "The total monetary amount calculated for this room type.",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteScheduledTransactionDto": {
+        "additionalProperties": false,
+        "description": "Represents a scheduled financial transaction associated with a quote.",
+        "properties": {
+          "amount": { "description": "The monetary amount of the transaction.", "format": "double", "type": "number" },
+          "date_due": { "description": "The due date for the transaction.", "nullable": true, "type": "string" },
+          "is_current": {
+            "description": "Indicates whether this transaction is currently due or active.",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "The current status of the transaction (e.g., \"Pending\", \"Paid\").",
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "description": "The type of the scheduled transaction (e.g., \"Payment\", \"Refund\").",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.RoomRateType": {
+        "enum": ["Stay", "ShortStayPremium"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Quote.RoomTypeParamDto": {
+        "additionalProperties": false,
+        "description": "Represents the parameters for selecting a room type in a quote calculation.",
+        "properties": {
+          "guest_breakdown": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.GuestBreakdownDto"
+          },
+          "id": { "description": "The unique identifier of the room type.", "format": "int32", "type": "integer" },
+          "people": {
+            "deprecated": true,
+            "description": "Deprecated. Use GuestBreakdown.Adults instead.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": ["guest_breakdown"],
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.PaymentTypeEnum": {
+        "description": "Information about the payment type of the Transaction",
+        "enum": [
+          "None",
+          "PaypalWallet",
+          "BankAccount",
+          "StripeSpreedly",
+          "Payyo",
+          "AuthorizeNetSpreedly",
+          "BraintreeSpreedly",
+          "PayPalProSpreedly",
+          "PciProxy",
+          "SpreedlyTestSpreedly",
+          "StripeSca",
+          "LodgifyPaymentsStripe"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionDto": {
+        "additionalProperties": false,
+        "description": "Information about each transaction of the Booking",
+        "properties": {
+          "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "description": { "description": "Description of the transaction", "nullable": true, "type": "string" },
+          "id": { "description": "Id of the transaction", "format": "int32", "type": "integer" },
+          "payment_type": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.PaymentTypeEnum"
+          },
+          "processed_at": {
+            "description": "The time the transaction was processed at",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionStatusEnum"
+          },
+          "type": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionTypeEnum"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionStatusEnum": {
+        "description": "Information about the status of the Transaction",
+        "enum": ["Requested", "Processing", "Done", "Failed", "Canceled", "Abandoned", "Unknown"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionTypeEnum": {
+        "description": "Type of transaction",
+        "enum": ["Payment", "Refund", "Show", "Authorization", "Void", "Capture"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto": {
+        "additionalProperties": false,
+        "description": "Object used to checkin a booking",
+        "properties": {
+          "time": {
+            "description": "Time of the checkin (in the property's timezone). Use format HH:mm:ss",
+            "format": "date-span",
+            "type": "string"
+          }
+        },
+        "required": ["time"],
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckOutDto": {
+        "additionalProperties": false,
+        "description": "Object used to checkout a booking",
+        "properties": {
+          "time": {
+            "description": "Time of the checkout (in the property's timezone). Use format HH:mm:ss",
+            "format": "date-span",
+            "type": "string"
+          }
+        },
+        "required": ["time"],
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingDto": {
+        "additionalProperties": false,
+        "description": "Main booking model",
+        "properties": {
+          "amount_due": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "amount_paid": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "arrival": { "description": "Arrival date", "type": "string" },
+          "canceled_at": {
+            "description": "Date the booking was canceled at",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "check_in": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.CheckInViewModel"
+          },
+          "check_out": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.CheckOutViewModel"
+          },
+          "created_at": { "description": "Time the booking was created at", "format": "date-time", "type": "string" },
+          "created_from_ip": { "description": "Ip the booking was created from", "nullable": true, "type": "string" },
+          "currency_code": {
+            "description": "Currency in which all amounts are expressed for this booking",
+            "nullable": true,
+            "type": "string"
+          },
+          "damage_protection": {
+            "description": "Damage-protection transaction details of the booking",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "departure": { "description": "Departure date", "type": "string" },
+          "external_booking": {
+            "description": "Booking information as received from an external channel",
+            "nullable": true,
+            "type": "string"
+          },
+          "guest": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.GuestDto"
+          },
+          "id": { "description": "Id of the booking", "format": "int32", "type": "integer" },
+          "is_deleted": {
+            "description": "When it is deleted, the owner moved the booking to trash",
+            "type": "boolean"
+          },
+          "is_new": { "description": "When it is new, the owner has not seen the booking yet", "type": "boolean" },
+          "is_overbooked": { "description": "Booking is overbooked", "type": "boolean" },
+          "is_unavailable": {
+            "description": "Booking cannot be booked because calendar is not available",
+            "type": "boolean"
+          },
+          "language": { "description": "Language selected by the guest", "nullable": true, "type": "string" },
+          "notes": { "description": "Notes added by the owner", "nullable": true, "type": "string" },
+          "property_id": { "description": "Id of the property", "format": "int32", "type": "integer" },
+          "quote": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.QuoteDto"
+          },
+          "rooms": {
+            "description": "Rooms booked",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingRoomDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.SourceEnum"
+          },
+          "source_text": {
+            "description": "Details of the booking from the source",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.StatusEnum"
+          },
+          "subtotals": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.SubtotalDto"
+          },
+          "tentative_expires_at": {
+            "description": "Time the Tentative status will expire at",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "thread_uid": {
+            "description": "Uid of the message thread the booking belongs to",
+            "format": "uuid",
+            "type": "string"
+          },
+          "total_amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "transactions": {
+            "description": "Transaction details of the booking",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "updated_at": { "description": "Last time the booking was updated", "format": "date-time", "type": "string" },
+          "upgraded_enquiry_id": {
+            "description": "If the booking was upgraded from an enquiry, this is the Id of the original enquiry.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "user_id": { "description": "User the booking belongs to", "format": "int32", "type": "integer" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto": {
+        "additionalProperties": false,
+        "description": "Represents a Booking with the list of room types and keycodes to access to the properties rented.",
+        "properties": {
+          "rooms": {
+            "description": "List of room types of the booking.",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingRoomTypeKeyCodeDto"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingRoomDto": {
+        "additionalProperties": false,
+        "description": "Room information related to the Booking",
+        "properties": {
+          "guest_breakdown": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.GuestBreakdownDto"
+          },
+          "key_code": {
+            "description": "KeyCode to access the property or room rented",
+            "nullable": true,
+            "type": "string"
+          },
+          "people": {
+            "deprecated": true,
+            "description": "Deprecated. Map to GuestBreakdown.Adults",
+            "format": "int32",
+            "type": "integer"
+          },
+          "room_type_id": { "description": "Id of the room type booked", "format": "int32", "type": "integer" }
+        },
+        "required": ["guest_breakdown"],
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingRoomTypeKeyCodeDto": {
+        "additionalProperties": false,
+        "description": "Represents a Booking Roomtype, with and identifier and the keycode to access to the property rented.",
+        "properties": {
+          "key_code": {
+            "description": "KeyCode PIN to access to the property rented.",
+            "nullable": true,
+            "type": "string"
+          },
+          "room_type_id": { "description": "Identifier of the room type", "format": "int32", "type": "integer" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingSetDto": {
+        "additionalProperties": false,
+        "properties": {
+          "count": { "format": "int32", "nullable": true, "type": "integer" },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingDto"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.CheckInViewModel": {
+        "additionalProperties": false,
+        "description": "Represents check-in for a booking",
+        "properties": {
+          "initiator": { "description": "The check-in source of change", "nullable": true, "type": "string" },
+          "time": { "description": "The check-in time\r\nFormat: HH:mm:ss", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.CheckOutViewModel": {
+        "additionalProperties": false,
+        "description": "Represents check-out for a booking",
+        "properties": {
+          "initiator": { "description": "The check-out source of change", "nullable": true, "type": "string" },
+          "time": { "description": "The check-out time\r\nFormat: HH:mm:ss", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingDto": {
+        "additionalProperties": false,
+        "description": "External booking model",
+        "properties": {
+          "content": { "description": "Contents of the external booking", "nullable": true, "type": "string" },
+          "created_at": {
+            "description": "Time the external booking was created at",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingListDto": {
+        "additionalProperties": false,
+        "description": "External bookings result",
+        "properties": {
+          "external_bookings": {
+            "description": "List of external bookings",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingDto"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.GuestDto": {
+        "additionalProperties": false,
+        "description": "Guest information related to the Booking",
+        "properties": {
+          "country_code": {
+            "description": "Code of the country the Guest is from",
+            "nullable": true,
+            "type": "string"
+          },
+          "email": { "description": "Email of the guest", "nullable": true, "type": "string" },
+          "name": { "description": "Name of the guest", "nullable": true, "type": "string" },
+          "phone": { "description": "Phone number of the guest", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.SourceEnum": {
+        "description": "Type of source the Booking comes from",
+        "enum": [
+          "Manual",
+          "OH",
+          "NineFlats",
+          "Airbnb",
+          "AirbnbIntegration",
+          "HomeAway",
+          "BookingCom",
+          "Expedia",
+          "ICal",
+          "Email",
+          "FacebookMessenger",
+          "PublicApi",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.StatusEnum": {
+        "description": "Status information of the Booking",
+        "enum": ["Open", "Tentative", "Booked", "Declined"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.StayFilterEnum": {
+        "enum": ["Upcoming", "Current", "Historic", "All", "ArrivalDate", "DepartureDate"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.SubtotalDto": {
+        "additionalProperties": false,
+        "description": "Subtotal information of the Booking",
+        "properties": {
+          "addons": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "fees": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "promotions": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "stay": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "taxes": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "vat": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.TrashEnum": {
+        "enum": ["False", "True", "All"],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuotePriceItemDto": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "description": { "description": "Quote item description", "nullable": true, "type": "string" },
+          "type": { "description": "Quote item type", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuoteRoomTypeItemDto": {
+        "additionalProperties": false,
+        "properties": {
+          "prices": {
+            "description": "Items belonging to the Quote related to this Room type",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuotePriceItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "room_type_id": { "description": "Room type identifier", "format": "int32", "type": "integer" },
+          "subtotal": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.PolicyDto": {
+        "additionalProperties": false,
+        "description": "Policy information related to the Booking",
+        "properties": {
+          "cancellation": {
+            "description": "Description of the cancellation policy",
+            "nullable": true,
+            "type": "string"
+          },
+          "damage_deposit": {
+            "description": "Description of the damage deposit policy",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": { "description": "Name of the policy", "nullable": true, "type": "string" },
+          "payments": { "description": "Description of the payment policy", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.QuoteDto": {
+        "additionalProperties": false,
+        "description": "Quote information related to the Booking",
+        "properties": {
+          "addon_items": {
+            "description": "Addons belonging to the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuotePriceItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "id": { "description": "Id of the Quote", "format": "int32", "type": "integer" },
+          "other_items": {
+            "description": "Other items belonging to the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuotePriceItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.PolicyDto"
+          },
+          "rental_contract_uid": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.RentalContractUidDto"
+          },
+          "room_type_items": {
+            "description": "Room types belonging to the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuoteRoomTypeItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "scheduled_damage_protection": {
+            "description": "Schedule details of damage protection enforced by the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "scheduled_transactions": {
+            "description": "Schedule details enforced by the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.QuoteStatusEnum"
+          },
+          "vat_items": {
+            "description": "Vat items belonging to the Quote",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.BookingQuotePriceItemDto"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.QuoteStatusEnum": {
+        "description": "Information about the quote status",
+        "enum": [
+          "Null",
+          "NotScheduled",
+          "NotSent",
+          "Agreed",
+          "CancelledByOwner",
+          "CancelledByGuest",
+          "Rejected",
+          "Deactivated",
+          "ExpiredByGuest",
+          "ExpiredByOwner",
+          "PendingForOwner",
+          "PendingForGuest",
+          "PendingForPayment",
+          "RedirectedToOffsitePayment",
+          "ChangeRequested",
+          "Changed",
+          "Disconnected"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.RentalContractUidDto": {
+        "additionalProperties": false,
+        "description": "Rental contract unique identifier",
+        "properties": {
+          "hash": { "description": "Rental contract hash code", "format": "uuid", "type": "string" },
+          "uid": { "description": "Rental contract unique identifier", "format": "uuid", "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionDto": {
+        "additionalProperties": false,
+        "description": "Transaction scheduled in the Quote",
+        "properties": {
+          "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" },
+          "due_at": {
+            "description": "The date the schedule item will be due at. \r\nNull means that the date will be the date of the booking agreement.",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": { "description": "Id of the scheduled item", "format": "int32", "type": "integer" },
+          "status": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionStatusEnum"
+          },
+          "type": {
+            "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionTypeEnum"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionStatusEnum": {
+        "description": "Status of a scheduled transaction",
+        "enum": [
+          "Scheduled",
+          "Overdue",
+          "Pending",
+          "Aborted",
+          "Paid",
+          "Refunded",
+          "Authorized",
+          "Voided",
+          "Captured",
+          "Shown"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Quotes.ScheduledTransactionTypeEnum": {
+        "description": "Type of scheduled transaction",
+        "enum": [
+          "PrePayment",
+          "InterimPayment",
+          "BalancePayment",
+          "PrecedingPayment",
+          "Cancellation",
+          "DamageDepositAuthorization",
+          "DamageDepositVoid",
+          "SecurityDepositCharge",
+          "SecurityDepositRefund"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Rates.Models.v2.CalendarPrice": {
+        "additionalProperties": false,
+        "properties": {
+          "additional_guests_starts_from": {
+            "description": "Indicates the number of people from which an extra charge is charged",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_stay": { "description": "Maximum days to stay", "format": "int32", "type": "integer" },
+          "min_stay": { "description": "Minimum days to stay", "format": "int32", "type": "integer" },
+          "price_per_additional_guest": { "$ref": "#/components/schemas/Lodgify.App.Types.Money" },
+          "price_per_day": { "$ref": "#/components/schemas/Lodgify.App.Types.Money" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.CalendarResponse": {
+        "additionalProperties": false,
+        "description": "Defines the nightly rates calendar and rate settings for a property",
+        "properties": {
+          "calendar_items": {
+            "description": "Calendar items",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.CalendarResponseItem" },
+            "nullable": true,
+            "type": "array"
+          },
+          "rate_settings": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateSettings" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.CalendarResponseItem": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "Represents the DateTime for the calendar item",
+            "nullable": true,
+            "type": "string"
+          },
+          "is_default": { "description": "Indicates if the calendar item is the default rate", "type": "boolean" },
+          "prices": {
+            "description": "List of prices for the calendar item",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.CalendarPrice" },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RateFee": {
+        "additionalProperties": false,
+        "description": "Rate fee",
+        "properties": {
+          "applied_for_nights": {
+            "description": "Fee is applied only if the stay of nights is less or equal than the amount nights",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "charge_type": {
+            "description": "Type of charge. Possible values are: \"PerQuantity\", \"SingleCharge\", \"PerPerson\", or \"PerRoom\"",
+            "nullable": true,
+            "type": "string"
+          },
+          "fee_name": { "description": "Name of the fee", "nullable": true, "type": "string" },
+          "fee_type": { "description": "Type of the fee", "nullable": true, "type": "string" },
+          "frequency": {
+            "description": "Frequency, can be either \"PerStay\" or \"PerNight\"",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateFeePrice" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RateFeePrice": {
+        "additionalProperties": false,
+        "description": "Rate fee price",
+        "properties": {
+          "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money" },
+          "is_vat_exclusive": { "description": "Indicates if the fee price is vat exclusive", "type": "boolean" },
+          "percentage": {
+            "description": "Price value percentage",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "rate_type": {
+            "description": "Rate type, equals \"Fixed\" for a fixed amount price, \"Percentage\" for a percentage price",
+            "nullable": true,
+            "type": "string"
+          },
+          "vat_percentage": {
+            "description": "VAT percentage value (only defined if not inclusive)",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RatePrice": {
+        "additionalProperties": false,
+        "description": "Rate price",
+        "properties": {
+          "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money" },
+          "percentage": {
+            "description": "Price value percentage",
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "rate_type": {
+            "description": "Rate type, equals \"Fixed\" for a fixed amount price, \"Percentage\" for a percentage price",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RatePromotion": {
+        "additionalProperties": false,
+        "description": "Rate promotion - \r\nPromotions can be of type Early Booker, Last Minute, Minimum Stay or Promo Code,\r\ndepending on the conditions that need to be met for the promotion to be applied.",
+        "properties": {
+          "booking_dates": {
+            "description": "Promotion is applied only if booked during the specific date range\r\n(if empty, will always be applied if other conditions are met).\r\nInclusive start and end dates - for example, if start and end dates are 1st and 3rd of January,\r\nbookings made on the 1st, 2nd and 3rd of January for the given stay dates will apply the promotion.\r\nLimited booking dates for promos are not supported in some newer versions of the Lodgify UI.",
+            "items": { "$ref": "#/components/schemas/Lodgify.Rates.Models.v1.DateRangeModel" },
+            "nullable": true,
+            "type": "array"
+          },
+          "codes": {
+            "description": "List of valid codes that can be used by guests to apply to this promotion",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RatePromotionCode" },
+            "nullable": true,
+            "type": "array"
+          },
+          "early_booker_days": {
+            "description": "Indicates the amount of nights or more before arrival to apply the promotion",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "last_minute_days": {
+            "description": "Indicates the amount of days nights or less before arrival to apply the promotion",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "minimum_stay_days": {
+            "description": "Indicates the type nights minimum stay required to apply the promotion",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": { "description": "Promotion name", "nullable": true, "type": "string" },
+          "price": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RatePrice" },
+          "stay_dates": {
+            "description": "Date range when the promotion applies\r\n(if empty, will be applied for all dates if other conditions are met).\r\nInclusive start and end dates - if start and end dates are 1st and 3rd of January,\r\nthe promo will be applied for the nights of the 1st, 2nd AND 3rd of January.\r\nApplying promos only to specific date ranges is not supported in some newer versions of the Lodgify UI.",
+            "items": { "$ref": "#/components/schemas/Lodgify.Rates.Models.v1.DateRangeModel" },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RatePromotionCode": {
+        "additionalProperties": false,
+        "description": "Rate promotion code",
+        "properties": {
+          "code": { "description": "Promotion code", "nullable": true, "type": "string" },
+          "is_active": { "description": "Indicates if the promotion code is active", "type": "boolean" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RateSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "advance_notice_days": {
+            "description": "Specifies the minimum number of days in advance that a guest has to make a reservation.\r\nGuests cannot make a reservation less than this many days before the check-in date.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "advance_notice_hours": {
+            "description": "Specifies the minimum number of hours in advance that a guest has to make a reservation,\r\napplied in addition to advance_notice_days.\r\nGuests cannot make a reservation less than this many hours before the check-in date.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "bookability": { "$ref": "#/components/schemas/Lodgify.Rates.Models.v1.BookingSettings.BookingType" },
+          "booking_window_days": {
+            "description": "Limits how many days in advance guests can book.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "check_in_hour": {
+            "description": "If present, minimum hour allowed to check in\r\n-1: Flexible, 0-23: Hour of day",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "check_out_hour": {
+            "description": "If present, maximum hour allowed to check out\r\n-1: Flexible, 0-23: Hour of day",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "currency_code": { "description": "Currency code", "nullable": true, "type": "string" },
+          "fees": {
+            "description": "List of fees applied to this room rate",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateFee" },
+            "nullable": true,
+            "type": "array"
+          },
+          "is_vat_exclusive": {
+            "description": "Indicates if the price includes or excludes VAT (true is exclusive/no VAT, false is inclusive)",
+            "type": "boolean"
+          },
+          "preparation_time_days": {
+            "description": "Indicates the time between bookings when reservations are not allowed",
+            "format": "int32",
+            "type": "integer"
+          },
+          "promotions": {
+            "description": "List of promotions applied to this room rate",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RatePromotion" },
+            "nullable": true,
+            "type": "array"
+          },
+          "taxes": {
+            "description": "List of taxes applied to this room rate",
+            "items": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateTax" },
+            "nullable": true,
+            "type": "array"
+          },
+          "vat": { "description": "VAT amount", "format": "double", "type": "number" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Rates.Models.v2.RateTax": {
+        "additionalProperties": false,
+        "description": "Rate tax",
+        "properties": {
+          "charge_type": {
+            "description": "Type of charge. Possible values are: \"PerQuantity\", \"SingleCharge\", \"PerPerson\", or \"PerRoom\"",
+            "nullable": true,
+            "type": "string"
+          },
+          "frequency": {
+            "description": "Frequency, can be either \"PerStay\" or \"PerNight\"",
+            "nullable": true,
+            "type": "string"
+          },
+          "price": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RatePrice" },
+          "tax_name": { "description": "Name of the tax", "nullable": true, "type": "string" },
+          "tax_type": { "description": "Type of the tax", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Api.Types.ApiErrorCode": {
+        "enum": [
+          "Unknown",
+          "NoRateDefined",
+          "MinStayRequired",
+          "BookingStatusUnknown",
+          "BookingMessageTypeNotAllowed",
+          "BookingNoRooms",
+          "BookingCannotChangeStatus",
+          "EnquiryAlreadyUpgraded",
+          "BookingPaymentNotValid",
+          "ArrivalNotValid",
+          "DepartureNotValid",
+          "PropertyNotAvailable",
+          "CaptchaInvalid",
+          "StripeError",
+          "ValidationError",
+          "PaymentError",
+          "ArgumentError",
+          "NotFound",
+          "NotImplemented",
+          "NotAuthorized"
+        ],
+        "type": "string"
+      },
+      "Lodgify.Api.Types.ApiErrorCode1": {
+        "enum": [
+          "Unknown",
+          "NoRateDefined",
+          "MinStayRequired",
+          "BookingStatusUnknown",
+          "BookingMessageTypeNotAllowed",
+          "BookingNoRooms",
+          "BookingCannotChangeStatus",
+          "EnquiryAlreadyUpgraded",
+          "BookingPaymentNotValid",
+          "ArrivalNotValid",
+          "DepartureNotValid",
+          "PropertyNotAvailable",
+          "MaxStayExceeded",
+          "CaptchaInvalid",
+          "StripeError",
+          "ValidationError",
+          "PaymentError",
+          "ArgumentError",
+          "NotFound",
+          "NotImplemented",
+          "NotAuthorized"
+        ],
+        "type": "string"
+      },
+      "Lodgify.App.Types.Money": {
+        "additionalProperties": false,
+        "example": 123.45,
+        "format": "decimal",
+        "type": "number"
+      },
+      "Lodgify.App.Types.Money1": { "additionalProperties": false, "type": "object" },
+      "Lodgify.Messaging.Legacy.Public.Api.Models.InboxDetailAttachmentDto": {
+        "additionalProperties": false,
+        "description": "Details of a message attachment",
+        "properties": {
+          "content_length": { "description": "Length of the attachment in bytes", "nullable": true, "type": "string" },
+          "content_type": {
+            "description": "Attachment's content type (e.g. text/plain, application/pdf, image/jpeg)",
+            "nullable": true,
+            "type": "string"
+          },
+          "file_name": { "description": "Attachment's file name", "nullable": true, "type": "string" },
+          "file_url": { "description": "Attachment's file url to download", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Messaging.Legacy.Public.Api.Models.InboxDetailMessageDto": {
+        "additionalProperties": false,
+        "description": "Object to hold a message details within a thread",
+        "properties": {
+          "attachments": {
+            "description": "List of attachments in the message",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Messaging.Legacy.Public.Api.Models.InboxDetailAttachmentDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "date_created": { "description": "Creation date of the message", "format": "date-time", "type": "string" },
+          "id": { "description": "Message Id", "format": "int32", "type": "integer" },
+          "is_imported": { "nullable": true, "type": "boolean" },
+          "is_read": { "description": "Read status of the message", "type": "boolean" },
+          "message": {
+            "description": "Message body (You can expect HTML content)",
+            "nullable": true,
+            "type": "string"
+          },
+          "message_id": {
+            "description": "The unique idempotent identifier of the message.",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "message_status": {
+            "description": "Message status: Submitted, Sent, Delivered, Failed",
+            "nullable": true,
+            "type": "string"
+          },
+          "route": { "$ref": "#/components/schemas/Lodgify.Messaging.Primitives.MessageRoute" },
+          "subject": { "description": "Message subject", "nullable": true, "type": "string" },
+          "type": { "description": "Message type: Owner, Renter", "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Messaging.Legacy.Public.Api.Models.ThreadItemListDetailDto": {
+        "additionalProperties": false,
+        "description": "Object to hold the details of a thread",
+        "properties": {
+          "error_message": {
+            "description": "Error message indicating why the thread is closed",
+            "nullable": true,
+            "type": "string"
+          },
+          "error_title": {
+            "description": "Error title indicating why the thread is closed",
+            "nullable": true,
+            "type": "string"
+          },
+          "guest_email": { "description": "The thread's guest email", "nullable": true, "type": "string" },
+          "guest_name": { "description": "The thread's guest name", "nullable": true, "type": "string" },
+          "is_closed": {
+            "description": "Indicates if the thread is closed and cannot receive any messages.",
+            "type": "boolean"
+          },
+          "is_read": { "description": "Read status of the thread", "type": "boolean" },
+          "last_message_date": {
+            "description": "Date and time of the last message in the thread",
+            "format": "date-time",
+            "type": "string"
+          },
+          "messages": {
+            "description": "List of messages in the thread",
+            "items": {
+              "$ref": "#/components/schemas/Lodgify.Messaging.Legacy.Public.Api.Models.InboxDetailMessageDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "thread_uid": { "description": "The thread's unique identifier", "format": "uuid", "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Messaging.Primitives.MessageRoute": {
+        "enum": ["Email", "Airbnb", "BookingCom", "Vrbo", "Sms"],
+        "type": "string"
+      },
+      "Lodgify.Public.Api.Infrastructure.Models.Error": {
+        "additionalProperties": false,
+        "properties": {
+          "code": { "$ref": "#/components/schemas/Lodgify.Api.Types.ApiErrorCode" },
+          "correlation_id": { "nullable": true, "type": "string" },
+          "event_id": { "nullable": true, "type": "string" },
+          "message": { "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "Lodgify.Rates.Models.v1.BookingSettings.BookingType": {
+        "enum": ["InstantBooking", "BookingRequest", "EnquiryOnly"],
+        "type": "string"
+      },
+      "Lodgify.Rates.Models.v1.DateRangeModel": {
+        "additionalProperties": false,
+        "properties": { "lower": { "type": "string" }, "upper": { "type": "string" } },
+        "type": "object"
+      },
+      "Microsoft.AspNetCore.Mvc.ProblemDetails": {
+        "additionalProperties": {},
+        "properties": {
+          "detail": { "nullable": true, "type": "string" },
+          "instance": { "nullable": true, "type": "string" },
+          "status": { "format": "int32", "nullable": true, "type": "integer" },
+          "title": { "nullable": true, "type": "string" },
+          "type": { "nullable": true, "type": "string" }
+        },
+        "type": "object"
+      },
+      "System.Runtime.InteropServices.JavaScript.JSTypeError": { "additionalProperties": false, "type": "object" }
+    },
+    "securitySchemes": {
+      "ApiKey": { "description": "Lodgify Public Api key", "in": "header", "name": "X-ApiKey", "type": "apiKey" }
+    }
+  },
+  "info": {
+    "contact": { "email": "development@lodgify.com", "name": "Lodgify", "url": "https://www.lodgify.com" },
+    "description": "API documentation for Lodgify Public API v2",
+    "title": "Lodgify Public API v2",
+    "version": "v2"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/v2/availability": {
+      "get": {
+        "description": "Retrieves availability calendar data for all properties associated with the authenticated user for a given date range.",
+        "operationId": "GetCalendarByUser",
+        "parameters": [
+          {
+            "description": "The start date of the calendar period.",
+            "in": "query",
+            "name": "start",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "The end date of the calendar period.",
+            "in": "query",
+            "name": "end",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "Indicates whether to include detailed booking status information.",
+            "in": "query",
+            "name": "includeDetails",
+            "schema": { "default": false, "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Retrieves availability calendar data for all properties associated with the authenticated user for a given date range.",
+        "tags": ["Availability"]
+      }
+    },
+    "/v2/availability/{propertyId}": {
+      "get": {
+        "description": "Retrieves availability calendar data for a specific property for a given date range.",
+        "operationId": "GetCalendarByProperty",
+        "parameters": [
+          {
+            "description": "The start date of the calendar period.",
+            "in": "query",
+            "name": "start",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "The end date of the calendar period.",
+            "in": "query",
+            "name": "end",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "The unique identifier of the property.",
+            "in": "path",
+            "name": "propertyId",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Indicates whether to include detailed booking status information.",
+            "in": "query",
+            "name": "includeDetails",
+            "schema": { "default": false, "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Retrieves availability calendar data for a specific property for a given date range.",
+        "tags": ["Availability"]
+      }
+    },
+    "/v2/availability/{propertyId}/{roomTypeId}": {
+      "get": {
+        "description": "Retrieves availability calendar data for a specific room type within a property for a given date range.",
+        "operationId": "GetCalendarByRoomType",
+        "parameters": [
+          {
+            "description": "The start date of the calendar period.",
+            "in": "query",
+            "name": "start",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "The end date of the calendar period.",
+            "in": "query",
+            "name": "end",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "The unique identifier of the property.",
+            "in": "path",
+            "name": "propertyId",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "The unique identifier of the room type.",
+            "in": "path",
+            "name": "roomTypeId",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Indicates whether to include detailed booking status information.",
+            "in": "query",
+            "name": "includeDetails",
+            "schema": { "default": false, "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Availability.CalendarDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Retrieves availability calendar data for a specific room type within a property for a given date range.",
+        "tags": ["Availability"]
+      }
+    },
+    "/v2/deletedProperties": {
+      "get": {
+        "description": "Returns a paged list of all deleted properties since some date",
+        "operationId": "GetAllDeletedAsync",
+        "parameters": [
+          {
+            "description": "Optional datetime filter to include only properties deleted since this date",
+            "in": "query",
+            "name": "deletedSince",
+            "schema": { "format": "date-time", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": { "schema": { "items": { "format": "int32", "type": "integer" }, "type": "array" } },
+              "application/xml": { "schema": { "items": { "format": "int32", "type": "integer" }, "type": "array" } },
+              "text/json": { "schema": { "items": { "format": "int32", "type": "integer" }, "type": "array" } },
+              "text/plain": { "schema": { "items": { "format": "int32", "type": "integer" }, "type": "array" } },
+              "text/xml": { "schema": { "items": { "format": "int32", "type": "integer" }, "type": "array" } }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Gets deleted properties",
+        "tags": ["Properties"]
+      }
+    },
+    "/v2/messaging/{threadGuid}": {
+      "get": {
+        "description": "Retrieve a message thread with the specified Id.",
+        "parameters": [
+          {
+            "description": "Thread Id",
+            "in": "path",
+            "name": "threadGuid",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Messaging.Legacy.Public.Api.Models.ThreadItemListDetailDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Messaging.Legacy.Public.Api.Models.ThreadItemListDetailDto"
+                  },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Lodgify.Messaging.Legacy.Public.Api.Models.ThreadItemListDetailDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" }
+              },
+              "text/json": { "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" } },
+              "text/plain": { "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" } }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/System.Runtime.InteropServices.JavaScript.JSTypeError" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get thread details",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/properties": {
+      "get": {
+        "description": "Returns a paged list of all properties",
+        "operationId": "GetAllPropertiesAsync",
+        "parameters": [
+          {
+            "description": "Optional website identifier for localized content",
+            "in": "query",
+            "name": "wid",
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Optional datetime filter to include only properties modified since this date",
+            "in": "query",
+            "name": "updatedSince",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "If true, returns the total number of results",
+            "in": "query",
+            "name": "includeCount",
+            "schema": { "default": false, "type": "boolean" }
+          },
+          {
+            "description": "If true, includes available dates for arrival or departure",
+            "in": "query",
+            "name": "includeInOut",
+            "schema": { "default": false, "type": "boolean" }
+          },
+          {
+            "description": "Page number to retrieve (default: 1)",
+            "in": "query",
+            "name": "page",
+            "schema": { "default": 1, "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Number of items per page (max: 50, default: 50)",
+            "in": "query",
+            "name": "size",
+            "schema": { "default": 50, "format": "int32", "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyListDto" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyListDto" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyListDto" }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Properties info list",
+        "tags": ["Properties"]
+      }
+    },
+    "/v2/properties/{id}": {
+      "get": {
+        "description": "Get the basic info for a given property",
+        "operationId": "GetPropertyByIdV2",
+        "parameters": [
+          {
+            "description": "Property identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Optional website identifier for localized content",
+            "in": "query",
+            "name": "wid",
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "If true, includes available dates for arrival or departure",
+            "in": "query",
+            "name": "includeInOut",
+            "schema": { "default": false, "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" }
+              },
+              "text/xml": { "schema": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.PropertyDto" } }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Property info by Id",
+        "tags": ["Properties"]
+      }
+    },
+    "/v2/properties/{id}/rooms": {
+      "get": {
+        "description": "Returns all the roomtypes available for a given property",
+        "parameters": [
+          {
+            "description": "Property identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Optional website identifier for localized content",
+            "in": "query",
+            "name": "wid",
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.RoomDetailsDto" },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.RoomDetailsDto" },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Properties.Models.v2.RoomDetailsDto" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "application/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/xml": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Available rooms",
+        "tags": ["Properties"]
+      }
+    },
+    "/v2/quote/{propertyId}": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Arrival date",
+            "in": "query",
+            "name": "arrival",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "Departure date",
+            "in": "query",
+            "name": "departure",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "Property identifier",
+            "in": "path",
+            "name": "propertyId",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Room type details",
+            "in": "query",
+            "name": "roomTypes",
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.RoomTypeParamDto"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Optional add-ons to include in Quote",
+            "in": "query",
+            "name": "addOns",
+            "schema": {
+              "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.AddOnParamDto" },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Optional promotion code to apply to Quote",
+            "in": "query",
+            "name": "promotionCode",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteDto" },
+                  "type": "array"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteDto" },
+                  "type": "array"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.QuoteDto" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Gets a quote",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/rates/calendar": {
+      "get": {
+        "description": "Returns nightly rates calendar for rental, requested by houseId and roomTypeId (most rentals on Lodgify have only a single room type id). For a less detailed response (e.g. for quickly building a simple calendar UI), consider using the V1 version of this endpoint.",
+        "operationId": "RatesCalendar v2",
+        "parameters": [
+          {
+            "description": "The ID of the house.",
+            "in": "query",
+            "name": "houseId",
+            "required": true,
+            "schema": { "default": "123456", "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "The ID of the room type (details for associated room types can be obtained in responses from Properties endpoints).",
+            "in": "query",
+            "name": "roomTypeId",
+            "required": true,
+            "schema": { "default": "123456", "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "The start date of the calendar. Rates start from this night (inclusive).",
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": { "default": "yyyy-MM-dd", "type": "string" }
+          },
+          {
+            "description": "The end date of the calendar. Rates go until this night (inclusive of this night).",
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": { "default": "yyyy-MM-dd", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.CalendarResponse" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.CalendarResponse" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.CalendarResponse" }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Nightly rates",
+        "tags": ["Rates"]
+      }
+    },
+    "/v2/rates/settings": {
+      "get": {
+        "description": "Returns rate settings for the houseId.",
+        "operationId": "RateSettings v2",
+        "parameters": [{ "in": "query", "name": "houseId", "schema": { "format": "int32", "type": "integer" } }],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateSettings" }
+              },
+              "text/json": { "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateSettings" } },
+              "text/plain": { "schema": { "$ref": "#/components/schemas/Lodgify.Api.Rates.Models.v2.RateSettings" } }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Public.Api.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Server Error"
+          }
+        },
+        "summary": "Rate's settings",
+        "tags": ["Rates"]
+      }
+    },
+    "/v2/reservations/bookings": {
+      "get": {
+        "description": "Retrieve a list of bookings matching the query parameters",
+        "operationId": "GetAllAsync",
+        "parameters": [
+          {
+            "description": "Number of the page to retrieve",
+            "in": "query",
+            "name": "page",
+            "schema": { "default": 1, "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Number of items per page",
+            "in": "query",
+            "name": "size",
+            "schema": { "default": 50, "format": "int32", "type": "integer" }
+          },
+          {
+            "description": "Include number of all items",
+            "in": "query",
+            "name": "includeCount",
+            "schema": { "default": false, "type": "boolean" }
+          },
+          {
+            "description": "Filter Bookings by the stay dates",
+            "in": "query",
+            "name": "stayFilter",
+            "schema": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.StayFilterEnum"
+            }
+          },
+          {
+            "description": "Include only Bookings updated since this date",
+            "in": "query",
+            "name": "updatedSince",
+            "schema": { "format": "date-time", "type": "string" }
+          },
+          {
+            "description": "Include details about transactions and schedule",
+            "in": "query",
+            "name": "includeTransactions",
+            "schema": { "default": false, "type": "boolean" }
+          },
+          { "in": "query", "name": "includeExternal", "schema": { "default": false, "type": "boolean" } },
+          {
+            "description": "Include quote details",
+            "in": "query",
+            "name": "includeQuoteDetails",
+            "schema": { "default": false, "type": "boolean" }
+          },
+          {
+            "description": "Query bookings that are in trash",
+            "in": "query",
+            "name": "trash",
+            "schema": {
+              "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.TrashEnum"
+            }
+          },
+          {
+            "description": "Date to filter when selected ArrivalDate or DepartureDate in stayFilter",
+            "in": "query",
+            "name": "stayFilterDate",
+            "schema": { "format": "date-time", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingSetDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingSetDto"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingSetDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "List of bookings",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}": {
+      "get": {
+        "operationId": "GetAsync",
+        "parameters": [
+          {
+            "description": "Id of the Booking",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingDto"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Booking by id",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}/checkin": {
+      "put": {
+        "description": "Checkin a booking at the specified time",
+        "parameters": [
+          {
+            "description": "Booking Identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto"
+              }
+            },
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Checkin a booking at the specified time",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}/checkout": {
+      "put": {
+        "description": "Checkout a booking at the specified time",
+        "parameters": [
+          {
+            "description": "Booking Identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckOutDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckOutDto"
+              }
+            },
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckOutDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckOutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK" },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Checkout a booking at the specified time",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}/externalBookings": {
+      "get": {
+        "description": "Get the list of external bookings belonging to the specified Id.",
+        "operationId": "GetExternalBookingsAsync",
+        "parameters": [
+          {
+            "description": "Id of the Booking",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingListDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingListDto"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.ExternalBookingListDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "External bookings by Booking id",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}/keyCodes": {
+      "put": {
+        "description": "Updates the access key codes of rooms belonging to a given booking.",
+        "operationId": "UpdateKeyCodes",
+        "parameters": [
+          {
+            "description": "Id of the booking",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+              }
+            },
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+              }
+            }
+          },
+          "description": "Booking object with rooms and key codes to update"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingKeyCodeDto"
+                }
+              }
+            },
+            "description": "Returns the updated booking"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" }
+              },
+              "text/json": { "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" } },
+              "text/plain": { "schema": { "$ref": "#/components/schemas/Microsoft.AspNetCore.Mvc.ProblemDetails" } }
+            },
+            "description": "Booking or Room not found"
+          },
+          "500": { "description": "An error occurred in our side" }
+        },
+        "summary": "Update rooms' access key codes",
+        "tags": ["Reservations"]
+      }
+    },
+    "/v2/reservations/bookings/{id}/quote/paymentLink": {
+      "get": {
+        "description": "Retrieve the next payment link for a Booking",
+        "operationId": "GetPaymentLinkAsync",
+        "parameters": [
+          {
+            "description": "Id of the Booking",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkDto" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkDto" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkDto" }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Gets a booking's payment link",
+        "tags": ["Reservations"]
+      },
+      "post": {
+        "operationId": "CreatePaymentLinkAsync",
+        "parameters": [
+          {
+            "description": "Id of the booking",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": { "format": "int32", "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto"
+              }
+            },
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto"
+              }
+            }
+          },
+          "description": "Amount to be requested"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkCreatedDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkCreatedDto"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v1_2.PaymentLinkCreatedDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/json": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              },
+              "text/plain": {
+                "schema": { "$ref": "#/components/schemas/Lodgify.Api.Public.Infrastructure.Models.Error" }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Create a payment link for a booking",
+        "tags": ["Reservations"]
+      }
+    }
+  },
+  "security": [{ "ApiKey": [] }],
+  "servers": [{ "url": "api.lodgify.com" }]
+}

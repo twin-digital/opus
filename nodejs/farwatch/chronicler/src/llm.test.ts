@@ -35,7 +35,7 @@ describe('selectLlm', () => {
   })
 
   it('returns a function for each known backend', () => {
-    for (const name of ['bedrock', 'claude-cli']) {
+    for (const name of ['bedrock', 'claude-cli', 'ollama']) {
       withLlmEnv(name, () => {
         expect(typeof selectLlm()).toBe('function')
       })

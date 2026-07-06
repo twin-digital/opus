@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/opus-scripts",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "Scripts used to perform package-level operations in the Opus repository.",
   "type": "module",
   "bin": {
@@ -20,9 +20,9 @@
   },
   "dependencies": {
     "chalk": "catalog:",
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "execa": "catalog:",
-    "globby": "^15.0.0"
+    "globby": "^16.0.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -35,6 +35,6 @@
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
+    "pnpm": "11.x"
   }
 }

@@ -58,7 +58,7 @@ chore(deps): update react to v19
 
 - **I see `.changeset/renovate-<PR>.md` on a Renovate PR — should I edit it?**
   No. It's regenerated from scratch on every run, so edits are overwritten. To change the result,
-  add your *own* changeset (next question).
+  add your _own_ changeset (next question).
 - **Can I add my own changeset to a Renovate PR?**
   Yes. Add a separate `.changeset/<name>.md`; the automation only manages `renovate-<PR>.md` and
   never touches yours. At release, changesets takes the **max bump per package**, so a higher human
@@ -96,21 +96,21 @@ chore(deps): update react to v19
 - Reacting to resolution-only changes (overrides, `patchedDependencies`, `lockFileMaintenance`
   relocks) — these don't change a published package's declared ranges (§4).
 - Supporting Renovate's native `postUpgradeTasks` (disabled on the Mend-hosted app — §8).
-- A hard CI gate that *requires* a changeset (deferred).
+- A hard CI gate that _requires_ a changeset (deferred).
 
 ---
 
 ## 2. Components
 
-| Path | Role |
-| --- | --- |
-| `tooling/renovate-tools/` | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.** |
-| `.github/workflows/renovate-changeset.yml` | **Caller** (untrusted half): `pull_request` trigger, `renovate/*` + actor gate, concurrency. Delegates to the reusable workflow pinned `@main`. |
-| `.github/workflows/_commit-renovate-changeset.yml` | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7). |
-| `merge-checks.yaml` → `renovate-changeset-present` job | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). (In `merge-checks`, not `ci.yaml`: it's a PR-merge gate, not an every-push build.) |
-| AWS minter role (`vars.GH_APP_MINTER_ROLE_ARN_RENOVATE`, a repo variable — the ARN isn't sensitive) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]`, on the `repo:…:pull_request` subject (no environment) (§7). |
-| `renovate.json` (PR #91) | Renovate behavior + `gitIgnoredAuthors` + `automerge` (§6.2, §6.8). |
-| `docs/cicd/renovate-integration.md` | This reference. |
+| Path                                                                                                | Role                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tooling/renovate-tools/`                                                                           | `@twin-digital/renovate-tools` (`private: true`): the detection logic + CLI. Repo-kit-managed (tsconfig/eslint/vitest); dep `yaml`; run via `tsx`. **No `@pnpm/*` deps.**                            |
+| `.github/workflows/renovate-changeset.yml`                                                          | **Caller** (untrusted half): `pull_request` trigger, `renovate/*` + actor gate, concurrency. Delegates to the reusable workflow pinned `@main`.                                                      |
+| `.github/workflows/_commit-renovate-changeset.yml`                                                  | **Reusable** (trusted, `@main`-pinned): OIDC→KMS mints an App token, runs the CLI, commits the changeset **signed via the GitHub API** (§5, §7).                                                     |
+| `merge-checks.yaml` → `renovate-changeset-present` job                                              | Required check: a `renovate/*` PR must carry its managed changeset before it can merge — gates auto-merge (§6.8). (In `merge-checks`, not `ci.yaml`: it's a PR-merge gate, not an every-push build.) |
+| AWS minter role (`vars.GH_APP_MINTER_ROLE_ARN_RENOVATE`, a repo variable — the ARN isn't sensitive) | `kms:Sign`-only; OIDC trust pinned to the reusable workflow `@main` + `actor == renovate[bot]`, on the `repo:…:pull_request` subject (no environment) (§7).                                          |
+| `renovate.json` (PR #91)                                                                            | Renovate behavior + `gitIgnoredAuthors` + `automerge` (§6.2, §6.8).                                                                                                                                  |
+| `docs/cicd/renovate-integration.md`                                                                 | This reference.                                                                                                                                                                                      |
 
 The **detection** logic is self-contained in `@twin-digital/renovate-tools` and supports named
 catalogs natively (§4.1). The **commit** path is split into a thin untrusted caller and a `@main`-pinned
@@ -126,7 +126,7 @@ Configured by `renovate.json` (PR #91):
   `twin-digital/opus` (not forks) — why the workflow can use `pull_request` with a writable token (§7).
 - **Grouping.** `group:allNonMajor` collapses non-major updates into a **single PR that accumulates**
   bumps over time; majors/security open separately. A grouped PR changes (`synchronize`) as Renovate
-  adds/removes bumps, so the automation must converge on the *current* state each run, not append.
+  adds/removes bumps, so the automation must converge on the _current_ state each run, not append.
   **Exception:** packages in pnpm's `onlyBuiltDependencies` (which run install/build scripts) are
   pulled out of the batch into their own per-package PRs (distinct title + `build-scripts` label) and
   never auto-merge, so a script-running bump is reviewed in isolation. Keep that `matchPackageNames`
@@ -147,7 +147,7 @@ Configured by `renovate.json` (PR #91):
 
 ## 4. Detection model
 
-The core idea: **the lockfile isn't published — consumers resolve a package's *declared ranges*
+The core idea: **the lockfile isn't published — consumers resolve a package's _declared ranges_
 against their own tree.** So a package needs a changeset iff its **effective published dependency
 ranges** changed. That is the complete, semver-correct signal for published packages, and it
 naturally ignores resolution-only churn (overrides/relocks) that doesn't affect consumers. This is
@@ -192,18 +192,18 @@ Per `(package, depType, depName)`:
 - present on **one** side only (Renovate occasionally adds/removes a dep) → changed; magnitude
   unknowable → `patch`. Compare must tolerate `undefined` without throwing.
 - **New package** (base `package.json` absent): `git show` **fails** (non-zero) → skip; Renovate
-  never adds packages. This is distinguished from *present-but-unparseable* by `git show`'s exit
+  never adds packages. This is distinguished from _present-but-unparseable_ by `git show`'s exit
   status, **not** by empty output (§4.4).
 
 ### 4.3 Bump policy
 
 Per affected package, the entry is the **max** (`major` > `patch`) over its changed deps:
 
-| Dependency type | Change | Bump |
-| --- | --- | --- |
-| `dependencies` / `optionalDependencies` | any | **patch** |
-| `peerDependencies` | within the same major | **patch** |
-| `peerDependencies` | crosses a major (`^18` → `^19`) — literal, `catalog:`, or named-`catalog:` | **major** |
+| Dependency type                         | Change                                                                     | Bump      |
+| --------------------------------------- | -------------------------------------------------------------------------- | --------- |
+| `dependencies` / `optionalDependencies` | any                                                                        | **patch** |
+| `peerDependencies`                      | within the same major                                                      | **patch** |
+| `peerDependencies`                      | crosses a major (`^18` → `^19`) — literal, `catalog:`, or named-`catalog:` | **major** |
 
 Regular/optional updates are **flat patch** by deliberate policy (predictable, batch-releasable,
 kind to downstream consumers). Peers are the one consumer-facing contract: requiring a new **major**
@@ -230,7 +230,7 @@ marks it as managed; no boilerplate leaks into changelogs). Entries sorted by pa
    managed file as-is); exit 0 (fail-open, never blocks Renovate).
 
 The critical rule (§4.2): there is **no `safeJson(...) → {}` fallback**. In the effective-range
-model, treating a failed base parse as "no deps at base" would make every head dep look *added* →
+model, treating a failed base parse as "no deps at base" would make every head dep look _added_ →
 a spurious, authoritative `patch`-everything changeset. A throw must route to the **errored** path,
 never masquerade as a clean (empty or full) result.
 
@@ -255,7 +255,7 @@ The commit must be **signed** (branch protection requires it) and must **re-trig
 and a `GITHUB_TOKEN` push triggers nothing — so we commit through the GitHub API with a short-lived
 **GitHub App token minted via OIDC→KMS** (the same mechanism as `publish.yaml`; see
 [`./github-app-token-minting.md`](./github-app-token-minting.md)). API commits are signed
-("Verified"); App-token events *do* re-trigger workflows.
+("Verified"); App-token events _do_ re-trigger workflows.
 
 The privileged half lives in its own reusable workflow so it can be **pinned**:
 
@@ -270,10 +270,10 @@ Reusable steps:
 
 1. **`actions/checkout`** (`fetch-depth: 0`, ref: head).
 2. **Hand-rolled setup with `pnpm install --ignore-scripts`** (same SHA pins as `./.github/actions/setup`,
-   but *not* the composite). This job mints a privileged token, so a bumped dependency's lifecycle
+   but _not_ the composite). This job mints a privileged token, so a bumped dependency's lifecycle
    script must never execute here; `tsx`/`yaml` need no postinstall.
 3. **Generate** the changeset: `git fetch origin $BASE_REF`, then the CLI via `tsx`.
-4. **Mint** (only *after* install/generate, so no creds are present while third-party code is on disk):
+4. **Mint** (only _after_ install/generate, so no creds are present while third-party code is on disk):
    `configure-aws-credentials` (OIDC) → assume the `kms:Sign`-only minter role → sign the App JWT →
    exchange for an installation token scoped to **`opus` / `contents:write` only**.
 5. **Commit via `createCommitOnBranch`** (signed): `expectedHeadOid` pins the write to the tip we saw —
@@ -288,25 +288,29 @@ Trigger rationale (`pull_request`, not `pull_request_target`) and the minting tr
 ## 6. Lifecycle scenarios & hazards
 
 ### 6.1 Initial PR open
+
 Renovate opens a PR → caller gates → reusable computes the affected set → writes
 `.changeset/renovate-<PR>.md` → commits it via the GitHub API, **signed** (§6.7). Renovate ignores
 the commit (`gitIgnoredAuthors`), so the PR stays managed; the App-token commit re-triggers the PR
 checks, which re-runs the auto-merge gate (§6.8).
 
-### 6.2 Hazard: foreign commit freezes Renovate *(mitigated)*
+### 6.2 Hazard: foreign commit freezes Renovate _(mitigated)_
+
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
 **stop updating it** (maintainer-confirmed, #24882). **Mitigation:** `gitIgnoredAuthors:
 ["290907000+twin-digital-agent[bot]@users.noreply.github.com"]` (the App identity that mints/commits)
 — and it **must equal** the commit author the API produces exactly (§10). The reusable step asserts
 this on every run and warns on drift.
 
-### 6.3 PR grows / Renovate rebases *(self-healing)*
+### 6.3 PR grows / Renovate rebases _(self-healing)_
+
 When Renovate adds a bump or rebases (force-push, as the app), `synchronize` fires → the workflow
 **regenerates from current state**. New affected packages appear, removed ones disappear, bumps
 recompute; a dropped changeset is re-created. Each dep ends as exactly one entry per affected
 package, regardless of how many incremental pushes built the PR.
 
-### 6.4 Hazard: stale tip race *(mitigated)*
+### 6.4 Hazard: stale tip race _(mitigated)_
+
 Renovate may force-push between our checkout and write-back. **Mitigation:** `createCommitOnBranch`
 with `expectedHeadOid` pinned to the checked-out tip — if the branch moved, the mutation fails (it
 never overwrites unseen work) and we re-fetch, hard-reset, **regenerate**, and retry (bounded); on
@@ -314,25 +318,29 @@ exhaustion exit non-zero (a later `synchronize` re-heals). `concurrency` uses
 **`cancel-in-progress: false`** so a run isn't SIGTERM'd mid-commit. (`expectedHeadOid` is what makes
 the write transactional; concurrency only serializes.)
 
-### 6.5 Hazard: clobbering human changesets *(mitigated)*
+### 6.5 Hazard: clobbering human changesets _(mitigated)_
+
 The automation manages exactly `.changeset/renovate-<PR>.md` and never touches other changeset files.
 A maintainer's own changeset is preserved; changesets takes the max bump per package, so an
 overlapping entry is harmless.
 
-### 6.6 Hazard: workflow self-loop *(mitigated, defense-in-depth)*
+### 6.6 Hazard: workflow self-loop _(mitigated, defense-in-depth)_
+
 The App-token commit **does** re-trigger workflows (intentionally — it re-runs the §6.8 gate on the
 commit that carries the changeset). The loop is still bounded: (a) that re-trigger's `synchronize`
 has `actor == twin-digital-agent[bot]`, not `renovate[bot]`, so the **caller's gate skips** it — no
 second mint/commit; (b) the tool is idempotent — an unchanged state writes an identical file and
 commits nothing. Either alone breaks the loop.
 
-### 6.7 Hazard: unsigned commit rejected by branch protection *(mitigated)*
+### 6.7 Hazard: unsigned commit rejected by branch protection _(mitigated)_
+
 Branch protection **requires signed commits**; a local `git commit` from Actions is unsigned and is
 rejected as unverified. **Mitigation:** commit via the GitHub API (`createCommitOnBranch`), which
 GitHub signs server-side ("Verified") — no GPG/SSH key to provision or rotate. The signing token is
 the OIDC→KMS-minted App token (§7).
 
-### 6.8 Hazard: auto-merge races the changeset *(mitigated)*
+### 6.8 Hazard: auto-merge races the changeset _(mitigated)_
+
 With `automerge: true`, native auto-merge could merge Renovate's original commit **before** the
 changeset is added. **Mitigation:** the required `renovate-changeset-present` check (a
 `merge-checks.yaml` job — it's a PR-merge gate, not an every-push build) fails on a `renovate/*` PR
@@ -342,19 +350,19 @@ token rather than `GITHUB_TOKEN` — the latter wouldn't re-run the gate on the 
 
 ### 6.9 Hazard summary
 
-| Hazard | Mitigation |
-| --- | --- |
-| Foreign commit freezes Renovate | `gitIgnoredAuthors` (exact App-identity email) |
-| Renovate drops changeset on rebase | self-heal via `synchronize` |
-| Stale tip / concurrent force-push | `expectedHeadOid` + regenerate-retry; `cancel-in-progress: false` |
-| Clobbering human changesets | manage only `renovate-<PR>.md` |
-| Stale per-commit changeset files | stable PR-keyed name (`renovate-<PR>.md`), full regenerate |
-| Workflow self-loop | caller actor-gate skips the App commit + idempotent content |
-| Unsigned commit rejected (signed-commits rule) | commit via GitHub API → "Verified" (§6.7) |
-| Auto-merge merges before changeset | required `renovate-changeset-present` check (§6.8) |
-| Privileged mint redirected by a tampered PR | OIDC trust pinned to reusable `@main` + `actor` (§7) |
-| Parse failure → spurious changeset | errored path: annotate + write nothing (§4.4) |
-| Fork PR mints/pushes | forks get no `id-token` and can't push (§7) |
+| Hazard                                         | Mitigation                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| Foreign commit freezes Renovate                | `gitIgnoredAuthors` (exact App-identity email)                    |
+| Renovate drops changeset on rebase             | self-heal via `synchronize`                                       |
+| Stale tip / concurrent force-push              | `expectedHeadOid` + regenerate-retry; `cancel-in-progress: false` |
+| Clobbering human changesets                    | manage only `renovate-<PR>.md`                                    |
+| Stale per-commit changeset files               | stable PR-keyed name (`renovate-<PR>.md`), full regenerate        |
+| Workflow self-loop                             | caller actor-gate skips the App commit + idempotent content       |
+| Unsigned commit rejected (signed-commits rule) | commit via GitHub API → "Verified" (§6.7)                         |
+| Auto-merge merges before changeset             | required `renovate-changeset-present` check (§6.8)                |
+| Privileged mint redirected by a tampered PR    | OIDC trust pinned to reusable `@main` + `actor` (§7)              |
+| Parse failure → spurious changeset             | errored path: annotate + write nothing (§4.4)                     |
+| Fork PR mints/pushes                           | forks get no `id-token` and can't push (§7)                       |
 
 ---
 
@@ -383,7 +391,7 @@ condition keys (notably **not** `head_ref`), so we scope on what works and is ob
   `renovate/*` branch triggers as themselves, so the condition fails and nothing mints.)
 - `job_workflow_ref == …/_commit-renovate-changeset.yml@refs/heads/main` — the **load-bearing** pin. The
   caller always invokes the reusable workflow as `@main`, so the reusable job's `job_workflow_ref`
-  resolves to that exact file on `main`. A `pull_request` runs the *caller* from the PR head, so a PR
+  resolves to that exact file on `main`. A `pull_request` runs the _caller_ from the PR head, so a PR
   could edit the caller — but it can only ever mint by calling this `@main` file, whose contents a PR
   cannot change. (`pull_request`'s own `sub`/`ref` are branch-agnostic — `…:pull_request` /
   `refs/pull/N/merge` — which is why we pin on `job_workflow_ref`, not `sub`.)
@@ -411,7 +419,7 @@ supported path. If we ever self-host Renovate, `postUpgradeTasks` running the CL
 - **Direct-deps-only scope.** Transitive changes are not inspected.
 - **Resolution-only changes produce no changeset.** Overrides, `patchedDependencies`, and
   `lockFileMaintenance` relocks change resolution but not declared ranges — correct for published
-  packages (§4). **Accepted residual:** a *private deployed app* whose deployed deps shift via an
+  packages (§4). **Accepted residual:** a _private deployed app_ whose deployed deps shift via an
   override/relock won't get a changeset (bookkeeping only; deploys happen regardless).
 
 ---
@@ -423,7 +431,7 @@ auto-merge** has an ordered rollout, because the AWS trust must match the reusab
 `job_workflow_ref` (§7):
 
 1. **Merge this PR** so `_commit-renovate-changeset.yml` exists on `main` and its first run logs the exact
-   `job_workflow_ref`/`actor` claims. (Until the role exists, the mint step fails *visibly* but
+   `job_workflow_ref`/`actor` claims. (Until the role exists, the mint step fails _visibly_ but
    doesn't block — `renovate-changeset` isn't a required check.)
 2. **Create the AWS role + secret:** a `kms:Sign`-only role with trust pinned to that
    `job_workflow_ref@refs/heads/main` + `actor == renovate[bot]` + `repository`; add it as

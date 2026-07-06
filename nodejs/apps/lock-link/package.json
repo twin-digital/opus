@@ -1,0 +1,66 @@
+{
+  "private": true,
+  "name": "@twin-digital/lock-link",
+  "version": "0.1.0",
+  "description": "Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "deploy:cdk": "cdk deploy",
+    "destroy:cdk": "cdk destroy",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "synth": "cdk synth",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/parameters": "catalog:",
+    "@aws-sdk/client-sns": "catalog:",
+    "@aws-sdk/client-ssm": "catalog:",
+    "@twin-digital/observability-lib": "workspace:*",
+    "aws-cdk-lib": "^2.260.0",
+    "constructs": "^10.6.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "aws-cdk": "^2.1127.0",
+    "aws-sdk-client-mock": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

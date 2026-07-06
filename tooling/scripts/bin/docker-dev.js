@@ -6,6 +6,8 @@ import { basename, dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
 
+import { requireDocker } from '../lib/require-docker.js'
+
 // Configuration
 const INITIAL_BUILD_WAIT_MS = 3000
 const CONTAINER_CHECK_INTERVAL_MS = 500
@@ -172,6 +174,8 @@ const waitForContainers = async () => {
 }
 
 const main = async () => {
+  requireDocker()
+
   // Resolve compose file source
   if (useStdin) {
     const chunks = []

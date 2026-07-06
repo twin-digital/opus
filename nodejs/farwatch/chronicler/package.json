@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/fw-chronicler",
-  "version": "0.0.2",
+  "version": "0.1.1",
   "description": "Turns pinned simulation outcomes into narrative via an LLM backend.",
   "license": "ISC",
   "type": "module",
@@ -30,6 +30,7 @@
   "scripts": {
     "build": "build",
     "clean": "clean",
+    "gen-examples": "tsx --conditions=source src/gen-examples.ts",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "test": "vitest run",
@@ -37,9 +38,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/bedrock-sdk": "^0.29.0",
+    "@anthropic-ai/bedrock-sdk": "^0.30.0",
     "@thrashplay/fw-core": "workspace:*",
-    "@thrashplay/fw-simulation": "workspace:*"
+    "@thrashplay/fw-simulation": "workspace:*",
+    "ajv": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -54,12 +57,13 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
+    "pnpm": "11.x"
   }
 }

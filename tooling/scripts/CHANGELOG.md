@@ -1,5 +1,19 @@
 # @twin-digital/opus-scripts
 
+## 0.3.3
+
+### Patch Changes
+
+- e4369a0: Add `@twin-digital/credential-shelf`: a consolidated credential vendor sidecar (one image, N vend loops) that reads a unified `vend.yaml` of `aws-sso` / `github-app` providers and vends short-lived, scoped AWS role creds and GitHub App installation tokens onto a read-only `/creds` shelf. Node + AWS CLI (shells to `aws-cli` for STS export and KMS signing; no AWS SDK), published as `ghcr.io/twin-digital/credential-shelf`.
+
+  Also fixes `opus-scripts`' `artifact` to build with the monorepo root as the Docker context (was the package directory), so a package Dockerfile's `turbo prune` can see the full workspace — required by any monorepo turbo-prune image build.
+
+## 0.3.2
+
+### Patch Changes
+
+- 4ab24c0: `artifact` and `docker-dev` now fail fast with a pointer to #164 when no Docker daemon is reachable (the workspace devcontainer no longer mounts the host Docker socket).
+
 ## 0.3.1
 
 ### Patch Changes

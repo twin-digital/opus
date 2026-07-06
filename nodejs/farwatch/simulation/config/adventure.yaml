@@ -1,0 +1,8 @@
+# How many trials an adventure runs. Weights are relative (need not sum to 1). Tune freely.
+# The chain's last trial decides the overall outcome, so a longer adventure is a longer build.
+
+trialCountWeights:
+  '3': 2
+  '4': 4
+  '5': 3
+  '6': 1

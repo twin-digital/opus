@@ -8,6 +8,7 @@ Repository of all public works developed by Twin Digital.
 
 - [@twin-digital/context-server](./nodejs/apps/context-server): Web service providing contextual information for LLM queries.
 - [@twin-digital/discord-bot](./nodejs/apps/discord-bot): Discord Bot providing server presence and message utilities for Twin Digital applications.
+- [@twin-digital/lock-link](./nodejs/apps/lock-link): Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.
 - [@twin-digital/bookify](./nodejs/bookify/bookify): Core logic and models for the Bookify platform
 - [@twin-digital/bookify-cli](./nodejs/bookify/bookify-cli): CLI toolkit for interacting with the Bookify publishing engine.
 - [@twin-digital/bookify-render-api](./nodejs/bookify/bookify-render-api): Serverless API for Bookify rendering platform
@@ -15,6 +16,9 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/observability-lib](./nodejs/core-aws/observability-lib): AWS Lambda observability utilities with Powertools integration (logging, tracing, metrics)
 - [@twin-digital/cli-lib](./nodejs/core/cli-lib): Utilities for building CLI applications with oclif.
 - [@twin-digital/logger-lib](./nodejs/core/logger-lib): Generic logging interface and implementations for TypeScript applications
+- [@twin-digital/credential-shelf](./nodejs/devcontainer/credential-shelf): Credential vendor sidecar — vends scoped, short-lived AWS and GitHub App credentials onto a read-only /creds shelf.
+- [@twin-digital/credential-shelf-trigger](./nodejs/devcontainer/credential-shelf-trigger): Network-facing trigger for the credential-shelf remote refresh — an authenticated, rate-limited, LAN-local endpoint that drives the sidecar's device-code refresh primitive over a Unix socket. Holds no AWS identity.
+- [@twin-digital/workspace](./nodejs/devcontainer/workspace): Dev container image — security hardening (no sudo, VS Code channel scrub, credential shims) plus common tooling.
 - [@twin-digital/eslint-config](./nodejs/devtools/eslint-config): Twin Digital's preferred eslint rules.
 - [@twin-digital/json-patch-x](./nodejs/devtools/json-patch-x): JSON patch library that provides custom extensions for operations not found in RFC 6902.
 - [@twin-digital/repo-kit](./nodejs/devtools/repo-kit): CLI that keeps per-package config across the monorepo in sync with a single declarative source of truth.
@@ -29,7 +33,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-chronicler](./nodejs/farwatch/chronicler): Turns pinned simulation outcomes into narrative via an LLM backend.
 - [@thrashplay/fw-core](./nodejs/farwatch/core): Deterministic RNG and shared primitives for Farwatch.
 - [@thrashplay/fw-simulation](./nodejs/farwatch/simulation): Adventure resolution and simulation loop for Farwatch.
-- [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural covenant and world generation for Farwatch.
+- [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
@@ -51,7 +55,7 @@ Packages in this monorepo configure their `package.json` exports to provide mult
 {
   "exports": {
     ".": {
-      "source": "./src/index.ts",
+      "source": "./src/index.ts"
       // ... other exports as normal
     }
   }
@@ -88,17 +92,20 @@ export default defineConfig({
 #### Why We Use This Pattern
 
 **Development Benefits:**
+
 - **No intermediate builds**: Don't need to build dependencies before building consumers
 - **Always fresh code**: Impossible to have stale dist files causing bugs
 - **Faster iteration**: Change source → rebuild consumer → see results immediately
 - **Simpler workflow**: One build strategy for both dev and production
 
 **Monorepo Benefits:**
+
 - **Eliminates build orchestration**: No need to `pnpm build` packages in dependency order
 - **Works with watch mode**: Changes to dependencies automatically trigger rebuilds
 - **Cleaner dev scripts**: Just run watch on the package you're working on
 
 **Production Safety:**
+
 - Dev and production use the same source files (no "works in dev, breaks in prod")
 - External npm users automatically fall back to dist files (when `src/` isn't published)
 - Modern bundlers handle TypeScript efficiently, so performance impact is negligible

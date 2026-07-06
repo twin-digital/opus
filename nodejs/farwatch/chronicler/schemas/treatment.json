@@ -1,0 +1,126 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["setting", "treasures", "cast", "inventory", "trials", "closing"],
+  "properties": {
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scale", "name", "look", "locations"],
+      "properties": {
+        "scale": {
+          "type": "string",
+          "description": "Geographic scope of the expedition, e.g. 'a single archive-keep', 'a day's march of marsh', 'a mountain range crossed over weeks'."
+        },
+        "name": { "type": "string" },
+        "look": { "type": "string", "description": "The overall place and its mood, in a sentence or two." },
+        "locations": {
+          "type": "array",
+          "description": "The distinct places the trials happen at, and how they physically connect.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "look", "connectsTo"],
+            "properties": {
+              "name": { "type": "string" },
+              "look": { "type": "string" },
+              "connectsTo": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Names of locations this one physically adjoins or leads to."
+              }
+            }
+          }
+        }
+      }
+    },
+    "treasures": {
+      "type": "array",
+      "description": "The significant non-fungible prizes in play (the sought item, a discovered secret), fleshed out.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "look", "significance"],
+        "properties": {
+          "name": { "type": "string" },
+          "look": { "type": "string" },
+          "significance": { "type": "string", "description": "Why it matters to the compact or the world." }
+        }
+      }
+    },
+    "cast": {
+      "type": "array",
+      "description": "The animate actors the expedition meets — never the party themselves.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "role", "look", "wants"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["person", "group", "creature"] },
+          "role": { "type": "string", "enum": ["ally", "antagonist", "obstacle", "neutral"] },
+          "look": { "type": "string" },
+          "wants": {
+            "type": "string",
+            "description": "What this figure is after — what makes them act on their own ends."
+          }
+        }
+      }
+    },
+    "inventory": {
+      "type": "array",
+      "description": "Other significant objects in play, distinct from the treasures.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "look", "significance"],
+        "properties": {
+          "name": { "type": "string" },
+          "look": { "type": "string" },
+          "significance": { "type": "string" }
+        }
+      }
+    },
+    "trials": {
+      "type": "array",
+      "description": "The authored plot — exactly one entry per trial of the expedition, in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location", "obstacle", "whyBarrier", "howResolved", "consequence", "cast", "wins"],
+        "properties": {
+          "location": { "type": "string", "description": "Which setting location this trial happens at." },
+          "obstacle": {
+            "type": "string",
+            "description": "The significant thing standing in the party's way — a real barrier, not a vague gatekeeper."
+          },
+          "whyBarrier": {
+            "type": "string",
+            "description": "Why this obstacle actually blocks the objective or a prize in play."
+          },
+          "howResolved": {
+            "type": "string",
+            "description": "How this trial's approach met the obstacle; on a failure, how it fell short and what that cost."
+          },
+          "consequence": {
+            "type": "string",
+            "description": "Therefore/but: how this trial's outcome changes the situation going into the next."
+          },
+          "cast": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Names (from cast) who appear in this trial."
+          },
+          "wins": {
+            "type": ["string", "null"],
+            "description": "Name of a treasure/reward obtained at this trial, or null."
+          }
+        }
+      }
+    },
+    "closing": {
+      "type": "string",
+      "description": "The payoff: how the expedition ends and the prize is carried home, or lost."
+    }
+  }
+}

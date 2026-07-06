@@ -47,7 +47,7 @@ runs:
         SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
       run: |
         pnpm serverless update
-        pnpm exec turbo run "${{ inputs.operation }}" -- \
+        pnpm exec turbo run "${{ inputs.operation }}:serverless" -- \
           --stage "${{ inputs.stage }}" \
           --region "${{ inputs.aws-region }}"
       shell: bash

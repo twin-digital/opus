@@ -1,0 +1,21 @@
+# Prize (success-boon) generation. Weights are relative. Tune by reading chronicles.
+
+# Chance a won trial yields a prize at all.
+prizeChance: 0.35
+
+# What a prize is — any resource kind (it reflects what was there to win, not how).
+prizeKindWeights:
+  wealth: 5
+  item: 3
+  lore: 3
+  secret: 2
+  supplies: 2
+  renown: 2
+  vigor: 1
+
+# Magnitude of a fungible prize (incidental boons skew small).
+prizeTierWeights:
+  minor: 4
+  moderate: 3
+  major: 2
+  extreme: 1

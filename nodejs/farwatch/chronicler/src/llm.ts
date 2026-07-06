@@ -1,11 +1,13 @@
 import { bedrock } from './bedrock.js'
 import type { Llm } from './chronicle.js'
 import { claudeCli } from './claude-cli.js'
+import { ollama } from './ollama.js'
 
 /** Available LLM backends, keyed by the value of the `CHRONICLER_LLM` env var. */
 export const BACKENDS: Record<string, Llm | undefined> = {
   bedrock,
   'claude-cli': claudeCli,
+  ollama,
 }
 
 /**

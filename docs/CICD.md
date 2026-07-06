@@ -18,14 +18,14 @@ images publish to **GHCR**.
 
 ## Workflows
 
-| Workflow | Trigger | Purpose |
-| --- | --- | --- |
-| `ci.yaml` | every push (any branch); PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`. |
-| `merge-checks.yaml` | PRs to `main` | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
-| `deploy.yaml` | CI completion on `main` | Deploys **production** (stage `prod`). |
-| `deploy-preview.yaml` | CI completion (PR runs) | Deploys the PR's **preview** stage (`pr-<number>`). |
-| `destroy-preview.yml` | PR closed | Tears down that PR's preview stage. |
-| `publish.yaml` | CI completion on `main` | changesets release to npm, then GHCR image publish. |
+| Workflow              | Trigger                                | Purpose                                                                                                                       |
+| --------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yaml`             | every push (any branch); PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`.                                                                           |
+| `merge-checks.yaml`   | PRs to `main`                          | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
+| `deploy.yaml`         | CI completion on `main`                | Deploys **production** (stage `prod`).                                                                                        |
+| `deploy-preview.yaml` | CI completion (PR runs)                | Deploys the PR's **preview** stage (`pr-<number>`).                                                                           |
+| `destroy-preview.yml` | PR closed                              | Tears down that PR's preview stage.                                                                                           |
+| `publish.yaml`        | CI completion on `main`                | changesets release to npm, then GHCR image publish.                                                                           |
 
 `deploy.yaml`, `deploy-preview.yaml`, and `publish.yaml` all chain off CI via `workflow_run`,
 so **infrastructure and releases only proceed after `ci.yaml` succeeds** — both production and
@@ -98,15 +98,15 @@ From a service directory: `pnpm deploy:dev` / `pnpm deploy:prod` (or `serverless
 Secrets are **environment-scoped** (there are no repo-level secrets); non-sensitive identifiers (role
 ARNs, App/KMS ids) are **repo variables**.
 
-| Name | Kind | Scope | Used for |
-| --- | --- | --- | --- |
-| `AWS_ROLE_ARN` | secret | env: development/preview/production | OIDC role assumed for deploys |
-| `SERVERLESS_ACCESS_KEY` | secret | env: preview/production | Serverless Framework Dashboard auth |
-| `NPM_TOKEN` | secret | env: release | publishing packages to npm |
-| `AWS_REGION` | variable | repo | deploy region |
-| `GH_APP_MINTER_ROLE_ARN` | variable | repo | `kms:Sign`-only OIDC role for publish's App-token mint |
-| `GH_APP_MINTER_ROLE_ARN_RENOVATE` | variable | repo | same, for the renovate-changeset mint |
-| `GH_APP_ID` / `GH_APP_INSTALLATION_ID` / `GH_APP_KMS_KEY` | variable | repo | GitHub App identity + KMS key for token minting |
+| Name                                                      | Kind     | Scope                               | Used for                                               |
+| --------------------------------------------------------- | -------- | ----------------------------------- | ------------------------------------------------------ |
+| `AWS_ROLE_ARN`                                            | secret   | env: development/preview/production | OIDC role assumed for deploys                          |
+| `SERVERLESS_ACCESS_KEY`                                   | secret   | env: preview/production             | Serverless Framework Dashboard auth                    |
+| `NPM_TOKEN`                                               | secret   | env: release                        | publishing packages to npm                             |
+| `AWS_REGION`                                              | variable | repo                                | deploy region                                          |
+| `GH_APP_MINTER_ROLE_ARN`                                  | variable | repo                                | `kms:Sign`-only OIDC role for publish's App-token mint |
+| `GH_APP_MINTER_ROLE_ARN_RENOVATE`                         | variable | repo                                | same, for the renovate-changeset mint                  |
+| `GH_APP_ID` / `GH_APP_INSTALLATION_ID` / `GH_APP_KMS_KEY` | variable | repo                                | GitHub App identity + KMS key for token minting        |
 
 Environments scope their secrets to the jobs that declare them — `development`/`preview`/`production`
 for deploys, `release` for publish. `production` and `release` restrict deployments to `main`;

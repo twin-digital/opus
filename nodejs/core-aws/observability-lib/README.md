@@ -14,8 +14,8 @@ pnpm add @twin-digital/observability-lib
 import { withObservability, MetricUnit } from '@twin-digital/observability-lib'
 
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { logger, metrics } = internal
+  async (event, context) => {
+    const { logger, metrics } = context
 
     // Log business events (NOT Lambda invocations)
     logger.info('Processing order', { orderId: event.orderId })
@@ -76,11 +76,11 @@ logger.debug('Processing request') // ❌ Too generic
 
 ### Accessing Logger and Metrics
 
-The middleware injects logger, metrics, and tracer into the **third parameter** of your handler:
+The middleware injects logger, metrics, and tracer onto the Lambda **context** (the handler's second parameter):
 
 ```typescript
-;async (event, context, { internal }) => {
-  const { logger, metrics, tracer } = internal
+;async (event, context) => {
+  const { logger, metrics, tracer } = context
 
   logger.info('User authenticated', { userId: event.userId })
   metrics.addMetric('AuthSuccess', MetricUnit.Count, 1)
@@ -119,8 +119,8 @@ Wraps a Lambda handler with observability middleware.
 import { withObservability, MetricUnit } from '@twin-digital/observability-lib'
 
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { logger, metrics } = internal
+  async (event, context) => {
+    const { logger, metrics } = context
 
     logger.info('Processing payment', { amount: event.amount })
     metrics.addMetric('PaymentProcessed', MetricUnit.Count, 1)
@@ -267,8 +267,8 @@ export const handler = async (event) => {
 import { withObservability } from '@twin-digital/observability-lib'
 
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { logger } = internal
+  async (event, context) => {
+    const { logger } = context
     logger.info('Processing order', { orderId: event.orderId })
     return { statusCode: 200 }
   },
@@ -301,8 +301,8 @@ export const handler = async (event) => {
 import { withObservability, MetricUnit } from '@twin-digital/observability-lib'
 
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { logger, metrics } = internal
+  async (event, context) => {
+    const { logger, metrics } = context
     logger.info('Order processed', { orderId: event.orderId })
     metrics.addMetric('Processed', MetricUnit.Count, 1)
     // No need to call publishStoredMetrics() - handled by middleware
@@ -321,8 +321,8 @@ import middy from '@middy/core'
 import { observabilityMiddleware } from '@twin-digital/observability-lib'
 import httpErrorHandler from '@middy/http-error-handler'
 
-const handler = middy(async (event, context, { internal }) => {
-  const { logger } = internal
+const handler = middy(async (event, context) => {
+  const { logger } = context
   logger.info('Processing HTTP request')
   return { statusCode: 200, body: 'OK' }
 })
@@ -336,8 +336,8 @@ export { handler }
 
 ```typescript
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { metrics } = internal
+  async (event, context) => {
+    const { metrics } = context
 
     // Add dimensions for filtering/grouping
     metrics.addDimension('Environment', process.env.STAGE)
@@ -356,8 +356,8 @@ export const handler = withObservability(
 
 ```typescript
 export const handler = withObservability(
-  async (event, context, { internal }) => {
-    const { tracer } = internal
+  async (event, context) => {
+    const { tracer } = context
 
     if (tracer) {
       // Only add traces when X-Ray is available
@@ -380,12 +380,12 @@ export const handler = withObservability(
 
 **Problem**: Logger context (requestId, userId) not showing in logs.
 
-**Solution**: Ensure you're using the logger from `internal`, not creating a new instance:
+**Solution**: Ensure you're using the logger from `context`, not creating a new instance:
 
 ```typescript
 // ✅ Correct
-;async (event, context, { internal }) => {
-  const { logger } = internal
+;async (event, context) => {
+  const { logger } = context
   logger.info('Message')
 }
 

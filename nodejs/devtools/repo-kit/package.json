@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/repo-kit",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "CLI utilities for configuring and maintaining monorepos",
   "type": "module",
   "bin": {
@@ -24,7 +24,7 @@
     "@pnpm/find-workspace-dir": "^1000.1.0",
     "@twin-digital/json-patch-x": "workspace:*",
     "chalk": "catalog:",
-    "commander": "^14.0.0",
+    "commander": "^15.0.0",
     "execa": "catalog:",
     "gray-matter": "^4.0.3",
     "json-merge-patch": "^1.0.2",
@@ -32,9 +32,9 @@
     "yaml": "catalog:"
   },
   "devDependencies": {
-    "@commander-js/extra-typings": "^14.0.0",
+    "@commander-js/extra-typings": "^15.0.0",
     "@eslint/js": "catalog:",
-    "@pnpm/types": "^1000.6.0",
+    "@pnpm/types": "^1101.0.0",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
@@ -55,6 +55,6 @@
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
+    "pnpm": "11.x"
   }
 }

@@ -1,5 +1,19 @@
 # @twin-digital/observability-lib
 
+## 0.0.4
+
+### Patch Changes
+
+- d3f7b5f: Fix README examples to match the actual API: logger/metrics/tracer are injected onto the handler's `context` (second parameter), not a third `{ internal }` argument.
+  - @twin-digital/logger-lib@0.0.1
+
+## 0.0.3
+
+### Patch Changes
+
+- 729a6a6: chore(deps): update middy-js monorepo to v7
+  - @twin-digital/logger-lib@0.0.1
+
 ## 0.0.2
 
 ### Patch Changes
