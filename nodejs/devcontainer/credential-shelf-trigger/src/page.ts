@@ -1,9 +1,14 @@
+import { esc, safeUrl } from './page-sanitize.js'
+
 /**
  * The self-contained operator page served at `GET /`. It carries no secrets: the shared token
  * is entered on the device and kept in `localStorage`, and every call adds it as a Bearer
  * header — so the token never rides a URL or lands in a server log. Designed for a phone: save
  * the token once, then tap "Refresh" to start a device-code login and get the `user_code` +
  * an approval link. Plain inline HTML/CSS/JS, no build step, no external resources.
+ *
+ * `esc` and `safeUrl` are embedded from ./page-sanitize via `.toString()`, so the guards that run
+ * in the browser are exactly the unit-tested functions.
  */
 export const INDEX_HTML = `<!doctype html>
 <html lang="en">
@@ -46,12 +51,9 @@ export const INDEX_HTML = `<!doctype html>
   var $ = function (id) { return document.getElementById(id); };
   var token = function () { return localStorage.getItem(KEY); };
   var out = function (html) { $('out').innerHTML = html; };
-  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-  }); };
-  // Only ever link an http(s) URL — never a javascript:/data: scheme, even if the upstream
-  // response were tampered with (it must not become a token-exfiltration click).
-  var safeUrl = function (u) { return /^https?:\\/\\//i.test(String(u == null ? '' : u)) ? u : ''; };
+  // esc + safeUrl are the exact functions unit-tested in page-sanitize.ts (embedded via toString).
+  var esc = ${esc.toString()};
+  var safeUrl = ${safeUrl.toString()};
   var show = function () {
     var t = token();
     $('setup').classList.toggle('hidden', !!t);
