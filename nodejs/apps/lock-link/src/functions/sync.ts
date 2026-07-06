@@ -8,6 +8,7 @@ import { createSsmTokenCache } from '../lynx/ssm-token-cache.js'
 import { loadSecrets } from '../secrets.js'
 import { createSnsNotifier } from '../sync/sns-notifier.js'
 import { runSync } from '../sync/sync.js'
+import { buildOutcomeLogFields, buildSnapshotLogFields } from './log-format.js'
 
 /**
  * Scheduled entrypoint for the Lynx→Lodgify sync. On each tick: decrypt the SSM
@@ -49,32 +50,15 @@ export const handler = withObservability(
       // `considered` line (category = gap / code-set / out-of-horizon / not-booked /
       // deleted) AND any matching `written` / `skipped` / `escalated` outcome below.
       for (const b of result.snapshot) {
-        context.logger.info(`lock-link considered ${b.category}`, {
-          bookingId: b.bookingId,
-          arrival: b.arrival,
-          category: b.category,
-          status: b.status,
-        })
+        context.logger.info(`lock-link considered ${b.category}`, buildSnapshotLogFields(b))
       }
 
       // Per-outcome logs — one line per gap the sync touched, easily grouped in
       // CloudWatch Logs Insights (`filter action = "written"` etc.). Covers the "where
-      // did the code go?" question a run summary alone can't answer.
-      //
-      // NOTE: only the last two digits of `outcome.code` are logged (as `codeMasked`).
-      // The code is the literal PIN a guest types on the physical lock, so the full
-      // value doesn't belong in CloudWatch (broader IAM read access + 30-day+ retention).
-      // The suffix lets an operator match a write against the value they see in Lodgify
-      // without giving log-readers everything they need to enter a lock.
+      // did the code go?" question a run summary alone can't answer. The full door PIN
+      // never enters the payload — see `buildOutcomeLogFields` for the masked-suffix rule.
       for (const outcome of result.outcomes) {
-        context.logger.info(`lock-link ${outcome.action}`, {
-          bookingId: outcome.bookingId,
-          action: outcome.action,
-          ...(outcome.code !== undefined && { codeMasked: `**${outcome.code.slice(-2)}` }),
-          roomTypeIds: outcome.roomTypeIds,
-          confirmationCode: outcome.confirmationCode,
-          reasons: outcome.reasons,
-        })
+        context.logger.info(`lock-link ${outcome.action}`, buildOutcomeLogFields(outcome))
       }
 
       // EMF metrics — dashboard/alarm surface. `GapsFound == 0` for a long window signals

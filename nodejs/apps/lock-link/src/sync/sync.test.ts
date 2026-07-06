@@ -64,10 +64,15 @@ describe('runSync (gap-fill orchestration)', () => {
       },
     ])
 
-    // Second pass: no gap left, so Lynx is never touched.
+    // Second pass: no gap left, so Lynx is never touched — but the snapshot still
+    // categorizes the (now-filled) booking. Pinning `snapshot` on the healthy no-gap
+    // path guards the "trace any bookingId" contract on the most-frequent runtime path.
     const lynxCallsBefore = world.lynxRequests.length
     const second = await run(ARRIVAL_MS - 71 * HOURS)
     expect(second).toMatchObject({ gaps: 0, written: 0, outcomes: [] })
+    expect(second.snapshot).toEqual([
+      { bookingId: 20559349, arrival: expect.any(String), category: 'code-set', status: 'Booked' },
+    ])
     expect(world.lynxRequests.length).toBe(lynxCallsBefore)
   })
 
@@ -137,6 +142,10 @@ describe('runSync (gap-fill orchestration)', () => {
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
     expect(result).toMatchObject({ gaps: 0 })
+    // Snapshot is preserved on the no-gap early-return path — losing it here would
+    // strip the trace for the most-frequent runtime path.
+    expect(result.snapshot).toHaveLength(1)
+    expect(result.snapshot[0]).toMatchObject({ bookingId: 20559349, category: 'code-set' })
     expect(world.lynxRequests).toEqual([])
   })
 
@@ -196,6 +205,14 @@ describe('runSync (gap-fill orchestration)', () => {
     world.addReservation({ bookingId: 2, code: '9234', lodgifyKeyCode: '9234' }) // code-set: filled
     world.addReservation({ bookingId: 3, code: '9234', checkInTimestamp: ARRIVAL + 30 * 86400 }) // 30d out
     world.addReservation({ bookingId: 4, code: '9234', status: 'Tentative' }) // not-booked
+    // rooms.nullable() is in the Lodgify wire schema. A null-rooms booking has nothing
+    // to fill, so it categorizes as code-set. Pinning this so a refactor that drops the
+    // `?? []` guard NPEs a test instead of production.
+    world.addReservation({ bookingId: 5, code: '9234' })
+    const nullRooms = world.bookings.get(5)
+    if (nullRooms) {
+      Object.assign(nullRooms, { rooms: null })
+    }
 
     // Override horizonDays down from the suite default (365d) so the 30d-out booking
     // actually falls out of horizon.
@@ -206,8 +223,9 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(byId.get(2)?.category).toBe('code-set')
     expect(byId.get(3)?.category).toBe('out-of-horizon')
     expect(byId.get(4)?.category).toBe('not-booked')
+    expect(byId.get(5)?.category).toBe('code-set')
     // Snapshot is the full Lodgify list, not just gaps — the "here's what the sync saw"
     // trace that pairs with `outcomes` for full per-booking observability.
-    expect(result.snapshot).toHaveLength(4)
+    expect(result.snapshot).toHaveLength(5)
   })
 })
