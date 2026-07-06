@@ -7,7 +7,8 @@ import { startLynxFake } from '../testing/lynx-fake.js'
 import { createWorld, type World } from '../testing/world.js'
 import { LynxClient } from '../lynx/client.js'
 import { type NotifyEvent, type Notifier } from './notify.js'
-import { runSync, type SyncConfig } from './sync.js'
+import { mergeBookings, runSync, type SyncConfig } from './sync.js'
+import { type Booking } from '../lodgify/schema.js'
 
 const ARRIVAL = 1_781_557_200 // unix seconds; the seeded reservation's check-in
 const ARRIVAL_MS = ARRIVAL * 1000
@@ -227,5 +228,114 @@ describe('runSync (gap-fill orchestration)', () => {
     // Snapshot is the full Lodgify list, not just gaps — the "here's what the sync saw"
     // trace that pairs with `outcomes` for full per-booking observability.
     expect(result.snapshot).toHaveLength(5)
+  })
+
+  it('includes same-day arrivals whose Lodgify state has flipped to Current', async () => {
+    // The bug this pins: same-day arrivals past their check-in time move from
+    // `Upcoming` to `Current`. A sync that only queries `Upcoming` misses them — the
+    // exact moment a guest most needs the code.
+    world.addReservation({ bookingId: 1, code: '9234', stayCategory: 'Upcoming' })
+    world.addReservation({ bookingId: 2, code: '9234', stayCategory: 'Current' })
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    // Sync must issue BOTH stayFilter queries — the whole point of the fix. Exact
+    // page counts pin the terminator too: two bookings well under `size=50`, one
+    // page per filter, no retries.
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1], current: [1] })
+    // Both bookings surface in the snapshot; a Current-only booking is no longer invisible.
+    const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
+    expect(byId.get(1)?.category).toBe('gap')
+    expect(byId.get(2)?.category).toBe('gap')
+    expect(result.snapshot).toHaveLength(2)
+  })
+
+  const listingCallsByFilter = () => {
+    const upcoming: number[] = []
+    const current: number[] = []
+    for (const r of world.lodgifyRequests) {
+      if (r.path !== '/v2/reservations/bookings' || r.method !== 'GET') {
+        continue
+      }
+      const filter = r.query?.get('stayFilter')
+      const page = Number(r.query?.get('page') ?? '1')
+      if (filter === 'Upcoming') {
+        upcoming.push(page)
+      }
+      if (filter === 'Current') {
+        current.push(page)
+      }
+    }
+    return { upcoming, current }
+  }
+
+  it('paginates until a short page — 75 bookings → 2 Upcoming pages + 1 empty Current page', async () => {
+    // Seed more bookings than fit in one page (fake default = size 50) so a
+    // single-page fetch would leave 25 behind.
+    for (let i = 1; i <= 75; i += 1) {
+      world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
+    }
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    // All 75 surface in the snapshot — pagination walked every page.
+    expect(result.snapshot).toHaveLength(75)
+    // Exact call counts — pins BOTH termination branches. Upcoming: page 1 returns 50
+    // (== size, keep going), page 2 returns 25 (< size, stop). Current: page 1 returns
+    // 0 (< size, stop). No stray page 3 (overfetch regression would fail).
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
+  })
+
+  it('mergeBookings: Current wins on same-id collision (fresher state)', () => {
+    // Direct test of the dedup contract. Feed two Booking objects with the SAME id but
+    // materially different `status` values, and assert the surviving Booking is the
+    // Current-side variant. A regression that inverted merge order — the exact bug the
+    // contract prevents — would flip the surviving status.
+    const base: Omit<Booking, 'status'> = {
+      id: 1,
+      property_id: 72230,
+      arrival: '2026-06-15T21:00:00Z',
+      departure: '2026-06-16T16:00:00Z',
+      is_deleted: false,
+      source: 'Expedia',
+      source_text: null,
+      created_at: '2026-06-01T00:00:00Z',
+      guest: { name: 'Guest', email: 'g@example.com' },
+      rooms: [{ room_type_id: 501, key_code: '' }],
+    }
+    const upcoming: Booking = { ...base, status: 'Tentative' } // stale
+    const current: Booking = { ...base, status: 'Booked' } // fresher
+
+    const merged = mergeBookings([upcoming], [current])
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.status).toBe('Booked') // Current-variant survived
+  })
+
+  it('mergeBookings: preserves ordering and does not clone', () => {
+    // Non-collision case — every input survives, order = upcoming then non-collided current.
+    const a: Booking = { id: 1 } as Booking
+    const b: Booking = { id: 2 } as Booking
+    const c: Booking = { id: 3 } as Booking
+    const merged = mergeBookings([a, b], [c])
+    expect(merged).toEqual([a, b, c])
+    // Reference preserved — merge doesn't clone Booking objects.
+    expect(merged[0]).toBe(a)
+    expect(merged[2]).toBe(c)
+  })
+
+  it('walks one extra page at the exact size boundary — 50 bookings → 2 Upcoming pages', async () => {
+    // Boundary case: a page returns exactly `size` items, so we can't tell from the
+    // response alone whether there's a page 2 or not. Under a short-page terminator we
+    // must fetch page 2 (empty) to be sure. A count-based terminator would exit after
+    // page 1 but would then be vulnerable to null-count / stale-count / mid-walk
+    // shrinkage bugs — the accepted trade-off is one extra empty fetch at each boundary.
+    for (let i = 1; i <= 50; i += 1) {
+      world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
+    }
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    expect(result.snapshot).toHaveLength(50)
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
   })
 })
