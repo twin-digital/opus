@@ -239,10 +239,13 @@ describe('runSync (gap-fill orchestration)', () => {
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
-    // Sync must issue BOTH stayFilter queries — the whole point of the fix. Exact
-    // page counts pin the terminator too: two bookings well under `size=50`, one
-    // page per filter, no retries.
-    expect(listingCallsByFilter()).toEqual({ upcoming: [1], current: [1] })
+    // Sync must issue BOTH stayFilter queries — the whole point of the fix. Exact call
+    // shapes pin the no-retry case too: two bookings well under `size=50`, one request
+    // per filter, no expanded page-1 window.
+    expect(listingCallsByFilter()).toEqual({
+      upcoming: [{ page: 1, size: 50 }],
+      current: [{ page: 1, size: 50 }],
+    })
     // Both bookings surface in the snapshot; a Current-only booking is no longer invisible.
     const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
     expect(byId.get(1)?.category).toBe('gap')
@@ -251,25 +254,26 @@ describe('runSync (gap-fill orchestration)', () => {
   })
 
   const listingCallsByFilter = () => {
-    const upcoming: number[] = []
-    const current: number[] = []
+    const upcoming: { page: number; size: number }[] = []
+    const current: { page: number; size: number }[] = []
     for (const r of world.lodgifyRequests) {
       if (r.path !== '/v2/reservations/bookings' || r.method !== 'GET') {
         continue
       }
       const filter = r.query?.get('stayFilter')
       const page = Number(r.query?.get('page') ?? '1')
+      const size = Number(r.query?.get('size') ?? '50')
       if (filter === 'Upcoming') {
-        upcoming.push(page)
+        upcoming.push({ page, size })
       }
       if (filter === 'Current') {
-        current.push(page)
+        current.push({ page, size })
       }
     }
     return { upcoming, current }
   }
 
-  it('paginates until a short page — 75 bookings → 2 Upcoming pages + 1 empty Current page', async () => {
+  it('re-fetches page 1 with a larger window until it gets a short page', async () => {
     // Seed more bookings than fit in one page (fake default = size 50) so a
     // single-page fetch would leave 25 behind.
     for (let i = 1; i <= 75; i += 1) {
@@ -278,12 +282,18 @@ describe('runSync (gap-fill orchestration)', () => {
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
-    // All 75 surface in the snapshot — pagination walked every page.
+    // All 75 surface in the snapshot — the second, larger window catches the tail.
     expect(result.snapshot).toHaveLength(75)
-    // Exact call counts — pins BOTH termination branches. Upcoming: page 1 returns 50
-    // (== size, keep going), page 2 returns 25 (< size, stop). Current: page 1 returns
-    // 0 (< size, stop). No stray page 3 (overfetch regression would fail).
-    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
+    // Exact call shapes — Upcoming re-reads page 1 at sizes 50 then 100; Current stops
+    // after one empty page-1 fetch. A regression to raw offset pagination would ask for
+    // Upcoming page 2 instead.
+    expect(listingCallsByFilter()).toEqual({
+      upcoming: [
+        { page: 1, size: 50 },
+        { page: 1, size: 100 },
+      ],
+      current: [{ page: 1, size: 50 }],
+    })
   })
 
   it('mergeBookings: Current wins on same-id collision (fresher state)', () => {
@@ -323,12 +333,10 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(merged[2]).toBe(c)
   })
 
-  it('walks one extra page at the exact size boundary — 50 bookings → 2 Upcoming pages', async () => {
-    // Boundary case: a page returns exactly `size` items, so we can't tell from the
-    // response alone whether there's a page 2 or not. Under a short-page terminator we
-    // must fetch page 2 (empty) to be sure. A count-based terminator would exit after
-    // page 1 but would then be vulnerable to null-count / stale-count / mid-walk
-    // shrinkage bugs — the accepted trade-off is one extra empty fetch at each boundary.
+  it('grows the page-1 window at the exact size boundary — 50 bookings → sizes 50 then 100', async () => {
+    // Boundary case: page 1 returns exactly `size` items, so we can't tell whether the
+    // collection ends there or a hidden tail shifted upward between requests. Re-reading
+    // page 1 at size 100 gives one full current snapshot without relying on `count`.
     for (let i = 1; i <= 50; i += 1) {
       world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
     }
@@ -336,6 +344,12 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
     expect(result.snapshot).toHaveLength(50)
-    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
+    expect(listingCallsByFilter()).toEqual({
+      upcoming: [
+        { page: 1, size: 50 },
+        { page: 1, size: 100 },
+      ],
+      current: [{ page: 1, size: 50 }],
+    })
   })
 })

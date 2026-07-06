@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { startServer, type Fake } from '../testing/http.js'
+import { sendJson, startServer, type Fake } from '../testing/http.js'
 import { startLodgifyFake } from '../testing/lodgify-fake.js'
 import { createWorld, type World } from '../testing/world.js'
 import { LodgifyApiError, LodgifyClient } from './client.js'
@@ -74,6 +74,29 @@ describe('lodgify client', () => {
       })
     } finally {
       await Promise.all([gateway502.close(), ok200.close()])
+    }
+  })
+
+  it('re-fetches from page 1 with a larger window so a mid-walk shrink cannot hide the tail', async () => {
+    const booking = world.bookings.get(20559349)
+    if (!booking) {
+      throw new Error('expected seeded booking')
+    }
+    const page1 = Array.from({ length: 50 }, (_, i) => ({ ...booking, id: i + 1 }))
+    const shrunk = Array.from({ length: 50 }, (_, i) => ({ ...booking, id: i + 2 }))
+    const sizes: number[] = []
+    const server = await startServer((req, res) => {
+      const url = new URL(req.url ?? '/', 'http://lodgify.test')
+      sizes.push(Number(url.searchParams.get('size') ?? '50'))
+      sendJson(res, 200, { count: null, items: sizes.length === 1 ? page1 : shrunk })
+    })
+    try {
+      const items = await new LodgifyClient({ baseUrl: server.baseUrl, apiKey: 'k' }).listAllBookings()
+      expect(sizes).toEqual([50, 100])
+      expect(items.map((b) => b.id)).toEqual(shrunk.map((b) => b.id))
+      expect(items.at(-1)?.id).toBe(51)
+    } finally {
+      await server.close()
     }
   })
 })

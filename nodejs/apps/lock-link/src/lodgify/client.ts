@@ -83,27 +83,27 @@ export class LodgifyClient {
   }
 
   /**
-   * All bookings matching the filter across every page. Terminates on a short page
-   * (the standard offset-pagination end signal) rather than the response envelope's
-   * `count` — `count` is nullable on the wire, can lag under concurrent mutation, and
-   * can be inflated by cross-page duplicates when Lodgify's default sort places a
-   * touched booking back on top between fetches. A short page is unambiguous: if we
-   * asked for `size` items and got fewer, there are no more. Callers that need only
-   * one page — canary probes, targeted diagnostics — use `listBookings` directly.
+   * All bookings matching the filter. Re-fetch page 1 with progressively larger windows
+   * until the page comes back short, then return that final window as the snapshot. This
+   * avoids two silent-drop races from raw offset pagination over a mutating collection:
+   * nullable/stale `count`, and bookings shifting upward between page fetches when the
+   * filter shrinks or a touched booking re-sorts to the top. A short first page at size
+   * N is unambiguous: the response contains the full current collection (≤ N items).
+   *
+   * Callers that need only one page — canary probes, targeted diagnostics — use
+   * `listBookings` directly.
    */
   async listAllBookings(params: Omit<ListBookingsParams, 'page'> = {}): Promise<Booking[]> {
     // Explicit `size=50` matches Lodgify's documented default; leaving it implicit
     // would tie our fetch cadence to a silent server-side change.
-    const size = params.size ?? 50
-    const items: Booking[] = []
-    let page = 1
+    const pageSize = params.size ?? 50
+    let size = pageSize
     for (;;) {
-      const set = await this.listBookings({ ...params, page, size })
-      items.push(...set.items)
+      const set = await this.listBookings({ ...params, page: 1, size })
       if (set.items.length < size) {
-        return items
+        return set.items
       }
-      page += 1
+      size += pageSize
     }
   }
 
