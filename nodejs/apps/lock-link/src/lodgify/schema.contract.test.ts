@@ -119,9 +119,8 @@ describe('lodgify openapi contract', () => {
   })
 
   it('accepts a null BookingSetDto.count and .items when the spec says nullable', () => {
-    // The list-bookings 200 response. Both fields are nullable in the spec; zod must not
-    // be stricter. (This was the highest-severity find from the cold review: a null items
-    // response would take down the poll driver otherwise.)
+    // The list-bookings 200 response — the poll driver. Both fields are nullable in the
+    // spec; zod must not be stricter or a documented null takes the run down.
     const json = spec.paths['/v2/reservations/bookings']?.get?.responses?.['200']?.content?.['application/json']
     if (!json?.schema) {
       throw new Error('no 200 application/json schema for GET bookings')
@@ -136,9 +135,9 @@ describe('lodgify openapi contract', () => {
   })
 
   it('accepts every documented booking status without silently coercing it', () => {
-    // `bookingStatusSchema` has `.catch('Open')` so `safeParse` succeeds for any input —
-    // asserting `.success` alone would silently pass a newly-added spec value coerced to
-    // `'Open'` (the exact drift this test exists to catch). Compare the parsed value.
+    // `bookingStatusSchema` has `.catch('Open')`, so `safeParse` succeeds for any input —
+    // compare the parsed value to the input so a newly-added spec value silently coerced
+    // to `'Open'` (the drift this test exists to catch) fails cleanly.
     const status = deref(bookingComponent().properties?.status ?? {})
     for (const value of status.enum ?? []) {
       expect(bookingStatusSchema.parse(value), `status "${value}" coerced or rejected`).toBe(value)
@@ -146,8 +145,9 @@ describe('lodgify openapi contract', () => {
   })
 
   it('models the keyCodes PUT echo as rooms-only, not a full booking', () => {
-    // Regression guard: the keyCodes 200 echo is BookingKeyCodeDto ({ rooms }), NOT a full
-    // booking. Parsing it through bookingSchema would throw against the real API.
+    // The keyCodes 200 echo is `BookingKeyCodeDto { rooms }`, distinct from the full
+    // `BookingDto` returned by GET — parsing the echo through `bookingSchema` throws
+    // against the real API. Pin the shape here.
     const json =
       spec.paths['/v2/reservations/bookings/{id}/keyCodes']?.put?.responses?.['200']?.content?.['application/json']
     if (!json?.schema) {
@@ -160,9 +160,9 @@ describe('lodgify openapi contract', () => {
   })
 
   it('agrees with the spec on the PUT keyCodes REQUEST body — the write shape', () => {
-    // The write side of the sync. A `key_code`→`keyCode` (or `room_type_id`) rename
-    // upstream would keep the response echo passing but silently break every write; this
-    // pins the request field names to `putKeyCodesRequestSchema`.
+    // Pin the request field names to `putKeyCodesRequestSchema`. Response-echo coverage
+    // above wouldn't notice a `key_code`→`keyCode` (or `room_type_id`) rename on the
+    // request side — writes would silently start 400-ing.
     const json = spec.paths['/v2/reservations/bookings/{id}/keyCodes']?.put?.requestBody?.content?.['application/json']
     if (!json?.schema) {
       throw new Error('no application/json requestBody schema for PUT keyCodes')

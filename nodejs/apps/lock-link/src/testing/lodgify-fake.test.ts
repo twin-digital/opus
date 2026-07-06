@@ -69,7 +69,8 @@ describe('lodgify fake', () => {
     const put = await get(`/v2/reservations/bookings/20559349/keyCodes`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      // Good row first, bad row second — pre-fix, the first would land before the 404.
+      // Good row first, bad row second: the write must be all-or-nothing so a mid-batch
+      // 404 can't leave the shared world half-updated.
       body: JSON.stringify({
         rooms: [
           { room_type_id: 501, key_code: '9234' },

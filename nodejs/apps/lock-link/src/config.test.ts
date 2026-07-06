@@ -56,9 +56,7 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '0' }).graceMinutes).toBe(0)
   })
 
-  it('rejects empty / whitespace-only numeric envs (Number("") is 0)', () => {
-    // Bare `z.coerce.number()` would silently accept `""` as 0 — for `GRACE_MINUTES` that
-    // would degrade to a 0-min grace window instead of failing fast.
+  it('rejects empty / whitespace-only numeric envs', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '' })).toThrow()
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '   ' })).toThrow()
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_SLA_HOURS: '' })).toThrow()
@@ -66,10 +64,7 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_ACCOUNT_ID: '' })).toThrow()
   })
 
-  it('rejects whitespace-only string envs (would flow to Lynx hostId / SSM parameter names)', () => {
-    // Bare `z.string().min(1)` accepts `'   '`; whitespace user id would become a Lynx
-    // hostId of `'   '` on every request, and whitespace param names would only fail at
-    // SSM GetParameter with a less-clear error.
+  it('rejects whitespace-only string envs', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_USER_ID: '   ' })).toThrow()
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_USERNAME_PARAM: '   ' })).toThrow()
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '   ' })).toThrow()

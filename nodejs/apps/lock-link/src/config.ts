@@ -26,10 +26,9 @@ export interface LockLinkConfig extends SyncConfig {
   }
 }
 
-// Empty/whitespace-only env values reject before use. For numeric envs, `Number('')` is
-// `0` — a misconfigured `GRACE_MINUTES` would have silently degraded the grace window;
-// for string envs, whitespace would flow through to Lynx as `hostId` or to SSM as a
-// parameter name, failing later with a less-clear error. Applied uniformly.
+// Trim and require at least one character before use. `z.coerce.number()` would accept
+// `""` as `0` (passing `nonnegative()` for `GRACE_MINUTES`), and whitespace strings would
+// flow into Lynx as `hostId` or SSM as parameter names — reject both at cold start.
 const stringEnv = z.string().trim().min(1)
 const numericEnv = stringEnv.pipe(z.coerce.number())
 

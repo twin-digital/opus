@@ -47,8 +47,8 @@ describe('lynx + lodgify scenario', () => {
         })
       ).json(),
     )
-    // Use the actual join rule the sync uses (VK<accountId> suffix), not a prefix match —
-    // proves the scenario exercises the documented rule and can't false-match a sibling id.
+    // Use the same `resolveBookingId` the sync uses so the scenario exercises the
+    // documented `VK<accountId>` join rule (and can't false-match a sibling id).
     const match = reservations.data.reservations.find((r) => {
       try {
         return resolveBookingId(r.confirmationCode, world.accountId) === gap?.id

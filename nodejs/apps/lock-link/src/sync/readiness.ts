@@ -49,9 +49,8 @@ export const checkReadiness = (reservation: Reservation, lockSet: readonly Smart
   if (distinctCodes.size > 1) {
     reasons.push(`access codes differ across locks: ${[...distinctCodes].join(', ')}`)
   }
-  // An empty string is not a usable code. `roomsNeedingCode` treats `''` as a gap, so
-  // writing `''` to Lodgify would re-appear as a gap next tick — perpetual churn with
-  // no convergence. Route these through escalation instead.
+  // Empty string is not a usable code. The gap filter treats `''` as a gap, so an
+  // empty code would look like a gap again on the next tick — route to escalation.
   if (codes.some((c) => c.code === '')) {
     reasons.push('access code is empty')
   }

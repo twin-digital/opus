@@ -115,9 +115,8 @@ export const createWorld = (options: WorldOptions = {}): World => {
     },
 
     addReservation: (spec) => {
-      // One Lodgify booking per bookingId. Overwriting the Lodgify record while
-      // appending a Lynx reservation (the previous behaviour) modelled a state real
-      // systems can't produce; require callers to be explicit instead.
+      // One Lodgify booking per bookingId — real systems can't produce two, so tests
+      // shouldn't silently model one either.
       if (world.bookings.has(spec.bookingId)) {
         throw new Error(`world.addReservation: duplicate bookingId ${String(spec.bookingId)}`)
       }
@@ -132,8 +131,8 @@ export const createWorld = (options: WorldOptions = {}): World => {
       const status = spec.status ?? 'Booked'
 
       if (world.properties.has(propertyId)) {
-        // A later reservation with different lockNames would silently disagree with the
-        // property's already-fixed lock set — a state real Lynx can't produce. Surface it.
+        // Locks are property-scoped in Lynx: a property's lock set is fixed. Reject a
+        // reservation whose `lockNames` disagree with the property's existing set.
         const existing = (world.locksByProperty.get(propertyId) ?? []).map((l) => l.lockName).sort()
         const requested = [...lockNames].sort()
         if (existing.join('|') !== requested.join('|')) {
