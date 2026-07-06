@@ -86,11 +86,12 @@ export const startLodgifyFake = (world: World): Promise<Fake> =>
         if (b.is_deleted) {
           return false
         }
-        // No filter → return everything (matches Lodgify's default behavior).
-        if (stayFilter === null) {
+        // Absent or explicit `All` filter → return everything (matches Lodgify).
+        if (stayFilter === null || stayFilter === 'All') {
           return true
         }
-        return (world.stayCategoryByBookingId.get(b.id) ?? 'Upcoming') === stayFilter
+        const cats = world.stayCategoriesByBookingId.get(b.id) ?? new Set(['Upcoming'])
+        return cats.has(stayFilter as 'Upcoming' | 'Current' | 'Historic')
       })
       const page = Number(url.searchParams.get('page') ?? '1')
       const size = Number(url.searchParams.get('size') ?? '50')

@@ -79,10 +79,12 @@ export interface World {
   readonly locksByProperty: Map<number, SmartLock[]>
   readonly reservations: SeededReservation[]
   readonly bookings: Map<number, Booking>
-  /** The Lodgify `stayFilter` bucket each booking lives in. Bookings without an entry
-   * default to `Upcoming` when the fake filters — matches the behavior tests seeded
-   * before this map existed. */
-  readonly stayCategoryByBookingId: Map<number, LodgifyStayCategory>
+  /** The Lodgify `stayFilter` bucket(s) each booking lives in. A Set (not a single
+   * value) so tests can model the transition race where a booking briefly appears in
+   * both `Upcoming` and `Current` — the dedup contract in `runSync` says `Current`
+   * wins on collision, and the E2E path can only exercise that if the fake can double-
+   * list. Bookings without an entry default to `{ Upcoming }`. */
+  readonly stayCategoriesByBookingId: Map<number, Set<LodgifyStayCategory>>
   readonly lynxRequests: RequestLog[]
   readonly lodgifyRequests: RequestLog[]
   addProperty: (spec: { propertyId: number; name?: string; lockNames?: readonly string[] }) => void
@@ -117,7 +119,7 @@ export const createWorld = (
     locksByProperty: new Map(),
     reservations: [],
     bookings: new Map(),
-    stayCategoryByBookingId: new Map(),
+    stayCategoriesByBookingId: new Map(),
     lynxRequests: [],
     lodgifyRequests: [],
 
@@ -212,7 +214,7 @@ export const createWorld = (
         },
         rooms: [{ room_type_id: roomTypeId, key_code: spec.lodgifyKeyCode ?? '' }],
       })
-      world.stayCategoryByBookingId.set(spec.bookingId, spec.stayCategory ?? 'Upcoming')
+      world.stayCategoriesByBookingId.set(spec.bookingId, new Set([spec.stayCategory ?? 'Upcoming']))
     },
   }
 

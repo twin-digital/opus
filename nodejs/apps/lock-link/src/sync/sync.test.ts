@@ -239,10 +239,9 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
     // Sync must issue BOTH stayFilter queries — the whole point of the fix.
-    const stayFilters = world.lodgifyRequests
-      .filter((r) => r.path === '/v2/reservations/bookings' && r.method === 'GET')
-      .flatMap((r) => (r.query?.get('stayFilter') ? [r.query.get('stayFilter')] : []))
-    expect(new Set(stayFilters)).toEqual(new Set(['Upcoming', 'Current']))
+    const { upcoming, current } = listingCallsByFilter()
+    expect(upcoming.length).toBeGreaterThanOrEqual(1)
+    expect(current.length).toBeGreaterThanOrEqual(1)
     // Both bookings surface in the snapshot; a Current-only booking is no longer invisible.
     const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
     expect(byId.get(1)?.category).toBe('gap')
@@ -250,22 +249,75 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(result.snapshot).toHaveLength(2)
   })
 
-  it('paginates the Lodgify listing until every page has been walked', async () => {
-    // Seed more bookings than fit in one page (default page size = 50 in the fake).
-    // The pre-fix single-page fetch would silently drop everything past #50.
+  const listingCallsByFilter = () => {
+    const upcoming: number[] = []
+    const current: number[] = []
+    for (const r of world.lodgifyRequests) {
+      if (r.path !== '/v2/reservations/bookings' || r.method !== 'GET') {
+        continue
+      }
+      const filter = r.query?.get('stayFilter')
+      const page = Number(r.query?.get('page') ?? '1')
+      if (filter === 'Upcoming') {
+        upcoming.push(page)
+      }
+      if (filter === 'Current') {
+        current.push(page)
+      }
+    }
+    return { upcoming, current }
+  }
+
+  it('paginates until a short page — 75 bookings → 2 Upcoming pages + 1 empty Current page', async () => {
+    // Seed more bookings than fit in one page (fake default = size 50) so a
+    // single-page fetch would leave 25 behind.
     for (let i = 1; i <= 75; i += 1) {
       world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
     }
 
     const result = await run(ARRIVAL_MS - 24 * HOURS)
 
-    // All 75 land in the snapshot — pagination walked every page.
+    // All 75 surface in the snapshot — pagination walked every page.
     expect(result.snapshot).toHaveLength(75)
-    // And the sync issued more than one Lodgify listing request per stayFilter (two
-    // full walks: Upcoming pages 1..2 + Current page 1 = at least 3 listing calls).
-    const listingCalls = world.lodgifyRequests.filter(
-      (r) => r.path === '/v2/reservations/bookings' && r.method === 'GET',
-    )
-    expect(listingCalls.length).toBeGreaterThanOrEqual(3)
+    // Exact call counts — pins BOTH termination branches. Upcoming: page 1 returns 50
+    // (== size, keep going), page 2 returns 25 (< size, stop). Current: page 1 returns
+    // 0 (< size, stop). No stray page 3 (overfetch regression would fail).
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
+  })
+
+  it('walks one extra page at the exact size boundary — 50 bookings → 2 Upcoming pages', async () => {
+    // Boundary case: a page returns exactly `size` items, so we can't tell from the
+    // response alone whether there's a page 2 or not. Under a short-page terminator we
+    // must fetch page 2 (empty) to be sure. A count-based terminator would exit after
+    // page 1 but would then be vulnerable to null-count / stale-count / mid-walk
+    // shrinkage bugs — the accepted trade-off is one extra empty fetch at each boundary.
+    for (let i = 1; i <= 50; i += 1) {
+      world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
+    }
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    expect(result.snapshot).toHaveLength(50)
+    expect(listingCallsByFilter()).toEqual({ upcoming: [1, 2], current: [1] })
+  })
+
+  it('dedupes a booking that appears in both Upcoming and Current buckets', async () => {
+    // Transition race: at check-in-time a booking can briefly appear in both buckets.
+    // `runSync` merges via `Map<id, Booking>` in insertion order Upcoming → Current, so
+    // Current wins on collision (fresher state). Without this test, the whole
+    // dedup contract sits unexercised.
+    world.addReservation({ bookingId: 1, code: '9234', stayCategory: 'Upcoming' })
+    world.stayCategoriesByBookingId.get(1)?.add('Current') // also visible in Current
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    // Fake really did serve the booking twice (once per filter query).
+    const { upcoming, current } = listingCallsByFilter()
+    expect(upcoming).toEqual([1])
+    expect(current).toEqual([1])
+    // …but the sync processes it exactly once.
+    expect(result.snapshot.filter((s) => s.bookingId === 1)).toHaveLength(1)
+    expect(result.gaps).toBe(1)
+    expect(result.written).toBe(1)
   })
 })

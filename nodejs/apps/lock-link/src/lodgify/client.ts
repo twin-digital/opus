@@ -83,21 +83,24 @@ export class LodgifyClient {
   }
 
   /**
-   * All bookings matching the filter across every page. Loops until the accumulated
-   * item count reaches `count` (or a page comes back empty). Callers that need only
+   * All bookings matching the filter across every page. Terminates on a short page
+   * (the standard offset-pagination end signal) rather than the response envelope's
+   * `count` — `count` is nullable on the wire, can lag under concurrent mutation, and
+   * can be inflated by cross-page duplicates when Lodgify's default sort places a
+   * touched booking back on top between fetches. A short page is unambiguous: if we
+   * asked for `size` items and got fewer, there are no more. Callers that need only
    * one page — canary probes, targeted diagnostics — use `listBookings` directly.
    */
   async listAllBookings(params: Omit<ListBookingsParams, 'page'> = {}): Promise<Booking[]> {
-    // Explicit `size=50` matches Lodgify's documented default; leaving it implicit means
-    // a silent server-side change to the default page size would silently change our
-    // fetch cadence. `includeCount` is required so the loop can detect the end.
+    // Explicit `size=50` matches Lodgify's documented default; leaving it implicit
+    // would tie our fetch cadence to a silent server-side change.
     const size = params.size ?? 50
     const items: Booking[] = []
     let page = 1
     for (;;) {
-      const set = await this.listBookings({ ...params, page, size, includeCount: true })
+      const set = await this.listBookings({ ...params, page, size })
       items.push(...set.items)
-      if (set.items.length === 0 || items.length >= set.count) {
+      if (set.items.length < size) {
         return items
       }
       page += 1
