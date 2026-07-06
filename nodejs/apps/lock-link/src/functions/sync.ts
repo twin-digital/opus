@@ -47,16 +47,16 @@ export const handler = withObservability(
       // CloudWatch Logs Insights (`filter action = "written"` etc.). Covers the "where
       // did the code go?" question a run summary alone can't answer.
       //
-      // NOTE: `outcome.code` is deliberately NOT logged. The value is the literal PIN a
-      // guest types on the physical lock — CloudWatch retention + broader IAM access
-      // makes it a bigger blast radius than Lodgify itself. Verify the code by opening
-      // the booking in Lodgify; the log confirms the write happened, the metric confirms
-      // the count, and the 200 echo from Lodgify's `putKeyCodes` in `runSync` already
-      // validated the round-trip.
+      // NOTE: only the last two digits of `outcome.code` are logged (as `codeMasked`).
+      // The code is the literal PIN a guest types on the physical lock, so the full
+      // value doesn't belong in CloudWatch (broader IAM read access + 30-day+ retention).
+      // The suffix lets an operator match a write against the value they see in Lodgify
+      // without giving log-readers everything they need to enter a lock.
       for (const outcome of result.outcomes) {
         context.logger.info(`lock-link ${outcome.action}`, {
           bookingId: outcome.bookingId,
           action: outcome.action,
+          ...(outcome.code !== undefined && { codeMasked: `**${outcome.code.slice(-2)}` }),
           roomTypeIds: outcome.roomTypeIds,
           confirmationCode: outcome.confirmationCode,
           reasons: outcome.reasons,
