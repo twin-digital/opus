@@ -38,7 +38,7 @@ const fetchOne = async (provider: SSMProvider, name: string): Promise<string> =>
 }
 
 export const loadSecrets = async (
-  config: LockLinkConfig,
+  config: Pick<LockLinkConfig, 'secretNames'>,
   provider: SSMProvider = defaultProvider,
 ): Promise<LockLinkSecrets> => {
   const [lynxUsername, lynxPassword, lodgifyApiKey] = await Promise.all([

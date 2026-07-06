@@ -32,38 +32,33 @@ export interface LockLinkConfig extends SyncConfig {
 const stringEnv = z.string().trim().min(1)
 const numericEnv = stringEnv.pipe(z.coerce.number())
 
-// Env vars are strings; coerce to numbers and validate every value (all required).
-const envSchema = z.object({
-  LOCK_LINK_ACCOUNT_ID: numericEnv.pipe(z.number().int().positive()),
-  LOCK_LINK_USER_ID: stringEnv,
-  LOCK_LINK_HORIZON_DAYS: numericEnv.pipe(z.number().int().positive()),
-  LOCK_LINK_SLA_HOURS: numericEnv.pipe(z.number().positive()),
-  LOCK_LINK_GRACE_MINUTES: numericEnv.pipe(z.number().nonnegative()),
-  LOCK_LINK_ALERT_TOPIC_ARN: z
-    .string()
-    .regex(/^arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+$/, 'must be an SNS topic ARN'),
-  LOCK_LINK_LYNX_USERNAME_PARAM: stringEnv,
-  LOCK_LINK_LYNX_PASSWORD_PARAM: stringEnv,
-  LOCK_LINK_LODGIFY_API_KEY_PARAM: stringEnv,
-})
-
-/**
- * Read + validate config from the environment. A missing or invalid value throws (fail
- * fast at cold start rather than mid-run).
- */
-export const loadConfig = (env: NodeJS.ProcessEnv = process.env): LockLinkConfig => {
-  const parsed = envSchema.parse(env)
-  return {
-    accountId: parsed.LOCK_LINK_ACCOUNT_ID,
-    userId: parsed.LOCK_LINK_USER_ID,
-    horizonDays: parsed.LOCK_LINK_HORIZON_DAYS,
-    slaHours: parsed.LOCK_LINK_SLA_HOURS,
-    graceMinutes: parsed.LOCK_LINK_GRACE_MINUTES,
-    alertTopicArn: parsed.LOCK_LINK_ALERT_TOPIC_ARN,
+const envSchema = z
+  .object({
+    LOCK_LINK_ACCOUNT_ID: numericEnv.pipe(z.number().int().positive()),
+    LOCK_LINK_USER_ID: stringEnv,
+    LOCK_LINK_HORIZON_DAYS: numericEnv.pipe(z.number().int().positive()),
+    LOCK_LINK_SLA_HOURS: numericEnv.pipe(z.number().positive()),
+    LOCK_LINK_GRACE_MINUTES: numericEnv.pipe(z.number().nonnegative()),
+    LOCK_LINK_ALERT_TOPIC_ARN: z
+      .string()
+      .regex(/^arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+$/, 'must be an SNS topic ARN'),
+    LOCK_LINK_LYNX_USERNAME_PARAM: stringEnv,
+    LOCK_LINK_LYNX_PASSWORD_PARAM: stringEnv,
+    LOCK_LINK_LODGIFY_API_KEY_PARAM: stringEnv,
+  })
+  .transform<LockLinkConfig>((p) => ({
+    accountId: p.LOCK_LINK_ACCOUNT_ID,
+    userId: p.LOCK_LINK_USER_ID,
+    horizonDays: p.LOCK_LINK_HORIZON_DAYS,
+    slaHours: p.LOCK_LINK_SLA_HOURS,
+    graceMinutes: p.LOCK_LINK_GRACE_MINUTES,
+    alertTopicArn: p.LOCK_LINK_ALERT_TOPIC_ARN,
     secretNames: {
-      lynxUsername: parsed.LOCK_LINK_LYNX_USERNAME_PARAM,
-      lynxPassword: parsed.LOCK_LINK_LYNX_PASSWORD_PARAM,
-      lodgifyApiKey: parsed.LOCK_LINK_LODGIFY_API_KEY_PARAM,
+      lynxUsername: p.LOCK_LINK_LYNX_USERNAME_PARAM,
+      lynxPassword: p.LOCK_LINK_LYNX_PASSWORD_PARAM,
+      lodgifyApiKey: p.LOCK_LINK_LODGIFY_API_KEY_PARAM,
     },
-  }
-}
+  }))
+
+/** Read + validate config from the environment; throws fast on cold start otherwise. */
+export const loadConfig = (env: NodeJS.ProcessEnv = process.env): LockLinkConfig => envSchema.parse(env)

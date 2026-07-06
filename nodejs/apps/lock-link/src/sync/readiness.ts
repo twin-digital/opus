@@ -1,13 +1,9 @@
 import { type AccessCode, type Reservation, type SmartLock } from '../lynx/schema.js'
 
 /**
- * Whether a reservation's access codes are safe to push to Lodgify. Lock provisioning is
- * eventually consistent, so "all locks set to one code" is a readiness *signal*, not an
- * always-true invariant. Ready means: every lock in the property's lock set is covered by
- * an access code, each `syncToLockStatus: "success"`, all the same code. The guest `code`
- * is assigned up front and uniform even while a lock is still `scheduled` — so a uniform
- * code is NOT the signal; `success` on every lock is. Never push a partial/unsynced code:
- * a code that opens some doors is worse than none.
+ * Whether a reservation's codes are safe to push. `syncToLockStatus: "success"` on every
+ * lock is the readiness signal (a uniform `code` is not — it's assigned up front, even
+ * while locks are still `scheduled`). Never push a partial/unsynced code.
  */
 
 export interface ReadinessResult {

@@ -79,28 +79,19 @@ export class LockLinkStack extends Stack {
       Arn.format({ service: 'ssm', resource: 'parameter', resourceName: name.replace(/^\//, '') }, this),
     )
     syncFunction.addToRolePolicy(new PolicyStatement({ actions: ['ssm:GetParameter'], resources: parameterArns }))
-    // KMS authorization runs against the underlying CMK ARN, not the alias — the
-    // AWS-managed `alias/aws/ssm` key ARN isn't predictable at synth time, so we scope by
-    // service instead. The `kms:ViaService` condition restricts the grant to KMS calls
-    // originating from SSM in this region, so this is still least-privilege.
-    syncFunction.addToRolePolicy(
+    // KMS authorization runs against the underlying CMK ARN, not the alias — and the
+    // AWS-managed CMK ARN isn't predictable at synth time. Scope by service instead:
+    // `kms:ViaService` restricts each grant to calls originating from that service in
+    // this region, so `resources: ['*']` is still least-privilege.
+    const viaService = (service: string, actions: string[]) =>
       new PolicyStatement({
-        actions: ['kms:Decrypt'],
+        actions,
         resources: ['*'],
-        conditions: { StringEquals: { 'kms:ViaService': `ssm.${this.region}.amazonaws.com` } },
-      }),
-    )
-    // Same pattern for the SNS topic's SSE key: encrypted-topic publishes need
-    // `kms:GenerateDataKey` on the topic's CMK, scoped by ViaService to SNS.
-    syncFunction.addToRolePolicy(
-      new PolicyStatement({
-        actions: ['kms:GenerateDataKey', 'kms:Decrypt'],
-        resources: ['*'],
-        conditions: { StringEquals: { 'kms:ViaService': `sns.${this.region}.amazonaws.com` } },
-      }),
-    )
+        conditions: { StringEquals: { 'kms:ViaService': `${service}.${this.region}.amazonaws.com` } },
+      })
+    syncFunction.addToRolePolicy(viaService('ssm', ['kms:Decrypt']))
+    syncFunction.addToRolePolicy(viaService('sns', ['kms:GenerateDataKey', 'kms:Decrypt']))
 
-    // Placeholder cadence — tighten once the real sync logic lands.
     new Rule(this, 'Schedule', {
       schedule: Schedule.rate(Duration.hours(1)),
       targets: [new LambdaFunction(syncFunction)],

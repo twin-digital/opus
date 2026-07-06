@@ -14,7 +14,7 @@ import { type Property, type Reservation, type ReservationType, type SmartLock }
 
 const DEFAULT_LOCK_NAMES = ['Dalton Door', '4th Street Lofts', 'Front Door']
 
-export interface ReservationSpec {
+interface ReservationSpec {
   /** Lodgify numeric booking id; also the leading run of `confirmationCode`. */
   readonly bookingId: number
   readonly propertyId?: number
@@ -40,13 +40,13 @@ export interface ReservationSpec {
 }
 
 /** A Lynx reservation tagged with the property + poll bucket it belongs to. */
-export interface SeededReservation {
+interface SeededReservation {
   readonly propertyId: number
   readonly type: ReservationType
   readonly reservation: Reservation
 }
 
-export interface RequestLog {
+interface RequestLog {
   readonly method: string
   readonly path: string
   /** The Lynx dashboard action (last path segment), when applicable. */
@@ -79,14 +79,14 @@ const aLock = (lockName: string): SmartLock => ({
   lockModelUniqueName: 'SCHLAGE_ENCODE',
 })
 
-export interface WorldOptions {
-  readonly accountId?: number
-  readonly credentials?: { username: string; password: string }
-  readonly token?: string
-  readonly lodgifyApiKey?: string
-}
-
-export const createWorld = (options: WorldOptions = {}): World => {
+export const createWorld = (
+  options: {
+    readonly accountId?: number
+    readonly credentials?: { username: string; password: string }
+    readonly token?: string
+    readonly lodgifyApiKey?: string
+  } = {},
+): World => {
   const accountId = options.accountId ?? 222262
 
   const world: World = {

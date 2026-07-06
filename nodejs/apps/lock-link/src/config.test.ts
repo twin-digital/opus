@@ -31,43 +31,29 @@ describe('loadConfig', () => {
     })
   })
 
-  it('rejects an empty secret-parameter name', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '' })).toThrow()
-  })
-
-  it('rejects an alert topic ARN that is not a well-formed SNS ARN', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' })).toThrow()
-    // Prefix-only strings passed the loose /^arn:aws:sns:/ check; must be rejected now.
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:foo:topic' })).toThrow()
-  })
-
-  it('throws when a required value is absent', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_SLA_HOURS: undefined })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_USER_ID: '' })).toThrow()
-  })
-
-  it('rejects a non-positive horizon and a non-numeric threshold', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_HORIZON_DAYS: '0' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_SLA_HOURS: 'soon' })).toThrow()
-  })
-
   it('allows zero grace minutes', () => {
     expect(loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '0' }).graceMinutes).toBe(0)
   })
 
-  it('rejects empty / whitespace-only numeric envs', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '   ' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_SLA_HOURS: '' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_HORIZON_DAYS: '' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ACCOUNT_ID: '' })).toThrow()
-  })
-
-  it('rejects whitespace-only string envs', () => {
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_USER_ID: '   ' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_USERNAME_PARAM: '   ' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '   ' })).toThrow()
-    expect(() => loadConfig({ ...validEnv, LOCK_LINK_LODGIFY_API_KEY_PARAM: '   ' })).toThrow()
+  it.each<[string, Partial<Record<keyof typeof validEnv, string | undefined>>]>([
+    ['required value absent', { LOCK_LINK_SLA_HOURS: undefined }],
+    ['empty required string', { LOCK_LINK_USER_ID: '' }],
+    ['non-positive horizon', { LOCK_LINK_HORIZON_DAYS: '0' }],
+    ['non-numeric threshold', { LOCK_LINK_SLA_HOURS: 'soon' }],
+    ['empty numeric — GRACE_MINUTES', { LOCK_LINK_GRACE_MINUTES: '' }],
+    ['whitespace numeric — GRACE_MINUTES', { LOCK_LINK_GRACE_MINUTES: '   ' }],
+    ['empty numeric — SLA_HOURS', { LOCK_LINK_SLA_HOURS: '' }],
+    ['empty numeric — HORIZON_DAYS', { LOCK_LINK_HORIZON_DAYS: '' }],
+    ['empty numeric — ACCOUNT_ID', { LOCK_LINK_ACCOUNT_ID: '' }],
+    ['whitespace string — USER_ID', { LOCK_LINK_USER_ID: '   ' }],
+    ['whitespace string — LYNX_USERNAME_PARAM', { LOCK_LINK_LYNX_USERNAME_PARAM: '   ' }],
+    ['whitespace string — LYNX_PASSWORD_PARAM', { LOCK_LINK_LYNX_PASSWORD_PARAM: '   ' }],
+    ['whitespace string — LODGIFY_API_KEY_PARAM', { LOCK_LINK_LODGIFY_API_KEY_PARAM: '   ' }],
+    ['empty secret-parameter name', { LOCK_LINK_LYNX_PASSWORD_PARAM: '' }],
+    ['ARN not well-formed', { LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' }],
+    ['ARN prefix only', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:' }],
+    ['ARN bad account id', { LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:foo:topic' }],
+  ])('rejects %s', (_, override) => {
+    expect(() => loadConfig({ ...validEnv, ...override })).toThrow()
   })
 })

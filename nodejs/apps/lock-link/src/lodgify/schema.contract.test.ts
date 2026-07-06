@@ -99,22 +99,18 @@ describe('lodgify openapi contract', () => {
     const rooms = booking.properties?.rooms
     const room = rooms?.items ? deref(rooms.items) : undefined
     const guest = booking.properties?.guest ? deref(booking.properties.guest) : undefined
-
-    if (rooms?.nullable) {
-      expect(bookingSchema.shape.rooms.safeParse(null).success, 'booking.rooms is nullable in spec').toBe(true)
-    }
     const keyCode = room?.properties?.key_code
     expect(keyCode, 'BookingRoomDto missing key_code').toBeDefined()
-    if (keyCode?.nullable) {
-      expect(roomSchema.shape.key_code.safeParse(null).success, 'room.key_code is nullable in spec').toBe(true)
-    }
-    if (guest?.properties?.name?.nullable) {
-      expect(bookingSchema.shape.guest.shape.name.safeParse(null).success, 'guest.name is nullable in spec').toBe(true)
-    }
-    if (guest?.properties?.email?.nullable) {
-      expect(bookingSchema.shape.guest.shape.email.safeParse(null).success, 'guest.email is nullable in spec').toBe(
-        true,
-      )
+
+    for (const [path, node, schema] of [
+      ['booking.rooms', rooms, bookingSchema.shape.rooms],
+      ['room.key_code', keyCode, roomSchema.shape.key_code],
+      ['guest.name', guest?.properties?.name, bookingSchema.shape.guest.shape.name],
+      ['guest.email', guest?.properties?.email, bookingSchema.shape.guest.shape.email],
+    ] as const) {
+      if (node?.nullable) {
+        expect(schema.safeParse(null).success, `${path} is nullable in spec`).toBe(true)
+      }
     }
   })
 

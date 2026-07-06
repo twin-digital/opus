@@ -3,18 +3,11 @@ import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm'
 import { mockClient } from 'aws-sdk-client-mock'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { type LockLinkConfig } from './config.js'
 import { loadSecrets } from './secrets.js'
 
 const ssm = mockClient(SSMClient)
 
-const CONFIG: LockLinkConfig = {
-  accountId: 222262,
-  userId: '232753',
-  horizonDays: 14,
-  slaHours: 48,
-  graceMinutes: 30,
-  alertTopicArn: 'arn:aws:sns:us-east-1:444705667097:lock-link-alerts',
+const CONFIG = {
   secretNames: {
     lynxUsername: '/lock-link/lynx-username',
     lynxPassword: '/lock-link/lynx-password',

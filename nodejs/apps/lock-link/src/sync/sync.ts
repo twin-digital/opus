@@ -2,19 +2,11 @@ import { type LodgifyClient } from '../lodgify/client.js'
 import { type Booking } from '../lodgify/schema.js'
 import { type LynxClient } from '../lynx/client.js'
 import { type Reservation, type SmartLock } from '../lynx/schema.js'
-import { type NotifyEvent, type Notifier, type Severity } from './notify.js'
+import { type Notifier, type Severity } from './notify.js'
 import { checkReadiness } from './readiness.js'
 import { ConfirmationCodeError, resolveBookingId } from './resolve.js'
 
-/**
- * The Lodgify-driven gap-fill loop. Drive from the official Lodgify API and touch the
- * unofficial Lynx API only when there are gaps to fill — so at steady state (no in-horizon
- * booking missing a code) Lynx is never called. For each gap we find the Lynx reservation
- * by the confirmationCode join, and push its code to Lodgify only once every lock reports
- * `success` (push-timing decision). A still-bare booking is escalated only once it's both
- * within the SLA window of arrival and past the grace period (so brand-new bookings aren't
- * flagged the instant they appear). The loop is stateless — the schedule is the retry.
- */
+/** The Lodgify-driven gap-fill loop. See `docs/architecture.md` for the design. */
 
 const HOUR_MS = 3_600_000
 const MINUTE_MS = 60_000
@@ -155,7 +147,13 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
 
     const arrivalMs = entry.reservation.checkInTimestamp * 1000
     if (isOverdue(arrivalMs, gap.created_at, now, config)) {
-      await notify(notReadyEvent(gap, entry.reservation, readiness.reasons, severityFor(arrivalMs, now)))
+      await notify({
+        severity: severityFor(arrivalMs, now),
+        reason: 'door code not ready before arrival',
+        bookingId: gap.id,
+        confirmationCode: entry.reservation.confirmationCode,
+        details: readiness.reasons,
+      })
       escalated += 1
     } else {
       skipped += 1
@@ -181,16 +179,3 @@ const isOverdue = (arrivalMs: number, createdAt: string, now: number, config: Sy
 
 const severityFor = (arrivalMs: number, now: number): Severity =>
   (arrivalMs - now) / HOUR_MS <= CRITICAL_HOURS ? 'critical' : 'warning'
-
-const notReadyEvent = (
-  gap: Booking,
-  reservation: Reservation,
-  reasons: readonly string[],
-  severity: Severity,
-): NotifyEvent => ({
-  severity,
-  reason: 'door code not ready before arrival',
-  bookingId: gap.id,
-  confirmationCode: reservation.confirmationCode,
-  details: reasons,
-})
