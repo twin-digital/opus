@@ -43,6 +43,13 @@ onlyBuiltDependencies:
   - hnswlib-node
   - serverless
 
+peerDependencyRules:
+  allowedVersions:
+    # @mishieck/ink-titled-box@0.4.x still declares peer ink@^6, but it only uses ink's
+    # stable Box/Text API and runs fine on ink 7 (refbash builds, type-checks, and tests
+    # pass). Scoped to this edge so a genuine ink peer mismatch elsewhere still warns.
+    '@mishieck/ink-titled-box>ink': '7'
+
 overrides:
   '@smithy/types': 4.15.0
 
