@@ -116,6 +116,14 @@ jobs:
   preview:
     needs: gate
     if: ${{ needs.gate.outputs.should_deploy == 'true' }}
+    # Serialize this stage's deploy against its teardown. destroy-preview.yml uses the SAME PR-keyed
+    # group, so a close that fires mid-deploy queues the `serverless remove` behind this `serverless
+    # deploy` (`cancel-in-progress: false`) instead of racing it — which could orphan the stack or
+    # wedge CloudFormation in DELETE_FAILED. This is separate from the workflow-level concurrency
+    # (which supersedes stale runs on a new push, keyed on branch).
+    concurrency:
+      group: preview-stage-pr-${{ needs.gate.outputs.pr }}
+      cancel-in-progress: false
     environment: preview
     permissions:
       # OIDC for the AWS role lives only here, on the gated deploy.
@@ -127,25 +135,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      # Record that a stage is being deployed for this PR BEFORE deploying, via the sticky
-      # `preview-deployed` label. strip-preview-label.yml only ever removes `preview`, never this one,
-      # so it durably marks "this PR initiated a preview deploy" — the exact signal destroy-preview.yml
-      # reads off the close event payload to decide whether a teardown may be needed. Marking first means a
-      # partially failed deploy is still torn down. The label is keyed on the PR number (like the
-      # `pr-<number>` stage itself), so the teardown decision is immune to branch reuse/rename. This
-      # step is required (no `|| true`): if labeling fails we must NOT proceed to deploy, or we'd create
-      # a stage with no teardown signal — a leak. Failing first means no stage is created.
-      - name: Mark PR as preview-deployed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ needs.gate.outputs.pr }}
-        run: |
-          set -euo pipefail
-          gh api -X POST "repos/${REPO}/issues/${PR}/labels" \
-            -f 'labels[]=preview-deployed' >/dev/null
-          echo "Labeled PR #${PR} 'preview-deployed' (sticky teardown signal)."
-
       # checkout the exact commit CI validated (resolved by the gate, for either trigger)
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -176,6 +165,27 @@ jobs:
           else
             echo "open=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Record that a stage is being deployed for this PR BEFORE deploying, via the sticky
+      # `preview-deployed` label — the signal destroy-preview.yml reads off the close event payload to
+      # decide whether a teardown may be needed. It runs only once the PR is confirmed still open (so a
+      # PR closed before we deploy is never labeled for a stage that won't exist) but still BEFORE the
+      # Deploy step, so a partially-failed deploy is still torn down. destroy-preview.yml removes the
+      # label after a successful teardown; strip-preview-label.yml only ever touches `preview`. The label
+      # is keyed on the PR number (like the `pr-<number>` stage), so teardown is immune to branch
+      # reuse/rename. Required (no `|| true`): if labeling fails we must NOT deploy, or we'd create a
+      # stage with no teardown signal — a leak.
+      - name: Mark PR as preview-deployed
+        if: ${{ steps.pr_state.outputs.open == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${REPO}/issues/${PR}/labels" \
+            -f 'labels[]=preview-deployed' >/dev/null
+          echo "Labeled PR #${PR} 'preview-deployed' (sticky teardown signal)."
 
       # authenticate with AWS & deploy
       - name: Deploy

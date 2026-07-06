@@ -3,6 +3,8 @@ name: Destroy Preview
 permissions:
   id-token: write
   contents: read
+  # Remove the sticky `preview-deployed` label after a successful teardown.
+  pull-requests: write
 
 # SAFETY — this uses `pull_request_target` (not `pull_request`) so the teardown runs in the BASE repo
 # context and therefore receives AWS creds (`secrets.*`) and OIDC even when the PR comes from a fork.
@@ -30,19 +32,25 @@ jobs:
   # are OPT-IN (see deploy-preview.yaml), so most PRs never deploy a stage; without this guard every
   # close would enter the `preview` environment and run a no-op `serverless remove` (issue #123).
   #
-  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it when it starts a stage
-  # deploy, and (unlike `preview`) strip-preview-label.yml never removes it, so its presence on the
-  # close event's `pull_request.labels` durably means “this PR initiated a preview deploy” (and teardown
-  # may be needed — a no-op `serverless remove` if no stage was actually created). We read it straight
-  # off the event payload — no API call, no credentials — and a `false` here skips the whole job, so an
-  # un-deployed close never enters the `preview` environment. The label is keyed on the PR number, like
-  # the `pr-<number>` stage it guards, so this is immune to the branch reuse/rename ambiguity a
-  # branch-scoped deploy-history lookup would have. (Surfacing the deploy URL/details on the PR is
-  # tracked separately and intentionally out of scope here.)
+  # SIGNAL — the sticky `preview-deployed` label. deploy-preview.yaml adds it once a stage deploy is
+  # committed to (the PR confirmed open, immediately before `serverless deploy`), and this job removes
+  # it after a successful teardown; strip-preview-label.yml only ever touches `preview`. Its presence on
+  # the close event's `pull_request.labels` means “this PR has a live preview stage to tear down”. We
+  # read it straight off the event payload — no API call, no credentials — and a `false` here skips the
+  # whole job, so an un-deployed close never enters the `preview` environment. The label is keyed on the
+  # PR number, like the `pr-<number>` stage it guards, so this is immune to the branch reuse/rename
+  # ambiguity a branch-scoped deploy-history lookup would have. (Surfacing the deploy URL/details on the
+  # PR is tracked separately and intentionally out of scope here.)
   destroy:
     if: >-
       github.event.pull_request.head.ref != 'changeset-release/main' &&
       contains(github.event.pull_request.labels.*.name, 'preview-deployed')
+    # Same PR-keyed group as deploy-preview's `preview` job, so a close that fires while a deploy is
+    # still in flight queues this teardown behind it (`cancel-in-progress: false`) rather than running
+    # `serverless remove` concurrently with `serverless deploy` on the same stack.
+    concurrency:
+      group: preview-stage-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     environment: preview
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -83,3 +91,17 @@ jobs:
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           stage: ${{ steps.slugify.outputs.stage }}
+
+      # Clear the sticky signal now that the stage is gone, so a later reopen+close of this PR doesn't
+      # re-enter the `preview` environment to `serverless remove` a stage that no longer exists. Only on
+      # a successful teardown (the default `success()` gate): if destroy failed the stack may still
+      # exist, so the label must persist for a retry. A missing label (404) is tolerated.
+      - name: Clear preview-deployed label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api -X DELETE "repos/${REPO}/issues/${PR}/labels/preview-deployed" >/dev/null 2>&1 \
+            || echo "Label 'preview-deployed' already absent on PR #${PR}."
