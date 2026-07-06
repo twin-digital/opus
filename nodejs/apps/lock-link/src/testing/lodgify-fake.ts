@@ -40,13 +40,19 @@ export const startLodgifyFake = (world: World): Promise<Fake> =>
         return
       }
       const body = putKeyCodesRequestSchema.parse(await readBody(req))
+      // Resolve every target room BEFORE mutating anything, so a partial-then-404 write
+      // can't leave the shared world half-updated (real Lodgify doesn't half-apply either).
+      const resolved: { room: NonNullable<typeof booking.rooms>[number]; keyCode: string }[] = []
       for (const update of body.rooms) {
         const room = booking.rooms?.find((r) => r.room_type_id === update.room_type_id)
         if (!room) {
           sendError(res, 404, 'NotFound', `room_type_id ${String(update.room_type_id)} not on booking ${String(id)}`)
           return
         }
-        room.key_code = update.key_code
+        resolved.push({ room, keyCode: update.key_code })
+      }
+      for (const { room, keyCode } of resolved) {
+        room.key_code = keyCode
       }
       // Lodgify echoes only the updated rooms (BookingKeyCodeDto), not a full booking.
       sendJson(

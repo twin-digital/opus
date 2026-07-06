@@ -59,5 +59,26 @@ describe('lodgify fake', () => {
 
   it('401s a missing or wrong API key', async () => {
     expect((await fetch(`${fake.baseUrl}/v2/reservations/bookings`)).status).toBe(401)
+    // Exact-value check: guards a regression to existence-only auth (`!headers['x-apikey']`).
+    const wrong = await fetch(`${fake.baseUrl}/v2/reservations/bookings`, { headers: { 'x-apikey': 'nope' } })
+    expect(wrong.status).toBe(401)
+  })
+
+  it('rejects a mid-batch bad room_type_id atomically (no half-applied write)', async () => {
+    const before = world.bookings.get(20559349)?.rooms?.[0]?.key_code
+    const put = await get(`/v2/reservations/bookings/20559349/keyCodes`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      // Good row first, bad row second: the write must be all-or-nothing so a mid-batch
+      // 404 can't leave the shared world half-updated.
+      body: JSON.stringify({
+        rooms: [
+          { room_type_id: 501, key_code: '9234' },
+          { room_type_id: 999, key_code: '9234' },
+        ],
+      }),
+    })
+    expect(put.status).toBe(404)
+    expect(world.bookings.get(20559349)?.rooms?.[0]?.key_code).toBe(before)
   })
 })

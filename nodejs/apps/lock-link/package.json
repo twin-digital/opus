@@ -4,6 +4,19 @@
   "version": "0.1.0",
   "description": "Syncs Lynx smart-lock access codes into Lodgify reservations on a schedule.",
   "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
   "scripts": {
     "build": "build",
     "clean": "clean",
@@ -17,6 +30,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-lambda-powertools/parameters": "catalog:",
+    "@aws-sdk/client-sns": "catalog:",
+    "@aws-sdk/client-ssm": "catalog:",
     "@twin-digital/observability-lib": "workspace:*",
     "aws-cdk-lib": "^2.260.0",
     "constructs": "^10.6.0",
@@ -32,6 +48,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
     "aws-cdk": "^2.1127.0",
+    "aws-sdk-client-mock": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",

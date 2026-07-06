@@ -14,7 +14,7 @@ import { type Property, type Reservation, type ReservationType, type SmartLock }
 
 const DEFAULT_LOCK_NAMES = ['Dalton Door', '4th Street Lofts', 'Front Door']
 
-export interface ReservationSpec {
+interface ReservationSpec {
   /** Lodgify numeric booking id; also the leading run of `confirmationCode`. */
   readonly bookingId: number
   readonly propertyId?: number
@@ -22,6 +22,8 @@ export interface ReservationSpec {
   readonly guest?: { firstName?: string; lastName?: string; email?: string }
   readonly checkInTimestamp?: number
   readonly checkOutTimestamp?: number
+  /** Lodgify booking creation time (unix seconds); defaults to 7 days before check-in. */
+  readonly createdAtTimestamp?: number
   readonly bookingSource?: number
   /** The property's full lock set; defaults to the three real locks. */
   readonly lockNames?: readonly string[]
@@ -38,13 +40,13 @@ export interface ReservationSpec {
 }
 
 /** A Lynx reservation tagged with the property + poll bucket it belongs to. */
-export interface SeededReservation {
+interface SeededReservation {
   readonly propertyId: number
   readonly type: ReservationType
   readonly reservation: Reservation
 }
 
-export interface RequestLog {
+interface RequestLog {
   readonly method: string
   readonly path: string
   /** The Lynx dashboard action (last path segment), when applicable. */
@@ -77,14 +79,14 @@ const aLock = (lockName: string): SmartLock => ({
   lockModelUniqueName: 'SCHLAGE_ENCODE',
 })
 
-export interface WorldOptions {
-  readonly accountId?: number
-  readonly credentials?: { username: string; password: string }
-  readonly token?: string
-  readonly lodgifyApiKey?: string
-}
-
-export const createWorld = (options: WorldOptions = {}): World => {
+export const createWorld = (
+  options: {
+    readonly accountId?: number
+    readonly credentials?: { username: string; password: string }
+    readonly token?: string
+    readonly lodgifyApiKey?: string
+  } = {},
+): World => {
   const accountId = options.accountId ?? 222262
 
   const world: World = {
@@ -100,6 +102,9 @@ export const createWorld = (options: WorldOptions = {}): World => {
     lodgifyRequests: [],
 
     addProperty: ({ propertyId, name, lockNames = DEFAULT_LOCK_NAMES }) => {
+      if (world.properties.has(propertyId)) {
+        throw new Error(`world.addProperty: propertyId ${String(propertyId)} already exists`)
+      }
       world.properties.set(propertyId, {
         uniquePropertyId: propertyId,
         name: name ?? `Property ${String(propertyId)}`,
@@ -110,15 +115,33 @@ export const createWorld = (options: WorldOptions = {}): World => {
     },
 
     addReservation: (spec) => {
+      // One Lodgify booking per bookingId — real systems can't produce two, so tests
+      // shouldn't silently model one either.
+      if (world.bookings.has(spec.bookingId)) {
+        throw new Error(`world.addReservation: duplicate bookingId ${String(spec.bookingId)}`)
+      }
+
       const propertyId = spec.propertyId ?? 72230
       const roomTypeId = spec.roomTypeId ?? 501
       const lockNames = spec.lockNames ?? DEFAULT_LOCK_NAMES
       const checkInTimestamp = spec.checkInTimestamp ?? 1781557200
       const checkOutTimestamp = spec.checkOutTimestamp ?? 1781625600
+      const createdAtTimestamp = spec.createdAtTimestamp ?? checkInTimestamp - 7 * 86400
       const synced = spec.synced ?? true
       const status = spec.status ?? 'Booked'
 
-      if (!world.properties.has(propertyId)) {
+      if (world.properties.has(propertyId)) {
+        // Locks are property-scoped in Lynx: a property's lock set is fixed. Reject a
+        // reservation whose `lockNames` disagree with the property's existing set.
+        const existing = (world.locksByProperty.get(propertyId) ?? []).map((l) => l.lockName).sort()
+        const requested = [...lockNames].sort()
+        if (existing.join('|') !== requested.join('|')) {
+          throw new Error(
+            `world.addReservation: property ${String(propertyId)} already has lock set [${existing.join(', ')}]; ` +
+              `cannot add a reservation covering [${requested.join(', ')}]`,
+          )
+        }
+      } else {
         world.addProperty({ propertyId, lockNames })
       }
 
@@ -158,8 +181,9 @@ export const createWorld = (options: WorldOptions = {}): World => {
         departure: new Date(checkOutTimestamp * 1000).toISOString(),
         status,
         is_deleted: false,
-        source: String(spec.bookingSource ?? 12),
+        source: 'Expedia',
         source_text: null,
+        created_at: new Date(createdAtTimestamp * 1000).toISOString(),
         guest: {
           name: `${spec.guest?.firstName ?? 'Jordan'} ${spec.guest?.lastName ?? 'Rivers'}`,
           email: spec.guest?.email ?? `guest-${String(spec.bookingId)}@example.com`,

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { bookingSetSchema } from '../lodgify/schema.js'
 import { reservationsResponseSchema } from '../lynx/schema.js'
+import { resolveBookingId } from '../sync/resolve.js'
 import { type Fake } from './http.js'
 import { startLodgifyFake } from './lodgify-fake.js'
 import { startLynxFake } from './lynx-fake.js'
@@ -46,7 +47,15 @@ describe('lynx + lodgify scenario', () => {
         })
       ).json(),
     )
-    const match = reservations.data.reservations.find((r) => r.confirmationCode.startsWith(String(gap?.id)))
+    // Use the same `resolveBookingId` the sync uses so the scenario exercises the
+    // documented `VK<accountId>` join rule (and can't false-match a sibling id).
+    const match = reservations.data.reservations.find((r) => {
+      try {
+        return resolveBookingId(r.confirmationCode, world.accountId) === gap?.id
+      } catch {
+        return false
+      }
+    })
     const code = match?.accessCodes[0]?.code
     const ready = match?.accessCodes.every((c) => c.syncToLockStatus === 'success')
     expect(code).toBe('9234')

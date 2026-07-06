@@ -5,9 +5,8 @@ property-management system, internally "Cat") into **Lodgify** (short-term-renta
 manager, internally "Hotel"). It replaces a manual workflow: a property manager reads each
 reservation's door code off the Lynx dashboard and pastes it into the matching Lodgify booking.
 
-Status: deployed scaffold. The Lambda runs on a schedule and currently only logs a placeholder
-tick — the read→resolve→validate→diff→write loop below is the remaining work. The integration
-contracts described here are all proven against live data.
+The scheduled Lambda runs the full read → resolve → validate → diff → write loop described
+below. The integration contracts are all proven against live data.
 
 ---
 
@@ -211,17 +210,21 @@ key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read ba
 
 ### Secrets / config
 
-- **SSM String** (non-secret): `accountId` (`222262`), the per-user id, poll settings.
-- **SSM SecureString, read at runtime** (via Powertools parameters, cached): Lynx username/password,
-  Lodgify API key. Read at runtime (not injected at deploy) so they stay encrypted at rest and are
-  rotatable without redeploy.
+- **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, SLA,
+  grace, alert topic ARN, and the SSM parameter names. Validated at cold start
+  (see the Configuration table below).
+- **SSM SecureString** (read at runtime via Powertools, cached ~2 h): Lynx username,
+  Lynx password, Lodgify API key. Values are populated out-of-band so they stay
+  encrypted at rest and rotatable without redeploy.
 
 ### Notify / escalation (single sink)
 
-All error cases funnel to one `notify(reservation, reason)` (and a catch-all for whole-run
-failures: login 401, endpoint down, JSON shape changed). Channel **TBD** — SNS→email first, with a
-custom SMTP/SES fast-follow for nicer messages. CloudWatch alarms on generic Lambda metrics +
-custom domain metrics (validation/verification mismatches) feed the same channel.
+All error cases — a `confirmationCode` that doesn't parse, a booking overdue and still
+not ready, a booking with no Lynx reservation, and the catch-all for whole-run failures
+(auth 401, endpoint down, JSON shape changed) — funnel to one `Notifier`, backed by SNS
+(`createSnsNotifier` publishes with severity as the subject prefix and a message
+attribute). The Lambda consumes the topic by ARN so the topic can later become a shared
+cross-workload channel with no code change.
 
 ---
 
@@ -230,8 +233,8 @@ custom domain metrics (validation/verification mismatches) feed the same channel
 - **AWS CDK** app (TypeScript), **not** Serverless Framework. Deployed to the **saas-apps** account
   (`444705667097`; test account `saas-apps-test` `425946675033`), **us-east-1** (the bootstrapped
   region — keep the deploy region aligned with bootstrap).
-- **Scheduled Lambda**: `NodejsFunction` (Node 22, esbuild-bundled) on an hourly EventBridge rule
-  (placeholder cadence). Bundling uses `--conditions=source` so workspace deps bundle from source.
+- **Scheduled Lambda**: `NodejsFunction` (Node 24, esbuild-bundled) on an hourly EventBridge rule.
+  Bundling uses `--conditions=source` so workspace deps bundle from source.
 - **Package layout — `infra/` + `src/` split** (single package):
   - `infra/` — CDK app + stack (`app.ts`, `stack.ts`). May depend on `src/`.
   - `src/` — runtime/handler code, where the sync logic grows. **eslint bans importing
@@ -250,36 +253,54 @@ custom domain metrics (validation/verification mismatches) feed the same channel
 
 ---
 
-## Building the sync logic (next session)
+## Module layout
 
-Suggested `src/` module layout:
+- `lynx/` — client (`login` + `TokenCache`, `listProperties`, `listReservations` for
+  `upcoming`/`current`, `listSmartLocks` for the lock set) and zod schemas.
+- `lodgify/` — client (`listBookings`, `getBooking`, `putKeyCodes`), zod schemas, the
+  vendored OpenAPI (`lodgify.openapi.json`), and the `pull-spec` refresh tool.
+- `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (all locks `success`,
+  same code, non-empty), `runSync` (the Lodgify-driven gap-fill loop), and
+  `createSnsNotifier`.
+- `config.ts` — env-sourced, zod-validated `LockLinkConfig`; `secrets.ts` — Powertools
+  SSM SecureString reads with a 2 h TTL.
+- `functions/sync.ts` — the Lambda handler: `loadConfig` → build notifier → `loadSecrets`
+  → build clients → `runSync`, wrapped in try/notify/rethrow so a whole-run failure
+  reaches the escalation sink.
 
-- `lynx/` — client (`login` + token cache, `listProperties`, `getReservationsByProperty` for
-  `upcoming`+`current`, `getSmartLocksByPropertyWithStatus` for the lock set), types
-- `lodgify/` — client (`listBookings` for the poll, `getBooking`, `putKeyCodes`), types
-- `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (all locks `success`, same code),
-  and the **Lodgify-driven gap-fill** orchestration
-- `config.ts` — account id, secret names; `secrets.ts` — runtime SecureString reads
-- `notify.ts` — the single escalation sink
-- `functions/sync.ts` — the handler (already exists, wraps `withObservability`)
+## Configuration
 
-Loop: Lodgify **list** (Upcoming, in-horizon, Booked) → gap set (empty `key_code`) → if any, index
-Lynx `upcoming` reservations by `confirmationCode` → for each gap find the code + check readiness →
-`PUT keyCodes` when ready (escalate when not-ready near arrival), confirm via the 200 echo.
+Operational config (all required, validated at cold start):
 
-### Open questions / TODO
+| Env var                           | Purpose                                            |
+| --------------------------------- | -------------------------------------------------- |
+| `LOCK_LINK_ACCOUNT_ID`            | Lynx umbrella account id (drives the join suffix)  |
+| `LOCK_LINK_USER_ID`               | Lynx per-user id sent as `hostId`/`loggedInUserId` |
+| `LOCK_LINK_HORIZON_DAYS`          | Fill gaps arriving within this window (14)         |
+| `LOCK_LINK_SLA_HOURS`             | Escalate a bare booking within this hours (48)     |
+| `LOCK_LINK_GRACE_MINUTES`         | Don't flag brand-new bookings (30)                 |
+| `LOCK_LINK_ALERT_TOPIC_ARN`       | SNS topic the Notifier publishes to                |
+| `LOCK_LINK_LYNX_USERNAME_PARAM`   | SSM SecureString name — Lynx username              |
+| `LOCK_LINK_LYNX_PASSWORD_PARAM`   | SSM SecureString name — Lynx password              |
+| `LOCK_LINK_LODGIFY_API_KEY_PARAM` | SSM SecureString name — Lodgify API key            |
 
-- **Decide push timing:** the guest `code` is final/uniform from booking creation (even while locks
-  are `scheduled`), so we could push to Lodgify when the code is _assigned_ (guest gets it early;
-  track provisioning separately for escalation) or only once all locks are `success` (guaranteed
-  live). Doc currently assumes the latter.
-- Tune the `SLA` / `GRACE` thresholds (and severity bands) for the readiness escalation.
-- Confirm whether Lynx ever **rotates** a code after it's set (validates the static-code assumption /
-  whether scheduled reconciliation is needed). Pick the **horizon** window + cron cadence.
-- Pick the notify channel (SNS→email vs SMTP).
-- A `cdk diff` step on PRs + a `production` approval gate are nice deploy-maturity adds (optional).
+SSM SecureString **values** are populated out-of-band on initial setup (CFN never sees
+secret material); the stack grants the Lambda `ssm:GetParameter` on the named parameters
+plus `kms:Decrypt` scoped by `kms:ViaService = ssm.<region>.amazonaws.com`.
+
+## Open questions / follow-ups
+
+- Confirm whether Lynx ever **rotates** a code after it's set (validates the static-code
+  assumption / whether a scheduled reconciliation pass is needed). Tune the cron cadence
+  once real behaviour is observed.
+- Per-property Lynx error isolation so a single-property outage doesn't abort the
+  whole tick — tracked as opus#201.
+- Parameterize (or remove, once the shared cross-workload SNS topic exists) the alert
+  email currently hardcoded in the stack — tracked as opus#202.
+- A `cdk diff` step on PRs + a `production` approval gate are nice deploy-maturity adds.
 
 ## Reference
 
-- A throwaway `lynx-getreservations.sh` curl script (used to prove the Lynx endpoint) exists in the
-  repo root of the exploration checkout — handy for poking the API by hand with a pasted token.
+- A throwaway `lynx-getreservations.sh` curl script (used to prove the Lynx endpoint)
+  exists in the repo root of the exploration checkout — handy for poking the API by
+  hand with a pasted token.

@@ -18,8 +18,12 @@ export const roomSchema = z.object({
 })
 export type Room = z.infer<typeof roomSchema>
 
-/** Booking status; `Booked` is the only one we act on. Tolerant of unseen values. */
-export const bookingStatusSchema = z.enum(['Booked', 'Tentative', 'Declined', 'Open'])
+/**
+ * Booking status; `Booked` is the only one we act on. An unknown value from Lodgify
+ * (a new StatusEnum entry) falls back to `Open` rather than throwing, so one unfamiliar
+ * status can't halt the whole poll — anything not `Booked` is skipped by the sync anyway.
+ */
+export const bookingStatusSchema = z.enum(['Booked', 'Tentative', 'Declined', 'Open']).catch('Open')
 
 export const bookingSchema = z.object({
   id: z.number().int(),
@@ -35,6 +39,8 @@ export const bookingSchema = z.object({
   source: z.string().nullable(),
   /** Real OTA reference (e.g. an Expedia confirmation), distinct from `source`. */
   source_text: z.string().nullable(),
+  /** Booking creation time (ISO). Used for the escalation GRACE window. */
+  created_at: z.string(),
   guest: z.object({
     name: z.string().nullable(),
     email: z.string().nullable(),
@@ -44,10 +50,21 @@ export const bookingSchema = z.object({
 })
 export type Booking = z.infer<typeof bookingSchema>
 
-/** `GET /v2/reservations/bookings` — the poll driver. */
+/**
+ * `GET /v2/reservations/bookings` — the poll driver. The spec marks both `count` and
+ * `items` nullable; we accept nulls on the wire and normalize to `0` / `[]` so consumers
+ * (the sync loop, the client, tests) don't need null-handling everywhere.
+ */
 export const bookingSetSchema = z.object({
-  count: z.number().int(),
-  items: z.array(bookingSchema),
+  count: z
+    .number()
+    .int()
+    .nullable()
+    .transform((v) => v ?? 0),
+  items: z
+    .array(bookingSchema)
+    .nullable()
+    .transform((v) => v ?? []),
 })
 export type BookingSet = z.infer<typeof bookingSetSchema>
 

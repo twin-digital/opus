@@ -1,13 +1,9 @@
 import { type AccessCode, type Reservation, type SmartLock } from '../lynx/schema.js'
 
 /**
- * Whether a reservation's access codes are safe to push to Lodgify. Lock provisioning is
- * eventually consistent, so "all locks set to one code" is a readiness *signal*, not an
- * always-true invariant. Ready means: every lock in the property's lock set is covered by
- * an access code, each `syncToLockStatus: "success"`, all the same code. The guest `code`
- * is assigned up front and uniform even while a lock is still `scheduled` — so a uniform
- * code is NOT the signal; `success` on every lock is. Never push a partial/unsynced code:
- * a code that opens some doors is worse than none.
+ * Whether a reservation's codes are safe to push. `syncToLockStatus: "success"` on every
+ * lock is the readiness signal (a uniform `code` is not — it's assigned up front, even
+ * while locks are still `scheduled`). Never push a partial/unsynced code.
  */
 
 export interface ReadinessResult {
@@ -48,6 +44,11 @@ export const checkReadiness = (reservation: Reservation, lockSet: readonly Smart
   const distinctCodes = new Set(codes.map((c) => c.code))
   if (distinctCodes.size > 1) {
     reasons.push(`access codes differ across locks: ${[...distinctCodes].join(', ')}`)
+  }
+  // Empty string is not a usable code. The gap filter treats `''` as a gap, so an
+  // empty code would look like a gap again on the next tick — route to escalation.
+  if (codes.some((c) => c.code === '')) {
+    reasons.push('access code is empty')
   }
 
   const ready = reasons.length === 0

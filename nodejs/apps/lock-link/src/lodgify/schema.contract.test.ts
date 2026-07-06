@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
-import { bookingSchema, bookingStatusSchema, keyCodesSchema, roomSchema } from './schema.js'
+import {
+  bookingSchema,
+  bookingSetSchema,
+  bookingStatusSchema,
+  keyCodesSchema,
+  putKeyCodesRequestSchema,
+  roomSchema,
+} from './schema.js'
 import { LODGIFY_OPERATIONS } from './openapi-source.js'
 
 /**
@@ -28,8 +35,12 @@ interface SchemaNode {
   content?: Record<string, { schema?: SchemaNode } | undefined>
 }
 
+interface Operation {
+  requestBody?: { content?: Record<string, { schema?: SchemaNode } | undefined> }
+  responses?: Record<string, SchemaNode | undefined>
+}
 const spec = JSON.parse(readFileSync(new URL('./lodgify.openapi.json', import.meta.url), 'utf8')) as {
-  paths: Record<string, Record<string, { responses?: Record<string, SchemaNode | undefined> } | undefined> | undefined>
+  paths: Record<string, Record<string, Operation | undefined> | undefined>
   components: { schemas: Record<string, SchemaNode | undefined> }
 }
 
@@ -72,6 +83,7 @@ describe('lodgify openapi contract', () => {
       'status',
       'source',
       'source_text',
+      'created_at',
       'guest',
       'rooms',
       'is_deleted',
@@ -80,33 +92,58 @@ describe('lodgify openapi contract', () => {
     }
   })
 
-  it('is not stricter than the spec on nullability (booking.rooms, room.key_code)', () => {
+  it('is not stricter than the spec on nullability (booking fields and nested DTOs)', () => {
+    // Every field the sync reads that is `nullable: true` in the spec must round-trip
+    // `null` through our zod — else a documented null crashes the parse in production.
     const booking = bookingComponent()
     const rooms = booking.properties?.rooms
     const room = rooms?.items ? deref(rooms.items) : undefined
-
-    // If the spec marks these nullable, our zod must accept null — else a documented null
-    // would crash the parse in production. (These two caught real bugs in the first pass.)
-    if (rooms?.nullable) {
-      expect(bookingSchema.shape.rooms.safeParse(null).success, 'booking.rooms is nullable in spec').toBe(true)
-    }
+    const guest = booking.properties?.guest ? deref(booking.properties.guest) : undefined
     const keyCode = room?.properties?.key_code
     expect(keyCode, 'BookingRoomDto missing key_code').toBeDefined()
-    if (keyCode?.nullable) {
-      expect(roomSchema.shape.key_code.safeParse(null).success, 'room.key_code is nullable in spec').toBe(true)
+
+    for (const [path, node, schema] of [
+      ['booking.rooms', rooms, bookingSchema.shape.rooms],
+      ['room.key_code', keyCode, roomSchema.shape.key_code],
+      ['guest.name', guest?.properties?.name, bookingSchema.shape.guest.shape.name],
+      ['guest.email', guest?.properties?.email, bookingSchema.shape.guest.shape.email],
+    ] as const) {
+      if (node?.nullable) {
+        expect(schema.safeParse(null).success, `${path} is nullable in spec`).toBe(true)
+      }
     }
   })
 
-  it('accepts every documented booking status', () => {
+  it('accepts a null BookingSetDto.count and .items when the spec says nullable', () => {
+    // The list-bookings 200 response — the poll driver. Both fields are nullable in the
+    // spec; zod must not be stricter or a documented null takes the run down.
+    const json = spec.paths['/v2/reservations/bookings']?.get?.responses?.['200']?.content?.['application/json']
+    if (!json?.schema) {
+      throw new Error('no 200 application/json schema for GET bookings')
+    }
+    const setDto = deref(json.schema)
+    if (setDto.properties?.count?.nullable) {
+      expect(bookingSetSchema.safeParse({ count: null, items: [] }).success).toBe(true)
+    }
+    if (setDto.properties?.items?.nullable) {
+      expect(bookingSetSchema.safeParse({ count: 0, items: null }).success).toBe(true)
+    }
+  })
+
+  it('accepts every documented booking status without silently coercing it', () => {
+    // `bookingStatusSchema` has `.catch('Open')`, so `safeParse` succeeds for any input —
+    // compare the parsed value to the input so a newly-added spec value silently coerced
+    // to `'Open'` (the drift this test exists to catch) fails cleanly.
     const status = deref(bookingComponent().properties?.status ?? {})
     for (const value of status.enum ?? []) {
-      expect(bookingStatusSchema.safeParse(value).success, `status "${value}" rejected`).toBe(true)
+      expect(bookingStatusSchema.parse(value), `status "${value}" coerced or rejected`).toBe(value)
     }
   })
 
   it('models the keyCodes PUT echo as rooms-only, not a full booking', () => {
-    // Regression guard: the keyCodes 200 echo is BookingKeyCodeDto ({ rooms }), NOT a full
-    // booking. Parsing it through bookingSchema would throw against the real API.
+    // The keyCodes 200 echo is `BookingKeyCodeDto { rooms }`, distinct from the full
+    // `BookingDto` returned by GET — parsing the echo through `bookingSchema` throws
+    // against the real API. Pin the shape here.
     const json =
       spec.paths['/v2/reservations/bookings/{id}/keyCodes']?.put?.responses?.['200']?.content?.['application/json']
     if (!json?.schema) {
@@ -116,5 +153,22 @@ describe('lodgify openapi contract', () => {
     expect(Object.keys(echo.properties ?? {})).toEqual(['rooms'])
     expect(keyCodesSchema.safeParse({ rooms: [{ room_type_id: 1, key_code: null }] }).success).toBe(true)
     expect(keyCodesSchema.safeParse({ rooms: null }).success).toBe(true)
+  })
+
+  it('agrees with the spec on the PUT keyCodes REQUEST body — the write shape', () => {
+    // Pin the request field names to `putKeyCodesRequestSchema`. Response-echo coverage
+    // above wouldn't notice a `key_code`→`keyCode` (or `room_type_id`) rename on the
+    // request side — writes would silently start 400-ing.
+    const json = spec.paths['/v2/reservations/bookings/{id}/keyCodes']?.put?.requestBody?.content?.['application/json']
+    if (!json?.schema) {
+      throw new Error('no application/json requestBody schema for PUT keyCodes')
+    }
+    const reqDto = deref(json.schema)
+    expect(Object.keys(reqDto.properties ?? {})).toEqual(['rooms'])
+    const roomsField = reqDto.properties?.rooms
+    const roomItem = roomsField?.items ? deref(roomsField.items) : undefined
+    expect(Object.keys(roomItem?.properties ?? {}).sort()).toEqual(['key_code', 'room_type_id'])
+    // Zod's request schema must accept a documented row without any transformation.
+    expect(putKeyCodesRequestSchema.safeParse({ rooms: [{ room_type_id: 1, key_code: '1234' }] }).success).toBe(true)
   })
 })
