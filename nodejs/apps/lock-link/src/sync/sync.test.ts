@@ -81,7 +81,13 @@ describe('runSync (gap-fill orchestration)', () => {
     expect(events[0]).toMatchObject({ severity: 'warning', bookingId: 20559349 })
     expect(events[0]?.details?.some((d) => d.includes('scheduled'))).toBe(true)
     // Outcome carries the reasons so a human reading logs can see WHY it escalated.
-    expect(result.outcomes[0]?.action).toBe('escalated')
+    // Includes confirmationCode — the distinguishing field from the no-Lynx-entry branch
+    // (which has no reservation to source it from).
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'escalated',
+      confirmationCode: '20559349VK222262',
+    })
     expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
   })
 
@@ -91,8 +97,30 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 100 * HOURS) // > 48h to arrival
     expect(result).toMatchObject({ written: 0, escalated: 0, skipped: 1 })
     expect(events).toEqual([])
-    expect(result.outcomes[0]?.action).toBe('skipped')
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'skipped',
+      confirmationCode: '20559349VK222262',
+    })
     expect(result.outcomes[0]?.reasons?.some((r) => r.includes('scheduled'))).toBe(true)
+  })
+
+  it('skips a no-Lynx-entry gap outside the SLA window (not-overdue no-entry branch)', async () => {
+    // A Lodgify booking with no matching Lynx reservation. Well outside the SLA window,
+    // so isOverdue is false → skipped, not escalated. Guards against an inverted-guard
+    // regression that would silently escalate every no-entry gap on every tick.
+    world.addReservation({ bookingId: 20559349, code: '9234' })
+    world.reservations.length = 0 // drop the Lynx side; keep the Lodgify booking
+
+    const result = await run(ARRIVAL_MS - 200 * HOURS) // far outside SLA
+    expect(result).toMatchObject({ written: 0, escalated: 0, skipped: 1 })
+    expect(events).toEqual([])
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'skipped',
+      reasons: ['no Lynx reservation for booking'],
+    })
+    expect(result.outcomes[0]?.confirmationCode).toBeUndefined()
   })
 
   it('suppresses escalation for a brand-new booking inside the grace period', async () => {
@@ -134,6 +162,14 @@ describe('runSync (gap-fill orchestration)', () => {
     const result = await run(ARRIVAL_MS - 100 * HOURS)
     expect(result).toMatchObject({ escalated: 1, skipped: 0 })
     expect(events.some((e) => e.reason.includes('no Lynx reservation'))).toBe(true)
+    // Pin the outcome shape for this branch — a regression that flipped action to
+    // 'skipped' while still firing notify would otherwise still pass the count check.
+    expect(result.outcomes[0]).toMatchObject({
+      bookingId: 20559349,
+      action: 'escalated',
+      reasons: ['no Lynx reservation for booking'],
+    })
+    expect(result.outcomes[0]?.confirmationCode).toBeUndefined()
   })
 
   it('escalates when the same bookingId resolves under two different properties', async () => {

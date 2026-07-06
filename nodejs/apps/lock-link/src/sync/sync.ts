@@ -137,8 +137,9 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
 
     if (!entry) {
       const reason = 'no Lynx reservation for booking'
-      if (isOverdue(Date.parse(gap.arrival), gap.created_at, now, config)) {
-        await notify({ severity: severityFor(Date.parse(gap.arrival), now), reason, bookingId: gap.id })
+      const arrivalMs = Date.parse(gap.arrival)
+      if (isOverdue(arrivalMs, gap.created_at, now, config)) {
+        await notify({ severity: severityFor(arrivalMs, now), reason, bookingId: gap.id })
         outcomes.push({ bookingId: gap.id, action: 'escalated', reasons: [reason] })
       } else {
         outcomes.push({ bookingId: gap.id, action: 'skipped', reasons: [reason] })
@@ -186,10 +187,12 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
     }
   }
 
-  const written = outcomes.filter((o) => o.action === 'written').length
-  const escalated = outcomes.filter((o) => o.action === 'escalated').length
-  const skipped = outcomes.filter((o) => o.action === 'skipped').length
-  return { gaps: gaps.length, written, escalated, skipped, outcomes }
+  // Single-pass count — easier to extend if a fourth action shows up.
+  const counts = { written: 0, escalated: 0, skipped: 0 }
+  for (const o of outcomes) {
+    counts[o.action] += 1
+  }
+  return { gaps: gaps.length, ...counts, outcomes }
 }
 
 /** Overdue = within the SLA window of arrival AND past the grace period since booking. */
