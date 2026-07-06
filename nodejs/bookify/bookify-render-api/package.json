@@ -60,11 +60,6 @@
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "10.x"
-  },
-  "pnpm": {
-    "overrides": {
-      "@smithy/types": "^4.11.0"
-    }
+    "pnpm": "11.x"
   }
 }

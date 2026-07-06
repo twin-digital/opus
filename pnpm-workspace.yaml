@@ -41,10 +41,20 @@ catalog:
   yaml: ^2.8.2
   zod: ^4.4.3
 
-onlyBuiltDependencies:
-  - esbuild
-  - hnswlib-node
-  - serverless
+# pnpm 11 removed `onlyBuiltDependencies`; the allowlist of deps permitted to run
+# install scripts is now the `allowBuilds` map. `strictDepBuilds` defaults to true,
+# so anything not listed here fails the install rather than silently skipping.
+allowBuilds:
+  esbuild: true
+  hnswlib-node: true
+  serverless: true
+
+# pnpm 11 enables an install-time supply-chain gate (minimumReleaseAge, default 1 day):
+# newly published versions won't resolve until they've matured. globby@16.2.1 landed in
+# the lockfile (via #205) less than a day before this migration, so exclude that one
+# version temporarily until it ages past the window.
+minimumReleaseAgeExclude:
+  - globby@16.2.1
 
 peerDependencyRules:
   allowedVersions:
