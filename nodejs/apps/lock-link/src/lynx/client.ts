@@ -179,16 +179,28 @@ export class LynxClient {
     return this.inflightLogin
   }
 
-  /** Mint a JWT; it arrives in the `x-auth-token` response header, not the body. */
+  /**
+   * Mint a JWT; it arrives in the `x-auth-token` response header, not the body. Lynx
+   * expects the account identifier as `email` on the wire (the `username` we track is
+   * the same string — Lynx accounts use email addresses as their login handle).
+   */
   private async login(): Promise<string> {
     const res = await fetch(`${this.baseUrl}${PREFIX}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: this.username, password: this.password }),
+      body: JSON.stringify({ email: this.username, password: this.password }),
     })
     const token = res.headers.get('x-auth-token')
     if (!res.ok || token === null) {
-      throw new LynxApiError(res.status, 'Lynx login failed (no x-auth-token)')
+      // Include the response body so a misconfiguration doesn't hide behind a generic
+      // message. `res.text()` on a mint failure is cheap; the response is small JSON.
+      let detail = ''
+      try {
+        detail = ` — ${(await res.text()).slice(0, 200)}`
+      } catch {
+        // ignore body read failures
+      }
+      throw new LynxApiError(res.status, `Lynx login failed (no x-auth-token)${detail}`)
     }
     return token
   }
