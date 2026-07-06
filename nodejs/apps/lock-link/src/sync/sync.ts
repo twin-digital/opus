@@ -100,14 +100,28 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   // 1. Snapshot every Lodgify booking with a category — `gap` is the subset the sync
   //    will try to fill; the other four are the reasons a booking was excluded (logged
   //    per-booking in the handler so an operator can trace any bookingId).
-  const bookings = await lodgify.listBookings({ stayFilter: 'Upcoming' })
-  const snapshot: BookingSnapshot[] = bookings.items.map((booking) => ({
+  //
+  //    Query BOTH `Upcoming` and `Current`: Lodgify flips a booking from `Upcoming` to
+  //    `Current` at check-in time (~4pm local), so same-day arrivals past their check-in
+  //    time — the exact moment a guest needs the code most — would otherwise be invisible.
+  //    Dedup by `id` so a booking that appears in both buckets during the transition is
+  //    processed once; `Current` wins because its state is fresher.
+  const [upcoming, current] = await Promise.all([
+    lodgify.listAllBookings({ stayFilter: 'Upcoming' }),
+    lodgify.listAllBookings({ stayFilter: 'Current' }),
+  ])
+  const byId = new Map<number, Booking>()
+  for (const b of [...upcoming, ...current]) {
+    byId.set(b.id, b)
+  }
+  const bookings = [...byId.values()]
+  const snapshot: BookingSnapshot[] = bookings.map((booking) => ({
     bookingId: booking.id,
     arrival: booking.arrival,
     category: categorize(booking, horizonCutoff),
     status: booking.status,
   }))
-  const gaps = bookings.items.filter((booking) => categorize(booking, horizonCutoff) === 'gap')
+  const gaps = bookings.filter((booking) => categorize(booking, horizonCutoff) === 'gap')
 
   // 2. Steady state: no gaps → never touch Lynx.
   if (gaps.length === 0) {

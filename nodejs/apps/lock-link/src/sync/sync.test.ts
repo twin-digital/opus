@@ -228,4 +228,44 @@ describe('runSync (gap-fill orchestration)', () => {
     // trace that pairs with `outcomes` for full per-booking observability.
     expect(result.snapshot).toHaveLength(5)
   })
+
+  it('includes same-day arrivals whose Lodgify state has flipped to Current', async () => {
+    // The bug this pins: same-day arrivals past their check-in time move from
+    // `Upcoming` to `Current`. A sync that only queries `Upcoming` misses them — the
+    // exact moment a guest most needs the code.
+    world.addReservation({ bookingId: 1, code: '9234', stayCategory: 'Upcoming' })
+    world.addReservation({ bookingId: 2, code: '9234', stayCategory: 'Current' })
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    // Sync must issue BOTH stayFilter queries — the whole point of the fix.
+    const stayFilters = world.lodgifyRequests
+      .filter((r) => r.path === '/v2/reservations/bookings' && r.method === 'GET')
+      .flatMap((r) => (r.query?.get('stayFilter') ? [r.query.get('stayFilter')] : []))
+    expect(new Set(stayFilters)).toEqual(new Set(['Upcoming', 'Current']))
+    // Both bookings surface in the snapshot; a Current-only booking is no longer invisible.
+    const byId = new Map(result.snapshot.map((s) => [s.bookingId, s]))
+    expect(byId.get(1)?.category).toBe('gap')
+    expect(byId.get(2)?.category).toBe('gap')
+    expect(result.snapshot).toHaveLength(2)
+  })
+
+  it('paginates the Lodgify listing until every page has been walked', async () => {
+    // Seed more bookings than fit in one page (default page size = 50 in the fake).
+    // The pre-fix single-page fetch would silently drop everything past #50.
+    for (let i = 1; i <= 75; i += 1) {
+      world.addReservation({ bookingId: i, code: '9234', propertyId: 72230 + (i % 4) })
+    }
+
+    const result = await run(ARRIVAL_MS - 24 * HOURS)
+
+    // All 75 land in the snapshot — pagination walked every page.
+    expect(result.snapshot).toHaveLength(75)
+    // And the sync issued more than one Lodgify listing request per stayFilter (two
+    // full walks: Upcoming pages 1..2 + Current page 1 = at least 3 listing calls).
+    const listingCalls = world.lodgifyRequests.filter(
+      (r) => r.path === '/v2/reservations/bookings' && r.method === 'GET',
+    )
+    expect(listingCalls.length).toBeGreaterThanOrEqual(3)
+  })
 })

@@ -43,7 +43,13 @@ interface ReservationSpec {
   readonly lodgifyKeyCode?: string
   readonly type?: ReservationType
   readonly status?: Booking['status']
+  /** Which Lodgify `stayFilter` bucket surfaces this booking. Defaults to `Upcoming`
+   * (guest hasn't arrived); use `Current` to model a booking whose check-in-time has
+   * already passed (guest checked in but not yet checked out). */
+  readonly stayCategory?: LodgifyStayCategory
 }
+
+export type LodgifyStayCategory = 'Upcoming' | 'Current' | 'Historic'
 
 /** A Lynx reservation tagged with the property + poll bucket it belongs to. */
 interface SeededReservation {
@@ -57,6 +63,9 @@ interface RequestLog {
   readonly path: string
   /** The Lynx dashboard action (last path segment), when applicable. */
   readonly action?: string
+  /** Query params as sent (Lodgify only for now); enables tests to assert
+   * which `stayFilter` / pagination knobs a request carried. */
+  readonly query?: URLSearchParams
 }
 
 export interface World {
@@ -70,6 +79,10 @@ export interface World {
   readonly locksByProperty: Map<number, SmartLock[]>
   readonly reservations: SeededReservation[]
   readonly bookings: Map<number, Booking>
+  /** The Lodgify `stayFilter` bucket each booking lives in. Bookings without an entry
+   * default to `Upcoming` when the fake filters — matches the behavior tests seeded
+   * before this map existed. */
+  readonly stayCategoryByBookingId: Map<number, LodgifyStayCategory>
   readonly lynxRequests: RequestLog[]
   readonly lodgifyRequests: RequestLog[]
   addProperty: (spec: { propertyId: number; name?: string; lockNames?: readonly string[] }) => void
@@ -104,6 +117,7 @@ export const createWorld = (
     locksByProperty: new Map(),
     reservations: [],
     bookings: new Map(),
+    stayCategoryByBookingId: new Map(),
     lynxRequests: [],
     lodgifyRequests: [],
 
@@ -198,6 +212,7 @@ export const createWorld = (
         },
         rooms: [{ room_type_id: roomTypeId, key_code: spec.lodgifyKeyCode ?? '' }],
       })
+      world.stayCategoryByBookingId.set(spec.bookingId, spec.stayCategory ?? 'Upcoming')
     },
   }
 

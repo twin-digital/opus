@@ -82,6 +82,28 @@ export class LodgifyClient {
     return bookingSetSchema.parse(await this.request('GET', `/v2/reservations/bookings${qs ? `?${qs}` : ''}`))
   }
 
+  /**
+   * All bookings matching the filter across every page. Loops until the accumulated
+   * item count reaches `count` (or a page comes back empty). Callers that need only
+   * one page — canary probes, targeted diagnostics — use `listBookings` directly.
+   */
+  async listAllBookings(params: Omit<ListBookingsParams, 'page'> = {}): Promise<Booking[]> {
+    // Explicit `size=50` matches Lodgify's documented default; leaving it implicit means
+    // a silent server-side change to the default page size would silently change our
+    // fetch cadence. `includeCount` is required so the loop can detect the end.
+    const size = params.size ?? 50
+    const items: Booking[] = []
+    let page = 1
+    for (;;) {
+      const set = await this.listBookings({ ...params, page, size, includeCount: true })
+      items.push(...set.items)
+      if (set.items.length === 0 || items.length >= set.count) {
+        return items
+      }
+      page += 1
+    }
+  }
+
   /** `GET /v2/reservations/bookings/{id}` — resolve / diff. */
   async getBooking(id: number): Promise<Booking> {
     return bookingSchema.parse(await this.request('GET', `/v2/reservations/bookings/${String(id)}`))
