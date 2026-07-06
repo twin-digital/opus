@@ -22,11 +22,15 @@ describe('createSsmTokenCache', () => {
     expect(ssm.commandCalls(GetParameterCommand)).toHaveLength(1)
   })
 
-  it('returns undefined on ParameterNotFound (first-ever run — cache miss)', async () => {
+  it('returns undefined on ParameterNotFound and caches the "not found" state', async () => {
     ssm.on(GetParameterCommand).rejects(new ParameterNotFound({ $metadata: {}, message: 'x' }))
     const cache = createSsmTokenCache({ parameterName: PARAM })
 
     expect(await cache.get()).toBeUndefined()
+    // Subsequent gets in the same warm container must NOT re-poll SSM. Before this
+    // guard, every `authToken()` call on a fresh cache made an extra SSM round-trip.
+    expect(await cache.get()).toBeUndefined()
+    expect(ssm.commandCalls(GetParameterCommand)).toHaveLength(1)
   })
 
   it('writes a SecureString with Overwrite: true and updates the in-memory cache', async () => {
@@ -53,5 +57,17 @@ describe('createSsmTokenCache', () => {
     const cache = createSsmTokenCache({ parameterName: PARAM })
 
     await expect(cache.get()).rejects.toThrow(/AccessDenied/)
+  })
+
+  it('updates the in-memory cache even when PutParameter throws', async () => {
+    // A transient SSM failure must not leave the closure holding a stale token — every
+    // subsequent call in the same warm container would otherwise 401 and re-mint.
+    ssm.on(PutParameterCommand).rejects(Object.assign(new Error('Throttling'), { name: 'ThrottlingException' }))
+    const cache = createSsmTokenCache({ parameterName: PARAM })
+
+    await expect(cache.set('jwt-fresh')).rejects.toThrow(/Throttling/)
+    // Post-set get() sees the fresh token from memory — no SSM read attempt at all.
+    expect(await cache.get()).toBe('jwt-fresh')
+    expect(ssm.commandCalls(GetParameterCommand)).toHaveLength(0)
   })
 })

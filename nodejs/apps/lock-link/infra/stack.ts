@@ -97,15 +97,26 @@ export class LockLinkStack extends Stack {
     // KMS authorization runs against the underlying CMK ARN, not the alias — and the
     // AWS-managed CMK ARN isn't predictable at synth time. Scope by service instead:
     // `kms:ViaService` restricts each grant to calls originating from that service in
-    // this region, so `resources: ['*']` is still least-privilege. SSM SecureString
-    // WRITES need `kms:GenerateDataKey` in addition to `Decrypt` for reads.
-    const viaService = (service: string, actions: string[]) =>
+    // this region, so `resources: ['*']` is still least-privilege.
+    const viaService = (service: string, actions: string[], extraConditions: Record<string, unknown> = {}) =>
       new PolicyStatement({
         actions,
         resources: ['*'],
-        conditions: { StringEquals: { 'kms:ViaService': `${service}.${this.region}.amazonaws.com` } },
+        conditions: {
+          StringEquals: { 'kms:ViaService': `${service}.${this.region}.amazonaws.com`, ...extraConditions },
+        },
       })
-    syncFunction.addToRolePolicy(viaService('ssm', ['kms:Decrypt', 'kms:GenerateDataKey']))
+    // Read (all four params) — decrypt via SSM only.
+    syncFunction.addToRolePolicy(viaService('ssm', ['kms:Decrypt']))
+    // Write (token param only) — SecureString write needs Encrypt + GenerateDataKey.
+    // Additionally scope by `kms:EncryptionContext:PARAMETER_ARN`: SSM passes the
+    // target parameter's ARN as encryption context, so this grant can only encrypt
+    // material bound for the token cache — not the three credential params.
+    syncFunction.addToRolePolicy(
+      viaService('ssm', ['kms:Encrypt', 'kms:GenerateDataKey'], {
+        'kms:EncryptionContext:PARAMETER_ARN': tokenParamArn,
+      }),
+    )
     syncFunction.addToRolePolicy(viaService('sns', ['kms:GenerateDataKey', 'kms:Decrypt']))
 
     new Rule(this, 'Schedule', {
