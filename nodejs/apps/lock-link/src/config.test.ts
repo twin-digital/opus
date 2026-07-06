@@ -55,4 +55,14 @@ describe('loadConfig', () => {
   it('allows zero grace minutes', () => {
     expect(loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '0' }).graceMinutes).toBe(0)
   })
+
+  it('rejects empty / whitespace-only numeric envs (Number("") is 0)', () => {
+    // Bare `z.coerce.number()` would silently accept `""` as 0 — for `GRACE_MINUTES` that
+    // would degrade to a 0-min grace window instead of failing fast.
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_GRACE_MINUTES: '   ' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_SLA_HOURS: '' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_HORIZON_DAYS: '' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ACCOUNT_ID: '' })).toThrow()
+  })
 })

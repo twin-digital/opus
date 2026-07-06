@@ -26,13 +26,19 @@ export interface LockLinkConfig extends SyncConfig {
   }
 }
 
+// Empty/whitespace-only env values reject before coercion. Without this, `Number('')` is
+// `0` — passing `nonnegative()` on `GRACE_MINUTES` — so a misconfigured deploy would
+// silently degrade the grace window instead of failing fast at cold start. Applied
+// uniformly to keep the numeric envs symmetric.
+const numericEnv = z.string().trim().min(1).pipe(z.coerce.number())
+
 // Env vars are strings; coerce to numbers and validate every value (all required).
 const envSchema = z.object({
-  LOCK_LINK_ACCOUNT_ID: z.coerce.number().int().positive(),
+  LOCK_LINK_ACCOUNT_ID: numericEnv.pipe(z.number().int().positive()),
   LOCK_LINK_USER_ID: z.string().min(1),
-  LOCK_LINK_HORIZON_DAYS: z.coerce.number().int().positive(),
-  LOCK_LINK_SLA_HOURS: z.coerce.number().positive(),
-  LOCK_LINK_GRACE_MINUTES: z.coerce.number().nonnegative(),
+  LOCK_LINK_HORIZON_DAYS: numericEnv.pipe(z.number().int().positive()),
+  LOCK_LINK_SLA_HOURS: numericEnv.pipe(z.number().positive()),
+  LOCK_LINK_GRACE_MINUTES: numericEnv.pipe(z.number().nonnegative()),
   LOCK_LINK_ALERT_TOPIC_ARN: z
     .string()
     .regex(/^arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+$/, 'must be an SNS topic ARN'),
