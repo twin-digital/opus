@@ -49,6 +49,13 @@ peerDependencyRules:
     # stable Box/Text API and runs fine on ink 7 (refbash builds, type-checks, and tests
     # pass). Scoped to this edge so a genuine ink peer mismatch elsewhere still warns.
     '@mishieck/ink-titled-box>ink': '7'
+    # These deps haven't widened their peer ranges to the toolchain versions the repo
+    # standardizes on (TypeScript 6, ESLint 10); all build and lint clean against them.
+    # Scoped per-edge so a genuinely incompatible peer elsewhere still warns.
+    'tsdown>typescript': '6'
+    'rolldown-plugin-dts>typescript': '6'
+    '@mishieck/ink-titled-box>typescript': '6'
+    'eslint-plugin-react>eslint': '10'
 
 overrides:
   '@smithy/types': 4.15.0
