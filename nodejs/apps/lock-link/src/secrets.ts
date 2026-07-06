@@ -15,9 +15,11 @@ export interface LockLinkSecrets {
   readonly lodgifyApiKey: string
 }
 
-// 15 minutes ≫ the schedule cadence: a warm container reuses the cached value, and a
-// rotation propagates within one TTL without redeploy.
-const TTL_SECONDS = 900
+// 2 hours: comfortably above the hourly schedule cadence so a warm container reuses the
+// cached value across scheduled invocations. A rotation propagates within one TTL without
+// redeploy, and the 401 re-mint paths on Lynx / typed error paths on Lodgify catch stale
+// values before the TTL expires anyway.
+const TTL_SECONDS = 7200
 
 /**
  * Module-scoped provider so its cache survives between handler invocations on a warm

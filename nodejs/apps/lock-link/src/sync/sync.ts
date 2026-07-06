@@ -85,8 +85,9 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
     const upcoming = await lynx.listReservations(propertyId, 'upcoming')
     const current = await lynx.listReservations(propertyId, 'current')
     for (const reservation of [...upcoming, ...current]) {
+      let bookingId: number
       try {
-        byBookingId.set(resolveBookingId(reservation.confirmationCode, config.accountId), { reservation, propertyId })
+        bookingId = resolveBookingId(reservation.confirmationCode, config.accountId)
       } catch (error) {
         if (!(error instanceof ConfirmationCodeError)) {
           throw error
@@ -97,7 +98,26 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
           confirmationCode: reservation.confirmationCode,
           details: [error.message],
         })
+        continue
       }
+      const existing = byBookingId.get(bookingId)
+      if (existing && existing.propertyId !== propertyId) {
+        // Same Lodgify booking id resolved from two different properties — no legitimate
+        // upstream state produces this. Escalate and keep the first entry.
+        await notify({
+          severity: 'warning',
+          reason: 'Lynx bookingId resolved from multiple properties',
+          bookingId,
+          details: [
+            `${existing.reservation.confirmationCode} on propertyId ${String(existing.propertyId)}`,
+            `${reservation.confirmationCode} on propertyId ${String(propertyId)}`,
+          ],
+        })
+        continue
+      }
+      // Within a property, `current` overwrites `upcoming` on purpose — the newer
+      // lifecycle bucket has the more accurate provisioning state.
+      byBookingId.set(bookingId, { reservation, propertyId })
     }
   }
 
@@ -147,6 +167,12 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
 
 /** Overdue = within the SLA window of arrival AND past the grace period since booking. */
 const isOverdue = (arrivalMs: number, createdAt: string, now: number, config: SyncConfig): boolean => {
+  // An unparseable arrival is treated as overdue: a booking we can't even date belongs in
+  // the escalation queue, not the silent-skip pile. Symmetric with the createdAt fallback
+  // below (unparseable createdAt → Infinity age → grace check passes trivially).
+  if (Number.isNaN(arrivalMs)) {
+    return true
+  }
   const hoursToArrival = (arrivalMs - now) / HOUR_MS
   const created = Date.parse(createdAt)
   const ageMinutes = Number.isNaN(created) ? Infinity : (now - created) / MINUTE_MS

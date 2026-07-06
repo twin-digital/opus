@@ -4,6 +4,7 @@ import { Arn, Duration, Stack, type StackProps } from 'aws-cdk-lib'
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
+import { Alias } from 'aws-cdk-lib/aws-kms'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { Topic } from 'aws-cdk-lib/aws-sns'
@@ -32,7 +33,13 @@ export class LockLinkStack extends Stack {
     // Escalation channel. Created here for now; it will become a shared cross-workload
     // topic later — the Lambda only consumes the ARN (env), so swapping to an imported
     // topic won't touch the handler. Email subscription is confirm-on-first-deploy.
-    const alertTopic = new Topic(this, 'AlertTopic', { displayName: 'lock-link alerts' })
+    // Server-side encryption: escalation messages carry `confirmationCode` (embeds the
+    // Lynx accountId) and `bookingId` — indirectly identifying guests — so the topic is
+    // encrypted with the AWS-managed SNS key (matches SSM SecureString care).
+    const alertTopic = new Topic(this, 'AlertTopic', {
+      displayName: 'lock-link alerts',
+      masterKey: Alias.fromAliasName(this, 'SnsKey', 'alias/aws/sns'),
+    })
     alertTopic.addSubscription(new EmailSubscription('skleinjung@gmail.com'))
 
     // NOTE: once there's a second CDK app, extract a shared base construct that pre-fills these
@@ -72,10 +79,24 @@ export class LockLinkStack extends Stack {
       Arn.format({ service: 'ssm', resource: 'parameter', resourceName: name.replace(/^\//, '') }, this),
     )
     syncFunction.addToRolePolicy(new PolicyStatement({ actions: ['ssm:GetParameter'], resources: parameterArns }))
+    // KMS authorization runs against the underlying CMK ARN, not the alias — the
+    // AWS-managed `alias/aws/ssm` key ARN isn't predictable at synth time, so we scope by
+    // service instead. The `kms:ViaService` condition restricts the grant to KMS calls
+    // originating from SSM in this region, so this is still least-privilege.
     syncFunction.addToRolePolicy(
       new PolicyStatement({
         actions: ['kms:Decrypt'],
-        resources: [Arn.format({ service: 'kms', resource: 'alias', resourceName: 'aws/ssm' }, this)],
+        resources: ['*'],
+        conditions: { StringEquals: { 'kms:ViaService': `ssm.${this.region}.amazonaws.com` } },
+      }),
+    )
+    // Same pattern for the SNS topic's SSE key: encrypted-topic publishes need
+    // `kms:GenerateDataKey` on the topic's CMK, scoped by ViaService to SNS.
+    syncFunction.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['kms:GenerateDataKey', 'kms:Decrypt'],
+        resources: ['*'],
+        conditions: { StringEquals: { 'kms:ViaService': `sns.${this.region}.amazonaws.com` } },
       }),
     )
 

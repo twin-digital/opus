@@ -104,4 +104,36 @@ describe('runSync (gap-fill orchestration)', () => {
     await run(ARRIVAL_MS - 1000 * HOURS, { accountId: 999999 })
     expect(events.some((e) => e.reason.includes('did not parse'))).toBe(true)
   })
+
+  it('escalates a Lodgify booking with an unparseable arrival on the no-Lynx-entry path', async () => {
+    world.addReservation({ bookingId: 20559349, code: '9234' })
+    // Drop the Lynx side (so `byBookingId.get(gap.id)` misses) and corrupt the Lodgify
+    // arrival. Pre-fix, `isOverdue(NaN, …)` returned false → perpetual skip; now it
+    // treats NaN as overdue and escalates.
+    world.reservations.length = 0
+    const booking = world.bookings.get(20559349)
+    if (booking) {
+      Object.assign(booking, { arrival: 'not-a-date' })
+    }
+
+    const result = await run(ARRIVAL_MS - 100 * HOURS)
+    expect(result).toMatchObject({ escalated: 1, skipped: 0 })
+    expect(events.some((e) => e.reason.includes('no Lynx reservation'))).toBe(true)
+  })
+
+  it('escalates when the same bookingId resolves under two different properties', async () => {
+    world.addReservation({ bookingId: 20559349, propertyId: 72230, code: '9234', synced: false })
+    // A second Lynx reservation with the SAME confirmationCode on a DIFFERENT propertyId.
+    // Only Lynx state (not Lodgify) matters, so tack it onto the world's reservations directly.
+    const first = world.reservations[0].reservation
+    world.addProperty({ propertyId: 72231, name: 'Second' })
+    world.reservations.push({
+      propertyId: 72231,
+      type: 'upcoming',
+      reservation: { ...first, bookingId: first.bookingId + 1 },
+    })
+
+    await run(ARRIVAL_MS - 100 * HOURS)
+    expect(events.some((e) => e.reason.includes('multiple properties'))).toBe(true)
+  })
 })

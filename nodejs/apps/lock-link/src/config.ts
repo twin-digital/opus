@@ -33,7 +33,9 @@ const envSchema = z.object({
   LOCK_LINK_HORIZON_DAYS: z.coerce.number().int().positive(),
   LOCK_LINK_SLA_HOURS: z.coerce.number().positive(),
   LOCK_LINK_GRACE_MINUTES: z.coerce.number().nonnegative(),
-  LOCK_LINK_ALERT_TOPIC_ARN: z.string().regex(/^arn:aws:sns:/, 'must be an SNS topic ARN'),
+  LOCK_LINK_ALERT_TOPIC_ARN: z
+    .string()
+    .regex(/^arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+$/, 'must be an SNS topic ARN'),
   LOCK_LINK_LYNX_USERNAME_PARAM: z.string().min(1),
   LOCK_LINK_LYNX_PASSWORD_PARAM: z.string().min(1),
   LOCK_LINK_LODGIFY_API_KEY_PARAM: z.string().min(1),

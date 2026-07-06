@@ -35,8 +35,11 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_LYNX_PASSWORD_PARAM: '' })).toThrow()
   })
 
-  it('rejects an alert topic ARN that is not an SNS ARN', () => {
+  it('rejects an alert topic ARN that is not a well-formed SNS ARN', () => {
     expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'not-an-arn' })).toThrow()
+    // Prefix-only strings passed the loose /^arn:aws:sns:/ check; must be rejected now.
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:' })).toThrow()
+    expect(() => loadConfig({ ...validEnv, LOCK_LINK_ALERT_TOPIC_ARN: 'arn:aws:sns:us-east-1:foo:topic' })).toThrow()
   })
 
   it('throws when a required value is absent', () => {

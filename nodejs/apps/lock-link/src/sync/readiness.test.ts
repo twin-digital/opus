@@ -77,4 +77,14 @@ describe('checkReadiness', () => {
     expect(result.ready).toBe(false)
     expect(result.reasons).toContainEqual(expect.stringContaining('Front Door'))
   })
+
+  it('rejects an empty-string code (would be re-detected as a gap next tick)', () => {
+    const { reservation, lockSet } = seed({ bookingId: 1, code: '9234' })
+    // A single empty entry is enough — writing '' to Lodgify would perpetually re-appear
+    // as a gap.
+    reservation.accessCodes[1].code = ''
+    const result = checkReadiness(reservation, lockSet)
+    expect(result.ready).toBe(false)
+    expect(result.reasons.some((r) => r.includes('empty'))).toBe(true)
+  })
 })

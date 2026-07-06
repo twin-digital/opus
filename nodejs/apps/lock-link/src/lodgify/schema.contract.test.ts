@@ -135,10 +135,13 @@ describe('lodgify openapi contract', () => {
     }
   })
 
-  it('accepts every documented booking status', () => {
+  it('accepts every documented booking status without silently coercing it', () => {
+    // `bookingStatusSchema` has `.catch('Open')` so `safeParse` succeeds for any input —
+    // asserting `.success` alone would silently pass a newly-added spec value coerced to
+    // `'Open'` (the exact drift this test exists to catch). Compare the parsed value.
     const status = deref(bookingComponent().properties?.status ?? {})
     for (const value of status.enum ?? []) {
-      expect(bookingStatusSchema.safeParse(value).success, `status "${value}" rejected`).toBe(true)
+      expect(bookingStatusSchema.parse(value), `status "${value}" coerced or rejected`).toBe(value)
     }
   })
 
