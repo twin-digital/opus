@@ -11,6 +11,13 @@ import { z } from 'zod'
  * `lynxEnvelope(dataSchema)`.
  */
 
+/**
+ * Lynx encodes booleans as ints on the wire. Strict-literal keeps the runtime type
+ * `0 | 1` (JS truthy eval reads naturally, `if (x.isJammed) ...`) while rejecting stray
+ * values (`2`, `"1"`, `null`) at parse rather than silently propagating them.
+ */
+const zBoolInt = z.union([z.literal(0), z.literal(1)])
+
 const lynxEnvelope = <T extends z.ZodType>(data: T) =>
   z.object({
     status: z.boolean(),
@@ -33,9 +40,8 @@ const lynxEnvelope = <T extends z.ZodType>(data: T) =>
 export const accessCodeSchema = z.object({
   lockName: z.string(),
   code: z.string(),
-  /** 0 | 1 */
-  isCodeSet: z.number().int(),
-  isHubCommunicated: z.number().int(),
+  isCodeSet: zBoolInt,
+  isHubCommunicated: zBoolInt,
   /** Seen: `scheduled` (pending) | `success` (live on the lock). */
   syncToLockStatus: z.string(),
   syncToCloudStatus: z.string(),
@@ -68,8 +74,8 @@ export const smartLockSchema = z.object({
   /** ONLINE | OFFLINE */
   connectivityStatus: z.string(),
   batteryLevel: z.number().nullable(),
-  isJammed: z.boolean(),
-  provisionStatus: z.string(),
+  isJammed: zBoolInt,
+  provisionStatus: z.number(),
   /** e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`. */
   lockModelUniqueName: z.string(),
 })

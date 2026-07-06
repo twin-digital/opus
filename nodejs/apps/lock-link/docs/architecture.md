@@ -73,9 +73,10 @@ returns them as plaintext** — so no scraping or OCR is needed.
 - `POST https://api.getlynx.co/ProdV1.1/dashboard/getSmartLocksByPropertyWithStatus`
 - Body: `{ hostId, loggedInUserId, propertyId, page, perPage, isHubAndLockStatusRequired: true, provisioningInfo: true, skipDeviceStatusApiCall: false }`
 - Returns `data.smartLocksInfo[]` — **the property's full lock set** (`paginationInfo.total` = lock
-  count; property `72230` has **3**: Dalton Door, 4th Street Lofts, Front Door) plus per-lock health:
-  `provisionStatus`, `connectivityStatus` (ONLINE/OFFLINE), `batteryLevel`, `isJammed`,
-  `provisioningInfo`, `syncToLockStatus`, `lockModelUniqueName` (e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`).
+  count; property `72230` has **3**: Dalton Door, 4th Street Lofts, Front Door) plus per-lock
+  health: `provisionStatus` (int status code), `connectivityStatus` (`ONLINE`/`OFFLINE`),
+  `batteryLevel`, `isJammed` (int `0`/`1`), `provisioningInfo`, `syncToLockStatus`,
+  `lockModelUniqueName` (e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`).
 - This gives the **denominator** for "all locks ready" (how many locks a reservation must cover) and
   the health context for escalation messages.
 - A lock's `erCode` here is its **base/default** code, **not** the per-reservation guest code (which
