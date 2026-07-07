@@ -177,12 +177,18 @@ export class LockLinkStack extends Stack {
     })
 
     // Behavior — sync is running but not accomplishing anything useful.
-    alarm('ZeroCodesWritten24h', {
+    // 7 daily sums must ALL be ≤ 0 before alarming. Zero writes on a single day is
+    // legitimate (slow booking week, all bookings already have codes); a full week
+    // without a single write suggests a silently-broken pipeline.
+    new Alarm(this, 'ZeroCodesWritten7d', {
       metric: appMetric('CodesWritten', Duration.hours(24)),
       threshold: 0,
       comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-      alarmDescription: 'lock-link wrote zero codes in 24h — pipeline may be silently unhealthy',
-    })
+      evaluationPeriods: 7,
+      datapointsToAlarm: 7,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'lock-link wrote zero codes for 7 consecutive days — pipeline may be silently unhealthy',
+    }).addAlarmAction(snsAction)
     alarm('EscalationsInLastHour', {
       metric: appMetric('Escalated', Duration.hours(1)),
       threshold: 1,
@@ -191,13 +197,13 @@ export class LockLinkStack extends Stack {
     })
 
     // Nice-to-have — a spike suggests an upstream data problem (e.g., Lodgify bulk-cleared
-    // codes, or Lynx dropped reservations). 50 is a starting threshold that assumes ~2 gaps
-    // per tick as a healthy ceiling; retune once real steady-state cadence is characterized.
+    // codes, or Lynx dropped reservations). 25 is a starting threshold; retune once real
+    // steady-state cadence is characterized.
     alarm('GapsFoundSpike', {
       metric: appMetric('GapsFound', Duration.hours(1)),
-      threshold: 50,
+      threshold: 25,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      alarmDescription: 'lock-link surfaced >50 gaps in one hour — likely upstream data anomaly',
+      alarmDescription: 'lock-link surfaced >25 gaps in one hour — likely upstream data anomaly',
     })
   }
 }
