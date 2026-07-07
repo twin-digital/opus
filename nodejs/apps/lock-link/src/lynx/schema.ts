@@ -11,13 +11,6 @@ import { z } from 'zod'
  * `lynxEnvelope(dataSchema)`.
  */
 
-/**
- * Lynx encodes booleans as ints on the wire. Strict-literal keeps the runtime type
- * `0 | 1` (JS truthy eval reads naturally, `if (x.isJammed) ...`) while rejecting stray
- * values (`2`, `"1"`, `null`) at parse rather than silently propagating them.
- */
-const zBoolInt = z.union([z.literal(0), z.literal(1)])
-
 const lynxEnvelope = <T extends z.ZodType>(data: T) =>
   z.object({
     status: z.boolean(),
@@ -36,12 +29,15 @@ const lynxEnvelope = <T extends z.ZodType>(data: T) =>
  * Per-lock guest code on a reservation. `code` is assigned up front and uniform across
  * locks even while a lock is still `scheduled` — so readiness keys off
  * `syncToLockStatus: "success"`, not the code being present.
+ *
+ * Only fields the sync actually reads are modeled. Lynx also emits
+ * `isCodeSet` / `isHubCommunicated` as int-booleans; not modeled because unused fields
+ * with strict types are a maintenance burden without buying validation value (see
+ * commit message for the batteryLevel/isJammed drift that triggered this cleanup).
  */
 export const accessCodeSchema = z.object({
   lockName: z.string(),
   code: z.string(),
-  isCodeSet: zBoolInt,
-  isHubCommunicated: zBoolInt,
   /** Seen: `scheduled` (pending) | `success` (live on the lock). */
   syncToLockStatus: z.string(),
   syncToCloudStatus: z.string(),
@@ -68,16 +64,19 @@ export type Reservation = z.infer<typeof reservationSchema>
 export const reservationsResponseSchema = lynxEnvelope(z.object({ reservations: z.array(reservationSchema) }))
 export type ReservationsResponse = z.infer<typeof reservationsResponseSchema>
 
-/** One physical lock in a property's lock set, with health/provisioning context. */
+/**
+ * One physical lock in a property's lock set. Only `lockName` is currently consumed —
+ * `checkReadiness` uses it to enumerate the property's lock set as the readiness
+ * denominator. Lynx also emits `connectivityStatus`, `batteryLevel`, `isJammed`,
+ * `provisionStatus`, `lockModelUniqueName`; not modeled because their wire types have
+ * drifted repeatedly (`isJammed` shifted boolean→number→other; `batteryLevel` shifted
+ * number→string) and blocking the sync on validation for fields we don't read costs
+ * runtime uptime without buying safety. When we start consuming any of them (health
+ * context for escalation messages was the design intent), add them back typed against
+ * observed wire data at that point.
+ */
 export const smartLockSchema = z.object({
   lockName: z.string(),
-  /** ONLINE | OFFLINE */
-  connectivityStatus: z.string(),
-  batteryLevel: z.number().nullable(),
-  isJammed: zBoolInt,
-  provisionStatus: z.number(),
-  /** e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`. */
-  lockModelUniqueName: z.string(),
 })
 export type SmartLock = z.infer<typeof smartLockSchema>
 
