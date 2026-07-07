@@ -1,40 +1,63 @@
 # lock-link — architecture & design
 
-`@twin-digital/lock-link` keeps smart-lock access codes in sync from **Lynx** (smart-lock /
-property-management system, internally "Cat") into **Lodgify** (short-term-rental PMS / channel
-manager, internally "Hotel"). It replaces a manual workflow: a property manager reads each
-reservation's door code off the Lynx dashboard and pastes it into the matching Lodgify booking.
+`@twin-digital/lock-link` delivers smart-lock access codes from **Lynx** (smart-lock /
+property-management system, internally "Cat") to guests booked through **Lodgify**
+(short-term-rental PMS / channel manager, internally "Hotel"). It replaces a manual workflow:
+a property manager reads each reservation's door codes off the Lynx dashboard and pastes them
+into the matching Lodgify booking for Lodgify's scheduled messages to deliver.
 
-The scheduled Lambda runs the full read → resolve → validate → diff → write loop described
-below. The integration contracts are all proven against live data.
+lock-link owns delivery end-to-end: it **captures** per-lock codes into the Lodgify booking's
+`key_code` field, then **messages** the guest through Lodgify's messaging API (landing in the
+unified inbox) once codes are provisioned and arrival is near. Sending our own message is what
+makes two things possible that Lodgify's "X days before arrival" templates cannot do: carry a
+different code per lock, and hold delivery until provisioning has actually succeeded (a template
+fires on schedule even when the code isn't ready — worst on last-minute bookings, where "1 day
+before" means "immediately").
+
+The scheduled Lambda runs the full read → resolve → validate → capture → message → escalate
+loop described below. The integration contracts are all proven against live data.
 
 ---
 
 ## Data flow
 
-**Lodgify-driven, gap-fill.** Drive from the _official_ Lodgify API and touch the unofficial Lynx API
-only for actual gaps — so Lynx usage scales with new near-term bookings (not calendar size) and
-quiesces to **zero** once everything in-horizon already has a code.
+**Lodgify-driven, gap-fill, two phases.** Drive from the _official_ Lodgify API and touch the
+unofficial Lynx API only for actual gaps — so Lynx usage scales with new near-term bookings (not
+calendar size) and quiesces to **zero** once everything in-horizon already has its codes.
 
 ```
             scheduled Lambda (lock-link, cron)
-  1. Lodgify: list Upcoming bookings within a horizon (e.g. next 1-2 weeks),
-     status Booked, with NO key_code   ──►  the "gap set"
-  2. if gaps → Lynx: pull the properties' `upcoming` reservations, index by
-     confirmationCode, resolve each gap's code + provisioning readiness
-  3. ready (all locks success) → Lodgify: PUT keyCodes
-     not ready + near arrival     → notify (escalate)
+  1. Lodgify: list Upcoming + Current bookings within a horizon
+     (e.g. next 1-2 weeks), status Booked
+  2. capture — bookings with NO key_code  ──►  the "gap set":
+       Lynx: pull the properties' reservations, index by confirmationCode,
+       resolve each gap's per-lock codes + provisioning readiness
+       ready (all locks success) → Lodgify: PUT keyCodes (encoded, see below)
+  3. message — bookings WITH key_code, inside the send window:
+       Lodgify: read the booking's message thread; our deterministic
+       message_id absent → POST Owner message carrying the codes
+       (parsed back out of key_code), send_notification = true
+  4. not ready / not sent + near arrival → notify (escalate)
 ```
 
-At steady state (no in-horizon gaps) step 2 is skipped entirely — no Lynx calls. The Lodgify→Lynx
-join uses `confirmationCode` (it embeds the Lodgify booking id); the Lodgify→Lynx `property_id` map is
-only an optimization (query one Lynx property instead of all four when filling a gap).
+**Capture and message are deliberately decoupled.** Capture runs days-to-weeks before the send
+window opens, and once it lands the codes live in Lodgify's own booking record — so at send time
+the only dependency is Lodgify. A Lynx outage can delay capture (retried hourly, with lots of
+slack) but can never block a send. The `key_code` field doubles as the local store: no separate
+database, visible to the host in the Lodgify UI, and any legacy Lodgify template that references
+the key-code variable still renders something correct.
+
+At steady state (no in-horizon gaps) the Lynx half of step 2 is skipped entirely — no Lynx calls.
+The Lodgify→Lynx join uses `confirmationCode` (it embeds the Lodgify booking id); the
+Lodgify→Lynx `property_id` map is only an optimization (query one Lynx property instead of all
+four when filling a gap).
 
 > [!IMPORTANT]
 > **We assume door codes are static once set.** A Lodgify booking that already has a `key_code` is
-> treated as done and never re-checked, so a _rotation_ of the code in Lynx after the fact would not
-> propagate. The data suggests codes are assigned once and stable. If that proves untrue, add a
-> scheduled reconciliation that compares Lynx vs Lodgify codes for the in-horizon set.
+> treated as captured and never re-checked against Lynx, so a _rotation_ of the code in Lynx after
+> capture would not propagate — the guest would be messaged the captured codes. The data suggests
+> codes are assigned once and stable. If that proves untrue, add a best-effort re-check against
+> Lynx at send time (see open questions) or a scheduled reconciliation for the in-horizon set.
 
 ---
 
@@ -64,8 +87,9 @@ returns them as plaintext** — so no scraping or OCR is needed.
 - `type` ∈ `upcoming` | `current` | `past`. **Poll `upcoming` (primary — get codes in before
   arrival) and `current` (catches same-day / in-house).** **`past` returns `accessCodes: []`** (codes
   are cleared after checkout) — skip it, and don't let empty-on-past trip escalation.
-- Access code: `data.reservations[].accessCodes[].code` (plaintext, e.g. `"9234"`; same code across
-  all of a reservation's locks). Each entry also carries `syncToLockStatus` (the readiness
+- Access code: `data.reservations[].accessCodes[].code` (plaintext, e.g. `"9234"`; usually the
+  same across a reservation's locks, but legitimately differs per lock — capture each entry).
+  Each entry also carries `syncToLockStatus` (the readiness
   signal) and `syncToCloudStatus`. Lynx additionally emits `isCodeSet` / `isHubCommunicated`
   int-booleans; not modeled in the schema — see the smart-lock note below.
 
@@ -102,8 +126,8 @@ returns them as plaintext** — so no scraping or OCR is needed.
 | Field                                   | Example            | Use                                                                 |
 | --------------------------------------- | ------------------ | ------------------------------------------------------------------- |
 | `confirmationCode`                      | `20559349VK222262` | **join key** → Lodgify booking id (see below)                       |
-| `accessCodes[].code`                    | `9234`             | the door code to push                                               |
-| `accessCodes[].lockName`                | `Front Door`       | 3 locks per reservation (see invariant)                             |
+| `accessCodes[].code`                    | `9234`             | the door code(s) to capture — one entry per lock                    |
+| `accessCodes[].lockName`                | `Front Door`       | per-lock label (encoding + guest message when codes differ)         |
 | `bookingId`                             | `10490339`         | Lynx-internal id (NOT Lodgify's)                                    |
 | `guestFirstName/LastName`, `guestEmail` | `Heather Cobb`     | sanity-match against Lodgify                                        |
 | `checkInTimestamp`/`checkOutTimestamp`  | `2026-06-15/16`    | sanity-match                                                        |
@@ -117,20 +141,25 @@ transient errors), so a reservation legitimately spends part of its life only pa
 "All locks set to one code" is therefore a **readiness signal, not an always-true invariant.**
 
 - **Ready** = the reservation's `accessCodes` cover **every** lock in the property's lock set (count
-  from `getSmartLocksByPropertyWithStatus`), each with **`syncToLockStatus: "success"`**, all the
-  same `code`. ⚠️ The `code` is assigned up front and **uniform across all locks even
-  while a lock is `"scheduled"`** (assigned but not yet pushed to the lock) — so "all locks have the
-  same code" is **not** a readiness signal; **`syncToLockStatus: "success"` is.** Only when all locks
-  are `success` do we push to Lodgify — **never push a partial/unsynced code** (a code that opens
-  some doors is worse than none). Seen states so far: `scheduled` (pending), `success` (live).
+  from `getSmartLocksByPropertyWithStatus`), each with **`syncToLockStatus: "success"`**. Codes are
+  **usually uniform across a reservation's locks but legitimately differ** (observed live
+  2026-07-07: front door `2968`, back door `3350` on one booking) — capture every lock's code, don't
+  require them to match. ⚠️ A lock's `code` is assigned up front, **even while the lock is still
+  `"scheduled"`** (assigned but not yet pushed to the hardware) — so code presence is **not** a
+  readiness signal; **`syncToLockStatus: "success"` is.** Only when all locks are `success` do we
+  capture to Lodgify — **never capture a partial/unsynced code set** (a code that opens some doors
+  is worse than none). Seen states so far: `scheduled` (pending), `success` (live).
 - **Not ready is normal**, not an error — skip and re-check next run. The schedule is the retry and
   the stateless diff converges.
-- **Escalate only when not-ready is overdue**, computed statelessly from `checkInTimestamp` (+ the
-  booking `createdAt` for a grace window): escalate if `hoursToArrival <= SLA` (target: codes ready
-  **≥24h before arrival**) **and** `bookingAge >= GRACE` (so brand-new / same-day bookings aren't
-  flagged the instant they appear; after the grace, a still-bare imminent booking _is_ urgent).
-  Severity ramps with proximity (info > 24h, warn inside the window, critical < a few hours / past
-  arrival). Enrich the message with lock health (offline / jammed / low battery vs just slow).
+- **Escalate only when the booking is overdue and still unmessaged** — whether it is stuck at
+  capture (locks not ready) or at send (thread closed, sends failing). Computed statelessly from
+  `checkInTimestamp` (+ the booking `createdAt` for a grace window): escalate if
+  `hoursToArrival <= SLA` (target: guest has their codes **≥24h before arrival**) **and**
+  `bookingAge >= GRACE` (so brand-new / same-day bookings aren't flagged the instant they appear;
+  after the grace, a still-unmessaged imminent booking _is_ urgent). Severity ramps with proximity
+  (info > 24h, warn inside the window, critical < a few hours / past arrival — a guest arriving
+  without their codes is the worst outcome the system can produce). Enrich the message with lock
+  health (offline / jammed / low battery vs just slow).
 
 ---
 
@@ -162,22 +191,93 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 
 ---
 
-## Lodgify (destination) — public API v2
+## Lodgify (destination) — public API (v2, plus v1 for messaging)
 
-- Auth: **`X-ApiKey: <key>`** header (Lodgify dashboard → Settings → Public API). Not a bearer token.
+- Auth: **`X-ApiKey: <key>`** header (Lodgify dashboard → Settings → Public API). Not a bearer
+  token. The same key works for both API versions.
 
-### Write the door code
+### Capture the door codes — keyCodes write + encoding
 
 - `PUT https://api.lodgify.com/v2/reservations/bookings/{id}/keyCodes`
 - `{id}` = the numeric booking number from the join rule (int32).
-- Body: `{ "rooms": [ { "room_type_id": <int>, "key_code": "<code>" } ] }`
+- Body: `{ "rooms": [ { "room_type_id": <int>, "key_code": "<encoded codes>" } ] }`
+- **`key_code` is a free-form string and lock-link owns it** (single-host deployment, nothing else
+  writes the field). Encoding convention:
+  - all locks share one code → the bare code, e.g. `9234`
+  - codes differ per lock → a labeled list, e.g. `Front Door: 2968 · Back Door: 3350`, locks
+    ordered alphabetically by `lockName` so the encoding is deterministic
+  - The labeled form is deliberately human-readable: the host sees the field in the Lodgify UI,
+    and a legacy Lodgify message template that interpolates the key-code variable still renders
+    something a guest can use. Round-trip fidelity (length, `·`, spaces) proven live 2026-07-07.
 - Returns **200** with a rooms-only echo (`BookingKeyCodeDto = { rooms: [{ room_type_id,
 key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read back
   `rooms[].key_code` to confirm the write (no separate GET needed).
 - Errors → notify sink: **404** booking/room not found (stale parsed id / room_type_id); **400**
   typed `code` (`ValidationError`/`ArgumentError`/…) + `message` + `correlation_id`; **401** bad key.
-- One code per reservation maps cleanly to a single-room booking. (Lynx's 3 locks are physical
+- One `key_code` per reservation maps cleanly to a single-room booking. (Lynx's locks are physical
   hardware; Lodgify only cares about the booking's room(s).)
+
+### Message the guest — v1 messaging + v2 thread read
+
+The guest-facing message is sent through Lodgify's messaging API so it lands in the **unified
+inbox** thread for the booking (one conversation view for the host), and — for notified messages —
+is delivered onward to the guest.
+
+**Send** — `POST https://api.lodgify.com/v1/reservation/booking/{id}/messages`
+
+- Body: an **array** of `{ subject, message, type, send_notification, message_id }`.
+- `type: "Owner"` = host→guest. Always use `Owner`: ⚠️ `type: "Comment"` posts return success but
+  the message is silently dropped (never appears in the thread — proven live).
+- `send_notification: true` is the delivery switch — without it the message only sits in the
+  thread (no email; proven live). With it, Lodgify emails the guest; per the API docs, bookings
+  from an external channel have the message pushed through that channel instead.
+- `message_id` is an idempotency key we control: a **UUIDv5 of `<bookingId>:access-codes`**
+  (fixed namespace constant in code). Deterministic, so every run computes the same id for the
+  same booking without any local state.
+- ⚠️ **The HTTP status lies.** A successful send returns `200` with a literal `null` body. A
+  failed send — including a duplicate `message_id` — **also returns HTTP 200**, with an error
+  envelope in the body: `{ success: false, type: "domain_exception", statusCode: "400", ... }`.
+  The client must parse the body; a duplicate-id rejection means "already sent" (benign — the
+  read-before-send check normally prevents ever hitting it), any other envelope is a real
+  failure → escalate.
+
+**Read back** — `GET /v2/reservations/bookings/{id}` carries `thread_uid`;
+`GET /v2/messaging/{thread_uid}` returns the thread (an array of thread objects) with every
+message's `message_id`, `type`, `message_status`, and `route`.
+
+- **Sent-check**: our message exists ⇔ a thread message carries our deterministic `message_id`.
+  Exact-match, stateless, no local ledger. This check gates every send (read-before-send); the
+  server-side duplicate rejection is only the backstop for the crash-between-send-and-read race.
+- **Delivery signal**: `message_status` ∈ Submitted/Sent/Delivered/Failed — a notified message
+  should reach `Delivered` (observed within seconds for email); `Failed` → escalate.
+  Non-notified messages sit at `Unknown`; only notified ones are expected to progress.
+- **Thread health**: `is_closed: true` (+ `error_title`/`error_message`) means the thread can no
+  longer receive messages — that guest is unreachable through Lodgify → escalate immediately.
+- `route` on messages was `null` for email-delivered messages on a Manual booking; the enum
+  (`Email`/`Airbnb`/`BookingCom`/`Vrbo`/`Sms`) suggests OTA bookings populate it. **Channel push
+  for OTA bookings is documented but not yet verified live** — verify on the first real OTA send.
+
+### Send window
+
+A booking is messaged when **all** of these hold; the hourly schedule is the retry:
+
+1. **Codes captured** — `key_code` is set (which already implies readiness held at capture time).
+2. **Inside the window** — `hoursToArrival <= SEND_HOURS`. Codes are live on the locks the moment
+   Lynx reports `success`, so messaging weeks ahead is a small security/confusion cost with no
+   benefit; the window bounds it. Late bookings need no special case: a booking made 2 hours
+   before arrival is born inside the window and is messaged on the first run after capture.
+3. **Not already sent** — the read-before-send thread check above.
+
+There is **no cutoff at arrival** — attempts continue until checkout (a guest mid-stay without
+their codes still needs them; late beats never). Missing the SLA is the _escalation's_ trigger,
+never a reason to stop sending.
+
+### Message content
+
+Fixed template (single-host deployment — no per-host customization): greeting with the guest's
+name, property name, arrival date, and the codes — one line when uniform, a labeled list per lock
+when they differ. Plain text; the thread stores what we send verbatim and email delivery preserves
+it.
 
 ### List bookings (the poll driver) — `GET /v2/reservations/bookings`
 
@@ -196,8 +296,8 @@ key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read ba
   `arrival`/`departure`, `property_id`, `rooms[{ room_type_id, key_code }]`, `source`,
   `source_text` (the real OTA reference, e.g. Expedia `2462813314`).
 - **Stateless diff:** the booking JSON already contains the current `rooms[].key_code`. Compare it
-  to the Lynx code and **PUT only when they differ** — self-correcting, **no local snapshot store
-  needed** at this volume.
+  to the encoded string we would write and **PUT only when they differ** — self-correcting, **no
+  local snapshot store needed** at this volume.
 - ⚠️ `updated_at` does **not** change when key codes are written — never use it to detect changes.
 
 ---
@@ -219,8 +319,8 @@ key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read ba
 
 ### Secrets / config
 
-- **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, SLA,
-  grace, alert topic ARN, and the SSM parameter names. Validated at cold start
+- **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, send
+  window, SLA, grace, alert topic ARN, and the SSM parameter names. Validated at cold start
   (see the Configuration table below).
 - **SSM SecureString — credentials** (read at runtime via Powertools, cached ~2 h): Lynx
   username, Lynx password, Lodgify API key. Values are populated out-of-band so they stay
@@ -233,8 +333,10 @@ key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read ba
 ### Notify / escalation (single sink)
 
 All error cases — a `confirmationCode` that doesn't parse, a booking overdue and still
-not ready, a booking with no Lynx reservation, and the catch-all for whole-run failures
-(auth 401, endpoint down, JSON shape changed) — funnel to one `Notifier`, backed by SNS
+unmessaged, a booking with no Lynx reservation, a message send that returns an error
+envelope, a sent message whose `message_status` lands on `Failed`, a closed thread
+(`is_closed`, the guest is unreachable through Lodgify), and the catch-all for whole-run
+failures (auth 401, endpoint down, JSON shape changed) — funnel to one `Notifier`, backed by SNS
 (`createSnsNotifier` publishes with severity as the subject prefix and a message
 attribute). The Lambda consumes the topic by ARN so the topic can later become a shared
 cross-workload channel with no code change.
@@ -271,10 +373,14 @@ cross-workload channel with no code change.
 - `lynx/` — client (`login` + `TokenCache` seam, `listProperties`, `listReservations` for
   `upcoming`/`current`, `listSmartLocks` for the lock set), zod schemas, and
   `createSsmTokenCache` (durable JWT cache backed by SSM SecureString).
-- `lodgify/` — client (`listBookings`, `getBooking`, `putKeyCodes`), zod schemas, the
-  vendored OpenAPI (`lodgify.openapi.json`), and the `pull-spec` refresh tool.
-- `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (all locks `success`,
-  same code, non-empty), `runSync` (the Lodgify-driven gap-fill loop), and
+- `lodgify/` — client (`listBookings`, `getBooking`, `putKeyCodes`, `getThread`,
+  `addBookingMessage`), zod schemas, the vendored OpenAPI (`lodgify.openapi.json`, **v2 only** —
+  the v1 messaging endpoint is modeled by hand from live probing), and the `pull-spec` refresh
+  tool. `addBookingMessage` parses the response body for the success/error envelope (the HTTP
+  status is always 200 — see the messaging section).
+- `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (every lock covered, all
+  `success`), key-code encode/decode (the `key_code` convention), message composition + the
+  deterministic `message_id` derivation, `runSync` (capture + message phases), and
   `createSnsNotifier`.
 - `config.ts` — env-sourced, zod-validated `LockLinkConfig`; `secrets.ts` — Powertools
   SSM SecureString reads with a 2 h TTL.
@@ -286,18 +392,23 @@ cross-workload channel with no code change.
 
 Operational config (all required, validated at cold start):
 
-| Env var                           | Purpose                                            |
-| --------------------------------- | -------------------------------------------------- |
-| `LOCK_LINK_ACCOUNT_ID`            | Lynx umbrella account id (drives the join suffix)  |
-| `LOCK_LINK_USER_ID`               | Lynx per-user id sent as `hostId`/`loggedInUserId` |
-| `LOCK_LINK_HORIZON_DAYS`          | Fill gaps arriving within this window (14)         |
-| `LOCK_LINK_SLA_HOURS`             | Escalate a bare booking within this hours (48)     |
-| `LOCK_LINK_GRACE_MINUTES`         | Don't flag brand-new bookings (30)                 |
-| `LOCK_LINK_ALERT_TOPIC_ARN`       | SNS topic the Notifier publishes to                |
-| `LOCK_LINK_LYNX_USERNAME_PARAM`   | SSM SecureString name — Lynx username              |
-| `LOCK_LINK_LYNX_PASSWORD_PARAM`   | SSM SecureString name — Lynx password              |
-| `LOCK_LINK_LODGIFY_API_KEY_PARAM` | SSM SecureString name — Lodgify API key            |
-| `LOCK_LINK_LYNX_TOKEN_PARAM`      | SSM SecureString name — durable Lynx JWT cache     |
+| Env var                           | Purpose                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| `LOCK_LINK_ACCOUNT_ID`            | Lynx umbrella account id (drives the join suffix)                          |
+| `LOCK_LINK_USER_ID`               | Lynx per-user id sent as `hostId`/`loggedInUserId`                         |
+| `LOCK_LINK_HORIZON_DAYS`          | Fill gaps arriving within this window (14)                                 |
+| `LOCK_LINK_SEND_HOURS`            | Message the guest inside this many hours before arrival (72)               |
+| `LOCK_LINK_SLA_HOURS`             | Escalate a still-unmessaged booking within this many hours of arrival (48) |
+| `LOCK_LINK_GRACE_MINUTES`         | Don't flag brand-new bookings (30)                                         |
+| `LOCK_LINK_ALERT_TOPIC_ARN`       | SNS topic the Notifier publishes to                                        |
+| `LOCK_LINK_LYNX_USERNAME_PARAM`   | SSM SecureString name — Lynx username                                      |
+| `LOCK_LINK_LYNX_PASSWORD_PARAM`   | SSM SecureString name — Lynx password                                      |
+| `LOCK_LINK_LODGIFY_API_KEY_PARAM` | SSM SecureString name — Lodgify API key                                    |
+| `LOCK_LINK_LYNX_TOKEN_PARAM`      | SSM SecureString name — durable Lynx JWT cache                             |
+
+`LOCK_LINK_SEND_HOURS` must exceed `LOCK_LINK_SLA_HOURS`: the send window has to open before
+the escalation clock runs out, so a healthy booking always gets send attempts before anyone
+is paged.
 
 SSM SecureString **values** are populated out-of-band on initial setup (CFN never sees
 secret material); the stack grants the Lambda `ssm:GetParameter` on the named parameters
@@ -305,6 +416,11 @@ plus `kms:Decrypt` scoped by `kms:ViaService = ssm.<region>.amazonaws.com`.
 
 ## Open questions / follow-ups
 
+- **Verify OTA channel push on the first real OTA-sourced send** (documented behavior of
+  `send_notification`, not yet observed live; watch the message's `route`).
+- Stretch: **best-effort code freshness at send time** — re-check Lynx before messaging and use
+  the fresh codes if reachable, the captured ones if not. Rotation after capture is expected to
+  be an anomaly; MVP assumes codes are static once set.
 - Confirm whether Lynx ever **rotates** a code after it's set (validates the static-code
   assumption / whether a scheduled reconciliation pass is needed). Tune the cron cadence
   once real behaviour is observed.
@@ -319,3 +435,6 @@ plus `kms:Decrypt` scoped by `kms:ViaService = ssm.<region>.amazonaws.com`.
 - A throwaway `lynx-getreservations.sh` curl script (used to prove the Lynx endpoint)
   exists in the repo root of the exploration checkout — handy for poking the API by
   hand with a pasted token.
+- A throwaway `lodgify-messaging-probe.mjs` script (used to prove the messaging contract:
+  thread read-back, `message_id` idempotency, `send_notification` behavior, `key_code`
+  round-trip) exists alongside it — subcommands for `booking`/`thread`/`send`/`keycode`.
