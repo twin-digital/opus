@@ -84,9 +84,16 @@ export class LockLinkStack extends Stack {
         LOCK_LINK_LYNX_PASSWORD_PARAM: SECRET_PARAMS.lynxPassword,
         LOCK_LINK_LODGIFY_API_KEY_PARAM: SECRET_PARAMS.lodgifyApiKey,
         LOCK_LINK_LYNX_TOKEN_PARAM: TOKEN_PARAM,
-        // Pin the Powertools metrics namespace so it doesn't fall back to the default
-        // `Application`; the alarms below reference this exact namespace.
+        // Pin the Powertools metrics namespace + service so the alarms below reference
+        // an exact (namespace, dimension) pair. `POWERTOOLS_SERVICE_NAME` is redundant
+        // today (the handler passes `serviceName: 'lock-link'` through
+        // `withObservability`, which flows into Powertools' Metrics constructor) but
+        // holds the dimension even if a future refactor drops the constructor option —
+        // otherwise the `service` dimension would default to the literal
+        // string `service_undefined` and every EMF alarm below would sit at
+        // INSUFFICIENT_DATA forever.
         POWERTOOLS_METRICS_NAMESPACE: METRICS_NAMESPACE,
+        POWERTOOLS_SERVICE_NAME: METRICS_SERVICE,
       },
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
@@ -180,6 +187,15 @@ export class LockLinkStack extends Stack {
     // 7 daily sums must ALL be ≤ 0 before alarming. Zero writes on a single day is
     // legitimate (slow booking week, all bookings already have codes); a full week
     // without a single write suggests a silently-broken pipeline.
+    //
+    // Coverage matrix (deliberate): this alarm fires when the handler is completing
+    // normally but writing nothing — Powertools emits `CodesWritten: 0` on every
+    // healthy invocation, giving CloudWatch a datapoint of 0 to score. The other
+    // failure modes are covered separately: a handler that throws before emitting
+    // metrics is caught by `FunctionErrors` (within 1h); a schedule that stops
+    // firing is caught by `InvocationsBelowMinimum` (within 24h). `NOT_BREACHING`
+    // on missing data is intentional — flipping to BREACHING would fire during the
+    // first-week deploy window when historical periods are missing by construction.
     new Alarm(this, 'ZeroCodesWritten7d', {
       metric: appMetric('CodesWritten', Duration.hours(24)),
       threshold: 0,
