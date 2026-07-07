@@ -300,12 +300,110 @@ describe('observabilityMiddleware', () => {
       const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
       const { logMetrics } = await import('@aws-lambda-powertools/metrics/middleware')
       const calls: string[] = []
-      const tracerAfter = vi.fn(() => {
-        calls.push('tracerAfter')
+      // Promise-returning mocks so the ordering test also catches a missing `await`
+      // on the metrics side — a sync-returning mock would let a bug of "close subsegment
+      // while metrics are still flushing" pass the ordering assertion.
+      const deferred = (label: string) => vi.fn(() => Promise.resolve().then(() => void calls.push(label)))
+      vi.mocked(captureLambdaHandler).mockReturnValueOnce({
+        before: vi.fn(),
+        after: deferred('tracerAfter'),
+        onError: vi.fn(),
       })
-      const metricsAfter = vi.fn(() => {
-        calls.push('metricsAfter')
+      vi.mocked(logMetrics).mockReturnValueOnce({
+        before: vi.fn(),
+        after: deferred('metricsAfter'),
+        onError: vi.fn(),
       })
+
+      const middleware = observabilityMiddleware({ skipTracing: false })
+      const request = {
+        event: {},
+        context: mockContext as ObservabilityContext,
+        internal: {},
+        response: undefined,
+        error: null,
+      }
+      // Real lifecycle — before then after — so the tracer/metrics flags are set to true
+      // and both cleanup steps actually run.
+      await middleware.before?.(request)
+      await middleware.after?.(request)
+
+      expect(calls).toEqual(['metricsAfter', 'tracerAfter'])
+    })
+
+    it('closes the tracer subsegment even when metrics.after throws', async () => {
+      // The subsegment MUST close on every path — a metrics-flush throw that leaked the
+      // subsegment would corrupt every subsequent invocation in the warm container.
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      const { logMetrics } = await import('@aws-lambda-powertools/metrics/middleware')
+      const tracerAfter = vi.fn()
+      vi.mocked(captureLambdaHandler).mockReturnValueOnce({
+        before: vi.fn(),
+        after: tracerAfter,
+        onError: vi.fn(),
+      })
+      vi.mocked(logMetrics).mockReturnValueOnce({
+        before: vi.fn(),
+        after: vi.fn(() => {
+          throw new Error('EMF flush failed')
+        }),
+        onError: vi.fn(),
+      })
+
+      const middleware = observabilityMiddleware({ skipTracing: false })
+      const request = {
+        event: {},
+        context: mockContext as ObservabilityContext,
+        internal: {},
+        response: undefined,
+        error: null,
+      }
+      await middleware.before?.(request)
+      await expect(middleware.after?.(request)).rejects.toThrow('EMF flush failed')
+
+      expect(tracerAfter).toHaveBeenCalledTimes(1)
+    })
+
+    it('closes the tracer subsegment even when metrics.onError throws', async () => {
+      // Same invariant on the error path — where the leak matters most.
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      const { logMetrics } = await import('@aws-lambda-powertools/metrics/middleware')
+      const tracerOnError = vi.fn()
+      vi.mocked(captureLambdaHandler).mockReturnValueOnce({
+        before: vi.fn(),
+        after: vi.fn(),
+        onError: tracerOnError,
+      })
+      vi.mocked(logMetrics).mockReturnValueOnce({
+        before: vi.fn(),
+        after: vi.fn(),
+        onError: vi.fn(() => {
+          throw new Error('EMF flush failed')
+        }),
+      })
+
+      const middleware = observabilityMiddleware({ skipTracing: false })
+      const request = {
+        event: {},
+        context: mockContext as ObservabilityContext,
+        internal: {},
+        response: undefined,
+        error: new Error('handler failed'),
+      }
+      await middleware.before?.(request)
+      await expect(middleware.onError?.(request)).rejects.toThrow('EMF flush failed')
+
+      expect(tracerOnError).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not call cleanup on sub-middlewares whose `before` never ran (no unpaired close)', async () => {
+      // If `before` never opened the subsegment, `after`/`onError` MUST NOT call the
+      // tracer's cleanup — Powertools reads a segment stack and closing without a paired
+      // open corrupts trace state or throws "no subsegment on the stack".
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      const { logMetrics } = await import('@aws-lambda-powertools/metrics/middleware')
+      const tracerAfter = vi.fn()
+      const metricsAfter = vi.fn()
       vi.mocked(captureLambdaHandler).mockReturnValueOnce({
         before: vi.fn(),
         after: tracerAfter,
@@ -318,6 +416,8 @@ describe('observabilityMiddleware', () => {
       })
 
       const middleware = observabilityMiddleware({ skipTracing: false })
+      // Call `after` on a fresh middleware whose `before` was never invoked (models
+      // a chained user middleware short-circuiting before observability's `before`).
       await middleware.after?.({
         event: {},
         context: mockContext as ObservabilityContext,
@@ -326,7 +426,8 @@ describe('observabilityMiddleware', () => {
         error: null,
       })
 
-      expect(calls).toEqual(['metricsAfter', 'tracerAfter'])
+      expect(tracerAfter).not.toHaveBeenCalled()
+      expect(metricsAfter).not.toHaveBeenCalled()
     })
 
     it('does not attach a tracer middleware when tracing is skipped', async () => {
