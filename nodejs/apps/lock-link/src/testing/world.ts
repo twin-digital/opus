@@ -91,14 +91,7 @@ export interface World {
   addReservation: (spec: ReservationSpec) => void
 }
 
-const aLock = (lockName: string): SmartLock => ({
-  lockName,
-  connectivityStatus: 'ONLINE',
-  batteryLevel: 90,
-  isJammed: 0,
-  provisionStatus: 1,
-  lockModelUniqueName: 'SCHLAGE_ENCODE',
-})
+const aLock = (lockName: string): SmartLock => ({ lockName })
 
 export const createWorld = (
   options: {
@@ -175,8 +168,6 @@ export const createWorld = (
             (lockName): AccessCode => ({
               lockName,
               code: spec.code ?? '',
-              isCodeSet: synced ? 1 : 0,
-              isHubCommunicated: 1,
               syncToLockStatus: synced ? 'success' : 'scheduled',
               syncToCloudStatus: 'success',
             }),
