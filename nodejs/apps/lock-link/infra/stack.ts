@@ -171,9 +171,8 @@ export class LockLinkStack extends Stack {
     // `BREACHING` on missing data (overriding the helper's default `NOT_BREACHING`):
     // Lambda emits no `Invocations` datapoint at all when the function isn't invoked,
     // so `NOT_BREACHING` would score a fully-stopped schedule as OK and silently miss
-    // the exact failure this alarm exists to catch. `BREACHING` catches it. The
-    // first-day-post-deploy period fires either way (sum < 22 with partial data), so
-    // there's no downside beyond a one-time deploy-window alarm.
+    // the exact failure this alarm exists to catch. Expect one alarm shortly after
+    // the initial deploy (the trailing 24h has no data until the first tick fires).
     alarm('InvocationsBelowMinimum', {
       metric: syncFunction.metricInvocations({ period: Duration.hours(24), statistic: 'Sum' }),
       threshold: 22, // 24 expected/day; 22 leaves slack for one skipped tick + one late deploy.

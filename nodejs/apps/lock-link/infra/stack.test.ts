@@ -1,6 +1,6 @@
 import { App } from 'aws-cdk-lib'
 import { Match, Template } from 'aws-cdk-lib/assertions'
-import { describe, expect, it } from 'vitest'
+import { describe, it } from 'vitest'
 
 import { SERVICE_NAME } from '../src/service.js'
 import { LockLinkStack } from './stack.js'
