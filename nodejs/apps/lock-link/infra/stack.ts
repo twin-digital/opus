@@ -157,7 +157,7 @@ export class LockLinkStack extends Stack {
         statistic: 'Sum',
         period,
       })
-    const alarm = (id: string, config: Omit<AlarmProps, 'evaluationPeriods' | 'treatMissingData'>) => {
+    const alarm = (id: string, config: Omit<AlarmProps, 'evaluationPeriods'>) => {
       const a = new Alarm(this, id, {
         evaluationPeriods: 1,
         treatMissingData: TreatMissingData.NOT_BREACHING,
@@ -168,10 +168,17 @@ export class LockLinkStack extends Stack {
     }
 
     // Health — the schedule stopped firing or the handler is throwing.
+    // `BREACHING` on missing data (overriding the helper's default `NOT_BREACHING`):
+    // Lambda emits no `Invocations` datapoint at all when the function isn't invoked,
+    // so `NOT_BREACHING` would score a fully-stopped schedule as OK and silently miss
+    // the exact failure this alarm exists to catch. `BREACHING` catches it. The
+    // first-day-post-deploy period fires either way (sum < 22 with partial data), so
+    // there's no downside beyond a one-time deploy-window alarm.
     alarm('InvocationsBelowMinimum', {
       metric: syncFunction.metricInvocations({ period: Duration.hours(24), statistic: 'Sum' }),
       threshold: 22, // 24 expected/day; 22 leaves slack for one skipped tick + one late deploy.
       comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: TreatMissingData.BREACHING,
       alarmDescription: 'lock-link sync fired fewer than 22 times in 24h — schedule may have stopped',
     })
     alarm('FunctionErrors', {
