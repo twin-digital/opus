@@ -1,6 +1,8 @@
 import { fileURLToPath } from 'node:url'
 
 import { Arn, Duration, Stack, type StackProps } from 'aws-cdk-lib'
+import { Alarm, type AlarmProps, ComparisonOperator, Metric, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch'
+import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events'
 import { LambdaFunction } from 'aws-cdk-lib/aws-events-targets'
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam'
@@ -10,6 +12,12 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs'
 import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
 import type { Construct } from 'constructs'
+
+/** CloudWatch namespace for the sync's application metrics — Powertools writes here when
+ * `POWERTOOLS_METRICS_NAMESPACE` is set (see env below). The alarms read from the same
+ * namespace + `service` dimension the handler emits. */
+const METRICS_NAMESPACE = 'lock-link'
+const METRICS_SERVICE = 'lock-link'
 
 /**
  * SSM SecureString parameter names. Values are populated **out-of-band** (initial setup;
@@ -76,6 +84,9 @@ export class LockLinkStack extends Stack {
         LOCK_LINK_LYNX_PASSWORD_PARAM: SECRET_PARAMS.lynxPassword,
         LOCK_LINK_LODGIFY_API_KEY_PARAM: SECRET_PARAMS.lodgifyApiKey,
         LOCK_LINK_LYNX_TOKEN_PARAM: TOKEN_PARAM,
+        // Pin the Powertools metrics namespace so it doesn't fall back to the default
+        // `Application`; the alarms below reference this exact namespace.
+        POWERTOOLS_METRICS_NAMESPACE: METRICS_NAMESPACE,
       },
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
@@ -125,6 +136,68 @@ export class LockLinkStack extends Stack {
     new Rule(this, 'Schedule', {
       schedule: Schedule.rate(Duration.hours(1)),
       targets: [new LambdaFunction(syncFunction)],
+    })
+
+    // CloudWatch alarms — every alarm publishes to the same `alertTopic` the escalation
+    // notifier uses, so operator routing (email) is already in place. `NOT_BREACHING` on
+    // missing data: a missing datapoint means "the sync didn't emit that metric" (usually
+    // steady state), NOT "something is wrong" — treating it as breaching would give false
+    // pages every hour there was no interesting activity.
+    const snsAction = new SnsAction(alertTopic)
+    const appMetric = (metricName: string, period: Duration) =>
+      new Metric({
+        namespace: METRICS_NAMESPACE,
+        metricName,
+        dimensionsMap: { service: METRICS_SERVICE },
+        statistic: 'Sum',
+        period,
+      })
+    const alarm = (id: string, config: Omit<AlarmProps, 'evaluationPeriods' | 'treatMissingData'>) => {
+      const a = new Alarm(this, id, {
+        evaluationPeriods: 1,
+        treatMissingData: TreatMissingData.NOT_BREACHING,
+        ...config,
+      })
+      a.addAlarmAction(snsAction)
+      return a
+    }
+
+    // Health — the schedule stopped firing or the handler is throwing.
+    alarm('InvocationsBelowMinimum', {
+      metric: syncFunction.metricInvocations({ period: Duration.hours(24), statistic: 'Sum' }),
+      threshold: 22, // 24 expected/day; 22 leaves slack for one skipped tick + one late deploy.
+      comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
+      alarmDescription: 'lock-link sync fired fewer than 22 times in 24h — schedule may have stopped',
+    })
+    alarm('FunctionErrors', {
+      metric: syncFunction.metricErrors({ period: Duration.hours(1), statistic: 'Sum' }),
+      threshold: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: 'lock-link sync threw an exception in the last hour',
+    })
+
+    // Behavior — sync is running but not accomplishing anything useful.
+    alarm('ZeroCodesWritten24h', {
+      metric: appMetric('CodesWritten', Duration.hours(24)),
+      threshold: 0,
+      comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: 'lock-link wrote zero codes in 24h — pipeline may be silently unhealthy',
+    })
+    alarm('EscalationsInLastHour', {
+      metric: appMetric('Escalated', Duration.hours(1)),
+      threshold: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: 'lock-link escalated at least one gap — a code was not ready before SLA',
+    })
+
+    // Nice-to-have — a spike suggests an upstream data problem (e.g., Lodgify bulk-cleared
+    // codes, or Lynx dropped reservations). 50 is a starting threshold that assumes ~2 gaps
+    // per tick as a healthy ceiling; retune once real steady-state cadence is characterized.
+    alarm('GapsFoundSpike', {
+      metric: appMetric('GapsFound', Duration.hours(1)),
+      threshold: 50,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+      alarmDescription: 'lock-link surfaced >50 gaps in one hour — likely upstream data anomaly',
     })
   }
 }
