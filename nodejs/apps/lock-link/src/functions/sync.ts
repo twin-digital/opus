@@ -6,6 +6,7 @@ import { LodgifyClient } from '../lodgify/client.js'
 import { LynxClient } from '../lynx/client.js'
 import { createSsmTokenCache } from '../lynx/ssm-token-cache.js'
 import { loadSecrets } from '../secrets.js'
+import { SERVICE_NAME } from '../service.js'
 import { createSnsNotifier } from '../sync/sns-notifier.js'
 import { runSync } from '../sync/sync.js'
 import { buildOutcomeLogFields, buildSnapshotLogFields } from './log-format.js'
@@ -91,5 +92,5 @@ export const handler = withObservability(
       throw error
     }
   },
-  { serviceName: 'lock-link' },
+  { serviceName: SERVICE_NAME },
 )

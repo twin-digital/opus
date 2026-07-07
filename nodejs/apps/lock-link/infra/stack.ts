@@ -13,11 +13,13 @@ import { Topic } from 'aws-cdk-lib/aws-sns'
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
 import type { Construct } from 'constructs'
 
-/** CloudWatch namespace for the sync's application metrics — Powertools writes here when
- * `POWERTOOLS_METRICS_NAMESPACE` is set (see env below). The alarms read from the same
- * namespace + `service` dimension the handler emits. */
+import { SERVICE_NAME } from '../src/service.js'
+
+/** CloudWatch namespace for the sync's application metrics. Powertools writes here when
+ * `POWERTOOLS_METRICS_NAMESPACE` is set (see env below). Kept as a local because the
+ * namespace is an infra-side choice — the runtime doesn't reason about it — while
+ * `SERVICE_NAME` is shared with the handler so a rename can't strand the alarms. */
 const METRICS_NAMESPACE = 'lock-link'
-const METRICS_SERVICE = 'lock-link'
 
 /**
  * SSM SecureString parameter names. Values are populated **out-of-band** (initial setup;
@@ -84,16 +86,12 @@ export class LockLinkStack extends Stack {
         LOCK_LINK_LYNX_PASSWORD_PARAM: SECRET_PARAMS.lynxPassword,
         LOCK_LINK_LODGIFY_API_KEY_PARAM: SECRET_PARAMS.lodgifyApiKey,
         LOCK_LINK_LYNX_TOKEN_PARAM: TOKEN_PARAM,
-        // Pin the Powertools metrics namespace + service so the alarms below reference
-        // an exact (namespace, dimension) pair. `POWERTOOLS_SERVICE_NAME` is redundant
-        // today (the handler passes `serviceName: 'lock-link'` through
-        // `withObservability`, which flows into Powertools' Metrics constructor) but
-        // holds the dimension even if a future refactor drops the constructor option —
-        // otherwise the `service` dimension would default to the literal
-        // string `service_undefined` and every EMF alarm below would sit at
-        // INSUFFICIENT_DATA forever.
+        // Pin the Powertools metrics namespace so it doesn't fall back to the default
+        // `Application`; the alarms below reference this exact namespace. The `service`
+        // dimension comes from the handler's `withObservability({ serviceName })`
+        // option, which reads from the shared `SERVICE_NAME` constant — no env var
+        // needed and no drift risk from a handler rename.
         POWERTOOLS_METRICS_NAMESPACE: METRICS_NAMESPACE,
-        POWERTOOLS_SERVICE_NAME: METRICS_SERVICE,
       },
       bundling: {
         // Resolve workspace deps (observability-lib, logger-lib) via their `source` export
@@ -155,7 +153,7 @@ export class LockLinkStack extends Stack {
       new Metric({
         namespace: METRICS_NAMESPACE,
         metricName,
-        dimensionsMap: { service: METRICS_SERVICE },
+        dimensionsMap: { service: SERVICE_NAME },
         statistic: 'Sum',
         period,
       })
