@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda'
 import { logMetrics } from '@aws-lambda-powertools/metrics/middleware'
+import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware'
 import { createLogger } from '../core/logger.js'
 import { createMetrics } from '../core/metrics.js'
 import { createTracer } from '../core/tracer.js'
@@ -160,9 +161,18 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
     captureColdStartMetric: options.captureColdStart ?? false,
   })
 
+  // Compose with Powertools tracer middleware. Its `before` opens an X-Ray subsegment
+  // for the invocation; we then add annotations on THAT subsegment rather than on the
+  // Lambda-provided facade segment — which Powertools refuses to annotate, emitting
+  // "cannot annotate the main segment in a Lambda execution environment" if we try.
+  const tracerMiddleware = tracer ? captureLambdaHandler(tracer) : null
+
   return {
-    before: (request) => {
+    before: async (request) => {
       const { event, context } = request
+
+      // Open the subsegment first so downstream annotations land on it, not on the facade.
+      await tracerMiddleware?.before?.(request)
 
       // Create a fresh logger for this invocation with contextual information
       const requestId = getRequestId(event, context)
@@ -184,7 +194,8 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
       // AsyncLocalStorage will automatically isolate this between concurrent invocations
       setLogger(logger)
 
-      // Add annotations to trace
+      // Add annotations to trace — safe now because captureLambdaHandler.before ran first
+      // and the current segment is a subsegment (not the Lambda facade).
       if (tracer) {
         tracer.putAnnotation('correlationId', correlationId)
         if (userId) {
@@ -202,14 +213,18 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
       metricsMiddleware.before?.(request)
     },
 
-    after: (request) => {
+    after: async (request) => {
       // Delegate to Powertools metrics middleware
       metricsMiddleware.after?.(request)
+      // Close the X-Ray subsegment last so metrics + logger cleanup happens inside its scope.
+      await tracerMiddleware?.after?.(request)
     },
 
-    onError: (request) => {
+    onError: async (request) => {
       // Delegate to Powertools metrics middleware
       metricsMiddleware.onError?.(request)
+      // Record the error on the subsegment and close it.
+      await tracerMiddleware?.onError?.(request)
     },
   }
 }

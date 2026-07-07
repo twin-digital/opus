@@ -43,6 +43,14 @@ vi.mock('@aws-lambda-powertools/metrics/middleware', () => ({
   })),
 }))
 
+vi.mock('@aws-lambda-powertools/tracer/middleware', () => ({
+  captureLambdaHandler: vi.fn(() => ({
+    before: vi.fn(),
+    after: vi.fn(),
+    onError: vi.fn(),
+  })),
+}))
+
 vi.mock('@twin-digital/logger-lib', () => ({
   setLogger: vi.fn(),
 }))
@@ -79,7 +87,7 @@ describe('observabilityMiddleware', () => {
       expect(middleware).toBeDefined()
     })
 
-    it('creates middleware with custom service name', () => {
+    it('creates middleware with custom service name', async () => {
       const middleware = observabilityMiddleware({ serviceName: 'my-service' })
       const request = {
         event: {},
@@ -89,7 +97,7 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       // Verify createLogger was called with the custom service name in the before hook
       expect(createLogger).toHaveBeenCalledWith({
@@ -99,7 +107,7 @@ describe('observabilityMiddleware', () => {
   })
 
   describe('before hook', () => {
-    it('injects logger, metrics, and tracer into context', () => {
+    it('injects logger, metrics, and tracer into context', async () => {
       const middleware = observabilityMiddleware()
       const request = {
         event: {},
@@ -109,14 +117,14 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       expect(request.context.logger).toBeDefined()
       expect(request.context.metrics).toBeDefined()
       expect(request.context.tracer).toBeDefined()
     })
 
-    it('sets the logger via setLogger', () => {
+    it('sets the logger via setLogger', async () => {
       const middleware = observabilityMiddleware()
       const request = {
         event: {},
@@ -126,12 +134,12 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       expect(setLogger).toHaveBeenCalledWith(expect.any(Object))
     })
 
-    it('extracts requestId from API Gateway event', () => {
+    it('extracts requestId from API Gateway event', async () => {
       const mockLogger = {
         appendKeys: vi.fn(),
         error: vi.fn(),
@@ -156,7 +164,7 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       expect(mockLogger.appendKeys).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -165,7 +173,7 @@ describe('observabilityMiddleware', () => {
       )
     })
 
-    it('extracts correlationId from headers', () => {
+    it('extracts correlationId from headers', async () => {
       const mockLogger = {
         appendKeys: vi.fn(),
         error: vi.fn(),
@@ -190,7 +198,7 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       expect(mockLogger.appendKeys).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -199,7 +207,7 @@ describe('observabilityMiddleware', () => {
       )
     })
 
-    it('extracts userId from authorizer context', () => {
+    it('extracts userId from authorizer context', async () => {
       const mockLogger = {
         appendKeys: vi.fn(),
         error: vi.fn(),
@@ -228,7 +236,7 @@ describe('observabilityMiddleware', () => {
         error: null,
       }
 
-      middleware.before?.(request)
+      await middleware.before?.(request)
 
       expect(mockLogger.appendKeys).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -251,6 +259,83 @@ describe('observabilityMiddleware', () => {
       observabilityMiddleware({ skipTracing: false })
 
       expect(vi.mocked(createTracer)).toHaveBeenCalled()
+    })
+
+    it('opens the tracer subsegment BEFORE putAnnotation so the facade segment is never annotated', async () => {
+      // Regression pin for Powertools' "cannot annotate the main segment in a Lambda
+      // execution environment" warning. Order matters: captureLambdaHandler.before must
+      // run before the middleware calls putAnnotation, otherwise annotations land on the
+      // Lambda facade segment (which Powertools refuses to annotate).
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      const calls: string[] = []
+      const putAnnotation = vi.fn(() => {
+        calls.push('putAnnotation')
+      })
+      const tracerBefore = vi.fn(() => {
+        calls.push('tracerBefore')
+      })
+      vi.mocked(createTracer).mockReturnValueOnce({
+        putAnnotation,
+        putMetadata: vi.fn(),
+      } as unknown as ReturnType<typeof createTracer>)
+      vi.mocked(captureLambdaHandler).mockReturnValueOnce({
+        before: tracerBefore,
+        after: vi.fn(),
+        onError: vi.fn(),
+      })
+
+      const middleware = observabilityMiddleware({ skipTracing: false })
+      await middleware.before?.({
+        event: {},
+        context: mockContext as ObservabilityContext,
+        internal: {},
+        response: undefined,
+        error: null,
+      })
+
+      expect(calls).toEqual(['tracerBefore', 'putAnnotation'])
+    })
+
+    it('closes the tracer subsegment AFTER metrics flush so metrics land inside the subsegment scope', async () => {
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      const { logMetrics } = await import('@aws-lambda-powertools/metrics/middleware')
+      const calls: string[] = []
+      const tracerAfter = vi.fn(() => {
+        calls.push('tracerAfter')
+      })
+      const metricsAfter = vi.fn(() => {
+        calls.push('metricsAfter')
+      })
+      vi.mocked(captureLambdaHandler).mockReturnValueOnce({
+        before: vi.fn(),
+        after: tracerAfter,
+        onError: vi.fn(),
+      })
+      vi.mocked(logMetrics).mockReturnValueOnce({
+        before: vi.fn(),
+        after: metricsAfter,
+        onError: vi.fn(),
+      })
+
+      const middleware = observabilityMiddleware({ skipTracing: false })
+      await middleware.after?.({
+        event: {},
+        context: mockContext as ObservabilityContext,
+        internal: {},
+        response: undefined,
+        error: null,
+      })
+
+      expect(calls).toEqual(['metricsAfter', 'tracerAfter'])
+    })
+
+    it('does not attach a tracer middleware when tracing is skipped', async () => {
+      const { captureLambdaHandler } = await import('@aws-lambda-powertools/tracer/middleware')
+      vi.mocked(captureLambdaHandler).mockClear()
+
+      observabilityMiddleware({ skipTracing: true })
+
+      expect(vi.mocked(captureLambdaHandler)).not.toHaveBeenCalled()
     })
   })
 })
