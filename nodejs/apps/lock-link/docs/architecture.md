@@ -37,7 +37,9 @@ calendar size) and quiesces to **zero** once everything in-horizon already has i
        Lodgify: read the booking's message thread; our deterministic
        message_id absent → POST Owner message carrying the codes
        (parsed back out of key_code), send_notification = true
-  4. not ready / not sent + near arrival → notify (escalate)
+  4. still not ready at SLA/grace breach → assign the room's emergency code
+     (same key_code write, marked; delivered by the same message step)
+  5. not ready / not sent + near arrival → notify (escalate)
 ```
 
 **Capture and message are deliberately decoupled — but pipelined within a tick.** Capture
@@ -201,6 +203,39 @@ transient errors), so a reservation legitimately spends part of its life only pa
 
 ---
 
+## Emergency access codes (capture fallback)
+
+Each room/unit has **pre-created static codes in its locks** (one code opens all of the room's
+locks). When a reservation breaches the SLA/grace window with its guest code still unprovisioned,
+the capture phase falls back to the room's emergency code instead of leaving the guest without
+access: it writes the code to `key_code` with the `Emergency:` marker, and the **normal message
+step delivers it** — same thread, same dedup, same template (the marker is stripped; the guest
+just receives their access code). A business alert always accompanies issuance.
+
+- **Store**: an SSM SecureString (`LOCK_LINK_EMERGENCY_CODES_PARAM`) holding a JSON map of Lynx
+  `propertyId` → **list of code objects**: `{ "<propertyId>": [{ "code": "1234" }, ...] }`.
+  Objects, not bare strings, so future metadata (e.g. issued-at for auto-expiring used codes) is
+  additive. Populated and rotated out-of-band like the other secrets; read with a cache-bypass at
+  issuance time (rare enough that freshness wins).
+- **Selection**: deterministic — hash of the `bookingId` mod pool size — so the loop stays
+  stateless and a retried tick picks the same code. No used-code tracking: issuance is already
+  durably recorded in the marked `key_code`, the thread message, and the business alert.
+- **Rotation is manual**: the issuance alert instructs the manager to create a replacement code
+  in the locks and update the store. Pool depth (2–3 codes per room) is the slack that keeps a
+  unit covered while rotation is pending. Automated rotation — lock-link _creating_ codes through
+  the unofficial Lynx API, our first write into lock hardware — is explicitly out of scope.
+- **Non-expiry caveat**: unlike guest codes (which Lynx clears at checkout), emergency codes work
+  until rotated — a guest who received one retains access after their stay. This is why the
+  issuance alert is loud and prescriptive.
+- **Failure handling**: no codes configured for the room / store unreadable → operational alert,
+  and the ordinary overdue-unmessaged business escalation still fires.
+- Once issued, the reservation is **done** from the loop's perspective — if the real guest code
+  syncs later, no follow-up message is sent (the static-codes assumption applies). Anything
+  fancier is a manual step.
+- **Rejected**: sourcing these from Lynx at issuance time. The fallback must not depend on the
+  system whose failure triggered it, and a lock's `erCode` is its permanent base code — never
+  guest material.
+
 ## The join rule (Lynx → Lodgify booking)
 
 Lodgify's write endpoint needs Lodgify's **numeric booking number**, which Lynx never returns
@@ -244,6 +279,8 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
   - all locks share one code → the bare code, e.g. `9234`
   - codes differ per lock → a labeled list, e.g. `Front Door: 2968 · Back Door: 3350`, locks
     ordered alphabetically by `lockName` so the encoding is deterministic
+  - emergency fallback issued → the marked form `Emergency: 1234` (see the emergency-codes
+    section); the marker is for audit/diffing and is stripped before message composition
   - The human-readable form is cheap insurance, not a live requirement: Lodgify's UI does not
     surface `key_code` anywhere and no active message template interpolates it. It costs nothing
     over JSON, reads cleanly in API responses and debugging sessions, and would render usably if
@@ -366,6 +403,8 @@ it.
 - **SSM SecureString — credentials** (read at runtime via Powertools, cached ~2 h): Lynx
   username, Lynx password, Lodgify API key. Values are populated out-of-band so they stay
   encrypted at rest and rotatable without redeploy.
+- **SSM SecureString — emergency codes** (`LOCK_LINK_EMERGENCY_CODES_PARAM`, read at issuance
+  with a cache-bypass): the per-room emergency code pools — see the emergency-codes section.
 - **SSM SecureString — Lynx JWT cache** (`LOCK_LINK_LYNX_TOKEN_PARAM`, read+write at
   runtime): the Lambda persists the minted JWT so cold starts don't repeatedly call
   `login`. The JWT is valid ~95 days; a 401 forces a re-mint and write-back. Zero setup —
@@ -376,11 +415,12 @@ it.
 Notifications split by who has to act, which turns out to be outcomes vs. causes:
 
 - **Business** (property manager) — guest-experience-impacting _outcomes_ that trigger manual
-  processes: reconfigure a lock, set a code by hand, call the guest. Cases: a booking overdue and
-  still unmessaged (regardless of why), a closed thread (`is_closed` — the guest is unreachable
-  through Lodgify) near arrival, imminent bookings whose locks report offline / jammed / low
-  battery. Business alerts are **cause-agnostic**: the unmessaged-SLA alert fires whether the
-  blocker is slow Lynx provisioning or a system fault.
+  processes: reconfigure a lock, set a code by hand, call the guest. Cases: an emergency code
+  issued (with the rotate-after-use instruction), a booking overdue and still unmessaged
+  (regardless of why), a closed thread (`is_closed` — the guest is unreachable through Lodgify)
+  near arrival, imminent bookings whose locks report offline / jammed / low battery. Business
+  alerts are **cause-agnostic**: the unmessaged-SLA alert fires whether the blocker is slow Lynx
+  provisioning or a system fault.
 - **Operational** (engineers/maintainers) — system _causes_ needing technical assessment or
   remediation: a `confirmationCode` that doesn't parse, a booking with no Lynx reservation, a
   message send returning an error envelope, a sent message whose `message_status` lands on
@@ -435,9 +475,10 @@ manager needs to act.
   tool. `addBookingMessage` parses the response body for the success/error envelope (the HTTP
   status is always 200 — see the messaging section).
 - `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness` (every lock covered, all
-  `success`), key-code encode/decode (the `key_code` convention), message composition + the
-  deterministic `message_id` derivation, `runSync` (capture + message phases), and
-  `createSnsNotifier`.
+  `success`), key-code encode/decode (the `key_code` convention, including the `Emergency:`
+  marker), the emergency-code fallback (store read + deterministic pool selection), message
+  composition + the deterministic `message_id` derivation, `runSync` (capture + message phases),
+  and `createSnsNotifier`.
 - `config.ts` — env-sourced, zod-validated `LockLinkConfig`; `secrets.ts` — Powertools
   SSM SecureString reads with a 2 h TTL.
 - `functions/sync.ts` — the Lambda handler: `loadConfig` → build notifier → `loadSecrets`
@@ -462,6 +503,7 @@ Operational config (all required, validated at cold start):
 | `LOCK_LINK_LYNX_USERNAME_PARAM`        | SSM SecureString name — Lynx username                                      |
 | `LOCK_LINK_LYNX_PASSWORD_PARAM`        | SSM SecureString name — Lynx password                                      |
 | `LOCK_LINK_LODGIFY_API_KEY_PARAM`      | SSM SecureString name — Lodgify API key                                    |
+| `LOCK_LINK_EMERGENCY_CODES_PARAM`      | SSM SecureString name — per-room emergency code pools                      |
 | `LOCK_LINK_LYNX_TOKEN_PARAM`           | SSM SecureString name — durable Lynx JWT cache                             |
 
 `LOCK_LINK_SEND_HOURS` must exceed `LOCK_LINK_SLA_HOURS`: the send window has to open before
@@ -479,6 +521,9 @@ plus `kms:Decrypt` scoped by `kms:ViaService = ssm.<region>.amazonaws.com`.
 - Stretch: **best-effort code freshness at send time** — re-check Lynx before messaging and use
   the fresh codes if reachable, the captured ones if not. Rotation after capture is expected to
   be an anomaly; MVP assumes codes are static once set.
+- Stretch: **stale emergency-store alert** — after an emergency code is issued, alert if the
+  store hasn't been updated within some interval (the rotate-after-use step was forgotten). The
+  code-object metadata (issued-at) is the hook for this and for auto-expiring used codes.
 - Stretch: **Lodgify webhooks as a second watch path for imminent bookings.** Instant detection
   isn't valuable on its own (we wait on Lynx provisioning regardless), but a new-booking webhook
   could kick off a tighter watch loop — short-interval Lynx re-checks — for bookings arriving
