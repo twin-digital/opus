@@ -195,9 +195,10 @@ transient errors), so a reservation legitimately spends part of its life only pa
   after the grace, a still-unmessaged imminent booking _is_ urgent). Severity ramps with proximity
   (info > 24h, warn inside the window, critical < a few hours / past arrival — a guest arriving
   without their codes is the worst outcome the system can produce). **Once `now >= checkIn` the
-  grace tightens** (≈10 min instead of 30) and severity is critical immediately after it — the
-  guest may be at the door, and the operator needs the earliest possible chance to intervene
-  manually. Both grace values are tunables to revisit once the calibration metrics show Lynx's
+  grace tightens** (`LOCK_LINK_POST_CHECKIN_GRACE_MINUTES`, 10, instead of the ordinary
+  `LOCK_LINK_GRACE_MINUTES`, 30) and severity is critical immediately after it — the guest may be
+  at the door, and the operator needs the earliest possible chance to intervene manually. Both
+  grace knobs are tunables to revisit once the calibration metrics show Lynx's
   real provisioning-latency distribution. Enrich the message with lock health (offline / jammed /
   low battery vs just slow).
 
@@ -398,7 +399,7 @@ it.
 ### Secrets / config
 
 - **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, send
-  window, SLA, grace, alert topic ARNs, and the SSM parameter names. Validated at cold start
+  window, SLA, graces, alert topic ARNs, and the SSM parameter names. Validated at cold start
   (see the Configuration table below).
 - **SSM SecureString — credentials** (read at runtime via Powertools, cached ~2 h): Lynx
   username, Lynx password, Lodgify API key. Values are populated out-of-band so they stay
@@ -498,6 +499,7 @@ Operational config (all required, validated at cold start):
 | `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES` | Lynx re-check interval for gaps outside the send window (60)               |
 | `LOCK_LINK_SLA_HOURS`                  | Escalate a still-unmessaged booking within this many hours of arrival (48) |
 | `LOCK_LINK_GRACE_MINUTES`              | Don't flag brand-new bookings (30)                                         |
+| `LOCK_LINK_POST_CHECKIN_GRACE_MINUTES` | Tightened grace once check-in time has passed (10)                         |
 | `LOCK_LINK_BUSINESS_ALERT_TOPIC_ARN`   | SNS topic for business alerts (property manager)                           |
 | `LOCK_LINK_OPS_ALERT_TOPIC_ARN`        | SNS topic for operational alerts (engineers)                               |
 | `LOCK_LINK_LYNX_USERNAME_PARAM`        | SSM SecureString name — Lynx username                                      |
