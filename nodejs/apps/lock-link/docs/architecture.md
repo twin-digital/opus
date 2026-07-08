@@ -437,6 +437,19 @@ with no code change. CloudWatch alarms (sync health + the messaging alarms) targ
 operational topic; business notifications are runtime-emitted with the booking/guest context the
 manager needs to act.
 
+**Re-alert throttling (stateless).** Escalation is recomputed every tick, and at a 15-minute
+cadence a naively re-fired alert is spam that trains the recipient to ignore the topic. Repeats
+are therefore gated with the same modulo trick as the Lynx tiering — re-notify only on ticks
+where `epoch(scheduledTime) % REALERT_INTERVAL < TICK_RATE` — with the interval scaled by
+severity (severity → interval is a code-level constant map; think critical ≈ 1 h, warn ≈ 4 h,
+info ≈ 24 h: critical can legitimately repeat often, info shouldn't). Two events bypass the
+throttle so they always fire promptly: the **initial** alert and each **severity upgrade**. Both
+are detectable without state because their trigger times are themselves deterministic — a booking
+becomes overdue at `T0 = max(arrival − SLA, created + GRACE)` (or `checkIn + postCheckInGrace`)
+and crosses severity thresholds at fixed offsets from arrival — so a tick fires unthrottled iff a
+threshold time falls inside `(previousTick, thisTick]`. CloudWatch alarms are unaffected (alarm
+state transitions already de-duplicate).
+
 ---
 
 ## Deployment architecture
