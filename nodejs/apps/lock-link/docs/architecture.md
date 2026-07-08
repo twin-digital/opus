@@ -40,12 +40,37 @@ calendar size) and quiesces to **zero** once everything in-horizon already has i
   4. not ready / not sent + near arrival → notify (escalate)
 ```
 
-**Capture and message are deliberately decoupled.** Capture runs days-to-weeks before the send
-window opens, and once it lands the codes live in Lodgify's own booking record — so at send time
-the only dependency is Lodgify. A Lynx outage can delay capture (retried hourly, with lots of
-slack) but can never block a send. The `key_code` field doubles as the local store: no separate
-database, visible to the host in the Lodgify UI, and any legacy Lodgify template that references
-the key-code variable still renders something correct.
+**Capture and message are deliberately decoupled — but pipelined within a tick.** Capture
+usually runs days-to-weeks before the send window opens, and once it lands the codes live in
+Lodgify's own booking record — so at send time the only dependency is Lodgify. A Lynx outage can
+delay capture (retried on the schedule, with lots of slack) but can never block a send. The
+`key_code` field doubles as the local store: no separate database, visible to the host in the
+Lodgify UI, and any legacy Lodgify template that references the key-code variable still renders
+something correct. Within a single run, each booking flows through capture → message in one
+pass: a booking that becomes ready inside the send window is messaged in the same invocation,
+never parked for the next tick. This matters most for same-day bookings, where every tick of
+delay is guest-facing.
+
+**Cadence & Lynx tiering.** The rule fires every **15 minutes** (minute-aligned cron), but Lynx
+re-checks are tiered so Lynx pressure still scales with urgency, not with the faster clock:
+
+- Gaps **inside the send window** (`hoursToArrival <= SEND_HOURS`, including past-check-in
+  bookings) → Lynx re-checked **every tick**. These are the bookings where readiness latency is
+  guest-facing.
+- Gaps **outside the send window** → Lynx re-checked only on the **top-of-hour tick** (stateless:
+  derived from the tick's own timestamp). A booking arriving next week loses nothing by being
+  re-checked hourly.
+
+At steady state (no gaps at all) even the top-of-hour tick makes no Lynx calls; the faster
+cadence costs only a Lodgify list read per tick. Worst-case detection latency for a same-day
+booking is one tick (~15 min) plus Lynx's own provisioning time.
+
+**Latency calibration.** Lynx keeps no event history (no timestamps on reservations or access
+codes, and `past` reservations return `accessCodes: []`), so provisioning latency can only be
+measured by observing it live. The loop therefore emits calibration metrics as it works: per gap
+booking, the observed transitions (first seen as gap, first seen ready, captured, messaged) with
+the Lodgify `created_at` as the clock-start. These distributions — especially the same-day
+segment — are what tune `SEND_HOURS`, the post-check-in grace, and the tick rate over time.
 
 At steady state (no in-horizon gaps) the Lynx half of step 2 is skipped entirely — no Lynx calls.
 The Lodgify→Lynx join uses `confirmationCode` (it embeds the Lodgify booking id); the
@@ -158,8 +183,12 @@ transient errors), so a reservation legitimately spends part of its life only pa
   `bookingAge >= GRACE` (so brand-new / same-day bookings aren't flagged the instant they appear;
   after the grace, a still-unmessaged imminent booking _is_ urgent). Severity ramps with proximity
   (info > 24h, warn inside the window, critical < a few hours / past arrival — a guest arriving
-  without their codes is the worst outcome the system can produce). Enrich the message with lock
-  health (offline / jammed / low battery vs just slow).
+  without their codes is the worst outcome the system can produce). **Once `now >= checkIn` the
+  grace tightens** (≈10 min instead of 30) and severity is critical immediately after it — the
+  guest may be at the door, and the operator needs the earliest possible chance to intervene
+  manually. Both grace values are tunables to revisit once the calibration metrics show Lynx's
+  real provisioning-latency distribution. Enrich the message with lock health (offline / jammed /
+  low battery vs just slow).
 
 ---
 
@@ -259,7 +288,8 @@ message's `message_id`, `type`, `message_status`, and `route`.
 
 ### Send window
 
-A booking is messaged when **all** of these hold; the hourly schedule is the retry:
+A booking is messaged when **all** of these hold; the schedule is the retry (see Cadence & Lynx
+tiering in the data-flow section):
 
 1. **Codes captured** — `key_code` is set (which already implies readiness held at capture time).
 2. **Inside the window** — `hoursToArrival <= SEND_HOURS`. Codes are live on the locks the moment
@@ -348,8 +378,9 @@ cross-workload channel with no code change.
 - **AWS CDK** app (TypeScript), **not** Serverless Framework. Deployed to the **saas-apps** account
   (`444705667097`; test account `saas-apps-test` `425946675033`), **us-east-1** (the bootstrapped
   region — keep the deploy region aligned with bootstrap).
-- **Scheduled Lambda**: `NodejsFunction` (Node 24, esbuild-bundled) on an hourly EventBridge rule.
-  Bundling uses `--conditions=source` so workspace deps bundle from source.
+- **Scheduled Lambda**: `NodejsFunction` (Node 24, esbuild-bundled) on a 15-minute, minute-aligned
+  EventBridge cron rule (alignment lets the tick tier its own Lynx polling — see Cadence & Lynx
+  tiering). Bundling uses `--conditions=source` so workspace deps bundle from source.
 - **Package layout — `infra/` + `src/` split** (single package):
   - `infra/` — CDK app + stack (`app.ts`, `stack.ts`). May depend on `src/`.
   - `src/` — runtime/handler code, where the sync logic grows. **eslint bans importing
@@ -421,9 +452,14 @@ plus `kms:Decrypt` scoped by `kms:ViaService = ssm.<region>.amazonaws.com`.
 - Stretch: **best-effort code freshness at send time** — re-check Lynx before messaging and use
   the fresh codes if reachable, the captured ones if not. Rotation after capture is expected to
   be an anomaly; MVP assumes codes are static once set.
+- Stretch: **Lodgify webhooks as a second watch path for imminent bookings.** Instant detection
+  isn't valuable on its own (we wait on Lynx provisioning regardless), but a new-booking webhook
+  could kick off a tighter watch loop — short-interval Lynx re-checks — for bookings arriving
+  soon or already past check-in, cutting the one-tick detection delay when it matters most.
+  Needs the same contract-proving treatment the messaging API got.
 - Confirm whether Lynx ever **rotates** a code after it's set (validates the static-code
-  assumption / whether a scheduled reconciliation pass is needed). Tune the cron cadence
-  once real behaviour is observed.
+  assumption / whether a scheduled reconciliation pass is needed). The calibration metrics and
+  observed behaviour also drive tuning of the tick rate, `SEND_HOURS`, and the grace values.
 - Per-property Lynx error isolation so a single-property outage doesn't abort the
   whole tick — tracked as opus#201.
 - Parameterize (or remove, once the shared cross-workload SNS topic exists) the alert
