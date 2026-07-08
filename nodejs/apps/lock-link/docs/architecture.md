@@ -44,9 +44,8 @@ calendar size) and quiesces to **zero** once everything in-horizon already has i
 usually runs days-to-weeks before the send window opens, and once it lands the codes live in
 Lodgify's own booking record — so at send time the only dependency is Lodgify. A Lynx outage can
 delay capture (retried on the schedule, with lots of slack) but can never block a send. The
-`key_code` field doubles as the local store: no separate database, visible to the host in the
-Lodgify UI, and any legacy Lodgify template that references the key-code variable still renders
-something correct. Within a single run, each booking flows through capture → message in one
+`key_code` field doubles as the local store: no separate database, and the state rides in the
+system of record for the booking itself. Within a single run, each booking flows through capture → message in one
 pass: a booking that becomes ready inside the send window is messaged in the same invocation,
 never parked for the next tick. This matters most for same-day bookings, where every tick of
 delay is guest-facing.
@@ -245,9 +244,11 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
   - all locks share one code → the bare code, e.g. `9234`
   - codes differ per lock → a labeled list, e.g. `Front Door: 2968 · Back Door: 3350`, locks
     ordered alphabetically by `lockName` so the encoding is deterministic
-  - The labeled form is deliberately human-readable: the host sees the field in the Lodgify UI,
-    and a legacy Lodgify message template that interpolates the key-code variable still renders
-    something a guest can use. Round-trip fidelity (length, `·`, spaces) proven live 2026-07-07.
+  - The human-readable form is cheap insurance, not a live requirement: Lodgify's UI does not
+    surface `key_code` anywhere and no active message template interpolates it. It costs nothing
+    over JSON, reads cleanly in API responses and debugging sessions, and would render usably if
+    Lodgify ever surfaces the field or a template is added later. Round-trip fidelity (length,
+    `·`, spaces) proven live 2026-07-07.
 - Returns **200** with a rooms-only echo (`BookingKeyCodeDto = { rooms: [{ room_type_id,
 key_code }] }`, per the vendored OpenAPI) — **not** a full booking → read back
   `rooms[].key_code` to confirm the write (no separate GET needed).
@@ -360,7 +361,7 @@ it.
 ### Secrets / config
 
 - **Environment** (set by CDK): the tunable knobs — accountId, per-user id, horizon, send
-  window, SLA, grace, alert topic ARN, and the SSM parameter names. Validated at cold start
+  window, SLA, grace, alert topic ARNs, and the SSM parameter names. Validated at cold start
   (see the Configuration table below).
 - **SSM SecureString — credentials** (read at runtime via Powertools, cached ~2 h): Lynx
   username, Lynx password, Lodgify API key. Values are populated out-of-band so they stay
@@ -370,16 +371,30 @@ it.
   `login`. The JWT is valid ~95 days; a 401 forces a re-mint and write-back. Zero setup —
   the first-ever run mints normally and creates the parameter.
 
-### Notify / escalation (single sink)
+### Notify / escalation (two audiences)
 
-All error cases — a `confirmationCode` that doesn't parse, a booking overdue and still
-unmessaged, a booking with no Lynx reservation, a message send that returns an error
-envelope, a sent message whose `message_status` lands on `Failed`, a closed thread
-(`is_closed`, the guest is unreachable through Lodgify), and the catch-all for whole-run
-failures (auth 401, endpoint down, JSON shape changed) — funnel to one `Notifier`, backed by SNS
-(`createSnsNotifier` publishes with severity as the subject prefix and a message
-attribute). The Lambda consumes the topic by ARN so the topic can later become a shared
-cross-workload channel with no code change.
+Notifications split by who has to act, which turns out to be outcomes vs. causes:
+
+- **Business** (property manager) — guest-experience-impacting _outcomes_ that trigger manual
+  processes: reconfigure a lock, set a code by hand, call the guest. Cases: a booking overdue and
+  still unmessaged (regardless of why), a closed thread (`is_closed` — the guest is unreachable
+  through Lodgify) near arrival, imminent bookings whose locks report offline / jammed / low
+  battery. Business alerts are **cause-agnostic**: the unmessaged-SLA alert fires whether the
+  blocker is slow Lynx provisioning or a system fault.
+- **Operational** (engineers/maintainers) — system _causes_ needing technical assessment or
+  remediation: a `confirmationCode` that doesn't parse, a booking with no Lynx reservation, a
+  message send returning an error envelope, a sent message whose `message_status` lands on
+  `Failed`, and the catch-all for whole-run failures (auth 401, endpoint down, JSON shape
+  changed). The tech team decides what to relay to the business; the business still hears
+  automatically when a system issue produces a guest-impacting outcome, because the business
+  alerts don't depend on the cause.
+
+Both audiences funnel through one `Notifier` interface (`createSnsNotifier` publishes with
+severity as the subject prefix and audience + severity as message attributes), backed by **two
+SNS topics** consumed by ARN — so either topic can later become a shared cross-workload channel
+with no code change. CloudWatch alarms (sync health + the messaging alarms) target the
+operational topic; business notifications are runtime-emitted with the booking/guest context the
+manager needs to act.
 
 ---
 
@@ -442,7 +457,8 @@ Operational config (all required, validated at cold start):
 | `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES` | Lynx re-check interval for gaps outside the send window (60)               |
 | `LOCK_LINK_SLA_HOURS`                  | Escalate a still-unmessaged booking within this many hours of arrival (48) |
 | `LOCK_LINK_GRACE_MINUTES`              | Don't flag brand-new bookings (30)                                         |
-| `LOCK_LINK_ALERT_TOPIC_ARN`            | SNS topic the Notifier publishes to                                        |
+| `LOCK_LINK_BUSINESS_ALERT_TOPIC_ARN`   | SNS topic for business alerts (property manager)                           |
+| `LOCK_LINK_OPS_ALERT_TOPIC_ARN`        | SNS topic for operational alerts (engineers)                               |
 | `LOCK_LINK_LYNX_USERNAME_PARAM`        | SSM SecureString name — Lynx username                                      |
 | `LOCK_LINK_LYNX_PASSWORD_PARAM`        | SSM SecureString name — Lynx password                                      |
 | `LOCK_LINK_LODGIFY_API_KEY_PARAM`      | SSM SecureString name — Lodgify API key                                    |
