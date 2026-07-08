@@ -57,13 +57,23 @@ re-checks are tiered so Lynx pressure still scales with urgency, not with the fa
 - Gaps **inside the send window** (`hoursToArrival <= SEND_HOURS`, including past-check-in
   bookings) → Lynx re-checked **every tick**. These are the bookings where readiness latency is
   guest-facing.
-- Gaps **outside the send window** → Lynx re-checked only on the **top-of-hour tick** (stateless:
-  derived from the tick's own timestamp). A booking arriving next week loses nothing by being
-  re-checked hourly.
+- Gaps **outside the send window** → Lynx re-checked only on the first tick of each slow
+  interval: `epoch(scheduledTime) % LYNX_SLOW_INTERVAL < TICK_RATE`. Stateless — the schedule is
+  the state, no check timestamps stored anywhere — and the interval is an arbitrary tunable
+  (need not align to hours). A booking arriving next week loses nothing by being re-checked
+  every hour or two.
 
-At steady state (no gaps at all) even the top-of-hour tick makes no Lynx calls; the faster
-cadence costs only a Lodgify list read per tick. Worst-case detection latency for a same-day
-booking is one tick (~15 min) plus Lynx's own provisioning time.
+Tiering decisions key off the **scheduled** tick time, not the wall clock: the EventBridge event
+carries the nominal fire time (`event.time` on classic rules; `<aws.scheduler.scheduled-time>`
+with EventBridge Scheduler), so delivery jitter, cold starts, and async-retry redelivery all
+resolve to the same logical tick. Snap the received time to the tick grid for sub-minute wobble.
+The guarantee is "at most one slow-tier check per interval" — if that one tick errors out, the
+interval's check is skipped until the next window, a bounded staleness that never affects
+in-window gaps (checked every tick regardless).
+
+At steady state (no gaps at all) even the slow-tier tick makes no Lynx calls; the faster cadence
+costs only a Lodgify list read per tick. Worst-case detection latency for a same-day booking is
+one tick (~15 min) plus Lynx's own provisioning time.
 
 **Latency calibration.** Lynx keeps no event history (no timestamps on reservations or access
 codes, and `past` reservations return `accessCodes: []`), so provisioning latency can only be
@@ -423,19 +433,20 @@ cross-workload channel with no code change.
 
 Operational config (all required, validated at cold start):
 
-| Env var                           | Purpose                                                                    |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| `LOCK_LINK_ACCOUNT_ID`            | Lynx umbrella account id (drives the join suffix)                          |
-| `LOCK_LINK_USER_ID`               | Lynx per-user id sent as `hostId`/`loggedInUserId`                         |
-| `LOCK_LINK_HORIZON_DAYS`          | Fill gaps arriving within this window (14)                                 |
-| `LOCK_LINK_SEND_HOURS`            | Message the guest inside this many hours before arrival (72)               |
-| `LOCK_LINK_SLA_HOURS`             | Escalate a still-unmessaged booking within this many hours of arrival (48) |
-| `LOCK_LINK_GRACE_MINUTES`         | Don't flag brand-new bookings (30)                                         |
-| `LOCK_LINK_ALERT_TOPIC_ARN`       | SNS topic the Notifier publishes to                                        |
-| `LOCK_LINK_LYNX_USERNAME_PARAM`   | SSM SecureString name — Lynx username                                      |
-| `LOCK_LINK_LYNX_PASSWORD_PARAM`   | SSM SecureString name — Lynx password                                      |
-| `LOCK_LINK_LODGIFY_API_KEY_PARAM` | SSM SecureString name — Lodgify API key                                    |
-| `LOCK_LINK_LYNX_TOKEN_PARAM`      | SSM SecureString name — durable Lynx JWT cache                             |
+| Env var                                | Purpose                                                                    |
+| -------------------------------------- | -------------------------------------------------------------------------- |
+| `LOCK_LINK_ACCOUNT_ID`                 | Lynx umbrella account id (drives the join suffix)                          |
+| `LOCK_LINK_USER_ID`                    | Lynx per-user id sent as `hostId`/`loggedInUserId`                         |
+| `LOCK_LINK_HORIZON_DAYS`               | Fill gaps arriving within this window (14)                                 |
+| `LOCK_LINK_SEND_HOURS`                 | Message the guest inside this many hours before arrival (72)               |
+| `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES` | Lynx re-check interval for gaps outside the send window (60)               |
+| `LOCK_LINK_SLA_HOURS`                  | Escalate a still-unmessaged booking within this many hours of arrival (48) |
+| `LOCK_LINK_GRACE_MINUTES`              | Don't flag brand-new bookings (30)                                         |
+| `LOCK_LINK_ALERT_TOPIC_ARN`            | SNS topic the Notifier publishes to                                        |
+| `LOCK_LINK_LYNX_USERNAME_PARAM`        | SSM SecureString name — Lynx username                                      |
+| `LOCK_LINK_LYNX_PASSWORD_PARAM`        | SSM SecureString name — Lynx password                                      |
+| `LOCK_LINK_LODGIFY_API_KEY_PARAM`      | SSM SecureString name — Lodgify API key                                    |
+| `LOCK_LINK_LYNX_TOKEN_PARAM`           | SSM SecureString name — durable Lynx JWT cache                             |
 
 `LOCK_LINK_SEND_HOURS` must exceed `LOCK_LINK_SLA_HOURS`: the send window has to open before
 the escalation clock runs out, so a healthy booking always gets send attempts before anyone
