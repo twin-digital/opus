@@ -18,10 +18,11 @@ Lodgify's messaging so every guest conversation stays in the unified inbox.
    API, exactly once.
 
 Owning the message (rather than letting Lodgify's "X days before arrival" templates deliver the
-field) is what makes two things possible: a **different code per lock** on one reservation, and
-**holding delivery until provisioning has actually succeeded** — a template fires on schedule
-even when the code isn't ready, worst on last-minute bookings where "1 day before" means
-"immediately".
+field) is what makes two things possible: carrying a **different code per lock** on one
+reservation — a requirement Lynx imposes by not guaranteeing code uniformity, not a feature we
+set out to build — and **holding delivery until provisioning has actually succeeded** — a
+template fires on schedule even when the code isn't ready, worst on last-minute bookings where
+"1 day before" means "immediately".
 
 This document covers the what, why, and when. Endpoint-level contracts, wire shapes, and
 provenance live in the per-API references: **[lynx-api.md](./lynx-api.md)** and
@@ -49,6 +50,12 @@ quiesces to **zero** once everything in-horizon has its codes.
      (same key_code write, same message step)
   5. overdue / unmessaged / unreachable → notify (see Notifications)
 ```
+
+> [!NOTE]
+> **T0** is the instant a booking becomes _overdue_: old enough that provisioning should have
+> happened, close enough to arrival that it matters. It triggers both the emergency fallback and
+> the first escalation, and it appears throughout this doc — the precise (piecewise) definition
+> is in the Timing section.
 
 **Capture and message are decoupled — but pipelined within a tick.** Capture usually runs
 days-to-weeks before the send window opens, and once it lands the codes live in Lodgify's own
@@ -90,8 +97,8 @@ value is env-tunable — no timing constants in code.** The one value that lives
 | `LOCK_LINK_TICK_MINUTES`               | 15      | minutes | Tick rate (stack-derived with the cron rule)  |
 | `LOCK_LINK_HORIZON_DAYS`               | 14      | days    | Which upcoming bookings the loop considers    |
 | `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES` | 60      | minutes | Lynx re-check gate outside the send window    |
-| `LOCK_LINK_SEND_HOURS`                 | 72      | hours   | Send window opens; fast-tier polling boundary |
-| `LOCK_LINK_SLA_HOURS`                  | 48      | hours   | Escalation clock; emergency-issuance trigger  |
+| `LOCK_LINK_SEND_HOURS`                 | 24      | hours   | Send window opens; fast-tier polling boundary |
+| `LOCK_LINK_SLA_HOURS`                  | 8       | hours   | Escalation clock; emergency-issuance trigger  |
 | `LOCK_LINK_GRACE_MINUTES`              | 30      | minutes | New-booking escalation suppression            |
 | `LOCK_LINK_POST_CHECKIN_GRACE_MINUTES` | 10      | minutes | Tightened grace once check-in time has passed |
 | `LOCK_LINK_CRITICAL_HOURS`             | 6       | hours   | Severity flips to critical inside this window |
@@ -102,7 +109,11 @@ value is env-tunable — no timing constants in code.** The one value that lives
 Cold-start validation enforces `SEND_HOURS > SLA_HOURS > CRITICAL_HOURS` (the send window opens
 before the escalation clock runs out, which runs out before maximum urgency),
 `POST_CHECKIN_GRACE_MINUTES ≤ GRACE_MINUTES` (the system must never get _lazier_ once the guest
-may be physically present), and every interval ≥ the tick rate.
+may be physically present), and every **interval gate** (`LYNX_SLOW_INTERVAL_MINUTES`, the three
+`REALERT_*` intervals) ≥ the tick rate — a gate shorter than a tick would degenerate to
+"every tick". The graces are exempt: they are age thresholds, not gates, and may legitimately be
+shorter than a tick (a 10-minute grace on a 15-minute tick simply means the breach is acted on
+at the first tick after it).
 
 ### The three timing mechanisms
 
@@ -180,7 +191,9 @@ distributions emerge; nothing self-tunes. The same-day segment is the one that p
 Lynx's typical same-day provisioning latency exceeds the grace, nearly every booked-at-the-door
 guest consumes an emergency code (plus a manual rotation) that the real code would have overtaken
 minutes later — and since an issued reservation is done, the real code never goes out. If typical
-latency is below the grace, tightening it is nearly free.
+latency is below the grace, tightening it is nearly free. A pre-launch baseline — two observed
+provisioning latencies and a 60-day booking-timing distribution — is recorded in
+[calibration-baseline.md](./calibration-baseline.md).
 
 ---
 
