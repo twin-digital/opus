@@ -100,8 +100,9 @@ value is env-tunable — no timing constants in code.** The one value that lives
 | `LOCK_LINK_REALERT_INFO_MINUTES`       | 1440    | minutes | Re-alert gate at info severity                |
 
 Cold-start validation enforces `SEND_HOURS > SLA_HOURS > CRITICAL_HOURS` (the send window opens
-before the escalation clock runs out, which runs out before maximum urgency) and every interval
-≥ the tick rate.
+before the escalation clock runs out, which runs out before maximum urgency),
+`POST_CHECKIN_GRACE_MINUTES ≤ GRACE_MINUTES` (the system must never get _lazier_ once the guest
+may be physically present), and every interval ≥ the tick rate.
 
 ### The three timing mechanisms
 
@@ -113,9 +114,13 @@ before the escalation clock runs out, which runs out before maximum urgency) and
    interval"): the Lynx slow tier and re-alert throttling. Stateless: the schedule is the state;
    no check or alert timestamps are stored anywhere. Intervals are arbitrary tunables — no need
    to align to hours.
-3. **Threshold crossings** — deterministic instants derived from the windows: a booking becomes
-   overdue at `T0 = max(arrival − SLA, created + GRACE)` (past check-in:
-   `checkIn + postCheckInGrace`), and severity upgrades at `arrival − CRITICAL_HOURS`. A tick
+3. **Threshold crossings** — deterministic instants derived from the windows. A booking becomes
+   overdue at **T0**, where the applicable grace is `GRACE` before check-in and
+   `POST_CHECKIN_GRACE` after: `T0 = max(arrival − SLA, created + GRACE)` when that lands before
+   check-in, otherwise `max(checkIn, created + POST_CHECKIN_GRACE)`. Note the deliberate
+   discontinuity: a booking whose age at check-in is between the two graces breaches _exactly at
+   check-in_ — the guest just became present. (For bookings made in advance, `arrival − SLA`
+   dominates and neither grace matters.) Severity upgrades at `arrival − CRITICAL_HOURS`. A tick
    acts unthrottled iff a threshold falls inside `(previousTick, thisTick]` — first alerts are
    prompt and severity upgrades immediate, still with no alert ledger.
 
@@ -170,7 +175,12 @@ can only be measured by observing it live. The loop therefore emits calibration 
 works: per gap booking, the observed transitions (first seen as gap, first seen ready, captured,
 messaged) with the Lodgify `created_at` as the clock-start. **These give an operator the data to
 tune the knobs above** — `SEND_HOURS`, the graces, the tick rate — as real provisioning-latency
-distributions emerge; nothing self-tunes.
+distributions emerge; nothing self-tunes. The same-day segment is the one that prices
+`POST_CHECKIN_GRACE`: the grace buys rain-minutes at the cost of **emergency-code burn**. If
+Lynx's typical same-day provisioning latency exceeds the grace, nearly every booked-at-the-door
+guest consumes an emergency code (plus a manual rotation) that the real code would have overtaken
+minutes later — and since an issued reservation is done, the real code never goes out. If typical
+latency is below the grace, tightening it is nearly free.
 
 ---
 
@@ -256,8 +266,16 @@ emergency code is a normal code; only its **source** differs. A business alert a
 accompanies issuance, and that alert (plus the issuance metric) is the durable record that a
 fallback happened.
 
-- **Store**: an SSM SecureString (`LOCK_LINK_EMERGENCY_CODES_PARAM`) holding a JSON map of Lynx
-  `propertyId` → **list of code objects**: `{ "<propertyId>": [{ "code": "1234" }, ...] }`.
+**Issuance is Lynx-independent.** The trigger — gap ∧ past T0 — is computable from Lodgify and
+the clock alone, and the pool lookup needs only the booking's Lodgify `property_id`. A failed
+Lynx check that tick, a Lynx-wide outage, or a reservation Lynx never received does not block
+the fallback — those are precisely the scenarios it exists for.
+
+- **Store**: an SSM SecureString (`LOCK_LINK_EMERGENCY_CODES_PARAM`) holding a JSON map of
+  **Lodgify `property_id`** → **list of code objects**:
+  `{ "<lodgifyPropertyId>": [{ "code": "1234" }, ...] }`. Keyed by the Lodgify id — present on
+  every booking — rather than the Lynx `propertyId`, which is only resolvable through a Lynx
+  reservation: the pool must be reachable when Lynx is not.
   Objects, not bare strings, so future metadata (e.g. issued-at for auto-expiring used codes) is
   additive. Populated and rotated out-of-band like the other secrets; read with a cache-bypass
   at issuance time (rare enough that freshness wins).
@@ -459,9 +477,9 @@ a stopped schedule within ~24 h. ⚠️ Its threshold assumes the tick rate — 
 | 7   | Lynx down / 5xx / drift on one property            | Property-scoped failure: skip the property, continue the others _(depends on opus#201; today a property failure aborts the run)_                                                                                | Ops / warning                                                      | Next tick                     | property-failure metric                   |
 | 8   | `confirmationCode` unparseable                     | Skip the reservation, continue                                                                                                                                                                                  | Ops / warning (throttled if persistent)                            | Next tick                     | outcome metric                            |
 | 9   | Same booking id resolved from two properties       | Keep the first entry, alert                                                                                                                                                                                     | Ops / warning                                                      | Next tick                     | outcome metric                            |
-| 10  | Lodgify booking with no Lynx reservation           | Skip until overdue; then escalate                                                                                                                                                                               | Business / ramps                                                   | Every tick                    | outcome metric + unmessaged-overdue       |
+| 10  | Lodgify booking with no Lynx reservation           | Skip until overdue; at T0 the emergency fallback applies (issuance is Lynx-independent) and escalation fires                                                                                                    | Business / ramps                                                   | Every tick                    | outcome metric + unmessaged-overdue       |
 | 11  | Locks not ready (the normal case)                  | Skip; calibration transitions recorded                                                                                                                                                                          | none until T0                                                      | Fast/slow tier per window     | calibration metrics                       |
-| 12  | Still not ready at T0                              | **Emergency issuance**: ordinary `key_code` write from the room's pool + normal message step                                                                                                                    | Business / ramps (rotate-after-use instruction)                    | —                             | emergency-issued metric                   |
+| 12  | Still not ready at T0                              | **Emergency issuance**: ordinary `key_code` write from the room's pool + normal message step; fires even when the Lynx check failed this tick                                                                   | Business / ramps (rotate-after-use instruction)                    | —                             | emergency-issued metric                   |
 | 13  | Emergency pool missing / empty / store unreadable  | No issuance; the ordinary overdue escalation continues                                                                                                                                                          | Ops / warning + Business / ramps                                   | Every tick (alerts throttled) | emergency-issuance-failed metric          |
 | 14  | `putKeyCodes` 404/400, or read-back mismatch       | Skip the booking; it remains a gap                                                                                                                                                                              | Ops / warning                                                      | Next tick                     | keycode-write-failed metric               |
 | 15  | Booking missing `thread_uid`, or thread read fails | **No blind send** — skip messaging this tick                                                                                                                                                                    | Ops / warning (throttled)                                          | Next tick                     | thread-read-failed metric                 |
