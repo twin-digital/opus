@@ -94,7 +94,7 @@ value is env-tunable — no timing constants in code.** The one value that lives
 
 | Env var                                | Default | Units   | Governs                                         |
 | -------------------------------------- | ------- | ------- | ----------------------------------------------- |
-| `LOCK_LINK_TICK_MINUTES`               | 15      | minutes | Tick rate (stack-derived with the cron rule)    |
+| `LOCK_LINK_TICK_MINUTES`               | 10      | minutes | Tick rate (stack-derived with the cron rule)    |
 | `LOCK_LINK_HORIZON_DAYS`               | 14      | days    | Which upcoming bookings the loop considers      |
 | `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES` | 60      | minutes | Lynx re-check gate outside the send window      |
 | `LOCK_LINK_SEND_HOURS`                 | 24      | hours   | Send window opens; fast-tier polling boundary   |
@@ -115,8 +115,8 @@ before the escalation clock runs out, which runs out before maximum urgency),
 may be physically present), and every **interval gate** (`LYNX_SLOW_INTERVAL_MINUTES`, the three
 `REALERT_*` intervals) ≥ the tick rate — a gate shorter than a tick would degenerate to
 "every tick". The graces are exempt: they are age thresholds, not gates, and may legitimately be
-shorter than a tick (a 10-minute grace on a 15-minute tick simply means the breach is acted on
-at the first tick after it).
+shorter than or equal to a tick (a 10-minute grace on a 10-minute tick simply means the breach
+is acted on at the first tick after it).
 
 ### The three timing mechanisms
 
@@ -160,26 +160,56 @@ tick plus Lynx's own provisioning time.
 
 ### Worked example
 
-Booking created **Mon 10:07**, arrival **Thu 16:00** (76 h out), defaults throughout:
+Booking created **Mon 10:07**, arrival **Thu 16:00** (78 h out), defaults throughout:
 
-- **Mon 10:15** (first tick after creation): enters the horizon as a gap. Outside the send
-  window (76 h > 72) → slow tier, Lynx checked roughly hourly.
+- **Mon 10:10** (first tick after creation): enters the horizon as a gap. Outside the send
+  window (78 h > 24) → slow tier, Lynx checked roughly hourly.
 - **Mon 14:00**: Lynx reports all locks `success` → codes captured to `key_code`. The booking
   idles — messaging isn't allowed yet.
-- **Tue 12:00** (T-72 h): send window opens. That tick: thread read → no lock-link message →
+- **Wed 16:00** (T-24 h): send window opens. That tick: thread read → no lock-link message →
   message sent. Done; every later tick sees the message in the thread and does nothing.
 
 Sad-path variant — Lynx never provisions:
 
-- **Tue 16:00** (T-48 h = T0; grace long since passed): breach. This tick fires unthrottled —
-  the room's emergency code is issued (written to `key_code`, delivered by the message step) and
-  the business alert goes out (warning).
-- If somehow still unresolved: warning re-alerts on the 240-minute gate (Tue 20:00, Wed 00:00…),
-  then **Thu 10:00** (arrival − 6 h) crosses the severity threshold → unthrottled **critical**
-  alert, repeating on the 60-minute gate until resolved or checkout.
+- **Thu 08:00** (T-8 h = T0; grace long since passed): breach. This tick fires unthrottled — the
+  room's emergency code is issued (written to `key_code`, delivered by the message step) and the
+  business alert goes out (warning).
+- If somehow still unresolved: **Thu 10:00** (arrival − 6 h) crosses the severity threshold →
+  unthrottled **critical** alert, repeating on the 60-minute gate until resolved or checkout.
+  (The 240-minute warning gate never gets a turn in this timeline — the upgrade preempts it.)
 - Contrast, a late booking created **Thu 14:30** for a Thu 16:00 arrival: born inside every
   window; T0 = created + 30 min = 15:00. If codes sync at 14:52, the 15:00 tick captures _and_
   messages in one pass — nothing ever alerts.
+
+### Post-check-in issuance latency (the rain window)
+
+How long a guest who books **at or after check-in** waits for the emergency fallback, assuming a
+standing code is available.
+
+**How to calculate it.** For a booking created at/after check-in, `arrival − SLA` is already in
+the past, so `T0 = created + POST_CHECKIN_GRACE`. Issuance (and, pipelined, the message) happens
+at the **first tick ≥ T0**, which adds anywhere from 0 to one full `TICK` depending on how T0
+lands on the tick grid; delivery adds _slop_ (~½–2 min of invoke lag, run time, and email
+delivery). So:
+
+```
+wait = POST_CHECKIN_GRACE + U + slop        where U ∈ [0, TICK)
+
+floor   = grace + slop            (T0 lands exactly on a tick)
+typical = grace + TICK/2 + slop   (uniform tick alignment on average)
+ceiling = grace + TICK + slop     (T0 just misses a tick)
+```
+
+With the defaults (grace 10, tick 10): **floor ~10½ min, typical ~16 min, ceiling ~20 min +
+slop.**
+
+The grace is the floor and the burn-rate knob (every minute shaved is a minute less for Lynx to
+provision before a non-expiring code is consumed — see the calibration trade-off below); the
+tick is the variance and is nearly free. Guests who book **before** check-in wait less — with
+lead time `C` before check-in, T0 follows the piecewise definition above, so:
+`C ≥ GRACE + TICK` (≥ 40 min at defaults) → issued before they arrive, zero wait;
+`POST_CHECKIN_GRACE ≤ C < GRACE` → T0 lands exactly at check-in, wait = pure tick alignment
+(≤ one tick + slop); `C < POST_CHECKIN_GRACE` → wait ≤ `grace − C + TICK + slop`.
 
 ### Latency calibration
 
@@ -541,7 +571,7 @@ rethrowing, reaching the operator in seconds. CloudWatch alarms are the backstop
 that fails: `FunctionErrors` (1 h period, threshold ≥ 1) typically transitions within minutes of
 the errored invocation and the failure re-breaches every tick; `InvocationsBelowMinimum` catches
 a stopped schedule within ~24 h. ⚠️ Its threshold assumes the tick rate — retune it whenever
-`TICK_MINUTES` changes (at 15-minute ticks, ~88 of 96 expected/day).
+`TICK_MINUTES` changes (at 10-minute ticks, ~132 of 144 expected/day).
 
 | #   | Failure                                              | System response                                                                                                                                                                                                 | Audience / severity                                                | Retry                         | Metric / alarm                            |
 | --- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------- | ----------------------------------------- |

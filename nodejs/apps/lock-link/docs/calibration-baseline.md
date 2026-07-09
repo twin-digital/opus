@@ -71,7 +71,7 @@ Lead time from booking to check-in (Central assumption):
   out closer to the ~1 h easy case, burn drops toward the at-the-door bookings only
   (~0.35/week).
 - The severity/grace tunables should be revisited against the calibration metrics once a few
-  weeks of 15-minute-tick data exist — this baseline is the denominator to compare against.
+  weeks of 10-minute-tick data exist — this baseline is the denominator to compare against.
 
 ## Caveats
 
