@@ -120,3 +120,31 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
   `timeZone`, `propertyStatus`. **Enumerate the active set** (`propertyStatus == "ACTIVE"`) → the
   list of `propertyId`s to poll. (Account `222262` currently: 72229 Markham, 72230 Dalton,
   72231 Lakeshore, 72232 Rex.) This is the dynamic enumeration source — no static list.
+
+## User management & task codes — observed, not yet probed
+
+⚠️ The emergency-pool reconciler (see
+[architecture.md](./architecture.md#the-pool-reconciler-automated-rotation)) rides on Lynx's
+task-code user mechanism. Everything below comes from dashboard observation and Lynx
+documentation; **none of it has had the live-probe treatment yet** — endpoint names, response
+shapes, and especially delete semantics must be proven before implementation.
+
+- **Task codes** are a small account-wide budget of assignable code slots (8 observed at
+  baseline). An API call lists the **available** ones; assigning one (via user creation) removes
+  it from the list, deleting the user returns it immediately. The set is dynamic — treat the
+  list as live truth, never assume the total, and expect other processes may consume or change
+  entries.
+- **Create user** grants a room's locks a **randomly generated PIN** (unrelated to the task-code
+  id — recreation genuinely rotates the secret). Fields: first/last name, email, phone
+  (required; the literal `"1"` is accepted), a needs-PIN flag, the task-code id, a role id, a
+  couple of boolean permission values (static for our use), a tags array, and the **group id** —
+  each group maps to a single room's lock set, so one user = one room.
+- Lynx likely **emails the created user** — use plus-addressed mailboxes on a domain we control.
+- **Provisioning** takes up to 24 h per Lynx's documentation (empirically often much faster); a
+  per-user **pending-codes** read lists which locks are still waiting. Empty = the PIN is live
+  on every lock.
+- **Where the PIN is readable** (create response vs a separate user read) is unconfirmed.
+- **Delete** releases the task code immediately (per the available list). Whether the PIN is
+  reliably removed from lock hardware — and how failure/staleness manifests — is **the biggest
+  unknown**: a delete that silently fails orphans a code in finite lock memory, which degrades
+  guest-code provisioning for everyone. Probe first.
