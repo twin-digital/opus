@@ -21,11 +21,17 @@ Compiled 2026-07-10 via multi-source research. Supports the OTA due-diligence se
 > email accounts, enabling you to use the guest email alias with your Customer Relationship
 > Management (CRM) or another third-party system."
 
-- I.e. the relay is **sender-gated to validated EPC user accounts**; arbitrary external senders
-  (Lynx) are dropped, third-party support is "in the works", and **no partner-facing allowlist
-  exists**. This is the most direct documented explanation for the observed Lynx delivery
-  failures on Expedia. Corroborated by ThinkReservations ("not allowed to be used by PMS
-  systems"), Hostaway, AirHost, and a Mews community thread documenting rejected PMS-sent mail.
+- I.e. the relay is **sender-gated**. Corroborated by ThinkReservations ("not allowed to be used
+  by PMS systems"), Hostaway, AirHost, and a Mews community thread documenting rejected PMS-sent
+  mail.
+- ⚠️ **Correction (2026-07-10 research):** there **is** a partner-facing allowlist, contrary to
+  the earlier "no allowlist" reading. Partner Central → **Message Centre → Settings → Authorised
+  email addresses** lets a property register sender addresses (against a **verified sending
+  domain**); mail from unregistered senders is dropped. This is the Expedia analog of
+  Booking.com's approved-sender fix. The open caveat is whether it accepts a **third-party**
+  sender like Lynx — Expedia describes non-Partner-Central sender support as still "in the works."
+  (Duve help center, current 2026-03-10.) So Expedia is not a hard structural block; it is a
+  configurable allowlist with an incomplete third-party story — try adding Lynx's sender.
 
 **Content filtering** — vendor-documented:
 
@@ -105,7 +111,7 @@ senders:
 ## Cross-channel synthesis
 
 - The Lynx email failures are **structural, not intermittent**: Airbnb guests are unreachable by
-  email at all; Expedia guests only from validated EPC sender accounts with no allowlist;
+  email at all; Expedia via its own Authorised-email-addresses allowlist (with a verified domain; third-party-sender support incomplete);
   Booking.com is the single channel with a portal fix (approved-sender registration — recommended
   regardless of this project, with the block-all-email and link-filter settings checked at the
   same time). Agoda, encountered incidentally, has similarly masked guest emails since ~2020.

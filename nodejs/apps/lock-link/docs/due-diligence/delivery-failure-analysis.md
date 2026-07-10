@@ -1,8 +1,8 @@
 # Why OTA door-code delivery started failing (~mid-June 2026)
 
-Root-cause analysis of the delivery failures that motivate this project. Status: **leading
-explanation identified, confirmation pending** (a deliverability research pass and the Lynx
-bounce/NDR codes are outstanding — see Confirmation below). Written 2026-07-10.
+Root-cause analysis of the delivery failures that motivate this project. Status: **leading hypothesis unconfirmed; the mid-2026 timing is not explained by any public
+evidence** — the Lynx bounce/NDR codes are the only decisive test outstanding (see Confirmation).
+Written 2026-07-10; updated after a deliverability research pass.
 
 ## The timeline puzzle
 
@@ -40,31 +40,38 @@ API-connected property is exempt from Airbnb's non-API-host proxy-number rollout
 - **A contact-info trend break.** No — the placeholder-phone (Expedia) and proxy-email patterns
   are flat from Sept 2025 onward, with no May/June 2026 change. Guests didn't stop having (or
   start lacking) contact info; the _deliverability_ of the one channel that reaches them changed.
-- **An Expedia-specific policy change.** No documented Expedia changelog/announcement in 2026
-  touches guest-email or sender authentication; the validated-sender rule is long-standing
-  (documented since ~2024), not new. (See [ota-messaging-research.md](./ota-messaging-research.md).)
+- **An Expedia-specific policy change.** No documented Expedia changelog/announcement, partner
+  notice, or community surge dated April–July 2026. Expedia's sender **allowlist** requirement
+  (below) is long-standing (documented since ~2024, current March 2026), not a mid-2026 change.
 
-## Leading explanation: the 2026 DMARC / email-authentication enforcement cliff
+## Two mechanisms — neither alone explains the timing
 
-Lynx emails codes to the OTA **relay alias**, which **forwards** to the guest's real inbox.
-Forwarding breaks SPF and — without ARC — DMARC alignment. Enforcement of the Gmail/Yahoo/
-Microsoft bulk-sender + DMARC rules escalated from spam-foldering to **hard SMTP 550 rejection**
-on a public timeline that lines up with the symptom:
+A deliverability research pass (2026-07-10, multi-source, adversarially verified) found two
+real mechanisms but **could not pin the mid-June onset to any dated public event.**
 
-- Gmail → SMTP-level rejection: **Nov 2025**
-- Microsoft auth enforcement completed: **~Apr 30 2026**
-- DMARC enforcement "fully active across all three major providers": **~May 2026**
+**(a) Expedia's sender allowlist (documented, static).** Mail to the alias is delivered only
+from addresses the property has added to the **"Authorised email addresses" list in Partner
+Central → Message Centre → Settings**, which requires a **verified sending domain**; third-party/
+PMS sender support is described as still "in the works" / "currently considering." Documented via
+multiple PMS help centers, current as of **2026-03-10** — i.e. this gate **predates** the failure
+window and did not change in mid-2026. On its own it does not explain the ~9-month working period
+(a hard allowlist gate would have blocked Lynx from go-live, not mid-June) — unless Lynx's sender
+was effectively getting through until something else tightened.
 
-So a third-party sender's forwarded mail to the alias **worked while enforcement was lax (Sept
-2025 → spring 2026), then began being rejected mid-2026** — with **no change on the property's or
-Expedia's side.** A mid-June report trailing a May enforcement milestone by a few weeks is the
-expected lag. This also explains the channel pattern: **Expedia fails hardest** because it is
-email-only (no phone fallback), while Airbnb (real phone), Booking.com (real phone + allowlist),
-and direct (real everything) have alternate paths.
+**(b) Industry DMARC / bulk-sender enforcement (time-varying, not Expedia-specific).** Forwarded
+relay mail is exactly the pattern that breaks SPF alignment and fails DMARC without aligned DKIM
+or ARC. Enforcement escalated over 2024–2026 — Gmail initial compliance Feb 2024 → some rejection
+Apr 2024 → **hard rejection Nov 2025**; Outlook **junk-foldering from May 2025**, hard rejection to
+follow. This is the **only time-varying factor** that fits a mid-2026 cliff, so it remains the
+leading timing hypothesis. But **no public source ties this enforcement to Expedia's alias
+forwarding**, and nothing dates a surge of "Expedia guest emails failing" to April–July 2026.
 
-> [!NOTE]
-> This is an **inference from industry sources**, not yet a confirmed bounce analysis. It is the
-> best fit for the evidence but must be verified before being stated as fact.
+> [!IMPORTANT]
+> **The ~9-months-then-broke-in-mid-June-2026 timing is not explained by public evidence.** The
+> allowlist gate is static; DMARC enforcement is the only moving part but is unconfirmed for this
+> case. The combined-and-plausible story — Lynx mail getting through a soft/default gate until
+> rising DMARC enforcement crossed a threshold mid-2026 — is inference, not fact. **Only the Lynx
+> bounce/NDR codes can settle it.**
 
 ## The SMS question (an additive, separate issue)
 
@@ -82,8 +89,10 @@ has no usable phone, so it depends entirely on the (now-broken) email path regar
    — a second confirmation path.
 3. **Which channels the manager's failures are actually on.** Expedia-heavy → confirms the
    email-only + DMARC chain. Airbnb also failing → Lynx SMS is additionally broken.
-4. A deep-research deliverability pass (partner-forum reports + Expedia materials on
-   `@m.expediapartnercentral.com` deliverability, DMARC, filtering) is in progress.
+4. **Try Expedia's own allowlist** — add Lynx's sending address to Partner Central → Message
+   Centre → Authorised email addresses (needs domain verification). This is the Expedia-side
+   analog of Booking.com's approved-sender fix; whether it accepts a third-party sender is the
+   open caveat ("in the works"). A no-cost mitigation to attempt regardless of the root cause.
 
 ## Why this strengthens, not weakens, the proposal
 
