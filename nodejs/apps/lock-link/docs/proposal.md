@@ -150,6 +150,47 @@ core, three pieces can be scaled to fit budget:
    against real provisioning behavior. Can be deferred; the system then runs on its initial
    settings.
 
+## Due diligence (to be completed before sign-off)
+
+_Placeholder — this section records the vendor conversations and platform research that confirm
+no simpler path exists, so the decision to build is documented alongside the decision itself._
+
+### Lynx support engagement
+
+For each contact: date, channel (ticket/email/phone), what was asked, their response (quoted
+where possible, with ticket numbers), and the conclusion.
+
+Statements to obtain in writing:
+
+- [ ] The OTA-guest delivery failures we reported: is a fix planned, and on what timeline?
+- [ ] Does Lynx offer delivery visibility — per-message logs, bounce reports, or delivery
+      confirmations — that staff could monitor?
+- [ ] Can Lynx write the codes it provisions into Lodgify (or any PMS field), so the PMS could
+      handle messaging?
+- [ ] Does Lynx offer a supported API, webhook, or integration program — or have one on the
+      roadmap?
+- [ ] What is Lynx's stated provisioning time for a new reservation's code (their documented
+      figure vs. our observations)?
+- [ ] How many task codes does an account include, and can that number be increased?
+
+### OTA partner portal research
+
+For each channel (Expedia Partner Central, Booking.com extranet, Airbnb), record whether any
+native mechanism can deliver a **per-reservation** door code that does not exist until shortly
+before (or after) booking:
+
+- [ ] Check-in / property-access instruction fields — static per property, or per reservation?
+- [ ] Message template capabilities — can they carry per-reservation custom values, and when do
+      they fire relative to booking?
+- [ ] Any documented masking or filtering of codes/links in relayed guest messages (affects our
+      delivery path too — record findings either way).
+- [ ] Any native smart-lock integrations, and whether they support this hardware.
+
+### Conclusion
+
+_One paragraph, written after the above: what remains true (or changed) about the "no
+off-the-shelf path" claim in How We Got Here._
+
 ## What we need from you
 
 1. **Lynx setup**: one lock group per unit configured in the Lynx dashboard (we'll provide
