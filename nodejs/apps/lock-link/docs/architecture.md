@@ -77,6 +77,16 @@ the booking itself. Within a single run, each booking flows capture → message 
 booking that becomes ready inside the send window is messaged in the same invocation, never
 parked for the next tick.
 
+**Degraded mode: manual capture.** Capture is the _only_ step that requires the Lynx API. If
+Lynx access is ever lost — a breaking change that can't reasonably be accommodated, or access
+revoked outright — the system degrades, in order: already-captured bookings message normally
+(send needs only Lodgify); the emergency pool keeps issuing without Lynx (the snapshot is
+Lynx-independent and the codes are already in the locks — weeks of coverage at observed
+same-day rates); and permanently, staff can read codes off the Lynx dashboard and enter them
+into Lodgify's key-code field by hand, at which point **everything downstream still works** —
+timing, verified sending, read-before-send, delivery tracking, escalation. Total Lynx API loss
+reduces the system to "staff type one code per booking," not to nothing.
+
 **The join** between systems is Lynx's `confirmationCode`, which embeds the Lodgify booking id
 (`20559349VK222262` → booking `20559349`). A `confirmationCode` that doesn't match the expected
 shape escalates — a free integrity check. Mechanics and the Lynx ID model:

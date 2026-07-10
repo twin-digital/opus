@@ -111,6 +111,11 @@ We recommend starting with the default and revisiting once real usage data exist
   officially support for outside systems. If Lynx changes their system, parts of this may need
   maintenance. Monitoring is built in so such changes surface to Twin Digital quickly — this is
   a maintenance fact of life, not a reason the design would stop working.
+- Even in the worst case — the Lynx connection permanently lost — the delivery system keeps
+  working: staff enter each booking's code by hand (reading it from the Lynx dashboard as they
+  would today), and the system still handles the timing, the verified sending, the delivery
+  tracking, and the alerts. Guests already booked keep receiving codes automatically, and the
+  standby codes continue to cover late arrivals in the meantime.
 
 ## Sign-off
 
