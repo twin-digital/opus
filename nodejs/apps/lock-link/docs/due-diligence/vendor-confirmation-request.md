@@ -62,14 +62,7 @@ Status on the guest arrival message a supported configuration for gating deliver
 retry window expires with conditions unmet, the message is permanently dropped — is any alert
 generated?
 
-**Hostaway** — your docs describe a 15-minute delay when the standard `door_code` field is
-empty, then fallback to the listing's static code. (a) Does any hold apply to reservation
-**custom fields** (where Lynx writes)? (b) Your changelog describes automation conditions on
-custom fields (`is empty` / `is not empty`) with re-checks on field change ("automations will
-cancel/resume accordingly") — if a scheduled message is blocked by such a condition and the
-field populates later, does the message then send (late), or is it cancelled? (c) Can the
-static-code fallback be disabled (a static code is unusable for us — codes are per-reservation
-and per-lock)?
+**Hostaway** — your docs describe a 15-minute delay when the standard `door_code` field is empty, then fallback to the listing's static code. (a) Does any hold apply to reservation **custom fields** (where Lynx writes)? (b) Your changelog describes automation conditions on custom fields (`is empty` / `is not empty`) with re-checks on field change ("automations will cancel/resume accordingly") — if a scheduled message is blocked by such a condition and the field populates later, does the message then send (late), or is it cancelled? (c) Can the static-code fallback be disabled (a static code is unusable for us — codes are per-reservation and per-lock)?
 
 **Guesty** — does any automation condition or hold exist on the key-code field being populated
 before an auto-message containing `{{key_code}}` sends? What renders when `{{key_code}}` is

@@ -26,8 +26,6 @@ from Lynx** — the code field on the Lodgify booking is always empty. Please cl
 - Is code write-back to Lodgify a real, currently-shipping feature?
 - If so, why is it not happening on our account — is it broken, gated to a specific plan tier,
   or behind a configuration setting we haven't enabled? How do we turn it on?
-- When it works, does it send **one** code per booking, or can it represent a **different code
-  per lock** on the same reservation?
 
 ## 2. Can Lynx deliver guest messages through Lodgify's messaging (the unified inbox)?
 
