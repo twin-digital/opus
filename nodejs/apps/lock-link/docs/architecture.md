@@ -113,23 +113,23 @@ value is env-tunable — no timing constants in code.** The one value that lives
 (the EventBridge cron rate) is derived in `stack.ts` from the same constant that sets
 `LOCK_LINK_TICK_MINUTES`, so the rule and the Lambda can't drift apart.
 
-| Env var                                   | Default | Units   | Governs                                         |
-| ----------------------------------------- | ------- | ------- | ----------------------------------------------- |
-| `LOCK_LINK_TICK_MINUTES`                  | 10      | minutes | Tick rate (stack-derived with the cron rule)    |
-| `LOCK_LINK_HORIZON_DAYS`                  | 14      | days    | Which upcoming bookings the loop considers      |
-| `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES`    | 60      | minutes | Lynx re-check gate outside the send window      |
-| `LOCK_LINK_SEND_HOURS`                    | 24      | hours   | Send window opens; fast-tier polling boundary   |
-| `LOCK_LINK_SLA_HOURS`                     | 8       | hours   | Escalation clock; emergency-issuance trigger    |
-| `LOCK_LINK_GRACE_MINUTES`                 | 30      | minutes | New-booking escalation suppression              |
-| `LOCK_LINK_POST_CHECKIN_GRACE_MINUTES`    | 10      | minutes | Tightened grace once check-in time has passed   |
-| `LOCK_LINK_CRITICAL_HOURS`                | 6       | hours   | Severity flips to critical inside this window   |
-| `LOCK_LINK_REALERT_CRITICAL_MINUTES`      | 60      | minutes | Re-alert gate at critical severity              |
-| `LOCK_LINK_REALERT_WARNING_MINUTES`       | 240     | minutes | Re-alert gate at warning severity               |
-| `LOCK_LINK_REALERT_INFO_MINUTES`          | 1440    | minutes | Re-alert gate at info severity                  |
-| `LOCK_LINK_EC_HOLD_BUFFER_HOURS`          | 24      | hours   | Issued emergency code protected after departure |
-| `LOCK_LINK_EC_PENDING_ALARM_HOURS`        | 36      | hours   | Alarm on an emergency create still provisioning |
-| `LOCK_LINK_EC_STUCK_DELETE_HOURS`         | 6       | hours   | Unconverged-delete circuit breaker              |
-| `LOCK_LINK_EC_RECONCILE_INTERVAL_MINUTES` | 360     | minutes | Emergency-pool reconciler gate                  |
+| Env var                                   | Default | Units   | Governs                                           |
+| ----------------------------------------- | ------- | ------- | ------------------------------------------------- |
+| `LOCK_LINK_TICK_MINUTES`                  | 10      | minutes | Tick rate (stack-derived with the cron rule)      |
+| `LOCK_LINK_HORIZON_DAYS`                  | 14      | days    | Which upcoming bookings the loop considers        |
+| `LOCK_LINK_LYNX_SLOW_INTERVAL_MINUTES`    | 60      | minutes | Lynx re-check gate outside the send window        |
+| `LOCK_LINK_SEND_HOURS`                    | 24      | hours   | Send window opens; fast-tier polling boundary     |
+| `LOCK_LINK_SLA_HOURS`                     | 8       | hours   | Escalation clock; emergency-issuance trigger      |
+| `LOCK_LINK_GRACE_MINUTES`                 | 30      | minutes | New-booking escalation suppression                |
+| `LOCK_LINK_POST_CHECKIN_GRACE_MINUTES`    | 10      | minutes | Tightened grace once check-in time has passed     |
+| `LOCK_LINK_CRITICAL_HOURS`                | 6       | hours   | Severity flips to critical inside this window     |
+| `LOCK_LINK_REALERT_CRITICAL_MINUTES`      | 60      | minutes | Re-alert gate at critical severity                |
+| `LOCK_LINK_REALERT_WARNING_MINUTES`       | 240     | minutes | Re-alert gate at warning severity                 |
+| `LOCK_LINK_REALERT_INFO_MINUTES`          | 1440    | minutes | Re-alert gate at info severity                    |
+| `LOCK_LINK_EC_HOLD_BUFFER_HOURS`          | 24      | hours   | Issued emergency code protected after departure   |
+| `LOCK_LINK_EC_PENDING_ALARM_HOURS`        | 36      | hours   | Alarm on an emergency create still provisioning   |
+| `LOCK_LINK_EC_RECONCILE_INTERVAL_MINUTES` | 360     | minutes | Emergency-pool reconciler gate                    |
+| `LOCK_LINK_EC_USE_DECAY_DAYS`             | 90      | days    | Emergency-code uses older than this stop counting |
 
 Cold-start validation enforces `SEND_HOURS > SLA_HOURS > CRITICAL_HOURS` (the send window opens
 before the escalation clock runs out, which runs out before maximum urgency),
@@ -341,12 +341,13 @@ the fallback — those are precisely the scenarios it exists for.
 
 - **Pool snapshot**: an SSM SecureString (`LOCK_LINK_EMERGENCY_CODES_PARAM`) holding a JSON map
   of **Lodgify `property_id`** → **list of code objects**:
-  `{ "<lodgifyPropertyId>": [{ "code": "1234", "userId": 111111, "createdAt": "…" }, ...] }`.
+  `{ "<lodgifyPropertyId>": [{ "code": "1234", "userId": 111111, "createdAt": "…", "assignedBookings": [{ "bookingId": 123, "issuedAt": "…" }] }, ...] }`.
   Terminology matters here because "cache" is overloaded: this is **Lynx pool state snapshotted
   into SSM by the reconciler** so that issuance never needs Lynx; it is _not_ additionally
   cached in Lambda memory — issuance reads the parameter fresh every time (a stale code is the
   one thing worse than a slow read).
-- **Selection**: the **first standing code not currently assigned**, in stable creation order
+- **Selection**: the **first standing code not currently assigned and with uses remaining**
+  (see the reuse policy), in stable creation order
   (the timestamp embedded in each emergency user's name). "Assigned" is derived live: a code
   counts as assigned while it appears in the `key_code` of any booking with
   `departure ≥ now − EC_HOLD_BUFFER` — the same rule that pins deletion — so a code straddling
@@ -380,9 +381,11 @@ compose into one:
 - So each room holds a pool of synthetic **"emergency users"** — accounts associated with no
   human — whose user codes are the standing emergency codes.
 - **Issuing** a code = handing one of these users' door codes to a guest. **Rotating** =
-  deleting the user, which revokes the code (⚠️ with the caveat that we have no real visibility
-  into whether — or how quickly — Lynx actually clears it from lock memory), then creating a
-  replacement.
+  deleting the user, which revokes the code, then creating a replacement. ⚠️ List removal and
+  task-code return are observed to be **immediate**, but clearing the code from lock hardware is
+  suspected to take longer (minutes-to-hours) and is **unobservable** — no signal exists to
+  verify it. That asymmetry drives the reuse policy below: the mitigation for rotation risk is
+  **doing fewer rotations**, not detecting failed ones.
 
 Two constraints shape the pool:
 
@@ -399,14 +402,40 @@ Two constraints shape the pool:
   impossible** — 24 h doesn't beat a guest at the door. The pool is kept warm _ahead_ of need;
   create/delete is **replenishment after use**, never issuance.
 
+**Reuse policy — rotation is tunable, not mandatory.** Rotation-by-deletion carries risks
+beyond lock memory: frequent user-management events are the kind of API usage most likely to
+draw audit attention, and there is an unconfirmed suspicion that code removals trigger manual
+verification by Lynx support staff. So how aggressively codes rotate is a knob, trading physical
+security (a past guest could regain access) against the risk of destabilizing the lock system:
+
+- **`LOCK_LINK_EC_MAX_USES`** (`number | 'unlimited'`, default **1**): how many guests may
+  receive a code before it is rotated. `1` = today's rotate-after-every-use; higher values
+  divide the rotation traffic by that factor; `'unlimited'` disables rotation entirely — the
+  reconciler makes **zero** user-management writes after initial pool creation.
+- **`LOCK_LINK_EC_USE_DECAY_DAYS`** (default **90**): uses older than this stop counting toward
+  the limit, on the assumption that a guest from months ago has lost or forgotten the code.
+  This turns the limit from a lifetime cliff into a rate — the real security statement becomes
+  "at most `MAX_USES` guests within any `DECAY` window know a live code." Irrelevant at
+  `MAX_USES = 1`; it is what makes higher values reasonable.
+- **Use tracking lives in the pool snapshot**: each code object carries
+  `assignedBookings: [{ bookingId, issuedAt }]`. The issuance path appends the entry in the
+  same breath as the `key_code` write — an SSM write, so still Lynx-independent — and the
+  append is idempotent (set semantics on `bookingId`), so retries can't double-count. Effective
+  uses = entries with `issuedAt` inside the decay window; the reconciler prunes older entries.
+  A lost append under-counts by one use — a bounded, acceptable error in a feature that
+  deliberately trades security margin for stability.
+- Lifecycle consequence: after a stay ends (hold buffer passed), a code with remaining uses
+  returns to **standing**; a code at its limit becomes **rotation-eligible** and is deleted and
+  replaced.
+
 **Cadence.** The reconciler runs on its own interval gate, `EC_RECONCILE_INTERVAL_MINUTES`
 (default 6 h) — much slower than the sync loop, because its reads hit the unofficial Lynx API
 (minimize-Lynx-calls applies) and nothing in the lifecycle is minute-sensitive. The delay
 modeling: a full rotation cycle is `checkout + 24 h hold + ≤6 h detect + delete + ≤6 h confirm +
 ≤24 h provision + ≤6 h detect standing` ≈ **under 3 days**, comfortably covered by the room's
 second code at the observed ~1 issuance/week account-wide burn. Alarm detection latency
-(zero-standing, stuck deletes) is bounded by the same gate — acceptable for advisory and
-watch-for-it alerts at these rates.
+(zero-standing, pool faults) is bounded by the same gate — acceptable for advisory alerts at
+these rates.
 
 Each pass **observes everything, stores nothing** beyond the pool snapshot — all endpoints in
 [lynx-api.md](./lynx-api.md#user-management--task-codes):
@@ -421,15 +450,16 @@ Each pass **observes everything, stores nothing** beyond the pool snapshot — a
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Creating: room below target ∧ free task code ∧ no unconverged delete ∧ breaker closed
+    [*] --> Creating: room below target ∧ free task code ∧ no pending delete for the room
     Creating --> Provisioning: addSecondaryUser accepted
     Provisioning --> Standing: pendingInfo empty → read PIN → snapshot
     Provisioning --> StuckPending: pending > EC_PENDING_ALARM_HOURS (ops alert, human decides)
     Standing --> Assigned: issued at breach (fast path, from the snapshot)
-    Assigned --> Deletable: no booking references the code within EC_HOLD_BUFFER
-    Deletable --> Deleting: removeSecondaryUser
-    Deleting --> [*]: user gone from the list — task code returned, replenish
-    Deleting --> BreakerOpen: unconverged > EC_STUCK_DELETE_HOURS — halt all creates (ops critical + business)
+    Assigned --> Standing: hold buffer passed ∧ effective uses < MAX_USES
+    Assigned --> RotationEligible: hold buffer passed ∧ effective uses ≥ MAX_USES
+    RotationEligible --> Deleting: removeSecondaryUser
+    Deleting --> [*]: user gone from the list (observed immediate) — task code returned, replenish
+    Deleting --> DeleteFault: API error, or user persists in the list — ops + business alert, no further mutations for the room
 ```
 
 **Identity.** Emergency users are named `locklink-ec-<roomSlug>-<epochSeconds>` with a
@@ -453,20 +483,26 @@ degrades _guest_ code provisioning for everyone):
 - **Read-before-write, always** — every pass re-observes before mutating; nothing is created or
   deleted on remembered state.
 - **One mutation per room per pass; delete-before-create** — no replacement create while the
-  room has an unconverged delete.
+  room has a delete that hasn't been verified against the user list.
 - **Hard ceilings** counted from the live user list: never more than the per-room target, never
   more than the global target of prefix-owned users.
-- **Circuit breaker**: a delete unconverged past `EC_STUCK_DELETE_HOURS` halts **all** creates
-  account-wide, alerts ops (critical) **and the business** — a watchable physical-security
-  event. Degradation must point toward "fewer standing codes, human decides" — never toward
-  compounding writes against an API that isn't honoring them.
+- **Delete faults are detectable only at the list level.** Removal from the user list (and
+  task-code return) is observed to be immediate, so a delete API error — or a user that
+  persists in the list afterwards — is anomalous: alert ops **and the business** (a code that
+  should be dead may still open the door — watchable, or manually disablable) and stop mutating
+  that room until a human clears it. What is **not** detectable is whether lock hardware
+  actually cleared the code — suspected to lag by minutes-to-hours with no signal to verify.
+  That residual-access window is accepted and mitigated by the reuse policy (fewer rotations),
+  not by convergence tracking; the stretch activity-log monitor is the only path to real
+  verification.
 - **Stuck-pending**: a create still pending past `EC_PENDING_ALARM_HOURS` alarms for operator
   remediation. Deliberately **not** auto-deleted-and-recreated — retry loops against a flaky
   unofficial API are how the whole budget burns overnight.
 
-⚠️ **Probe-gated before implementation**: delete-convergence semantics (does a 200 actually
-clear lock memory, and how fast?) and real provisioning timing. The PIN-read question is
-resolved (`getSecondaryUserInformation`).
+⚠️ **Probe-gated before implementation**: real provisioning timing (vs the documented 24 h).
+The PIN-read question is resolved (`getSecondaryUserInformation`); delete behavior at the API
+level is resolved by repeated observation (immediate), with hardware clearing accepted as
+unverifiable.
 
 ## Notifications & escalation
 
@@ -487,7 +523,7 @@ causes:
 - **Operational** (engineers/maintainers) — system _causes_ needing technical assessment or
   remediation: a `confirmationCode` that doesn't parse, a booking with no Lynx reservation, a
   message send returning an error envelope, a sent message whose `message_status` lands on
-  `Failed`, reconciler faults (pool below target, stuck provisioning, unconverged deletes), and
+  `Failed`, reconciler faults (pool below target, stuck provisioning, delete faults), and
   the catch-all for whole-run failures. The tech team decides what to relay to the
   business; the business still hears automatically when a system issue produces a guest-impacting
   outcome, because business alerts don't depend on the cause.
@@ -536,17 +572,22 @@ notifications are runtime-emitted with the booking/guest context the manager nee
 
 Timing knobs are tabled in the Timing section. The rest (all required, validated at cold start):
 
-| Env var                              | Purpose                                               |
-| ------------------------------------ | ----------------------------------------------------- |
-| `LOCK_LINK_ACCOUNT_ID`               | Lynx umbrella account id (drives the join suffix)     |
-| `LOCK_LINK_USER_ID`                  | Lynx per-user id sent as `hostId`/`loggedInUserId`    |
-| `LOCK_LINK_BUSINESS_ALERT_TOPIC_ARN` | SNS topic for business alerts (property manager)      |
-| `LOCK_LINK_OPS_ALERT_TOPIC_ARN`      | SNS topic for operational alerts (engineers)          |
-| `LOCK_LINK_LYNX_USERNAME_PARAM`      | SSM SecureString name — Lynx username                 |
-| `LOCK_LINK_LYNX_PASSWORD_PARAM`      | SSM SecureString name — Lynx password                 |
-| `LOCK_LINK_LODGIFY_API_KEY_PARAM`    | SSM SecureString name — Lodgify API key               |
-| `LOCK_LINK_EMERGENCY_CODES_PARAM`    | SSM SecureString name — per-room emergency code pools |
-| `LOCK_LINK_LYNX_TOKEN_PARAM`         | SSM SecureString name — durable Lynx JWT cache        |
+| Env var                              | Purpose                                                      |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `LOCK_LINK_ACCOUNT_ID`               | Lynx umbrella account id (drives the join suffix)            |
+| `LOCK_LINK_USER_ID`                  | Lynx per-user id sent as `hostId`/`loggedInUserId`           |
+| `LOCK_LINK_BUSINESS_ALERT_TOPIC_ARN` | SNS topic for business alerts (property manager)             |
+| `LOCK_LINK_OPS_ALERT_TOPIC_ARN`      | SNS topic for operational alerts (engineers)                 |
+| `LOCK_LINK_LYNX_USERNAME_PARAM`      | SSM SecureString name — Lynx username                        |
+| `LOCK_LINK_LYNX_PASSWORD_PARAM`      | SSM SecureString name — Lynx password                        |
+| `LOCK_LINK_LODGIFY_API_KEY_PARAM`    | SSM SecureString name — Lodgify API key                      |
+| `LOCK_LINK_EMERGENCY_CODES_PARAM`    | SSM SecureString name — the emergency pool snapshot          |
+| `LOCK_LINK_EC_TARGET_PER_ROOM`       | Standing emergency codes per room (2)                        |
+| `LOCK_LINK_EC_MAX_USES`              | Guests per code before rotation (`number \| 'unlimited'`, 1) |
+| `LOCK_LINK_EC_GROUP_MAP`             | JSON map, Lodgify `property_id` → Lynx group id + room slug  |
+| `LOCK_LINK_EC_ROLE_ID`               | Lynx role id for emergency users                             |
+| `LOCK_LINK_EC_EMAIL`                 | Base email for plus-addressed emergency users                |
+| `LOCK_LINK_LYNX_TOKEN_PARAM`         | SSM SecureString name — durable Lynx JWT cache               |
 
 - **SSM SecureString values are populated out-of-band** on initial setup (CFN never sees secret
   material); the stack grants the Lambda `ssm:GetParameter` on the named parameters plus
@@ -676,7 +717,7 @@ a stopped schedule within ~24 h. ⚠️ Its threshold assumes the tick rate — 
 | 21  | Code rotated in Lynx after capture                   | Not detected (static-codes assumption); the captured code is messaged                                                                                                                                           | —                                                                  | —                             | open question / stretch re-verify         |
 | 22  | Room's standing pool below target                    | Reconciler replenishes (create); if the budget is exhausted or the breaker is open, stays degraded                                                                                                              | Ops / warning + Business / warning at zero standing (standby)      | Reconciler gate               | pool-standing metric (alarmed)            |
 | 23  | Emergency create still pending past the alarm window | Operator remediation; deliberately no auto delete-recreate                                                                                                                                                      | Ops / warning                                                      | Manual                        | ec-pending-age metric (alarmed)           |
-| 24  | Emergency delete unconverged past the breaker        | **Circuit breaker**: all creates halted account-wide (orphaned codes consume finite lock memory)                                                                                                                | Ops / critical + Business (watchable security event)               | Manual                        | ec-stuck-delete metric (alarmed)          |
+| 24  | Delete API error, or user persists in the list       | Anomalous (list removal is observed immediate): stop mutating the room until a human clears it. Hardware-level clearing is unverifiable — accepted, mitigated by the reuse policy                               | Ops / critical + Business (watchable security event)               | Manual                        | ec-delete-fault metric (alarmed)          |
 | 25  | Foreign task-code consumption squeezes the budget    | Target becomes unreachable; surfaced by the below-target alarm                                                                                                                                                  | Ops / warning                                                      | —                             | pool-standing metric                      |
 
 Row 19 is the one deliberate gap: delivery-failure recovery stays manual unless the
@@ -690,10 +731,14 @@ observed in practice.
 - Stretch: **best-effort code freshness at send time** — re-check Lynx before messaging and use
   the fresh codes if reachable, the captured ones if not. Rotation after capture is expected to
   be an anomaly; MVP assumes codes are static once set.
-- **Probe the emergency user lifecycle** before building the pool reconciler: where the PIN is
-  readable (create response vs user read), delete-convergence semantics (the biggest risk —
-  orphans consume lock memory), real provisioning timing vs the documented 24 h, and how the
-  available-task-codes list behaves under foreign activity.
+- Stretch: **unlock-activity monitoring** — poll `logActivity/getActivities` (unlock events,
+  including which user) for emergency-code usage outside its expected window; alert the
+  business and deactivate the user's code. Also the only available signal that a "deleted"
+  code is still live on a lock. Endpoint known, not yet captured (see
+  [lynx-api.md](./lynx-api.md)).
+- **Probe the emergency user lifecycle** before building the pool reconciler: real provisioning
+  timing vs the documented 24 h, and how the available-task-codes list behaves under foreign
+  activity. (PIN read and API-level delete behavior are resolved by observation.)
 - Stretch: **Lodgify webhooks as a second watch path for imminent bookings.** Instant detection
   isn't valuable on its own (we wait on Lynx provisioning regardless), but a new-booking webhook
   could kick off a tighter watch loop — short-interval Lynx re-checks — for bookings arriving

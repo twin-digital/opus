@@ -8,16 +8,15 @@ see [architecture.md](./architecture.md).
 
 Lynx has **no public API and no webhooks**. Its dashboard frontend calls a private JSON API that
 we call directly — every contract here was reverse-engineered from live dashboard traffic and is
-proven against live data. The UI renders codes with a glyph font (display-layer obfuscation); the
-JSON returns them as **plaintext**, so no scraping or OCR is needed.
+proven against live data.
 
 Because the API is unofficial, two standing rules apply:
 
-- **Wire shapes drift.** Health-metadata types have changed repeatedly (`isJammed` swung
-  boolean → int → other; `batteryLevel` swung number → string). Zod schemas model **only the
-  fields we consume** and strip the rest on parse (zod's default `.strip()`), so drift in fields
-  we don't read can't block the sync. Add fields back — typed against observed wire data at the
-  time — when a consumer lands.
+- **Wire shapes drift.** The API is unofficial and unsupported, so field types and shapes can
+  change without notice — minimize dependence on concrete specifics. Zod schemas model **only
+  the fields we consume** and strip the rest on parse (zod's default `.strip()`), so drift in
+  fields we don't read can't block the sync. Add fields back — typed against observed wire data
+  at the time — when a consumer lands.
 - **Keep a low profile.** Poll at modest rates with jitter, back off on errors, and log in
   rarely (the token cache exists for this as much as for latency).
 
@@ -127,9 +126,8 @@ The emergency-pool reconciler (see
 [architecture.md](./architecture.md#the-pool-reconciler-automated-rotation)) rides on Lynx's
 task-code user mechanism. Request/response shapes below are captured from live dashboard
 traffic (2026-07-10); samples are anonymized (names, emails, phone numbers replaced with fakes).
-⚠️ **Delete semantics remain unprobed** — the biggest risk: a delete that silently fails orphans
-a code in finite lock memory, degrading guest-code provisioning for everyone. Probe before
-implementation.
+⚠️ The one unverifiable behavior — whether/when a deleted user's code actually leaves lock
+hardware — is covered under the delete endpoint below.
 
 ### List available task codes — `getTaskNotificationCodesForHost`
 
@@ -222,7 +220,7 @@ implementation.
   `tnAccessCodeIdDB` = the task-code `id` from the available list; `roleId` 6 = "Guest"
   (configurable constant); `enableGroupRestrictions` + `linkGroupsOnCreation` true;
   `holdAccess` is the **string** `"0"`; `phoneNumber` `"1"` is accepted; `emailLoginAccess` /
-  `isAdmin` false; `previousRestrictions` / `tags` arrays (tags are our audit channel);
+  `isAdmin` false; `previousRestrictions` / `tags` arrays (both unused by us);
   `acl` an empty object. Here `hostId`/`loggedInUserId` are **numbers**, not strings.
 
 ```json
@@ -440,10 +438,23 @@ usual wire-drift caution applies; model only what we consume.
 }
 ```
 
-- ⚠️ **Semantics unprobed** — whether a 200 means the PIN is actually removed from lock hardware
-  (immediately? after a deprovisioning cycle? can it silently fail?) is unknown, and there is no
-  known pending-style signal for removal. The reconciler treats a delete as **unconverged** until
-  the user disappears from the list; whether that's sufficient is the priority probe item.
+- **Observed repeatedly**: on a successful delete the user disappears from the secondary-user
+  list **immediately**, and the task code returns to the available pool **immediately**.
+- ⚠️ **Suspected but unobservable**: removing the code from lock hardware takes longer
+  (minutes-to-hours?), and there is **no signal to monitor** — no pending-style read exists for
+  removal, so "did the lock actually forget the code" cannot be verified from the API.
+  Unremoved codes remain the largest blast-radius item (finite lock memory), but convergence
+  tracking is not a usable mitigation; **minimizing consumption/rotation is** (see the reuse
+  policy in architecture.md). There is also an unconfirmed suspicion that code removals trigger
+  manual checks by Lynx support staff — another reason to keep rotation rare.
 
 An endpoint also exists to retrieve the groups assigned to a user — not yet captured; add here
 if the reconciler ends up needing it.
+
+### Unlock activity — `getActivities` (known, not captured)
+
+`POST https://api.getlynx.co/ProdV1.1/logActivity/getActivities` returns a record of every
+unlock event, including **which user unlocked**. Not yet captured or probed — relevant to the
+stretch goal of monitoring emergency-code usage outside an expected window (see
+architecture.md open questions), which would also be the only available signal that a "deleted"
+code is still live on a lock.
