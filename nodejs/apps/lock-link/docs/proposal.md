@@ -229,7 +229,8 @@ where possible, with ticket numbers), and the conclusion.
 Statements to obtain in writing. This list was revised after the OTA, PMS, and middleware
 research completed — several original questions were answered or mooted by that research (the
 OTA failures are structural on the platform side, so "is a delivery fix planned" is no longer
-the right question), and the research surfaced new ones:
+the right question), and the research surfaced new ones: A sendable version is in
+[lynx-support-questions.md](./due-diligence/lynx-support-questions.md).
 
 - [ ] **The Lodgify code write-back discrepancy (top item).** Lynx's own Lodgify integration
       page states that guest access codes are sent to Lodgify; this account has never received
