@@ -16,6 +16,15 @@ build — and **holding delivery until provisioning has actually succeeded** —
 schedule even when the code isn't ready, worst on last-minute bookings where "1 day before"
 means "immediately".
 
+The constraint chain, compactly: commercial locks (DormaKaba) → Lynx is the only middleware that
+drives them from a vacation-rental PMS → OTAs structurally block third-party senders (so Lynx's
+own emails can't deliver) → Lynx doesn't push codes into Lodgify (so Lodgify's first-class OTA
+messaging can't carry them) → the PMSs Lynx does push into have disqualifying OTA gaps → and
+every PMS's scheduled messaging is time-triggered, not readiness-triggered, so late bookings get
+blank-code messages regardless. Full evidence:
+[proposal.md](./proposal.md), [ota-messaging-research.md](./ota-messaging-research.md),
+[pms-evaluation.md](./pms-evaluation.md).
+
 **What it does:** a scheduled loop that, per booking —
 
 1. **Captures**: once Lynx reports every lock provisioned, writes the per-lock codes into the

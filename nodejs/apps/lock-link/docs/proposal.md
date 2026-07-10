@@ -18,6 +18,15 @@ The data says this isn't rare. Looking at the last 60 days of bookings:
   door code wasn't ready anywhere until **almost four hours later**. Under the current setup,
   that guest waits — or calls.
 
+**The late-booking problem, in one paragraph.** Automatic guest messages — in Lodgify and every
+comparable system — are _scheduled_: "send N hours before check-in." A booking made inside that
+window sends its message **immediately upon booking**. But a door code takes time to program
+into the locks after a booking arrives (we've observed minutes to nearly four hours), so for
+last-minute bookings the scheduled message fires **before the code exists** — the guest gets a
+message with a blank where their code should be. With 1 in 7 bookings made on arrival day, this
+is a weekly occurrence, not a corner case. Fixing it requires messaging that **waits until the
+code is confirmed working** — which no booking system offers off the shelf.
+
 ## How we got here
 
 A short recap, because the constraint driving everything is the hardware:
@@ -36,8 +45,31 @@ A short recap, because the constraint driving everything is the hardware:
   blank-code messages for exactly the bookings where timing is tightest. (Jervis papered over
   this with a separate bare-bones SMS containing just the code.)
 
-In short: the lock hardware is right for the property, Lynx is the only way to drive it, and
-nothing off the shelf closes the delivery gap. That gap is what this system fills.
+**Why nothing off the shelf closes the gap** — the five facts, in order:
+
+1. **Commercial locks narrow the field to one vendor.** The DormaKaba hardware the property
+   needs is unusual in short-term rentals, and the niche of smart-lock middleware that speaks
+   vacation-rental booking systems is small — Lynx is the only viable provisioning vendor.
+2. **OTAs strictly gate guest messaging.** Expedia, Booking.com, and Airbnb only reliably
+   deliver messages sent through their own platforms or from senders tied to the host's account;
+   third-party senders are blocked structurally (documented in our
+   [OTA research](./ota-messaging-research.md)).
+3. **Lynx doesn't share codes with Lodgify.** The integration is one-way, so Lodgify never sees
+   the codes and its messaging — the one channel OTAs treat as first-class — can't carry them.
+   Delivery falls back to Lynx's own emails, which fact 2 blocks. **Together, facts 2 and 3 mean
+   nobody in the current stack can deliver reliably.**
+4. **The systems Lynx does share codes with have disqualifying gaps.** Each viable alternative
+   booking system fails exactly where it matters most — same-day Expedia bookings that can't be
+   retrieved, message review delays of up to a day, bookings arriving with no guest contact
+   (documented in our [PMS evaluation](./pms-evaluation.md)).
+5. **Scheduled messages fire on the clock, not on code readiness — everywhere.** Even where a
+   system can see the codes, its automatic messages are time-triggered, so late bookings get
+   blank-code messages (see "The late-booking problem" above). No system we evaluated offers
+   readiness-gated sending. This is what makes the gap a software gap, not a shopping gap.
+
+That delivery-and-timing gap is what this system fills: it sends through the connected booking
+system (the channel that works), waits for confirmed provisioning (the timing no one else
+implements), and covers provisioning delays with standby codes.
 
 ## Alternatives considered
 
