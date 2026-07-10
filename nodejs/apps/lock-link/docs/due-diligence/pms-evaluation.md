@@ -45,7 +45,7 @@ StayNTouch, RDP, Direct, LMPM, ReservIT, Booking Automation, CiiRUS, RNS.
 | Escapia    | ❌ Likely eliminated       | Expedia Group-owned professional VRM. Per STRhub, requires **25+ units under management**; individual self-managing owners not served. Confirm with sales if desired, but likely a policy disqualification at 4 units.                                                                                                                                                                                                  |
 | OwnerRez   | ✅ Candidate               | Published sliding-scale pricing, no contracts/setup fees, self-serve. Strongest small-portfolio fit.                                                                                                                                                                                                                                                                                                                    |
 | Hostaway   | ✅ Candidate               | Quote-only but actively serves 1–4 unit operators.                                                                                                                                                                                                                                                                                                                                                                      |
-| Guesty     | ✅ Candidate               | Lite caps at 3 listings, so 4 units forces the quote-only Pro tier (min. 2 listings).                                                                                                                                                                                                                                                                                                                                   |
+| Guesty     | ⚠️ Candidate — unreachable | Lite caps at 3 listings, so 4 units forces the quote-only Pro tier (min. 2 listings). **Sales/demo request could not be submitted** — the form errored on the final step across multiple attempts (2026-07-10), and no direct contact address was found. See Vendor contact outcomes.                                                                                                                                   |
 | Cloudbeds  | ⚠️ Effectively unavailable | Targets ~20–100-room hotels; quote pricing (~$120–600+/mo) is uneconomic for micro-properties. A demo request identifying us as a 4-room hotel drew an **auto-decline** (2026-07-10): "not quite ready to showcase those features… we'll be in touch" — a polite segment gate, same shape as Escapia's 25-unit minimum. Has the most automated Lynx integration of the group, but that's moot if they won't onboard us. |
 
 ## 3. OTA support (candidates)
@@ -158,6 +158,40 @@ timing and guest-contact delivery (the two failure modes for door-code automatio
   manager (see §3 footnote ⁴).
 - Standout strength: direct, privileged Vrbo/Expedia connection with exclusive Expedia Group
   market data; reported outperformance on Vrbo vs. other software.
+
+## 3c. Vendor contact outcomes (2026-07-10)
+
+Direct outreach outcomes, recorded as first-hand evidence.
+
+**Cloudbeds — auto-declined as too small.** A demo request identifying the property as a 4-room
+hotel drew this reply (verbatim):
+
+> "Thank you for your interest in Cloudbeds. Our team is continually enhancing our platform
+> functionality to serve properties just like yours. Though we are not quite ready to showcase
+> those features yet. When we are ready, we'll be in touch. In the meantime, access our
+> hospitality resources for guide, templates, and other ideas to improve your business. Cheers
+> to more reservations and happier guests!"
+
+This is a segment decline, not a scheduling delay — corroborated by independent analyses that
+place Cloudbeds' fit at **10–100+ rooms** and call it overkill and over-priced below ~10:
+
+- Independent reviews: for properties **under ~10 rooms Cloudbeds "may be overkill"** with
+  simpler/cheaper tools (e.g. Little Hotelier) recommended; its control suits properties
+  "growing beyond 10–20 rooms." Pricing runs ~$99–600/mo even at ≤9 rooms.
+  ([6hoteliers review](https://6hoteliers.com/property-management/cloudbeds-review/),
+  [HotelSystemsGuide review](https://hotelsystemsguide.com/cloudbeds-review/),
+  [roommaster pricing analysis](https://www.roommaster.com/blog/cloudbeds-pricing))
+- Cloudbeds' own add-on guidance targets **20+ room** properties
+  ([Hotel Tech Report](https://hoteltechreport.com/operations/hotel-management-software/cloudbeds-hms)).
+
+Verdict: **effectively unavailable** at 4 units — same shape as Escapia's 25-unit gate, but here
+confirmed by the vendor directly.
+
+**Guesty — could not submit a request.** The sales/demo form **errored on the final step across
+multiple attempts** (2026-07-10); no direct email or phone contact was found. Guesty remains a
+paper candidate (its Lynx pushback and OTA support are documented), but it could not be reached
+to confirm pricing or the messaging-trigger questions — a practical barrier at this scale, where
+there is no self-serve path.
 
 ## 4. Pricing (candidates, ~4 units)
 
