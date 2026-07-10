@@ -110,11 +110,13 @@ senders:
 
 ## Cross-channel synthesis
 
-- The Lynx email failures are **structural, not intermittent**: Airbnb guests are unreachable by
-  email at all; Expedia via its own Authorised-email-addresses allowlist (with a verified domain; third-party-sender support incomplete);
-  Booking.com is the single channel with a portal fix (approved-sender registration — recommended
-  regardless of this project, with the block-all-email and link-filter settings checked at the
-  same time). Agoda, encountered incidentally, has similarly masked guest emails since ~2020.
+- The Lynx email failures trace to relay/allowlist gating on each channel: **Airbnb** has no
+  email path at all; **Booking.com** and **Expedia** both expose a partner-managed sender
+  allowlist (Booking.com's is well-documented and clearly third-party-friendly; Expedia's needs
+  a verified domain and its third-party-sender support is "in the works"). Registering Lynx's
+  sender on both is the no-cost mitigation to try — for Booking.com also verify the
+  block-all-email and link-filter settings. Agoda, encountered incidentally, has similarly
+  masked guest emails since ~2020.
 - **Messaging through the connected booking platform (the PMS path)** is the only route all
   three channels treat as first-class — the route lock-link uses.
 - Template rules confirmed for our messages: **no links** (Booking.com stripping), **no phone
