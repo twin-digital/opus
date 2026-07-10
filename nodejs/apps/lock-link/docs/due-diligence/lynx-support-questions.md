@@ -29,13 +29,16 @@ from Lynx** — the code field on the Lodgify booking is always empty. Please cl
 - When it works, does it send **one** code per booking, or can it represent a **different code
   per lock** on the same reservation?
 
-## 2. Can Lynx's guest messaging be disabled more granularly than the global toggle?
+## 2. Can Lynx deliver guest messages through Lodgify's messaging (the unified inbox)?
 
-We understand Lynx's guest email/SMS is a single account-wide on/off switch. We intend to handle
-guest code delivery ourselves, so we'd turn it off — but the global switch is coarse: it would
-also silence delivery to direct guests, where Lynx's own messaging works fine. Is per-property or
-per-channel control (e.g. off for OTA bookings only) available or on the roadmap? If not, we can
-work with the global setting.
+Our OTA delivery problems come down to one thing: the booking platforms (Expedia, Booking.com,
+Airbnb) only reliably deliver guest messages sent **through the booking system's own messaging** —
+they block or drop outside emails. So instead of Lynx emailing the guest directly, can Lynx send
+its guest notifications (the access-code message in particular) **into Lodgify's guest
+messaging/inbox**, the way Lodgify's own automated messages are delivered? If Lynx posted the code
+message through Lodgify rather than by its own email, it would reach OTA guests through the
+channel those platforms actually honor — which would resolve most of the delivery failures we see.
+Is this possible today, or something on the roadmap?
 
 ## 3. What email address/domain do Lynx guest messages come from?
 
