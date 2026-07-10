@@ -189,7 +189,9 @@ Statements to obtain in writing:
 
 The delivery failures concentrate on OTA guests, so the question researched was: **is the OTA
 itself blocking or degrading Lynx's messages, and could any portal setting fix that without a
-build?** Findings, verified against the platforms' own documentation:
+build?** Summary findings below, verified against the platforms' own documentation; the full research
+record with evidence quotes and all sources is in
+[ota-messaging-research.md](./ota-messaging-research.md).
 
 **Expedia** (the largest channel, ~43% of recent bookings):
 
