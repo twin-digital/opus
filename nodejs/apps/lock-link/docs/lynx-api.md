@@ -140,10 +140,10 @@ implementation.
   deleting the user returns it immediately. Sample below shows 7 while one automation user holds
   the 8th. The set is dynamic: treat as live truth, never assume the total.
 - Each entry's `id` is the `tnAccessCodeIdDB` passed to user creation.
-- ⚠️ Each entry carries an **`accessCode`** — plausibly the PIN a user created against this id
-  receives, which would answer the where-is-the-PIN-readable question. **Whether it regenerates
-  when the task code is released is unknown** — if it doesn't, PIN-reuse across generations is
-  back on the table. Priority probe item.
+- Each entry's **`accessCode` is NOT a door code** — it serves unrelated task workflows (e.g. a
+  housekeeper marking a room cleaned), is never given to guests, and grants no room access. The
+  **door PIN** lives on the user, in `getSecondaryUserInformation` →
+  `secondaryUserAccessCodeInfo.accessCode` (below).
 - `createdDate`/`modifiedDate` are epoch-second **strings**; `ruleId`/`deletedDate` observed
   `null`, `isDeleted` an int-boolean.
 
@@ -155,9 +155,9 @@ implementation.
   "data": {
     "taskNotificationCodes": [
       {
-        "id": 31087,
+        "id": 12345,
         "ruleId": null,
-        "accessCode": "2728",
+        "accessCode": "1111",
         "hostUserId": 222262,
         "isDeleted": 0,
         "createdDate": "1758225170",
@@ -165,9 +165,9 @@ implementation.
         "deletedDate": null
       },
       {
-        "id": 31338,
+        "id": 12346,
         "ruleId": null,
-        "accessCode": "8415",
+        "accessCode": "2222",
         "hostUserId": 222262,
         "isDeleted": 0,
         "createdDate": "1760131513",
@@ -187,9 +187,9 @@ implementation.
 - `POST https://api.getlynx.co/ProdV1.1/secondaryGroups/getGroupList`
 - Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "filters": { "searchKey": "" }, "page": 1, "perPage": 10 }`
 - A group grants access to a set of locks; the reconciler needs **one room-scoped group per
-  property**. ⚠️ The observed set has only one (`Dalton`, 13118) plus all-properties defaults —
-  room groups for the remaining properties must be created in the dashboard before the
-  reconciler can target them.
+  property**. ⚠️ **Prerequisite: none exist yet** — the observed set is all-properties defaults
+  plus a `Dalton` group that is not correctly configured. All four room groups must be created
+  (dashboard) before the reconciler can target anything.
 - Live enumeration works, but group ids are construction-rate-stable — static config
   (`LOCK_LINK_EC_GROUP_MAP`) is simpler and avoids matching on display names.
 
@@ -201,14 +201,14 @@ implementation.
   "data": {
     "groupInfo": [
       {
-        "groupId": 14698,
+        "groupId": 22221,
         "groupName": "Lynx - All Properties",
         "hostId": 222262,
         "enabledWhiteLabel": 0,
         "isDefault": 1
       },
-      { "groupId": 13118, "groupName": "Dalton", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 },
-      { "groupId": 12919, "groupName": "All properties", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 }
+      { "groupId": 22222, "groupName": "Dalton", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 },
+      { "groupId": 22223, "groupName": "All properties", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 }
     ]
   },
   "paginationInfo": { "perPage": 10, "totalPages": 1, "page": 1, "total": 3 }
@@ -238,9 +238,9 @@ implementation.
   "roleId": 6,
   "enableGroupRestrictions": true,
   "linkGroupsOnCreation": true,
-  "groupRestrictions": [13118],
+  "groupRestrictions": [22222],
   "holdAccess": "0",
-  "tnAccessCodeIdDB": 31338,
+  "tnAccessCodeIdDB": 12346,
   "emailLoginAccess": false,
   "isAdmin": false,
   "acl": {}
@@ -254,7 +254,7 @@ Response:
   "status": true,
   "errorCodeId": 0,
   "errorMessage": "",
-  "data": { "uniqueSecondaryUserId": 47022 }
+  "data": { "uniqueSecondaryUserId": 111111 }
 }
 ```
 
@@ -277,7 +277,7 @@ Response:
       "count": 12,
       "rows": [
         {
-          "uniqueSecondaryUserId": 47022,
+          "uniqueSecondaryUserId": 111111,
           "firstName": "FirstName",
           "lastName": "LastName",
           "userId": 222262,
@@ -286,7 +286,7 @@ Response:
           "roleInfo": { "uniqueRoleId": 6, "name": "Guest", "icon": "Guest.png" }
         },
         {
-          "uniqueSecondaryUserId": 46982,
+          "uniqueSecondaryUserId": 111112,
           "firstName": "emergency",
           "lastName": "user-3",
           "userId": 222262,
@@ -295,7 +295,7 @@ Response:
           "roleInfo": { "uniqueRoleId": 6, "name": "Guest", "icon": "Guest.png" }
         },
         {
-          "uniqueSecondaryUserId": 46435,
+          "uniqueSecondaryUserId": 111113,
           "firstName": "Twin Digital",
           "lastName": "Operations",
           "userId": 222262,
@@ -304,7 +304,7 @@ Response:
           "roleInfo": { "uniqueRoleId": 11, "name": "Staff", "icon": "Staff.png " }
         },
         {
-          "uniqueSecondaryUserId": 42357,
+          "uniqueSecondaryUserId": 111114,
           "firstName": "Dana",
           "lastName": "Smith",
           "userId": 222262,
@@ -313,7 +313,7 @@ Response:
           "roleInfo": { "uniqueRoleId": 12, "name": "Owner", "icon": "property-manager.png" }
         },
         {
-          "uniqueSecondaryUserId": 40617,
+          "uniqueSecondaryUserId": 111115,
           "firstName": "Hannah",
           "lastName": "Harris",
           "userId": 222262,
@@ -322,7 +322,7 @@ Response:
           "roleInfo": { "uniqueRoleId": 7, "name": "Maintenance", "icon": "Handyman.png" }
         },
         {
-          "uniqueSecondaryUserId": 40615,
+          "uniqueSecondaryUserId": 111116,
           "firstName": "Maria",
           "lastName": "Clark",
           "userId": 222262,
@@ -342,4 +342,108 @@ Observed roles so far: 2 Housekeeper, 6 Guest, 7 Maintenance, 9 Property Manager
 12 Owner. Note `roleInfo.icon` has a trailing space in at least one row (`"Staff.png "`) — the
 usual wire-drift caution applies; model only what we consume.
 
-_Delete user and per-user pending-codes endpoints: to be captured._
+### Provisioning status — `getPendingCodeInfoForSecondaryUserLiveCodes`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryUsers/getPendingCodeInfoForSecondaryUserLiveCodes`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "uniqueSecondaryUserId": 111111 }`
+- **Per-user** provisioning check — the reconciler's "standing" signal. `pendingInfo: []` means
+  the user's code is live on every lock; otherwise each entry names a lock still waiting:
+
+```json
+{ "status": true, "errorCodeId": 0, "errorMessage": "", "data": { "pendingInfo": [] } }
+```
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "pendingInfo": [
+      { "lockIdDB": 44441, "lockName": "Dalton Door", "propertyId": 72230, "propertyAddress": "123 Main Street" },
+      { "lockIdDB": 44442, "lockName": "4th Street Lofts", "propertyId": 72230, "propertyAddress": "123 Main Street" },
+      { "lockIdDB": 44443, "lockName": "Front Door", "propertyId": 72230, "propertyAddress": "123 Main Street" }
+    ]
+  }
+}
+```
+
+### Read a user (including the door PIN) — `getSecondaryUserInformation`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryUsers/getSecondaryUserInformation`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "allowedSecondaryUsers": [111111], "filters": { "searchKey": "" } }`
+- **`data.secondaryUserList[0].secondaryUserAccessCodeInfo.accessCode` is the door PIN** — this
+  is where the reconciler reads the code it caches for issuance. `isCodeChangeInProgress` is an
+  int-boolean worth respecting before trusting the value.
+- `taskNotificationCodeInfo` echoes the assigned task code (id + its non-door `accessCode`);
+  `groupRestrictions` echoes the room group. The response also carries a large `acl` object and
+  several RFID config blocks — the wire-drift rule applies double here: model only the fields we
+  consume, strip the rest.
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "secondaryUserList": [
+      {
+        "uniqueSecondaryUserId": 111111,
+        "firstName": "FirstName",
+        "lastName": "LastName",
+        "email": "emailaddress@twindigital.io",
+        "phone": "1",
+        "roleInfo": { "uniqueRoleId": 6, "name": "Guest", "icon": "Guest.png" },
+        "emailLoginAccess": 0,
+        "secondaryUserAccessCodeInfo": {
+          "accessCodeId": 33333,
+          "accessCode": "1234",
+          "isCodeChangeInProgress": 0
+        },
+        "taskNotificationCodeInfo": {
+          "taskNotificationCodeId": 12346,
+          "taskNotificationCode": "2222",
+          "isCodeChangeInProgress": 0
+        },
+        "isAdministrator": 0,
+        "emailSentStatus": 0,
+        "smsSentStatus": 0,
+        "holdAccess": 0,
+        "acl": {
+          "...": "large permission map — elided; VALUEs were READ for PROPERTY/LOCK_DEVICE/SMART_DEVICE, NONE elsewhere"
+        },
+        "enableGroupRestrictions": true,
+        "groupRestrictions": [{ "groupId": 22222, "groupName": "Dalton" }],
+        "rfidConfig": { "...": "elided" },
+        "lyazonRfidConfig": { "...": "elided" },
+        "remotelockRfidConfig": { "...": "elided" },
+        "areSomeAccessCardsPendingCreation": false,
+        "areSomeTaskCardsPendingCreation": false
+      }
+    ]
+  }
+}
+```
+
+### Delete a user — `removeSecondaryUser`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryUsers/removeSecondaryUser`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "uniqueSecondaryUserId": 111111 }`
+- Response echoes the id:
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": { "uniqueSecondaryUserId": 111111 }
+}
+```
+
+- ⚠️ **Semantics unprobed** — whether a 200 means the PIN is actually removed from lock hardware
+  (immediately? after a deprovisioning cycle? can it silently fail?) is unknown, and there is no
+  known pending-style signal for removal. The reconciler treats a delete as **unconverged** until
+  the user disappears from the list; whether that's sufficient is the priority probe item.
+
+An endpoint also exists to retrieve the groups assigned to a user — not yet captured; add here
+if the reconciler ends up needing it.
