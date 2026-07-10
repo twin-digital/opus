@@ -54,26 +54,13 @@ email domain? (This would confirm where the OTA-guest emails are being dropped.)
   observed same-day bookings taking 3–4 hours.)
 - Once a code is live on the locks, can it ever **change** on its own before checkout?
 
-## 6. A backup-code capability for late/failed provisioning
-
-Today each lock has a single static emergency code, and (as we understand it) these are
-per-lock, not grouped — so a guest given them would need **three separate codes** (exterior
-door, interior common access, their room) rather than one code that works on all three, and
-changing any of them requires a Lynx support request.
-
-What we're really asking about is a **new capability**: could Lynx pre-provision a small pool of
-backup codes per unit and automatically assign one to a reservation when the normal guest code
-can't be programmed in time — whether because of a lock connectivity issue or a very late
-booking? Ideally one code per assignment that opens all of that unit's locks. Does anything like
-this exist, and if not, is it something Lynx would consider building?
-
-## 7. Expedia third-party sending
+## 6. Expedia third-party sending
 
 Expedia's documentation says support for non–Partner Central senders (CRM / third-party systems)
 is "in the works." Is Lynx tracking this, and would Lynx use it to deliver to Expedia guests
 once available?
 
-## 8. Supported API or integration program
+## 7. Supported API or integration program
 
 Does Lynx offer — or plan to offer — a supported API, webhooks, or a partner/integration program
 for building on top of Lynx?
