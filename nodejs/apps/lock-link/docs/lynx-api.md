@@ -92,7 +92,7 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 | `accessCodes[].code`                    | `9234`             | the door code(s) to capture — one entry per lock                    |
 | `accessCodes[].lockName`                | `Front Door`       | per-lock label (encoding + guest message when codes differ)         |
 | `bookingId`                             | `10490339`         | Lynx-internal id (NOT Lodgify's)                                    |
-| `guestFirstName/LastName`, `guestEmail` | `Heather Cobb`     | sanity-match against Lodgify                                        |
+| `guestFirstName/LastName`, `guestEmail` | `Alice Anderson`   | sanity-match against Lodgify                                        |
 | `checkInTimestamp`/`checkOutTimestamp`  | `2026-06-15/16`    | escalation clock + sanity-match                                     |
 | `rentalMarketPlace`                     | `LODGIFY`          | constant (the PMS), not a key                                       |
 | `bookingSource`                         | `12`               | int channel code (Expedia here); useful to spot non-Expedia records |
@@ -121,30 +121,225 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
   list of `propertyId`s to poll. (Account `222262` currently: 72229 Markham, 72230 Dalton,
   72231 Lakeshore, 72232 Rex.) This is the dynamic enumeration source — no static list.
 
-## User management & task codes — observed, not yet probed
+## User management & task codes
 
-⚠️ The emergency-pool reconciler (see
+The emergency-pool reconciler (see
 [architecture.md](./architecture.md#the-pool-reconciler-automated-rotation)) rides on Lynx's
-task-code user mechanism. Everything below comes from dashboard observation and Lynx
-documentation; **none of it has had the live-probe treatment yet** — endpoint names, response
-shapes, and especially delete semantics must be proven before implementation.
+task-code user mechanism. Request/response shapes below are captured from live dashboard
+traffic (2026-07-10); samples are anonymized (names, emails, phone numbers replaced with fakes).
+⚠️ **Delete semantics remain unprobed** — the biggest risk: a delete that silently fails orphans
+a code in finite lock memory, degrading guest-code provisioning for everyone. Probe before
+implementation.
 
-- **Task codes** are a small account-wide budget of assignable code slots (8 observed at
-  baseline). An API call lists the **available** ones; assigning one (via user creation) removes
-  it from the list, deleting the user returns it immediately. The set is dynamic — treat the
-  list as live truth, never assume the total, and expect other processes may consume or change
-  entries.
-- **Create user** grants a room's locks a **randomly generated PIN** (unrelated to the task-code
-  id — recreation genuinely rotates the secret). Fields: first/last name, email, phone
-  (required; the literal `"1"` is accepted), a needs-PIN flag, the task-code id, a role id, a
-  couple of boolean permission values (static for our use), a tags array, and the **group id** —
-  each group maps to a single room's lock set, so one user = one room.
-- Lynx likely **emails the created user** — use plus-addressed mailboxes on a domain we control.
-- **Provisioning** takes up to 24 h per Lynx's documentation (empirically often much faster); a
-  per-user **pending-codes** read lists which locks are still waiting. Empty = the PIN is live
-  on every lock.
-- **Where the PIN is readable** (create response vs a separate user read) is unconfirmed.
-- **Delete** releases the task code immediately (per the available list). Whether the PIN is
-  reliably removed from lock hardware — and how failure/staleness manifests — is **the biggest
-  unknown**: a delete that silently fails orphans a code in finite lock memory, which degrades
-  guest-code provisioning for everyone. Probe first.
+### List available task codes — `getTaskNotificationCodesForHost`
+
+- `POST https://api.getlynx.co/ProdV1.1/smartworkflows/getTaskNotificationCodesForHost`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "page": 1, "perPage": 10 }`
+  (note: the **account id**, not the per-user id — mirror the dashboard)
+- Returns only the **available** codes — assigning one (user creation) removes it from the list;
+  deleting the user returns it immediately. Sample below shows 7 while one automation user holds
+  the 8th. The set is dynamic: treat as live truth, never assume the total.
+- Each entry's `id` is the `tnAccessCodeIdDB` passed to user creation.
+- ⚠️ Each entry carries an **`accessCode`** — plausibly the PIN a user created against this id
+  receives, which would answer the where-is-the-PIN-readable question. **Whether it regenerates
+  when the task code is released is unknown** — if it doesn't, PIN-reuse across generations is
+  back on the table. Priority probe item.
+- `createdDate`/`modifiedDate` are epoch-second **strings**; `ruleId`/`deletedDate` observed
+  `null`, `isDeleted` an int-boolean.
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "taskNotificationCodes": [
+      {
+        "id": 31087,
+        "ruleId": null,
+        "accessCode": "2728",
+        "hostUserId": 222262,
+        "isDeleted": 0,
+        "createdDate": "1758225170",
+        "modifiedDate": "1758225170",
+        "deletedDate": null
+      },
+      {
+        "id": 31338,
+        "ruleId": null,
+        "accessCode": "8415",
+        "hostUserId": 222262,
+        "isDeleted": 0,
+        "createdDate": "1760131513",
+        "modifiedDate": "1760131513",
+        "deletedDate": null
+      }
+      // …5 more of the same shape
+    ],
+    "paginationInfo": { "perPage": 10, "totalPages": 1, "page": 1, "total": 7 }
+  },
+  "paginationInfo": { "perPage": 10, "totalPages": 1, "page": 1, "total": 7 }
+}
+```
+
+### List groups — `getGroupList`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryGroups/getGroupList`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "filters": { "searchKey": "" }, "page": 1, "perPage": 10 }`
+- A group grants access to a set of locks; the reconciler needs **one room-scoped group per
+  property**. ⚠️ The observed set has only one (`Dalton`, 13118) plus all-properties defaults —
+  room groups for the remaining properties must be created in the dashboard before the
+  reconciler can target them.
+- Live enumeration works, but group ids are construction-rate-stable — static config
+  (`LOCK_LINK_EC_GROUP_MAP`) is simpler and avoids matching on display names.
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "groupInfo": [
+      {
+        "groupId": 14698,
+        "groupName": "Lynx - All Properties",
+        "hostId": 222262,
+        "enabledWhiteLabel": 0,
+        "isDefault": 1
+      },
+      { "groupId": 13118, "groupName": "Dalton", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 },
+      { "groupId": 12919, "groupName": "All properties", "hostId": 222262, "enabledWhiteLabel": 0, "isDefault": 0 }
+    ]
+  },
+  "paginationInfo": { "perPage": 10, "totalPages": 1, "page": 1, "total": 3 }
+}
+```
+
+### Create user — `addSecondaryUser`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryUsers/addSecondaryUser`
+- Field notes: `groupRestrictions` = a single-element array with the room's group id;
+  `tnAccessCodeIdDB` = the task-code `id` from the available list; `roleId` 6 = "Guest"
+  (configurable constant); `enableGroupRestrictions` + `linkGroupsOnCreation` true;
+  `holdAccess` is the **string** `"0"`; `phoneNumber` `"1"` is accepted; `emailLoginAccess` /
+  `isAdmin` false; `previousRestrictions` / `tags` arrays (tags are our audit channel);
+  `acl` an empty object. Here `hostId`/`loggedInUserId` are **numbers**, not strings.
+
+```json
+{
+  "hostId": 222262,
+  "loggedInUserId": 222262,
+  "firstName": "FirstName",
+  "lastName": "LastName",
+  "phoneNumber": "1",
+  "email": "emailaddress@twindigital.io",
+  "previousRestrictions": [],
+  "tags": [],
+  "roleId": 6,
+  "enableGroupRestrictions": true,
+  "linkGroupsOnCreation": true,
+  "groupRestrictions": [13118],
+  "holdAccess": "0",
+  "tnAccessCodeIdDB": 31338,
+  "emailLoginAccess": false,
+  "isAdmin": false,
+  "acl": {}
+}
+```
+
+Response:
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": { "uniqueSecondaryUserId": 47022 }
+}
+```
+
+### List users — `getSecondaryUsersList`
+
+- `POST https://api.getlynx.co/ProdV1.1/secondaryUsers/getSecondaryUsersList`
+- Body: `{ "hostId": "<account id>", "loggedInUserId": "<account id>", "filters": { "searchKey": "" }, "page": 1, "perPage": 10 }`
+- Paginated (`data.secondaryUserList.count` + `rows`, plus the top-level `paginationInfo`).
+- This is the reconciler's **read-before-write source**: automation-owned users are recognized
+  by the deterministic name/email convention; everything else (owners, housekeepers, property
+  managers — see the role variety below) is foreign and untouchable.
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "secondaryUserList": {
+      "count": 12,
+      "rows": [
+        {
+          "uniqueSecondaryUserId": 47022,
+          "firstName": "FirstName",
+          "lastName": "LastName",
+          "userId": 222262,
+          "email": "emailaddress@twindigital.io",
+          "phone": "1",
+          "roleInfo": { "uniqueRoleId": 6, "name": "Guest", "icon": "Guest.png" }
+        },
+        {
+          "uniqueSecondaryUserId": 46982,
+          "firstName": "emergency",
+          "lastName": "user-3",
+          "userId": 222262,
+          "email": "support+emergency-3@twindigital.io",
+          "phone": "1",
+          "roleInfo": { "uniqueRoleId": 6, "name": "Guest", "icon": "Guest.png" }
+        },
+        {
+          "uniqueSecondaryUserId": 46435,
+          "firstName": "Twin Digital",
+          "lastName": "Operations",
+          "userId": 222262,
+          "email": "support@twindigital.io",
+          "phone": "218-555-0148",
+          "roleInfo": { "uniqueRoleId": 11, "name": "Staff", "icon": "Staff.png " }
+        },
+        {
+          "uniqueSecondaryUserId": 42357,
+          "firstName": "Dana",
+          "lastName": "Smith",
+          "userId": 222262,
+          "email": "dana.smith@example.com",
+          "phone": "218-555-0117",
+          "roleInfo": { "uniqueRoleId": 12, "name": "Owner", "icon": "property-manager.png" }
+        },
+        {
+          "uniqueSecondaryUserId": 40617,
+          "firstName": "Hannah",
+          "lastName": "Harris",
+          "userId": 222262,
+          "email": "hannah.harris@example.com",
+          "phone": "218-555-0156",
+          "roleInfo": { "uniqueRoleId": 7, "name": "Maintenance", "icon": "Handyman.png" }
+        },
+        {
+          "uniqueSecondaryUserId": 40615,
+          "firstName": "Maria",
+          "lastName": "Clark",
+          "userId": 222262,
+          "email": "maria.clark@example.com",
+          "phone": "218-555-0161",
+          "roleInfo": { "uniqueRoleId": 2, "name": "Housekeeper", "icon": "cleaning.png" }
+        }
+        // …remaining rows elided: Guest, Housekeeper, and Property Manager roles of the same shape
+      ]
+    }
+  },
+  "paginationInfo": { "perPage": 10, "totalPages": 2, "page": 1, "total": 12 }
+}
+```
+
+Observed roles so far: 2 Housekeeper, 6 Guest, 7 Maintenance, 9 Property Manager, 11 Staff,
+12 Owner. Note `roleInfo.icon` has a trailing space in at least one row (`"Staff.png "`) — the
+usual wire-drift caution applies; model only what we consume.
+
+_Delete user and per-user pending-codes endpoints: to be captured._
