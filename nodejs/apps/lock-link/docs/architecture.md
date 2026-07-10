@@ -22,8 +22,8 @@ own emails can't deliver) → Lynx doesn't push codes into Lodgify (so Lodgify's
 messaging can't carry them) → the PMSs Lynx does push into have disqualifying OTA gaps → and
 every PMS's scheduled messaging is time-triggered, not readiness-triggered, so late bookings get
 blank-code messages regardless. Full evidence:
-[proposal.md](./proposal.md), [ota-messaging-research.md](./ota-messaging-research.md),
-[pms-evaluation.md](./pms-evaluation.md).
+[proposal.md](./proposal.md), [ota-messaging-research.md](./due-diligence/ota-messaging-research.md),
+[pms-evaluation.md](./due-diligence/pms-evaluation.md).
 
 **What it does:** a scheduled loop that, per booking —
 

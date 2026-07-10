@@ -53,7 +53,7 @@ A short recap, because the constraint driving everything is the hardware:
 2. **OTAs strictly gate guest messaging.** Expedia, Booking.com, and Airbnb only reliably
    deliver messages sent through their own platforms or from senders tied to the host's account;
    third-party senders are blocked structurally (documented in our
-   [OTA research](./ota-messaging-research.md)).
+   [OTA research](./due-diligence/ota-messaging-research.md)).
 3. **Lynx doesn't share codes with Lodgify.** The integration is one-way, so Lodgify never sees
    the codes and its messaging — the one channel OTAs treat as first-class — can't carry them.
    Delivery falls back to Lynx's own emails, which fact 2 blocks. **Together, facts 2 and 3 mean
@@ -61,7 +61,7 @@ A short recap, because the constraint driving everything is the hardware:
 4. **The systems Lynx does share codes with have disqualifying gaps.** Each viable alternative
    booking system fails exactly where it matters most — same-day Expedia bookings that can't be
    retrieved, message review delays of up to a day, bookings arriving with no guest contact
-   (documented in our [PMS evaluation](./pms-evaluation.md)).
+   (documented in our [PMS evaluation](./due-diligence/pms-evaluation.md)).
 5. **Scheduled messages fire on the clock, not on code readiness — everywhere.** Even where a
    system can see the codes, its automatic messages are time-triggered, so late bookings get
    blank-code messages (see "The late-booking problem" above). No system we evaluated offers
@@ -77,7 +77,7 @@ implements), and covers provisioning delays with standby codes.
   concentrated at evenings and last-minute arrivals. Lynx support has already been engaged
   without resolution, so there is no fix coming from that direction.
 - **Switch to a PMS that Lynx writes codes into.** This was evaluated in depth (see the
-  [PMS evaluation](./pms-evaluation.md)): Lynx documents code write-back for eight systems, four
+  [PMS evaluation](./due-diligence/pms-evaluation.md)): Lynx documents code write-back for eight systems, four
   of which are viable at this property's size (OwnerRez, Hostaway, Guesty, Cloudbeds). None
   verifiably closes the gap that motivates this project — the late and same-day bookings:
   Hostaway's own documentation says same-day Expedia reservations **cannot be retrieved
@@ -223,7 +223,7 @@ The delivery failures concentrate on OTA guests, so the question researched was:
 itself blocking or degrading Lynx's messages, and could any portal setting fix that without a
 build?** Summary findings below, verified against the platforms' own documentation; the full research
 record with evidence quotes and all sources is in
-[ota-messaging-research.md](./ota-messaging-research.md).
+[ota-messaging-research.md](./due-diligence/ota-messaging-research.md).
 
 **Expedia** (the largest channel, ~43% of recent bookings):
 

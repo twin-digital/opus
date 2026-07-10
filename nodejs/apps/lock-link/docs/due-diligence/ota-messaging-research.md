@@ -1,6 +1,6 @@
 # OTA guest-messaging research: contact info, sender restrictions, content filtering
 
-Compiled 2026-07-10 via multi-source research. Supports the OTA due-diligence section of [proposal.md](./proposal.md). Separates **vendor-documented** facts from **industry-reported** behavior.
+Compiled 2026-07-10 via multi-source research. Supports the OTA due-diligence section of [proposal.md](../proposal.md). Separates **vendor-documented** facts from **industry-reported** behavior.
 
 ## Expedia (Expedia Partner Central)
 

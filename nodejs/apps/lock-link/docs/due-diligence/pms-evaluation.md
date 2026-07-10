@@ -2,7 +2,7 @@
 
 Compiled 2026-07-10 (Twin Digital, out-of-band research). Pricing figures are a mix of published
 rates and operator-reported quotes; verify directly with vendors before committing. Supports the
-"switch PMS" alternative in [proposal.md](./proposal.md).
+"switch PMS" alternative in [proposal.md](../proposal.md).
 
 **Verification status (2026-07-10):** the two decision-critical vendor claims were spot-checked
 against the official support pages via search-indexed content (the help centers block direct
