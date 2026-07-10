@@ -1,0 +1,244 @@
+/*
+ * Layout and typography for the Lock Link proposal PDF.
+ * Tokens (colors, fonts, sizes) live in defaults.css.
+ */
+
+@page {
+  size: letter;
+  margin: var(--page-margin-top) var(--page-margin-side) var(--page-margin-bottom);
+
+  @bottom-left {
+    content: 'Lock Link — Proposal';
+    color: var(--pal-muted);
+    font-family: var(--font-heading);
+    font-size: 7.5pt;
+    letter-spacing: 0.04em;
+  }
+
+  @bottom-right {
+    content: 'Page ' counter(page) ' of ' counter(pages);
+    color: var(--pal-muted);
+    font-family: var(--font-heading);
+    font-size: 7.5pt;
+  }
+}
+
+html {
+  font-size: var(--font-size-base);
+}
+
+body {
+  color: var(--pal-ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+/*
+ * Letterhead: the document's single h1 becomes the page-1 masthead, with an
+ * eyebrow line above and the attribution line below.
+ */
+
+h1 {
+  color: var(--pal-primary-dark);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-06);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1::before {
+  color: var(--pal-primary);
+  content: 'Twin Digital';
+  display: block;
+  font-size: var(--font-size-00);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  margin-bottom: 1.4em;
+  text-transform: uppercase;
+}
+
+/* Update the client name and date here when issuing a revision. */
+h1::after {
+  border-bottom: 2pt solid var(--pal-primary);
+  color: var(--pal-muted);
+  content: 'Prepared by Twin Digital · July 2026';
+  display: block;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-01);
+  font-weight: 400;
+  margin-top: 0.9em;
+  padding-bottom: 1.1em;
+}
+
+/* section headings */
+
+h2 {
+  border-bottom: 0.75pt solid var(--pal-rule);
+  color: var(--pal-primary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-04);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 2em 0 0.6em;
+  padding-bottom: 0.25em;
+}
+
+h3 {
+  color: var(--pal-primary-dark);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-03);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.4em;
+}
+
+h1,
+h2,
+h3 {
+  break-after: avoid;
+}
+
+/* body copy */
+
+p {
+  margin: 0 0 0.7em;
+}
+
+a {
+  color: var(--pal-primary);
+  text-decoration: none;
+}
+
+strong {
+  font-weight: 600;
+}
+
+/* lists */
+
+ul,
+ol {
+  margin: 0 0 0.8em;
+  padding-left: 1.6em;
+}
+
+li {
+  margin-bottom: 0.35em;
+}
+
+li > p {
+  margin-bottom: 0.35em;
+}
+
+::marker {
+  color: var(--pal-primary);
+}
+
+/* task lists (the due-diligence checklists) */
+
+ul.task-list {
+  list-style: none;
+  padding-left: 1.7em;
+}
+
+ul.task-list li {
+  position: relative;
+}
+
+ul.task-list input[type='checkbox'] {
+  display: none;
+}
+
+ul.task-list li::before {
+  color: var(--pal-primary);
+  content: '☐';
+  left: -1.7em;
+  position: absolute;
+}
+
+/* tables */
+
+table {
+  border-collapse: collapse;
+  break-inside: avoid;
+  font-size: var(--font-size-01);
+  margin: 1.2em 0;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 0.5pt solid var(--pal-rule-light);
+  padding: 0.55em 0.7em;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* leave room to write in the sign-off columns */
+th:nth-child(2) {
+  width: 22%;
+}
+
+th:nth-child(3) {
+  width: 15%;
+}
+
+tbody td {
+  padding-bottom: 1.6em;
+}
+
+th {
+  border-bottom: 1pt solid var(--pal-primary);
+  color: var(--pal-primary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-00);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+tbody tr:nth-child(even) td {
+  background-color: var(--pal-primary-tint);
+}
+
+/* misc */
+
+hr {
+  border: none;
+  border-top: 0.75pt solid var(--pal-rule);
+  margin: 2em 0;
+}
+
+blockquote {
+  border-left: 2pt solid var(--pal-primary);
+  color: var(--pal-muted);
+  margin: 0 0 0.8em;
+  padding: 0.2em 0 0.2em 1em;
+}
+
+code {
+  font-size: 0.9em;
+}
+
+/*
+ * Screen preview: emulate a letter-size sheet so the HTML preview approximates
+ * the PDF. Print rendering (WeasyPrint) ignores this block.
+ */
+
+@media screen {
+  html {
+    background-color: #35393c;
+  }
+
+  body {
+    background-color: var(--pal-paper);
+    box-shadow: 0 2px 12px rgb(0 0 0 / 0.4);
+    box-sizing: border-box;
+    margin: 2rem auto;
+    max-width: 8.5in;
+    min-height: 11in;
+    padding: var(--page-margin-top) var(--page-margin-side) var(--page-margin-bottom);
+  }
+}

@@ -24,6 +24,9 @@
     "destroy:cdk": "cdk destroy",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "proposal:pdf": "bookify pdf --project .bookify.yml -o dist/proposal.pdf",
+    "proposal:pdf:watch": "bookify pdf --project .bookify.yml -o dist/proposal.pdf --watch",
+    "proposal:serve": "bookify serve --project .bookify.yml",
     "synth": "cdk synth",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -40,6 +43,7 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@twin-digital/bookify-cli": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

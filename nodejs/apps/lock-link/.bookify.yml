@@ -1,0 +1,8 @@
+assetPaths: docs/assets
+
+css:
+  - docs/styles/defaults.css
+  - docs/styles/proposal.css
+
+inputs:
+  - docs/proposal.md
