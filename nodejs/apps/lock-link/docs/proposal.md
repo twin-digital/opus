@@ -55,10 +55,13 @@ A short recap, because the constraint driving everything is the hardware:
    deliver messages sent through their own platforms or from senders tied to the host's account;
    third-party senders are blocked structurally (documented in our
    [OTA research](./due-diligence/ota-messaging-research.md)).
-3. **Lynx doesn't share codes with Lodgify.** The integration is one-way, so Lodgify never sees
-   the codes and its messaging — the one channel OTAs treat as first-class — can't carry them.
-   Delivery falls back to Lynx's own emails, which fact 2 blocks. **Together, facts 2 and 3 mean
-   nobody in the current stack can deliver reliably.**
+3. **Lynx doesn't share codes with Lodgify.** As observed across every recent booking, the
+   integration behaves one-way: Lodgify never sees the codes, so its messaging — the one channel
+   OTAs treat as first-class — can't carry them, and delivery falls back to Lynx's own emails,
+   which fact 2 blocks. **Together, facts 2 and 3 mean nobody in the current stack can deliver
+   reliably.** (Lynx's marketing page for its Lodgify integration claims codes _are_ sent to
+   Lodgify; our account has never received one — reconciling that discrepancy is the top item in
+   the Lynx support questions below.)
 4. **The systems Lynx does share codes with have disqualifying gaps.** Each viable alternative
    booking system fails exactly where it matters most — same-day Expedia bookings that can't be
    retrieved, message review delays of up to a day, bookings arriving with no guest contact
@@ -223,18 +226,38 @@ research and PMS evaluation are complete; the Lynx support statements remain to 
 For each contact: date, channel (ticket/email/phone), what was asked, their response (quoted
 where possible, with ticket numbers), and the conclusion.
 
-Statements to obtain in writing:
+Statements to obtain in writing. This list was revised after the OTA, PMS, and middleware
+research completed — several original questions were answered or mooted by that research (the
+OTA failures are structural on the platform side, so "is a delivery fix planned" is no longer
+the right question), and the research surfaced new ones:
 
-- [ ] The OTA-guest delivery failures we reported: is a fix planned, and on what timeline?
-- [ ] Does Lynx offer delivery visibility — per-message logs, bounce reports, or delivery
-      confirmations — that staff could monitor?
-- [ ] Can Lynx write the codes it provisions into Lodgify (or any PMS field), so the PMS could
-      handle messaging?
+- [ ] **The Lodgify code write-back discrepancy (top item).** Lynx's own Lodgify integration
+      page states that guest access codes are sent to Lodgify; this account has never received
+      one across ~91 recent bookings. Is that feature real — and if so, is it broken here,
+      gated to a plan tier, or behind configuration we're missing?
+- [ ] **Exact sending address/domain for guest emails**, and whether it is stable and shared or
+      per-account/customizable. (Needed to register Lynx as an approved sender in Booking.com's
+      extranet — the one OTA-side mitigation available — and to evaluate whether a
+      property-controlled sending identity could ever satisfy Expedia's validated-sender gate.)
+- [ ] **Can Lynx's own guest notifications (email/SMS) be disabled** per property or per
+      channel? (Required for cutover regardless: without it, direct-booking guests would
+      receive duplicate code messages.)
+- [ ] **Delivery visibility**: per-message send/bounce/delivery logs, ideally broken out by
+      recipient domain — this would confirm the structural-relay diagnosis with their data.
+- [ ] **Expedia's third-party sender program**: Expedia documents that support for non-Partner
+      Central senders is "in the works" — is Lynx tracking it / planning to join when it ships?
+- [ ] **Provisioning**: their stated time for a new reservation's code (vs. our observed 3–4 h
+      same-day case), whether same-day bookings can be expedited or provisioning manually
+      forced, and whether an assigned code can ever change after it reaches the locks.
+- [ ] **The "Emergency Access Code" feature**: Lynx's permission model and lock data reference
+      emergency access codes — what is this feature, how are those codes managed and rotated,
+      and is it suitable as a guest fallback?
+- [ ] **User and task-code mechanics**: how many task codes an account includes and whether
+      more can be purchased; and when a secondary user is deleted, how quickly their PIN is
+      removed from lock hardware and whether that can be verified. (We plan to manage
+      staff/temporary users more actively.)
 - [ ] Does Lynx offer a supported API, webhook, or integration program — or have one on the
       roadmap?
-- [ ] What is Lynx's stated provisioning time for a new reservation's code (their documented
-      figure vs. our observations)?
-- [ ] How many task codes does an account include, and can that number be increased?
 
 ### OTA partner portal research (completed 2026-07-10)
 
