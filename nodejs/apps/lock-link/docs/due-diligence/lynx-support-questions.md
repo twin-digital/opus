@@ -29,11 +29,13 @@ from Lynx** — the code field on the Lodgify booking is always empty. Please cl
 - When it works, does it send **one** code per booking, or can it represent a **different code
   per lock** on the same reservation?
 
-## 2. Can Lynx's own guest emails/SMS be turned off — per property or per channel?
+## 2. Can Lynx's guest messaging be disabled more granularly than the global toggle?
 
-We intend to handle guest code delivery ourselves. If Lynx also emails/texts the guest, direct
-guests would receive **two** messages. Can Lynx's guest notifications be disabled selectively
-(e.g. off for OTA bookings, or off entirely) while code provisioning continues?
+We understand Lynx's guest email/SMS is a single account-wide on/off switch. We intend to handle
+guest code delivery ourselves, so we'd turn it off — but the global switch is coarse: it would
+also silence delivery to direct guests, where Lynx's own messaging works fine. Is per-property or
+per-channel control (e.g. off for OTA bookings only) available or on the roadmap? If not, we can
+work with the global setting.
 
 ## 3. What email address/domain do Lynx guest messages come from?
 
@@ -50,29 +52,28 @@ email domain? (This would confirm where the OTA-guest emails are being dropped.)
 
 - What is Lynx's stated time to provision a new reservation's code onto the locks? (We've
   observed same-day bookings taking 3–4 hours.)
-- Can provisioning for a specific reservation be **expedited or manually forced**?
 - Once a code is live on the locks, can it ever **change** on its own before checkout?
 
-## 6. The "Emergency Access Code" feature
+## 6. A backup-code capability for late/failed provisioning
 
-Lynx's user permissions and lock data reference an **emergency access code**. What is this
-feature — how are emergency codes created, managed, and rotated, and can one be given to a guest
-as a fallback when their normal code isn't ready in time?
+Today each lock has a single static emergency code, and (as we understand it) these are
+per-lock, not grouped — so a guest given them would need **three separate codes** (exterior
+door, interior common access, their room) rather than one code that works on all three, and
+changing any of them requires a Lynx support request.
 
-## 7. Task codes and user management
+What we're really asking about is a **new capability**: could Lynx pre-provision a small pool of
+backup codes per unit and automatically assign one to a reservation when the normal guest code
+can't be programmed in time — whether because of a lock connectivity issue or a very late
+booking? Ideally one code per assignment that opens all of that unit's locks. Does anything like
+this exist, and if not, is it something Lynx would consider building?
 
-- How many "task notification codes" does our account include, and can we get more?
-- When a secondary user is deleted, **how quickly is their PIN removed from the physical
-  locks**, and is there any way to confirm it has been removed? (We plan to manage
-  staff/temporary users more actively.)
-
-## 8. Expedia third-party sending
+## 7. Expedia third-party sending
 
 Expedia's documentation says support for non–Partner Central senders (CRM / third-party systems)
 is "in the works." Is Lynx tracking this, and would Lynx use it to deliver to Expedia guests
 once available?
 
-## 9. Supported API or integration program
+## 8. Supported API or integration program
 
 Does Lynx offer — or plan to offer — a supported API, webhooks, or a partner/integration program
 for building on top of Lynx?
