@@ -22,9 +22,8 @@ own emails can't deliver) → Lynx doesn't push codes into Lodgify (so Lodgify's
 messaging can't carry them) → the PMSs Lynx does push into have disqualifying OTA gaps → and
 no PMS's scheduled messaging will hold a guest message until the code exists (the gating that
 exists is bounded — capped holds, retry windows that silently drop — or absent), so late
-bookings get blank, stale, or dropped code messages regardless. Full evidence:
-[proposal.md](./proposal.md), [ota-messaging-research.md](./due-diligence/ota-messaging-research.md),
-[pms-evaluation.md](./due-diligence/pms-evaluation.md).
+bookings get blank, stale, or dropped code messages regardless. (The vendor research and the
+client proposal that substantiate this chain are tracked separately, in a follow-up.)
 
 **What it does:** a scheduled loop that, per booking —
 
