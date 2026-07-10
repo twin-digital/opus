@@ -4,6 +4,22 @@ Send to each candidate PMS (OwnerRez, Hostaway, Guesty, Cloudbeds) — core ques
 matching vendor addendum. Answers close the final open item in
 [pms-messaging-triggers.md](./pms-messaging-triggers.md).
 
+## How to reach each vendor
+
+No public pre-sales **email** addresses were found; three of the four route through a
+sales/demo funnel, so these questions are most practically asked during a demo call (or in the
+web contact/support form linked below), not sent cold by email.
+
+| Vendor    | Channel                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------- |
+| OwnerRez  | Self-serve — free trial + support tickets (no sales call): <https://www.ownerrez.com/pricing> |
+| Hostaway  | Demo request (quote only after demo): <https://www.hostaway.com/pricing/>                     |
+| Guesty    | Sales/demo form: <https://www.guesty.com/pricing/>                                            |
+| Cloudbeds | Demo request: <https://www.cloudbeds.com>                                                     |
+
+OwnerRez is the only one answerable without a sales call — its support tickets and forums take
+product questions directly, so it can be confirmed fastest.
+
 ---
 
 Subject: Pre-sales question — gating automated door-code messages on code readiness

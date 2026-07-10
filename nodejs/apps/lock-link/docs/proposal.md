@@ -226,6 +226,9 @@ research and PMS evaluation are complete; the Lynx support statements remain to 
 For each contact: date, channel (ticket/email/phone), what was asked, their response (quoted
 where possible, with ticket numbers), and the conclusion.
 
+**Status:** the questions below were submitted to Lynx support as **ticket #246508**
+(2026-07-10), following up the earlier request #242686. Awaiting response.
+
 Statements to obtain in writing. This list was revised after the OTA, PMS, and middleware
 research completed — several original questions were answered or mooted by that research (the
 OTA failures are structural on the platform side, so "is a delivery fix planned" is no longer
