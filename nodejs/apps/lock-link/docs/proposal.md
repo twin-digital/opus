@@ -25,7 +25,8 @@ into the locks after a booking arrives (we've observed minutes to nearly four ho
 last-minute bookings the scheduled message fires **before the code exists** — the guest gets a
 message with a blank where their code should be. With 1 in 7 bookings made on arrival day, this
 is a weekly occurrence, not a corner case. Fixing it requires messaging that **waits until the
-code is confirmed working** — which no booking system offers off the shelf.
+code is confirmed working** — which no booking system offers outright: the closest built-in
+mechanisms cap the wait at minutes or silently drop the message when their window expires.
 
 ## How we got here
 
@@ -62,10 +63,18 @@ A short recap, because the constraint driving everything is the hardware:
    booking system fails exactly where it matters most — same-day Expedia bookings that can't be
    retrieved, message review delays of up to a day, bookings arriving with no guest contact
    (documented in our [PMS evaluation](./due-diligence/pms-evaluation.md)).
-5. **Scheduled messages fire on the clock, not on code readiness — everywhere.** Even where a
-   system can see the codes, its automatic messages are time-triggered, so late bookings get
-   blank-code messages (see "The late-booking problem" above). No system we evaluated offers
-   readiness-gated sending. This is what makes the gap a software gap, not a shopping gap.
+5. **No system delivers "wait until the code exists, then send" as its supported model.** We
+   stress-tested this claim against every candidate's documentation (see the
+   [messaging-trigger research](./due-diligence/pms-messaging-triggers.md)). The closest
+   capabilities stop short: OwnerRez can attach a door-code condition with hourly retries, but
+   only inside a fixed window — the message is **silently dropped** when it expires, the
+   feature is documented for staff alerts, and it is tied to its native lock integrations
+   rather than Lynx-written fields; Hostaway holds a door-code message at most **15 minutes**,
+   then sends the listing's **static** code, and gives third-party-written fields no protection
+   at all (they render blank); Guesty and Cloudbeds document nothing either way; even Lynx's
+   own messaging is time-offset. Late bookings therefore still end in blank, stale, or dropped
+   code messages (see "The late-booking problem" above); final vendor confirmations are being
+   requested. This is what keeps the gap a software gap, not a shopping gap.
 
 That delivery-and-timing gap is what this system fills: it sends through the connected booking
 system (the channel that works), waits for confirmed provisioning (the timing no one else
@@ -85,9 +94,11 @@ implements), and covers provisioning delays with standby codes.
   delays and its Airbnb connection has documented limitations for vacation-home listings;
   Guesty's Expedia-affiliate bookings can arrive with no guest contact and no inbox sync; and
   OwnerRez — the best small-property fit — currently has no direct Expedia connection at all
-  (Expedia is not accepting new integrations). All of them also fire scheduled messages the same
-  way Lodgify does, so the blank-code-for-late-bookings behavior would need to be verified with
-  each vendor before trusting it. On top of that: migration means re-linking every channel,
+  (Expedia is not accepting new integrations). Message timing is also unsolved: the strongest built-in
+  gating is bounded (OwnerRez retries hourly but silently drops the message when its window
+  expires; Hostaway holds at most 15 minutes then falls back to a static code), none of it is
+  documented to work with Lynx-written fields, and Guesty/Cloudbeds document nothing — see the
+  [messaging-trigger research](./due-diligence/pms-messaging-triggers.md). On top of that: migration means re-linking every channel,
   importing reservations, replacing the booking website, retraining, and $75–290/month ongoing.
   A defensible path, but it trades a build for a migration without solving the hardest 15% of
   bookings.
