@@ -44,10 +44,21 @@ nothing off the shelf closes the delivery gap. That gap is what this system fill
 - **Do nothing / handle failures manually.** The current state: staff intervene per failure,
   concentrated at evenings and last-minute arrivals. Lynx support has already been engaged
   without resolution, so there is no fix coming from that direction.
-- **Switch to a PMS with better lock support.** Researching each candidate seriously costs a
-  few hundred dollars; an actual migration means significant cost, staff retraining, and
-  workflow change — and PMS-native support for commercial DormaKaba hardware is likely to be
-  rare for the same reason most platforms don't support it today.
+- **Switch to a PMS that Lynx writes codes into.** This was evaluated in depth (see the
+  [PMS evaluation](./pms-evaluation.md)): Lynx documents code write-back for eight systems, four
+  of which are viable at this property's size (OwnerRez, Hostaway, Guesty, Cloudbeds). None
+  verifiably closes the gap that motivates this project — the late and same-day bookings:
+  Hostaway's own documentation says same-day Expedia reservations **cannot be retrieved
+  automatically**; Cloudbeds routes Expedia guest messages through a review step with 1–24 hour
+  delays and its Airbnb connection has documented limitations for vacation-home listings;
+  Guesty's Expedia-affiliate bookings can arrive with no guest contact and no inbox sync; and
+  OwnerRez — the best small-property fit — currently has no direct Expedia connection at all
+  (Expedia is not accepting new integrations). All of them also fire scheduled messages the same
+  way Lodgify does, so the blank-code-for-late-bookings behavior would need to be verified with
+  each vendor before trusting it. On top of that: migration means re-linking every channel,
+  importing reservations, replacing the booking website, retraining, and $75–290/month ongoing.
+  A defensible path, but it trades a build for a migration without solving the hardest 15% of
+  bookings.
 - **Adopt a different smart-lock integration platform.** The platforms known to support this
   class of hardware run **$1,000+ per month** (concrete examples available on request) — more
   than an order of magnitude above the ongoing cost of this system.
@@ -150,10 +161,11 @@ core, three pieces can be scaled to fit budget:
    against real provisioning behavior. Can be deferred; the system then runs on its initial
    settings.
 
-## Due diligence (to be completed before sign-off)
+## Due diligence
 
-_Placeholder — this section records the vendor conversations and platform research that confirm
-no simpler path exists, so the decision to build is documented alongside the decision itself._
+_This section records the vendor conversations and platform research that confirm no simpler
+path exists, so the decision to build is documented alongside the decision itself. The OTA
+research and PMS evaluation are complete; the Lynx support statements remain to be collected._
 
 ### Lynx support engagement
 
@@ -173,32 +185,61 @@ Statements to obtain in writing:
       figure vs. our observations)?
 - [ ] How many task codes does an account include, and can that number be increased?
 
-### OTA partner portal research
+### OTA partner portal research (completed 2026-07-10)
 
-The delivery failures concentrate on OTA guests, so for each channel (Expedia Partner Central,
-Booking.com extranet, Airbnb) the question is: **is the OTA itself blocking or degrading Lynx's
-messages, and could any portal setting fix that without a build?** Record per channel:
+The delivery failures concentrate on OTA guests, so the question researched was: **is the OTA
+itself blocking or degrading Lynx's messages, and could any portal setting fix that without a
+build?** Findings, verified against the platforms' own documentation:
 
-- [ ] What guest contact information the property actually receives — relay email addresses,
-      masked phone numbers — and whether any portal setting shares real contact details.
-- [ ] Relay behavior: which senders can deliver through the guest's relay address? Is delivery
-      restricted to the booking platform / connected PMS, and is there any approved-sender or
-      allowlist mechanism that could admit Lynx's emails?
-- [ ] Any evidence in the portal of Lynx's messages being filtered, blocked, or spam-foldered —
-      message logs, delivery indicators, bounce records.
-- [ ] Whether the masked phone relay accepts SMS from external senders (relevant to any
-      SMS-based workaround).
-- [ ] Any documented content filtering in relayed messages (codes, links, phone numbers) — this
-      applies to our own delivery path too; record findings either way.
+**Expedia** (the largest channel, ~43% of recent bookings):
 
-Expected conclusion: the relays only reliably carry traffic from the booking platform and its
-connected PMS — which is exactly why this system delivers through Lodgify — and no portal
-setting can admit a third-party sender like Lynx. Confirming (or refuting) that is the point.
+- Properties never receive the guest's real email — each reservation gets a masked alias.
+  Expedia's own help documentation states that mail to the alias is delivered **only if sent
+  from an email account associated with a validated Expedia Partner Central user account**, and
+  that support for third-party senders (like Lynx) is "in the works" — i.e., does not exist.
+  There is **no portal setting** that can admit a third-party sender.
+  ([Expedia: About the guest email alias](https://apps.expediapartnercentral.com/lodging/help/help-article/guests/messaging-guests/about-the-guest-email-alias?langId=1033))
+- All alias mail is routed through Partner Central and monitored; messages containing credit
+  card numbers are blocked. No filtering of numeric door codes is documented.
+- Industry-reported (not Expedia-official): real guest emails can be enabled per property only
+  by request to an Expedia market manager.
+
+**Booking.com** (~4% of recent bookings):
+
+- Guest emails are aliases (`@guest.booking.com`); real addresses are never shared.
+- **This is the one channel with a portal-level fix**: the extranet's Messaging Security
+  settings let an administrator register approved sender addresses or whole domains — mail from
+  unregistered senders silently never reaches guests. Registering Lynx's sending domain is the
+  fix Booking.com's own documentation prescribes.
+  ([Booking.com: messaging security settings](https://partner.booking.com/en-us/help/legal-security/security/all-about-our-messaging-security-settings))
+- Two settings can still break delivery even for approved senders: a link-security filter that
+  strips unapproved URLs, and a **"Block all email communication" toggle that suppresses
+  everything** — both should be checked in the extranet regardless of this project.
+
+**Airbnb** (~13% of recent bookings):
+
+- **There is no email path to Airbnb guests at all.** The guest email alias was retired on
+  September 30, 2023; since then neither hosts nor third-party systems can email Airbnb guests.
+  ([Airbnb: alias retirement](https://platform.airbnb.com/resources/hosting-homes/a/an-update-for-hosts-who-use-the-email-alias-feature-195))
+- Proxy phone numbers expire two days after checkout and do not connect calls/SMS from numbers
+  not linked to the reservation — automated third-party SMS delivery is documented (by other
+  smart-lock vendors) to break on exactly this.
+- Real phone numbers appearing in message content are blocked or rewritten by the platform.
 
 ### Conclusion
 
-_One paragraph, written after the above: what remains true (or changed) about the "no
-off-the-shelf path" claim in How We Got Here._
+The Lynx delivery failures are **structural, not intermittent**. On Expedia, the relay only
+accepts mail from validated Partner Central accounts and no setting can change that; on Airbnb,
+no email channel to guests exists at all. One channel — Booking.com, about 4% of recent
+bookings — has a documented portal fix (registering Lynx as an approved sender), which we
+recommend doing regardless; it does not change the picture for the other 96%. The one route all
+three platforms treat as first-class is **messaging through the connected booking system
+(Lodgify)** — which is precisely the route this system uses. The research also confirmed two
+content rules our messages already follow: no links (Booking.com strips unapproved ones) and no
+phone numbers (Airbnb rewrites them); plain numeric door codes have no documented filtering on
+any channel. The "no off-the-shelf path" claim in How We Got Here stands. Remaining to complete:
+the Lynx support statements above, and a check of this property's own Booking.com extranet
+settings (approved-sender list and the block-all-email toggle).
 
 ## What we need from you
 
