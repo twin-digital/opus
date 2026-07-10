@@ -175,16 +175,25 @@ Statements to obtain in writing:
 
 ### OTA partner portal research
 
-For each channel (Expedia Partner Central, Booking.com extranet, Airbnb), record whether any
-native mechanism can deliver a **per-reservation** door code that does not exist until shortly
-before (or after) booking:
+The delivery failures concentrate on OTA guests, so for each channel (Expedia Partner Central,
+Booking.com extranet, Airbnb) the question is: **is the OTA itself blocking or degrading Lynx's
+messages, and could any portal setting fix that without a build?** Record per channel:
 
-- [ ] Check-in / property-access instruction fields — static per property, or per reservation?
-- [ ] Message template capabilities — can they carry per-reservation custom values, and when do
-      they fire relative to booking?
-- [ ] Any documented masking or filtering of codes/links in relayed guest messages (affects our
-      delivery path too — record findings either way).
-- [ ] Any native smart-lock integrations, and whether they support this hardware.
+- [ ] What guest contact information the property actually receives — relay email addresses,
+      masked phone numbers — and whether any portal setting shares real contact details.
+- [ ] Relay behavior: which senders can deliver through the guest's relay address? Is delivery
+      restricted to the booking platform / connected PMS, and is there any approved-sender or
+      allowlist mechanism that could admit Lynx's emails?
+- [ ] Any evidence in the portal of Lynx's messages being filtered, blocked, or spam-foldered —
+      message logs, delivery indicators, bounce records.
+- [ ] Whether the masked phone relay accepts SMS from external senders (relevant to any
+      SMS-based workaround).
+- [ ] Any documented content filtering in relayed messages (codes, links, phone numbers) — this
+      applies to our own delivery path too; record findings either way.
+
+Expected conclusion: the relays only reliably carry traffic from the booking platform and its
+connected PMS — which is exactly why this system delivers through Lodgify — and no portal
+setting can admit a third-party sender like Lynx. Confirming (or refuting) that is the point.
 
 ### Conclusion
 
