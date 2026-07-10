@@ -98,6 +98,10 @@ senders:
   rewritten in transit. Documented filtering covers phone numbers; no report of numeric door
   codes being filtered.
 
+> For the analysis of _why delivery started failing around mid-June 2026_ (the DMARC
+> enforcement cliff and per-channel reachability), see
+> [delivery-failure-analysis.md](./delivery-failure-analysis.md).
+
 ## Cross-channel synthesis
 
 - The Lynx email failures are **structural, not intermittent**: Airbnb guests are unreachable by
