@@ -18,6 +18,46 @@ The data says this isn't rare. Looking at the last 60 days of bookings:
   door code wasn't ready anywhere until **almost four hours later**. Under the current setup,
   that guest waits — or calls.
 
+## How we got here
+
+A short recap, because the constraint driving everything is the hardware:
+
+- The original smart-lock platform (Jervis, driving Tuya locks) had persistent code-provisioning
+  failures it was unable to resolve. The locksmith's search for a replacement found exactly one
+  lock system that met all of the property's needs with remote control: **DormaKaba** — a
+  commercial line that is unusual in short-term rentals, which is why most hospitality software
+  doesn't support it.
+- **Lynx was the only platform found** that supports these locks _and_ automatically provisions
+  guest codes from reservations. It does that job; what it doesn't do reliably is **deliver**
+  the codes (the OTA-guest email failures above), and it doesn't share codes with Lodgify — so
+  Lodgify's own messaging features can't send them either.
+- Even if the codes reached Lodgify, its scheduled messages fire **immediately** for bookings
+  made less than 24 hours before check-in — before any code exists — which would send guests
+  blank-code messages for exactly the bookings where timing is tightest. (Jervis papered over
+  this with a separate bare-bones SMS containing just the code.)
+
+In short: the lock hardware is right for the property, Lynx is the only way to drive it, and
+nothing off the shelf closes the delivery gap. That gap is what this system fills.
+
+## Alternatives considered
+
+- **Do nothing / handle failures manually.** The current state: staff intervene per failure,
+  concentrated at evenings and last-minute arrivals. Lynx support has already been engaged
+  without resolution, so there is no fix coming from that direction.
+- **Switch to a PMS with better lock support.** Researching each candidate seriously costs a
+  few hundred dollars; an actual migration means significant cost, staff retraining, and
+  workflow change — and PMS-native support for commercial DormaKaba hardware is likely to be
+  rare for the same reason most platforms don't support it today.
+- **Adopt a different smart-lock integration platform.** The platforms known to support this
+  class of hardware run **$1,000+ per month** (concrete examples available on request) — more
+  than an order of magnitude above the ongoing cost of this system.
+- **Replace the locks.** Consumer short-term-rental hardware would unlock inexpensive
+  off-the-shelf tooling, but the DormaKaba units were selected because nothing else met the
+  property's requirements — replacing working commercial locks on every door to fix a message
+  delivery problem is backwards.
+- **Physical fallbacks (lockboxes, key handoff).** A regression in both guest experience and
+  security, and still per-stay work for staff.
+
 ## What we're building
 
 A system that takes over guest door-code delivery end to end:
@@ -90,6 +130,26 @@ makes this a policy setting:
 
 We recommend starting with the default and revisiting once real usage data exists.
 
+## Scope options
+
+The core of the system is not divisible — watching bookings, waiting for verified codes,
+sending on time, confirming delivery, and alerting on real problems is the product. Around that
+core, three pieces can be scaled to fit budget:
+
+1. **Standby codes** (the largest cost lever), three levels:
+   - **None** — at-risk arrivals alert staff for manual handling. Cheapest; guest experience
+     then depends on staff availability at exactly the hours coverage is thinnest.
+   - **Semi-automatic** — staff create the standby codes once; the system issues them
+     automatically when needed and alerts staff to retire and replace used ones.
+   - **Fully automatic** (proposed) — the system creates, monitors, issues, retires, and
+     replaces standby codes itself, under the security policy above. Staff touch nothing unless
+     alerted.
+2. **Two-channel alerting** — separate business and technical alert channels (proposed). Can be
+   collapsed to one channel at a small saving, at the cost of staff seeing technical noise.
+3. **Performance reporting** — the measurement layer that tunes send timing and thresholds
+   against real provisioning behavior. Can be deferred; the system then runs on its initial
+   settings.
+
 ## What we need from you
 
 1. **Lynx setup**: one lock group per unit configured in the Lynx dashboard (we'll provide
@@ -119,9 +179,10 @@ We recommend starting with the default and revisiting once real usage data exist
 
 ## Sign-off
 
-| Item                                            | Approved by | Date |
-| ----------------------------------------------- | ----------- | ---- |
-| Scope and features as described                 |             |      |
-| Standby-code security policy (default: 1 guest) |             |      |
-| Lynx setup prerequisites                        |             |      |
-| Observation-mode rollout plan                   |             |      |
+| Item                                                        | Approved by | Date |
+| ----------------------------------------------------------- | ----------- | ---- |
+| Scope and features as described                             |             |      |
+| Scope options selected (standby level, alerting, reporting) |             |      |
+| Standby-code security policy (default: 1 guest)             |             |      |
+| Lynx setup prerequisites                                    |             |      |
+| Observation-mode rollout plan                               |             |      |
