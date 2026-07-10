@@ -91,9 +91,17 @@ implements), and covers provisioning delays with standby codes.
   importing reservations, replacing the booking website, retraining, and $75–290/month ongoing.
   A defensible path, but it trades a build for a migration without solving the hardest 15% of
   bookings.
-- **Adopt a different smart-lock integration platform.** The platforms known to support this
-  class of hardware run **$1,000+ per month** (concrete examples available on request) — more
-  than an order of magnitude above the ongoing cost of this system.
+- **Replace Lynx with a different smart-lock platform.** Researched in depth (see the
+  [lock middleware evaluation](./due-diligence/lock-middleware-evaluation.md)): the Saffire EVO
+  front-door lock is managed only through dormakaba's partner platforms, and exactly **two**
+  have verified support — Lynx and RemoteLock. The surprise is that cost is _not_ the obstacle
+  (RemoteLock runs $24–72/month at this scale): **capability is**. RemoteLock has no Lodgify
+  connection — its documented Lodgify paths are a third-party bridge or a calendar-feed
+  mechanism with a known Lodgify incompatibility — and no other platform documents this lock at
+  all. "Replace Lynx and keep Lodgify" has no off-the-shelf solution at any price; replacing
+  Lynx therefore also means replacing the booking system, which is the alternative above.
+  Notably, no platform examined offers automatic backup-code provisioning — the standby-code
+  feature in this proposal — as a built-in feature.
 - **Replace the locks.** Consumer short-term-rental hardware would unlock inexpensive
   off-the-shelf tooling, but the DormaKaba units were selected because nothing else met the
   property's requirements — replacing working commercial locks on every door to fix a message
