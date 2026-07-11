@@ -1,13 +1,26 @@
 # lock-link — future architecture & deferred features
 
-Enhancements deliberately **out of scope for MVP**, collected here so [architecture.md](./architecture.md)
-stays focused on what ships. Each is a considered deferral, not a backlog dump — the MVP works
+Enhancements deliberately **out of scope for MVP**, collected here so the architecture
+docs stay focused on what ships. Each is a considered deferral, not a backlog dump — the MVP works
 without them.
+
+## Fault-aware early warning
+
+**MVP behavior:** the "no code deliverable" alert fires early only on hard sendability blockers
+(closed thread); a **lock fault** (offline / jammed) that would break the fallback code too has
+no early trigger on the delivery path.
+
+**Status:** the heads-up itself is substantially covered by the monitoring leg's lock-health
+sampler and its unhealthy-lock-before-arrival business warning
+([architecture-monitoring.md](./architecture-monitoring.md#lock--hub-health)). What remains for
+the delivery era: treat a lock fault that also invalidates the room's fallback code as an
+**early "no code deliverable" trigger** for affected bookings — a fault-aware escalation rather
+than a standalone hardware warning.
 
 ## Configurable re-alerting
 
 **MVP behavior:** each alert condition fires **once per booking** and never repeats
-([architecture.md → Notifications](./architecture.md#notifications--escalation)), because there
+([architecture-monitoring.md → Notifications](./architecture-monitoring.md#notifications--escalation)), because there
 is no way to acknowledge, pause, or clear an alert — so re-firing would be unmanageable noise.
 
 **Future:** repeat unresolved alerts on a severity-scaled cadence, with the operational controls
@@ -25,7 +38,7 @@ that make repetition safe:
 ## Fallback-delete auto-retry
 
 **MVP behavior:** `removeSecondaryUser` is one-shot; an API error raises an ops alert and stops
-([architecture.md → Write discipline](./architecture.md#the-pool-reconciler)).
+([architecture-delivery.md → Write discipline](./architecture-delivery.md#the-pool-reconciler)).
 
 **Future:** a **stateless** bounded retry — derive the attempt count from the scheduled tick time
 (the same modulo trick), retry the delete a configurable number of times across reconciler
@@ -36,7 +49,7 @@ rare and an immediate alert is adequate for the launch volume.
 ## Best-effort code freshness at send time
 
 **MVP behavior:** codes are assumed static once captured; a `key_code` already set is never
-re-checked against Lynx ([architecture.md → static-codes callout](./architecture.md)).
+re-checked against Lynx ([architecture-delivery.md](./architecture-delivery.md) — and see its drift register: the monitoring leg's capture verifier already re-checks).
 
 **Future:** before messaging, re-check Lynx and use the fresh code if reachable, the captured one
 if not — closing the (expected-anomalous) window where a code rotates in Lynx after capture.
