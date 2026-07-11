@@ -96,19 +96,22 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 | `rentalMarketPlace`                     | `LODGIFY`          | constant (the PMS), not a key                                       |
 | `bookingSource`                         | `12`               | int channel code (Expedia here); useful to spot non-Expedia records |
 
-## Access-code email status — `getAccessCodeEmailStatus`
+## Access-code email & SMS status — `getAccessCodeEmailStatus` / `getAccessCodeSMSStatus`
 
-Lynx's own record of whether it emailed a reservation's door code to the guest. Captured from
-live dashboard traffic (2026-07-11); samples sanitized (reservation ids replaced with fakes).
+Lynx's own record of whether it delivered a reservation's door code to the guest, one endpoint
+per channel. Captured from live dashboard traffic (2026-07-11); samples sanitized (reservation
+ids replaced with fakes).
 
-- `POST https://api.getlynx.co/ProdV1.1/dashboard/getAccessCodeEmailStatus`
+- `POST https://api.getlynx.co/ProdV1.1/dashboard/getAccessCodeEmailStatus` (email)
+- `POST https://api.getlynx.co/ProdV1.1/dashboard/getAccessCodeSMSStatus` (SMS) — identical
+  body and response shape. ⚠️ The SMS response's payload key is **also `accessCodeEmail`**
+  (evidently copied on Lynx's side) — one shared schema models both.
 - Body: `{ "hostId": "<per-user id>", "loggedInUserId": "<per-user id>", "propertyId": 72230, "bookingType": 1, "reservationId": 10490339 }`
   - `reservationId` is the **Lynx-internal reservation id** — the reservations list's
-    `bookingId` field, NOT the Lodgify booking id. Presumed from the dashboard's usage; verify
-    on first implementation.
+    `bookingId` field, NOT the Lodgify booking id (confirmed).
   - `bookingType` observed as the constant `1`; meaning unknown — mirror the dashboard.
 - Response: `data.accessCodeEmail = { reservationId, sentStatus, errorMessage }`, one
-  reservation per call.
+  reservation and one channel per call.
 
 | `sentStatus` | Meaning (inferred from live samples) |
 | ------------ | ------------------------------------ |
@@ -131,12 +134,12 @@ live dashboard traffic (2026-07-11); samples sanitized (reservation ids replaced
   beyond the status itself.
 - ⚠️ **No timestamp** — current state only, like the rest of the API; the send _time_ is only
   measurable by observing the `0 → 1` transition live.
-- ⚠️ `sentStatus: 1` means Lynx **dispatched** the email, not that the guest received it — a
-  relay address silently discarding the mail would presumably still read `1`.
-- Statuses have been observed on much older reservation ids (both `0` and `2`), suggesting the
-  field is **retained after checkout** — unlike `accessCodes`, which `past` reservations clear.
-  If confirmed, a retroactive sweep of past reservations is possible (see
-  [architecture-sure-lock.md](./architecture-sure-lock.md#lynx-email-delivery-status)).
+- ⚠️ `sentStatus: 1` means Lynx **dispatched** the message, not that the guest received it — a
+  relay address silently discarding an email would presumably still read `1`.
+- Statuses are **retained after checkout** (confirmed against old reservations) — unlike
+  `accessCodes`, which `past` reservations clear — so a retroactive sweep of past reservations
+  works (see
+  [architecture-sure-lock.md](./architecture-sure-lock.md#lynx-email--sms-delivery-status)).
 
 ## Lock set & health — `getSmartLocksByPropertyWithStatus`
 

@@ -36,9 +36,9 @@ unchanged when the extension lands.
 
 This document covers the what, why, and when. Endpoint-level contracts, wire shapes, and
 provenance live in the per-API references: **[lynx-api.md](./lynx-api.md)** and
-**[lodgify-api.md](./lodgify-api.md)**. Integration contracts for capture, Lynx's email-status
-read, and thread reads are proven against live data; residual unknowns are called out in Open
-questions.
+**[lodgify-api.md](./lodgify-api.md)**. Integration contracts for capture, Lynx's
+delivery-status reads, and thread reads are proven against live data; residual unknowns are
+called out in Open questions.
 
 ---
 
@@ -55,9 +55,9 @@ flowchart TD
     R --> RD{"all locks success?"}
     RD -- yes --> W["capture: write encoded key_code<br/>+ record first-ready / captured events"]
     RD -- "no / Lynx unreachable" --> T{"past T0?"}
-    G -- yes --> ES{"Lynx code email sent?"}
+    G -- yes --> ES{"Lynx code email/SMS sent?"}
     W --> ES
-    ES -- "not yet / failed" --> T
+    ES -- "no channel sent" --> T
     ES -- yes --> DONE["nothing to do"]
     T -- yes --> AL["business alert (once):<br/>guest lacks a working code in hand"]
     T -- no --> S["skip — the schedule is the retry"]
@@ -156,9 +156,9 @@ urgency, not with the clock:
   and where sure-lock's latency measurements need tick-level resolution.
 - Gaps **outside** that window → Lynx re-checked only on the slow-interval gate. A booking
   arriving next week loses nothing by being re-checked hourly.
-- **Email-status checks** follow the same tiering, for every in-horizon reservation until
-  `sentStatus: 1` is observed — a send is monotonic, so it memoizes for the warm lifetime and
-  the polling stops.
+- **Delivery-status checks** (email + SMS) follow the same tiering, for every in-horizon
+  reservation until that channel's `sentStatus: 1` is observed — a send is monotonic, so it
+  memoizes for the warm lifetime and the polling stops.
 - The **observers** (health sampler, thread scanner, notes scanner, capture verifier) run on the
   slow-interval gate: their findings are advisory or evidentiary, and an hour of detection
   latency is acceptable for all of them.
@@ -272,6 +272,7 @@ them. At ~28 bookings/week the volume is trivial and the table is effectively fr
 | `workaround-noted`            | tagged phone-workaround line found in booking notes                 |
 | `alert-fired`                 | any business/ops alert (doubles as the alert ledger)                |
 | `lynx-email-sent` / `-failed` | first tick observing the code email's `sentStatus` at `1` / `2`     |
+| `lynx-sms-sent` / `-failed`   | same, for the SMS channel                                           |
 
 **Keying sketch** (finalized at implementation): booking-scoped events partition on
 `BOOKING#<lodgifyBookingId>`, property/lock-scoped on `PROPERTY#<lynxPropertyId>`. One-shot
@@ -306,8 +307,8 @@ What sure-lock measures, which goal each serves, and what it depends on:
 | Post-capture code mutation                                                     | evidence, extension de-risking | ready                              |
 | Guest access complaints (thread)                                               | evidence, alerting             | ready — keyword list open          |
 | Manual workarounds (host code sends + tagged phone notes)                      | evidence                       | notes round-trip probe pending     |
-| Lynx email send failures                                                       | evidence, alerting             | ready — sent ≠ received caveat     |
-| Email send timing vs. check-in, by booking class                               | evidence                       | ready — observed-transition timing |
+| Lynx email/SMS send failures                                                   | evidence, alerting             | ready — sent ≠ received caveat     |
+| Email/SMS send timing vs. check-in, by channel + class                         | evidence                       | ready — observed-transition timing |
 
 The check-in miss rate is the headline: "per Lynx's own API, X of Y guests had no working code
 at check-in this month" is the sentence that turns vibes into a support ticket.
@@ -338,38 +339,40 @@ which access problems and workarounds occur. At this account's volume that is a 
 bookings per pass against the official (rate-limited but permitted) API; complaint-alert latency
 is bounded by the slow interval.
 
-## Lynx email delivery status
+## Lynx email & SMS delivery status
 
-Lynx emails guests their codes itself, and its dashboard API records the outcome per
-reservation: `getAccessCodeEmailStatus` returns a tri-state `sentStatus` — not yet attempted /
-sent / failed (wire details:
-[lynx-api.md](./lynx-api.md#access-code-email-status--getaccesscodeemailstatus)). sure-lock
-polls it for in-horizon reservations on the same fast/slow tiering as readiness, records the
-transitions as `lynx-email-sent` / `lynx-email-failed` events, and stops polling a reservation
-once `sent` is observed (a send is monotonic, so it memoizes).
+Lynx sends guests their codes itself, by email and SMS, and its dashboard API records each
+channel's outcome per reservation: `getAccessCodeEmailStatus` and `getAccessCodeSMSStatus`
+return a tri-state `sentStatus` — not yet attempted / sent / failed (wire details:
+[lynx-api.md](./lynx-api.md#access-code-email--sms-status--getaccesscodeemailstatus--getaccesscodesmsstatus)).
+sure-lock polls both for in-horizon reservations on the same fast/slow tiering as readiness,
+records the transitions as `lynx-email-sent` / `-failed` and `lynx-sms-sent` / `-failed`
+events, and stops polling a channel once its `sent` is observed (a send is monotonic, so it
+memoizes).
 
 What this yields:
 
-- **Send timing vs. check-in**, segmented by booking class. The response carries no timestamp
-  (like the rest of the Lynx API), so the send time is the observed transition time, at
-  polling-cadence resolution.
+- **Send timing vs. check-in**, per channel, segmented by booking class. The responses carry no
+  timestamp (like the rest of the Lynx API), so the send time is the observed transition time,
+  at polling-cadence resolution.
 - **Failure counts** (`sentStatus: 2`) — direct, Lynx-recorded evidence of failed sends.
   `errorMessage` has been observed empty even on failure, so the count may be all there is.
-- **A delivery leg for the overdue alert**: past T0 with the email unsent or failed, the guest
-  plausibly has no code in hand even when the locks are ready — the cause-agnostic business
-  alert fires with the captured code so the manager can relay it.
+- **A delivery leg for the overdue alert**: past T0 with **no channel** reporting `sent`, the
+  guest plausibly has no code in hand even when the locks are ready — the cause-agnostic
+  business alert fires with the captured code so the manager can relay it. (A failure on one
+  channel with a send on the other stays evidence, not an alert.)
 
-⚠️ Two caveats keep the evidence honest. `sentStatus: 1` means Lynx **dispatched** the email,
-not that the guest received it — an OTA relay silently discarding the mail presumably still
+⚠️ Two caveats keep the evidence honest. `sentStatus: 1` means Lynx **dispatched** the message,
+not that the guest received it — an OTA relay silently discarding an email presumably still
 reads `sent`, so the suspected relay-blocking failure mode stays invisible here and surfaces
 only as guest complaints (which sure-lock counts; correlating `sent` bookings with complaints
-is part of the analysis). And the status is a single tri-state per reservation with no history —
-any retries or manual re-sends collapse into the current value.
+is part of the analysis). And each status is a single tri-state per reservation with no
+history — any retries or manual re-sends collapse into the current value.
 
-**Historical backfill opportunity**: statuses have been observed retained on much older
-reservations (unlike `accessCodes`, which `past` reservations clear). If that holds, a one-time
-sweep of the `past` reservation list yields a retroactive send-failure baseline — evidence
-covering months before sure-lock launched. Confirm and run at first deploy.
+**Historical backfill**: statuses are retained for past reservations (confirmed; unlike
+`accessCodes`, which `past` reservations clear), so a one-time sweep of the `past` reservation
+list yields a retroactive send-failure baseline per channel — evidence covering months before
+sure-lock launched. Run it at first deploy.
 
 ## Lock & hub health
 
@@ -392,15 +395,15 @@ causes:
 
 - **Business** (property manager) — guest-impacting _outcomes_ with an available human action.
   Business alerts are **cause-agnostic**: the overdue alert fires whether the blocker is slow
-  Lynx provisioning, a reservation Lynx never received, an unsent or failed code email, or a
+  Lynx provisioning, a reservation Lynx never received, no code message sent on any channel, or a
   system fault.
 
-  | Alert                                | Trigger                                                                             | Action enabled                                       |
-  | ------------------------------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------- |
-  | Guest lacks a working code in hand   | past T0 and: locks not ready, booking absent from Lynx, or code email unsent/failed | relay the code (in the alert body) / call / stand by |
-  | Lock unhealthy before an arrival     | offline/jammed/low battery + arrival in `FAST_POLL_HOURS`                           | check the hardware before the guest arrives          |
-  | Guest access complaint               | classified `Renter` message                                                         | respond; code included in the alert body             |
-  | Access window doesn't cover the stay | capture-time `accessStart`/`accessEnd` mismatch                                     | verify/extend the code in the Lynx dashboard         |
+  | Alert                                | Trigger                                                                           | Action enabled                                       |
+  | ------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------- |
+  | Guest lacks a working code in hand   | past T0 and: locks not ready, booking absent from Lynx, or no code email/SMS sent | relay the code (in the alert body) / call / stand by |
+  | Lock unhealthy before an arrival     | offline/jammed/low battery + arrival in `FAST_POLL_HOURS`                         | check the hardware before the guest arrives          |
+  | Guest access complaint               | classified `Renter` message                                                       | respond; code included in the alert body             |
+  | Access window doesn't cover the stay | capture-time `accessStart`/`accessEnd` mismatch                                   | verify/extend the code in the Lynx dashboard         |
 
 - **Operational** (engineers/maintainers) — system _causes_ needing technical assessment: a
   `confirmationCode` that doesn't parse, schema drift, capture-write failures, evidence-store
@@ -487,7 +490,7 @@ Timing knobs are tabled in the Timing section. The rest (all required, validated
 ## Module layout
 
 - `lynx/` — client (`login` + `TokenCache` seam, `listProperties`, `listReservations`,
-  `listSmartLocks`, `getAccessCodeEmailStatus`), zod schemas, `createSsmTokenCache`.
+  `listSmartLocks`, `getAccessCodeEmailStatus`, `getAccessCodeSMSStatus`), zod schemas, `createSsmTokenCache`.
 - `lodgify/` — client (`listBookings`, `getBooking` — including `notes` and `thread_uid`,
   `putKeyCodes`, `getThread`), zod schemas, the vendored OpenAPI + `pull-spec` refresh tool.
 - `sync/` — `resolveBookingId(confirmationCode)`, `checkReadiness`, key-code encode/decode,
@@ -551,7 +554,7 @@ the same idempotency.
 | 10  | Lodgify booking with no Lynx reservation           | Evidence event; the cause-agnostic overdue alert covers it at T0                                            | Business (severity at T0, once) | Every tick                  |
 | 11  | Locks not ready (the normal case)                  | Skip; transition evidence recorded                                                                          | none until T0                   | Fast/slow tier per window   |
 | 12  | Still not ready at T0                              | Business alert (once, via the ledger) with per-lock status; capture keeps retrying                          | Business (severity at T0)       | Every tick (alert once)     |
-| 13  | Code email unsent/failed at T0 (locks ready)       | Evidence event; the same cause-agnostic overdue alert, with the captured code in the body                   | Business (severity at T0, once) | Every tick (alert once)     |
+| 13  | No code email/SMS sent at T0 (locks ready)         | Evidence event; the same cause-agnostic overdue alert, with the captured code in the body                   | Business (severity at T0, once) | Every tick (alert once)     |
 | 14  | `putKeyCodes` 404/400, or read-back mismatch       | Skip the booking; it remains a gap                                                                          | Ops / warning                   | Next tick                   |
 | 15  | Booking missing `thread_uid`, or thread read fails | Skip that booking's thread scan                                                                             | Ops / warning (once)            | Next slow gate              |
 | 16  | Evidence-store write fails                         | Bounded evidence loss (standing conditions re-derive; a one-shot transition may lose its precise timestamp) | Ops metric; alarm on rate       | Next tick                   |
@@ -562,12 +565,7 @@ the same idempotency.
 
 ## Open questions / follow-ups
 
-- **Email-status retention for past reservations** — statuses have been observed on much older
-  reservation ids; confirm `past`-type reservations answer `getAccessCodeEmailStatus`, then run
-  the one-time historical backfill.
-- **`reservationId` join for the email-status call** — confirm it is the reservations list's
-  `bookingId` (presumed from the dashboard's usage).
-- **When Lynx schedules its send** — unknown (a `0` status on a provisioned reservation may
+- **When Lynx schedules its sends** — unknown (a `0` status on a provisioned reservation may
   mean "scheduled for later"); the send-timing metric itself answers this within the first
   weeks of data.
 - **Booking-notes round trip** — confirm a note entered in the Lodgify dashboard/app surfaces in
