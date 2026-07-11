@@ -54,19 +54,19 @@ Lead time from booking to check-in (Central assumption):
 | already past check-in       | 3                |
 | 1 h                         | 6                |
 | 2 h                         | 7                |
-| 4 h                         | 10               |
-| 8 h (`SLA_HOURS`)           | 14               |
-| 24 h (`SEND_HOURS`)         | 15               |
+| 4 h (`FALLBACK_LEAD_HOURS`) | 10               |
+| 8 h                         | 14               |
+| 24 h (`NORMAL_LEAD_HOURS`)  | 15               |
 | 48 h                        | 24               |
 
 ## Implications for the defaults
 
-- **All 14 same-day bookings fall inside the 8-hour SLA window** — the late-booking path is
-  exercised ~1.6×/week, not an edge case. Lodgify's "X days before arrival" template model was
+- **10 of 91 bookings were made within the 4-hour fallback lead** (14 within 8 h) — the
+  late-booking path is exercised ~1×/week, not an edge case. Lodgify's "X days before arrival" template model was
   structurally broken for all of them.
-- **Emergency-code burn estimate: up to ~1 issuance/week.** 10 of 91 bookings arrived within
+- **Fallback-code burn estimate: up to ~1 issuance/week.** 10 of 91 bookings arrived within
   4 h of check-in; if the ~3–4 h same-day provisioning latency (n=1) is typical, most of those
-  guests hit T0 before Lynx is ready. Pool depth of 2–3 codes per room is adequate, but
+  guests hit the fallback lead before Lynx is ready. Pool depth of 2–3 codes per room is adequate, but
   rotate-after-use will be a **weekly** habit, not a yearly one. If same-day provisioning turns
   out closer to the ~1 h easy case, burn drops toward the at-the-door bookings only
   (~0.35/week).
