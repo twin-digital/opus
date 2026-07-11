@@ -28,7 +28,7 @@ pasted token.
 
 - `POST https://api.getlynx.co/ProdV1.1/api/v1/auth/login`
 - Body: plaintext JSON `{ "email": "...", "password": "..." }` (the Lynx account identifier is an
-  email address — the `LOCK_LINK_LYNX_USERNAME_PARAM` env var historically names it `username`,
+  email address — the `LL_LYNX_USERNAME_PARAM` env var historically names it `username`,
   but the wire field is `email`).
 - Response: a **JWT in the `x-auth-token` response header** (not the body). `exp ≈ 95 days`.
 - Use as `Authorization: Bearer <token>` on subsequent calls.
@@ -189,7 +189,7 @@ hardware — is covered under the delete endpoint below.
   plus a `Dalton` group that is not correctly configured. All four room groups must be created
   (dashboard) before the reconciler can target anything.
 - Live enumeration works, but group ids are construction-rate-stable — static config
-  (`LOCK_LINK_EC_GROUP_MAP`) is simpler and avoids matching on display names.
+  (`LL_FB_GROUP_MAP`) is simpler and avoids matching on display names.
 
 ```json
 {

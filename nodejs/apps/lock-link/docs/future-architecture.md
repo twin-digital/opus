@@ -13,15 +13,16 @@ is no way to acknowledge, pause, or clear an alert — so re-firing would be unm
 **Future:** repeat unresolved alerts on a severity-scaled cadence, with the operational controls
 that make repetition safe:
 
-- Per-severity re-alert intervals (the retired `LOCK_LINK_REALERT_{CRITICAL,WARNING,INFO}_MINUTES`
+- Per-severity re-alert intervals (the retired `LL_REALERT_{CRITICAL,WARNING,INFO}_MINUTES`
   knobs — critical repeats often, info rarely), gated statelessly by the same
   `epoch(scheduledTime) % INTERVAL < TICK` mechanism as the Lynx tiering.
-- Severity **upgrade** re-fires (e.g. a booking crossing `arrival − CRITICAL_HOURS` from warning
-  into critical) detected by threshold-crossing, so a worsening situation isn't silenced.
+- Severity **upgrade** re-fires — reintroduce a criticality threshold (a `CRITICAL_HOURS`-style
+  knob, removed from MVP) so a booking worsening as arrival nears escalates warning → critical,
+  detected by threshold-crossing so it isn't silenced.
 - An **acknowledge / pause / clear** mechanism (the missing piece) so a handled alert stops
   repeating — otherwise re-alerting is worse than silence.
 
-## Emergency-delete auto-retry
+## Fallback-delete auto-retry
 
 **MVP behavior:** `removeSecondaryUser` is one-shot; an API error raises an ops alert and stops
 ([architecture.md → Write discipline](./architecture.md#the-pool-reconciler)).
@@ -44,7 +45,7 @@ Best-effort so it never reintroduces a Lynx dependency on the send path.
 ## Unlock-activity monitoring
 
 Poll Lynx's `logActivity/getActivities` (unlock events, including which user unlocked) for
-**emergency-code usage outside its expected window** — alert the business and deactivate the
+**fallback-code usage outside its expected window** — alert the business and deactivate the
 user's code. This is also the only available signal that a "deleted" code is still live on a lock
 (the residual-access window the reuse policy otherwise just accepts). Endpoint known, not yet
 captured (see [lynx-api.md](./lynx-api.md)).
