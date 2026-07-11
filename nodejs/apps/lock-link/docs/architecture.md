@@ -17,8 +17,9 @@ Watches the pipeline end to end and talks only to the business. It captures each
 per-lock codes into the Lodgify booking record, measures how Lynx actually behaves —
 provisioning latency, send outcomes, lock health, guest complaints, manual workarounds — as
 durable, queryable evidence, and raises an alert when (and only when) a human needs to act, the
-central case being a guest approaching arrival with no working code in hand. It sends nothing
-to guests; until the delivery leg ships, the property manager acting on its alerts is the
+central case being a guest approaching arrival with no working code in hand. Each morning it
+sends the business a digest of the day's arrivals and their code-delivery status. It sends
+nothing to guests; until the delivery leg ships, the property manager acting on its alerts is the
 delivery channel of last resort.
 
 Full design: **[architecture-monitoring.md](./architecture-monitoring.md)**.

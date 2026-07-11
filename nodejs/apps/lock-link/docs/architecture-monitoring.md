@@ -82,9 +82,10 @@ under Timing:
 **Statelessness governs decisions; DynamoDB stores evidence.** Every _decision_ is re-derived
 each tick from the two APIs and the clock: `key_code` empty/set is the capture state, and all
 timing decisions are pure functions of the tick time. The evidence store is write-mostly — it
-exists so observations survive log retention, and it doubles as the **alert ledger** (an alert
-that has fired is recorded, so alerts fire once without any in-memory state). Nothing else about
-the loop's behavior depends on reading it back.
+exists so observations survive log retention — with exactly two readers inside the loop: the
+**alert ledger** (an alert that has fired is recorded, so alerts fire once without any
+in-memory state) and the **daily arrival digest**, which reads back the observed send/failure
+times it reports. Nothing on the capture or alerting decision path depends on reading it back.
 
 **The join** between systems is Lynx's `confirmationCode`, which embeds the Lodgify booking id
 (`20559349VK222262` → booking `20559349`). A `confirmationCode` that doesn't match the expected
@@ -103,7 +104,7 @@ delivery-status, lock health.
 skip re-reading them while the Lambda stays warm. The rule: memoize only **monotonic** facts,
 not mutable observations (not-ready, lock health), which are exactly what each tick exists to
 re-check. This serves a standing non-functional requirement: **minimize calls to the unofficial
-Lynx API**. the monitoring leg's Lynx footprint is read-only — `login` plus read endpoints; no
+Lynx API**. The monitoring leg's Lynx footprint is read-only — `login` plus read endpoints; no
 user-management or any other write ever occurs — which also keeps the integration's profile low.
 
 ---
@@ -125,6 +126,7 @@ EventBridge cron rate) is derived in `stack.ts` from the same constant that sets
 | `LL_GRACE_MINUTES`              | 30      | minutes | New-booking escalation suppression                         |
 | `LL_POST_CHECKIN_GRACE_MINUTES` | 10      | minutes | Tightened grace once check-in time has passed              |
 | `LL_THREAD_TRAILING_HOURS`      | 24      | hours   | How long past departure threads stay watched               |
+| `LL_DIGEST_LOCAL`               | 07:00   | local   | Daily arrival-digest send time (property TZ)               |
 
 The two leads share names and defaults with the [delivery leg](./architecture-delivery.md): `NORMAL_LEAD_HOURS`
 is the lead by which a code is normally in the guest's hands (there it opens the send window;
@@ -139,7 +141,7 @@ system must not get _lazier_ once the guest may be physically present), and the 
 tick". The graces are exempt: they are age thresholds, not gates, and may legitimately be
 shorter than or equal to a tick.
 
-### The three timing mechanisms
+### The four timing mechanisms
 
 1. **Windows** — pure functions of (tick time, booking timestamps): horizon, the two leads,
    graces. Recomputed every tick, so a booking's treatment changes as the clock runs down with
@@ -154,8 +156,13 @@ shorter than or equal to a tick.
    discontinuity: a booking whose age at check-in is between the two graces breaches _exactly at
    check-in_ — the guest just became present. (For bookings made in advance,
    `arrival − FALLBACK_LEAD` dominates and neither grace matters.)
+4. **Daily local-time triggers** — the first tick at or after a configured property-local time
+   of day (`LL_TIMEZONE`): the arrival digest here, the pre-close pool check in the
+   [delivery leg](./architecture-delivery.md). Deduplicated by the alert ledger on the local
+   date rather than tick arithmetic, so a failed action retries every tick for the rest of that
+   day instead of waiting for tomorrow.
 
-All three key off the **scheduled** tick time from the trigger event (`event.time`), not the
+All four key off the **scheduled** tick time from the trigger event (`event.time`), not the
 wall clock — delivery jitter, cold starts, and async-retry redelivery all resolve to the same
 logical tick. Snap the received time to the tick grid for sub-minute wobble. The interval-gate
 guarantee is "at most one action per interval"; if that one tick errors out, the interval is
@@ -286,6 +293,7 @@ them. At ~28 bookings/week the volume is trivial and the table is effectively fr
 | `manual-send-detected`        | host thread message containing a door code                          |
 | `workaround-noted`            | tagged phone-workaround line found in booking notes                 |
 | `alert-fired`                 | any business/ops alert (doubles as the alert ledger)                |
+| `digest-sent`                 | the daily arrival digest went out (ledger-keyed by local date)      |
 | `lynx-email-sent` / `-failed` | first tick observing the code email's `sentStatus` at `1` / `2`     |
 | `lynx-sms-sent` / `-failed`   | same, for the SMS channel                                           |
 
@@ -445,6 +453,40 @@ whole-run failure.
 The underlying _action_ still retries every tick — the schedule is the retry; only the alert is
 one-shot. Configurable re-alerting with an acknowledge mechanism is delivery-leg-era material.
 
+### Daily arrival digest
+
+Alongside the condition alerts, the business gets one **scheduled report**: a morning digest
+email of the day's arrivals, sent at `LL_DIGEST_LOCAL` (property-local, default 07:00). On a
+day with **no arrivals, no email is sent** — silence means an empty calendar, not a fault.
+
+Per booking arriving that local day, the digest shows the guest, property, and check-in time,
+then the code-delivery picture **one row per mechanism**:
+
+- **Lynx SMS** — status (sent / failed / not attempted) and the observed time.
+- **Lynx email** — same, labeled **direct** or **OTA relay** by the guest-address class, since
+  a "sent" to a relay address is exactly the delivery the relay may silently drop.
+- When the [delivery leg](./architecture-delivery.md) lands, its Lodgify-message send joins as
+  another row.
+
+Times are the observed transition times from the evidence store — the digest is that store's
+first reporting consumer — so they carry polling-cadence resolution, and "sent" means Lynx
+**dispatched** the message (the delivery-status caveats apply; receipt is not observable).
+Failures show the mechanism and when the failure was observed.
+
+**Severity & layout**: the digest defaults to `info` verbiage and styling — a routine morning
+readout. If **any** arrival has no code sent on **any** channel, the whole digest escalates to
+`critical`: critical subject line and styling, and the affected bookings pulled into a
+prominent section at the top, each carrying the captured code when one exists (the manager can
+send it on the spot) or the per-lock readiness status when capture is still pending.
+
+**Transport**: rendered as HTML and sent via **SES** to `LL_DIGEST_RECIPIENTS`. The tiered
+styling and per-mechanism tables need real formatting, which the plain-text SNS email
+subscriptions carrying the condition alerts can't provide; alerts stay on SNS.
+
+**Trigger & dedup**: a daily local-time trigger (see Timing). The send is recorded in the alert
+ledger keyed by the local date; a failed send retries every tick for the remainder of that
+local day and raises an ops warning if the day ends unsent.
+
 **Plumbing**: one `Notifier` interface (`createSnsNotifier` publishes with severity as the
 subject prefix and audience + severity as message attributes), backed by **two SNS topics**
 consumed by ARN. CloudWatch alarms (sync health) target the operational topic; business
@@ -476,6 +518,7 @@ Timing knobs are tabled in the Timing section. The rest (all required, validated
 | `LL_OPS_ALERT_TOPIC_ARN`      | SNS topic for operational alerts (engineers)                           |
 | `LL_TIMEZONE`                 | Property timezone for local-time computations (e.g. `America/Chicago`) |
 | `LL_EVENTS_TABLE`             | DynamoDB evidence-store table name                                     |
+| `LL_DIGEST_RECIPIENTS`        | Comma-separated recipient addresses for the daily arrival digest       |
 | `LL_LYNX_USERNAME_PARAM`      | SSM SecureString name — Lynx username                                  |
 | `LL_LYNX_PASSWORD_PARAM`      | SSM SecureString name — Lynx password                                  |
 | `LL_LODGIFY_API_KEY_PARAM`    | SSM SecureString name — Lodgify API key                                |
@@ -501,6 +544,8 @@ Timing knobs are tabled in the Timing section. The rest (all required, validated
   workspace deps bundle from source.
 - **DynamoDB evidence table**: on-demand billing, point-in-time recovery, no TTL; the Lambda
   gets read/write on it and nothing else does.
+- **SES** for the daily digest: the sending identity is verified out-of-band (like the SSM
+  secrets, CFN never manages it); the stack grants `ses:SendEmail` scoped to that identity.
 - **Package layout — `infra/` + `src/` split** (single package): `infra/` holds the CDK app +
   stack and may depend on `src/`; `src/` holds runtime/handler code. eslint bans importing
   `aws-cdk-lib`/`constructs` or `infra/` from `src/` (one-directional boundary).
@@ -524,6 +569,8 @@ Timing knobs are tabled in the Timing section. The rest (all required, validated
 - `monitor/` — the observers: health sampler, thread scanner (complaint + manual-send
   classifiers), notes scanner, capture verifier, and the booking classifier shared by all
   segmentation.
+- `digest/` — the daily arrival digest: evidence-store reads for the day's arrivals, the HTML
+  renderer, and the SES sender.
 - `evidence/` — the DynamoDB event store and the alert ledger.
 - `config.ts` — env-sourced, zod-validated config; `secrets.ts` — Powertools SSM reads.
 - `functions/sync.ts` — the Lambda handler, wrapped in try/notify/rethrow so a whole-run failure
@@ -552,6 +599,9 @@ Timing knobs are tabled in the Timing section. The rest (all required, validated
   segmentation dimension on every metric.
 - **Evidence event** — one durable observation in the DynamoDB store.
 - **Alert ledger** — `alert-fired` events; presence gives alerts once-per-condition semantics.
+- **Arrival digest** — the scheduled morning report of the day's check-ins and their
+  per-mechanism code-delivery status; `info` by default, `critical` when any arrival has no
+  code sent on any channel.
 - **Observer** — a slow-gate scan (health, threads, notes, capture verification) that records
   evidence and may alert, and is not part of the capture decision path.
 - **Severity / Audience** — urgency tier (`info`/`warning`/`critical`) / who acts (business vs.
@@ -573,28 +623,29 @@ that fails: `FunctionErrors` typically transitions within minutes of the errored
 the failure re-breaches every tick; `InvocationsBelowMinimum` catches a stopped schedule within
 ~24 h.
 
-| #   | Failure                                                                       | System response                                                                                             | Audience / severity        | Retry                       |
-| --- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- |
-| 1   | Bad/missing env config at cold start                                          | Throws before the notifier exists — Lambda invocation error                                                 | — (alarm only)             | Next tick                   |
-| 2   | Secrets unreadable (SSM/KMS)                                                  | Whole-run failure: catch-all notify + rethrow                                                               | Ops / critical             | Next tick                   |
-| 3   | SNS publish itself fails                                                      | Error propagates → Lambda error; the alarm layer backstops the notifier                                     | — (alarm only)             | Next tick                   |
-| 4   | Lodgify list/read down, 401, 5xx, schema drift                                | Whole-run failure (can't enumerate)                                                                         | Ops / critical             | Next tick                   |
-| 5   | Lynx login fails (bad creds)                                                  | Whole-run failure                                                                                           | Ops / critical             | Next tick                   |
-| 6   | Lynx 401 mid-run                                                              | Re-mint once, retry the call; a second failure → whole-run                                                  | Ops / critical (2nd only)  | In-run once, then next tick |
-| 7   | Lynx down / 5xx / drift on one property                                       | Property-scoped failure: skip the property, continue _(depends on opus#201; today aborts the run)_          | Ops / warning              | Next tick                   |
-| 8   | `confirmationCode` unparseable                                                | Skip the reservation, continue                                                                              | Ops / warning (once)       | Next tick                   |
-| 9   | Same booking id resolved from two properties                                  | Keep the first entry, alert                                                                                 | Ops / warning              | Next tick                   |
-| 10  | Lodgify booking with no Lynx reservation                                      | Evidence event; the cause-agnostic no-code alert covers it at T0                                            | Business / critical (once) | Every tick                  |
-| 11  | Locks not ready (the normal case)                                             | Skip; transition evidence recorded                                                                          | none until T0              | Fast/slow tier per window   |
-| 12  | Still not ready at T0                                                         | Business alert (once, via the ledger) with per-lock status; capture keeps retrying                          | Business / critical (once) | Every tick (alert once)     |
-| 13  | No code email/SMS sent at T0 — or both channels failed inside the normal lead | Evidence event; the same cause-agnostic no-code alert (early on double failure), captured code in the body  | Business / critical (once) | Every tick (alert once)     |
-| 14  | `putKeyCodes` 404/400, or read-back mismatch                                  | Skip the booking; it remains a gap                                                                          | Ops / warning              | Next tick                   |
-| 15  | Booking missing `thread_uid`, or thread read fails                            | Skip that booking's thread scan                                                                             | Ops / warning (once)       | Next slow gate              |
-| 16  | Evidence-store write fails                                                    | Bounded evidence loss (standing conditions re-derive; a one-shot transition may lose its precise timestamp) | Ops metric; alarm on rate  | Next tick                   |
-| 17  | Alert-ledger read fails                                                       | Fire the alert anyway — a duplicate beats a silent miss                                                     | Ops metric                 | Next tick                   |
-| 18  | Post-capture code mutation detected                                           | Evidence event + alert; `key_code` is **not** auto-rewritten (a mutation is an anomaly to understand first) | Ops / warning              | Next slow gate              |
-| 19  | Access window doesn't cover the stay                                          | Evidence event + alert                                                                                      | Business / warning         | Next slow gate              |
-| 20  | Notes present but no parseable tag lines                                      | Ignored — notes are the manager's field; only tagged lines are ours                                         | —                          | —                           |
+| #   | Failure                                                                       | System response                                                                                                                                                | Audience / severity        | Retry                       |
+| --- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- |
+| 1   | Bad/missing env config at cold start                                          | Throws before the notifier exists — Lambda invocation error                                                                                                    | — (alarm only)             | Next tick                   |
+| 2   | Secrets unreadable (SSM/KMS)                                                  | Whole-run failure: catch-all notify + rethrow                                                                                                                  | Ops / critical             | Next tick                   |
+| 3   | SNS publish itself fails                                                      | Error propagates → Lambda error; the alarm layer backstops the notifier                                                                                        | — (alarm only)             | Next tick                   |
+| 4   | Lodgify list/read down, 401, 5xx, schema drift                                | Whole-run failure (can't enumerate)                                                                                                                            | Ops / critical             | Next tick                   |
+| 5   | Lynx login fails (bad creds)                                                  | Whole-run failure                                                                                                                                              | Ops / critical             | Next tick                   |
+| 6   | Lynx 401 mid-run                                                              | Re-mint once, retry the call; a second failure → whole-run                                                                                                     | Ops / critical (2nd only)  | In-run once, then next tick |
+| 7   | Lynx down / 5xx / drift on one property                                       | Property-scoped failure: skip the property, continue _(depends on opus#201; today aborts the run)_                                                             | Ops / warning              | Next tick                   |
+| 8   | `confirmationCode` unparseable                                                | Skip the reservation, continue                                                                                                                                 | Ops / warning (once)       | Next tick                   |
+| 9   | Same booking id resolved from two properties                                  | Keep the first entry, alert                                                                                                                                    | Ops / warning              | Next tick                   |
+| 10  | Lodgify booking with no Lynx reservation                                      | Evidence event; the cause-agnostic no-code alert covers it at T0                                                                                               | Business / critical (once) | Every tick                  |
+| 11  | Locks not ready (the normal case)                                             | Skip; transition evidence recorded                                                                                                                             | none until T0              | Fast/slow tier per window   |
+| 12  | Still not ready at T0                                                         | Business alert (once, via the ledger) with per-lock status; capture keeps retrying                                                                             | Business / critical (once) | Every tick (alert once)     |
+| 13  | No code email/SMS sent at T0 — or both channels failed inside the normal lead | Evidence event; the same cause-agnostic no-code alert (early on double failure), captured code in the body                                                     | Business / critical (once) | Every tick (alert once)     |
+| 14  | `putKeyCodes` 404/400, or read-back mismatch                                  | Skip the booking; it remains a gap                                                                                                                             | Ops / warning              | Next tick                   |
+| 15  | Booking missing `thread_uid`, or thread read fails                            | Skip that booking's thread scan                                                                                                                                | Ops / warning (once)       | Next slow gate              |
+| 16  | Evidence-store write fails                                                    | Bounded evidence loss (standing conditions re-derive; a one-shot transition may lose its precise timestamp)                                                    | Ops metric; alarm on rate  | Next tick                   |
+| 17  | Alert-ledger read fails                                                       | Fire the alert anyway — a duplicate beats a silent miss                                                                                                        | Ops metric                 | Next tick                   |
+| 18  | Post-capture code mutation detected                                           | Evidence event + alert; `key_code` is **not** auto-rewritten (a mutation is an anomaly to understand first)                                                    | Ops / warning              | Next slow gate              |
+| 19  | Access window doesn't cover the stay                                          | Evidence event + alert                                                                                                                                         | Business / warning         | Next slow gate              |
+| 20  | Notes present but no parseable tag lines                                      | Ignored — notes are the manager's field; only tagged lines are ours                                                                                            | —                          | —                           |
+| 21  | Digest build or SES send fails                                                | Not sent that tick; the ledger records only success, so the send retries every tick for the rest of the local day; an ops warning fires if the day ends unsent | Ops / warning (once)       | Every tick until day end    |
 
 ## Open questions / follow-ups
 
