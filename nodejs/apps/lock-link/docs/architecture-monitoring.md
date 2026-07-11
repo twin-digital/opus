@@ -1,11 +1,11 @@
-# sure-lock — monitoring architecture & design
+# lock-link — monitoring leg (staff-facing)
 
-**sure-lock** is the monitoring milestone of `@twin-digital/lock-link`: it watches the
-Lynx → guest door-code pipeline end to end, captures per-lock codes into **Lodgify** (the
-PMS / system of record for bookings), records durable evidence about how reliably **Lynx** (the
-smart-lock management system) behaves, and alerts the business when a situation needs a human.
-It sends **nothing to guests** — Lynx remains the delivery system; sure-lock measures it and
-backstops it with alerts.
+The **monitoring leg** of lock-link (working name **sure-lock**; system overview in
+[architecture.md](./architecture.md)) watches the Lynx → guest door-code pipeline end to end,
+captures per-lock codes into **Lodgify** (the PMS / system of record for bookings), records
+durable evidence about how reliably **Lynx** (the smart-lock management system) behaves, and
+alerts the business when a situation needs a human. It sends **nothing to guests** — Lynx
+remains the delivery system; this leg measures it and backstops it with alerts.
 
 Two goals drive the design:
 
@@ -20,10 +20,9 @@ Two goals drive the design:
    investigating one. Codes-in-alerts is an accepted trade-off: the exposure matches Lynx's own
    guest emails.
 
-The guest-messaging system — sending codes through Lodgify's inbox, the fallback-code pool for
-provisioning failures — is a planned **extension** of sure-lock, tracked separately. sure-lock
-is deliberately a subset: everything here (capture, timing, evidence, alerting) carries forward
-unchanged when the extension lands.
+The [delivery leg](./architecture-delivery.md) — sending codes through Lodgify's inbox, the
+fallback-code pool for provisioning failures — builds on this one: everything here (capture,
+timing, evidence, alerting) carries forward unchanged when it lands.
 
 **What it does:** a scheduled loop that, per tick —
 
@@ -92,11 +91,19 @@ the loop's behavior depends on reading it back.
 shape escalates — a free integrity check. Mechanics and the Lynx ID model:
 [lynx-api.md](./lynx-api.md).
 
+**Degraded mode: manual capture.** Capture and the Lynx-side observers are the only pieces
+that need the Lynx API. If Lynx access is ever lost — a breaking change that can't reasonably
+be accommodated, or access revoked outright — staff can read codes off the Lynx dashboard and
+enter them into Lodgify's key-code field by hand, and everything Lodgify-side keeps working:
+the no-code alert (with the hand-entered code in its body), thread and notes scanning, and the
+evidence those produce. What stops is Lynx-side evidence — readiness transitions,
+delivery-status, lock health.
+
 **Warm-path memoization.** An invocation may memoize **immutable facts** in module scope and
 skip re-reading them while the Lambda stays warm. The rule: memoize only **monotonic** facts,
 not mutable observations (not-ready, lock health), which are exactly what each tick exists to
 re-check. This serves a standing non-functional requirement: **minimize calls to the unofficial
-Lynx API**. sure-lock's Lynx footprint is read-only — `login` plus read endpoints; no
+Lynx API**. the monitoring leg's Lynx footprint is read-only — `login` plus read endpoints; no
 user-management or any other write ever occurs — which also keeps the integration's profile low.
 
 ---
@@ -119,7 +126,7 @@ EventBridge cron rate) is derived in `stack.ts` from the same constant that sets
 | `LL_POST_CHECKIN_GRACE_MINUTES` | 10      | minutes | Tightened grace once check-in time has passed              |
 | `LL_THREAD_TRAILING_HOURS`      | 24      | hours   | How long past departure threads stay watched               |
 
-The two leads share names and defaults with the guest-messaging extension: `NORMAL_LEAD_HOURS`
+The two leads share names and defaults with the [delivery leg](./architecture-delivery.md): `NORMAL_LEAD_HOURS`
 is the lead by which a code is normally in the guest's hands (there it opens the send window;
 here it bounds fast polling), and `FALLBACK_LEAD_HOURS` is the last-resort deadline (there the
 fallback pool issues; here the manager is the fallback, and the default leaves them a few hours
@@ -150,7 +157,9 @@ shorter than or equal to a tick.
 
 All three key off the **scheduled** tick time from the trigger event (`event.time`), not the
 wall clock — delivery jitter, cold starts, and async-retry redelivery all resolve to the same
-logical tick.
+logical tick. Snap the received time to the tick grid for sub-minute wobble. The interval-gate
+guarantee is "at most one action per interval"; if that one tick errors out, the interval is
+skipped — bounded staleness that never affects fast-tier gaps (checked every tick regardless).
 
 ### Cadence & Lynx tiering
 
@@ -159,7 +168,7 @@ urgency, not with the clock:
 
 - Gaps with arrival **inside `NORMAL_LEAD_HOURS`** (including past-check-in bookings) → Lynx
   re-checked **every tick**. These are the bookings where readiness latency is guest-facing —
-  and where sure-lock's latency measurements need tick-level resolution.
+  and where the latency measurements need tick-level resolution.
 - Gaps **outside** that window → Lynx re-checked only on the slow-interval gate. A booking
   arriving next week loses nothing by being re-checked hourly.
 - **Delivery-status checks** (email + SMS) follow the same tiering, for every in-horizon
@@ -191,12 +200,12 @@ evidence needs to show. A 60-day pre-launch distribution of these classes is rec
 
 Lynx keeps no event history (no timestamps on reservations or access codes, and `past`
 reservations clear `accessCodes` — see [lynx-api.md](./lynx-api.md)), so provisioning latency
-can only be measured by observing transitions live. This is sure-lock's core job: per booking,
+can only be measured by observing transitions live. This is the monitoring leg's core job: per booking,
 the observed transitions (first seen as gap, first seen ready, captured) with the Lodgify
 `created_at` as the clock-start. Resolution equals the polling cadence — one tick inside the
 fast window, the slow interval outside it. The pre-launch baseline (two observed provisioning
 latencies at ±1 h resolution, from the earlier hourly sync) is in
-[calibration-baseline.md](./calibration-baseline.md); sure-lock's records supersede it.
+[calibration-baseline.md](./calibration-baseline.md); this leg's live records supersede it.
 
 ---
 
@@ -233,7 +242,7 @@ it). Encoding:
 
 The **stateless diff** follows from the convention: compare the booking's current `key_code` to
 the string we would write, and write only when they differ. Capture serves three purposes in
-sure-lock: it is the stateless capture-state marker, it is the code source for alert bodies (so
+the monitoring leg: it is the stateless capture-state marker, it is the code source for alert bodies (so
 the manager can relay a code without opening the Lynx dashboard), and it is the reference value
 the capture verifier diffs against.
 
@@ -242,7 +251,7 @@ the capture verifier diffs against.
 On the slow gate, captured in-horizon bookings are re-checked against Lynx: decode the stored
 `key_code`, compare against the reservation's current codes, and record + alert (ops) on any
 difference. This is an anomaly signal for the evidence trail and it directly tests the
-**static-codes assumption** the messaging extension depends on — if codes ever rotate after
+**static-codes assumption** the [delivery leg](./architecture-delivery.md) depends on — if codes ever rotate after
 provisioning, that needs to be known before guest messages carry captured codes.
 
 ### Access-window check
@@ -300,43 +309,43 @@ capture or alerting.
 
 ## Metrics catalog
 
-What sure-lock measures, which goal each serves, and what it depends on:
+What the monitoring leg measures, which goal each serves, and what it depends on:
 
-| Metric                                                                     | Serves                         | Status                             |
-| -------------------------------------------------------------------------- | ------------------------------ | ---------------------------------- |
-| Provisioning latency (created → ready → captured), segmented               | evidence, calibration          | ready — proven contracts           |
-| **Check-in miss rate** (% without a working code at check-in / both leads) | evidence (headline)            | ready — derived from transitions   |
-| Bookings absent from Lynx entirely                                         | evidence, alerting             | ready                              |
-| Per-lock sync-lag attribution                                              | evidence                       | ready                              |
-| Lock/hub health time-series (offline windows, battery, jams)               | evidence, alerting             | ready                              |
-| Access-window mismatches                                                   | evidence, alerting             | ready                              |
-| Post-capture code mutation                                                 | evidence, extension de-risking | ready                              |
-| Guest access complaints (thread)                                           | evidence, alerting             | ready — keyword list open          |
-| Manual workarounds (host code sends + tagged phone notes)                  | evidence                       | notes round-trip probe pending     |
-| Lynx email/SMS send failures                                               | evidence, alerting             | ready — sent ≠ received caveat     |
-| Email/SMS send timing vs. check-in, by channel + class                     | evidence                       | ready — observed-transition timing |
+| Metric                                                                     | Serves                        | Status                             |
+| -------------------------------------------------------------------------- | ----------------------------- | ---------------------------------- |
+| Provisioning latency (created → ready → captured), segmented               | evidence, calibration         | ready — proven contracts           |
+| **Check-in miss rate** (% without a working code at check-in / both leads) | evidence (headline)           | ready — derived from transitions   |
+| Bookings absent from Lynx entirely                                         | evidence, alerting            | ready                              |
+| Per-lock sync-lag attribution                                              | evidence                      | ready                              |
+| Lock/hub health time-series (offline windows, battery, jams)               | evidence, alerting            | ready                              |
+| Access-window mismatches                                                   | evidence, alerting            | ready                              |
+| Post-capture code mutation                                                 | evidence, delivery de-risking | ready                              |
+| Guest access complaints (thread)                                           | evidence, alerting            | ready — keyword list open          |
+| Manual workarounds (host code sends + tagged phone notes)                  | evidence                      | notes round-trip probe pending     |
+| Lynx email/SMS send failures                                               | evidence, alerting            | ready — sent ≠ received caveat     |
+| Email/SMS send timing vs. check-in, by channel + class                     | evidence                      | ready — observed-transition timing |
 
 The check-in miss rate is the headline: "per Lynx's own API, X of Y guests had no working code
 at check-in this month" is the sentence that turns vibes into a support ticket.
 
 ## Watching the guest thread & booking notes
 
-Lodgify's official API exposes both surfaces read-only to sure-lock (wire details:
+Lodgify's official API exposes both surfaces read-only to the monitoring leg (wire details:
 [lodgify-api.md](./lodgify-api.md)):
 
 - **Guest complaints**: `Renter`-type messages in the booking's thread are matched against a
   configurable keyword list (door code / lock / access terms). A match records an event (keyed
   by the thread message id, so re-scans can't duplicate it) and raises a business alert carrying
   the captured code. The exact term list is tuned with the property manager.
-- **Manual code sends**: since sure-lock sends nothing, every `Owner`-type message is the
+- **Manual code sends**: since this leg sends nothing, every `Owner`-type message is the
   manager's. One containing a door code (the captured code, or a code-shaped token) is recorded
   as a manual workaround — measuring what unreliable delivery costs in human effort today, and
-  providing the before/after baseline for the messaging extension.
+  providing the before/after baseline for the delivery leg.
 - **Phone workarounds**: Lodgify's inbox has no internal-notes feature, but the **booking's
   `notes` field** (editable by the manager in the Lodgify dashboard and mobile app, readable via
   the API) serves as the log. Convention: a line starting with a tag (working default
   `#code-call`, final form agreed with the manager) records a phone-call workaround; the notes
-  scanner parses tagged lines into events, deduplicated by line content. sure-lock reads `notes`
+  scanner parses tagged lines into events, deduplicated by line content. lock-link reads `notes`
   and never writes it, so there is no clobbering risk against the manager's edits.
 
 **Scan window & cost**: threads and notes are scanned on the slow gate, for bookings from
@@ -351,7 +360,7 @@ Lynx sends guests their codes itself, by email and SMS, and its dashboard API re
 channel's outcome per reservation: `getAccessCodeEmailStatus` and `getAccessCodeSMSStatus`
 return a tri-state `sentStatus` — not yet attempted / sent / failed (wire details:
 [lynx-api.md](./lynx-api.md#access-code-email--sms-status--getaccesscodeemailstatus--getaccesscodesmsstatus)).
-sure-lock polls both for in-horizon reservations on the same fast/slow tiering as readiness,
+lock-link polls both for in-horizon reservations on the same fast/slow tiering as readiness,
 records the transitions as `lynx-email-sent` / `-failed` and `lynx-sms-sent` / `-failed`
 events, and stops polling a channel once its `sent` is observed (a send is monotonic, so it
 memoizes).
@@ -372,14 +381,14 @@ What this yields:
 ⚠️ Two caveats keep the evidence honest. `sentStatus: 1` means Lynx **dispatched** the message,
 not that the guest received it — an OTA relay silently discarding an email presumably still
 reads `sent`, so the suspected relay-blocking failure mode stays invisible here and surfaces
-only as guest complaints (which sure-lock counts; correlating `sent` bookings with complaints
+only as guest complaints (which this leg counts; correlating `sent` bookings with complaints
 is part of the analysis). And each status is a single tri-state per reservation with no
 history — any retries or manual re-sends collapse into the current value.
 
 **Historical backfill**: statuses are retained for past reservations (confirmed; unlike
 `accessCodes`, which `past` reservations clear), so a one-time sweep of the `past` reservation
 list yields a retroactive send-failure baseline per channel — evidence covering months before
-sure-lock launched. Run it at first deploy.
+lock-link launched. Run it at first deploy.
 
 ## Lock & hub health
 
@@ -434,7 +443,7 @@ whole-run failure.
 
 **Alerts fire once per condition**, deduplicated by the alert ledger (see the evidence store).
 The underlying _action_ still retries every tick — the schedule is the retry; only the alert is
-one-shot. Configurable re-alerting with an acknowledge mechanism is extension material.
+one-shot. Configurable re-alerting with an acknowledge mechanism is delivery-leg-era material.
 
 **Plumbing**: one `Notifier` interface (`createSnsNotifier` publishes with severity as the
 subject prefix and audience + severity as message attributes), backed by **two SNS topics**
@@ -558,6 +567,12 @@ re-mint on a Lynx 401); every per-booking failure leaves state untouched so the 
 re-attempts. EventBridge's async redelivery (up to 2 retries on function error) is harmless by
 the same idempotency.
 
+**Alarm latency**: the `Notifier` is the fast path — a whole-run failure SNS-publishes before
+rethrowing, reaching the operator in seconds. CloudWatch alarms are the backstop for when even
+that fails: `FunctionErrors` typically transitions within minutes of the errored invocation and
+the failure re-breaches every tick; `InvocationsBelowMinimum` catches a stopped schedule within
+~24 h.
+
 | #   | Failure                                                                       | System response                                                                                             | Audience / severity        | Retry                       |
 | --- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | --------------------------- |
 | 1   | Bad/missing env config at cold start                                          | Throws before the notifier exists — Lambda invocation error                                                 | — (alarm only)             | Next tick                   |
@@ -595,9 +610,9 @@ the same idempotency.
   semantics: deterministic one-shot events, observation-keyed recurring events, denormalized
   dimensions).
 
-Extension material — guest messaging through Lodgify's inbox, the fallback-code pool and its
-reconciler, configurable re-alerting — is deliberately absent here and tracked with the
-messaging-pivot architecture work. The timing knobs are shared by name and default: when the
-extension lands, `NORMAL_LEAD_HOURS` opens the send window, `FALLBACK_LEAD_HOURS` drives pool
-issuance instead of a manual intervention, the capture phase is unchanged, and the evidence
-store's calibration data is what prices those knobs.
+Guest messaging through Lodgify's inbox, the fallback-code pool and its reconciler, and
+configurable re-alerting are deliberately absent here — they belong to the
+[delivery leg](./architecture-delivery.md). The timing knobs are shared by name and default:
+when that leg lands, `NORMAL_LEAD_HOURS` opens the send window, `FALLBACK_LEAD_HOURS` drives
+pool issuance instead of a manual intervention, the capture phase is unchanged, and the
+evidence store's calibration data is what prices those knobs.

@@ -2,7 +2,7 @@
 
 The Lodgify (short-term-rental PMS / channel manager, internally "Hotel") side of lock-link.
 This is the **how** — every endpoint, wire shape, and quirk we depend on. For what the system
-does with these calls and when, see [architecture-sure-lock.md](./architecture-sure-lock.md).
+does with these calls and when, see [architecture-monitoring.md](./architecture-monitoring.md).
 
 ## Provenance
 

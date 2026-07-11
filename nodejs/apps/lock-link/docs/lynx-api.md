@@ -2,7 +2,7 @@
 
 The Lynx (smart-lock management, internally "Cat") side of lock-link. This is the **how** — every
 endpoint, wire shape, and quirk we depend on. For what the system does with this data and when,
-see [architecture-sure-lock.md](./architecture-sure-lock.md).
+see [architecture-monitoring.md](./architecture-monitoring.md).
 
 ## Provenance
 
@@ -32,7 +32,7 @@ pasted token.
   but the wire field is `email`).
 - Response: a **JWT in the `x-auth-token` response header** (not the body). `exp ≈ 95 days`.
 - Use as `Authorization: Bearer <token>` on subsequent calls.
-- **Cache the token** (durably, in SSM — see architecture-sure-lock.md); **re-mint on `401`**. HTTPS only;
+- **Cache the token** (durably, in SSM — see architecture-monitoring.md); **re-mint on `401`**. HTTPS only;
   creds/token never logged. The `LynxLogins` metric counts every mint; more than ~4/year is
   churn worth investigating.
 
@@ -139,7 +139,7 @@ ids replaced with fakes).
 - Statuses are **retained after checkout** (confirmed against old reservations) — unlike
   `accessCodes`, which `past` reservations clear — so a retroactive sweep of past reservations
   works (see
-  [architecture-sure-lock.md](./architecture-sure-lock.md#lynx-email--sms-delivery-status)).
+  [architecture-monitoring.md](./architecture-monitoring.md#lynx-email--sms-delivery-status)).
 
 ## Lock set & health — `getSmartLocksByPropertyWithStatus`
 
@@ -168,7 +168,7 @@ ids replaced with fakes).
 ## User management & task codes
 
 The fallback-code pool planned for the guest-messaging extension (sure-lock itself makes no
-Lynx writes — see [architecture-sure-lock.md](./architecture-sure-lock.md)) rides on Lynx's
+Lynx writes — see [architecture-monitoring.md](./architecture-monitoring.md)) rides on Lynx's
 task-code user mechanism. Request/response shapes below are captured from live dashboard
 traffic (2026-07-10); samples are anonymized (names, emails, phone numbers replaced with fakes).
 ⚠️ The one unverifiable behavior — whether/when a deleted user's code actually leaves lock
