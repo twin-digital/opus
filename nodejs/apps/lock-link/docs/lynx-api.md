@@ -2,7 +2,7 @@
 
 The Lynx (smart-lock management, internally "Cat") side of lock-link. This is the **how** — every
 endpoint, wire shape, and quirk we depend on. For what the system does with this data and when,
-see [architecture.md](./architecture.md).
+see [architecture-monitoring.md](./architecture-monitoring.md).
 
 ## Provenance
 
@@ -32,7 +32,7 @@ pasted token.
   but the wire field is `email`).
 - Response: a **JWT in the `x-auth-token` response header** (not the body). `exp ≈ 95 days`.
 - Use as `Authorization: Bearer <token>` on subsequent calls.
-- **Cache the token** (durably, in SSM — see architecture.md); **re-mint on `401`**. HTTPS only;
+- **Cache the token** (durably, in SSM — see architecture-monitoring.md); **re-mint on `401`**. HTTPS only;
   creds/token never logged. The `LynxLogins` metric counts every mint; more than ~4/year is
   churn worth investigating.
 
@@ -96,6 +96,51 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 | `rentalMarketPlace`                     | `LODGIFY`          | constant (the PMS), not a key                                       |
 | `bookingSource`                         | `12`               | int channel code (Expedia here); useful to spot non-Expedia records |
 
+## Access-code email & SMS status — `getAccessCodeEmailStatus` / `getAccessCodeSMSStatus`
+
+Lynx's own record of whether it delivered a reservation's door code to the guest, one endpoint
+per channel. Captured from live dashboard traffic (2026-07-11); samples sanitized (reservation
+ids replaced with fakes).
+
+- `POST https://api.getlynx.co/ProdV1.1/dashboard/getAccessCodeEmailStatus` (email)
+- `POST https://api.getlynx.co/ProdV1.1/dashboard/getAccessCodeSMSStatus` (SMS) — identical
+  body and response shape. ⚠️ The SMS response's payload key is **also `accessCodeEmail`**
+  (evidently copied on Lynx's side) — one shared schema models both.
+- Body: `{ "hostId": "<per-user id>", "loggedInUserId": "<per-user id>", "propertyId": 72230, "bookingType": 1, "reservationId": 10490339 }`
+  - `reservationId` is the **Lynx-internal reservation id** — the reservations list's
+    `bookingId` field, NOT the Lodgify booking id (confirmed).
+  - `bookingType` observed as the constant `1`; meaning unknown — mirror the dashboard.
+- Response: `data.accessCodeEmail = { reservationId, sentStatus, errorMessage }`, one
+  reservation and one channel per call.
+
+| `sentStatus` | Meaning (inferred from live samples) |
+| ------------ | ------------------------------------ |
+| `0`          | not yet attempted                    |
+| `1`          | sent                                 |
+| `2`          | error — the send failed              |
+
+```json
+{
+  "status": true,
+  "errorCodeId": 0,
+  "errorMessage": "",
+  "data": {
+    "accessCodeEmail": { "reservationId": 10490339, "sentStatus": 1, "errorMessage": "" }
+  }
+}
+```
+
+- ⚠️ `errorMessage` observed **empty even when `sentStatus` is `2`** — expect no failure detail
+  beyond the status itself.
+- ⚠️ **No timestamp** — current state only, like the rest of the API; the send _time_ is only
+  measurable by observing the `0 → 1` transition live.
+- ⚠️ `sentStatus: 1` means Lynx **dispatched** the message, not that the guest received it — a
+  relay address silently discarding an email would presumably still read `1`.
+- Statuses are **retained after checkout** (confirmed against old reservations) — unlike
+  `accessCodes`, which `past` reservations clear — so a retroactive sweep of past reservations
+  works (see
+  [architecture-monitoring.md](./architecture-monitoring.md#lynx-email--sms-delivery-status)).
+
 ## Lock set & health — `getSmartLocksByPropertyWithStatus`
 
 - `POST https://api.getlynx.co/ProdV1.1/dashboard/getSmartLocksByPropertyWithStatus`
@@ -122,8 +167,8 @@ confirmationCode = <lodgifyBookingId> + "VK" + <accountId>
 
 ## User management & task codes
 
-The emergency-pool reconciler (see
-[architecture.md](./architecture.md#the-pool-reconciler-automated-rotation)) rides on Lynx's
+The fallback-code pool planned for the guest-messaging extension (sure-lock itself makes no
+Lynx writes — see [architecture-monitoring.md](./architecture-monitoring.md)) rides on Lynx's
 task-code user mechanism. Request/response shapes below are captured from live dashboard
 traffic (2026-07-10); samples are anonymized (names, emails, phone numbers replaced with fakes).
 ⚠️ The one unverifiable behavior — whether/when a deleted user's code actually leaves lock
@@ -444,8 +489,8 @@ usual wire-drift caution applies; model only what we consume.
   (minutes-to-hours?), and there is **no signal to monitor** — no pending-style read exists for
   removal, so "did the lock actually forget the code" cannot be verified from the API.
   Unremoved codes remain the largest blast-radius item (finite lock memory), but convergence
-  tracking is not a usable mitigation; **minimizing consumption/rotation is** (see the reuse
-  policy in architecture.md). There is also an unconfirmed suspicion that code removals trigger
+  tracking is not a usable mitigation; **minimizing consumption/rotation is** (a reuse policy
+  belongs to the extension's pool design). There is also an unconfirmed suspicion that code removals trigger
   manual checks by Lynx support staff — another reason to keep rotation rare.
 
 An endpoint also exists to retrieve the groups assigned to a user — not yet captured; add here
@@ -455,6 +500,6 @@ if the reconciler ends up needing it.
 
 `POST https://api.getlynx.co/ProdV1.1/logActivity/getActivities` returns a record of every
 unlock event, including **which user unlocked**. Not yet captured or probed — relevant to the
-stretch goal of monitoring emergency-code usage outside an expected window (see
-architecture.md open questions), which would also be the only available signal that a "deleted"
+stretch goal of monitoring emergency-code usage outside an expected window (extension
+material), which would also be the only available signal that a "deleted"
 code is still live on a lock.

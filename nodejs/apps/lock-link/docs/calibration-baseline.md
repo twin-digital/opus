@@ -1,6 +1,6 @@
 # Calibration baseline (2026-07-09)
 
-Pre-launch seed data for the timing knobs in [architecture.md](./architecture.md#timing),
+Pre-launch seed data for the timing knobs in [architecture-monitoring.md](./architecture-monitoring.md#timing),
 gathered before the messaging pivot ships. Two sources: mining the hourly-cadence sync logs for
 observed Lynx provisioning latency (n=2 — the calibration metrics will supersede this), and the
 Lodgify API for a 60-day booking-timing distribution (n=91). Recorded here because the logs age
