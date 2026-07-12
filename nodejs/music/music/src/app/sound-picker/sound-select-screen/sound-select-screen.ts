@@ -37,6 +37,7 @@ export const createSoundSelectScreen = ({
     }
   }
 
+  // The family selector occupies the top three rows (7-5); the instrument area fills the five rows below (4-0).
   return () =>
     group(
       translate(
@@ -49,7 +50,7 @@ export const createSoundSelectScreen = ({
       ),
       translate(
         0,
-        5,
+        4,
         makeInstrumentSelector({
           instrumentFamily: currentSelectedFamily,
           onInstrumentSelected: selectInstrument,

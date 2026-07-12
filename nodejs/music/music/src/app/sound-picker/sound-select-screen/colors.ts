@@ -1,4 +1,4 @@
-import type { Instrument, InstrumentFamily, InstrumentFamilyName } from '../../../midi/instrument-data.js'
+import type { InstrumentFamily, InstrumentFamilyName } from '../../../midi/instrument-data.js'
 import type { RgbColor } from '../../../ui/color.js'
 
 export const InstrumentFamilyColors = {
@@ -18,13 +18,13 @@ export const InstrumentFamilyColors = {
   Ethnic: [96, 64, 0], // Earthy Brown — traditional, rooted
   Percussive: [127, 96, 64], // Warm Sand — rhythmic, textured
   'Sound Effect': [64, 64, 127], // Steel Blue — abstract, cinematic
-  'Drum Kit': [0, 0, 0], // not rendered here
+  'Drum Kit': [127, 0, 0], // Red — driving, rhythmic
 } satisfies Record<InstrumentFamilyName, RgbColor>
 
-export const getInstrumentColor = (family: InstrumentFamily, instrument: Instrument, isSelected: boolean): RgbColor => {
+export const getInstrumentColor = (family: InstrumentFamily, column: number, isSelected: boolean): RgbColor => {
   const familyColor = InstrumentFamilyColors[family.name as InstrumentFamilyName]
 
   const factors = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-  const factor = factors[instrument.patch - family.firstPatch]
+  const factor = factors[column]
   return isSelected ? [0, 127, 0] : (familyColor.map((c) => Math.round(c * factor)) as RgbColor)
 }
