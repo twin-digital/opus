@@ -36,6 +36,7 @@ catalog:
   tsdown: ^0.18.3
   typescript: ^6.0.0
   typescript-eslint: ^8.47.0
+  vite: ^6.3.5
   vitest: ^4.0.12
   '@vitest/coverage-istanbul': 4.1.9
   yaml: ^2.8.2
@@ -45,6 +46,7 @@ catalog:
 # install scripts is now the `allowBuilds` map. `strictDepBuilds` defaults to true,
 # so anything not listed here fails the install rather than silently skipping.
 allowBuilds:
+  '@julusian/midi': true
   esbuild: true
   hnswlib-node: true
   serverless: true

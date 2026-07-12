@@ -1,0 +1,6 @@
+{
+  "extends": ["@twin-digital/tsconfig/tsconfig.vite.json"],
+  "compilerOptions": {
+    "customConditions": ["source"]
+  }
+}
