@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda'
 import { logMetrics } from '@aws-lambda-powertools/metrics/middleware'
+import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware'
 import { createLogger } from '../core/logger.js'
 import { createMetrics } from '../core/metrics.js'
 import { createTracer } from '../core/tracer.js'
@@ -160,9 +161,27 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
     captureColdStartMetric: options.captureColdStart ?? false,
   })
 
+  // Compose with Powertools tracer middleware. Its `before` opens an X-Ray subsegment
+  // for the invocation; we then add annotations on THAT subsegment rather than on the
+  // Lambda-provided facade segment — which Powertools refuses to annotate, emitting
+  // "cannot annotate the main segment in a Lambda execution environment" if we try.
+  const tracerMiddleware = tracer ? captureLambdaHandler(tracer) : null
+
+  // Per-invocation state tracking which sub-middlewares' `before` succeeded so `after`
+  // / `onError` don't call cleanup on an uninitialized middleware — Powertools'
+  // `captureLambdaHandler.onError` reads the subsegment stack, and calling it without
+  // a paired `before` would try to close a segment that was never opened. Lambda runs
+  // one invocation per container at a time, so closure-scoped booleans are safe.
+  let tracerOpened = false
+  let metricsStarted = false
+
   return {
-    before: (request) => {
+    before: async (request) => {
       const { event, context } = request
+
+      // Open the subsegment first so downstream annotations land on it, not on the facade.
+      await tracerMiddleware?.before?.(request)
+      tracerOpened = tracerMiddleware !== null
 
       // Create a fresh logger for this invocation with contextual information
       const requestId = getRequestId(event, context)
@@ -184,7 +203,8 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
       // AsyncLocalStorage will automatically isolate this between concurrent invocations
       setLogger(logger)
 
-      // Add annotations to trace
+      // Add annotations to trace — safe now because captureLambdaHandler.before ran first
+      // and the current segment is a subsegment (not the Lambda facade).
       if (tracer) {
         tracer.putAnnotation('correlationId', correlationId)
         if (userId) {
@@ -199,17 +219,41 @@ export const observabilityMiddleware = <TEvent = unknown, TResult = unknown>(
       context.tracer = tracer
 
       // Delegate to Powertools metrics middleware for metric handling
-      metricsMiddleware.before?.(request)
+      await metricsMiddleware.before?.(request)
+      metricsStarted = true
     },
 
-    after: (request) => {
-      // Delegate to Powertools metrics middleware
-      metricsMiddleware.after?.(request)
+    after: async (request) => {
+      // try/finally so a metrics flush failure doesn't leak the X-Ray subsegment into
+      // the warm container's next invocation — `captureLambdaHandler.after` must run.
+      try {
+        if (metricsStarted) {
+          await metricsMiddleware.after?.(request)
+        }
+      } finally {
+        if (tracerOpened) {
+          await tracerMiddleware?.after?.(request)
+        }
+        tracerOpened = false
+        metricsStarted = false
+      }
     },
 
-    onError: (request) => {
-      // Delegate to Powertools metrics middleware
-      metricsMiddleware.onError?.(request)
+    onError: async (request) => {
+      // Same try/finally shape as `after` — a metrics-flush throw on the error path
+      // is the exact scenario where losing the subsegment close matters most (a warm
+      // container ends up with an unclosed segment across every subsequent invocation).
+      try {
+        if (metricsStarted) {
+          await metricsMiddleware.onError?.(request)
+        }
+      } finally {
+        if (tracerOpened) {
+          await tracerMiddleware?.onError?.(request)
+        }
+        tracerOpened = false
+        metricsStarted = false
+      }
     },
   }
 }

@@ -65,20 +65,26 @@ returns them as plaintext** — so no scraping or OCR is needed.
   arrival) and `current` (catches same-day / in-house).** **`past` returns `accessCodes: []`** (codes
   are cleared after checkout) — skip it, and don't let empty-on-past trip escalation.
 - Access code: `data.reservations[].accessCodes[].code` (plaintext, e.g. `"9234"`; same code across
-  all of a reservation's locks). Each entry also carries provisioning status: `isCodeSet`,
-  `isHubCommunicated`, `syncToLockStatus`, `syncToCloudStatus`.
+  all of a reservation's locks). Each entry also carries `syncToLockStatus` (the readiness
+  signal) and `syncToCloudStatus`. Lynx additionally emits `isCodeSet` / `isHubCommunicated`
+  int-booleans; not modeled in the schema — see the smart-lock note below.
 
 ### Lock set & health — `getSmartLocksByPropertyWithStatus`
 
 - `POST https://api.getlynx.co/ProdV1.1/dashboard/getSmartLocksByPropertyWithStatus`
 - Body: `{ hostId, loggedInUserId, propertyId, page, perPage, isHubAndLockStatusRequired: true, provisioningInfo: true, skipDeviceStatusApiCall: false }`
 - Returns `data.smartLocksInfo[]` — **the property's full lock set** (`paginationInfo.total` = lock
-  count; property `72230` has **3**: Dalton Door, 4th Street Lofts, Front Door) plus per-lock
-  health: `provisionStatus` (int status code), `connectivityStatus` (`ONLINE`/`OFFLINE`),
-  `batteryLevel`, `isJammed` (int `0`/`1`), `provisioningInfo`, `syncToLockStatus`,
-  `lockModelUniqueName` (e.g. `SCHLAGE_ENCODE`, `REMOTELOCK_ACS`).
-- This gives the **denominator** for "all locks ready" (how many locks a reservation must cover) and
-  the health context for escalation messages.
+  count; property `72230` has **3**: Dalton Door, 4th Street Lofts, Front Door). Each entry has
+  a `lockName` (the join key against a reservation's per-lock access-code entry) plus health
+  metadata: `provisionStatus`, `connectivityStatus`, `batteryLevel`, `isJammed`,
+  `provisioningInfo`, `syncToLockStatus`, `lockModelUniqueName`.
+- The sync consumes only `lockName`. Health-metadata wire types have drifted repeatedly
+  (`isJammed` swung boolean → int → other; `batteryLevel` swung number → string) and
+  strict schemas for fields we don't read block the sync on validation errors that don't
+  affect behavior. `smartLockSchema` therefore models only `lockName`; the rest is
+  stripped on parse (zod's default `.strip()`) and immune to further wire drift. Add
+  fields back — typed against observed wire data at the time — when a consumer lands.
+- This gives the **denominator** for "all locks ready" (how many locks a reservation must cover).
 - A lock's `erCode` here is its **base/default** code, **not** the per-reservation guest code (which
   lives in the reservation's `accessCodes[].code`).
 
@@ -111,8 +117,8 @@ transient errors), so a reservation legitimately spends part of its life only pa
 "All locks set to one code" is therefore a **readiness signal, not an always-true invariant.**
 
 - **Ready** = the reservation's `accessCodes` cover **every** lock in the property's lock set (count
-  from `getSmartLocksByPropertyWithStatus`), each with **`syncToLockStatus: "success"`** (`isCodeSet:
-1`), all the same `code`. ⚠️ The `code` is assigned up front and **uniform across all locks even
+  from `getSmartLocksByPropertyWithStatus`), each with **`syncToLockStatus: "success"`**, all the
+  same `code`. ⚠️ The `code` is assigned up front and **uniform across all locks even
   while a lock is `"scheduled"`** (assigned but not yet pushed to the lock) — so "all locks have the
   same code" is **not** a readiness signal; **`syncToLockStatus: "success"` is.** Only when all locks
   are `success` do we push to Lodgify — **never push a partial/unsynced code** (a code that opens

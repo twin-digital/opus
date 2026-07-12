@@ -43,7 +43,13 @@ interface ReservationSpec {
   readonly lodgifyKeyCode?: string
   readonly type?: ReservationType
   readonly status?: Booking['status']
+  /** Which Lodgify `stayFilter` bucket surfaces this booking. Defaults to `Upcoming`
+   * (guest hasn't arrived); use `Current` to model a booking whose check-in-time has
+   * already passed (guest checked in but not yet checked out). */
+  readonly stayCategory?: LodgifyStayCategory
 }
+
+export type LodgifyStayCategory = 'Upcoming' | 'Current' | 'Historic'
 
 /** A Lynx reservation tagged with the property + poll bucket it belongs to. */
 interface SeededReservation {
@@ -57,6 +63,9 @@ interface RequestLog {
   readonly path: string
   /** The Lynx dashboard action (last path segment), when applicable. */
   readonly action?: string
+  /** Query params as sent (Lodgify only for now); enables tests to assert
+   * which `stayFilter` / pagination knobs a request carried. */
+  readonly query?: URLSearchParams
 }
 
 export interface World {
@@ -70,20 +79,19 @@ export interface World {
   readonly locksByProperty: Map<number, SmartLock[]>
   readonly reservations: SeededReservation[]
   readonly bookings: Map<number, Booking>
+  /** The Lodgify `stayFilter` bucket(s) each booking lives in. A Set (not a single
+   * value) so tests can model the transition race where a booking briefly appears in
+   * both `Upcoming` and `Current` — the dedup contract in `runSync` says `Current`
+   * wins on collision, and the E2E path can only exercise that if the fake can double-
+   * list. Bookings without an entry default to `{ Upcoming }`. */
+  readonly stayCategoriesByBookingId: Map<number, Set<LodgifyStayCategory>>
   readonly lynxRequests: RequestLog[]
   readonly lodgifyRequests: RequestLog[]
   addProperty: (spec: { propertyId: number; name?: string; lockNames?: readonly string[] }) => void
   addReservation: (spec: ReservationSpec) => void
 }
 
-const aLock = (lockName: string): SmartLock => ({
-  lockName,
-  connectivityStatus: 'ONLINE',
-  batteryLevel: 90,
-  isJammed: 0,
-  provisionStatus: 1,
-  lockModelUniqueName: 'SCHLAGE_ENCODE',
-})
+const aLock = (lockName: string): SmartLock => ({ lockName })
 
 export const createWorld = (
   options: {
@@ -104,6 +112,7 @@ export const createWorld = (
     locksByProperty: new Map(),
     reservations: [],
     bookings: new Map(),
+    stayCategoriesByBookingId: new Map(),
     lynxRequests: [],
     lodgifyRequests: [],
 
@@ -159,8 +168,6 @@ export const createWorld = (
             (lockName): AccessCode => ({
               lockName,
               code: spec.code ?? '',
-              isCodeSet: synced ? 1 : 0,
-              isHubCommunicated: 1,
               syncToLockStatus: synced ? 'success' : 'scheduled',
               syncToCloudStatus: 'success',
             }),
@@ -198,6 +205,7 @@ export const createWorld = (
         },
         rooms: [{ room_type_id: roomTypeId, key_code: spec.lodgifyKeyCode ?? '' }],
       })
+      world.stayCategoriesByBookingId.set(spec.bookingId, new Set([spec.stayCategory ?? 'Upcoming']))
     },
   }
 

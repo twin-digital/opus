@@ -23,8 +23,9 @@ const sendError = (res: ServerResponse, status: number, code: string, message: s
 export const startLodgifyFake = (world: World): Promise<Fake> =>
   startServer(async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const method = req.method ?? 'GET'
-    const path = new URL(req.url ?? '/', 'http://localhost').pathname
-    world.lodgifyRequests.push({ method, path })
+    const url = new URL(req.url ?? '/', 'http://localhost')
+    const path = url.pathname
+    world.lodgifyRequests.push({ method, path, query: url.searchParams })
 
     if (req.headers['x-apikey'] !== world.lodgifyApiKey) {
       sendError(res, 401, 'Unauthorized', 'Invalid or missing X-ApiKey')
@@ -77,8 +78,26 @@ export const startLodgifyFake = (world: World): Promise<Fake> =>
     }
 
     if (path === '/v2/reservations/bookings' && method === 'GET') {
-      const items = [...world.bookings.values()].filter((b) => !b.is_deleted)
-      sendJson(res, 200, bookingSetSchema.parse({ count: items.length, items }))
+      // Mirror real Lodgify: filter by stayFilter first, then slice by page/size. The
+      // sync now queries both `Upcoming` and `Current` and walks every page, so the fake
+      // has to model both dimensions or the tests won't catch a regression to either.
+      const stayFilter = url.searchParams.get('stayFilter')
+      const all = [...world.bookings.values()].filter((b) => {
+        if (b.is_deleted) {
+          return false
+        }
+        // Absent or explicit `All` filter → return everything (matches Lodgify).
+        if (stayFilter === null || stayFilter === 'All') {
+          return true
+        }
+        const cats = world.stayCategoriesByBookingId.get(b.id) ?? new Set(['Upcoming'])
+        return cats.has(stayFilter as 'Upcoming' | 'Current' | 'Historic')
+      })
+      const page = Number(url.searchParams.get('page') ?? '1')
+      const size = Number(url.searchParams.get('size') ?? '50')
+      const start = (page - 1) * size
+      const items = all.slice(start, start + size)
+      sendJson(res, 200, bookingSetSchema.parse({ count: all.length, items }))
       return
     }
 

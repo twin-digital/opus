@@ -33,35 +33,110 @@ export interface SyncDeps {
   readonly now: number
 }
 
+export type OutcomeAction = 'written' | 'escalated' | 'skipped'
+
+/** What happened to one identified gap during a run — the unit of per-run logging. */
+export interface Outcome {
+  readonly bookingId: number
+  readonly action: OutcomeAction
+  /** The Lynx confirmation code when a Lynx entry was found — the join key back. */
+  readonly confirmationCode?: string
+  /** For `written`: the code pushed to Lodgify. */
+  readonly code?: string
+  /** For `written`: the Lodgify room_type_ids that received the code. */
+  readonly roomTypeIds?: readonly number[]
+  /** For `skipped` / `escalated`: why. Multiple lines for multi-cause readiness misses. */
+  readonly reasons?: readonly string[]
+}
+
+/** Categories partition every Lodgify booking the sync considered — `gap` flows into
+ * the gap-fill logic; the other four are the reasons a booking was excluded. */
+export type BookingCategory = 'gap' | 'code-set' | 'out-of-horizon' | 'not-booked' | 'deleted'
+
+export interface BookingSnapshot {
+  readonly bookingId: number
+  /** Raw Lodgify `arrival` string — retained as-is so an unparseable value logs verbatim. */
+  readonly arrival: string
+  readonly category: BookingCategory
+  /** Lodgify booking status — carried on `not-booked` so logs show WHY it was excluded. */
+  readonly status?: string
+}
+
 export interface SyncResult {
   readonly gaps: number
   readonly written: number
   readonly escalated: number
   readonly skipped: number
+  readonly outcomes: readonly Outcome[]
+  /** Every booking Lodgify returned, categorized before the gap filter — the "here's what
+   * the sync saw" trace that pairs with `outcomes` for full per-booking observability. */
+  readonly snapshot: readonly BookingSnapshot[]
 }
 
 /** Rooms still missing a code (empty string or null) — the per-room gap signal. */
 const roomsNeedingCode = (booking: Booking) =>
   (booking.rooms ?? []).filter((room) => room.key_code === null || room.key_code === '')
 
+/**
+ * Dedupe two Lodgify listings by booking id. Insertion order is Upcoming → Current, so
+ * `Map.set` overwrites the Upcoming copy — `Current` wins on collision (its state is
+ * fresher). Extracted so the "Current wins" rule is testable directly with distinguishable
+ * Booking objects, rather than through a fake that can't naturally produce two per-id
+ * variants.
+ */
+export const mergeBookings = (upcoming: readonly Booking[], current: readonly Booking[]): Booking[] => {
+  const byId = new Map<number, Booking>()
+  for (const b of [...upcoming, ...current]) {
+    byId.set(b.id, b)
+  }
+  return [...byId.values()]
+}
+
+/** Assign one category per Lodgify booking; exhaustive over the exclusion reasons so the
+ * snapshot log answers "why didn't booking X get a code?" without a code archaeology dive. */
+const categorize = (booking: Booking, horizonCutoff: number): BookingCategory => {
+  if (booking.is_deleted) {
+    return 'deleted'
+  }
+  if (booking.status !== 'Booked') {
+    return 'not-booked'
+  }
+  const arrival = Date.parse(booking.arrival)
+  if (!Number.isNaN(arrival) && arrival > horizonCutoff) {
+    return 'out-of-horizon'
+  }
+  return roomsNeedingCode(booking).length > 0 ? 'gap' : 'code-set'
+}
+
 export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   const { lynx, lodgify, notify, config, now } = deps
   const horizonCutoff = now + config.horizonDays * DAY_MS
 
-  // 1. Lodgify gap set: Booked, in-horizon, at least one room without a code.
-  const bookings = await lodgify.listBookings({ stayFilter: 'Upcoming' })
-  const gaps = bookings.items.filter((booking) => {
-    if (booking.status !== 'Booked' || booking.is_deleted) {
-      return false
-    }
-    const arrival = Date.parse(booking.arrival)
-    const inHorizon = Number.isNaN(arrival) || arrival <= horizonCutoff
-    return inHorizon && roomsNeedingCode(booking).length > 0
-  })
+  // 1. Snapshot every Lodgify booking with a category — `gap` is the subset the sync
+  //    will try to fill; the other four are the reasons a booking was excluded (logged
+  //    per-booking in the handler so an operator can trace any bookingId).
+  //
+  //    Query BOTH `Upcoming` and `Current`: Lodgify flips a booking from `Upcoming` to
+  //    `Current` at check-in time (~4pm local), so same-day arrivals past their check-in
+  //    time — the exact moment a guest needs the code most — would otherwise be invisible.
+  //    Dedup by `id` so a booking that appears in both buckets during the transition is
+  //    processed once; `Current` wins because its state is fresher.
+  const [upcoming, current] = await Promise.all([
+    lodgify.listAllBookings({ stayFilter: 'Upcoming' }),
+    lodgify.listAllBookings({ stayFilter: 'Current' }),
+  ])
+  const bookings = mergeBookings(upcoming, current)
+  const snapshot: BookingSnapshot[] = bookings.map((booking) => ({
+    bookingId: booking.id,
+    arrival: booking.arrival,
+    category: categorize(booking, horizonCutoff),
+    status: booking.status,
+  }))
+  const gaps = bookings.filter((booking) => categorize(booking, horizonCutoff) === 'gap')
 
   // 2. Steady state: no gaps → never touch Lynx.
   if (gaps.length === 0) {
-    return { gaps: 0, written: 0, escalated: 0, skipped: 0 }
+    return { gaps: 0, written: 0, escalated: 0, skipped: 0, outcomes: [], snapshot }
   }
 
   // 3. Index Lynx reservations (upcoming + current) by the joined Lodgify booking id, and
@@ -114,22 +189,18 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
   }
 
   // 4. Resolve each gap: write when ready, escalate when overdue, else leave for next run.
-  let written = 0
-  let escalated = 0
-  let skipped = 0
+  const outcomes: Outcome[] = []
   for (const gap of gaps) {
     const entry = byBookingId.get(gap.id)
 
     if (!entry) {
-      if (isOverdue(Date.parse(gap.arrival), gap.created_at, now, config)) {
-        await notify({
-          severity: severityFor(Date.parse(gap.arrival), now),
-          reason: 'no Lynx reservation for booking',
-          bookingId: gap.id,
-        })
-        escalated += 1
+      const reason = 'no Lynx reservation for booking'
+      const arrivalMs = Date.parse(gap.arrival)
+      if (isOverdue(arrivalMs, gap.created_at, now, config)) {
+        await notify({ severity: severityFor(arrivalMs, now), reason, bookingId: gap.id })
+        outcomes.push({ bookingId: gap.id, action: 'escalated', reasons: [reason] })
       } else {
-        skipped += 1
+        outcomes.push({ bookingId: gap.id, action: 'skipped', reasons: [reason] })
       }
       continue
     }
@@ -137,11 +208,15 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
     const readiness = checkReadiness(entry.reservation, lockSets.get(entry.propertyId) ?? [])
     if (readiness.ready && readiness.code !== undefined) {
       const code = readiness.code
-      await lodgify.putKeyCodes(
-        gap.id,
-        roomsNeedingCode(gap).map((room) => ({ room_type_id: room.room_type_id, key_code: code })),
-      )
-      written += 1
+      const rooms = roomsNeedingCode(gap).map((room) => ({ room_type_id: room.room_type_id, key_code: code }))
+      await lodgify.putKeyCodes(gap.id, rooms)
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'written',
+        confirmationCode: entry.reservation.confirmationCode,
+        code,
+        roomTypeIds: rooms.map((r) => r.room_type_id),
+      })
       continue
     }
 
@@ -154,13 +229,28 @@ export const runSync = async (deps: SyncDeps): Promise<SyncResult> => {
         confirmationCode: entry.reservation.confirmationCode,
         details: readiness.reasons,
       })
-      escalated += 1
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'escalated',
+        confirmationCode: entry.reservation.confirmationCode,
+        reasons: readiness.reasons,
+      })
     } else {
-      skipped += 1
+      outcomes.push({
+        bookingId: gap.id,
+        action: 'skipped',
+        confirmationCode: entry.reservation.confirmationCode,
+        reasons: readiness.reasons,
+      })
     }
   }
 
-  return { gaps: gaps.length, written, escalated, skipped }
+  // Single-pass count — easier to extend if a fourth action shows up.
+  const counts = { written: 0, escalated: 0, skipped: 0 }
+  for (const o of outcomes) {
+    counts[o.action] += 1
+  }
+  return { gaps: gaps.length, ...counts, outcomes, snapshot }
 }
 
 /** Overdue = within the SLA window of arrival AND past the grace period since booking. */
