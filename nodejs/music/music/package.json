@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "@thrashplay/music",
   "version": "0.1.0",
   "description": "MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.",
@@ -22,6 +21,9 @@
         "import": "./dist/*.js"
       }
     }
+  },
+  "bin": {
+    "music": "./dist/index.js"
   },
   "files": [
     "dist",

@@ -22,6 +22,8 @@ live here.
 - Against hardware: `pnpm --filter @thrashplay/music dev` (requires the Launchpad and a MIDI piano
   connected; device names are matched in `src/index.ts`).
 - In the browser: `pnpm --filter @thrashplay/launchpad-sim dev`, then open the printed URL.
+- In the studio (no monorepo checkout): `npx @thrashplay/music@latest` — the package is published
+  to npm with a `music` bin; deploying is merging a PR and re-running that command.
 
 ## Architecture notes
 

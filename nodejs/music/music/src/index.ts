@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { NovationLaunchpadMiniMk3 } from './vendors/novation/launchpad-mini-mk3/novation-launchpad-mini-mk3.js'
 import { LaunchpadRenderer } from './vendors/novation/launchpad-mini-mk3/launchpad-renderer.js'
 import { logger } from './logger.js'
