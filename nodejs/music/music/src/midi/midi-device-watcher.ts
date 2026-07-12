@@ -1,13 +1,27 @@
-import * as easymidi from 'easymidi'
+import { Input, Output } from '@julusian/midi'
 import EventEmitter from 'node:events'
 import type { TypedEventEmitter } from '../typed-event-emitter.js'
 import { logger } from '../logger.js'
 import { randomUUID } from 'node:crypto'
+import { listNumberedPortNames } from './port-names.js'
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type DeviceConnectionStateEventMap = {
   found: (name: string) => void
   lost: (name: string) => void
+}
+
+// Enumerating via easymidi.getInputs()/getOutputs() constructs a new native MIDI client on
+// every call and permanently leaks it (dinchak/node-easymidi#51: the native constructor pins
+// its message callback, so neither closePort() nor GC ever frees the client). The watcher
+// polls continuously, so it enumerates through a single long-lived client pair instead —
+// port enumeration reflects live hot-plug state on an existing client. Created lazily so
+// merely importing this module doesn't open MIDI clients.
+let enumerationClients: { input: Input; output: Output } | undefined
+
+const getEnumerationClients = () => {
+  enumerationClients ??= { input: new Input(), output: new Output() }
+  return enumerationClients
 }
 
 export type MidiDeviceEventEmitter = TypedEventEmitter<DeviceConnectionStateEventMap>
@@ -30,7 +44,7 @@ export class MidiDeviceWatcher extends (EventEmitter as new () => MidiDeviceEven
 
     this.log.debug('Creating.')
     this.filter = options.devicesToWatch
-    this.pollIntervalMs = options.pollIntervalMs ?? 100
+    this.pollIntervalMs = options.pollIntervalMs ?? 500
   }
 
   start() {
@@ -45,7 +59,8 @@ export class MidiDeviceWatcher extends (EventEmitter as new () => MidiDeviceEven
 
   private tick() {
     const now = Date.now()
-    const all = new Set([...easymidi.getInputs(), ...easymidi.getOutputs()])
+    const { input, output } = getEnumerationClients()
+    const all = new Set([...listNumberedPortNames(input), ...listNumberedPortNames(output)])
     const wanted = this.filter ? new Set([...all].filter((d) => this.filter?.includes(d))) : all
 
     // newly found

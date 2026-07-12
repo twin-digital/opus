@@ -27,7 +27,7 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
   constructor({
     name,
     direction = 'duplex',
-    pollIntervalMs = 100,
+    pollIntervalMs = 500,
   }: {
     name:
       | string
