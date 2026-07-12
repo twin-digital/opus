@@ -481,6 +481,88 @@ features:
               '@twin-digital/tsconfig': workspace:*
               '@types/node': 'catalog:'
               typescript: 'catalog:'
+  # Vite applications: keyed on the `vite` dependency. Runs after `typescript` so its tsconfig.json
+  # (extending the browser/bundler-mode tsconfig.vite.json) replaces the NodeNext one that feature
+  # generates. The generated vite.config.ts is a fragment loader: per-app settings go in
+  # 'vite.config.d/*.js' (same override pattern as eslint.config.d), never in the generated file.
+  - name: vite
+    actions:
+      - name: Create vite tsconfig.json file
+        action: write-file
+        conditions:
+          - dependency: vite
+          - notExists: tsconfig.options.json
+        options:
+          file: tsconfig.json
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.vite.json"],
+              "compilerOptions": {
+                "customConditions": ["source"]
+              }
+            }
+      - name: Create vite tsconfig.json file with custom options
+        action: write-file
+        conditions:
+          - dependency: vite
+          - exists: tsconfig.options.json
+        options:
+          file: tsconfig.json
+          content: |
+            {
+              "extends": ["@twin-digital/tsconfig/tsconfig.vite.json", "./tsconfig.options.json"],
+              "compilerOptions": {
+                "customConditions": ["source"]
+              }
+            }
+      - name: Create vite config file
+        action: write-file
+        conditions:
+          - dependency: vite
+        options:
+          file: vite.config.ts
+          content: |
+            import { existsSync, readdirSync } from 'node:fs'
+
+            import { defaultClientConditions, defineConfig, mergeConfig, type UserConfig } from 'vite'
+
+            // Base config: resolve workspace dependencies straight to their src/ (the monorepo's
+            // source-first convention, mirroring tsconfig's customConditions). Project overrides:
+            // any 'vite.config.d/*.js' config fragments (merged in filename order via mergeConfig)
+            // extend the base. repo-kit features and packages drop fragments there instead of
+            // editing this file.
+            const base: UserConfig = {
+              resolve: {
+                conditions: ['source', ...defaultClientConditions],
+              },
+            }
+
+            const fragmentsDir = new URL('./vite.config.d/', import.meta.url)
+
+            let config = base
+            if (existsSync(fragmentsDir)) {
+              const files = readdirSync(fragmentsDir)
+                .filter((file) => file.endsWith('.js'))
+                .sort()
+              for (const file of files) {
+                const fragment = (await import(new URL(file, fragmentsDir).href)) as { default: UserConfig }
+                config = mergeConfig(config, fragment.default)
+              }
+            }
+
+            export default defineConfig(config)
+      - name: Add vite scripts and dependencies
+        action: json-merge-patch
+        conditions:
+          - dependency: vite
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              dev: vite --host
+              preview: vite preview
+            devDependencies:
+              vite: 'catalog:'
   # CDK applications: keyed on the `aws-cdk` CLI dependency (apps synth/deploy; construct *libraries*
   # depend on aws-cdk-lib/constructs but not the CLI, so they don't match — and must not get the
   # runtime/infra import ban, since their src legitimately imports aws-cdk-lib).

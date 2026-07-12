@@ -16,7 +16,17 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["assets/**", "package.json", "src/**", "tsconfig.json", "tsconfig.*.json", "tsdown.config.ts"],
+      "inputs": [
+        "assets/**",
+        "index.html",
+        "package.json",
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "tsdown.config.ts",
+        "vite.config.ts",
+        "vite.config.d/**"
+      ],
       "outputs": ["dist/**"]
     },
     "clean": {
