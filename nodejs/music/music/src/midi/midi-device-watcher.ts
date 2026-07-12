@@ -20,7 +20,18 @@ export type DeviceConnectionStateEventMap = {
 let enumerationClients: { input: Input; output: Output } | undefined
 
 const getEnumerationClients = () => {
-  enumerationClients ??= { input: new Input(), output: new Output() }
+  if (enumerationClients === undefined) {
+    // Assign only once both constructions succeed: RtMidi constructors throw on backend
+    // failure, and a half-constructed pair would orphan the Input (its pinned native
+    // callback makes it uncollectable without destroy()).
+    const input = new Input()
+    try {
+      enumerationClients = { input, output: new Output() }
+    } catch (error) {
+      input.destroy()
+      throw error
+    }
+  }
   return enumerationClients
 }
 
@@ -36,6 +47,7 @@ export class MidiDeviceWatcher extends (EventEmitter as new () => MidiDeviceEven
   )
 
   private pollIntervalMs: number
+  private running = false
   private seen = new Set<string>()
   private handle?: NodeJS.Timeout
 
@@ -48,42 +60,57 @@ export class MidiDeviceWatcher extends (EventEmitter as new () => MidiDeviceEven
   }
 
   start() {
+    if (this.running) {
+      return
+    }
+
     this.log.debug('Starting.')
+    this.running = true
     this.tick()
   }
 
   stop() {
     this.log.debug('Stopping.')
+    this.running = false
     clearTimeout(this.handle)
+    this.handle = undefined
   }
 
   private tick() {
     const now = Date.now()
-    const { input, output } = getEnumerationClients()
-    const all = new Set([...listNumberedPortNames(input), ...listNumberedPortNames(output)])
-    const wanted = this.filter ? new Set([...all].filter((d) => this.filter?.includes(d))) : all
 
-    // newly found
-    for (const d of wanted) {
-      if (!this.seen.has(d)) {
-        this.log.debug(`found ${d}`)
+    try {
+      const { input, output } = getEnumerationClients()
+      const all = new Set([...listNumberedPortNames(input), ...listNumberedPortNames(output)])
+      const wanted = this.filter ? new Set([...all].filter((d) => this.filter?.includes(d))) : all
 
-        this.seen.add(d)
-        this.emit('found', d)
+      // newly found
+      for (const d of wanted) {
+        if (!this.seen.has(d)) {
+          this.log.debug(`found ${d}`)
+
+          this.seen.add(d)
+          this.emit('found', d)
+        }
       }
+
+      // disconnected
+      for (const d of [...this.seen]) {
+        if (!wanted.has(d)) {
+          this.log.debug(`lost ${d}`)
+
+          this.seen.delete(d)
+          this.emit('lost', d)
+        }
+      }
+    } catch (error) {
+      // a transient MIDI-backend error degrades to a skipped poll, not a dead watcher
+      this.log.warn(error, 'Port enumeration failed; will retry on the next poll.')
     }
 
-    // disconnected
-    for (const d of [...this.seen]) {
-      if (!wanted.has(d)) {
-        this.log.debug(`lost ${d}`)
-
-        this.seen.delete(d)
-        this.emit('lost', d)
-      }
+    // schedule next — unless stop() was called (possibly from a found/lost listener)
+    if (this.running) {
+      this.handle = setTimeout(this.tick.bind(this), Math.max(0, this.pollIntervalMs - (Date.now() - now)))
     }
-
-    // schedule next
-    this.handle = setTimeout(this.tick.bind(this), Math.max(0, this.pollIntervalMs - (Date.now() - now)))
   }
 }

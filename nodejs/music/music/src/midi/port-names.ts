@@ -12,14 +12,17 @@ export interface PortLister {
  * comparable to the names the `easymidi.Input`/`Output` constructors expect.
  */
 export const listNumberedPortNames = (client: PortLister): string[] => {
+  const count = client.getPortCount()
   const names: string[] = []
-  for (let i = 0; i < client.getPortCount(); i++) {
+  const used = new Set<string>()
+  for (let i = 0; i < count; i++) {
     const portName = client.getPortName(i)
     let numberedPortName = portName
-    for (let counter = 1; names.includes(numberedPortName); counter++) {
+    for (let counter = 1; used.has(numberedPortName); counter++) {
       numberedPortName = `${portName}${counter}`
     }
     names.push(numberedPortName)
+    used.add(numberedPortName)
   }
   return names
 }
