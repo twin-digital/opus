@@ -1,10 +1,9 @@
 import type { CallAndResponseContext } from '../call-and-response-context.js'
-import { HigherOrLower } from '../challenges/higher-or-lower.js'
 
 export const makeStartNewChallenge = () => (context: CallAndResponseContext) => {
   return {
     enter: () => {
-      context.challenge = HigherOrLower.createRandom()
+      context.challenge = context.game.createChallenge()
     },
     getResult: () => 'done' as const,
     isDone: () => true,

@@ -1,10 +1,16 @@
 import type { CallAndResponseChallenge } from './call-and-response-challenge.js'
+import type { EarTrainingGame } from './games.js'
 
 export interface CallAndResponseContext {
   /**
    * The currently active challenge.
    */
   challenge: CallAndResponseChallenge
+
+  /**
+   * The game being played; supplies new challenges and the game's presentation identity.
+   */
+  game: EarTrainingGame
 }
 
 /**
@@ -21,6 +27,7 @@ const NullChallenge = {
   },
 } as const satisfies CallAndResponseChallenge
 
-export const makeInitialContext = (): CallAndResponseContext => ({
+export const makeInitialContext = (game: EarTrainingGame): CallAndResponseContext => ({
   challenge: NullChallenge,
+  game,
 })
