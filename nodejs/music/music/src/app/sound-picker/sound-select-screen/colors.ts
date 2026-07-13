@@ -19,6 +19,7 @@ export const InstrumentFamilyColors = {
   Percussive: [127, 96, 64], // Warm Sand — rhythmic, textured
   'Sound Effect': [64, 64, 127], // Steel Blue — abstract, cinematic
   'Drum Kit': [127, 0, 0], // Red — driving, rhythmic
+  Minecraft: [64, 127, 32], // Grass Green — sampled sound boards, played by the app rather than the piano
 } satisfies Record<InstrumentFamilyName, RgbColor>
 
 export const getInstrumentColor = (family: InstrumentFamily, column: number, isSelected: boolean): RgbColor => {

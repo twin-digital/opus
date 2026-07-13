@@ -1,4 +1,11 @@
+import { SoundBoardInstruments } from '../soundboard/sound-boards.js'
 import { Gm2Instruments, type Instrument, InstrumentFamilies } from './instrument-data.js'
+
+/**
+ * Every instrument the app can select: the GM2 patches, plus the sound boards, which live in a reserved bank of their
+ * own rather than being patches on the piano.
+ */
+export const AllInstruments: Instrument[] = [...Gm2Instruments, ...SoundBoardInstruments]
 
 // Compare function to sort by patch, then MSB, then LSB
 const sortInstruments = (a: Instrument, b: Instrument) => {
@@ -14,7 +21,7 @@ const sortInstruments = (a: Instrument, b: Instrument) => {
 /**
  * Map allowing lookup of instruments by the instrument ID.
  */
-export const InstrumentsById = Gm2Instruments.reduce<Record<string, Instrument>>((result, instrument) => {
+export const InstrumentsById = AllInstruments.reduce<Record<string, Instrument>>((result, instrument) => {
   result[instrument.id] = instrument
   return result
 }, {})
@@ -24,7 +31,7 @@ export const InstrumentsById = Gm2Instruments.reduce<Record<string, Instrument>>
  * MSB, then LSB.
  */
 export const InstrumentsByFamily = InstrumentFamilies.reduce<Record<string, Instrument[]>>((result, family) => {
-  result[family.name] = Gm2Instruments.filter((instrument) => instrument.family === family.name).sort(sortInstruments)
+  result[family.name] = AllInstruments.filter((instrument) => instrument.family === family.name).sort(sortInstruments)
   return result
 }, {})
 
@@ -34,7 +41,7 @@ export const InstrumentsByFamily = InstrumentFamilies.reduce<Record<string, Inst
  */
 export const InstrumentsByPatch = Array.from({ length: 128 }, (_, i) => i).reduce<Record<number, Instrument[]>>(
   (result, patch) => {
-    result[patch] = Gm2Instruments.filter((instrument) => instrument.patch === patch).sort(sortInstruments)
+    result[patch] = AllInstruments.filter((instrument) => instrument.patch === patch).sort(sortInstruments)
     return result
   },
   {},

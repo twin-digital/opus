@@ -14,6 +14,8 @@ import type { ReadbackEvent } from '../../vendors/novation/launchpad-mini-mk3/ev
 import { InstrumentFamilies, type Instrument, type InstrumentFamily } from '../../midi/instrument-data.js'
 import { InstrumentsByFamily } from '../../midi/instruments.js'
 import type { Program } from '../../engine/program.js'
+import { SamplePlayer } from '../../audio/sample-player.js'
+import { SoundBoardSampleNames } from '../../soundboard/sound-boards.js'
 
 const log = logger.child({}, { msgPrefix: '[PROGRAM] ' })
 
@@ -31,7 +33,8 @@ export const createSoundPickerProgram = (
   } = {},
 ): Program => {
   const channelCount = 1
-  const controller = new LaunchpadController(synthesizer, channelCount)
+  const samples = new SamplePlayer()
+  const controller = new LaunchpadController(synthesizer, channelCount, samples)
   const selectedFamilies: Record<number, InstrumentFamily> = {}
   const selectedInstruments: Record<number, Instrument> = {}
   let selectedChannelId = controller.channels[0].id
@@ -63,10 +66,7 @@ export const createSoundPickerProgram = (
     }
 
     selectedInstruments[selectedChannelId] = instrument
-    controller.selectSound(selectedChannelId, {
-      bank: instrument.bank,
-      program: instrument.patch,
-    })
+    controller.selectSound(selectedChannelId, instrument)
   }
 
   const channelLevelScreenFactory = createChannelLevelScreen({
@@ -134,14 +134,15 @@ export const createSoundPickerProgram = (
     initialize: () => {
       log.info('Initializing "Sound Picker" program.')
 
+      // Decode every sound-board sample up front. The samples are small and already on disk, so this finishes long
+      // before anyone can select a board, and playback never waits on I/O.
+      void samples.load(SoundBoardSampleNames)
+
       // reset instruments and mute all tracks except first
       controller.channels.forEach((channel, index) => {
         selectedFamilies[channel.id] = InstrumentFamilies[0]
         selectedInstruments[channel.id] = InstrumentsByFamily[selectedFamilies[channel.id].name][0]
-        controller.selectSound(channel.id, {
-          bank: selectedInstruments[channel.id].bank,
-          program: selectedInstruments[channel.id].patch,
-        })
+        controller.selectSound(channel.id, selectedInstruments[channel.id])
 
         if (index > 0) {
           controller.setMuted(channel.id, true)
@@ -157,6 +158,7 @@ export const createSoundPickerProgram = (
     shutdown: () => {
       log.info('Shutting down "Sound Picker" program.')
       controller.shutdown()
+      samples.stopAll()
       launchpad.events.off('readback', handleReadback)
     },
   }

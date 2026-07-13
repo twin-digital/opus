@@ -12,7 +12,8 @@ live here.
 - `music` (`@thrashplay/music`) — the whole game stack: MIDI device layer (easymidi) with
   hot-plug watching, the Launchpad Mini Mk3 driver (sysex commands, LED rendering, input mapping),
   a small program engine (main loop, entities, state machines), a grid UI kit
-  (buttons/faders/groups/translate), and the game programs under `src/app/`.
+  (buttons/faders/groups/translate), sample playback (`src/audio/`), and the game programs under
+  `src/app/`.
 - `launchpad-sim` (`@thrashplay/launchpad-sim`) — browser-based hardware stand-in: a Vite app that
   renders the Launchpad grid on a canvas and an on-screen piano (Web MIDI + soundfont-player), so
   programs can be developed without the physical devices.
@@ -24,13 +25,40 @@ live here.
 - In the browser: `pnpm --filter @thrashplay/launchpad-sim dev`, then open the printed URL.
 - In the studio (no monorepo checkout): `npx @thrashplay/music@latest` — the package is published
   to npm with a `music` bin; deploying is merging a PR and re-running that command.
+- Sound-board samples, once per machine: `npx -p @thrashplay/music music-fetch-samples` (or
+  `pnpm --filter @thrashplay/music exec music-fetch-samples` in the monorepo). Without it, the
+  boards are selectable but silent.
+
+## Sound boards
+
+Most instruments are MIDI patches: a key press is echoed to the piano, and the piano's synth makes
+the sound. Sound boards are the exception — the app plays a sample itself and sends the piano
+nothing.
+
+They are ordinary `Instrument`s in a bank the app reserves (MSB 126; GM2 uses 120 and 121), which
+is why they appear in the picker as a family beside the GM patches with no UI of their own. Nothing
+carrying that MSB is ever transmitted: `Channel.selectSound` recognizes it, binds the board, and
+returns before the program change. `Channel.playNote` then sounds the mapped sample rather than
+echoing. Boards are one-shot, so note-off does nothing, and the mapping wraps across the keyboard.
+
+`SamplePlayer` (`src/audio/`) talks to the Web Audio API — the browser's under the sim,
+`node-web-audio-api`'s under Node — so one implementation serves both. Decodes are memoized and
+warmed in the background at program start; playback never awaits them, and drops a sample that
+isn't ready rather than firing it late.
+
+The samples are Mojang's and are not in the repo or the npm package. `music-fetch-samples`
+downloads them from the asset servers the game's own launcher uses, into `~/.thrashplay/samples`
+(`MUSIC_SAMPLES_DIR` overrides). The sim serves that same directory at `/samples` via a Vite config
+fragment, since it sits outside any checkout.
 
 ## Architecture notes
 
 - `music` is isomorphic: the engine, UI kit, and programs run in Node and the browser; only the
   easymidi-backed `MidiDevice` layer is Node-only. The sim swaps in `WebMidiPiano`/`WebRenderer`
   and never executes those paths — Vite stubs the Node builtins it sees in the graph (the
-  "externalized for browser compatibility" build warnings are expected).
+  "externalized for browser compatibility" build warnings are expected). Node-only modules that the
+  bundler still has to resolve must import builtins as namespaces (`import * as path`), because a
+  named import off Vite's stub is a build error.
 - The sim consumes `@thrashplay/music` source-first: `vite.config.ts` adds the `source` export
   condition, matching the monorepo's tsconfig `customConditions` convention.
 - The sim's build is the repo's first Vite app: `build: build` (opus-scripts) dispatches to

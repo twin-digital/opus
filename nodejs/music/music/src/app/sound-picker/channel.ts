@@ -1,11 +1,22 @@
 import type pino from 'pino'
+import type { Note } from 'easymidi'
 import type { MidiDevice } from '../../midi/midi-device.js'
 import type { RgbColor } from '../../ui/color.js'
 import type { ChannelId, MidiChannel } from './model.js'
+import type { Instrument } from '../../midi/instrument-data.js'
+import type { SamplePlayer } from '../../audio/sample-player.js'
+import type { SoundBoard } from '../../soundboard/model.js'
 import { logger } from '../../logger.js'
 import { normalizeMidiByte } from '../../midi/normalize-midi-byte.js'
+import { getSampleForNote, isSoundBoard } from '../../soundboard/model.js'
+import { SoundBoardsByInstrumentId } from '../../soundboard/sound-boards.js'
 
 export class Channel {
+  /**
+   * Sound board currently selected on this channel, or `undefined` when the channel plays a MIDI patch.
+   */
+  private _board: SoundBoard | undefined
+
   /**
    * Current volume level for this channel.
    */
@@ -39,6 +50,11 @@ export class Channel {
      * Color used for UI elements assocaited with this channel.
      */
     private _color: RgbColor = [127, 127, 127],
+
+    /**
+     * Player used to sound samples when a sound board is selected.
+     */
+    private _samples?: SamplePlayer,
   ) {
     // Both numbers are logged: the id is what the UI and the controller's API speak, and the MIDI channel is what
     // shows up on the wire.
@@ -46,10 +62,43 @@ export class Channel {
   }
 
   /**
+   * Sounds a note on this channel. A MIDI patch is played by echoing the note to the piano, which renders it; a sound
+   * board is played by sounding the sample mapped to the key, and the note is not echoed.
+   */
+  public playNote(note: Note) {
+    if (this._board !== undefined) {
+      this._samples?.play(getSampleForNote(this._board, note.note), note.velocity)
+      return
+    }
+
+    this._device.send('noteon', {
+      ...note,
+      channel: this.midiChannel,
+    })
+  }
+
+  /**
+   * Releases a note on this channel. Sound-board samples are one-shots that play to completion, so a channel playing a
+   * board has nothing to release.
+   */
+  public stopNote(note: Note) {
+    if (this._board !== undefined) {
+      return
+    }
+
+    this._device.send('noteoff', {
+      ...note,
+      channel: this.midiChannel,
+    })
+  }
+
+  /**
    * Mutes all sounds currently playing on this channel. This does not mute the channel, so if new notes are played
    * sound will resume as normal.
    */
   public stopAllSound() {
+    this._samples?.stopAll()
+
     this._device.send('cc', {
       channel: this.midiChannel,
       controller: 0x78,
@@ -59,45 +108,46 @@ export class Channel {
 
   /**
    * Selects the sound played by notes on this channel.
-   * @param sound The specific sound to select.
-   * @param sound.bank MIDI bank of the sound.
-   * @param sound.program Program change number to select.
+   *
+   * A sound board is not a patch on the piano, so selecting one binds the board to this channel and sends no program
+   * change; the piano is silenced instead, since it renders none of the board's notes.
+   * @param instrument Instrument to select.
    */
-  public selectSound({
-    bank = {},
-    program,
-  }: {
-    /**
-     * MIDI bank containing the sound. The MSB selects the sound set (121 for GM2 melodic sounds, 120 for drum kits),
-     * and the LSB selects the sound variation.
-     * @defaultValue `{ msb: 121, lsb: 0 }`
-     */
-    bank?: { lsb?: number; msb?: number }
+  public selectSound(instrument: Instrument) {
+    if (isSoundBoard(instrument)) {
+      const board = SoundBoardsByInstrumentId[instrument.id]
+      if (board === undefined) {
+        this._log.warn(`Ignored a sound-board instrument that maps to no board. [instrument=${instrument.id}]`)
+        return
+      }
 
-    /**
-     * Value of the MIDI program change message to use for sound selection.
-     */
-    program: number
-  }) {
-    const { lsb = 0, msb = 121 } = bank
+      this._board = board
+      this.stopAllSound()
+      void this._samples?.load(board.samples)
+
+      this._log.info(`Selected sound board: ${instrument.name}`)
+      return
+    }
+
+    this._board = undefined
 
     this._device.send('cc', {
       channel: this.midiChannel,
       controller: 0,
-      value: msb,
+      value: instrument.bank.msb,
     })
     this._device.send('cc', {
       channel: this.midiChannel,
       controller: 32,
-      value: lsb,
+      value: instrument.bank.lsb,
     })
 
     this._device.send('program', {
       channel: this.midiChannel,
-      number: program,
+      number: instrument.patch,
     })
 
-    this._log.info({}, `Sent program change: ${program}`)
+    this._log.info({}, `Sent program change: ${instrument.patch}`)
   }
 
   public get color() {

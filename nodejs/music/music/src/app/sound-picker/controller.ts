@@ -4,6 +4,8 @@ import type { RgbColor } from '../../ui/color.js'
 import { toChannelId, type ChannelId, type MidiChannel } from './model.js'
 import { Channel } from './channel.js'
 import type { Note } from 'easymidi'
+import type { SamplePlayer } from '../../audio/sample-player.js'
+import type { Instrument } from '../../midi/instrument-data.js'
 
 const _log = logger.child({}, { msgPrefix: '[APP] ' })
 
@@ -47,10 +49,12 @@ export class LaunchpadController {
    * Creates a new LaunchpadController.
    * @param instrument MIDI device being controlled by this instance.
    * @param channelCount Number of channels to manage. Defaults to four.
+   * @param samples Player used to sound samples on channels playing a sound board.
    */
   constructor(
     private readonly instrument: MidiDevice,
     channelCount = 4,
+    samples?: SamplePlayer,
   ) {
     if (channelCount < 1 || channelCount > 8) {
       throw new Error(`The channelCount must be between 1 and 8, inclusive. [channelCount=${channelCount}]`)
@@ -58,7 +62,7 @@ export class LaunchpadController {
 
     this._channels = Array.from(
       { length: channelCount },
-      (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], ChannelColors[i]),
+      (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], ChannelColors[i], samples),
     )
   }
 
@@ -67,21 +71,15 @@ export class LaunchpadController {
   }
 
   private handleNoteOff(note: Note) {
-    this.channels.forEach((channel) => {
-      this.instrument.send('noteoff', {
-        ...note,
-        channel: channel.midiChannel,
-      })
+    this._channels.forEach((channel) => {
+      channel.stopNote(note)
     })
   }
 
   private handleNoteOn(note: Note) {
-    this.channels.forEach((channel) => {
+    this._channels.forEach((channel) => {
       if (!channel.muted) {
-        this.instrument.send('noteon', {
-          ...note,
-          channel: channel.midiChannel,
-        })
+        channel.playNote(note)
       }
     })
   }
@@ -151,26 +149,9 @@ export class LaunchpadController {
   /**
    * Selects the sound played by notes on a specified channel.
    * @param channelId ID of the channel which should have its sound changed.
-   * @param sound The specific sound to select.
-   * @param sound.bank MIDI bank of the sound.
-   * @param sound.program Program change number to select.
+   * @param instrument Instrument to select. A sound board is sounded by the app; anything else is played by the piano.
    */
-  public selectSound(
-    channelId: ChannelId,
-    sound: {
-      /**
-       * MIDI bank containing the sound. The MSB selects the sound set (121 for GM2 melodic sounds, 120 for drum kits),
-       * and the LSB selects the sound variation.
-       * @defaultValue `{ msb: 121, lsb: 0 }`
-       */
-      bank?: { lsb?: number; msb?: number }
-
-      /**
-       * Value of the MIDI program change message to use for sound selection.
-       */
-      program: number
-    },
-  ) {
-    this.channelById(channelId)?.selectSound(sound)
+  public selectSound(channelId: ChannelId, instrument: Instrument) {
+    this.channelById(channelId)?.selectSound(instrument)
   }
 }
