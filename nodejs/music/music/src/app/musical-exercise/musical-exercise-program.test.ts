@@ -167,6 +167,41 @@ describe('createMusicalExerciseProgram', () => {
     expect(speak).toHaveBeenCalledExactlyOnceWith(EarTrainingGames[0].name)
   })
 
+  it('plays the challenge after engine ticks arrive during the announcement (startup deadlock regression)', async () => {
+    // production sequence: the engine ticks update() every frame from the moment the program
+    // is entered, while the announcement is still playing. The state machine used to advance
+    // through its un-entered initial state into play-challenge with the NullChallenge (whose
+    // empty sequence never completes), wedging the game permanently: no notes, no input.
+    const options = makeStubOptions()
+    let finishSpeech = () => {
+      /* replaced below */
+    }
+    vi.mocked(speak).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSpeech = resolve
+        }),
+    )
+    const program = createMusicalExerciseProgram(options)
+    void program.initialize?.()
+
+    program.update?.(0.1)
+    program.update?.(0.1)
+    program.update?.(0.1)
+    // nothing may reach the scheduler while the announcement plays — especially not the
+    // NullChallenge's empty sequence
+    expect(options.midi.addSequence).not.toHaveBeenCalled()
+
+    finishSpeech()
+    await settle()
+    program.update?.(0.1)
+
+    // start-new-challenge -> play-challenge: the real challenge's notes reach the scheduler
+    expect(options.midi.addSequence).toHaveBeenCalledOnce()
+    const [events] = vi.mocked(options.midi.addSequence).mock.calls[0]
+    expect((events as unknown[]).length).toBeGreaterThan(0)
+  })
+
   it('does not start the challenge until the announcement finishes', async () => {
     const challengeSpy = vi.spyOn(EarTrainingGames[0], 'createChallenge')
     let finishSpeech = () => {
