@@ -57,6 +57,7 @@ jobs:
       should_deploy: ${{ steps.decide.outputs.should_deploy }}
       stage: ${{ steps.decide.outputs.stage }}
       sha: ${{ steps.decide.outputs.sha }}
+      pr: ${{ steps.decide.outputs.pr }}
     steps:
       - name: Decide whether to deploy a preview
         id: decide
@@ -110,15 +111,27 @@ jobs:
           echo "should_deploy=true" >> "$GITHUB_OUTPUT"
           echo "stage=$slug" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "pr=$num" >> "$GITHUB_OUTPUT"
 
   preview:
     needs: gate
     if: ${{ needs.gate.outputs.should_deploy == 'true' }}
+    # Serialize this stage's deploy against its teardown. destroy-preview.yml uses the SAME PR-keyed
+    # group, so a close that fires mid-deploy queues the `serverless remove` behind this `serverless
+    # deploy` (`cancel-in-progress: false`) instead of racing it — which could orphan the stack or
+    # wedge CloudFormation in DELETE_FAILED. This is separate from the workflow-level concurrency
+    # (which supersedes stale runs on a new push, keyed on branch).
+    concurrency:
+      group: preview-stage-pr-${{ needs.gate.outputs.pr }}
+      cancel-in-progress: false
     environment: preview
-    # OIDC for the AWS role lives only here, on the gated deploy.
     permissions:
+      # OIDC for the AWS role lives only here, on the gated deploy.
       id-token: write
       contents: read
+      # Add the sticky `preview-deployed` label below (the teardown signal). On the workflow_run path
+      # this token belongs to the base repo, so it can label fork PRs too.
+      pull-requests: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -131,8 +144,52 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # Guard against deploying a stage for an ALREADY-CLOSED PR. Between the gate's decision and this
+      # step (a window that widens if the `preview` environment ever requires approval) the PR can be
+      # closed — its teardown event has already fired, so a stage created now would have no close event
+      # left to clean it up (an orphan). Re-check the PR state here and skip the deploy if it isn't open.
+      # This is orthogonal to the `preview-deployed` label, which handles the normal "closed AFTER
+      # deploy" case; this handles "closed BEFORE we deploy".
+      - name: Skip deploy if PR is already closed
+        id: pr_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          state=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.state')
+          if [[ "$state" != "open" ]]; then
+            echo "PR #${PR} is '${state}', not open — skipping deploy to avoid an orphaned stage."
+            echo "open=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Record that a stage is being deployed for this PR BEFORE deploying, via the sticky
+      # `preview-deployed` label — the signal destroy-preview.yml reads off the close event payload to
+      # decide whether a teardown may be needed. It runs only once the PR is confirmed still open (so a
+      # PR closed before we deploy is never labeled for a stage that won't exist) but still BEFORE the
+      # Deploy step, so a partially-failed deploy is still torn down. destroy-preview.yml removes the
+      # label after a successful teardown; strip-preview-label.yml only ever touches `preview`. The label
+      # is keyed on the PR number (like the `pr-<number>` stage), so teardown is immune to branch
+      # reuse/rename. Required (no `|| true`): if labeling fails we must NOT deploy, or we'd create a
+      # stage with no teardown signal — a leak.
+      - name: Mark PR as preview-deployed
+        if: ${{ steps.pr_state.outputs.open == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.gate.outputs.pr }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${REPO}/issues/${PR}/labels" \
+            -f 'labels[]=preview-deployed' >/dev/null
+          echo "Labeled PR #${PR} 'preview-deployed' (sticky teardown signal)."
+
       # authenticate with AWS & deploy
       - name: Deploy
+        if: ${{ steps.pr_state.outputs.open == 'true' }}
         uses: ./.github/actions/deploy
         with:
           aws-region: ${{ vars.AWS_REGION }}

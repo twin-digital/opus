@@ -22,12 +22,13 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
   private log: pino.Logger
   private _state: 'connected' | 'disconnected' | 'error' = 'disconnected'
   private createDeviceHandle: ReturnType<typeof setTimeout> | undefined
+  private pollIntervalMs: number
   private watcher: MidiDeviceWatcher
 
   constructor({
     name,
     direction = 'duplex',
-    pollIntervalMs = 100,
+    pollIntervalMs = 500,
   }: {
     name:
       | string
@@ -46,6 +47,7 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
     this.outputName = typeof name === 'string' ? name : name.output
 
     this.direction = direction
+    this.pollIntervalMs = pollIntervalMs
     this.watcher = new MidiDeviceWatcher({
       devicesToWatch: [this.inputName, this.outputName],
       pollIntervalMs,
@@ -78,7 +80,10 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
 
       this.emit('connected')
     } catch (_) {
-      this.createDeviceHandle = setTimeout(this.tryCreateDevice.bind(this), 100)
+      // retry at the watcher's poll cadence: each failed easymidi construction leaks pinned
+      // native clients, so retrying faster than the watcher can emit 'lost' just multiplies
+      // the leak during a disconnect race
+      this.createDeviceHandle = setTimeout(this.tryCreateDevice.bind(this), this.pollIntervalMs)
 
       this.emit('error')
     }
@@ -114,6 +119,7 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
     // stop trying to create the device
     if (this.createDeviceHandle) {
       clearTimeout(this.createDeviceHandle)
+      this.createDeviceHandle = undefined
     }
 
     this.emit('disconnected')
