@@ -101,27 +101,59 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
       return
     }
 
-    // event === 'refresh' — the powerful path; rate-limit before touching the device-auth flow.
-    if (!deps.limiter.tryAcquire(now())) {
-      audit({ event, source, authorized: true, outcome: 'rate_limited' })
-      sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently' })
+    // event === 'refresh' — the powerful path. The limiter guards *starting* device-auth
+    // flows (they burn AWS device-authorization quota); re-presenting a prompt already
+    // awaiting approval costs nothing — the shelf's refresh handler is single-flight and
+    // returns the in-flight prompt instead of spawning a second login.
+    const relayRefresh = (inFlight: boolean): void => {
+      deps
+        .upstream('POST', '/refresh')
+        .then((r) => {
+          if (r.status === 200) {
+            audit({ event, source, authorized: true, outcome: inFlight ? 'ok_in_flight' : 'ok' })
+            // relays { prompts: [...] } to the operator only; in_flight tells the page this
+            // is an outstanding request being re-presented, not a new login
+            const body =
+              inFlight && typeof r.body === 'object' && r.body !== null ? { ...r.body, in_flight: true } : r.body
+            sendJson(res, 200, body)
+          } else {
+            audit({ event, source, authorized: true, outcome: 'upstream_error' })
+            sendJson(res, 502, { error: 'upstream error' })
+          }
+        })
+        .catch(() => {
+          audit({ event, source, authorized: true, outcome: 'upstream_error' })
+          sendJson(res, 502, { error: 'upstream unreachable' })
+        })
+    }
+
+    if (deps.limiter.tryAcquire(now())) {
+      relayRefresh(false)
       return
     }
 
+    // Throttled: if a refresh is already pending approval, relay anyway so the operator gets
+    // the outstanding prompt back (losing the tab or re-tapping used to strand them until the
+    // rate-limit window passed). Only a throttled request with *nothing* pending is refused —
+    // that is the abuse case the limiter exists for.
     deps
-      .upstream('POST', '/refresh')
+      .upstream('GET', '/status')
       .then((r) => {
-        if (r.status === 200) {
-          audit({ event, source, authorized: true, outcome: 'ok' })
-          sendJson(res, 200, r.body) // relays { prompts: [...] } to the operator only
+        const pending =
+          r.status === 200 &&
+          typeof r.body === 'object' &&
+          r.body !== null &&
+          (r.body as { refresh_pending?: unknown }).refresh_pending === true
+        if (pending) {
+          relayRefresh(true)
         } else {
-          audit({ event, source, authorized: true, outcome: 'upstream_error' })
-          sendJson(res, 502, { error: 'upstream error' })
+          audit({ event, source, authorized: true, outcome: 'rate_limited' })
+          sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently' })
         }
       })
       .catch(() => {
-        audit({ event, source, authorized: true, outcome: 'upstream_error' })
-        sendJson(res, 502, { error: 'upstream unreachable' })
+        audit({ event, source, authorized: true, outcome: 'rate_limited' })
+        sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently' })
       })
   })
 }

@@ -107,17 +107,66 @@ describe('createTriggerServer', () => {
     })
   })
 
-  it('throttles when the rate limiter is exhausted, before hitting the sidecar', async () => {
-    harness = await start({ limiter: { tryAcquire: () => false } })
+  it('throttles when the rate limiter is exhausted and no refresh is pending approval', async () => {
+    harness = await start({
+      limiter: { tryAcquire: () => false },
+      upstream: vi.fn(
+        (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { refresh_pending: false } }),
+      ),
+    })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
     expect(res.status).toBe(429)
-    expect(harness.upstream).not.toHaveBeenCalled()
+    // only the side-effect-free pending probe reaches the sidecar — never the refresh itself
+    expect(harness.upstream).toHaveBeenCalledExactlyOnceWith('GET', '/status')
     expect(harness.audits).toContainEqual({
       event: 'refresh',
       source: expect.any(String),
       authorized: true,
       outcome: 'rate_limited',
     })
+  })
+
+  it('re-presents the outstanding prompt when throttled while a refresh is pending approval', async () => {
+    const upstream = vi.fn(
+      (method: string): Promise<UpstreamResponse> =>
+        method === 'GET' ?
+          Promise.resolve({ status: 200, body: { refresh_pending: true } })
+        : Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, upstream })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ prompts: [{ user_code: 'WXYZ-1234' }], in_flight: true })
+    expect(harness.upstream).toHaveBeenCalledWith('GET', '/status')
+    expect(harness.upstream).toHaveBeenCalledWith('POST', '/refresh')
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'ok_in_flight',
+    })
+  })
+
+  it('falls back to a plain 429 when the throttled pending-probe fails', async () => {
+    harness = await start({
+      limiter: { tryAcquire: () => false },
+      upstream: vi.fn((): Promise<UpstreamResponse> => Promise.reject(new Error('socket down'))),
+    })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(429)
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'rate_limited',
+    })
+  })
+
+  it('does not mark an unthrottled refresh as in-flight', async () => {
+    harness = await start()
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ prompts: [{ user_code: 'WXYZ-1234' }] })
   })
 
   it('proxies an authorized GET /status', async () => {

@@ -8,7 +8,10 @@ export interface AuditEntry {
   /** Remote address of the caller. */
   source: string
   authorized: boolean
-  /** Coarse result: 'ok' | 'unauthorized' | 'rate_limited' | 'upstream_error'. */
+  /**
+   * Coarse result: 'ok' | 'unauthorized' | 'rate_limited' | 'upstream_error', plus
+   * 'ok_in_flight' when a throttled refresh re-presented the prompt already pending approval.
+   */
   outcome: string
 }
 
