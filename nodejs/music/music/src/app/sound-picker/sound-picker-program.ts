@@ -64,7 +64,7 @@ export const createSoundPickerProgram = (
 
     selectedInstruments[selectedChannelId] = instrument
     controller.selectSound(selectedChannelId, {
-      bank: instrument.bank.lsb,
+      bank: instrument.bank,
       program: instrument.patch,
     })
   }
@@ -139,7 +139,7 @@ export const createSoundPickerProgram = (
         selectedFamilies[i] = InstrumentFamilies[0]
         selectedInstruments[i] = InstrumentsByFamily[selectedFamilies[i].name][0]
         controller.selectSound(i, {
-          bank: selectedInstruments[i].bank.lsb,
+          bank: selectedInstruments[i].bank,
           program: selectedInstruments[i].patch,
         })
 

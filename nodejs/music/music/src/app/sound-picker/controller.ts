@@ -151,17 +151,18 @@ export class LaunchpadController {
    * Selects the sound played by notes on a specified channel.
    * @param channelId ID of the channel which should have its sound changed.
    * @param sound The specific sound to select.
-   * @param sound.bank MIDI bank LSB
+   * @param sound.bank MIDI bank of the sound.
    * @param sound.program Program change number to select.
    */
   public selectSound(
     channelId: number,
     sound: {
       /**
-       * MIDI bank select LSB to select as the sound variation.
-       * @defaultValue 0
+       * MIDI bank containing the sound. The MSB selects the sound set (121 for GM2 melodic sounds, 120 for drum kits),
+       * and the LSB selects the sound variation.
+       * @defaultValue `{ msb: 121, lsb: 0 }`
        */
-      bank?: number
+      bank?: { lsb?: number; msb?: number }
 
       /**
        * Value of the MIDI program change message to use for sound selection.
