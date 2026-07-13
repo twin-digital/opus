@@ -7,7 +7,9 @@ ENV HUSKY=0
 ENV TURBO_TELEMETRY_DISABLED=1
 
 ENV PNPM_HOME=/root/.pnpm
-ENV PATH=$PNPM_HOME:$PATH
+# pnpm 11 installs global bins into $PNPM_HOME/bin (pnpm 10 used $PNPM_HOME directly);
+# include both so `pnpm add -g` works across the pinned version
+ENV PATH=$PNPM_HOME/bin:$PNPM_HOME:$PATH
 RUN mkdir -p $PNPM_HOME && corepack enable
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -25,7 +27,6 @@ RUN set -e; \
     TURBO_VERSION=$(jq -r '.devDependencies.turbo // .dependencies.turbo // ""' package.json); \
     if [ -z "$TURBO_VERSION" ]; then echo "turbo not declared in package.json" >&2; exit 1; fi; \
     echo "Installing turbo@${TURBO_VERSION} globally"; \
-    pnpm setup >/dev/null 2>&1 || true; \
     pnpm add -g turbo@${TURBO_VERSION}; \
     turbo --version
 

@@ -5,6 +5,11 @@ name: 'Copilot Setup Steps'
 on:
   workflow_dispatch:
   push:
+    # `paths` filtering only applies to branch pushes — without a `branches` filter, every
+    # TAG push also matches, and a changesets release pushes one tag per versioned package
+    # (~17 spurious runs per release). Restricting to branch refs keeps the intended
+    # "validate when this file changes" behavior and nothing else.
+    branches: ['**']
     paths:
       - .github/workflows/copilot-setup-steps.yml
   pull_request:
