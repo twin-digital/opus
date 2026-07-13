@@ -6,12 +6,9 @@ import { createCanvas, type Canvas } from '../ui/canvas.js'
 import { startLoop } from './main-loop.js'
 import type { Program } from './program.js'
 
-const normalize = (color: RgbColor): RgbColor => {
-  color[0] = Math.round(color[0])
-  color[1] = Math.round(color[1])
-  color[2] = Math.round(color[2])
-  return color
-}
+// returns a new array: cells frequently hand us shared color tuples (component constants,
+// registry entries), and writing into them would corrupt the caller's colors
+const normalize = (color: RgbColor): RgbColor => [Math.round(color[0]), Math.round(color[1]), Math.round(color[2])]
 
 export class Engine {
   private input?: InputRouter

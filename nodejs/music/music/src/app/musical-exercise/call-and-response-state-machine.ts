@@ -1,6 +1,7 @@
 import type { Channel } from 'easymidi'
 import { StateMachine } from '../state-machine.js'
 import { makeInitialContext, type CallAndResponseContext } from './call-and-response-context.js'
+import type { EarTrainingGame } from './games.js'
 import type { MidiScheduler } from '../../midi/sequencing.js'
 import { makePlayChallengeState } from './states/play-challenge.js'
 import { makeWaitForResponseState } from './states/wait-for-response.js'
@@ -21,6 +22,7 @@ export const createCallAndResponseStateMachine = ({
   device,
   echoChannel,
   feedbackChannel,
+  game,
   inputChannel,
   midi,
 }: {
@@ -43,6 +45,11 @@ export const createCallAndResponseStateMachine = ({
    * MIDI channel to which feedback such as applause will be played.
    */
   feedbackChannel: Channel
+
+  /**
+   * The game to play: supplies each new challenge.
+   */
+  game: EarTrainingGame
 
   /**
    * MIDI channel on which user input will be received
@@ -79,7 +86,7 @@ export const createCallAndResponseStateMachine = ({
 
   class MusicalExerciseStateMachine extends StateMachine<CallAndResponseContext, AllStateFactories> {
     public constructor() {
-      super(makeInitialContext(), createStartNewChallenge, {
+      super(makeInitialContext(game), createStartNewChallenge, {
         'play-challenge': {
           'wait-for-response': createWaitForResponseState,
         },
