@@ -174,4 +174,27 @@ export class MidiScheduler {
 
     this.rescheduleLoop()
   }
+
+  /**
+   * Cancels every queued sequence without invoking completion callbacks. Any `noteoff` still
+   * pending in a cancelled sequence is sent immediately, so notes the sequence has already
+   * started don't sound forever; all other pending events are dropped.
+   */
+  public cancelAllSequences() {
+    for (const sequence of this.activeSequences) {
+      for (let i = sequence.nextEventIndex; i < sequence.events.length; i++) {
+        const event = sequence.events[i]
+        if (event.event === 'noteoff') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+          this.device.send(event.event, event.data as any)
+        }
+      }
+    }
+
+    this.activeSequences = []
+    if (this.timeoutHandle) {
+      clearTimeout(this.timeoutHandle)
+      this.timeoutHandle = undefined
+    }
+  }
 }

@@ -59,7 +59,7 @@ export const createSoundPickerProgram = (
 
   const selectInstrument = (instrument: Instrument) => {
     if (speakInstrumentNames) {
-      speak(instrument.name)
+      void speak(instrument.name)
     }
 
     selectedInstruments[selectedChannelId] = instrument
