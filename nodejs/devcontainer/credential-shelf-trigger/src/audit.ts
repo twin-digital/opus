@@ -10,7 +10,10 @@ export interface AuditEntry {
   authorized: boolean
   /**
    * Coarse result: 'ok' | 'unauthorized' | 'rate_limited' | 'upstream_error', plus
-   * 'ok_in_flight' when a throttled refresh re-presented the prompt already pending approval.
+   * 'ok_in_flight' when a throttled refresh re-presented the prompt already pending approval,
+   * and 'rate_limited_probe_failed' when a throttled refresh was refused without a pending
+   * answer because the status probe failed — distinct from 'rate_limited' so a sidecar outage
+   * during a throttle window stays visible in the log.
    */
   outcome: string
 }

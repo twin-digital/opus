@@ -14,6 +14,12 @@ import type { UpstreamClient } from './upstream.js'
 export interface ServerDeps {
   token: string
   upstream: UpstreamClient
+  /**
+   * Client used for the throttled-path pending probe. The probe sits on the operator's
+   * critical path, so it wants a much shorter timeout than the refresh relay (whose budget
+   * covers the sidecar's prompt-parse window). Defaults to `upstream`.
+   */
+  probe?: UpstreamClient
   limiter: RateLimiter
   now?: () => number
   audit?: Auditor
@@ -23,10 +29,19 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   // no-store: a /refresh response carries the device user_code + verification URL; keep any
   // intermediary (reverse proxy, browser) from caching it.
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' })
-  res.end(JSON.stringify(body))
+  // `?? null`: an undefined body would serialize to an empty payload, which is not valid JSON
+  // for a client that trusts the application/json content-type.
+  res.end(JSON.stringify(body ?? null))
 }
 
+/** A JSON object payload — the only body shape the sidecar's contract allows on a 200. */
+const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
 const sourceOf = (req: IncomingMessage): string => req.socket.remoteAddress ?? 'unknown'
+
+/** Timeout for the throttled-path pending probe — a status read, not a device-auth flow. */
+const PROBE_TIMEOUT_MS = 5_000
 
 /**
  * The LAN-facing trigger server. It authenticates + rate-limits, then relays to the
@@ -109,13 +124,15 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
       deps
         .upstream('POST', '/refresh')
         .then((r) => {
-          if (r.status === 200) {
+          // A healthy refresh is a 200 with a JSON object body ({ prompts: [...] }); the
+          // upstream client yields body: undefined for empty/unparseable JSON, and relaying
+          // that would hand the page an empty response (and drop the in_flight flag).
+          const body = r.body
+          if (r.status === 200 && isJsonObject(body)) {
             audit({ event, source, authorized: true, outcome: inFlight ? 'ok_in_flight' : 'ok' })
             // relays { prompts: [...] } to the operator only; in_flight tells the page this
             // is an outstanding request being re-presented, not a new login
-            const body =
-              inFlight && typeof r.body === 'object' && r.body !== null ? { ...r.body, in_flight: true } : r.body
-            sendJson(res, 200, body)
+            sendJson(res, 200, inFlight ? { ...body, in_flight: true } : body)
           } else {
             audit({ event, source, authorized: true, outcome: 'upstream_error' })
             sendJson(res, 502, { error: 'upstream error' })
@@ -135,26 +152,26 @@ export const createTriggerServer = (deps: ServerDeps): Server => {
     // Throttled: if a refresh is already pending approval, relay anyway so the operator gets
     // the outstanding prompt back (losing the tab or re-tapping used to strand them until the
     // rate-limit window passed). Only a throttled request with *nothing* pending is refused —
-    // that is the abuse case the limiter exists for.
-    deps
-      .upstream('GET', '/status')
+    // that is the abuse case the limiter exists for. `pending` in the 429 body tells the page
+    // whether "nothing is awaiting approval" is a verified fact (false) or unknowable because
+    // the probe failed ('unknown'); the audit outcome makes the same distinction so a sidecar
+    // outage during a throttle window is not masked as routine rate limiting.
+    const probeFailed = (): void => {
+      audit({ event, source, authorized: true, outcome: 'rate_limited_probe_failed' })
+      sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently', pending: 'unknown' })
+    }
+    ;(deps.probe ?? deps.upstream)('GET', '/status')
       .then((r) => {
-        const pending =
-          r.status === 200 &&
-          typeof r.body === 'object' &&
-          r.body !== null &&
-          (r.body as { refresh_pending?: unknown }).refresh_pending === true
-        if (pending) {
+        if (r.status !== 200 || !isJsonObject(r.body)) {
+          probeFailed()
+        } else if (r.body.refresh_pending === true) {
           relayRefresh(true)
         } else {
           audit({ event, source, authorized: true, outcome: 'rate_limited' })
-          sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently' })
+          sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently', pending: false })
         }
       })
-      .catch(() => {
-        audit({ event, source, authorized: true, outcome: 'rate_limited' })
-        sendJson(res, 429, { error: 'rate limited; a refresh was triggered too recently' })
-      })
+      .catch(probeFailed)
   })
 }
 
@@ -163,6 +180,8 @@ export const startServer = (cfg: TriggerConfig): Promise<Server> => {
   const server = createTriggerServer({
     token: cfg.token,
     upstream: createUpstreamClient(cfg.upstreamSocket),
+    // A hung sidecar should degrade a throttled tap to a fast 429, not a 45s stall.
+    probe: createUpstreamClient(cfg.upstreamSocket, PROBE_TIMEOUT_MS),
     limiter: createRateLimiter(cfg.rateLimitIntervalSec, cfg.rateLimitBurst),
   })
   return new Promise((resolve, reject) => {
