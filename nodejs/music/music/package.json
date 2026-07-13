@@ -36,9 +36,12 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@julusian/midi": "^3.6.1",
     "dotenv": "catalog:",
     "easymidi": "^3.1.0",
     "lodash-es": "catalog:",
@@ -50,8 +53,10 @@
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
@@ -60,7 +65,8 @@
     "prettier-package-json": "catalog:",
     "tsx": "^4.19.2",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",

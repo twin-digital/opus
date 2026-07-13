@@ -223,6 +223,7 @@ export class NovationLaunchpadMiniMk3 {
 
       const handleResponse = ({ message }: IdentityResponseEvent) => {
         clearTimeout(timeout)
+        this._events.off('identity-response', handleResponse)
         resolve(Number.parseInt(message.version.join(''), 10))
       }
       this._events.on('identity-response', handleResponse)
