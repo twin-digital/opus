@@ -27,17 +27,18 @@ export interface EarTrainingGame {
   createChallenge: () => CallAndResponseChallenge
 }
 
+// the first entry is the default game, selected when the program is entered
 export const EarTrainingGames: readonly EarTrainingGame[] = [
+  {
+    id: 'play-my-note',
+    name: 'Play My Note',
+    color: [0, 64, 127],
+    createChallenge: () => SingleNoteEarTraining.createRandom(),
+  },
   {
     id: 'higher-or-lower',
     name: 'Higher or Lower',
     color: [127, 80, 0],
     createChallenge: () => HigherOrLower.createRandom(),
-  },
-  {
-    id: 'perfect-pitch',
-    name: 'Perfect Pitch',
-    color: [0, 64, 127],
-    createChallenge: () => SingleNoteEarTraining.createRandom(),
   },
 ]

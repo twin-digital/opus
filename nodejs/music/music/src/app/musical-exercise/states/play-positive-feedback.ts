@@ -2,6 +2,7 @@ import type { Channel } from 'easymidi'
 import { animate } from 'popmotion'
 import type { MidiScheduler } from '../../../midi/sequencing.js'
 import type { CallAndResponseContext } from '../call-and-response-context.js'
+import { consumeVerbalFeedback } from './verbal-feedback.js'
 import type { Drawable } from '../../../ui/drawable.js'
 import type { State } from '../../state-machine.js'
 import { createRectangle } from '../../../ui/components/rectangle.js'
@@ -94,12 +95,14 @@ export const makePlayPositiveFeedbackState =
      */
     midi: MidiScheduler
   }) =>
-  (_: CallAndResponseContext) => {
+  (context: CallAndResponseContext) => {
     let done = false
+    let speech = { isDone: () => true }
     const flash = gridFlash()
 
     return {
       enter: () => {
+        speech = consumeVerbalFeedback(context)
         midi.addSequence(
           [
             {
@@ -139,7 +142,8 @@ export const makePlayPositiveFeedbackState =
       },
       getResult: () => 'done' as const,
       getDrawable: () => flash().draw(),
-      isDone: () => done,
+      // wait for the spoken feedback too, so the next challenge never talks over it
+      isDone: () => done && speech.isDone(),
       stateName: 'play-positive-feedback' as const,
       update: (elapsedSeconds: number) => {
         flash().tick(elapsedSeconds)

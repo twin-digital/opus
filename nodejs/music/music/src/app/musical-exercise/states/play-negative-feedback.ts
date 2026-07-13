@@ -3,6 +3,7 @@ import { animate } from 'popmotion'
 import type { MidiScheduler } from '../../../midi/sequencing.js'
 import type { CallAndResponseContext } from '../call-and-response-context.js'
 import type { State } from '../../state-machine.js'
+import { consumeVerbalFeedback } from './verbal-feedback.js'
 import { createRectangle } from '../../../ui/components/rectangle.js'
 import { group } from '../../../ui/components/group.js'
 import { translate } from '../../../ui/transform/translate.js'
@@ -92,11 +93,13 @@ export const makePlayNegativeFeedbackState =
      */
     midi: MidiScheduler
   }) =>
-  (_: CallAndResponseContext) => {
+  (context: CallAndResponseContext) => {
     let done = false
+    let speech = { isDone: () => true }
 
     return {
       enter: (entityManager) => {
+        speech = consumeVerbalFeedback(context)
         entityManager.add(new RedXEntity())
         midi.addSequence(
           [
@@ -136,7 +139,8 @@ export const makePlayNegativeFeedbackState =
         )
       },
       getResult: () => 'done' as const,
-      isDone: () => done,
+      // wait for the spoken feedback too, so the replayed challenge never talks over it
+      isDone: () => done && speech.isDone(),
       stateName: 'play-negative-feedback' as const,
     } satisfies State
   }

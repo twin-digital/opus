@@ -11,6 +11,12 @@ export interface CallAndResponseContext {
    * The game being played; supplies new challenges and the game's presentation identity.
    */
   game: EarTrainingGame
+
+  /**
+   * Verbal feedback for the round that just ended, snapshotted by `wait-for-response.exit`
+   * (before `reset()`), and consumed — spoken and cleared — by the feedback states.
+   */
+  verbalFeedback?: string
 }
 
 /**

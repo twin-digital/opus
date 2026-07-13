@@ -83,20 +83,34 @@ export const createMusicalExerciseProgram = (
       ),
     )
 
-  // identity bar (playfield top row): carries the active game's color onto the main screen
-  const makeIdentityBar = () =>
-    translate(
-      0,
-      7,
-      createRectangle({
-        color: [...selectedGame.color],
-        height: 1,
-        width: 8,
-      }),
+  // identity corners: the active game's color on the playfield's four corners. Drawn after
+  // the state machine, and the engine composites cells last-wins — so full-grid feedback
+  // effects (the success flash, the red X) are painted over at these positions on every
+  // frame, and the corners reappear intact the instant an effect ends.
+  const IdentityCornerPositions = [
+    [0, 0],
+    [7, 0],
+    [0, 7],
+    [7, 7],
+  ] as const
+
+  const makeIdentityCorners = () =>
+    group(
+      ...IdentityCornerPositions.map(([x, y]) =>
+        translate(
+          x,
+          y,
+          createRectangle({
+            color: [...selectedGame.color],
+            height: 1,
+            width: 1,
+          }),
+        ),
+      ),
     )
 
   return {
-    getDrawable: () => group(stateMachine.getDrawable(), makeIdentityBar(), makeGameSelector()),
+    getDrawable: () => group(stateMachine.getDrawable(), makeIdentityCorners(), makeGameSelector()),
     initialize: () => {
       running = true
       announceThenStart(stateMachine, selectedGame.name)

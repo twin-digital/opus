@@ -1,5 +1,6 @@
 import { type Channel } from 'easymidi'
 import type { MidiDevice } from '../../../midi/midi-device.js'
+import type { ChallengeResponse } from '../call-and-response-challenge.js'
 import type { CallAndResponseContext } from '../call-and-response-context.js'
 import { ChallengeInputHandler } from '../ressponse-input-handler.js'
 import { currentTimeMillis } from '../../../engine/timer.js'
@@ -32,9 +33,17 @@ export const makeWaitForResponseState =
      */
     timeout?: number
   }) =>
-  ({ challenge }: CallAndResponseContext) => {
+  (context: CallAndResponseContext) => {
+    const { challenge } = context
     let replayChallengeAt = Number.MAX_SAFE_INTEGER
-    const input = new ChallengeInputHandler(device, channel, echoChannel, challenge.handleResponseNote.bind(challenge))
+
+    // the machine records the last response itself: challenges stay free of temporal input
+    // state, and the record is judged before reset() can touch anything (see exit below)
+    let lastResponse: ChallengeResponse | undefined
+    const input = new ChallengeInputHandler(device, channel, echoChannel, (note, duration) => {
+      lastResponse = { note, duration }
+      challenge.handleResponseNote(note, duration)
+    })
 
     return {
       enter: () => {
@@ -43,6 +52,14 @@ export const makeWaitForResponseState =
       },
       exit: () => {
         input.stop()
+
+        // snapshot the verbal feedback while the round is fully intact — reset() runs before
+        // the feedback state enters, so this is the only safe moment to ask
+        const result = challenge.getResult()
+        if (result !== 'pending') {
+          context.verbalFeedback = challenge.getVerbalFeedback?.(result, lastResponse)
+        }
+
         challenge.reset()
       },
       getDrawable: challenge.getChallengeUi?.bind(challenge),

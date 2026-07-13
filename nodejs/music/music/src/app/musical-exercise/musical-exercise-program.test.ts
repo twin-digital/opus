@@ -38,6 +38,13 @@ const settle = async () => {
 
 const SelectedColor: RgbColor = [0, 127, 0]
 
+const CornerPositions = [
+  [0, 0],
+  [7, 0],
+  [0, 7],
+  [7, 7],
+] as const
+
 describe('createMusicalExerciseProgram', () => {
   const draw = (program: ReturnType<typeof createMusicalExerciseProgram>) => program.getDrawable().draw()
 
@@ -60,29 +67,32 @@ describe('createMusicalExerciseProgram', () => {
     })
   })
 
-  it("shows the active game's identity color across the playfield top row", async () => {
+  it("shows the active game's identity color on the playfield's four corners", async () => {
     const program = await start()
 
     const cells = draw(program)
-    for (let x = 0; x < 8; x++) {
-      expect(cellAt(cells, x, 7)?.value).toEqual(EarTrainingGames[0].color)
+    for (const [x, y] of CornerPositions) {
+      expect(cellAt(cells, x, y)?.value, `corner (${x},${y})`).toEqual(EarTrainingGames[0].color)
     }
   })
 
-  it('composites the identity bar over competing playfield cells, matching the engine (last-wins)', async () => {
+  it('composites the identity corners over competing playfield cells, matching the engine (last-wins)', async () => {
     const program = await start()
 
-    // replicate engine.draw(): apply cells to a canvas in draw order
+    // replicate engine.draw(): apply cells to a canvas in draw order. Feedback effects (the
+    // success flash, the red X) draw across the corner positions; because the corners are
+    // drawn after the state machine, the canvas shows them regardless — and they reappear
+    // intact each frame after an effect ends, since the frame is fully recomposed.
     const cells = draw(program)
     const canvas = createCanvas<RgbColor>(9, 9)
     for (const cell of cells) {
       canvas.set(cell.x, cell.y, cell.value)
     }
 
-    for (let x = 0; x < 8; x++) {
-      expect(canvas.getData().get(x, 7)).toEqual(EarTrainingGames[0].color)
+    for (const [x, y] of CornerPositions) {
+      expect(canvas.getData().get(x, y)).toEqual(EarTrainingGames[0].color)
       // cellAt (findLast) agrees with the canvas result at every asserted coordinate
-      expect(cellAt(cells, x, 7)?.value).toEqual(canvas.getData().get(x, 7))
+      expect(cellAt(cells, x, y)?.value).toEqual(canvas.getData().get(x, y))
     }
   })
 
@@ -159,8 +169,8 @@ describe('createMusicalExerciseProgram', () => {
   })
 
   it('only starts the last game when selections change while an announcement is in flight', async () => {
-    const higherOrLowerSpy = vi.spyOn(EarTrainingGames[0], 'createChallenge')
-    const perfectPitchSpy = vi.spyOn(EarTrainingGames[1], 'createChallenge')
+    const defaultGameSpy = vi.spyOn(EarTrainingGames[0], 'createChallenge')
+    const secondGameSpy = vi.spyOn(EarTrainingGames[1], 'createChallenge')
     const speechResolvers: (() => void)[] = []
     vi.mocked(speak).mockImplementation(
       () =>
@@ -171,8 +181,8 @@ describe('createMusicalExerciseProgram', () => {
 
     const program = createMusicalExerciseProgram(makeStubOptions())
     void program.initialize?.()
-    press(cellAt(draw(program), 8, 6)) // switch to Perfect Pitch...
-    press(cellAt(draw(program), 8, 7)) // ...and back to Higher or Lower, all before any speech ends
+    press(cellAt(draw(program), 8, 6)) // switch to the second game...
+    press(cellAt(draw(program), 8, 7)) // ...and back to the default, all before any speech ends
 
     speechResolvers.forEach((resolve) => {
       resolve()
@@ -180,11 +190,11 @@ describe('createMusicalExerciseProgram', () => {
     await settle()
 
     // only the finally-selected game's machine started; superseded machines never initialize
-    expect(perfectPitchSpy).not.toHaveBeenCalled()
-    expect(higherOrLowerSpy).toHaveBeenCalledOnce()
+    expect(secondGameSpy).not.toHaveBeenCalled()
+    expect(defaultGameSpy).toHaveBeenCalledOnce()
 
-    higherOrLowerSpy.mockRestore()
-    perfectPitchSpy.mockRestore()
+    defaultGameSpy.mockRestore()
+    secondGameSpy.mockRestore()
   })
 
   it('cancels queued scheduler audio when switching games and on shutdown', async () => {
