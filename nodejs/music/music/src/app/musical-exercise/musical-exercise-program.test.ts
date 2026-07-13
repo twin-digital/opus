@@ -13,13 +13,38 @@ vi.mock('../speak.js', () => ({ speak: vi.fn(() => Promise.resolve()) }))
 vi.mock('easymidi', () => ({ Input: vi.fn(), Output: vi.fn() }))
 import { speak } from '../speak.js'
 
-const makeStubOptions = () => ({
-  // the program only hands the device to states that touch it on challenge playback/response,
-  // which these tests never advance far enough to reach; the scheduler's cancel is invoked on
-  // every switch/shutdown
-  device: {} as unknown as MidiDevice,
-  midi: { cancelAllSequences: vi.fn() } as unknown as MidiScheduler,
-})
+interface StubHarness {
+  device: MidiDevice
+  midi: MidiScheduler
+  /** handlers ChallengeInputHandler registered on the device, keyed by event name */
+  deviceHandlers: Map<string, (note: { channel: number; note: number; velocity: number }) => void>
+  /** onComplete callbacks captured from midi.addSequence, oldest first */
+  sequenceCompletions: (() => void)[]
+}
+
+const makeStubOptions = (): StubHarness => {
+  const deviceHandlers = new Map<string, (note: { channel: number; note: number; velocity: number }) => void>()
+  const sequenceCompletions: (() => void)[] = []
+  return {
+    device: {
+      on: vi.fn((event: string, handler: never) => {
+        deviceHandlers.set(event, handler)
+      }),
+      off: vi.fn(),
+      send: vi.fn(),
+    } as unknown as MidiDevice,
+    midi: {
+      addSequence: vi.fn((_events: unknown, onComplete?: () => void) => {
+        if (onComplete) {
+          sequenceCompletions.push(onComplete)
+        }
+      }),
+      cancelAllSequences: vi.fn(),
+    } as unknown as MidiScheduler,
+    deviceHandlers,
+    sequenceCompletions,
+  }
+}
 
 // findLast mirrors the engine's compositing: engine.draw() applies cells to the canvas via
 // `cells.forEach -> canvas.set` in draw order, so the LAST cell at a coordinate wins. (See the
@@ -76,19 +101,36 @@ describe('createMusicalExerciseProgram', () => {
     }
   })
 
-  it('composites the identity corners over competing playfield cells, matching the engine (last-wins)', async () => {
-    const program = await start()
+  it('composites the identity corners over a live feedback effect (the entity-managed red X)', async () => {
+    const options = makeStubOptions()
+    vi.mocked(speak).mockClear()
+    vi.mocked(speak).mockImplementation(() => Promise.resolve())
+    const program = createMusicalExerciseProgram(options)
+    void program.initialize?.()
+    await settle()
 
-    // replicate engine.draw(): apply cells to a canvas in draw order. Feedback effects (the
-    // success flash, the red X) draw across the corner positions; because the corners are
-    // drawn after the state machine, the canvas shows them regardless — and they reappear
-    // intact each frame after an effect ends, since the frame is fully recomposed.
+    // drive a full wrong-answer round: start-new-challenge -> play-challenge (finish its
+    // audio) -> wait-for-response (play a note below the whole pool, always incorrect) ->
+    // play-negative-feedback, whose enter() injects the RedXEntity via the entity manager
+    program.update?.(0.1)
+    options.sequenceCompletions.shift()?.()
+    program.update?.(0.1)
+    options.deviceHandlers.get('noteon')?.({ channel: 0, note: 59, velocity: 96 })
+    options.deviceHandlers.get('noteoff')?.({ channel: 0, note: 59, velocity: 0 })
+    program.update?.(0.1)
+
+    // the red X is now live, and its cells include corner (0,0) — real contention
     const cells = draw(program)
+    const cornerCells = cells.filter((cell) => cell.x === 0 && cell.y === 0)
+    expect(cornerCells.length).toBeGreaterThan(1)
+
+    // replicate engine.draw(): apply cells to a canvas in draw order (last-wins). The corners
+    // are drawn after the machine (whose drawable includes entity-managed effects), so they
+    // win at every corner even while the effect plays.
     const canvas = createCanvas<RgbColor>(9, 9)
     for (const cell of cells) {
       canvas.set(cell.x, cell.y, cell.value)
     }
-
     for (const [x, y] of CornerPositions) {
       expect(canvas.getData().get(x, y)).toEqual(EarTrainingGames[0].color)
       // cellAt (findLast) agrees with the canvas result at every asserted coordinate

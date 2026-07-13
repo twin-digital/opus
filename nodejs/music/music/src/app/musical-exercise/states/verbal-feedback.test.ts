@@ -6,6 +6,7 @@ import { makeInitialContext } from '../call-and-response-context.js'
 import { EarTrainingGames } from '../games.js'
 import { consumeVerbalFeedback } from './verbal-feedback.js'
 import { makePlayNegativeFeedbackState } from './play-negative-feedback.js'
+import { makePlayPositiveFeedbackState } from './play-positive-feedback.js'
 import { makeWaitForResponseState } from './wait-for-response.js'
 
 vi.mock('../../speak.js', () => ({ speak: vi.fn(() => Promise.resolve()) }))
@@ -73,6 +74,42 @@ describe('play-negative-feedback verbal gating', () => {
     const state = makePlayNegativeFeedbackState({ channel: 6, midi })(context)
     state.enter({ add: vi.fn() } as never)
 
+    expect(state.isDone()).toBe(false)
+    finishAudio()
+    expect(state.isDone()).toBe(false) // audio done, speech still going
+
+    finishSpeech()
+    await Promise.resolve()
+    expect(state.isDone()).toBe(true)
+  })
+})
+
+describe('play-positive-feedback verbal gating', () => {
+  it('is not done until both the feedback audio and the speech finish', async () => {
+    let finishSpeech = () => {
+      /* replaced below */
+    }
+    vi.mocked(speak).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSpeech = resolve
+        }),
+    )
+    let finishAudio = () => {
+      /* replaced below */
+    }
+    const midi = {
+      addSequence: vi.fn((_events: unknown, onComplete?: () => void) => {
+        finishAudio = onComplete ?? finishAudio
+      }),
+    } as unknown as MidiScheduler
+
+    const context = makeContext()
+    context.verbalFeedback = 'nice job!'
+    const state = makePlayPositiveFeedbackState({ channel: 5, midi })(context)
+    state.enter()
+
+    expect(context.verbalFeedback).toBeUndefined() // consumed, not leaked to the next round
     expect(state.isDone()).toBe(false)
     finishAudio()
     expect(state.isDone()).toBe(false) // audio done, speech still going

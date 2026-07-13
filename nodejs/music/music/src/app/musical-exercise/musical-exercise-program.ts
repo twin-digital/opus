@@ -83,10 +83,12 @@ export const createMusicalExerciseProgram = (
       ),
     )
 
-  // identity corners: the active game's color on the playfield's four corners. Drawn after
-  // the state machine, and the engine composites cells last-wins — so full-grid feedback
-  // effects (the success flash, the red X) are painted over at these positions on every
-  // frame, and the corners reappear intact the instant an effect ends.
+  // identity corners: the active game's color on the playfield's four corners. Everything
+  // the machine renders — the states' own drawables (success flash) AND entity-managed
+  // effects (the red X) — flows through stateMachine.getDrawable(), which composes
+  // group(entityManager, state drawable); the corners are drawn after it and the engine
+  // composites cells last-wins, so effects are painted over at these positions each frame
+  // and the corners reappear intact the instant an effect ends.
   const IdentityCornerPositions = [
     [0, 0],
     [7, 0],
