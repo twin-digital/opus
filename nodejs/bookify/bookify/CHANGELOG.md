@@ -1,5 +1,12 @@
 # @twin-digital/bookify
 
+## 0.4.3
+
+### Patch Changes
+
+- bb752c0: fix(deps): update dependency chokidar to v5
+  - @twin-digital/logger-lib@0.0.1
+
 ## 0.4.2
 
 ### Patch Changes

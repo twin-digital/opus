@@ -1,5 +1,13 @@
 # @twin-digital/dolmenwood-bot
 
+## 0.1.2
+
+### Patch Changes
+
+- c831827: fix(deps): update dependency pdfjs-dist to v6
+  - @twin-digital/bedrock@0.1.1
+  - @twin-digital/genai-core@0.1.0
+
 ## 0.1.1
 
 ### Patch Changes

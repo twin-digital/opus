@@ -1,5 +1,13 @@
 # @twin-digital/refbash
 
+## 0.1.5
+
+### Patch Changes
+
+- bb752c0: fix(deps): update dependency meow to v14
+- 05ba4db: fix(deps): update dependency ink to v7
+  - @twin-digital/dolmenwood@0.3.1
+
 ## 0.1.4
 
 ### Patch Changes

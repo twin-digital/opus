@@ -1,5 +1,11 @@
 # @twin-digital/context-server
 
+## 0.1.2
+
+### Patch Changes
+
+- bb752c0: fix(deps): update dependency fastify-plugin to v6
+
 ## 0.1.1
 
 ### Patch Changes
