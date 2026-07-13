@@ -123,6 +123,7 @@ export interface StateMachineContext {
 export class StateMachine<TContext, TAllFactories extends StateFactory<TContext>> {
   private context: TContext
   private entityManager = new SimpleEntityManager()
+  private initialized = false
   private state: ReturnType<TAllFactories>
 
   public constructor(
@@ -164,16 +165,31 @@ export class StateMachine<TContext, TAllFactories extends StateFactory<TContext>
   }
 
   public initialize(): void {
+    this.initialized = true
+
     // enter our initial state
     this.state.enter?.(this.entityManager)
   }
 
   shutdown(): void {
+    // never entered (or already shut down): there is no current state to exit
+    if (!this.initialized) {
+      return
+    }
+    this.initialized = false
+
     // exit our current state
     this.state.exit?.()
   }
 
   update(elapsedSeconds: number): void {
+    // the current state hasn't been entered until initialize() — advancing before that runs
+    // transitions against un-entered states (e.g. a challenge that was never created) and
+    // can wedge the machine permanently
+    if (!this.initialized) {
+      return
+    }
+
     this.entityManager.update(elapsedSeconds)
     this.state.update?.(elapsedSeconds)
     this.maybeAdvanceToNextState()
