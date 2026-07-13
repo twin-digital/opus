@@ -11,7 +11,7 @@ const MidiChannels = {
   Challenge: 4,
   CorrectFeedback: 5,
   Echo: 3,
-  IncorrectFeedack: 6,
+  IncorrectFeedback: 6,
   Input: 0,
 } as const
 
