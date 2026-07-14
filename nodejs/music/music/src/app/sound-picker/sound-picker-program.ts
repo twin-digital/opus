@@ -135,18 +135,18 @@ export const createSoundPickerProgram = (
       log.info('Initializing "Sound Picker" program.')
 
       // reset instruments and mute all tracks except first
-      for (let i = 0; i < channelCount; i++) {
-        selectedFamilies[i] = InstrumentFamilies[0]
-        selectedInstruments[i] = InstrumentsByFamily[selectedFamilies[i].name][0]
-        controller.selectSound(i, {
-          bank: selectedInstruments[i].bank,
-          program: selectedInstruments[i].patch,
+      controller.channels.forEach((channel, index) => {
+        selectedFamilies[channel.id] = InstrumentFamilies[0]
+        selectedInstruments[channel.id] = InstrumentsByFamily[selectedFamilies[channel.id].name][0]
+        controller.selectSound(channel.id, {
+          bank: selectedInstruments[channel.id].bank,
+          program: selectedInstruments[channel.id].patch,
         })
 
-        if (i > 0) {
-          controller.setMuted(i, true)
+        if (index > 0) {
+          controller.setMuted(channel.id, true)
         }
-      }
+      })
 
       selectedChannelId = controller.channels[0].id
       selectedScreenId = 1

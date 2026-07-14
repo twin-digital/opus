@@ -1,16 +1,16 @@
 import { createButton } from '../../../ui/components/button.js'
 import { group } from '../../../ui/components/group.js'
 import { translate } from '../../../ui/transform/translate.js'
-import type { ChannelState } from '../model.js'
+import { toChannelId, type ChannelId, type ChannelState } from '../model.js'
 
 export const createSideTrackSelector = ({
   channels = [],
   onChannelSelected,
-  selectedChannelId = 0,
+  selectedChannelId = toChannelId(0),
 }: {
   channels?: readonly ChannelState[]
-  onChannelSelected?: (index: number) => void
-  selectedChannelId?: number
+  onChannelSelected?: (channelId: ChannelId) => void
+  selectedChannelId?: ChannelId
 }) =>
   group(
     ...channels.map((channel, index) =>
