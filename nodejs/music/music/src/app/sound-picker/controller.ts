@@ -1,7 +1,7 @@
 import { logger } from '../../logger.js'
 import type { MidiDevice } from '../../midi/midi-device.js'
 import type { RgbColor } from '../../ui/color.js'
-import { toChannelId, type ChannelId, type MidiChannel } from './model.js'
+import { toChannelId, type ChannelId, type KeyboardRoute, type MidiChannel } from './model.js'
 import { Channel } from './channel.js'
 import type { Note } from 'easymidi'
 import type { SamplePlayer } from '../../audio/sample-player.js'
@@ -46,6 +46,12 @@ export class LaunchpadController {
   private _noteOnListener = this.handleNoteOn.bind(this)
 
   /**
+   * Routing table applied to incoming keyboard notes: a note sounds on every channel whose route matches it. Defaults
+   * to one full-range route per channel, so the whole keyboard plays every channel.
+   */
+  private _routes: KeyboardRoute[]
+
+  /**
    * Creates a new LaunchpadController.
    * @param instrument MIDI device being controlled by this instance.
    * @param samples Player used to sound samples on channels playing a sound board.
@@ -64,20 +70,34 @@ export class LaunchpadController {
       { length: channelCount },
       (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], samples, ChannelColors[i]),
     )
+    this._routes = this._channels.map((channel) => ({ channelId: channel.id }))
   }
 
   private channelById(id: ChannelId): Channel | undefined {
     return this._channels.find((channel) => channel.id === id)
   }
 
+  /**
+   * Channels the routing table maps a keyboard note to. Deduplicated, so a note plays at most once per channel even
+   * when several routes to the same channel match it.
+   */
+  private channelsForNote(note: number): Channel[] {
+    const matched = this._routes
+      .filter((route) => route.range === undefined || (note >= route.range.low && note <= route.range.high))
+      .map((route) => this.channelById(route.channelId))
+      .filter((channel) => channel !== undefined)
+
+    return [...new Set(matched)]
+  }
+
   private handleNoteOff(note: Note) {
-    this._channels.forEach((channel) => {
+    this.channelsForNote(note.note).forEach((channel) => {
       channel.stopNote(note)
     })
   }
 
   private handleNoteOn(note: Note) {
-    this._channels.forEach((channel) => {
+    this.channelsForNote(note.note).forEach((channel) => {
       // A note-on of velocity 0 is a key release, which bypasses mute (the channel routes it to stopNote): mute stops
       // sound from starting, never from stopping.
       if (note.velocity === 0 || !channel.muted) {
@@ -93,6 +113,15 @@ export class LaunchpadController {
   public initialize() {
     this.stopAllSound()
 
+    // A fresh channel's level matches the piano only by luck — the instrument remembers the last CC 7 it was sent
+    // across program switches and power cycles — so initialization writes each level out rather than assume it.
+    this._channels.forEach((channel) => {
+      channel.sendLevel()
+    })
+
+    // off-then-on keeps each listener registered exactly once, however many times the controller is re-initialized.
+    this.instrument.off('noteon', this._noteOnListener)
+    this.instrument.off('noteoff', this._noteOffListener)
     this.instrument.on('noteon', this._noteOnListener)
     this.instrument.on('noteoff', this._noteOffListener)
   }
@@ -146,6 +175,15 @@ export class LaunchpadController {
     if (channel) {
       channel.level = level
     }
+  }
+
+  /**
+   * Replaces the keyboard routing table. Routes govern keyboard input only — notes played programmatically on a
+   * channel are unaffected. Notes already sounding are left alone; callers changing routes mid-note should also call
+   * {@link stopAllSound} if stragglers would be wrong.
+   */
+  public setRoutes(routes: KeyboardRoute[]) {
+    this._routes = [...routes]
   }
 
   /**

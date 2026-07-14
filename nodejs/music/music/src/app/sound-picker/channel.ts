@@ -198,6 +198,20 @@ export class Channel {
     }
   }
 
+  /**
+   * Transmits the channel's current level to the device unconditionally. The level setter only sends when the value
+   * changes, which assumes the device already agrees — true within one channel's lifetime, but a fresh channel
+   * matches the piano only by luck, since the instrument remembers the last CC 7 it was sent across program switches
+   * and power cycles.
+   */
+  public sendLevel() {
+    this._device.send('cc', {
+      controller: 0x07,
+      value: this.level,
+      channel: this.midiChannel,
+    })
+  }
+
   public get midiChannel() {
     return this._midiChannel
   }

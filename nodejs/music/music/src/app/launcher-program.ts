@@ -19,7 +19,7 @@ export const createLauncherProgram = ({
 }: {
   launchpad: NovationLaunchpadMiniMk3
   options?: {
-    speakInstrumentNames?: boolean
+    speech?: boolean
   }
 
   /**

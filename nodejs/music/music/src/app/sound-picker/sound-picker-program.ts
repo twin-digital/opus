@@ -2,7 +2,7 @@ import { group } from '../../ui/components/group.js'
 import { createChannelLevelScreen } from './channel-level-screen/channel-level-screen.js'
 import type { MidiDevice } from '../../midi/midi-device.js'
 import { LaunchpadController } from './controller.js'
-import { createSideTrackSelector } from './global-nav/side-track-selector.js'
+import { createSideColumn, type Side } from './global-nav/side-column.js'
 import { createTopScreenSelector } from './global-nav/top-screen-selector.js'
 import { createSoundSelectScreen } from './sound-select-screen/sound-select-screen.js'
 import type { Cell, Drawable } from '../../ui/drawable.js'
@@ -11,12 +11,19 @@ import type { NovationLaunchpadMiniMk3 } from '../../vendors/novation/launchpad-
 import { logger } from '../../logger.js'
 import { speak } from '../speak.js'
 import type { ReadbackEvent } from '../../vendors/novation/launchpad-mini-mk3/events.js'
-import { InstrumentFamilies, type Instrument, type InstrumentFamily } from '../../midi/instrument-data.js'
+import {
+  drumKitInstruments,
+  InstrumentFamilies,
+  type Instrument,
+  type InstrumentFamily,
+  type InstrumentFamilyName,
+} from '../../midi/instrument-data.js'
 import { InstrumentsByFamily } from '../../midi/instruments.js'
 import type { Program } from '../../engine/program.js'
 import { SamplePlayer } from '../../audio/sample-player.js'
 import { SoundBoardSampleNames } from '../../soundboard/sound-boards.js'
-import type { MidiChannel } from './model.js'
+import { InstrumentFamilyColors } from './sound-select-screen/colors.js'
+import { toChannelId, type ChannelId, type MidiChannel } from './model.js'
 
 /**
  * Sends Local Control (CC 122) to the piano on every MIDI channel, since which channel the piano listens for mode
@@ -36,68 +43,168 @@ const setLocalControl = (device: MidiDevice, on: boolean) => {
 
 const log = logger.child({}, { msgPrefix: '[PROGRAM] ' })
 
+/**
+ * First note of the right-hand zone when the keyboard is split: C4. Everything below it belongs to the left hand,
+ * which keeps the entire GM standard drum map (35–59) in reach.
+ */
+const SplitPoint = 60
+
+/**
+ * The left hand's sound whenever the split turns on: the GM standard drum kit. The default is fixed — there is no
+ * memory of prior left-hand choices.
+ */
+const GmStandardKit = drumKitInstruments[0]
+
+/**
+ * Channel each hand plays. Bottom-up like the piano: the left hand is the low zone, so it is channel 0.
+ */
+const LeftHand = toChannelId(0)
+const RightHand = toChannelId(1)
+
+const familyOf = (instrument: Instrument): InstrumentFamily =>
+  InstrumentFamilies.find((family) => family.name === instrument.family) ?? InstrumentFamilies[0]
+
 export const createSoundPickerProgram = (
   launchpad: NovationLaunchpadMiniMk3,
   synthesizer: MidiDevice,
   {
-    speakInstrumentNames = true,
+    speech = true,
   }: {
     /**
-     * Whether to speak instrument names as they are selected or not.
+     * Whether to speak selection feedback aloud: instrument names, side selection, and split announcements.
      * @defaultValue true
      */
-    speakInstrumentNames?: boolean
+    speech?: boolean
   } = {},
 ): Program => {
-  const channelCount = 1
   const samples = new SamplePlayer()
-  const controller = new LaunchpadController(synthesizer, samples, channelCount)
+  const controller = new LaunchpadController(synthesizer, samples, 2)
+  // Seeded by initialize(), which the engine and launcher guarantee runs before the first draw.
   const selectedFamilies: Record<number, InstrumentFamily> = {}
   const selectedInstruments: Record<number, Instrument> = {}
-  let selectedChannelId = controller.channels[0].id
+  let selectedChannelId: ChannelId = RightHand
   let selectedScreenId = 1
+  let split = false
 
-  // play notes when level changed?
-  //
-  // synthesizer.send('noteon', {
-  //   note: 30,
-  //   velocity: 64,
-  //   channel: index as Channel,
-  // })
-  //
-  // setTimeout(() => {
-  //   synthesizer.send('noteoff', {
-  //     note: 30,
-  //     velocity: 0,
-  //     channel: index as Channel,
-  //   })
-  // }, 250)
+  /**
+   * Seconds since the program started; drives the side column's animations.
+   */
+  let clock = 0
+
+  const displayColor = (channelId: ChannelId): RgbColor =>
+    InstrumentFamilyColors[selectedInstruments[channelId].family as InstrumentFamilyName]
+
+  /**
+   * Rebuilds the keyboard routing to match the split state: two zones when split, or the whole keyboard on the
+   * selected side's channel when not.
+   */
+  const applyRoutes = () => {
+    controller.setRoutes(
+      split ?
+        [
+          { channelId: LeftHand, range: { low: 0, high: SplitPoint - 1 } },
+          { channelId: RightHand, range: { low: SplitPoint, high: 127 } },
+        ]
+      : [{ channelId: selectedChannelId }],
+    )
+  }
+
+  /**
+   * Records and applies a channel's instrument without announcing it. User-driven selections go through
+   * `selectInstrument`, which also speaks the name.
+   */
+  const setChannelInstrument = (channelId: ChannelId, instrument: Instrument) => {
+    selectedFamilies[channelId] = familyOf(instrument)
+    selectedInstruments[channelId] = instrument
+    controller.selectSound(channelId, instrument)
+  }
 
   const selectFamily = (family: InstrumentFamily) => {
     selectedFamilies[selectedChannelId] = family
   }
 
   const selectInstrument = (instrument: Instrument) => {
-    if (speakInstrumentNames) {
+    if (speech) {
       void speak(instrument.name)
     }
 
-    selectedInstruments[selectedChannelId] = instrument
-    controller.selectSound(selectedChannelId, instrument)
+    setChannelInstrument(selectedChannelId, instrument)
+    rebuildChannelLevelScreen()
   }
 
-  const channelLevelScreenFactory = createChannelLevelScreen({
-    channels: [...controller.channels],
-    onLevelChanged: (channelId, level) => {
-      controller.setLevel(channelId, level)
-      selectedChannelId = channelId
-    },
-    onMuteStatusChanged: (channelId, muted) => {
-      controller.setMuted(channelId, muted)
-      selectedChannelId = channelId
-    },
-    selectedChannelId,
-  })
+  const selectSide = (side: Side) => {
+    const channelId = side === 'left' ? LeftHand : RightHand
+    if (selectedChannelId === channelId) {
+      return
+    }
+
+    selectedChannelId = channelId
+    if (speech) {
+      void speak(side === 'left' ? 'left hand' : 'right hand')
+    }
+  }
+
+  const toggleSplit = () => {
+    split = !split
+
+    // Stop sounding notes so nothing hangs across the transition — a key held through the toggle would otherwise
+    // never see its note-off on the channel it started on.
+    controller.stopAllSound()
+
+    if (split) {
+      // The right hand keeps the current sound; the left hand becomes the standard drum kit and takes the selection,
+      // ready for a kit change. Both hands start unmuted at the volume the whole keyboard had — the split inherits
+      // how loud the player was, and a mute or level left over from an earlier split session cannot silently kill a
+      // zone whose pad presents it as fresh and live.
+      const keptLevel = controller.channels.find((channel) => channel.id === selectedChannelId)?.level ?? 127
+      setChannelInstrument(RightHand, selectedInstruments[selectedChannelId])
+      setChannelInstrument(LeftHand, GmStandardKit)
+      controller.channels.forEach((channel) => {
+        controller.setMuted(channel.id, false)
+        controller.setLevel(channel.id, keptLevel)
+      })
+      selectedChannelId = LeftHand
+    }
+    // Turning split off collapses the keyboard to the selected side's sound, which the routes alone express.
+
+    applyRoutes()
+    rebuildChannelLevelScreen()
+
+    if (speech) {
+      void speak(split ? 'two instruments' : 'one instrument')
+    }
+  }
+
+  /**
+   * Channels the levels screen shows: both sides when split, otherwise only the side carrying the sound. Rows wear
+   * the family color of the channel's selected instrument, matching its side pad.
+   */
+  const activeChannelStates = () =>
+    controller.channels
+      .filter((channel) => split || channel.id === selectedChannelId)
+      .map((channel) => ({
+        color: displayColor(channel.id),
+        id: channel.id,
+        level: channel.level,
+        muted: channel.muted,
+      }))
+
+  // Level and mute changes adjust the mixer only — they never change which side the picker edits. Side selection
+  // always goes through selectSide, so it is announced and the collapse target never moves silently.
+  // The levels screen lives across frames because its faders hold in-flight gesture state; it is rebuilt only when
+  // the channels it shows (or their colors) change.
+  let channelLevelScreenFactory: () => Drawable = () => ({ draw: () => [] })
+  const rebuildChannelLevelScreen = () => {
+    channelLevelScreenFactory = createChannelLevelScreen({
+      channels: activeChannelStates(),
+      onLevelChanged: (channelId, level) => {
+        controller.setLevel(channelId, level)
+      },
+      onMuteStatusChanged: (channelId, muted) => {
+        controller.setMuted(channelId, muted)
+      },
+    })
+  }
 
   const makeSoundSelectScreen = () =>
     createSoundSelectScreen({
@@ -132,12 +239,14 @@ export const createSoundPickerProgram = (
     getDrawable: () => {
       return group(
         makeSelectedScreen()(),
-        createSideTrackSelector({
-          channels: controller.channels,
-          onChannelSelected: (channelId) => {
-            selectedChannelId = channelId
-          },
-          selectedChannelId,
+        createSideColumn({
+          leftColor: displayColor(LeftHand),
+          rightColor: displayColor(RightHand),
+          onSideSelected: selectSide,
+          onSplitToggled: toggleSplit,
+          selectedSide: selectedChannelId === LeftHand ? 'left' : 'right',
+          split,
+          time: clock,
         }),
         createTopScreenSelector({
           numberOfScreens: 2,
@@ -157,21 +266,27 @@ export const createSoundPickerProgram = (
       // before anyone can select a board, and playback never waits on I/O.
       void samples.load(SoundBoardSampleNames)
 
-      // reset instruments and mute all tracks except first
-      controller.channels.forEach((channel, index) => {
-        selectedFamilies[channel.id] = InstrumentFamilies[0]
-        selectedInstruments[channel.id] = InstrumentsByFamily[selectedFamilies[channel.id].name][0]
-        controller.selectSound(channel.id, selectedInstruments[channel.id])
+      controller.channels.forEach((channel) => {
+        setChannelInstrument(channel.id, InstrumentsByFamily[InstrumentFamilies[0].name][0])
 
-        if (index > 0) {
-          controller.setMuted(channel.id, true)
-        }
+        // Normalize the mixer alongside the instruments, so re-initializing yields the same state as a first launch —
+        // a stale mute would otherwise silently kill a zone in a fresh-looking session.
+        controller.setMuted(channel.id, false)
+        controller.setLevel(channel.id, 127)
       })
 
-      selectedChannelId = controller.channels[0].id
+      split = false
+      selectedChannelId = RightHand
       selectedScreenId = 1
+      clock = 0
+
+      applyRoutes()
+      rebuildChannelLevelScreen()
 
       controller.initialize()
+
+      // off-then-on keeps the handler registered exactly once, however many times the program is re-initialized.
+      launchpad.events.off('readback', handleReadback)
       launchpad.events.on('readback', handleReadback)
     },
     shutdown: () => {
@@ -183,6 +298,9 @@ export const createSoundPickerProgram = (
       // Releases the audio output device. Without it the render thread's handles keep Node's event loop alive and the
       // process never exits.
       void samples.close()
+    },
+    update: (elapsedSeconds) => {
+      clock += elapsedSeconds
     },
   }
 }

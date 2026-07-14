@@ -28,7 +28,7 @@ const main = async (): Promise<void> => {
   const launcher = await createLauncherProgram({
     launchpad,
     options: {
-      speakInstrumentNames: true,
+      speech: true,
     },
     renderer,
     scheduler: new MidiScheduler(fp30x),

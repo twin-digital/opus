@@ -28,3 +28,34 @@ export interface ChannelState {
   level: number
   muted: boolean
 }
+
+/**
+ * An inclusive range of MIDI note numbers on the keyboard.
+ */
+export interface KeyRange {
+  /**
+   * Lowest note in the range.
+   */
+  low: number
+
+  /**
+   * Highest note in the range.
+   */
+  high: number
+}
+
+/**
+ * One entry in the controller's keyboard routing table: notes played on the keyboard within `range` sound on the
+ * channel with `channelId`.
+ *
+ * Routes describe *keyboard input* only. Channels are also fed programmatically (games, sequencing), and notes from
+ * those sources are not range-filtered — a `Channel` plays whatever it is told.
+ */
+export interface KeyboardRoute {
+  channelId: ChannelId
+
+  /**
+   * Keys this route applies to. When omitted, the route matches the entire keyboard.
+   */
+  range?: KeyRange
+}

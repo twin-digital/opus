@@ -20,12 +20,18 @@ export const createLauncher = async (
 
   const selectProgram = async (index: number) => {
     if (index !== activeProgramIndex) {
-      await activeProgram?.shutdown?.()
-
+      // A program is exposed to the render loop only between initialize() and shutdown() — the loop keeps drawing
+      // while these awaits are in flight, so mid-transition the launcher shows its own chrome and nothing else.
+      const previous = activeProgram
+      activeProgram = undefined
       activeProgramIndex = index
-      activeProgram = programs[index]()
-      await activeProgram.initialize?.()
-      onProgramChanged?.(activeProgram)
+
+      await previous?.shutdown?.()
+
+      const next = programs[index]()
+      await next.initialize?.()
+      activeProgram = next
+      onProgramChanged?.(next)
     }
   }
 
