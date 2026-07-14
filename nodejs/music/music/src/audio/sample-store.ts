@@ -20,6 +20,8 @@ const readInBrowser = async (name: string): Promise<ArrayBuffer> => {
 }
 
 const readInNode = async (name: string): Promise<ArrayBuffer> => {
+  // Imported dynamically, unlike sample-directory's static namespace imports: this module is evaluated by the browser
+  // (the sim calls readSample), so the Node-only imports must stay out of the browser's evaluation path entirely.
   const [fs, path, { getSampleDirectory }] = await Promise.all([
     import('node:fs/promises'),
     import('node:path'),

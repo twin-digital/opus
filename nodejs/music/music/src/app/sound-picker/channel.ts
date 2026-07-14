@@ -47,15 +47,14 @@ export class Channel {
     private _midiChannel: MidiChannel,
 
     /**
+     * Player used to sound samples when a sound board is selected.
+     */
+    private _samples: SamplePlayer,
+
+    /**
      * Color used for UI elements assocaited with this channel.
      */
     private _color: RgbColor = [127, 127, 127],
-
-    /**
-     * Player used to sound samples when a sound board is selected. Required: a channel that could bind a board but
-     * had no way to sound it would swallow every key press, playing neither a sample nor a note on the piano.
-     */
-    private _samples: SamplePlayer,
   ) {
     // Both numbers are logged: the id is what the UI and the controller's API speak, and the MIDI channel is what
     // shows up on the wire.
@@ -67,18 +66,15 @@ export class Channel {
    * board is played by sounding the sample mapped to the key, and the note is not echoed.
    */
   public playNote(note: Note) {
-    // A note-on of velocity 0 is how many keyboards signal a key release, and easymidi surfaces it as it arrives
-    // rather than converting it. Treating it as a release here keeps both paths honest: a sound board would otherwise
-    // answer it by starting a sample at zero gain — inaudible, but a real voice held for the sample's full length, one
-    // per key release — and, worse, would swallow the release of a note the piano is still holding from before the
-    // board was selected.
+    // A note-on of velocity 0 is a key release: route it to stopNote, so a board never holds a zero-gain voice and a
+    // held piano note can still be let go.
     if (note.velocity === 0) {
       this.stopNote(note)
       return
     }
 
     if (this._board !== undefined) {
-      this._samples.play(getSampleForNote(this._board, note.note), note.velocity, this.level, this)
+      this._samples.play(getSampleForNote(this._board, note.note), (note.velocity / 127) * (this.level / 127), this)
       return
     }
 
@@ -124,9 +120,7 @@ export class Channel {
    * @param instrument Instrument to select.
    */
   public selectSound(instrument: Instrument) {
-    // Whatever is selected next, this channel's samples stop now. Otherwise leaving a board would leave its one-shots
-    // ringing with nothing left holding a reference to stop them — a multi-second sample would play on over the top of
-    // the patch that replaced it.
+    // Whatever is selected next, this channel's ringing one-shots stop now.
     this._samples.stopAll(this)
 
     if (isSoundBoard(instrument)) {
@@ -142,8 +136,14 @@ export class Channel {
       }
 
       this._board = board
-      this.stopAllSound()
       void this._samples.load(board.samples)
+
+      // Silence the piano; it renders none of the board's notes.
+      this._device.send('cc', {
+        channel: this.midiChannel,
+        controller: 0x78,
+        value: 0,
+      })
 
       this._log.info(`Selected sound board: ${instrument.name}`)
       return

@@ -1,5 +1,4 @@
 import { logger } from '../logger.js'
-import { normalizeMidiByte } from '../midi/normalize-midi-byte.js'
 import { getAudioApi, type AudioApi } from './audio-context.js'
 import { readSample } from './sample-store.js'
 
@@ -118,30 +117,26 @@ export class SamplePlayer {
   }
 
   /**
-   * Sounds a sample immediately, at a gain taken from the note's velocity and the channel's level.
+   * Sounds a sample immediately.
    *
    * This never waits on a decode. A sample that is not yet in memory is dropped and its decode started, because a
    * sound arriving whenever I/O happens to finish — potentially after the key is released — is worse than silence.
    * Callers warm the cache ahead of time (see {@link load}), so a miss should not happen in practice.
    * @param name Sample to sound.
-   * @param velocity Velocity of the note that triggered it, 0-127.
-   * @param level Level of the channel it is sounding on, 0-127.
+   * @param gain Gain to sound it at, 0-1. Clamped to that range.
    * @param owner Who is playing it, so {@link stopAll} can silence this voice without touching anyone else's.
    */
-  public play(name: string, velocity: number, level: number, owner: SampleOwner) {
+  public play(name: string, gain: number, owner: SampleOwner) {
     const buffer = this._buffers.get(name)
     if (this._api === undefined || this._outputUnavailable || buffer === undefined) {
       void this.decode(name)
       return
     }
 
-    // Everything from here on runs inside the MIDI note-on handler, so a throw would be an uncaught exception in an
-    // event listener and would take the app down mid-performance. Sounding a note is allowed to fail; it degrades to
-    // silence, the same bargain the decode path makes.
+    // play() never throws: any audio failure degrades to silence, since it runs inside MIDI- and UI-event handlers.
     try {
-      // Opening the output device is deferred to here: the first sample anyone actually plays. It fails on a machine
-      // with no usable output — and nothing before this point would have noticed, because the module imports fine and
-      // decoding runs on a context that needs no device.
+      // The output device opens here, on the first sample actually played — the earliest point a missing device can
+      // be observed, since decoding needs none.
       this._output ??= new this._api.AudioContext()
       const output = this._output
 
@@ -158,11 +153,11 @@ export class SamplePlayer {
       const source = output.createBufferSource()
       source.buffer = buffer
 
-      const gain = output.createGain()
-      gain.gain.value = (normalizeMidiByte(velocity) / 127) * (normalizeMidiByte(level) / 127)
+      const gainNode = output.createGain()
+      gainNode.gain.value = Math.min(1, Math.max(0, gain))
 
-      source.connect(gain)
-      gain.connect(output.destination)
+      source.connect(gainNode)
+      gainNode.connect(output.destination)
 
       const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
       this._voices.set(owner, voices)
@@ -170,7 +165,7 @@ export class SamplePlayer {
       source.onended = () => {
         voices.delete(source)
         source.disconnect()
-        gain.disconnect()
+        gainNode.disconnect()
       }
 
       // Registered only after start() has succeeded: `stop()` on a never-started source throws, so a voice in this
@@ -209,8 +204,7 @@ export class SamplePlayer {
     const output = this._output
     this._output = undefined
 
-    // Never rejects — the caller fires and forgets it during shutdown, and an unhandled rejection there would turn a
-    // graceful teardown into a crash.
+    // Never rejects; shutdown fires and forgets it.
     try {
       this.stopAll()
       await output?.close()

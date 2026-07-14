@@ -48,13 +48,13 @@ export class LaunchpadController {
   /**
    * Creates a new LaunchpadController.
    * @param instrument MIDI device being controlled by this instance.
-   * @param channelCount Number of channels to manage. Defaults to four.
    * @param samples Player used to sound samples on channels playing a sound board.
+   * @param channelCount Number of channels to manage. Defaults to four.
    */
   constructor(
     private readonly instrument: MidiDevice,
-    channelCount = 4,
     samples: SamplePlayer,
+    channelCount = 4,
   ) {
     if (channelCount < 1 || channelCount > 8) {
       throw new Error(`The channelCount must be between 1 and 8, inclusive. [channelCount=${channelCount}]`)
@@ -62,7 +62,7 @@ export class LaunchpadController {
 
     this._channels = Array.from(
       { length: channelCount },
-      (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], ChannelColors[i], samples),
+      (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], samples, ChannelColors[i]),
     )
   }
 
@@ -78,12 +78,9 @@ export class LaunchpadController {
 
   private handleNoteOn(note: Note) {
     this._channels.forEach((channel) => {
-      // A note-on of velocity 0 is a key release, and a release must reach the channel even when it is muted: mute
-      // stops new sound from starting, but a note echoed to the piano before the mute still has to be let go, or it
-      // sustains forever under a channel that reads as silent.
-      if (note.velocity === 0) {
-        channel.stopNote(note)
-      } else if (!channel.muted) {
+      // A note-on of velocity 0 is a key release, which bypasses mute (the channel routes it to stopNote): mute stops
+      // sound from starting, never from stopping.
+      if (note.velocity === 0 || !channel.muted) {
         channel.playNote(note)
       }
     })

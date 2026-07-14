@@ -119,8 +119,7 @@ const fetchObject = async (name: string, object: { hash: string; size: number },
     await writeFile(partial, bytes)
     await rename(partial, file)
   } catch (error) {
-    // Nothing ever looks at a '.part' file again, so a failed write would otherwise leave litter behind — and, when
-    // the write failed for want of space, it would be holding the very space the retry needs.
+    // A failed write leaves no litter (or, on ENOSPC, keeps holding the space the retry needs).
     await rm(partial, { force: true })
     throw error
   }

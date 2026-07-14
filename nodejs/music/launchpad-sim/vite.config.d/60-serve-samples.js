@@ -48,8 +48,8 @@ const serveSample = async (request, response) => {
 
   let requested
   try {
-    // Throws URIError on any malformed escape ('/samples/%zz'). The app only ever builds well-formed URLs, but this
-    // handler owns the /samples namespace and should answer garbage itself rather than throw out of the middleware.
+    // decodeURIComponent throws on malformed escapes ('/samples/%zz'); this handler owns the namespace, so garbage
+    // gets a 400 here rather than a throw out of the middleware.
     requested = decodeURIComponent((request.url ?? '').split('?')[0])
   } catch {
     fail(400)

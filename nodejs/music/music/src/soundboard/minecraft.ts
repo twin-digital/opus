@@ -13,26 +13,26 @@ export const MinecraftFamilyName = 'Minecraft'
 const BaseNote = 60
 
 /**
- * ID of the instrument that selects the board at `patch`. Both the board and its instrument are built from this, so a
- * board can never end up pointing at an ID no instrument carries — which would leave it selectable in the picker and
- * permanently silent.
+ * ID of the instrument that selects the board at `patch`.
  */
 const boardInstrumentId = (patch: number) => `${patch}#${SoundBoardBankMsb}#0`
 
 /**
- * Sound boards drawn from the Minecraft sound assets. Each board is one instrument in the Minecraft family, selected
- * by its patch number; the samples are listed in key order.
+ * The Minecraft boards: a name for the picker, and the samples each key triggers, in key order.
  *
  * Sample names are game-relative paths under `minecraft/sounds/`, without the `.ogg` extension. `music-fetch-samples`
  * resolves them against Mojang's asset index and downloads them; the audio itself is never checked in.
  *
  * Samples are chosen to be short. Nothing here stops a key from triggering a fifteen-second cave ambience, but a
  * one-shot that outlasts the key that started it makes the board unplayable.
+ *
+ * A board's position in this list is its patch number, and both the board and the instrument that selects it are
+ * derived from the same entry — so the pairing between them holds by construction. Adding a board is adding one entry
+ * (and widening the family's `lastPatch` in `InstrumentFamilies`).
  */
-export const MinecraftBoards = [
+const definitions = [
   {
-    instrumentId: boardInstrumentId(0),
-    baseNote: BaseNote,
+    name: 'Mobs',
     samples: [
       'mob/creeper/say1',
       'mob/creeper/death',
@@ -53,8 +53,7 @@ export const MinecraftBoards = [
     ],
   },
   {
-    instrumentId: boardInstrumentId(1),
-    baseNote: BaseNote,
+    name: 'Blocks and Items',
     samples: [
       'random/anvil_land',
       'random/chestopen',
@@ -75,8 +74,7 @@ export const MinecraftBoards = [
     ],
   },
   {
-    instrumentId: boardInstrumentId(2),
-    baseNote: BaseNote,
+    name: 'Adventure',
     samples: [
       'random/explode1',
       'random/levelup',
@@ -96,35 +94,25 @@ export const MinecraftBoards = [
       'ambient/cave/cave1',
     ],
   },
-] satisfies SoundBoard[]
+] satisfies { name: string; samples: [string, ...string[]] }[]
 
 /**
- * Instruments that select the Minecraft boards. Patch number is the board's position in {@link MinecraftBoards}, which
- * also places its button in the picker's sound area.
+ * Sound boards drawn from the Minecraft sound assets.
  */
-export const MinecraftInstruments = [
-  {
-    bank: { msb: SoundBoardBankMsb, lsb: 0 },
-    family: MinecraftFamilyName,
-    patch: 0,
-    name: 'Mobs',
-    id: boardInstrumentId(0),
-    standard: 'none',
-  },
-  {
-    bank: { msb: SoundBoardBankMsb, lsb: 0 },
-    family: MinecraftFamilyName,
-    patch: 1,
-    name: 'Blocks and Items',
-    id: boardInstrumentId(1),
-    standard: 'none',
-  },
-  {
-    bank: { msb: SoundBoardBankMsb, lsb: 0 },
-    family: MinecraftFamilyName,
-    patch: 2,
-    name: 'Adventure',
-    id: boardInstrumentId(2),
-    standard: 'none',
-  },
-] satisfies Instrument[]
+export const MinecraftBoards: SoundBoard[] = definitions.map(({ samples }, patch) => ({
+  instrumentId: boardInstrumentId(patch),
+  baseNote: BaseNote,
+  samples,
+}))
+
+/**
+ * Instruments that select the Minecraft boards.
+ */
+export const MinecraftInstruments: Instrument[] = definitions.map(({ name }, patch) => ({
+  bank: { msb: SoundBoardBankMsb, lsb: 0 },
+  family: MinecraftFamilyName,
+  patch,
+  name,
+  id: boardInstrumentId(patch),
+  standard: 'none',
+}))
