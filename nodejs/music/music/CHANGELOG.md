@@ -1,5 +1,57 @@
 # @thrashplay/music
 
+## 0.4.0
+
+### Minor Changes
+
+- dd23976: Split keyboard: two zones with a fixed split point at C4, each playing its own instrument.
+
+  The split toggle sits at the top of the sound picker's side column. Turning it on keeps the current
+  sound in the right hand and puts the GM standard drum kit in the left — B3 keeps the entire GM
+  standard drum map in reach of the left hand — with the left hand taking the selection, ready for a
+  kit change; both hands start unmuted at the volume the whole keyboard had. Turning it off collapses
+  the keyboard to the currently selected side's sound. The side pads below the toggle select which hand the picker edits, ordered
+  bottom-up to match low-to-high on the piano, and the levels screen orders its fader rows the same
+  way so each side pad labels its own fader row.
+
+  A side wears the family color of its selected instrument, and motion carries split state: with
+  split on the selected side breathes, the unselected side holds steady, and the toggle cycles left
+  color → black → right color → black; with split off everything holds steady. Side selection and
+  the toggle announce themselves ("left hand" / "right hand", "two instruments" / "one instrument");
+  all spoken feedback shares one `speech` option (previously `speakInstrumentNames`, which now gated
+  more than names).
+
+  Routing lives in `LaunchpadController` as a keyboard route table — `{ key range → channel }`
+  entries applied to incoming keyboard notes, with whole-keyboard play expressed as a single
+  full-range route. `Channel` remains a pure mixer strip and plays whatever it is told, so
+  programmatically fed notes are never range-filtered.
+
+  The launcher exposes a program to the render loop only between `initialize()` and `shutdown()`,
+  so a program switch no longer draws or updates a program that has not finished initializing.
+
+### Patch Changes
+
+- 1e276e0: audify is an optional peer dependency instead of a runtime dependency, so the
+  default install — including every npx invocation — no longer downloads its
+  native binding. Only the probe's opt-in rtaudio backend uses it; selecting
+  PROBE_BACKEND=rtaudio without the package present prints the exact command to
+  supply it (npx -y -p @thrashplay/music@latest -p audify music-audio-probe).
+- f7cac66: MUSIC_AUDIO_FORCE_GC no longer needs node started with --expose-gc. Node
+  refuses that flag in NODE_OPTIONS and npx offers no way to pass it to the
+  binary, so when gc() is not already exposed the player enables the flag at
+  runtime via v8.setFlagsFromString and picks up the function from a throwaway
+  VM context. Setting the two environment variables is now the whole setup:
+
+      MUSIC_AUDIO_DEBUG=1 MUSIC_AUDIO_FORCE_GC=1 npx @thrashplay/music@latest
+
+- c7ae5ba: MUSIC_AUDIO_FORCE_GC is removed. It existed to test whether the render graph
+  grew because V8 deferred collecting the wrappers that pin native nodes — a
+  theory the investigation on #254 falsified (a single note reproduced the
+  stall; the cause was degraded machine state cleared by a reboot). The
+  MUSIC_SAMPLE_RATE documentation also stops attributing the device wedge to
+  rate mismatch, which the same investigation disproved; the setting remains as
+  resampling hygiene.
+
 ## 0.3.5
 
 ### Patch Changes
