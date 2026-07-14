@@ -24,6 +24,21 @@ const DecodeSampleRate = 44100
 const MaxVoices = 32
 
 /**
+ * How long past a buffer's duration a voice is kept before its nodes are torn down.
+ */
+const CleanupMarginSeconds = 0.1
+
+/**
+ * One sounding sample: its nodes, the timer that tears them down, and the owner set it is registered in.
+ */
+interface Voice {
+  gain: GainNode
+  source: AudioBufferSourceNode
+  timer: ReturnType<typeof setTimeout>
+  voices: Set<Voice>
+}
+
+/**
  * Plays one-shot samples through the Web Audio API. Decoding is memoized per sample name and kept off the playback
  * path entirely, so pressing a key does no I/O.
  */
@@ -62,14 +77,14 @@ export class SamplePlayer {
   private _outputUnavailable = false
 
   /**
-   * Sources currently sounding, grouped by whoever started them.
+   * Voices currently sounding, grouped by whoever started them.
    */
-  private _voices = new Map<SampleOwner, Set<AudioBufferSourceNode>>()
+  private _voices = new Map<SampleOwner, Set<Voice>>()
 
   /**
-   * The same sources in the order they started, oldest first, so the cap can steal the oldest voice.
+   * The same voices in the order they started, oldest first, so the cap can steal the oldest.
    */
-  private _playing: AudioBufferSourceNode[] = []
+  private _playing: Voice[] = []
 
   /**
    * Last context state a note was dropped under, so a stalled stream is reported once per stall rather than per key.
@@ -176,10 +191,11 @@ export class SamplePlayer {
         log.info('Audio output is running again.')
       }
 
-      // Steal the oldest voice rather than grow the graph past the cap. It is dequeued here, synchronously — onended
-      // (which also dequeues) fires asynchronously, so stopping without shifting would spin on the same voice.
+      // Steal the oldest voice rather than grow the graph past the cap.
       while (this._playing.length >= MaxVoices) {
-        this._playing.shift()?.stop()
+        const oldest = this._playing[0]
+        oldest.source.stop()
+        this.release(oldest)
       }
 
       const source = output.createBufferSource()
@@ -191,29 +207,51 @@ export class SamplePlayer {
       source.connect(gainNode)
       gainNode.connect(output.destination)
 
-      const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
+      const voices = this._voices.get(owner) ?? new Set<Voice>()
       this._voices.set(owner, voices)
 
-      source.onended = () => {
-        voices.delete(source)
-        const at = this._playing.indexOf(source)
-        if (at >= 0) {
-          this._playing.splice(at, 1)
-        }
-        source.disconnect()
-        gainNode.disconnect()
+      // Started before registration: `stop()` on a never-started source throws, so a registered voice must be one
+      // that {@link stopAll} can safely stop.
+      source.start()
+
+      // Teardown is scheduled from the buffer's own duration instead of the source's 'ended' event. Registering any
+      // listener on a source keeps the node alive in the render graph forever (ircam-ismm/node-web-audio-api#168), so
+      // under sustained playing the graph grew with every note until the output device starved — taking down every
+      // process using the device, not just this one.
+      const voice: Voice = {
+        gain: gainNode,
+        source,
+        voices,
+        timer: setTimeout(
+          () => {
+            this.release(voice)
+          },
+          (buffer.duration + CleanupMarginSeconds) * 1000,
+        ),
       }
 
-      // Registered only after start() has succeeded: `stop()` on a never-started source throws, so a voice in this
-      // set must be one that {@link stopAll} can safely stop. Web Audio events never fire synchronously, so onended
-      // cannot race the registration.
-      source.start()
-      voices.add(source)
-      this._playing.push(source)
+      voices.add(voice)
+      this._playing.push(voice)
     } catch (error) {
       this._outputUnavailable = true
       log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
     }
+  }
+
+  /**
+   * Removes a voice: its teardown timer, its registrations, and its nodes' connections.
+   */
+  private release(voice: Voice) {
+    clearTimeout(voice.timer)
+    voice.voices.delete(voice)
+
+    const at = this._playing.indexOf(voice)
+    if (at >= 0) {
+      this._playing.splice(at, 1)
+    }
+
+    voice.source.disconnect()
+    voice.gain.disconnect()
   }
 
   /**
@@ -224,10 +262,11 @@ export class SamplePlayer {
     const groups = owner === undefined ? [...this._voices.values()] : [this._voices.get(owner)]
 
     groups.forEach((voices) => {
-      voices?.forEach((voice) => {
-        voice.stop()
+      const stopping = [...(voices ?? [])]
+      stopping.forEach((voice) => {
+        voice.source.stop()
+        this.release(voice)
       })
-      voices?.clear()
     })
   }
 
