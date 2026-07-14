@@ -28,10 +28,12 @@ const breathedAtTimeZero = (color: RgbColor): RgbColor => color.map((c) => c * (
 const LeftMidiChannel = 3
 const RightMidiChannel = 4
 
+type NoteHandler = (note: { channel: number; note: number; velocity: number }) => void
+
 interface Harness {
   program: ReturnType<typeof createSoundPickerProgram>
   /** handlers the controller registered on the synthesizer, keyed by event name */
-  deviceHandlers: Map<string, (note: { channel: number; note: number; velocity: number }) => void>
+  deviceHandlers: Map<string, NoteHandler[]>
   send: ReturnType<typeof vi.fn>
 }
 
@@ -39,13 +41,21 @@ const makeProgram = async ({
   clearInitTraffic = true,
   runInitialize = true,
 }: { clearInitTraffic?: boolean; runInitialize?: boolean } = {}): Promise<Harness> => {
-  const deviceHandlers = new Map<string, (note: { channel: number; note: number; velocity: number }) => void>()
+  // Handler lists mirror EventEmitter semantics — the same listener registered twice fires twice — so tests can see
+  // duplicate registrations that a keyed map would silently dedupe.
+  const deviceHandlers = new Map<string, NoteHandler[]>()
   const send = vi.fn()
   const synthesizer = {
-    on: vi.fn((event: string, handler: never) => {
-      deviceHandlers.set(event, handler)
+    on: vi.fn((event: string, handler: NoteHandler) => {
+      deviceHandlers.set(event, [...(deviceHandlers.get(event) ?? []), handler])
     }),
-    off: vi.fn(),
+    off: vi.fn((event: string, handler: NoteHandler) => {
+      const handlers = deviceHandlers.get(event) ?? []
+      const index = handlers.indexOf(handler)
+      if (index >= 0) {
+        handlers.splice(index, 1)
+      }
+    }),
     send,
   } as unknown as MidiDevice
   const launchpad = {
@@ -73,6 +83,16 @@ const press = (cell: Cell<RgbColor> | undefined) => {
 
 const drawCells = (harness: Harness) => harness.program.getDrawable().draw()
 
+const fireNote = (
+  harness: Harness,
+  event: 'noteon' | 'noteoff',
+  note: { channel: number; note: number; velocity: number },
+) => {
+  ;[...(harness.deviceHandlers.get(event) ?? [])].forEach((handler) => {
+    handler(note)
+  })
+}
+
 const pressToggle = (harness: Harness) => {
   press(cellAt(drawCells(harness), 8, 7))
 }
@@ -86,8 +106,8 @@ describe('createSoundPickerProgram split keyboard', () => {
   it('starts unsplit: the whole keyboard plays one sound on the right hand channel', async () => {
     const harness = await makeProgram()
 
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 90, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 90, velocity: 64 })
 
     expect(playedChannels(harness.send, 30)).toEqual([RightMidiChannel])
     expect(playedChannels(harness.send, 90)).toEqual([RightMidiChannel])
@@ -116,8 +136,8 @@ describe('createSoundPickerProgram split keyboard', () => {
         ]),
       )
 
-      harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 59, velocity: 64 })
-      harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 60, velocity: 64 })
+      fireNote(harness, 'noteon', { channel: 0, note: 59, velocity: 64 })
+      fireNote(harness, 'noteon', { channel: 0, note: 60, velocity: 64 })
       expect(playedChannels(harness.send, 59)).toEqual([LeftMidiChannel])
       expect(playedChannels(harness.send, 60)).toEqual([RightMidiChannel])
     })
@@ -163,7 +183,7 @@ describe('createSoundPickerProgram split keyboard', () => {
     expect(speak).toHaveBeenCalledWith('one instrument')
 
     // the whole keyboard now plays the left hand's channel — "the lit side is the sound you keep"
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 90, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 90, velocity: 64 })
     expect(playedChannels(harness.send, 90)).toEqual([LeftMidiChannel])
 
     const cells = drawCells(harness)
@@ -185,7 +205,7 @@ describe('createSoundPickerProgram split keyboard', () => {
     expect(cellAt(cells, 8, 1)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors['Drum Kit']))
     expect(cellAt(cells, 8, 0)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
 
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 72, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
     expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
   })
 
@@ -209,6 +229,8 @@ describe('createSoundPickerProgram split keyboard', () => {
       expect(calls).toEqual(
         expect.arrayContaining([['cc', expect.objectContaining({ controller: 0x78, value: 0 })]]), // all sound off
       )
+      // the level is written unconditionally: the piano remembers a stale CC 7 across program switches
+      expect(calls).toEqual(expect.arrayContaining([['cc', expect.objectContaining({ controller: 0x07, value: 127 })]]))
     }
   })
 
@@ -237,7 +259,7 @@ describe('createSoundPickerProgram split keyboard', () => {
     // the left side pad wears the new family color, and collapsing keeps the picked sound
     expect(cellAt(drawCells(harness), 8, 0)?.value).toEqual(InstrumentFamilyColors.Guitar)
     pressToggle(harness)
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 90, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 90, velocity: 64 })
     expect(playedChannels(harness.send, 90)).toEqual([LeftMidiChannel])
   })
 
@@ -249,7 +271,33 @@ describe('createSoundPickerProgram split keyboard', () => {
     pressToggle(harness) // collapse to the right hand
     pressToggle(harness) // split again — the left hand must come back audible
 
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
+  })
+
+  it('re-splitting resets a stale right hand mixer when the kept sound moves onto it', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 4, 8)) // levels screen
+    press(cellAt(drawCells(harness), 0, 1)) // mute the right hand
+    press(cellAt(drawCells(harness), 8, 0)) // select the left hand
+    pressToggle(harness) // collapse to the left hand — the muted right channel becomes invisible
+    pressToggle(harness) // split again: the kept sound moves to the right hand, which must come back audible
+
+    fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
+    expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
+  })
+
+  it('splitting leaves the right hand mixer alone when it was already selected', async () => {
+    const harness = await makeProgram()
+    press(cellAt(drawCells(harness), 4, 8)) // levels screen
+    press(cellAt(drawCells(harness), 0, 1)) // mute the single (right hand) sound — a live, visible setting
+    pressToggle(harness)
+
+    // the kept side stays muted; the fresh left hand plays
+    fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 72)).toEqual([])
     expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
   })
 
@@ -288,14 +336,14 @@ describe('createSoundPickerProgram split keyboard', () => {
     press(cellAt(drawCells(harness), 4, 8)) // switch to the levels screen
     press(cellAt(drawCells(harness), 0, 0)) // the left hand row's mute button
 
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 72, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
     expect(playedChannels(harness.send, 30)).toEqual([])
     expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
 
     // muting did not move the selection: collapsing still keeps the right hand's sound
     pressToggle(harness)
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 40, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 40, velocity: 64 })
     expect(playedChannels(harness.send, 40)).toEqual([RightMidiChannel])
   })
 
@@ -309,7 +357,7 @@ describe('createSoundPickerProgram split keyboard', () => {
     harness.send.mockClear()
 
     pressToggle(harness)
-    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
     expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
   })
 

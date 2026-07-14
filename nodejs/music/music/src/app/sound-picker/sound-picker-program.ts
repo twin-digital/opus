@@ -161,11 +161,17 @@ export const createSoundPickerProgram = (
 
     if (split) {
       // The right hand keeps the current sound; the left hand becomes the standard drum kit. "No memory of prior
-      // left-hand choices" extends to the mixer: a mute or level left over from an earlier split would silently kill
-      // a zone whose pad presents it as fresh and live.
-      const current = selectedInstruments[selectedChannelId]
-      if (current !== undefined) {
-        setChannelInstrument(RightHand, current)
+      // choices" extends to the mixer: a mute or level left over from an earlier split session would silently kill
+      // a zone whose pad presents it as fresh and live. The right hand's mixer resets only when the kept sound moves
+      // onto it — that is the case where its state is stale; when the right hand was already selected, its mute and
+      // level are the user's live, visible settings and stay put.
+      if (selectedChannelId !== RightHand) {
+        const current = selectedInstruments[selectedChannelId]
+        if (current !== undefined) {
+          setChannelInstrument(RightHand, current)
+        }
+        controller.setMuted(RightHand, false)
+        controller.setLevel(RightHand, 127)
       }
       setChannelInstrument(LeftHand, GmStandardKit)
       controller.setMuted(LeftHand, false)

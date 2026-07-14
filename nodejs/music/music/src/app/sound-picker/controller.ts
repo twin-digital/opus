@@ -113,6 +113,15 @@ export class LaunchpadController {
   public initialize() {
     this.stopAllSound()
 
+    // A fresh channel's level matches the piano only by luck — the instrument remembers the last CC 7 it was sent
+    // across program switches and power cycles — so initialization writes each level out rather than assume it.
+    this._channels.forEach((channel) => {
+      channel.sendLevel()
+    })
+
+    // off-then-on keeps each listener registered exactly once, however many times the controller is re-initialized.
+    this.instrument.off('noteon', this._noteOnListener)
+    this.instrument.off('noteoff', this._noteOffListener)
     this.instrument.on('noteon', this._noteOnListener)
     this.instrument.on('noteoff', this._noteOffListener)
   }
