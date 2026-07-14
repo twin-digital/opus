@@ -30,10 +30,9 @@ const sampleVolume = () => {
 }
 
 /**
- * Sample rate the output stream is opened at: MUSIC_SAMPLE_RATE, or 44100 by default. This matters far beyond audio
- * quality — a stream whose rate disagrees with the device's drifts against it, and on at least one USB device (the
- * FP-30X, twin-digital/opus#254) the reconciliation ~90 seconds in wedges the device for every process using it. The
- * default is the FP-30X's native rate; set the variable to match whatever device the samples play through.
+ * Sample rate the output stream is opened at: MUSIC_SAMPLE_RATE, or 44100 by default. Matching the output device's
+ * native rate keeps CoreAudio from resampling the stream; the default is the FP-30X's native rate, and the variable
+ * exists for whatever other device the samples play through.
  */
 const outputSampleRate = () => {
   const fallback = 44100
@@ -76,15 +75,6 @@ const StallDiscardMs = 10_000
  */
 const audioDebugEnabled = () =>
   typeof process !== 'undefined' && !['', '0', undefined].includes(process.env.MUSIC_AUDIO_DEBUG)
-
-/**
- * Whether to force a garbage-collection pass on every health tick (MUSIC_AUDIO_FORCE_GC; requires --expose-gc). The
- * library frees a native node when its JS wrapper is collected, and a session's wrappers are small enough that V8 may
- * defer collection indefinitely — this flag exists to test whether the render graph is growing for exactly that
- * reason: if forcing collection stops the stall, it is.
- */
-const forceGcEnabled = () =>
-  typeof process !== 'undefined' && !['', '0', undefined].includes(process.env.MUSIC_AUDIO_FORCE_GC)
 
 /**
  * The render-capacity monitor and its update events, typed structurally: the browser's AudioContext may not expose
@@ -395,31 +385,11 @@ export class SamplePlayer {
     })
     capacity?.start({ updateInterval: 1 })
 
-    let gc: (() => void) | undefined
-    if (forceGcEnabled()) {
-      gc = (globalThis as Partial<{ gc: () => void }>).gc
-      if (gc === undefined) {
-        // node refuses --expose-gc in NODE_OPTIONS and npx offers no way to pass it to the binary, so the flag is
-        // enabled at runtime: V8 accepts it late, and a throwaway VM context picks up the gc() it exposes.
-        void Promise.all([import('node:v8'), import('node:vm')]).then(
-          ([v8, vm]) => {
-            v8.setFlagsFromString('--expose-gc')
-            gc = vm.runInNewContext('gc') as () => void
-            v8.setFlagsFromString('--no-expose-gc')
-          },
-          (error: unknown) => {
-            log.warn(`MUSIC_AUDIO_FORCE_GC is set, but gc() could not be obtained. [error=${String(error)}]`)
-          },
-        )
-      }
-    }
-
     this._monitor = setInterval(() => {
       const memory = process.memoryUsage()
       log.info(
-        `[health] state=${output.state} clock=${output.currentTime.toFixed(1)}s voices=${this._playing.length} heap=${(memory.heapUsed / 1048576).toFixed(1)}MB native=${(memory.external / 1048576).toFixed(1)}MB${gc === undefined ? '' : ' gc=forced'}`,
+        `[health] state=${output.state} clock=${output.currentTime.toFixed(1)}s voices=${this._playing.length} heap=${(memory.heapUsed / 1048576).toFixed(1)}MB native=${(memory.external / 1048576).toFixed(1)}MB`,
       )
-      gc?.()
     }, 5_000)
 
     // A diagnostics timer must never be what keeps the process alive. (Node-only by construction: the debug flag
