@@ -17,6 +17,13 @@ export type SampleOwner = object
 const DecodeSampleRate = 44100
 
 /**
+ * Most voices allowed to sound at once; starting one beyond this stops the oldest. Samples run several seconds and
+ * keys can be mashed faster than they finish, so an uncapped graph grows until the render thread cannot keep its
+ * device buffer fed — and a starved output stream stalls all playback, not just the newest note.
+ */
+const MaxVoices = 32
+
+/**
  * Plays one-shot samples through the Web Audio API. Decoding is memoized per sample name and kept off the playback
  * path entirely, so pressing a key does no I/O.
  */
@@ -58,6 +65,16 @@ export class SamplePlayer {
    * Sources currently sounding, grouped by whoever started them.
    */
   private _voices = new Map<SampleOwner, Set<AudioBufferSourceNode>>()
+
+  /**
+   * The same sources in the order they started, oldest first, so the cap can steal the oldest voice.
+   */
+  private _playing: AudioBufferSourceNode[] = []
+
+  /**
+   * Last context state a note was dropped under, so a stalled stream is reported once per stall rather than per key.
+   */
+  private _reportedState: AudioContextState | undefined
 
   /**
    * Reads and decodes the named samples, skipping any already decoded or in flight. A sample that cannot be loaded is
@@ -141,13 +158,28 @@ export class SamplePlayer {
       const output = this._output
 
       if (output.state !== 'running') {
-        // A browser context not created inside a user gesture starts suspended, and a suspended context's clock does
-        // not advance: a source started on it is never heard and never ends, so its nodes would pile up for as long as
-        // the program runs. Ask for the context back and drop this note.
+        // A context that is not running has a stopped clock: a source started on it is never heard and never ends, so
+        // its nodes would pile up for as long as the program runs. Ask for the context back and drop this note.
+        if (this._reportedState !== output.state) {
+          this._reportedState = output.state
+          log.warn(`Audio output is not running; dropping notes until it resumes. [state=${output.state}]`)
+        }
+
         void output.resume().catch((error: unknown) => {
           log.warn(`Unable to start audio output. [error=${String(error)}]`)
         })
         return
+      }
+
+      if (this._reportedState !== undefined) {
+        this._reportedState = undefined
+        log.info('Audio output is running again.')
+      }
+
+      // Steal the oldest voice rather than grow the graph past the cap. It is dequeued here, synchronously — onended
+      // (which also dequeues) fires asynchronously, so stopping without shifting would spin on the same voice.
+      while (this._playing.length >= MaxVoices) {
+        this._playing.shift()?.stop()
       }
 
       const source = output.createBufferSource()
@@ -164,6 +196,10 @@ export class SamplePlayer {
 
       source.onended = () => {
         voices.delete(source)
+        const at = this._playing.indexOf(source)
+        if (at >= 0) {
+          this._playing.splice(at, 1)
+        }
         source.disconnect()
         gainNode.disconnect()
       }
@@ -173,6 +209,7 @@ export class SamplePlayer {
       // cannot race the registration.
       source.start()
       voices.add(source)
+      this._playing.push(source)
     } catch (error) {
       this._outputUnavailable = true
       log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
