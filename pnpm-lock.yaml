@@ -178,7 +178,7 @@ importers:
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
-        version: 10.0.1(eslint@10.5.0)
+        version: 10.0.1(eslint@10.5.0(supports-color@8.1.1))
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
@@ -199,10 +199,10 @@ importers:
         version: 24.13.2
       eslint:
         specifier: 'catalog:'
-        version: 10.5.0
+        version: 10.5.0(supports-color@8.1.1)
       eslint-config-prettier:
         specifier: 'catalog:'
-        version: 10.1.8(eslint@10.5.0)
+        version: 10.1.8(eslint@10.5.0(supports-color@8.1.1))
       globals:
         specifier: 'catalog:'
         version: 17.6.0
@@ -220,7 +220,7 @@ importers:
         version: 6.0.3
       typescript-eslint:
         specifier: 'catalog:'
-        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
+        version: 8.61.1(eslint@10.5.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
 
   nodejs/apps/discord-bot:
     dependencies:
@@ -1955,9 +1955,6 @@ importers:
       '@julusian/midi':
         specifier: ^3.6.1
         version: 3.6.1
-      audify:
-        specifier: ^1.10.1
-        version: 1.10.1
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -1979,7 +1976,7 @@ importers:
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
-        version: 10.0.1(eslint@10.5.0(supports-color@8.1.1))
+        version: 10.0.1(eslint@10.5.0)
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
@@ -2001,12 +1998,15 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 4.1.9(vitest@4.1.9)
+      audify:
+        specifier: ^1.10.1
+        version: 1.10.1(supports-color@8.1.1)
       eslint:
         specifier: 'catalog:'
-        version: 10.5.0(supports-color@8.1.1)
+        version: 10.5.0
       eslint-config-prettier:
         specifier: 'catalog:'
-        version: 10.1.8(eslint@10.5.0(supports-color@8.1.1))
+        version: 10.1.8(eslint@10.5.0)
       globals:
         specifier: 'catalog:'
         version: 17.6.0
@@ -2027,7 +2027,7 @@ importers:
         version: 6.0.3
       typescript-eslint:
         specifier: 'catalog:'
-        version: 8.61.1(eslint@10.5.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
       vitest:
         specifier: 'catalog:'
         version: 4.1.9(@types/node@24.13.2)(@vitest/coverage-istanbul@4.1.9)(jsdom@27.2.0)(vite@7.3.5(@types/node@24.13.2)(terser@5.44.1)(tsx@4.22.4)(yaml@2.9.0))
@@ -10919,10 +10919,10 @@ snapshots:
 
   atomic-sleep@1.0.0: {}
 
-  audify@1.10.1:
+  audify@1.10.1(supports-color@8.1.1):
     dependencies:
       bindings: 1.5.0
-      cmake-js: 7.4.0
+      cmake-js: 7.4.0(supports-color@8.1.1)
       node-abi: 4.33.0
       node-addon-api: 8.5.0
       prebuild-install: 7.1.3
@@ -10975,6 +10975,16 @@ snapshots:
       atomic-batcher: 1.0.2
       cls-hooked: 4.2.2
       semver: 7.8.5
+
+  axios@1.18.0(debug@4.4.3(supports-color@8.1.1)):
+    dependencies:
+      follow-redirects: 1.16.0(debug@4.4.3(supports-color@8.1.1))
+      form-data: 4.0.6
+      https-proxy-agent: 5.0.1
+      proxy-from-env: 2.1.0
+    transitivePeerDependencies:
+      - debug
+      - supports-color
 
   axios@1.18.0(debug@4.4.3):
     dependencies:
@@ -11176,9 +11186,9 @@ snapshots:
       emitter-listener: 1.1.2
       semver: 5.7.2
 
-  cmake-js@7.4.0:
+  cmake-js@7.4.0(supports-color@8.1.1):
     dependencies:
-      axios: 1.18.0(debug@4.4.3)
+      axios: 1.18.0(debug@4.4.3(supports-color@8.1.1))
       debug: 4.4.3(supports-color@8.1.1)
       fs-extra: 11.3.6
       memory-stream: 1.0.0
@@ -12012,6 +12022,10 @@ snapshots:
   flat@5.0.2: {}
 
   flatted@3.4.2: {}
+
+  follow-redirects@1.16.0(debug@4.4.3(supports-color@8.1.1)):
+    optionalDependencies:
+      debug: 4.4.3(supports-color@8.1.1)
 
   follow-redirects@1.16.0(debug@4.4.3):
     optionalDependencies:
