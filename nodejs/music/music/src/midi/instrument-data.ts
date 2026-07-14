@@ -75,6 +75,7 @@ export const InstrumentFamilies = [
   { firstPatch: 112, lastPatch: 119, index: 14, name: 'Percussive' },
   { firstPatch: 120, lastPatch: 127, index: 15, name: 'Sound Effect' },
   { firstPatch: 0, lastPatch: 56, index: 16, name: 'Drum Kit' },
+  { firstPatch: 0, lastPatch: 2, index: 17, name: 'Minecraft' },
 ] as const satisfies InstrumentFamily[]
 
 export type InstrumentFamilyName = (typeof InstrumentFamilies)[number]['name']

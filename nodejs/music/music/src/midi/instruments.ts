@@ -1,4 +1,11 @@
+import { SoundBoardInstruments } from '../soundboard/sound-boards.js'
 import { Gm2Instruments, type Instrument, InstrumentFamilies } from './instrument-data.js'
+
+/**
+ * Every instrument the app can select: the GM2 patches, plus the sound boards, which live in a reserved bank of their
+ * own rather than being patches on the piano.
+ */
+export const AllInstruments: Instrument[] = [...Gm2Instruments, ...SoundBoardInstruments]
 
 // Compare function to sort by patch, then MSB, then LSB
 const sortInstruments = (a: Instrument, b: Instrument) => {
@@ -14,7 +21,7 @@ const sortInstruments = (a: Instrument, b: Instrument) => {
 /**
  * Map allowing lookup of instruments by the instrument ID.
  */
-export const InstrumentsById = Gm2Instruments.reduce<Record<string, Instrument>>((result, instrument) => {
+export const InstrumentsById = AllInstruments.reduce<Record<string, Instrument>>((result, instrument) => {
   result[instrument.id] = instrument
   return result
 }, {})
@@ -24,13 +31,21 @@ export const InstrumentsById = Gm2Instruments.reduce<Record<string, Instrument>>
  * MSB, then LSB.
  */
 export const InstrumentsByFamily = InstrumentFamilies.reduce<Record<string, Instrument[]>>((result, family) => {
-  result[family.name] = Gm2Instruments.filter((instrument) => instrument.family === family.name).sort(sortInstruments)
+  result[family.name] = AllInstruments.filter((instrument) => instrument.family === family.name).sort(sortInstruments)
   return result
 }, {})
 
 /**
  * Map allowing lookup of instrument variations by the instrument patch number. Returned instruments will be sorted by
  * the bank MSB then the bank LSB.
+ *
+ * Built from the GM instruments alone. This map's subject is the bank dimension of a single GM patch, and a sound
+ * board is not a variation of one: boards carry patch numbers 0, 1, 2 only because a patch is how the picker positions
+ * a button, so including them would offer "Mobs" as a variation of Acoustic Grand Piano.
+ *
+ * A board's patch therefore *aliases* a GM patch: looking one up here returns the variations of Acoustic Grand Piano,
+ * Bright Acoustic Piano or Electric Grand Piano rather than nothing. Check {@link isSoundBoard} before using an
+ * instrument's patch as a key.
  */
 export const InstrumentsByPatch = Array.from({ length: 128 }, (_, i) => i).reduce<Record<number, Instrument[]>>(
   (result, patch) => {
