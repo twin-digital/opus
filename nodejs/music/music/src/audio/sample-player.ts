@@ -42,6 +42,45 @@ const OutputRetryMs = 30_000
 const StallDiscardMs = 10_000
 
 /**
+ * Whether audio diagnostics are enabled (MUSIC_AUDIO_DEBUG). When on, the player reports the render thread's own load
+ * once a second and a health line every five — so a stream can be watched degrading instead of only found dead.
+ */
+const audioDebugEnabled = () =>
+  typeof process !== 'undefined' && !['', '0', undefined].includes(process.env.MUSIC_AUDIO_DEBUG)
+
+/**
+ * Whether to force a garbage-collection pass on every health tick (MUSIC_AUDIO_FORCE_GC; requires --expose-gc). The
+ * library frees a native node when its JS wrapper is collected, and a session's wrappers are small enough that V8 may
+ * defer collection indefinitely — this flag exists to test whether the render graph is growing for exactly that
+ * reason: if forcing collection stops the stall, it is.
+ */
+const forceGcEnabled = () =>
+  typeof process !== 'undefined' && !['', '0', undefined].includes(process.env.MUSIC_AUDIO_FORCE_GC)
+
+/**
+ * The render-capacity monitor and its update events, typed structurally: the browser's AudioContext may not expose
+ * renderCapacity, and the DOM typings do not know it yet.
+ */
+interface RenderCapacity {
+  addEventListener: (type: 'update', listener: (event: RenderCapacityUpdate) => void) => void
+  start: (options?: { updateInterval: number }) => void
+}
+
+interface RenderCapacityUpdate {
+  averageLoad: number
+  peakLoad: number
+  underrunRatio: number
+}
+
+/**
+ * Shortest span of wall time over which the context clock's progress is judged. A healthy context's currentTime keeps
+ * pace with the wall clock even while rendering silence; one whose device stopped invoking its render callbacks
+ * freezes — while its state can still read 'running', because state is control-side bookkeeping, not device truth.
+ * The clock is the one liveness signal a wedged stream cannot fake.
+ */
+const LivenessWindowMs = 3_000
+
+/**
  * One sounding sample: its nodes, the timer that tears them down, and the owner set it is registered in.
  */
 interface Voice {
@@ -95,6 +134,16 @@ export class SamplePlayer {
    * {@link StallDiscardMs} can be told apart from a momentary suspension.
    */
   private _stalledSince: number | undefined
+
+  /**
+   * The output's clock as of the last liveness check, so the next check can compare its progress against wall time.
+   */
+  private _clock: { contextTime: number; output: AudioContext; wallTime: number } | undefined
+
+  /**
+   * Health-line timer for the current output, running only under MUSIC_AUDIO_DEBUG.
+   */
+  private _monitor: ReturnType<typeof setInterval> | undefined
 
   /**
    * Voices currently sounding, grouped by whoever started them.
@@ -193,7 +242,10 @@ export class SamplePlayer {
     try {
       // The output device opens here, on the first sample actually played — the earliest point a missing device can
       // be observed, since decoding needs none.
-      this._output ??= new this._api.AudioContext()
+      if (this._output === undefined) {
+        this._output = new this._api.AudioContext()
+        this.monitor(this._output)
+      }
       const output = this._output
 
       if (output.state !== 'running') {
@@ -206,18 +258,7 @@ export class SamplePlayer {
         }
 
         if (Date.now() - this._stalledSince >= StallDiscardMs) {
-          // The stream has ignored every resume() for the whole stall; its device has abandoned it. Discard it — the
-          // next note opens a fresh stream, which reaches a recovered device where the wedged one never would.
-          log.warn('Audio output stayed stalled; discarding the stream to open a fresh one.')
-          this._stalledSince = undefined
-          this._output = undefined
-
-          const playing = [...this._playing]
-          playing.forEach((voice) => {
-            this.release(voice)
-          })
-
-          void output.close().catch(() => undefined)
+          this.discard(output, 'it stayed stalled through every resume()')
           return
         }
 
@@ -231,6 +272,27 @@ export class SamplePlayer {
       if (this._reportedState !== undefined) {
         this._reportedState = undefined
         log.info('Audio output is running again.')
+      }
+
+      // The state says running; check whether the clock agrees. A stream whose device stopped calling it renders
+      // nothing, freezes its clock, and never updates its state — the only tell is currentTime falling behind the
+      // wall clock.
+      const now = Date.now()
+      if (this._clock?.output !== output) {
+        this._clock = { contextTime: output.currentTime, output, wallTime: now }
+      } else if (now - this._clock.wallTime >= LivenessWindowMs) {
+        const wallElapsed = (now - this._clock.wallTime) / 1000
+        const contextElapsed = output.currentTime - this._clock.contextTime
+
+        if (contextElapsed < wallElapsed / 2) {
+          this.discard(
+            output,
+            `its clock advanced ${contextElapsed.toFixed(2)}s over ${wallElapsed.toFixed(2)}s of wall time`,
+          )
+          return
+        }
+
+        this._clock = { contextTime: output.currentTime, output, wallTime: now }
       }
 
       // Steal the oldest voice rather than grow the graph past the cap.
@@ -284,6 +346,66 @@ export class SamplePlayer {
   }
 
   /**
+   * Starts diagnostics for a newly opened output, when MUSIC_AUDIO_DEBUG asks for them: the render thread's own load
+   * once a second (its update event carries average/peak load and the underrun ratio — the wedge, watched forming),
+   * and a health line every five seconds with the facts a post-mortem needs.
+   */
+  private monitor(output: AudioContext) {
+    if (!audioDebugEnabled()) {
+      return
+    }
+
+    const capacity = (output as Partial<{ renderCapacity: RenderCapacity }>).renderCapacity
+    capacity?.addEventListener('update', ({ averageLoad, peakLoad, underrunRatio }) => {
+      const report = `[capacity] avg=${averageLoad.toFixed(3)} peak=${peakLoad.toFixed(3)} underruns=${underrunRatio.toFixed(3)}`
+      if (underrunRatio > 0 || peakLoad > 0.8) {
+        log.warn(report)
+      } else {
+        log.info(report)
+      }
+    })
+    capacity?.start({ updateInterval: 1 })
+
+    const gc = forceGcEnabled() ? (globalThis as Partial<{ gc: () => void }>).gc : undefined
+    if (forceGcEnabled() && gc === undefined) {
+      log.warn('MUSIC_AUDIO_FORCE_GC is set but gc() is not exposed; run node with --expose-gc.')
+    }
+
+    this._monitor = setInterval(() => {
+      const memory = process.memoryUsage()
+      log.info(
+        `[health] state=${output.state} clock=${output.currentTime.toFixed(1)}s voices=${this._playing.length} heap=${(memory.heapUsed / 1048576).toFixed(1)}MB native=${(memory.external / 1048576).toFixed(1)}MB${gc === undefined ? '' : ' gc=forced'}`,
+      )
+      gc?.()
+    }, 5_000)
+
+    // A diagnostics timer must never be what keeps the process alive. (Node-only by construction: the debug flag
+    // requires `process`, so the browser never arms this.)
+    this._monitor.unref()
+  }
+
+  /**
+   * Abandons a wedged output stream: every voice is released, the context is closed, and the next note opens a fresh
+   * stream — which reaches a recovered device where the wedged one never would.
+   */
+  private discard(output: AudioContext, reason: string) {
+    log.warn(`Discarding the audio output stream to open a fresh one: ${reason}.`)
+
+    clearInterval(this._monitor)
+    this._monitor = undefined
+    this._stalledSince = undefined
+    this._clock = undefined
+    this._output = undefined
+
+    const playing = [...this._playing]
+    playing.forEach((voice) => {
+      this.release(voice)
+    })
+
+    void output.close().catch(() => undefined)
+  }
+
+  /**
    * Removes a voice: its teardown timer, its registrations, and its nodes' connections.
    */
   private release(voice: Voice) {
@@ -322,6 +444,9 @@ export class SamplePlayer {
    * the output device stays claimed against whatever else on the machine wants it.
    */
   public async close(): Promise<void> {
+    clearInterval(this._monitor)
+    this._monitor = undefined
+
     const output = this._output
     this._output = undefined
 
