@@ -29,6 +29,19 @@ const MaxVoices = 32
 const CleanupMarginSeconds = 0.1
 
 /**
+ * How long after the output device refuses to open before it is tried again. Long enough that a machine with no audio
+ * device logs a complaint twice a minute rather than one per key press; short enough that plugging a device in — or a
+ * wedged one coming back — restores sound without restarting the app.
+ */
+const OutputRetryMs = 30_000
+
+/**
+ * How long the output context may sit in a non-running state, with resume() being asked for on every note, before the
+ * stream is discarded. A stream its device has abandoned never comes back; a fresh one to a recovered device does.
+ */
+const StallDiscardMs = 10_000
+
+/**
  * One sounding sample: its nodes, the timer that tears them down, and the owner set it is registered in.
  */
 interface Voice {
@@ -72,9 +85,16 @@ export class SamplePlayer {
   private _output: AudioContext | undefined
 
   /**
-   * Set once the output device has refused to open, so the failure is reported once rather than on every key press.
+   * When the output device last refused to open. Playback stays silent for {@link OutputRetryMs} afterwards, then
+   * tries again — a transient device failure should cost a pause, not the rest of the session.
    */
-  private _outputUnavailable = false
+  private _outputFailedAt: number | undefined
+
+  /**
+   * When the output context was first observed in a non-running state, so a stall that outlives
+   * {@link StallDiscardMs} can be told apart from a momentary suspension.
+   */
+  private _stalledSince: number | undefined
 
   /**
    * Voices currently sounding, grouped by whoever started them.
@@ -160,8 +180,12 @@ export class SamplePlayer {
    */
   public play(name: string, gain: number, owner: SampleOwner) {
     const buffer = this._buffers.get(name)
-    if (this._api === undefined || this._outputUnavailable || buffer === undefined) {
+    if (this._api === undefined || buffer === undefined) {
       void this.decode(name)
+      return
+    }
+
+    if (this._outputFailedAt !== undefined && Date.now() - this._outputFailedAt < OutputRetryMs) {
       return
     }
 
@@ -175,9 +199,26 @@ export class SamplePlayer {
       if (output.state !== 'running') {
         // A context that is not running has a stopped clock: a source started on it is never heard and never ends, so
         // its nodes would pile up for as long as the program runs. Ask for the context back and drop this note.
+        this._stalledSince ??= Date.now()
         if (this._reportedState !== output.state) {
           this._reportedState = output.state
           log.warn(`Audio output is not running; dropping notes until it resumes. [state=${output.state}]`)
+        }
+
+        if (Date.now() - this._stalledSince >= StallDiscardMs) {
+          // The stream has ignored every resume() for the whole stall; its device has abandoned it. Discard it — the
+          // next note opens a fresh stream, which reaches a recovered device where the wedged one never would.
+          log.warn('Audio output stayed stalled; discarding the stream to open a fresh one.')
+          this._stalledSince = undefined
+          this._output = undefined
+
+          const playing = [...this._playing]
+          playing.forEach((voice) => {
+            this.release(voice)
+          })
+
+          void output.close().catch(() => undefined)
+          return
         }
 
         void output.resume().catch((error: unknown) => {
@@ -186,6 +227,7 @@ export class SamplePlayer {
         return
       }
 
+      this._stalledSince = undefined
       if (this._reportedState !== undefined) {
         this._reportedState = undefined
         log.info('Audio output is running again.')
@@ -232,9 +274,12 @@ export class SamplePlayer {
 
       voices.add(voice)
       this._playing.push(voice)
+      this._outputFailedAt = undefined
     } catch (error) {
-      this._outputUnavailable = true
-      log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
+      this._outputFailedAt = Date.now()
+      log.warn(
+        `Unable to open the audio output device; sound boards will be silent while it is retried. [error=${String(error)}]`,
+      )
     }
   }
 

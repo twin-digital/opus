@@ -22,6 +22,12 @@ at 32 (stealing the oldest), and the player logs when the audio context leaves
 the running state and when it recovers, so a stalled stream is visible in the
 log rather than presenting as silent dead keys.
 
+Audio failures now heal within the session instead of requiring a restart: a
+stream that stays stalled for ten seconds is discarded and reopened fresh on
+the next note, and an output device that refuses to open is retried after
+thirty seconds rather than latching the player silent for the rest of the
+session.
+
 Speech volume is tunable via MUSIC_SPEECH_VOLUME (0-1) and defaults to 0.5:
 announcements share an output with the instruments and should not drown them
 out.
