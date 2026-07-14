@@ -16,6 +16,7 @@ import {
   InstrumentFamilies,
   type Instrument,
   type InstrumentFamily,
+  type InstrumentFamilyName,
 } from '../../midi/instrument-data.js'
 import { InstrumentsByFamily } from '../../midi/instruments.js'
 import type { Program } from '../../engine/program.js'
@@ -67,20 +68,20 @@ export const createSoundPickerProgram = (
   launchpad: NovationLaunchpadMiniMk3,
   synthesizer: MidiDevice,
   {
-    speakInstrumentNames = true,
+    speech = true,
   }: {
     /**
      * Whether to speak selection feedback aloud: instrument names, side selection, and split announcements.
      * @defaultValue true
      */
-    speakInstrumentNames?: boolean
+    speech?: boolean
   } = {},
 ): Program => {
   const samples = new SamplePlayer()
   const controller = new LaunchpadController(synthesizer, samples, 2)
-  // Partial because the records are empty until initialize() seeds them, and a frame can be drawn before that.
-  const selectedFamilies: Partial<Record<number, InstrumentFamily>> = {}
-  const selectedInstruments: Partial<Record<number, Instrument>> = {}
+  // Seeded by initialize(), which the engine and launcher guarantee runs before the first draw.
+  const selectedFamilies: Record<number, InstrumentFamily> = {}
+  const selectedInstruments: Record<number, Instrument> = {}
   let selectedChannelId: ChannelId = RightHand
   let selectedScreenId = 1
   let split = false
@@ -90,17 +91,8 @@ export const createSoundPickerProgram = (
    */
   let clock = 0
 
-  /**
-   * Worn until a channel has a selection with a color — before initialize() seeds the selections, or if an
-   * instrument's family has no color entry, the side column renders neutral rather than throwing.
-   */
-  const NeutralColor: RgbColor = [127, 127, 127]
-
-  // A partial view of the color table: instrument families are open-ended strings, so a lookup can genuinely miss.
-  const familyColors: Partial<Record<string, RgbColor>> = InstrumentFamilyColors
-
   const displayColor = (channelId: ChannelId): RgbColor =>
-    familyColors[selectedInstruments[channelId]?.family ?? ''] ?? NeutralColor
+    InstrumentFamilyColors[selectedInstruments[channelId].family as InstrumentFamilyName]
 
   /**
    * Rebuilds the keyboard routing to match the split state: two zones when split, or the whole keyboard on the
@@ -132,7 +124,7 @@ export const createSoundPickerProgram = (
   }
 
   const selectInstrument = (instrument: Instrument) => {
-    if (speakInstrumentNames) {
+    if (speech) {
       void speak(instrument.name)
     }
 
@@ -147,7 +139,7 @@ export const createSoundPickerProgram = (
     }
 
     selectedChannelId = channelId
-    if (speakInstrumentNames) {
+    if (speech) {
       void speak(side === 'left' ? 'left hand' : 'right hand')
     }
   }
@@ -160,30 +152,25 @@ export const createSoundPickerProgram = (
     controller.stopAllSound()
 
     if (split) {
-      // The right hand keeps the current sound; the left hand becomes the standard drum kit. "No memory of prior
-      // choices" extends to the mixer: a mute or level left over from an earlier split session would silently kill
-      // a zone whose pad presents it as fresh and live. The right hand's mixer resets only when the kept sound moves
-      // onto it — that is the case where its state is stale; when the right hand was already selected, its mute and
-      // level are the user's live, visible settings and stay put.
-      if (selectedChannelId !== RightHand) {
-        const current = selectedInstruments[selectedChannelId]
-        if (current !== undefined) {
-          setChannelInstrument(RightHand, current)
-        }
-        controller.setMuted(RightHand, false)
-        controller.setLevel(RightHand, 127)
-      }
+      // The right hand keeps the current sound; the left hand becomes the standard drum kit and takes the selection,
+      // ready for a kit change. Both hands start unmuted at the volume the whole keyboard had — the split inherits
+      // how loud the player was, and a mute or level left over from an earlier split session cannot silently kill a
+      // zone whose pad presents it as fresh and live.
+      const keptLevel = controller.channels.find((channel) => channel.id === selectedChannelId)?.level ?? 127
+      setChannelInstrument(RightHand, selectedInstruments[selectedChannelId])
       setChannelInstrument(LeftHand, GmStandardKit)
-      controller.setMuted(LeftHand, false)
-      controller.setLevel(LeftHand, 127)
-      selectedChannelId = RightHand
+      controller.channels.forEach((channel) => {
+        controller.setMuted(channel.id, false)
+        controller.setLevel(channel.id, keptLevel)
+      })
+      selectedChannelId = LeftHand
     }
     // Turning split off collapses the keyboard to the selected side's sound, which the routes alone express.
 
     applyRoutes()
     rebuildChannelLevelScreen()
 
-    if (speakInstrumentNames) {
+    if (speech) {
       void speak(split ? 'two instruments' : 'one instrument')
     }
   }

@@ -37,10 +37,7 @@ interface Harness {
   send: ReturnType<typeof vi.fn>
 }
 
-const makeProgram = async ({
-  clearInitTraffic = true,
-  runInitialize = true,
-}: { clearInitTraffic?: boolean; runInitialize?: boolean } = {}): Promise<Harness> => {
+const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boolean } = {}): Promise<Harness> => {
   // Handler lists mirror EventEmitter semantics — the same listener registered twice fires twice — so tests can see
   // duplicate registrations that a keyed map would silently dedupe.
   const deviceHandlers = new Map<string, NoteHandler[]>()
@@ -63,12 +60,10 @@ const makeProgram = async ({
     sendCommand: vi.fn(() => Promise.resolve()),
   } as unknown as NovationLaunchpadMiniMk3
 
-  const program = createSoundPickerProgram(launchpad, synthesizer, { speakInstrumentNames: true })
-  if (runInitialize) {
-    await program.initialize?.()
-    if (clearInitTraffic) {
-      send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
-    }
+  const program = createSoundPickerProgram(launchpad, synthesizer, { speech: true })
+  await program.initialize?.()
+  if (clearInitTraffic) {
+    send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
   }
 
   return { program, deviceHandlers, send }
@@ -79,6 +74,11 @@ const cellAt = (cells: Cell<RgbColor>[], x: number, y: number) => cells.findLast
 const press = (cell: Cell<RgbColor> | undefined) => {
   expect(cell, 'expected a pressable cell at that position').toBeDefined()
   cell?.onPress?.({ type: 'press', x: cell.x, y: cell.y, absoluteX: cell.x, absoluteY: cell.y })
+}
+
+const release = (cell: Cell<RgbColor> | undefined) => {
+  expect(cell, 'expected a releasable cell at that position').toBeDefined()
+  cell?.onRelease?.({ type: 'release', x: cell.x, y: cell.y, absoluteX: cell.x, absoluteY: cell.y })
 }
 
 const drawCells = (harness: Harness) => harness.program.getDrawable().draw()
@@ -158,9 +158,10 @@ describe('createSoundPickerProgram split keyboard', () => {
       // exactly one announcement: the programmatic instrument assignments behind the toggle stay silent
       expect(vi.mocked(speak).mock.calls).toEqual([['two instruments']])
 
+      // the left hand takes the selection (it breathes), ready for a kit change; the right holds steady
       const cells = drawCells(harness)
-      expect(cellAt(cells, 8, 0)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
-      expect(cellAt(cells, 8, 1)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors.Piano))
+      expect(cellAt(cells, 8, 0)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors['Drum Kit']))
+      expect(cellAt(cells, 8, 1)?.value).toEqual(InstrumentFamilyColors.Piano)
     })
   })
 
@@ -168,16 +169,15 @@ describe('createSoundPickerProgram split keyboard', () => {
     const harness = await makeProgram()
 
     pressToggle(harness)
-    press(cellAt(drawCells(harness), 8, 0))
+    press(cellAt(drawCells(harness), 8, 1))
 
-    expect(speak).toHaveBeenCalledWith('left hand')
+    expect(speak).toHaveBeenCalledWith('right hand')
   })
 
   it('collapses to the selected side when split turns off', async () => {
     const harness = await makeProgram()
 
-    pressToggle(harness)
-    press(cellAt(drawCells(harness), 8, 0)) // select the left hand (the drum kit)
+    pressToggle(harness) // the left hand (the drum kit) takes the selection
     pressToggle(harness)
 
     expect(speak).toHaveBeenCalledWith('one instrument')
@@ -196,14 +196,13 @@ describe('createSoundPickerProgram split keyboard', () => {
     const harness = await makeProgram()
 
     pressToggle(harness)
-    press(cellAt(drawCells(harness), 8, 0))
-    pressToggle(harness) // collapse to the drum kit
+    pressToggle(harness) // collapse to the drum kit the split left selected
     pressToggle(harness) // split again
 
-    // the drum kit the user kept became the right hand's sound; the left is the standard kit default
+    // the drum kit the user kept became the right hand's sound; the left is the standard kit default, selected
     const cells = drawCells(harness)
-    expect(cellAt(cells, 8, 1)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors['Drum Kit']))
-    expect(cellAt(cells, 8, 0)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
+    expect(cellAt(cells, 8, 1)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
+    expect(cellAt(cells, 8, 0)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors['Drum Kit']))
 
     fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
     expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
@@ -234,71 +233,71 @@ describe('createSoundPickerProgram split keyboard', () => {
     }
   })
 
-  it('renders a frame drawn before initialize() instead of throwing', async () => {
-    const harness = await makeProgram({ runInitialize: false })
-
-    harness.program.update?.(0.1)
-    expect(() => drawCells(harness)).not.toThrow()
-  })
-
-  it('edits the selected side: a family picked after selecting the left hand lands on the left channel', async () => {
+  it('edits the selected side: a family picked after selecting the right hand lands on the right channel', async () => {
     const harness = await makeProgram()
     pressToggle(harness)
-    press(cellAt(drawCells(harness), 8, 0)) // select the left hand
+    press(cellAt(drawCells(harness), 8, 1)) // select the right hand
     press(cellAt(drawCells(harness), 3, 7)) // pick the Guitar family from the family selector
     harness.program.update?.(0.5) // advance to the peak of a breath, where the selected pad wears its full color
 
-    // the left hand received the family's first instrument; the right hand kept the piano
+    // the right hand received the family's first instrument; the left hand kept the drum kit
     expect(harness.send.mock.calls).toEqual(
-      expect.arrayContaining([['program', expect.objectContaining({ channel: LeftMidiChannel, number: 24 })]]),
-    )
-    expect(harness.send.mock.calls).not.toEqual(
       expect.arrayContaining([['program', expect.objectContaining({ channel: RightMidiChannel, number: 24 })]]),
     )
+    expect(harness.send.mock.calls).not.toEqual(
+      expect.arrayContaining([['program', expect.objectContaining({ channel: LeftMidiChannel, number: 24 })]]),
+    )
 
-    // the left side pad wears the new family color, and collapsing keeps the picked sound
-    expect(cellAt(drawCells(harness), 8, 0)?.value).toEqual(InstrumentFamilyColors.Guitar)
+    // the right side pad wears the new family color, and collapsing keeps the picked sound
+    expect(cellAt(drawCells(harness), 8, 1)?.value).toEqual(InstrumentFamilyColors.Guitar)
     pressToggle(harness)
-    fireNote(harness, 'noteon', { channel: 0, note: 90, velocity: 64 })
-    expect(playedChannels(harness.send, 90)).toEqual([LeftMidiChannel])
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 30)).toEqual([RightMidiChannel])
   })
 
-  it('re-splitting resets the left hand mixer along with its instrument', async () => {
+  it('re-splitting resets a stale left hand mute along with its instrument', async () => {
     const harness = await makeProgram()
     pressToggle(harness)
     press(cellAt(drawCells(harness), 4, 8)) // levels screen
     press(cellAt(drawCells(harness), 0, 0)) // mute the left hand
-    pressToggle(harness) // collapse to the right hand
+    press(cellAt(drawCells(harness), 8, 1)) // select the right hand
+    pressToggle(harness) // collapse to the right hand — the muted left channel becomes invisible
     pressToggle(harness) // split again — the left hand must come back audible
 
     fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
     expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
   })
 
-  it('re-splitting resets a stale right hand mixer when the kept sound moves onto it', async () => {
+  it('re-splitting resets a stale right hand mute when the kept sound moves onto it', async () => {
     const harness = await makeProgram()
     pressToggle(harness)
     press(cellAt(drawCells(harness), 4, 8)) // levels screen
     press(cellAt(drawCells(harness), 0, 1)) // mute the right hand
-    press(cellAt(drawCells(harness), 8, 0)) // select the left hand
-    pressToggle(harness) // collapse to the left hand — the muted right channel becomes invisible
+    pressToggle(harness) // collapse to the (selected) left hand — the muted right channel becomes invisible
     pressToggle(harness) // split again: the kept sound moves to the right hand, which must come back audible
 
     fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
     expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
   })
 
-  it('splitting leaves the right hand mixer alone when it was already selected', async () => {
+  it('splitting starts both hands unmuted at the whole-keyboard volume', async () => {
     const harness = await makeProgram()
     press(cellAt(drawCells(harness), 4, 8)) // levels screen
-    press(cellAt(drawCells(harness), 0, 1)) // mute the single (right hand) sound — a live, visible setting
+    press(cellAt(drawCells(harness), 0, 1)) // mute the single (right hand) sound
+    const fader = cellAt(drawCells(harness), 4, 1) // its fader; this position releases to level 72
+    press(fader)
+    release(fader)
+
     pressToggle(harness)
 
-    // the kept side stays muted; the fresh left hand plays
+    // the left hand adopts the pre-split volume, and the mute did not survive into the split
+    expect(harness.send.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['cc', expect.objectContaining({ channel: LeftMidiChannel, controller: 0x07, value: 72 })],
+      ]),
+    )
     fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
-    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
-    expect(playedChannels(harness.send, 72)).toEqual([])
-    expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
+    expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
   })
 
   it('never overdraws the side column', async () => {
@@ -326,25 +325,25 @@ describe('createSoundPickerProgram split keyboard', () => {
     expect(cellAt(inGap, 8, 7)?.value).toEqual([0, 0, 0])
     expect(cellAt(rightPhase, 8, 7)?.value).toEqual(InstrumentFamilyColors.Piano)
 
-    // the selected (right) side's brightness moves with the clock
-    expect(cellAt(inGap, 8, 1)?.value).not.toEqual(cellAt(atStart, 8, 1)?.value)
+    // the selected (left) side's brightness moves with the clock
+    expect(cellAt(inGap, 8, 0)?.value).not.toEqual(cellAt(atStart, 8, 0)?.value)
   })
 
   it('muting a row affects only its own hand and leaves the side selection alone', async () => {
     const harness = await makeProgram()
     pressToggle(harness)
     press(cellAt(drawCells(harness), 4, 8)) // switch to the levels screen
-    press(cellAt(drawCells(harness), 0, 0)) // the left hand row's mute button
+    press(cellAt(drawCells(harness), 0, 1)) // the right hand row's mute button
 
-    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
     fireNote(harness, 'noteon', { channel: 0, note: 72, velocity: 64 })
-    expect(playedChannels(harness.send, 30)).toEqual([])
-    expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
+    fireNote(harness, 'noteon', { channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 72)).toEqual([])
+    expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
 
-    // muting did not move the selection: collapsing still keeps the right hand's sound
+    // muting did not move the selection: collapsing still keeps the left hand's sound
     pressToggle(harness)
     fireNote(harness, 'noteon', { channel: 0, note: 40, velocity: 64 })
-    expect(playedChannels(harness.send, 40)).toEqual([RightMidiChannel])
+    expect(playedChannels(harness.send, 40)).toEqual([LeftMidiChannel])
   })
 
   it('re-initializing resets mixer state, so a stale mute cannot silence a zone', async () => {
