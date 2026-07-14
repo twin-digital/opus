@@ -278,7 +278,7 @@ export class SamplePlayer {
     } catch (error) {
       this._outputFailedAt = Date.now()
       log.warn(
-        `Unable to open the audio output device; sound boards will be silent while it is retried. [error=${String(error)}]`,
+        `Sample playback failed; sound boards will be silent until the audio output is retried. [error=${String(error)}]`,
       )
     }
   }
