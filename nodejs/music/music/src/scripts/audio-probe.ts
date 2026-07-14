@@ -10,6 +10,11 @@ import { AudioContext } from 'node-web-audio-api'
  * can work around the failure or the whole audio session is poisoned.
  *
  * Beep pitches identify the stream: low (440 Hz) is the first, high (880 Hz) is the second.
+ *
+ * PROBE_BACKEND selects the audio plumbing: 'webaudio' (default — node-web-audio-api, whose output runs on cpal) or
+ * 'rtaudio' (audify's RtAudio bindings — an independent CoreAudio path sharing no code with cpal). If the rtaudio
+ * backend survives where webaudio dies, the fault is in cpal's layer and RtAudio is a viable escape hatch; if both
+ * die alike, the fault is below every library.
  */
 
 /**
@@ -109,7 +114,213 @@ const report = (probe: Probe, startedAt: number) => {
   )
 }
 
+/** Interleaved stereo float32, matching RTAUDIO_FLOAT32 = 0x10 (audify declares it as a const enum, unusable as a runtime import). */
+const Float32Format = 0x10
+
+const FrameSize = 512
+
+interface RtDevice {
+  id: number
+  name: string
+  outputChannels: number
+  preferredSampleRate: number
+  sampleRates: number[]
+}
+
+interface RtStream {
+  closeStream: () => void
+  getDefaultOutputDevice: () => number
+  getDevices: () => RtDevice[]
+  openStream: (
+    output: { deviceId: number; firstChannel: number; nChannels: number } | null,
+    input: null,
+    format: number,
+    sampleRate: number,
+    frameSize: number,
+    name: string,
+    inputCallback: null,
+    frameOutputCallback: null,
+    flags?: number,
+    errorCallback?: (type: number, message: string) => void,
+  ) => number
+  start: () => void
+  streamTime: number
+  write: (pcm: Buffer) => void
+}
+
+interface RtProbe {
+  beepRemaining: number
+  lastStreamTime: number
+  lastWall: number
+  name: string
+  phase: number
+  pitch: number
+  rate: number
+  rt: RtStream
+  written: number
+}
+
+const openRtProbe = async (name: string, pitch: number, startedAt: number): Promise<RtProbe | undefined> => {
+  try {
+    // audify is CJS re-exporting a native binding, so its named exports are invisible to the ESM lexer and live on
+    // `default`.
+    const imported = (await import('audify')) as unknown as {
+      default?: { RtAudio: new () => RtStream }
+      RtAudio?: new () => RtStream
+    }
+    const RtAudio = (imported.default ?? imported).RtAudio
+    if (RtAudio === undefined) {
+      console.log(`[${name}] FAILED TO OPEN: audify loaded but exposes no RtAudio`)
+      return undefined
+    }
+    const rt = new RtAudio()
+
+    const devices = rt.getDevices()
+    const defaultId = rt.getDefaultOutputDevice()
+    const device = devices.find((candidate) => candidate.id === defaultId)
+    if (device === undefined) {
+      console.log(`[${name}] FAILED TO OPEN: no output device (rtaudio saw ${devices.length} devices)`)
+      return undefined
+    }
+
+    const requested = Number(process.env.PROBE_SAMPLE_RATE ?? '')
+    const rate = Number.isFinite(requested) && requested > 0 ? requested : device.preferredSampleRate
+    console.log(
+      `[${name}] rtaudio device: name=${JSON.stringify(device.name)} preferred=${device.preferredSampleRate} ` +
+        `supported=[${device.sampleRates.join(', ')}] opening at ${rate}`,
+    )
+
+    rt.openStream(
+      { deviceId: device.id, firstChannel: 0, nChannels: 2 },
+      null,
+      Float32Format,
+      rate,
+      FrameSize,
+      name,
+      null,
+      null,
+      0,
+      (type, message) => {
+        console.log(`[${name}] rtaudio error callback: type=${type} ${message}`)
+      },
+    )
+    rt.start()
+
+    return {
+      beepRemaining: 0,
+      lastStreamTime: rt.streamTime,
+      lastWall: startedAt,
+      name,
+      phase: 0,
+      pitch,
+      rate,
+      rt,
+      written: 0,
+    }
+  } catch (error) {
+    console.log(`[${name}] FAILED TO OPEN: ${String(error)}`)
+    return undefined
+  }
+}
+
+/**
+ * Pushes PCM ahead of the stream: sine while a beep is pending, silence otherwise, always ~200 ms ahead of wall time
+ * so scheduling jitter never starves the device.
+ */
+const pumpRtProbe = (probe: RtProbe, startedAt: number) => {
+  const targetSamples = ((Date.now() - startedAt) / 1000 + 0.2) * probe.rate
+
+  while (probe.written < targetSamples) {
+    const frame = new Float32Array(FrameSize * 2)
+    for (let i = 0; i < FrameSize; i++) {
+      if (probe.beepRemaining > 0) {
+        const sample = Math.sin(probe.phase) * 0.2
+        frame[i * 2] = sample
+        frame[i * 2 + 1] = sample
+        probe.phase += (2 * Math.PI * probe.pitch) / probe.rate
+        probe.beepRemaining--
+      }
+    }
+
+    probe.rt.write(Buffer.from(frame.buffer))
+    probe.written += FrameSize
+  }
+}
+
+const reportRtProbe = (probe: RtProbe, startedAt: number) => {
+  const now = Date.now()
+  const streamTime = probe.rt.streamTime
+  const wallDelta = (now - probe.lastWall) / 1000
+  const ratio = wallDelta > 0 ? (streamTime - probe.lastStreamTime) / wallDelta : 1
+  probe.lastWall = now
+  probe.lastStreamTime = streamTime
+
+  console.log(
+    `[${probe.name}] t+${((now - startedAt) / 1000).toFixed(0)}s streamTime=${streamTime.toFixed(1)}s ` +
+      `rate=${ratio.toFixed(3)} written=${(probe.written / probe.rate).toFixed(1)}s (beeping at ${probe.pitch}Hz)`,
+  )
+}
+
+const runRtAudio = async () => {
+  console.log('Backend: rtaudio (audify) — an independent CoreAudio path sharing no code with cpal.')
+
+  const startedAt = Date.now()
+  const first = await openRtProbe('rt-probe-1', 440, startedAt)
+  if (first === undefined) {
+    process.exitCode = 1
+    return
+  }
+
+  let second: RtProbe | undefined
+  const probes = () => [first, ...(second === undefined ? [] : [second])]
+
+  const pump = setInterval(() => {
+    probes().forEach((probe) => {
+      pumpRtProbe(probe, startedAt)
+    })
+  }, 25)
+
+  await new Promise<void>((resolve) => {
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startedAt
+
+      if (second === undefined && elapsed >= SecondContextAtMs) {
+        void openRtProbe('rt-probe-2', 880, startedAt).then((probe) => {
+          second = probe
+        })
+      }
+
+      probes().forEach((probe) => {
+        probe.beepRemaining = Math.floor(probe.rate * 0.15)
+        reportRtProbe(probe, startedAt)
+      })
+
+      if (elapsed >= EndAtMs) {
+        clearInterval(timer)
+        clearInterval(pump)
+        resolve()
+      }
+    }, HealthIntervalMs)
+  })
+
+  console.log('Probe complete.')
+  probes().forEach(({ rt }) => {
+    try {
+      rt.closeStream()
+    } catch {
+      // the stream may already be dead; the probe has what it came for either way
+    }
+  })
+  process.exit(0)
+}
+
 const main = async () => {
+  if (process.env.PROBE_BACKEND === 'rtaudio') {
+    console.log('Audio probe: listen for the beeps — a stream is dead when its pitch goes silent.')
+    await runRtAudio()
+    return
+  }
+
   console.log('Audio probe: listen for the beeps — a stream is dead when its pitch goes silent.')
   console.log(
     `Probe 1 (440 Hz) starts now; probe 2 (880 Hz) joins at t+${SecondContextAtMs / 1000}s; ends at t+${EndAtMs / 1000}s.`,
