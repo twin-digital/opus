@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@julusian/midi": "^3.6.1",
+    "audify": "^1.10.1",
     "dotenv": "catalog:",
     "easymidi": "^3.1.0",
     "lodash-es": "catalog:",
