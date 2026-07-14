@@ -158,8 +158,11 @@ export const createSoundPickerProgram = (
     shutdown: () => {
       log.info('Shutting down "Sound Picker" program.')
       controller.shutdown()
-      samples.stopAll()
       launchpad.events.off('readback', handleReadback)
+
+      // Releases the audio output device. Without it the render thread's handles keep Node's event loop alive and the
+      // process never exits.
+      void samples.close()
     },
   }
 }

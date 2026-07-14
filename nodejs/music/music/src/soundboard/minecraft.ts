@@ -13,6 +13,13 @@ export const MinecraftFamilyName = 'Minecraft'
 const BaseNote = 60
 
 /**
+ * ID of the instrument that selects the board at `patch`. Both the board and its instrument are built from this, so a
+ * board can never end up pointing at an ID no instrument carries — which would leave it selectable in the picker and
+ * permanently silent.
+ */
+const boardInstrumentId = (patch: number) => `${patch}#${SoundBoardBankMsb}#0`
+
+/**
  * Sound boards drawn from the Minecraft sound assets. Each board is one instrument in the Minecraft family, selected
  * by its patch number; the samples are listed in key order.
  *
@@ -24,7 +31,7 @@ const BaseNote = 60
  */
 export const MinecraftBoards = [
   {
-    instrumentId: `0#${SoundBoardBankMsb}#0`,
+    instrumentId: boardInstrumentId(0),
     baseNote: BaseNote,
     samples: [
       'mob/creeper/say1',
@@ -46,7 +53,7 @@ export const MinecraftBoards = [
     ],
   },
   {
-    instrumentId: `1#${SoundBoardBankMsb}#0`,
+    instrumentId: boardInstrumentId(1),
     baseNote: BaseNote,
     samples: [
       'random/anvil_land',
@@ -68,7 +75,7 @@ export const MinecraftBoards = [
     ],
   },
   {
-    instrumentId: `2#${SoundBoardBankMsb}#0`,
+    instrumentId: boardInstrumentId(2),
     baseNote: BaseNote,
     samples: [
       'random/explode1',
@@ -101,7 +108,7 @@ export const MinecraftInstruments = [
     family: MinecraftFamilyName,
     patch: 0,
     name: 'Mobs',
-    id: `0#${SoundBoardBankMsb}#0`,
+    id: boardInstrumentId(0),
     standard: 'none',
   },
   {
@@ -109,7 +116,7 @@ export const MinecraftInstruments = [
     family: MinecraftFamilyName,
     patch: 1,
     name: 'Blocks and Items',
-    id: `1#${SoundBoardBankMsb}#0`,
+    id: boardInstrumentId(1),
     standard: 'none',
   },
   {
@@ -117,7 +124,7 @@ export const MinecraftInstruments = [
     family: MinecraftFamilyName,
     patch: 2,
     name: 'Adventure',
-    id: `2#${SoundBoardBankMsb}#0`,
+    id: boardInstrumentId(2),
     standard: 'none',
   },
 ] satisfies Instrument[]

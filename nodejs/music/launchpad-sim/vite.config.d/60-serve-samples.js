@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 
@@ -24,34 +24,80 @@ const sampleDirectoryPrefix = sampleDirectory + sep
  * @param {import('node:http').ServerResponse} response
  */
 const handleSampleRequest = (request, response) => {
-  // The leading slash is stripped before joining: an absolute second argument would make `resolve`
-  // discard the sample directory entirely and serve from the filesystem root.
-  const requested = decodeURIComponent((request.url ?? '').split('?')[0]).replace(/^\/+/, '')
-  const file = resolve(sampleDirectory, requested)
-
-  // Reject anything resolving outside the sample directory: the request path arrives unsanitized,
-  // so '..' segments would otherwise read arbitrary files off the machine.
-  if (!file.startsWith(sampleDirectoryPrefix)) {
-    response.statusCode = 403
+  /** @param {number} status */
+  const fail = (status) => {
+    response.statusCode = status
     response.end()
+  }
+
+  let requested
+  try {
+    // Throws URIError on any malformed escape ('/samples/%zz'). The app only ever builds well-formed URLs, but this
+    // handler owns the /samples namespace and should answer garbage itself rather than throw out of the middleware.
+    requested = decodeURIComponent((request.url ?? '').split('?')[0])
+  } catch {
+    fail(400)
     return
   }
 
-  stat(file).then(
-    (stats) => {
-      if (!stats.isFile()) {
-        response.statusCode = 404
-        response.end()
+  // The leading slash is stripped before joining: an absolute second argument would make `resolve` discard the sample
+  // directory entirely and serve from the filesystem root.
+  const file = resolve(sampleDirectory, requested.replace(/^\/+/, ''))
+
+  // Reject anything resolving outside the sample directory: the request path arrives unsanitized, so '..' segments
+  // would otherwise read arbitrary files off the machine.
+  if (!file.startsWith(sampleDirectoryPrefix)) {
+    fail(403)
+    return
+  }
+
+  // `resolve` is purely lexical, so the check above only proves the *path* stays inside the sample directory — a
+  // symlink planted there would still be followed by stat and the read. `realpath` resolves the link before the
+  // containment test is repeated on what the file actually is.
+  realpath(file).then(
+    (real) => {
+      if (!real.startsWith(sampleDirectoryPrefix)) {
+        fail(403)
         return
       }
 
-      response.setHeader('Content-Type', 'audio/ogg')
-      response.setHeader('Content-Length', stats.size)
-      createReadStream(file).pipe(response)
+      stat(real).then(
+        (stats) => {
+          if (!stats.isFile()) {
+            fail(404)
+            return
+          }
+
+          response.setHeader('Content-Type', 'audio/ogg')
+          response.setHeader('Content-Length', stats.size)
+
+          // `pipe` does not forward source errors, and an unhandled 'error' on a stream is thrown as an uncaught
+          // exception — which would take the whole dev server down over one unreadable sample. The file can still
+          // vanish or turn out to be unreadable between the stat and the open.
+          const stream = createReadStream(real)
+          stream.on('error', () => {
+            if (response.headersSent) {
+              // Mid-transfer: the body is already partly written, so the only honest signal left is a broken
+              // connection.
+              response.destroy()
+              return
+            }
+
+            response.statusCode = 500
+            response.end()
+          })
+          response.on('close', () => {
+            stream.destroy()
+          })
+          stream.pipe(response)
+        },
+        () => {
+          fail(404)
+        },
+      )
     },
     () => {
-      response.statusCode = 404
-      response.end()
+      fail(404)
     },
   )
 }

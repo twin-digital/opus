@@ -54,7 +54,7 @@ export class LaunchpadController {
   constructor(
     private readonly instrument: MidiDevice,
     channelCount = 4,
-    samples?: SamplePlayer,
+    samples: SamplePlayer,
   ) {
     if (channelCount < 1 || channelCount > 8) {
       throw new Error(`The channelCount must be between 1 and 8, inclusive. [channelCount=${channelCount}]`)

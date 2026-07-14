@@ -38,10 +38,14 @@ export const InstrumentsByFamily = InstrumentFamilies.reduce<Record<string, Inst
 /**
  * Map allowing lookup of instrument variations by the instrument patch number. Returned instruments will be sorted by
  * the bank MSB then the bank LSB.
+ *
+ * Built from the GM instruments alone. This map's subject is the bank dimension of a single GM patch, and a sound
+ * board is not a variation of one: boards carry patch numbers 0, 1, 2 only because a patch is how the picker positions
+ * a button, so including them would offer "Mobs" as a variation of Acoustic Grand Piano.
  */
 export const InstrumentsByPatch = Array.from({ length: 128 }, (_, i) => i).reduce<Record<number, Instrument[]>>(
   (result, patch) => {
-    result[patch] = AllInstruments.filter((instrument) => instrument.patch === patch).sort(sortInstruments)
+    result[patch] = Gm2Instruments.filter((instrument) => instrument.patch === patch).sort(sortInstruments)
     return result
   },
   {},

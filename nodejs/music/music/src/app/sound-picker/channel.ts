@@ -52,9 +52,10 @@ export class Channel {
     private _color: RgbColor = [127, 127, 127],
 
     /**
-     * Player used to sound samples when a sound board is selected.
+     * Player used to sound samples when a sound board is selected. Required: a channel that could bind a board but
+     * had no way to sound it would swallow every key press, playing neither a sample nor a note on the piano.
      */
-    private _samples?: SamplePlayer,
+    private _samples: SamplePlayer,
   ) {
     // Both numbers are logged: the id is what the UI and the controller's API speak, and the MIDI channel is what
     // shows up on the wire.
@@ -67,7 +68,13 @@ export class Channel {
    */
   public playNote(note: Note) {
     if (this._board !== undefined) {
-      this._samples?.play(getSampleForNote(this._board, note.note), note.velocity, this)
+      // A note-on of velocity 0 is how many keyboards signal a key release. It reaches the piano as a note-off, but a
+      // sound board would otherwise answer it by starting a sample at zero gain: inaudible, yet a real voice held for
+      // the sample's full length. Every key release would allocate one.
+      if (note.velocity > 0) {
+        this._samples.play(getSampleForNote(this._board, note.note), note.velocity, this.level, this)
+      }
+
       return
     }
 
@@ -96,7 +103,7 @@ export class Channel {
    * sound will resume as normal.
    */
   public stopAllSound() {
-    this._samples?.stopAll(this)
+    this._samples.stopAll(this)
 
     this._device.send('cc', {
       channel: this.midiChannel,
@@ -113,6 +120,11 @@ export class Channel {
    * @param instrument Instrument to select.
    */
   public selectSound(instrument: Instrument) {
+    // Whatever is selected next, this channel's samples stop now. Otherwise leaving a board would leave its one-shots
+    // ringing with nothing left holding a reference to stop them — a multi-second sample would play on over the top of
+    // the patch that replaced it.
+    this._samples.stopAll(this)
+
     if (isSoundBoard(instrument)) {
       const board = SoundBoardsByInstrumentId[instrument.id]
       if (board === undefined) {
@@ -122,7 +134,7 @@ export class Channel {
 
       this._board = board
       this.stopAllSound()
-      void this._samples?.load(board.samples)
+      void this._samples.load(board.samples)
 
       this._log.info(`Selected sound board: ${instrument.name}`)
       return
