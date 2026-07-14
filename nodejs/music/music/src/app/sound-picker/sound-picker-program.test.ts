@@ -35,7 +35,7 @@ interface Harness {
   send: ReturnType<typeof vi.fn>
 }
 
-const makeProgram = async (): Promise<Harness> => {
+const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boolean } = {}): Promise<Harness> => {
   const deviceHandlers = new Map<string, (note: { channel: number; note: number; velocity: number }) => void>()
   const send = vi.fn()
   const synthesizer = {
@@ -52,7 +52,9 @@ const makeProgram = async (): Promise<Harness> => {
 
   const program = createSoundPickerProgram(launchpad, synthesizer, { speakInstrumentNames: true })
   await program.initialize?.()
-  send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
+  if (clearInitTraffic) {
+    send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
+  }
 
   return { program, deviceHandlers, send }
 }
@@ -177,6 +179,69 @@ describe('createSoundPickerProgram split keyboard', () => {
 
     harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 72, velocity: 64 })
     expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
+  })
+
+  it('initializes both hands with the default piano and stops all sound', async () => {
+    const harness = await makeProgram({ clearInitTraffic: false })
+
+    for (const channel of [LeftMidiChannel, RightMidiChannel]) {
+      expect(harness.send.mock.calls).toEqual(
+        expect.arrayContaining([
+          ['cc', expect.objectContaining({ channel, controller: 0, value: 121 })], // GM2 melodic bank
+          ['program', expect.objectContaining({ channel, number: 0 })], // Acoustic Grand Piano
+          ['cc', expect.objectContaining({ channel, controller: 0x78, value: 0 })], // all sound off
+        ]),
+      )
+    }
+  })
+
+  it('animates the side column once split: the toggle cycles and the selected side breathes', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+
+    const atStart = drawCells(harness)
+    harness.program.update?.(1.1) // into the first black gap of the toggle cycle
+    const inGap = drawCells(harness)
+    harness.program.update?.(0.6) // clock 1.7, inside the right color's window
+    const rightPhase = drawCells(harness)
+
+    expect(cellAt(atStart, 8, 7)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
+    expect(cellAt(inGap, 8, 7)?.value).toEqual([0, 0, 0])
+    expect(cellAt(rightPhase, 8, 7)?.value).toEqual(InstrumentFamilyColors.Piano)
+
+    // the selected (right) side's brightness moves with the clock
+    expect(cellAt(inGap, 8, 1)?.value).not.toEqual(cellAt(atStart, 8, 1)?.value)
+  })
+
+  it('muting a row affects only its own hand and leaves the side selection alone', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 4, 8)) // switch to the levels screen
+    press(cellAt(drawCells(harness), 0, 0)) // the left hand row's mute button
+
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 72, velocity: 64 })
+    expect(playedChannels(harness.send, 30)).toEqual([])
+    expect(playedChannels(harness.send, 72)).toEqual([RightMidiChannel])
+
+    // muting did not move the selection: collapsing still keeps the right hand's sound
+    pressToggle(harness)
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 40, velocity: 64 })
+    expect(playedChannels(harness.send, 40)).toEqual([RightMidiChannel])
+  })
+
+  it('re-initializing resets mixer state, so a stale mute cannot silence a zone', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 4, 8)) // levels screen
+    press(cellAt(drawCells(harness), 0, 0)) // mute the left hand
+
+    await harness.program.initialize?.()
+    harness.send.mockClear()
+
+    pressToggle(harness)
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
   })
 
   it('shows one fader row when unsplit and two when split, aligned with the side pads', async () => {

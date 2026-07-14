@@ -8,12 +8,10 @@ export const createChannelLevelScreen = ({
   channels,
   onLevelChanged,
   onMuteStatusChanged,
-  selectedChannelId,
 }: {
   channels: readonly ChannelState[]
   onLevelChanged?: (channelId: ChannelId, level: number) => void
   onMuteStatusChanged?: (channelId: ChannelId, muted: boolean) => void
-  selectedChannelId: ChannelId
 }): (() => Drawable) => {
   // Rows sit bottom-up at y = channel id, so each row lines up with its channel's pad in the side column — the side
   // pad acts as the row's label.
@@ -26,7 +24,6 @@ export const createChannelLevelScreen = ({
       onMuted: (muted) => {
         onMuteStatusChanged?.(channel.id, muted)
       },
-      selected: selectedChannelId === channel.id,
     }),
     y: channel.id,
   }))

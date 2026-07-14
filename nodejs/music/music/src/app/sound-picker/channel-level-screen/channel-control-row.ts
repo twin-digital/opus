@@ -12,7 +12,6 @@ export const createChannelControlRow = ({
 }: {
   onLevelChanged?: (level: number) => void
   onMuted?: (muted: boolean) => void
-  selected?: boolean
   channel: ChannelState
 }): (() => Drawable) => {
   const recreateFader = () =>

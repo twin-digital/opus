@@ -181,18 +181,17 @@ export const createSoundPickerProgram = (
         muted: channel.muted,
       }))
 
+  // Level and mute changes adjust the mixer only — they never change which side the picker edits. Side selection
+  // always goes through selectSide, so it is announced and the collapse target never moves silently.
   const makeChannelLevelScreen = () =>
     createChannelLevelScreen({
       channels: activeChannelStates(),
       onLevelChanged: (channelId, level) => {
         controller.setLevel(channelId, level)
-        selectedChannelId = channelId
       },
       onMuteStatusChanged: (channelId, muted) => {
         controller.setMuted(channelId, muted)
-        selectedChannelId = channelId
       },
-      selectedChannelId,
     })
 
   // The levels screen lives across frames because its faders hold in-flight gesture state; it is rebuilt only when
@@ -264,6 +263,11 @@ export const createSoundPickerProgram = (
 
       controller.channels.forEach((channel) => {
         setChannelInstrument(channel.id, InstrumentsByFamily[InstrumentFamilies[0].name][0])
+
+        // Normalize the mixer alongside the instruments, so re-initializing yields the same state as a first launch —
+        // a stale mute would otherwise silently kill a zone in a fresh-looking session.
+        controller.setMuted(channel.id, false)
+        controller.setLevel(channel.id, 127)
       })
 
       split = false
