@@ -173,8 +173,11 @@ export class SamplePlayer {
         gain.disconnect()
       }
 
-      voices.add(source)
+      // Registered only after start() has succeeded: `stop()` on a never-started source throws, so a voice in this
+      // set must be one that {@link stopAll} can safely stop. Web Audio events never fire synchronously, so onended
+      // cannot race the registration.
       source.start()
+      voices.add(source)
     } catch (error) {
       this._outputUnavailable = true
       log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
@@ -203,11 +206,16 @@ export class SamplePlayer {
    * the output device stays claimed against whatever else on the machine wants it.
    */
   public async close(): Promise<void> {
-    this.stopAll()
-
     const output = this._output
     this._output = undefined
 
-    await output?.close()
+    // Never rejects — the caller fires and forgets it during shutdown, and an unhandled rejection there would turn a
+    // graceful teardown into a crash.
+    try {
+      this.stopAll()
+      await output?.close()
+    } catch (error) {
+      log.warn(`Unable to release the audio output device cleanly. [error=${String(error)}]`)
+    }
   }
 }

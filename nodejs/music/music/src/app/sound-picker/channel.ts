@@ -132,7 +132,12 @@ export class Channel {
     if (isSoundBoard(instrument)) {
       const board = SoundBoardsByInstrumentId[instrument.id]
       if (board === undefined) {
-        this._log.warn(`Ignored a sound-board instrument that maps to no board. [instrument=${instrument.id}]`)
+        // Unbind rather than keep the previous sound: the picker has already recorded this instrument as the
+        // selection, and a channel that keeps playing the old one under the new highlight is worse than silence.
+        this._board = undefined
+        this._log.warn(
+          `Selected a sound-board instrument that maps to no board; the channel is silent. [instrument=${instrument.id}]`,
+        )
         return
       }
 
