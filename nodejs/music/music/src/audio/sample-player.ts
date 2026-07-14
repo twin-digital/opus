@@ -195,7 +195,7 @@ export class SamplePlayer {
   }
 
   /**
-   * Silences everything and releases the audio output device. The player is not reusable afterwards.
+   * Silences everything and releases the audio output device. Callers must not use the player afterwards.
    *
    * Without this, the audio render thread's handles keep Node's event loop alive — so the process never exits — and
    * the output device stays claimed against whatever else on the machine wants it.
