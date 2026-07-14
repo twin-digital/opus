@@ -1,5 +1,52 @@
 # @thrashplay/music
 
+## 0.3.0
+
+### Minor Changes
+
+- 2d84e2f: Add sound-board instruments: keys mapped to audio samples, played by the app itself.
+
+  Sound boards are ordinary instruments in a bank the app reserves for itself (MSB 126), so they sit
+  alongside the GM patches and drum kits in the picker and need no separate screen. The bank is an
+  internal marker rather than something the piano ever sees: selecting a board binds it to the
+  channel and sends no program change, and a note on that channel sounds its mapped sample instead of
+  being echoed to the piano. Boards are one-shot — a sample runs to completion, so note-off does
+  nothing — and the key mapping wraps, so every key on an 88-key piano triggers something.
+
+  This is the first audio the package produces on its own. `SamplePlayer` drives the Web Audio API,
+  backed by the browser's implementation in the sim and `node-web-audio-api` under Node, so the same
+  playback code runs in both. Samples are decoded once, memoized, and warmed in the background when
+  the sound picker starts, so a key press never waits on I/O; a sample that somehow isn't ready is
+  dropped rather than played late.
+
+  Ships with three Minecraft boards (Mobs, Blocks and Items, Adventure). The audio is Mojang's and is
+  not redistributed here: the new `music-fetch-samples` command downloads it from the same asset
+  servers the game's own launcher uses, into `~/.thrashplay/samples` (override with
+  `MUSIC_SAMPLES_DIR`). Run it once before selecting a board.
+
+### Patch Changes
+
+- 5074278: Fix the sound picker's initial instrument selection never reaching the piano, and give channels an
+  identity that does not depend on MIDI.
+
+  `Channel.id` returned the channel's MIDI channel number, so the first channel's id was 3 rather
+  than 0 — the MIDI channels backing the controller are neither zero-based nor contiguous, since 9 is
+  skipped as the General MIDI percussion channel. The picker's setup addressed channels by their
+  position in the channel list, which meant `channelById` matched nothing: the opening program change
+  was silently dropped, and the selected family and instrument were recorded under a key that nothing
+  ever read.
+
+  A channel's id is now its position in the channel list, which is what the UI already assumed and
+  what `ChannelState` — the view model the grid components consume — was always shaped for. The MIDI
+  channel stays inside `Channel`, as the transport detail it is, and is no longer part of the view
+  model, which nothing was reading anyway. This also lets a channel exist without a meaningful MIDI
+  channel at all.
+
+  `ChannelId` is branded, so the confusion that caused the bug is now a compile error rather than a
+  silent mismatch: a raw number, such as an array index, can no longer be passed where a channel id
+  is expected. Channel logs carry both numbers (`[CHANNEL#0 midi=3]`), since the MIDI channel is
+  still what appears on the wire.
+
 ## 0.2.1
 
 ### Patch Changes
