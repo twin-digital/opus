@@ -24,6 +24,7 @@
   },
   "bin": {
     "music": "./dist/index.js",
+    "music-audio-probe": "./dist/scripts/audio-probe.js",
     "music-fetch-samples": "./dist/scripts/fetch-samples.js"
   },
   "files": [
