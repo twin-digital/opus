@@ -11,10 +11,26 @@ const log = logger.child({}, { msgPrefix: '[AUDIO] ' })
 export type SampleOwner = object
 
 /**
- * Sample rate samples are decoded at. Playback resamples to whatever the output device runs at, so this only has to be
- * a sane rate, not the device's.
+ * Sample rate samples are decoded at. Playback resamples to whatever the output stream runs at, so this only has to
+ * be a sane rate, not the device's.
  */
 const DecodeSampleRate = 44100
+
+/**
+ * Sample rate the output stream is opened at: MUSIC_SAMPLE_RATE, or 44100 by default. This matters far beyond audio
+ * quality — a stream whose rate disagrees with the device's drifts against it, and on at least one USB device (the
+ * FP-30X, twin-digital/opus#254) the reconciliation ~90 seconds in wedges the device for every process using it. The
+ * default is the FP-30X's native rate; set the variable to match whatever device the samples play through.
+ */
+const outputSampleRate = () => {
+  const fallback = 44100
+  if (typeof process === 'undefined') {
+    return fallback
+  }
+
+  const configured = Number(process.env.MUSIC_SAMPLE_RATE ?? '')
+  return Number.isFinite(configured) && configured >= 8000 && configured <= 192000 ? configured : fallback
+}
 
 /**
  * Most voices allowed to sound at once; starting one beyond this stops the oldest. Samples run several seconds and
@@ -243,7 +259,7 @@ export class SamplePlayer {
       // The output device opens here, on the first sample actually played — the earliest point a missing device can
       // be observed, since decoding needs none.
       if (this._output === undefined) {
-        this._output = new this._api.AudioContext()
+        this._output = new this._api.AudioContext({ sampleRate: outputSampleRate() })
         this.monitor(this._output)
       }
       const output = this._output
