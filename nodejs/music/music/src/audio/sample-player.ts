@@ -17,6 +17,19 @@ export type SampleOwner = object
 const DecodeSampleRate = 44100
 
 /**
+ * Master volume applied to every sample voice, on top of the per-note velocity and channel level: MUSIC_SAMPLE_VOLUME,
+ * 0-1, 1 by default. Exists because the samples share an output with the piano and can need taming relative to it.
+ */
+const sampleVolume = () => {
+  if (typeof process === 'undefined') {
+    return 1
+  }
+
+  const configured = Number(process.env.MUSIC_SAMPLE_VOLUME ?? '1')
+  return Number.isFinite(configured) ? Math.min(1, Math.max(0, configured)) : 1
+}
+
+/**
  * Sample rate the output stream is opened at: MUSIC_SAMPLE_RATE, or 44100 by default. This matters far beyond audio
  * quality — a stream whose rate disagrees with the device's drifts against it, and on at least one USB device (the
  * FP-30X, twin-digital/opus#254) the reconciliation ~90 seconds in wedges the device for every process using it. The
@@ -322,7 +335,7 @@ export class SamplePlayer {
       source.buffer = buffer
 
       const gainNode = output.createGain()
-      gainNode.gain.value = Math.min(1, Math.max(0, gain))
+      gainNode.gain.value = Math.min(1, Math.max(0, gain)) * sampleVolume()
 
       source.connect(gainNode)
       gainNode.connect(output.destination)
