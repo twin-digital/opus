@@ -1,5 +1,13 @@
 # @thrashplay/launchpad-sim
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [5074278]
+- Updated dependencies [2d84e2f]
+  - @thrashplay/music@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes
