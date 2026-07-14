@@ -16,7 +16,6 @@ import {
   InstrumentFamilies,
   type Instrument,
   type InstrumentFamily,
-  type InstrumentFamilyName,
 } from '../../midi/instrument-data.js'
 import { InstrumentsByFamily } from '../../midi/instruments.js'
 import type { Program } from '../../engine/program.js'
@@ -79,8 +78,9 @@ export const createSoundPickerProgram = (
 ): Program => {
   const samples = new SamplePlayer()
   const controller = new LaunchpadController(synthesizer, samples, 2)
-  const selectedFamilies: Record<number, InstrumentFamily> = {}
-  const selectedInstruments: Record<number, Instrument> = {}
+  // Partial because the records are empty until initialize() seeds them, and a frame can be drawn before that.
+  const selectedFamilies: Partial<Record<number, InstrumentFamily>> = {}
+  const selectedInstruments: Partial<Record<number, Instrument>> = {}
   let selectedChannelId: ChannelId = RightHand
   let selectedScreenId = 1
   let split = false
@@ -90,8 +90,17 @@ export const createSoundPickerProgram = (
    */
   let clock = 0
 
+  /**
+   * Worn until a channel has a selection with a color — before initialize() seeds the selections, or if an
+   * instrument's family has no color entry, the side column renders neutral rather than throwing.
+   */
+  const NeutralColor: RgbColor = [127, 127, 127]
+
+  // A partial view of the color table: instrument families are open-ended strings, so a lookup can genuinely miss.
+  const familyColors: Partial<Record<string, RgbColor>> = InstrumentFamilyColors
+
   const displayColor = (channelId: ChannelId): RgbColor =>
-    InstrumentFamilyColors[selectedInstruments[channelId].family as InstrumentFamilyName]
+    familyColors[selectedInstruments[channelId]?.family ?? ''] ?? NeutralColor
 
   /**
    * Rebuilds the keyboard routing to match the split state: two zones when split, or the whole keyboard on the
@@ -127,8 +136,7 @@ export const createSoundPickerProgram = (
       void speak(instrument.name)
     }
 
-    selectedInstruments[selectedChannelId] = instrument
-    controller.selectSound(selectedChannelId, instrument)
+    setChannelInstrument(selectedChannelId, instrument)
     rebuildChannelLevelScreen()
   }
 
@@ -152,9 +160,16 @@ export const createSoundPickerProgram = (
     controller.stopAllSound()
 
     if (split) {
-      // The right hand keeps the current sound; the left hand becomes the standard drum kit.
-      setChannelInstrument(RightHand, selectedInstruments[selectedChannelId])
+      // The right hand keeps the current sound; the left hand becomes the standard drum kit. "No memory of prior
+      // left-hand choices" extends to the mixer: a mute or level left over from an earlier split would silently kill
+      // a zone whose pad presents it as fresh and live.
+      const current = selectedInstruments[selectedChannelId]
+      if (current !== undefined) {
+        setChannelInstrument(RightHand, current)
+      }
       setChannelInstrument(LeftHand, GmStandardKit)
+      controller.setMuted(LeftHand, false)
+      controller.setLevel(LeftHand, 127)
       selectedChannelId = RightHand
     }
     // Turning split off collapses the keyboard to the selected side's sound, which the routes alone express.
@@ -183,8 +198,11 @@ export const createSoundPickerProgram = (
 
   // Level and mute changes adjust the mixer only — they never change which side the picker edits. Side selection
   // always goes through selectSide, so it is announced and the collapse target never moves silently.
-  const makeChannelLevelScreen = () =>
-    createChannelLevelScreen({
+  // The levels screen lives across frames because its faders hold in-flight gesture state; it is rebuilt only when
+  // the channels it shows (or their colors) change.
+  let channelLevelScreenFactory: () => Drawable = () => ({ draw: () => [] })
+  const rebuildChannelLevelScreen = () => {
+    channelLevelScreenFactory = createChannelLevelScreen({
       channels: activeChannelStates(),
       onLevelChanged: (channelId, level) => {
         controller.setLevel(channelId, level)
@@ -193,12 +211,6 @@ export const createSoundPickerProgram = (
         controller.setMuted(channelId, muted)
       },
     })
-
-  // The levels screen lives across frames because its faders hold in-flight gesture state; it is rebuilt only when
-  // the channels it shows (or their colors) change.
-  let channelLevelScreenFactory: () => Drawable = () => ({ draw: () => [] })
-  const rebuildChannelLevelScreen = () => {
-    channelLevelScreenFactory = makeChannelLevelScreen()
   }
 
   const makeSoundSelectScreen = () =>
@@ -273,11 +285,15 @@ export const createSoundPickerProgram = (
       split = false
       selectedChannelId = RightHand
       selectedScreenId = 1
+      clock = 0
 
       applyRoutes()
       rebuildChannelLevelScreen()
 
       controller.initialize()
+
+      // off-then-on keeps the handler registered exactly once, however many times the program is re-initialized.
+      launchpad.events.off('readback', handleReadback)
       launchpad.events.on('readback', handleReadback)
     },
     shutdown: () => {

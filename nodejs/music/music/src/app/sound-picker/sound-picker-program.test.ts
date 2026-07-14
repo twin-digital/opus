@@ -35,7 +35,10 @@ interface Harness {
   send: ReturnType<typeof vi.fn>
 }
 
-const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boolean } = {}): Promise<Harness> => {
+const makeProgram = async ({
+  clearInitTraffic = true,
+  runInitialize = true,
+}: { clearInitTraffic?: boolean; runInitialize?: boolean } = {}): Promise<Harness> => {
   const deviceHandlers = new Map<string, (note: { channel: number; note: number; velocity: number }) => void>()
   const send = vi.fn()
   const synthesizer = {
@@ -51,9 +54,11 @@ const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boo
   } as unknown as NovationLaunchpadMiniMk3
 
   const program = createSoundPickerProgram(launchpad, synthesizer, { speakInstrumentNames: true })
-  await program.initialize?.()
-  if (clearInitTraffic) {
-    send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
+  if (runInitialize) {
+    await program.initialize?.()
+    if (clearInitTraffic) {
+      send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
+    }
   }
 
   return { program, deviceHandlers, send }
@@ -119,6 +124,7 @@ describe('createSoundPickerProgram split keyboard', () => {
 
     it('stops sounding notes, announces "two instruments", and lights both side pads', async () => {
       const harness = await makeProgram()
+      vi.mocked(speak).mockClear()
 
       pressToggle(harness)
 
@@ -128,7 +134,9 @@ describe('createSoundPickerProgram split keyboard', () => {
           ['cc', expect.objectContaining({ channel: RightMidiChannel, controller: 0x78, value: 0 })],
         ]),
       )
-      expect(speak).toHaveBeenCalledWith('two instruments')
+
+      // exactly one announcement: the programmatic instrument assignments behind the toggle stay silent
+      expect(vi.mocked(speak).mock.calls).toEqual([['two instruments']])
 
       const cells = drawCells(harness)
       expect(cellAt(cells, 8, 0)?.value).toEqual(InstrumentFamilyColors['Drum Kit'])
@@ -185,13 +193,74 @@ describe('createSoundPickerProgram split keyboard', () => {
     const harness = await makeProgram({ clearInitTraffic: false })
 
     for (const channel of [LeftMidiChannel, RightMidiChannel]) {
-      expect(harness.send.mock.calls).toEqual(
-        expect.arrayContaining([
-          ['cc', expect.objectContaining({ channel, controller: 0, value: 121 })], // GM2 melodic bank
-          ['program', expect.objectContaining({ channel, number: 0 })], // Acoustic Grand Piano
-          ['cc', expect.objectContaining({ channel, controller: 0x78, value: 0 })], // all sound off
-        ]),
+      const calls = harness.send.mock.calls.filter(
+        ([, payload]) => (payload as { channel: number }).channel === channel,
       )
+      const bankSelect = calls.findIndex(
+        ([type, payload]) => type === 'cc' && (payload as { controller: number }).controller === 0,
+      )
+      const programChange = calls.findIndex(([type]) => type === 'program')
+
+      // the bank select must precede the program change, or the piano resolves the patch in the wrong bank
+      expect(bankSelect).toBeGreaterThanOrEqual(0)
+      expect(programChange).toBeGreaterThan(bankSelect)
+      expect(calls[bankSelect][1]).toMatchObject({ value: 121 }) // GM2 melodic bank
+      expect(calls[programChange][1]).toMatchObject({ number: 0 }) // Acoustic Grand Piano
+      expect(calls).toEqual(
+        expect.arrayContaining([['cc', expect.objectContaining({ controller: 0x78, value: 0 })]]), // all sound off
+      )
+    }
+  })
+
+  it('renders a frame drawn before initialize() instead of throwing', async () => {
+    const harness = await makeProgram({ runInitialize: false })
+
+    harness.program.update?.(0.1)
+    expect(() => drawCells(harness)).not.toThrow()
+  })
+
+  it('edits the selected side: a family picked after selecting the left hand lands on the left channel', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 8, 0)) // select the left hand
+    press(cellAt(drawCells(harness), 3, 7)) // pick the Guitar family from the family selector
+    harness.program.update?.(0.5) // advance to the peak of a breath, where the selected pad wears its full color
+
+    // the left hand received the family's first instrument; the right hand kept the piano
+    expect(harness.send.mock.calls).toEqual(
+      expect.arrayContaining([['program', expect.objectContaining({ channel: LeftMidiChannel, number: 24 })]]),
+    )
+    expect(harness.send.mock.calls).not.toEqual(
+      expect.arrayContaining([['program', expect.objectContaining({ channel: RightMidiChannel, number: 24 })]]),
+    )
+
+    // the left side pad wears the new family color, and collapsing keeps the picked sound
+    expect(cellAt(drawCells(harness), 8, 0)?.value).toEqual(InstrumentFamilyColors.Guitar)
+    pressToggle(harness)
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 90, velocity: 64 })
+    expect(playedChannels(harness.send, 90)).toEqual([LeftMidiChannel])
+  })
+
+  it('re-splitting resets the left hand mixer along with its instrument', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 4, 8)) // levels screen
+    press(cellAt(drawCells(harness), 0, 0)) // mute the left hand
+    pressToggle(harness) // collapse to the right hand
+    pressToggle(harness) // split again — the left hand must come back audible
+
+    harness.deviceHandlers.get('noteon')?.({ channel: 0, note: 30, velocity: 64 })
+    expect(playedChannels(harness.send, 30)).toEqual([LeftMidiChannel])
+  })
+
+  it('never overdraws the side column', async () => {
+    const harness = await makeProgram()
+    pressToggle(harness)
+    press(cellAt(drawCells(harness), 4, 8)) // the levels screen sits beside the side column's pads
+
+    const cells = drawCells(harness)
+    for (const y of [0, 1, 7]) {
+      expect(cells.filter((cell) => cell.x === 8 && cell.y === y)).toHaveLength(1)
     }
   })
 
