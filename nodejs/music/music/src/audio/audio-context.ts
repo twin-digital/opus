@@ -10,7 +10,7 @@ const NodeWebAudioModule = 'node-web-audio-api'
  * The Web Audio constructors this package uses. The browser's globals and `node-web-audio-api` both provide them.
  */
 export interface AudioApi {
-  AudioContext: new () => AudioContext
+  AudioContext: new (options?: { sampleRate?: number }) => AudioContext
   OfflineAudioContext: new (channels: number, length: number, sampleRate: number) => OfflineAudioContext
 }
 

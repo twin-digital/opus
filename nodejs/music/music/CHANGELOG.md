@@ -1,5 +1,101 @@
 # @thrashplay/music
 
+## 0.3.5
+
+### Patch Changes
+
+- 0d55816: music-audio-probe gains a second audio backend: PROBE_BACKEND=rtaudio drives
+  the beeps through audify's RtAudio bindings — an independent CoreAudio path
+  sharing no code with the cpal backend under node-web-audio-api. If the rtaudio
+  backend survives where the webaudio backend dies at ~90 seconds, the fault is
+  in cpal's layer and RtAudio is a viable escape hatch for sample playback; if
+  both die alike, the fault is below every library. The rtaudio backend also
+  prints the device's preferred and supported sample rates as RtAudio sees them.
+
+## 0.3.4
+
+### Patch Changes
+
+- 06767d5: music-audio-probe accepts stream configuration overrides, for isolating a
+  sample-rate or buffering mismatch with the output device: PROBE_SAMPLE_RATE
+  opens the stream at an explicit rate and PROBE_LATENCY takes 'interactive',
+  'balanced', 'playback', or a number of seconds. The requested configuration is
+  printed before the stream opens, and the resulting rate after.
+- 727edd4: The audio output stream opens at MUSIC_SAMPLE_RATE, defaulting to 44100. The
+  rate matters far beyond audio quality: a stream whose rate disagrees with the
+  output device's drifts against it, and on at least the FP-30X's USB audio
+  interface the reconciliation ~90 seconds in wedges the device for every
+  process using it. The default is that device's native rate; set the variable
+  to match whatever the samples play through.
+- a175a95: MUSIC_SAMPLE_VOLUME (0-1, default 1) scales every sample voice, on top of the
+  per-note velocity and channel level. The samples share an output with the
+  piano and can need taming relative to it.
+
+## 0.3.3
+
+### Patch Changes
+
+- c09552d: Add music-audio-probe, a standalone diagnostic for the timed audio death under
+  investigation in #254: it opens an output stream with no MIDI or samples
+  involved, beeps through it every five seconds, and prints the stream's clock
+  rate, state, and render load — so the failure can be heard and measured at the
+  same moment. A second stream joins at 100 seconds and alternates beeps with
+  the first, answering whether a fresh stream survives the first one's death.
+
+## 0.3.2
+
+### Patch Changes
+
+- 7750fd0: Detect a wedged audio stream by its clock, not just its state. A stream whose
+  device has stopped invoking its render callbacks renders nothing and freezes
+  its clock, but its state can still read 'running' — state is control-side
+  bookkeeping, not device truth — so the stall detection added in 0.3.1 never saw
+  it. When wall time advances and the context's currentTime does not keep pace,
+  the stream is discarded and the next note opens a fresh one, the same recovery
+  path a non-running state takes.
+
+  MUSIC_AUDIO_DEBUG=1 turns on audio diagnostics: the render thread reports its
+  own load and underrun ratio once a second, and a health line (context state,
+  clock, live voices, heap and native memory) prints every five — so a failing
+  stream can be watched degrading instead of only found dead. MUSIC_AUDIO_FORCE_GC=1
+  (with node --expose-gc) additionally forces a collection pass on every health
+  tick, to test whether the render graph grows only because V8 defers collecting
+  the small wrapper objects that pin native nodes.
+
+## 0.3.1
+
+### Patch Changes
+
+- 805edda: Field fixes from the first hardware session with sound boards.
+
+  The sound picker turns the piano's Local Control off while it runs (and restores
+  it on shutdown), so the keyboard stops sounding its own keys: every key press is
+  re-voiced through the app — as an echoed program or a sample — and the piano's
+  factory tone underneath doubles every note, most audibly as a piano note under
+  each sound-board sample.
+
+  Sample playback no longer stalls after a minute or two of sustained playing.
+  Voice cleanup listened for each source's 'ended' event, and registering any
+  listener on a source keeps its node alive in node-web-audio-api's render graph
+  forever (ircam-ismm/node-web-audio-api#168) — so the graph grew with every note
+  until the render thread starved the output device, silencing every process
+  using it (speech synthesis included) for the rest of the session.
+  Voices are now torn down by a timer derived from the buffer's own duration, and
+  no listener is ever registered on a source. Concurrent voices are also capped
+  at 32 (stealing the oldest), and the player logs when the audio context leaves
+  the running state and when it recovers, so a stalled stream is visible in the
+  log rather than presenting as silent dead keys.
+
+  Audio failures now heal within the session instead of requiring a restart: a
+  stream that stays stalled for ten seconds is discarded and reopened fresh on
+  the next note, and an output device that refuses to open is retried after
+  thirty seconds rather than latching the player silent for the rest of the
+  session.
+
+  Speech volume is tunable via MUSIC_SPEECH_VOLUME (0-1) and defaults to 0.5:
+  announcements share an output with the instruments and should not drown them
+  out.
+
 ## 0.3.0
 
 ### Minor Changes

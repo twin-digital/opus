@@ -1,6 +1,6 @@
 {
   "name": "@thrashplay/music",
-  "version": "0.3.0",
+  "version": "0.3.5",
   "description": "MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.",
   "license": "ISC",
   "type": "module",
@@ -24,6 +24,7 @@
   },
   "bin": {
     "music": "./dist/index.js",
+    "music-audio-probe": "./dist/scripts/audio-probe.js",
     "music-fetch-samples": "./dist/scripts/fetch-samples.js"
   },
   "files": [
@@ -50,6 +51,14 @@
     "pino": "^9.7.0",
     "popmotion": "^11.0.5"
   },
+  "peerDependencies": {
+    "audify": "^1.10.1"
+  },
+  "peerDependenciesMeta": {
+    "audify": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
@@ -59,6 +68,7 @@
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
+    "audify": "^1.10.1",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",

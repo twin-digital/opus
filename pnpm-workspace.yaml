@@ -47,6 +47,7 @@ catalog:
 # so anything not listed here fails the install rather than silently skipping.
 allowBuilds:
   '@julusian/midi': true
+  audify: true
   esbuild: true
   hnswlib-node: true
   serverless: true
