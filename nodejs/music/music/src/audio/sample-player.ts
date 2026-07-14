@@ -395,9 +395,23 @@ export class SamplePlayer {
     })
     capacity?.start({ updateInterval: 1 })
 
-    const gc = forceGcEnabled() ? (globalThis as Partial<{ gc: () => void }>).gc : undefined
-    if (forceGcEnabled() && gc === undefined) {
-      log.warn('MUSIC_AUDIO_FORCE_GC is set but gc() is not exposed; run node with --expose-gc.')
+    let gc: (() => void) | undefined
+    if (forceGcEnabled()) {
+      gc = (globalThis as Partial<{ gc: () => void }>).gc
+      if (gc === undefined) {
+        // node refuses --expose-gc in NODE_OPTIONS and npx offers no way to pass it to the binary, so the flag is
+        // enabled at runtime: V8 accepts it late, and a throwaway VM context picks up the gc() it exposes.
+        void Promise.all([import('node:v8'), import('node:vm')]).then(
+          ([v8, vm]) => {
+            v8.setFlagsFromString('--expose-gc')
+            gc = vm.runInNewContext('gc') as () => void
+            v8.setFlagsFromString('--no-expose-gc')
+          },
+          (error: unknown) => {
+            log.warn(`MUSIC_AUDIO_FORCE_GC is set, but gc() could not be obtained. [error=${String(error)}]`)
+          },
+        )
+      }
     }
 
     this._monitor = setInterval(() => {
