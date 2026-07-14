@@ -25,7 +25,7 @@
     },
     {
       "description": "Packages with install/build scripts (pnpm `allowBuilds` in pnpm-workspace.yaml) run arbitrary code on install. Pull each out of the `group:allNonMajor` batch into its own PR with a distinct title/label, and never auto-merge — so the script-running bump is reviewed in isolation. Keep this list in sync with `allowBuilds`.",
-      "matchPackageNames": ["@julusian/midi", "esbuild", "hnswlib-node", "serverless"],
+      "matchPackageNames": ["@julusian/midi", "audify", "esbuild", "hnswlib-node", "serverless"],
       "groupName": null,
       "automerge": false,
       "addLabels": ["build-scripts"],
