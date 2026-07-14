@@ -6,6 +6,12 @@ import { readSample } from './sample-store.js'
 const log = logger.child({}, { msgPrefix: '[AUDIO] ' })
 
 /**
+ * Whoever started a sample sounding — a `Channel`, typically. Used only as an identity, to scope {@link
+ * SamplePlayer.stopAll} to one owner's voices.
+ */
+export type SampleOwner = object
+
+/**
  * Plays one-shot samples through the Web Audio API. Decoding is memoized per sample name and kept off the playback
  * path entirely, so pressing a key does no I/O.
  */
@@ -27,9 +33,11 @@ export class SamplePlayer {
   private _decodes = new Map<string, Promise<void>>()
 
   /**
-   * Sources currently sounding, so `stopAll` can silence them.
+   * Sources currently sounding, grouped by whoever started them, so that one voice's owner can be silenced without
+   * cutting off another's. A single player is shared across channels, and stopping "this channel" must not stop the
+   * rest.
    */
-  private _voices = new Set<AudioBufferSourceNode>()
+  private _voices = new Map<SampleOwner, Set<AudioBufferSourceNode>>()
 
   /**
    * Reads and decodes the named samples, skipping any already decoded or in flight. A sample that cannot be loaded is
@@ -93,8 +101,11 @@ export class SamplePlayer {
    * This never waits on a decode. A sample that is not yet in memory is dropped and its decode started, because a
    * sound arriving whenever I/O happens to finish — potentially after the key is released — is worse than silence.
    * Callers warm the cache ahead of time (see {@link load}), so a miss should not happen in practice.
+   * @param name Sample to sound.
+   * @param velocity Velocity of the note that triggered it, which becomes the gain.
+   * @param owner Who is playing it, so {@link stopAll} can silence this voice without touching anyone else's.
    */
-  public play(name: string, velocity: number) {
+  public play(name: string, velocity: number, owner: SampleOwner) {
     const buffer = this._buffers.get(name)
     if (this._context === undefined || buffer === undefined) {
       void this.decode(name)
@@ -115,23 +126,31 @@ export class SamplePlayer {
     source.connect(gain)
     gain.connect(this._context.destination)
 
+    const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
+    this._voices.set(owner, voices)
+
     source.onended = () => {
-      this._voices.delete(source)
+      voices.delete(source)
       source.disconnect()
       gain.disconnect()
     }
 
-    this._voices.add(source)
+    voices.add(source)
     source.start()
   }
 
   /**
-   * Silences every sample currently sounding.
+   * Silences samples currently sounding: one owner's, or every one of them if no owner is named.
+   * @param owner Whose voices to silence. Omit to silence all of them.
    */
-  public stopAll() {
-    this._voices.forEach((voice) => {
-      voice.stop()
+  public stopAll(owner?: SampleOwner) {
+    const groups = owner === undefined ? [...this._voices.values()] : [this._voices.get(owner)]
+
+    groups.forEach((voices) => {
+      voices?.forEach((voice) => {
+        voice.stop()
+      })
+      voices?.clear()
     })
-    this._voices.clear()
   }
 }

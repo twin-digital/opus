@@ -27,8 +27,11 @@ export interface SoundBoard {
   /**
    * Sample names, in key order, resolved against the sample directory. A name is a game-relative path without its
    * extension, such as `mob/creeper/say1`.
+   *
+   * Typed as non-empty: a board with no samples has nothing to map keys to, and would make the wrap in
+   * {@link getSampleForNote} a division by zero.
    */
-  samples: string[]
+  samples: [string, ...string[]]
 }
 
 /**

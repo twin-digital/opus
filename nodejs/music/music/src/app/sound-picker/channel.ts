@@ -67,7 +67,7 @@ export class Channel {
    */
   public playNote(note: Note) {
     if (this._board !== undefined) {
-      this._samples?.play(getSampleForNote(this._board, note.note), note.velocity)
+      this._samples?.play(getSampleForNote(this._board, note.note), note.velocity, this)
       return
     }
 
@@ -78,14 +78,13 @@ export class Channel {
   }
 
   /**
-   * Releases a note on this channel. Sound-board samples are one-shots that play to completion, so a channel playing a
-   * board has nothing to release.
+   * Releases a note on this channel.
+   *
+   * The note-off is sent even when a sound board is selected. A board's own samples are one-shots with nothing to
+   * release, but a board can be selected while a MIDI note is still held down — the key that was struck before the
+   * switch still has to be let go, or it sustains on the piano forever.
    */
   public stopNote(note: Note) {
-    if (this._board !== undefined) {
-      return
-    }
-
     this._device.send('noteoff', {
       ...note,
       channel: this.midiChannel,
@@ -97,7 +96,7 @@ export class Channel {
    * sound will resume as normal.
    */
   public stopAllSound() {
-    this._samples?.stopAll()
+    this._samples?.stopAll(this)
 
     this._device.send('cc', {
       channel: this.midiChannel,
