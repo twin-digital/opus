@@ -1,5 +1,24 @@
 # @thrashplay/music
 
+## 0.3.4
+
+### Patch Changes
+
+- 06767d5: music-audio-probe accepts stream configuration overrides, for isolating a
+  sample-rate or buffering mismatch with the output device: PROBE_SAMPLE_RATE
+  opens the stream at an explicit rate and PROBE_LATENCY takes 'interactive',
+  'balanced', 'playback', or a number of seconds. The requested configuration is
+  printed before the stream opens, and the resulting rate after.
+- 727edd4: The audio output stream opens at MUSIC_SAMPLE_RATE, defaulting to 44100. The
+  rate matters far beyond audio quality: a stream whose rate disagrees with the
+  output device's drifts against it, and on at least the FP-30X's USB audio
+  interface the reconciliation ~90 seconds in wedges the device for every
+  process using it. The default is that device's native rate; set the variable
+  to match whatever the samples play through.
+- a175a95: MUSIC_SAMPLE_VOLUME (0-1, default 1) scales every sample voice, on top of the
+  per-note velocity and channel level. The samples share an output with the
+  piano and can need taming relative to it.
+
 ## 0.3.3
 
 ### Patch Changes
