@@ -1,7 +1,7 @@
 import type pino from 'pino'
 import type { MidiDevice } from '../../midi/midi-device.js'
 import type { RgbColor } from '../../ui/color.js'
-import type { MidiChannel } from './model.js'
+import type { ChannelId, MidiChannel } from './model.js'
 import { logger } from '../../logger.js'
 import { normalizeMidiByte } from '../../midi/normalize-midi-byte.js'
 
@@ -25,7 +25,13 @@ export class Channel {
     private _device: MidiDevice,
 
     /**
-     * MIDI channel number (0-15) assigned to this instance.
+     * Identifies this channel to the UI. Its position in the controller's channel list, and unrelated to the MIDI
+     * channel the notes happen to travel on.
+     */
+    private _id: ChannelId,
+
+    /**
+     * MIDI channel number (0-15) this instance transmits on.
      */
     private _midiChannel: MidiChannel,
 
@@ -34,7 +40,9 @@ export class Channel {
      */
     private _color: RgbColor = [127, 127, 127],
   ) {
-    this._log = logger.child({}, { msgPrefix: `[CHANNEL#${this.id}] ` })
+    // Both numbers are logged: the id is what the UI and the controller's API speak, and the MIDI channel is what
+    // shows up on the wire.
+    this._log = logger.child({}, { msgPrefix: `[CHANNEL#${this.id} midi=${this.midiChannel}] ` })
   }
 
   /**
@@ -96,8 +104,8 @@ export class Channel {
     return this._color
   }
 
-  public get id(): number {
-    return this.midiChannel
+  public get id(): ChannelId {
+    return this._id
   }
 
   public get level() {

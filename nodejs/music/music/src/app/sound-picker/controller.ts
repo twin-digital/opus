@@ -1,7 +1,7 @@
 import { logger } from '../../logger.js'
 import type { MidiDevice } from '../../midi/midi-device.js'
 import type { RgbColor } from '../../ui/color.js'
-import type { MidiChannel } from './model.js'
+import { toChannelId, type ChannelId, type MidiChannel } from './model.js'
 import { Channel } from './channel.js'
 import type { Note } from 'easymidi'
 
@@ -22,7 +22,8 @@ const ChannelColors: RgbColor[] = [
 ]
 
 /**
- * MIDI channel numbers to assign to our virtual channels.
+ * MIDI channel numbers to assign to our virtual channels. Neither zero-based nor contiguous — 9 is skipped, being the
+ * General MIDI percussion channel — which is why channels are addressed by `ChannelId` rather than by this number.
  */
 const MidiChannels = [3, 4, 5, 6, 7, 8, 10, 11] satisfies MidiChannel[]
 
@@ -57,11 +58,11 @@ export class LaunchpadController {
 
     this._channels = Array.from(
       { length: channelCount },
-      (_, i) => new Channel(this.instrument, MidiChannels[i], ChannelColors[i]),
+      (_, i) => new Channel(this.instrument, toChannelId(i), MidiChannels[i], ChannelColors[i]),
     )
   }
 
-  private channelById(id: number): Channel | undefined {
+  private channelById(id: ChannelId): Channel | undefined {
     return this._channels.find((channel) => channel.id === id)
   }
 
@@ -112,7 +113,7 @@ export class LaunchpadController {
    * This does not mute the channels, so if new notes are played sound will resume as normal.
    * @param channelId ID of the channel in the controller's channel list. If not set, then all channels will be muted.
    */
-  public stopAllSound(channelId?: number) {
+  public stopAllSound(channelId?: ChannelId) {
     if (channelId !== undefined) {
       this.channelById(channelId)?.stopAllSound()
     } else {
@@ -127,7 +128,7 @@ export class LaunchpadController {
    * @param channelId ID of the channel which should have its mute state updated.
    * @param muted
    */
-  public setMuted(channelId: number, muted: boolean) {
+  public setMuted(channelId: ChannelId, muted: boolean) {
     const channel = this.channelById(channelId)
     if (channel) {
       channel.muted = muted
@@ -140,7 +141,7 @@ export class LaunchpadController {
    * @param level Level to set for the channel, in the range 0-127. Will be clamped to that range. Non-integers will be
    *    rounded to the nearest integer.
    */
-  public setLevel(channelId: number, level: number) {
+  public setLevel(channelId: ChannelId, level: number) {
     const channel = this.channelById(channelId)
     if (channel) {
       channel.level = level
@@ -155,7 +156,7 @@ export class LaunchpadController {
    * @param sound.program Program change number to select.
    */
   public selectSound(
-    channelId: number,
+    channelId: ChannelId,
     sound: {
       /**
        * MIDI bank containing the sound. The MSB selects the sound set (121 for GM2 melodic sounds, 120 for drum kits),
