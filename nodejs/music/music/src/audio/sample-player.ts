@@ -17,6 +17,41 @@ export type SampleOwner = object
 const DecodeSampleRate = 44100
 
 /**
+ * Most voices allowed to sound at once; starting one beyond this stops the oldest. Samples run several seconds and
+ * keys can be mashed faster than they finish, so an uncapped graph grows until the render thread cannot keep its
+ * device buffer fed — and a starved output stream stalls all playback, not just the newest note.
+ */
+const MaxVoices = 32
+
+/**
+ * How long past a buffer's duration a voice is kept before its nodes are torn down.
+ */
+const CleanupMarginSeconds = 0.1
+
+/**
+ * How long after the output device refuses to open before it is tried again. Long enough that a machine with no audio
+ * device logs a complaint twice a minute rather than one per key press; short enough that plugging a device in — or a
+ * wedged one coming back — restores sound without restarting the app.
+ */
+const OutputRetryMs = 30_000
+
+/**
+ * How long the output context may sit in a non-running state, with resume() being asked for on every note, before the
+ * stream is discarded. A stream its device has abandoned never comes back; a fresh one to a recovered device does.
+ */
+const StallDiscardMs = 10_000
+
+/**
+ * One sounding sample: its nodes, the timer that tears them down, and the owner set it is registered in.
+ */
+interface Voice {
+  gain: GainNode
+  source: AudioBufferSourceNode
+  timer: ReturnType<typeof setTimeout>
+  voices: Set<Voice>
+}
+
+/**
  * Plays one-shot samples through the Web Audio API. Decoding is memoized per sample name and kept off the playback
  * path entirely, so pressing a key does no I/O.
  */
@@ -50,14 +85,31 @@ export class SamplePlayer {
   private _output: AudioContext | undefined
 
   /**
-   * Set once the output device has refused to open, so the failure is reported once rather than on every key press.
+   * When the output device last refused to open. Playback stays silent for {@link OutputRetryMs} afterwards, then
+   * tries again — a transient device failure should cost a pause, not the rest of the session.
    */
-  private _outputUnavailable = false
+  private _outputFailedAt: number | undefined
 
   /**
-   * Sources currently sounding, grouped by whoever started them.
+   * When the output context was first observed in a non-running state, so a stall that outlives
+   * {@link StallDiscardMs} can be told apart from a momentary suspension.
    */
-  private _voices = new Map<SampleOwner, Set<AudioBufferSourceNode>>()
+  private _stalledSince: number | undefined
+
+  /**
+   * Voices currently sounding, grouped by whoever started them.
+   */
+  private _voices = new Map<SampleOwner, Set<Voice>>()
+
+  /**
+   * The same voices in the order they started, oldest first, so the cap can steal the oldest.
+   */
+  private _playing: Voice[] = []
+
+  /**
+   * Last context state a note was dropped under, so a stalled stream is reported once per stall rather than per key.
+   */
+  private _reportedState: AudioContextState | undefined
 
   /**
    * Reads and decodes the named samples, skipping any already decoded or in flight. A sample that cannot be loaded is
@@ -128,8 +180,12 @@ export class SamplePlayer {
    */
   public play(name: string, gain: number, owner: SampleOwner) {
     const buffer = this._buffers.get(name)
-    if (this._api === undefined || this._outputUnavailable || buffer === undefined) {
+    if (this._api === undefined || buffer === undefined) {
       void this.decode(name)
+      return
+    }
+
+    if (this._outputFailedAt !== undefined && Date.now() - this._outputFailedAt < OutputRetryMs) {
       return
     }
 
@@ -141,13 +197,47 @@ export class SamplePlayer {
       const output = this._output
 
       if (output.state !== 'running') {
-        // A browser context not created inside a user gesture starts suspended, and a suspended context's clock does
-        // not advance: a source started on it is never heard and never ends, so its nodes would pile up for as long as
-        // the program runs. Ask for the context back and drop this note.
+        // A context that is not running has a stopped clock: a source started on it is never heard and never ends, so
+        // its nodes would pile up for as long as the program runs. Ask for the context back and drop this note.
+        this._stalledSince ??= Date.now()
+        if (this._reportedState !== output.state) {
+          this._reportedState = output.state
+          log.warn(`Audio output is not running; dropping notes until it resumes. [state=${output.state}]`)
+        }
+
+        if (Date.now() - this._stalledSince >= StallDiscardMs) {
+          // The stream has ignored every resume() for the whole stall; its device has abandoned it. Discard it — the
+          // next note opens a fresh stream, which reaches a recovered device where the wedged one never would.
+          log.warn('Audio output stayed stalled; discarding the stream to open a fresh one.')
+          this._stalledSince = undefined
+          this._output = undefined
+
+          const playing = [...this._playing]
+          playing.forEach((voice) => {
+            this.release(voice)
+          })
+
+          void output.close().catch(() => undefined)
+          return
+        }
+
         void output.resume().catch((error: unknown) => {
           log.warn(`Unable to start audio output. [error=${String(error)}]`)
         })
         return
+      }
+
+      this._stalledSince = undefined
+      if (this._reportedState !== undefined) {
+        this._reportedState = undefined
+        log.info('Audio output is running again.')
+      }
+
+      // Steal the oldest voice rather than grow the graph past the cap.
+      while (this._playing.length >= MaxVoices) {
+        const oldest = this._playing[0]
+        oldest.source.stop()
+        this.release(oldest)
       }
 
       const source = output.createBufferSource()
@@ -159,24 +249,54 @@ export class SamplePlayer {
       source.connect(gainNode)
       gainNode.connect(output.destination)
 
-      const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
+      const voices = this._voices.get(owner) ?? new Set<Voice>()
       this._voices.set(owner, voices)
 
-      source.onended = () => {
-        voices.delete(source)
-        source.disconnect()
-        gainNode.disconnect()
+      // Started before registration: `stop()` on a never-started source throws, so a registered voice must be one
+      // that {@link stopAll} can safely stop.
+      source.start()
+
+      // Teardown is scheduled from the buffer's own duration instead of the source's 'ended' event. Registering any
+      // listener on a source keeps the node alive in the render graph forever (ircam-ismm/node-web-audio-api#168), so
+      // under sustained playing the graph grew with every note until the output device starved — taking down every
+      // process using the device, not just this one.
+      const voice: Voice = {
+        gain: gainNode,
+        source,
+        voices,
+        timer: setTimeout(
+          () => {
+            this.release(voice)
+          },
+          (buffer.duration + CleanupMarginSeconds) * 1000,
+        ),
       }
 
-      // Registered only after start() has succeeded: `stop()` on a never-started source throws, so a voice in this
-      // set must be one that {@link stopAll} can safely stop. Web Audio events never fire synchronously, so onended
-      // cannot race the registration.
-      source.start()
-      voices.add(source)
+      voices.add(voice)
+      this._playing.push(voice)
+      this._outputFailedAt = undefined
     } catch (error) {
-      this._outputUnavailable = true
-      log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
+      this._outputFailedAt = Date.now()
+      log.warn(
+        `Sample playback failed; sound boards will be silent until the audio output is retried. [error=${String(error)}]`,
+      )
     }
+  }
+
+  /**
+   * Removes a voice: its teardown timer, its registrations, and its nodes' connections.
+   */
+  private release(voice: Voice) {
+    clearTimeout(voice.timer)
+    voice.voices.delete(voice)
+
+    const at = this._playing.indexOf(voice)
+    if (at >= 0) {
+      this._playing.splice(at, 1)
+    }
+
+    voice.source.disconnect()
+    voice.gain.disconnect()
   }
 
   /**
@@ -187,10 +307,11 @@ export class SamplePlayer {
     const groups = owner === undefined ? [...this._voices.values()] : [this._voices.get(owner)]
 
     groups.forEach((voices) => {
-      voices?.forEach((voice) => {
-        voice.stop()
+      const stopping = [...(voices ?? [])]
+      stopping.forEach((voice) => {
+        voice.source.stop()
+        this.release(voice)
       })
-      voices?.clear()
     })
   }
 
