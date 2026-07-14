@@ -53,15 +53,16 @@ fragment, since it sits outside any checkout.
 
 ## Environment variables
 
-| Variable                             | Default                 | Purpose                                                                                                                        |
-| ------------------------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `MUSIC_SAMPLES_DIR`                  | `~/.thrashplay/samples` | Where `music-fetch-samples` downloads and the app reads sound-board samples.                                                   |
-| `MUSIC_SAMPLE_RATE`                  | `44100`                 | Rate the audio output stream opens at. Must match the output device's native rate — a mismatch wedges some USB devices (#254). |
-| `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                           |
-| `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                |
-| `MUSIC_AUDIO_FORCE_GC`               | off                     | Force a GC pass on every health tick (diagnostics).                                                                            |
-| `MINECRAFT_VERSION`                  | latest release          | Game version `music-fetch-samples` resolves sample names against.                                                              |
-| `PROBE_SAMPLE_RATE`, `PROBE_LATENCY` | library default         | Stream configuration for `music-audio-probe`.                                                                                  |
+| Variable                             | Default                 | Purpose                                                                                                                                                        |
+| ------------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MUSIC_SAMPLES_DIR`                  | `~/.thrashplay/samples` | Where `music-fetch-samples` downloads and the app reads sound-board samples.                                                                                   |
+| `MUSIC_SAMPLE_RATE`                  | `44100`                 | Rate the audio output stream opens at. Must match the output device's native rate — a mismatch wedges some USB devices (#254).                                 |
+| `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
+| `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |
+| `MUSIC_AUDIO_FORCE_GC`               | off                     | Force a GC pass on every health tick (diagnostics).                                                                                                            |
+| `MINECRAFT_VERSION`                  | latest release          | Game version `music-fetch-samples` resolves sample names against.                                                                                              |
+| `PROBE_SAMPLE_RATE`, `PROBE_LATENCY` | library default         | Stream configuration for `music-audio-probe`.                                                                                                                  |
+| `PROBE_BACKEND`                      | `webaudio`              | Audio plumbing for `music-audio-probe`: `webaudio` (cpal-based) or `rtaudio` (audify — an optional peer; supply it with `npx -p @thrashplay/music -p audify`). |
 
 ## Architecture notes
 

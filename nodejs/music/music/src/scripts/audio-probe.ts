@@ -164,9 +164,21 @@ const openRtProbe = async (name: string, pitch: number, startedAt: number): Prom
   try {
     // audify is CJS re-exporting a native binding, so its named exports are invisible to the ESM lexer and live on
     // `default`.
-    const imported = (await import('audify')) as unknown as {
+    // audify is an optional peer dependency: the default install does not carry it, so the native binding only
+    // downloads for users who ask for this backend and supply the package alongside.
+    interface AudifyModule {
       default?: { RtAudio: new () => RtStream }
       RtAudio?: new () => RtStream
+    }
+    let imported: AudifyModule
+    try {
+      imported = await import('audify')
+    } catch (error) {
+      console.log(
+        `[${name}] PROBE_BACKEND=rtaudio needs the optional 'audify' package (${String(error)}). Run:\n` +
+          `  npx -y -p @thrashplay/music@latest -p audify music-audio-probe`,
+      )
+      return undefined
     }
     const RtAudio = (imported.default ?? imported).RtAudio
     if (RtAudio === undefined) {

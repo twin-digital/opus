@@ -44,13 +44,20 @@
   },
   "dependencies": {
     "@julusian/midi": "^3.6.1",
-    "audify": "^1.10.1",
     "dotenv": "catalog:",
     "easymidi": "^3.1.0",
     "lodash-es": "catalog:",
     "node-web-audio-api": "^2.0.0",
     "pino": "^9.7.0",
     "popmotion": "^11.0.5"
+  },
+  "peerDependencies": {
+    "audify": "^1.10.1"
+  },
+  "peerDependenciesMeta": {
+    "audify": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -61,6 +68,7 @@
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
+    "audify": "^1.10.1",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
