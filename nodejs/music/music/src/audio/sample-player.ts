@@ -51,6 +51,11 @@ export class SamplePlayer {
   private _output: AudioContext | undefined
 
   /**
+   * Set once the output device has refused to open, so the failure is reported once rather than on every key press.
+   */
+  private _outputUnavailable = false
+
+  /**
    * Sources currently sounding, grouped by whoever started them.
    */
   private _voices = new Map<SampleOwner, Set<AudioBufferSourceNode>>()
@@ -125,45 +130,55 @@ export class SamplePlayer {
    */
   public play(name: string, velocity: number, level: number, owner: SampleOwner) {
     const buffer = this._buffers.get(name)
-    if (this._api === undefined || buffer === undefined) {
+    if (this._api === undefined || this._outputUnavailable || buffer === undefined) {
       void this.decode(name)
       return
     }
 
-    // Opening the output device is deferred to here: the first sample anyone actually plays.
-    this._output ??= new this._api.AudioContext()
-    const output = this._output
+    // Everything from here on runs inside the MIDI note-on handler, so a throw would be an uncaught exception in an
+    // event listener and would take the app down mid-performance. Sounding a note is allowed to fail; it degrades to
+    // silence, the same bargain the decode path makes.
+    try {
+      // Opening the output device is deferred to here: the first sample anyone actually plays. It fails on a machine
+      // with no usable output — and nothing before this point would have noticed, because the module imports fine and
+      // decoding runs on a context that needs no device.
+      this._output ??= new this._api.AudioContext()
+      const output = this._output
 
-    if (output.state !== 'running') {
-      // A browser context not created inside a user gesture starts suspended, and a suspended context's clock does not
-      // advance: a source started on it is never heard and never ends, so its nodes would pile up for as long as the
-      // program runs. Ask for the context back and drop this note — the same bargain the decode path makes.
-      void output.resume().catch((error: unknown) => {
-        log.warn(`Unable to start audio output. [error=${String(error)}]`)
-      })
-      return
+      if (output.state !== 'running') {
+        // A browser context not created inside a user gesture starts suspended, and a suspended context's clock does
+        // not advance: a source started on it is never heard and never ends, so its nodes would pile up for as long as
+        // the program runs. Ask for the context back and drop this note.
+        void output.resume().catch((error: unknown) => {
+          log.warn(`Unable to start audio output. [error=${String(error)}]`)
+        })
+        return
+      }
+
+      const source = output.createBufferSource()
+      source.buffer = buffer
+
+      const gain = output.createGain()
+      gain.gain.value = (normalizeMidiByte(velocity) / 127) * (normalizeMidiByte(level) / 127)
+
+      source.connect(gain)
+      gain.connect(output.destination)
+
+      const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
+      this._voices.set(owner, voices)
+
+      source.onended = () => {
+        voices.delete(source)
+        source.disconnect()
+        gain.disconnect()
+      }
+
+      voices.add(source)
+      source.start()
+    } catch (error) {
+      this._outputUnavailable = true
+      log.warn(`Unable to open the audio output device, so sound boards will be silent. [error=${String(error)}]`)
     }
-
-    const source = output.createBufferSource()
-    source.buffer = buffer
-
-    const gain = output.createGain()
-    gain.gain.value = (normalizeMidiByte(velocity) / 127) * (normalizeMidiByte(level) / 127)
-
-    source.connect(gain)
-    gain.connect(output.destination)
-
-    const voices = this._voices.get(owner) ?? new Set<AudioBufferSourceNode>()
-    this._voices.set(owner, voices)
-
-    source.onended = () => {
-      voices.delete(source)
-      source.disconnect()
-      gain.disconnect()
-    }
-
-    voices.add(source)
-    source.start()
   }
 
   /**

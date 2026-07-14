@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 
@@ -27,6 +28,12 @@ const Attempts = 3
  * Base delay between attempts, multiplied by the attempt number.
  */
 const RetryDelayMs = 500
+
+/**
+ * Error statuses worth trying again. Everything else in the 4xx range means the object is not coming, so retrying only
+ * delays the summary that says so.
+ */
+const RetryableStatuses = new Set([408, 429])
 
 /**
  * How one sample's download turned out. `missing` means the asset index has no such sample; `failed` means it does,
@@ -76,10 +83,18 @@ const exists = (path: string) =>
     () => false,
   )
 
+/**
+ * A response that will not become OK by asking again — the object is absent or forbidden, not briefly unavailable.
+ */
+class PermanentFailure extends Error {}
+
 const fetchObject = async (name: string, object: { hash: string; size: number }, file: string) => {
   const response = await fetch(`${ResourceBaseUrl}/${object.hash.slice(0, 2)}/${object.hash}`)
   if (!response.ok) {
-    throw new Error(`Download failed. [sample=${name}, status=${response.status}]`)
+    const message = `Download failed. [sample=${name}, status=${response.status}]`
+    throw RetryableStatuses.has(response.status) || response.status >= 500 ?
+        new Error(message)
+      : new PermanentFailure(message)
   }
 
   const bytes = Buffer.from(await response.arrayBuffer())
@@ -87,13 +102,28 @@ const fetchObject = async (name: string, object: { hash: string; size: number },
     throw new Error(`Download was truncated. [sample=${name}, expected=${object.size}, received=${bytes.byteLength}]`)
   }
 
+  // The asset index addresses each object by the SHA-1 of its contents, so the hash we fetched by is also the hash the
+  // bytes must have. Length alone would accept a corrupted body that happens to be the right size — and, once renamed
+  // into place, a bad file is treated as good by every later run and only surfaces as a key that will not sound.
+  const digest = createHash('sha1').update(bytes).digest('hex')
+  if (digest !== object.hash) {
+    throw new Error(`Download was corrupt. [sample=${name}, expected=${object.hash}, received=${digest}]`)
+  }
+
   // Written under a temporary name and renamed into place, because a sample is considered downloaded purely by
   // existing. A process killed mid-write would otherwise leave a partial file that every later run skips, and that
   // fails to decode at play time — a permanently dead key with no way to notice.
   await mkdir(dirname(file), { recursive: true })
   const partial = `${file}.part`
-  await writeFile(partial, bytes)
-  await rename(partial, file)
+  try {
+    await writeFile(partial, bytes)
+    await rename(partial, file)
+  } catch (error) {
+    // Nothing ever looks at a '.part' file again, so a failed write would otherwise leave litter behind — and, when
+    // the write failed for want of space, it would be holding the very space the retry needs.
+    await rm(partial, { force: true })
+    throw error
+  }
 }
 
 const downloadSample = async (name: string, index: AssetIndex, directory: string): Promise<SampleOutcome> => {
@@ -113,7 +143,7 @@ const downloadSample = async (name: string, index: AssetIndex, directory: string
       await fetchObject(name, object, file)
       return 'downloaded'
     } catch (error) {
-      if (attempt === Attempts) {
+      if (error instanceof PermanentFailure || attempt === Attempts) {
         // One sample's failure is not the run's: the rest still download, the summary still prints, and the exit
         // status reports that something is missing. Re-running picks up only what is absent.
         log.warn(`Giving up on a sample. [sample=${name}, attempts=${Attempts}, error=${String(error)}]`)

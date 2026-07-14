@@ -8,7 +8,15 @@ import { defineConfig } from 'vite'
 // Serves the sound-board samples at /samples, out of the same directory the Node app reads
 // (populated by `music-fetch-samples`). The samples are deliberately not part of any checkout,
 // so they cannot be served from the usual public/ directory.
-const sampleDirectory = resolve(process.env.MUSIC_SAMPLES_DIR ?? join(homedir(), '.thrashplay', 'samples'))
+//
+// The directory is canonicalized, because containment is tested against the *realpath* of the
+// requested file, and the two sides only share a prefix if both have their symlinks resolved.
+// Without this, a sample directory reached through a link — MUSIC_SAMPLES_DIR=/tmp/samples on macOS,
+// where /tmp links to /private/tmp, or an automounted home — would reject every legitimate sample
+// with a 403. Falls back to the lexical path when the directory does not exist yet, so the sim still
+// starts before the samples have been fetched.
+const configuredDirectory = resolve(process.env.MUSIC_SAMPLES_DIR ?? join(homedir(), '.thrashplay', 'samples'))
+const sampleDirectory = await realpath(configuredDirectory).catch(() => configuredDirectory)
 
 // The directory plus a trailing separator. Containment is tested against this rather than against
 // the bare directory, so that a sibling sharing its prefix — '<dir>2/secrets' — is not mistaken for
@@ -83,6 +91,11 @@ const handleSampleRequest = (request, response) => {
               return
             }
 
+            // The headers describing the file have to go before the 500 can: they are still pending, and a response
+            // that promises Content-Length bytes and then sends none leaves the client waiting for a body that will
+            // never arrive.
+            response.removeHeader('Content-Type')
+            response.removeHeader('Content-Length')
             response.statusCode = 500
             response.end()
           })

@@ -67,14 +67,18 @@ export class Channel {
    * board is played by sounding the sample mapped to the key, and the note is not echoed.
    */
   public playNote(note: Note) {
-    if (this._board !== undefined) {
-      // A note-on of velocity 0 is how many keyboards signal a key release. It reaches the piano as a note-off, but a
-      // sound board would otherwise answer it by starting a sample at zero gain: inaudible, yet a real voice held for
-      // the sample's full length. Every key release would allocate one.
-      if (note.velocity > 0) {
-        this._samples.play(getSampleForNote(this._board, note.note), note.velocity, this.level, this)
-      }
+    // A note-on of velocity 0 is how many keyboards signal a key release, and easymidi surfaces it as it arrives
+    // rather than converting it. Treating it as a release here keeps both paths honest: a sound board would otherwise
+    // answer it by starting a sample at zero gain — inaudible, but a real voice held for the sample's full length, one
+    // per key release — and, worse, would swallow the release of a note the piano is still holding from before the
+    // board was selected.
+    if (note.velocity === 0) {
+      this.stopNote(note)
+      return
+    }
 
+    if (this._board !== undefined) {
+      this._samples.play(getSampleForNote(this._board, note.note), note.velocity, this.level, this)
       return
     }
 

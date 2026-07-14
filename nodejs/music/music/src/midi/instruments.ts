@@ -42,6 +42,10 @@ export const InstrumentsByFamily = InstrumentFamilies.reduce<Record<string, Inst
  * Built from the GM instruments alone. This map's subject is the bank dimension of a single GM patch, and a sound
  * board is not a variation of one: boards carry patch numbers 0, 1, 2 only because a patch is how the picker positions
  * a button, so including them would offer "Mobs" as a variation of Acoustic Grand Piano.
+ *
+ * A board's patch therefore *aliases* a GM patch: looking one up here returns the variations of Acoustic Grand Piano,
+ * Bright Acoustic Piano or Electric Grand Piano rather than nothing. Check {@link isSoundBoard} before using an
+ * instrument's patch as a key.
  */
 export const InstrumentsByPatch = Array.from({ length: 128 }, (_, i) => i).reduce<Record<number, Instrument[]>>(
   (result, patch) => {
