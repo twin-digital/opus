@@ -78,7 +78,12 @@ export class LaunchpadController {
 
   private handleNoteOn(note: Note) {
     this._channels.forEach((channel) => {
-      if (!channel.muted) {
+      // A note-on of velocity 0 is a key release, and a release must reach the channel even when it is muted: mute
+      // stops new sound from starting, but a note echoed to the piano before the mute still has to be let go, or it
+      // sustains forever under a channel that reads as silent.
+      if (note.velocity === 0) {
+        channel.stopNote(note)
+      } else if (!channel.muted) {
         channel.playNote(note)
       }
     })
