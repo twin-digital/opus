@@ -42,6 +42,14 @@ const OutputRetryMs = 30_000
 const StallDiscardMs = 10_000
 
 /**
+ * Shortest span of wall time over which the context clock's progress is judged. A healthy context's currentTime keeps
+ * pace with the wall clock even while rendering silence; one whose device stopped invoking its render callbacks
+ * freezes — while its state can still read 'running', because state is control-side bookkeeping, not device truth.
+ * The clock is the one liveness signal a wedged stream cannot fake.
+ */
+const LivenessWindowMs = 3_000
+
+/**
  * One sounding sample: its nodes, the timer that tears them down, and the owner set it is registered in.
  */
 interface Voice {
@@ -95,6 +103,11 @@ export class SamplePlayer {
    * {@link StallDiscardMs} can be told apart from a momentary suspension.
    */
   private _stalledSince: number | undefined
+
+  /**
+   * The output's clock as of the last liveness check, so the next check can compare its progress against wall time.
+   */
+  private _clock: { contextTime: number; output: AudioContext; wallTime: number } | undefined
 
   /**
    * Voices currently sounding, grouped by whoever started them.
@@ -206,18 +219,7 @@ export class SamplePlayer {
         }
 
         if (Date.now() - this._stalledSince >= StallDiscardMs) {
-          // The stream has ignored every resume() for the whole stall; its device has abandoned it. Discard it — the
-          // next note opens a fresh stream, which reaches a recovered device where the wedged one never would.
-          log.warn('Audio output stayed stalled; discarding the stream to open a fresh one.')
-          this._stalledSince = undefined
-          this._output = undefined
-
-          const playing = [...this._playing]
-          playing.forEach((voice) => {
-            this.release(voice)
-          })
-
-          void output.close().catch(() => undefined)
+          this.discard(output, 'it stayed stalled through every resume()')
           return
         }
 
@@ -231,6 +233,27 @@ export class SamplePlayer {
       if (this._reportedState !== undefined) {
         this._reportedState = undefined
         log.info('Audio output is running again.')
+      }
+
+      // The state says running; check whether the clock agrees. A stream whose device stopped calling it renders
+      // nothing, freezes its clock, and never updates its state — the only tell is currentTime falling behind the
+      // wall clock.
+      const now = Date.now()
+      if (this._clock?.output !== output) {
+        this._clock = { contextTime: output.currentTime, output, wallTime: now }
+      } else if (now - this._clock.wallTime >= LivenessWindowMs) {
+        const wallElapsed = (now - this._clock.wallTime) / 1000
+        const contextElapsed = output.currentTime - this._clock.contextTime
+
+        if (contextElapsed < wallElapsed / 2) {
+          this.discard(
+            output,
+            `its clock advanced ${contextElapsed.toFixed(2)}s over ${wallElapsed.toFixed(2)}s of wall time`,
+          )
+          return
+        }
+
+        this._clock = { contextTime: output.currentTime, output, wallTime: now }
       }
 
       // Steal the oldest voice rather than grow the graph past the cap.
@@ -281,6 +304,25 @@ export class SamplePlayer {
         `Sample playback failed; sound boards will be silent until the audio output is retried. [error=${String(error)}]`,
       )
     }
+  }
+
+  /**
+   * Abandons a wedged output stream: every voice is released, the context is closed, and the next note opens a fresh
+   * stream — which reaches a recovered device where the wedged one never would.
+   */
+  private discard(output: AudioContext, reason: string) {
+    log.warn(`Discarding the audio output stream to open a fresh one: ${reason}.`)
+
+    this._stalledSince = undefined
+    this._clock = undefined
+    this._output = undefined
+
+    const playing = [...this._playing]
+    playing.forEach((voice) => {
+      this.release(voice)
+    })
+
+    void output.close().catch(() => undefined)
   }
 
   /**
