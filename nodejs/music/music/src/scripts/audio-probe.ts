@@ -12,6 +12,27 @@ import { AudioContext } from 'node-web-audio-api'
  * Beep pitches identify the stream: low (440 Hz) is the first, high (880 Hz) is the second.
  */
 
+/**
+ * Stream configuration overrides, for isolating a sample-rate or buffering mismatch with the device: PROBE_SAMPLE_RATE
+ * opens the stream at an explicit rate instead of the library's choice, and PROBE_LATENCY takes 'interactive',
+ * 'balanced', 'playback', or a number of seconds. The failing stream's zombie clock runs at almost exactly
+ * 44100/48000, so whichever explicit rate survives names the mismatch.
+ */
+const contextOptions = () => {
+  const options: { latencyHint?: number | string; sampleRate?: number } = {}
+  const rate = Number(process.env.PROBE_SAMPLE_RATE ?? '')
+  if (Number.isFinite(rate) && rate > 0) {
+    options.sampleRate = rate
+  }
+
+  const latency = process.env.PROBE_LATENCY
+  if (latency !== undefined && latency !== '') {
+    options.latencyHint = ['interactive', 'balanced', 'playback'].includes(latency) ? latency : Number(latency)
+  }
+
+  return options
+}
+
 const HealthIntervalMs = 5_000
 const SecondContextAtMs = 100_000
 const EndAtMs = 240_000
@@ -41,8 +62,11 @@ const beep = (probe: Probe) => {
 }
 
 const openProbe = (name: string, pitch: number): Probe | undefined => {
+  const options = contextOptions()
+  console.log(`[${name}] opening with requested=${JSON.stringify(options)}`)
+
   try {
-    const context = new AudioContext()
+    const context = new AudioContext(options as ConstructorParameters<typeof AudioContext>[0])
     console.log(
       `[${name}] opened: sampleRate=${context.sampleRate} baseLatency=${context.baseLatency.toFixed(4)} state=${context.state}`,
     )
