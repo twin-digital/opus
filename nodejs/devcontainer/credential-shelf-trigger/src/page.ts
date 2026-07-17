@@ -74,9 +74,20 @@ export const INDEX_HTML = `<!doctype html>
     out('<p class="muted">Starting device-code login…</p>');
     call('POST', '/refresh').then(function (r) {
       if (r.status === 401) { out('<p class="err">Token rejected — re-enter it.</p>'); rejectToken(); return; }
-      if (r.status === 429) { out('<p class="err">Rate limited — a refresh was triggered too recently.</p>'); return; }
+      if (r.status === 429) {
+        // pending === false is a verified "nothing awaiting approval"; anything else means the
+        // trigger could not check (probe failed), so do not assert a pending-state fact.
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          out(d.pending === false
+            ? '<p class="err">Rate limited — a refresh was triggered too recently and none is awaiting approval. Try again shortly.</p>'
+            : '<p class="err">Rate limited — could not check whether a refresh is already awaiting approval. Check status or try again shortly.</p>');
+        });
+      }
       if (!r.ok) { out('<p class="err">Trigger failed (' + r.status + ').</p>'); return; }
       return r.json().then(function (d) {
+        var banner = d.in_flight
+          ? '<p class="muted">A refresh was already awaiting approval — this is the outstanding request, not a new one.</p>'
+          : '';
         var html = (d.prompts || []).map(function (p) {
           var link = safeUrl(p.verification_uri_complete) || safeUrl(p.verification_uri);
           var approve = link
@@ -87,7 +98,9 @@ export const INDEX_HTML = `<!doctype html>
             + approve
             + '<p class="muted">Approve only this code — it came from this tap.</p></div>';
         }).join('');
-        out(html || '<p class="err">No prompt returned.</p>');
+        // the banner renders even with no prompts — "your request was already in flight" is
+        // exactly the context that explains an empty result (e.g. approved moments earlier)
+        out(banner + (html || '<p class="err">No prompt returned.</p>'));
       });
     }).catch(function () { out('<p class="err">Network error reaching the trigger.</p>'); });
   };
