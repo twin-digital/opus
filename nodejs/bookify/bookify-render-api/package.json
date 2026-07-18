@@ -28,7 +28,7 @@
     "@aws-sdk/lib-dynamodb": "catalog:",
     "@twin-digital/bookify": "workspace:*",
     "@twin-digital/observability-lib": "workspace:*",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "lodash-es": "catalog:",
     "yaml": "catalog:"
   },
