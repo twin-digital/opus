@@ -523,8 +523,8 @@ importers:
         specifier: workspace:*
         version: link:../../core-aws/observability-lib
       adm-zip:
-        specifier: ^0.5.16
-        version: 0.5.17
+        specifier: ^0.6.0
+        version: 0.6.0
       lodash-es:
         specifier: 'catalog:'
         version: 4.18.1
@@ -4628,9 +4628,9 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  adm-zip@0.5.17:
-    resolution: {integrity: sha512-+Ut8d9LLqwEvHHJl1+PIHqoyDxFgVN847JTVM3Izi3xHDWPE4UtzzXysMZQs64DMcrJfBeS/uoEP4AD3HQHnQQ==}
-    engines: {node: '>=12.0'}
+  adm-zip@0.6.0:
+    resolution: {integrity: sha512-XleryMhbuksdKtofnWZ9Sk+4CUTbms4Mb/EU32SZwToAyZ5RgVos/ki8n+yr0LWHOGKuakbXTuuYNHLQjhddgg==}
+    engines: {node: '>=14.0'}
 
   adsr@1.0.1:
     resolution: {integrity: sha512-thr9LK4jxApOzBA33IWOA83bXJFbyfbeozpHXyrMQOIhUni198uRxXqDhobW0S/51iokqty2Yz2WbLZbE6tntQ==}
@@ -10746,7 +10746,7 @@ snapshots:
 
   acorn@8.17.0: {}
 
-  adm-zip@0.5.17: {}
+  adm-zip@0.6.0: {}
 
   adsr@1.0.1: {}
 
