@@ -12,7 +12,7 @@
 //
 // Ctrl+C stops both (compose stops the container; the world volume persists).
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
@@ -116,3 +116,48 @@ spawnPrefixed('build', '33', 'pnpm', [
   PACKS_FILTER,
   `--concurrency=${countPacks() + 4}`,
 ])
+
+// Compose watch only reacts to local changes made while it is running, and the
+// activation list is generated before compose starts — so a stale list in the
+// world (new pack, migrated world) would never sync on its own. Once the
+// server is up, compare the world's activation with the generated one; if it
+// differs, rewrite the local file, which fires the watch rule (sync + server
+// restart).
+const reconcileActivation = async () => {
+  const activationPath = join(here, 'activation', 'world_behavior_packs.json')
+  const desired = readFileSync(activationPath, 'utf8')
+  for (let attempt = 0; attempt < 24 && !shuttingDown; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+    const result = spawnSync(
+      'docker',
+      [
+        'compose',
+        ...composeFiles,
+        'exec',
+        '-T',
+        'bedrock',
+        'sh',
+        '-c',
+        'cat "/data/worlds/${LEVEL_NAME:-dev}/world_behavior_packs.json" 2>/dev/null || echo __MISSING__',
+      ],
+      { cwd: root, encoding: 'utf8' },
+    )
+    if (result.status !== 0) {
+      continue // server still starting
+    }
+    let upToDate = false
+    try {
+      upToDate = JSON.stringify(JSON.parse(result.stdout)) === JSON.stringify(JSON.parse(desired))
+    } catch {
+      upToDate = false // missing or malformed in the world
+    }
+    if (upToDate) {
+      console.log('▸ world pack activation up to date')
+    } else {
+      console.log('▸ updating world pack activation (server will restart)…')
+      writeFileSync(activationPath, desired)
+    }
+    return
+  }
+}
+void reconcileActivation()
