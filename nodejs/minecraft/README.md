@@ -19,12 +19,11 @@ node nodejs/minecraft/dev-bedrock-server/dev.mjs
 ```
 
 It builds every pack, regenerates the dev config (per-pack compose watch rules
-
-- world activation list), then runs the server (`docker compose up --watch`:
-  server logs + deploy-on-change) and the pack builders (`turbo run watch`)
-  together with interleaved `[server]` / `[build]` output. Ctrl+C stops both (the
-  world persists). The pieces can also be run separately — see the
-  [dev server README](./dev-bedrock-server/README.md).
+and the world activation list), then runs the server (`docker compose up
+--watch`: server logs + deploy-on-change) and the pack builders (`turbo run
+watch`) together with interleaved `[server]` / `[build]` output. Ctrl+C stops
+both (the world persists). The pieces can also be run separately — see the
+[dev server README](./dev-bedrock-server/README.md).
 
 Edit a pack's `src/*.ts` (or `mc-scripting-core/src/*.ts`), save, and the change
 is live in-game in about a second — no restart, nobody kicked.
