@@ -61,10 +61,17 @@ console.log('▸ generating dev config…')
 run('node', [join(here, 'generate-dev-config.mjs')])
 
 // Spawn a child and interleave its output, each line tagged and colored.
+//
+// Children run detached, in their own process groups: a terminal Ctrl+C sends
+// SIGINT to the whole foreground group, and if compose received it directly it
+// would then treat the one shutdown() forwards as "press Ctrl+C again to
+// force" — aborting the graceful stop and leaving the container running. This
+// way only dev.mjs sees the terminal's SIGINT, and each child group gets
+// exactly one.
 const children = []
 let shuttingDown = false
 const spawnPrefixed = (label, color, command, args) => {
-  const child = spawn(command, args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(command, args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], detached: true })
   const prefix = `\x1b[${color}m[${label}]\x1b[0m `
   for (const stream of [child.stdout, child.stderr]) {
     createInterface({ input: stream }).on('line', (line) => {
@@ -80,19 +87,31 @@ const spawnPrefixed = (label, color, command, args) => {
   children.push(child)
 }
 
+const exited = (child) => child.exitCode !== null || child.signalCode !== null
+
 const shutdown = (code) => {
   if (shuttingDown) {
     return
   }
   shuttingDown = true
   for (const child of children) {
-    child.kill('SIGINT')
+    if (exited(child)) {
+      continue
+    }
+    try {
+      process.kill(-child.pid, 'SIGINT') // the child's whole process group
+    } catch {
+      child.kill('SIGINT')
+    }
   }
-  // Give compose time to stop the container gracefully before exiting.
+  // Wait for the children — compose needs time to stop the container
+  // gracefully (world save) — with a force-exit backstop.
   setTimeout(() => {
     process.exit(code)
-  }, 10_000).unref()
-  Promise.all(children.map((child) => new Promise((resolve) => child.on('exit', resolve)))).then(() => {
+  }, 30_000).unref()
+  Promise.all(
+    children.map((child) => (exited(child) ? Promise.resolve() : new Promise((resolve) => child.on('exit', resolve)))),
+  ).then(() => {
     process.exit(code)
   })
 }
