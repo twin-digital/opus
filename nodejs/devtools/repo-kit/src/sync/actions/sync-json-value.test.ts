@@ -100,3 +100,71 @@ describe('makeSyncJsonValueAction', () => {
     await expect(buildScriptsAction()(workspace)).rejects.toThrow()
   })
 })
+
+describe('makeSyncJsonValueAction — object-pointer target', () => {
+  const descriptionAction = () =>
+    makeSyncJsonValueAction({
+      source: { file: 'package.json', pointer: '/description' },
+      target: { file: 'pack/manifest.json', pointer: '/header/description' },
+    })
+
+  beforeEach(() => {
+    fs.mkdirSync(path.join(dir, 'pack'))
+    writeJson('package.json', { name: '@twin-digital/village-guard', description: 'Guards villagers.' })
+  })
+
+  it('writes a scalar value into an object field addressed by a JSON Pointer', async () => {
+    writeJson('pack/manifest.json', { header: { name: 'village-guard', description: 'stale' } })
+
+    const result = await descriptionAction()(workspace)
+
+    expect(result).toEqual({ result: 'ok', changedFiles: ['pack/manifest.json'] })
+    expect(readJson('pack/manifest.json')).toEqual({
+      header: { name: 'village-guard', description: 'Guards villagers.' },
+    })
+  })
+
+  it('is idempotent — skips when the field already matches the source', async () => {
+    writeJson('pack/manifest.json', { header: { name: 'village-guard', description: 'Guards villagers.' } })
+
+    expect(await descriptionAction()(workspace)).toEqual({ result: 'skipped' })
+  })
+
+  it('applies the strip-scope transform before writing (package name -> bare manifest name)', async () => {
+    writeJson('pack/manifest.json', { header: { name: 'stale', description: 'Guards villagers.' } })
+
+    const result = await makeSyncJsonValueAction({
+      source: { file: 'package.json', pointer: '/name' },
+      transform: 'strip-scope',
+      target: { file: 'pack/manifest.json', pointer: '/header/name' },
+    })(workspace)
+
+    expect(result).toEqual({ result: 'ok', changedFiles: ['pack/manifest.json'] })
+    expect((readJson('pack/manifest.json') as { header: { name: string } }).header.name).toBe('village-guard')
+  })
+
+  it('throws on an unknown transform name', async () => {
+    writeJson('pack/manifest.json', { header: { name: 'x' } })
+
+    await expect(
+      makeSyncJsonValueAction({
+        source: { file: 'package.json', pointer: '/name' },
+        transform: 'no-such-transform',
+        target: { file: 'pack/manifest.json', pointer: '/header/name' },
+      })(workspace),
+    ).rejects.toThrow(/unknown transform/)
+  })
+
+  it('throws when a transform is applied to a non-string value', async () => {
+    writeJson('package.json', { name: '@twin-digital/village-guard', version: [0, 1, 0] })
+    writeJson('pack/manifest.json', { header: {} })
+
+    await expect(
+      makeSyncJsonValueAction({
+        source: { file: 'package.json', pointer: '/version' },
+        transform: 'strip-scope',
+        target: { file: 'pack/manifest.json', pointer: '/header/version' },
+      })(workspace),
+    ).rejects.toThrow(/requires a string value/)
+  })
+})

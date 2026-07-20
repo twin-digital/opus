@@ -195,30 +195,50 @@ export type SyncActionConfig = {
         }
 
         /**
-         * Where to write the value. The value is written into the element(s) of an array selected by a predicate,
-         * addressing array elements by value rather than index (see `setMatching` in `@twin-digital/json-patch-x`).
+         * Optional named transform applied to the (scalar) value before it is written. One of a fixed, curated set
+         * (see `transforms`); e.g. `strip-scope` reduces a scoped `package.json` name to its bare name. The value must
+         * be a string, and only 1:1 transforms are meaningful for a single value.
          */
-        target: {
-          /**
-           * Project-relative path of the JSON file to update.
-           */
-          file: string
+        transform?: TransformName
 
-          /**
-           * JSON Pointer to the array within `target.file` whose elements are candidates.
-           */
-          array: string
+        /**
+         * Where to write the value — either an element of an array selected by a predicate (addressing array elements
+         * by value rather than index, see `setMatching`), or a single object field addressed by a JSON Pointer. Use
+         * the pointer form for a fixed field such as a manifest's `/header/description`.
+         */
+        target:
+          | {
+              /**
+               * Project-relative path of the JSON file to update.
+               */
+              file: string
 
-          /**
-           * Predicate selecting which element(s) of `target.array` to update.
-           */
-          where: SetMatchingPredicate
+              /**
+               * JSON Pointer to the array within `target.file` whose elements are candidates.
+               */
+              array: string
 
-          /**
-           * JSON Pointer, relative to each matched element, at which to write the value.
-           */
-          set: string
-        }
+              /**
+               * Predicate selecting which element(s) of `target.array` to update.
+               */
+              where: SetMatchingPredicate
+
+              /**
+               * JSON Pointer, relative to each matched element, at which to write the value.
+               */
+              set: string
+            }
+          | {
+              /**
+               * Project-relative path of the JSON file to update.
+               */
+              file: string
+
+              /**
+               * JSON Pointer within `target.file` at which to write the value. Parent objects must already exist.
+               */
+              pointer: string
+            }
       }
     }
   | {

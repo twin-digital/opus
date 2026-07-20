@@ -19,6 +19,16 @@ export const transforms = {
    */
   'strip-package-version': (items: readonly string[]): string[] =>
     items.map((item) => item.replace(/(?!^)@[^@/]+$/u, '')),
+
+  /**
+   * Drops an npm scope prefix (`@scope/`) from each name, leaving the bare package name. Unscoped names pass through
+   * unchanged. Pairs with an object-pointer target to derive a Bedrock manifest's `header.name` from a scoped
+   * `package.json` name.
+   *
+   *   '@twin-digital/village-guard' -> village-guard
+   *   village-guard                 -> village-guard
+   */
+  'strip-scope': (items: readonly string[]): string[] => items.map((item) => item.replace(/^@[^/]+\//u, '')),
 } satisfies Record<string, (items: readonly string[]) => string[]>
 
 /**
