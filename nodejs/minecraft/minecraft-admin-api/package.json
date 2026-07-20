@@ -1,0 +1,47 @@
+{
+  "private": true,
+  "name": "@twin-digital/minecraft-admin-api",
+  "version": "0.1.0",
+  "description": "Local broker that owns all serial access to a Bedrock server (console + save-hold snapshots) behind a Unix-socket API.",
+  "license": "ISC",
+  "type": "module",
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "tsx watch src/server/start.ts",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "node dist/server/start.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "execa": "catalog:",
+    "fastify": "^5.6.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  },
+  "packageManager": "pnpm@11.10.0"
+}
