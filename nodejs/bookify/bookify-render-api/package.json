@@ -39,6 +39,7 @@
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/serverless-dev-tools": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
     "@types/adm-zip": "^0.5.7",
     "@types/aws-lambda": "catalog:",

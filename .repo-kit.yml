@@ -30,6 +30,12 @@ packages:
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
       typescript-with-options: false
+  '@twin-digital/tsdown-config':
+    # This IS the shared bundle helper (keyed on its dev-time `tsdown`), so it
+    # must not consume the bundle feature itself — that would generate a
+    # tsdown.config.ts importing this package, and a self-referential devDep.
+    rules:
+      bundle: false
 
 hooks:
   - description: Install dependencies
@@ -60,22 +66,23 @@ features:
         options:
           file: tsdown.config.ts
           content: |
-            import { defineConfig } from 'tsdown'
+            // Managed by repo-kit. The bundle config is the shared base from
+            // @twin-digital/tsdown-config, plus any per-package overrides in a
+            // sibling tsdown.config.d/*.ts (default-exported partial configs,
+            // shallow-merged over the base). See @twin-digital/tsdown-config to
+            // add an override.
+            import { defineBundleConfig } from '@twin-digital/tsdown-config'
 
-            export default defineConfig({
-              dts: true,
-              entry: 'src/**/*.ts',
-              fixedExtension: false,
-              hash: false,
-              inputOptions: {
-                resolve: {
-                  conditionNames: ['source'],
-                },
-              },
-              noExternal: () => true,
-              shims: true,
-              unbundle: false,
-            })
+            export default await defineBundleConfig(import.meta.url)
+      - name: Add the shared tsdown config helper
+        action: json-merge-patch
+        conditions:
+          - dependency: tsdown
+        options:
+          file: package.json
+          patch: |
+            devDependencies:
+              '@twin-digital/tsdown-config': workspace:*
   - name: clean
     actions:
       - name: Add script

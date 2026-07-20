@@ -474,6 +474,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -550,6 +553,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
       '@twin-digital/vitest-config':
         specifier: workspace:*
         version: link:../../devtools/vitest-config
@@ -842,6 +848,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
       '@twin-digital/vitest-config':
         specifier: workspace:*
         version: link:../../devtools/vitest-config
@@ -893,6 +902,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
       '@twin-digital/vitest-config':
         specifier: workspace:*
         version: link:../../devtools/vitest-config
@@ -1137,6 +1149,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../tsdown-config
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
@@ -1173,6 +1188,48 @@ importers:
       prettier-package-json:
         specifier: 'catalog:'
         version: 2.8.0
+
+  nodejs/devtools/tsdown-config:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.5.0)
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      eslint:
+        specifier: 'catalog:'
+        version: 10.5.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.5.0)
+      globals:
+        specifier: 'catalog:'
+        version: 17.6.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.4
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.18.3(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
 
   nodejs/devtools/vitest-config:
     dependencies:
@@ -1256,6 +1313,9 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
