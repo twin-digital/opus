@@ -37,6 +37,17 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # Restore/save turbo's cache, keyed to the CI-validated commit so the `build` that the
+      # serverless deploy depends on replays CI's outputs instead of rebuilding. Newest cache is
+      # the restore-keys fallback. (`deploy:*` itself is cache:false; only its `build` dep caches.)
+      - name: Cache turbo outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       # authenticate with AWS & deploy
       - name: Deploy
         uses: ./.github/actions/deploy
@@ -64,6 +75,16 @@ jobs:
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
+
+      # Restore/save turbo's cache, keyed to the CI-validated commit so the `build` that deploy:cdk
+      # depends on replays CI's outputs instead of rebuilding. Newest cache is the restore-keys fallback.
+      - name: Cache turbo outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       # OIDC into the account's CDK deploy role, which can assume that account's cdk-* bootstrap roles
       - name: Configure AWS Credentials
