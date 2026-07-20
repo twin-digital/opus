@@ -13,5 +13,5 @@ startVillagerGuard()
 
 // This runs on every /reload, so the banner is your proof the dev loop works.
 system.run(() => {
-  world.sendMessage('§a[hello-pack] loaded §7— villager guard active')
+  world.sendMessage('§a[village-guard] loaded §7— villager guard active')
 })

@@ -11,7 +11,7 @@ cd dev-bedrock-server
 docker compose up -d            # boots Bedrock (downloads VERSION on first run)
 # wait a few seconds for the world to generate, then:
 pnpm install                    # from repo root: links village-guard → mc-pack-core
-cd ../village-guard && pnpm build   # produces dist/pack (mc-pack-core inlined)
+cd ../village-guard && pnpm build   # produces dist/main.js (mc-pack-core inlined)
 cd ../dev-bedrock-server && ./activate.sh   # lists the pack in world_behavior_packs.json
 ```
 
@@ -19,12 +19,12 @@ cd ../dev-bedrock-server && ./activate.sh   # lists the pack in world_behavior_p
 
 ```bash
 cd village-guard
-pnpm dev        # esbuild --watch: on save → cp built pack → send-command reload
+pnpm dev        # tsdown --watch: on save → cp built pack → send-command reload
 ```
 
 Edit `village-guard/src/*.ts` (or shared code in `mc-pack-core/src/*.ts`), save,
 and the change is live in ~1s — no restart, nobody kicked. That's `/reload`
-re-running the script. esbuild inlines `mc-pack-core`, so editing the shared lib
+re-running the script. tsdown bundles `mc-pack-core`, so editing the shared lib
 rebuilds every pack that uses it.
 
 ## Connect from your laptop

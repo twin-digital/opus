@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-time: activate hello-pack in the dev world.
+# One-time: activate village-guard in the dev world.
 #
-# `docker compose cp` (from build.mjs) only puts the pack in the server's
+# `docker compose cp` (from ../village-guard/deploy.mjs) only puts the pack in the server's
 # development_behavior_packs pool — a pack isn't applied until it's listed in
 # the world's world_behavior_packs.json. Run this once after the world has
 # generated (i.e. after the first `docker compose up`). Safe to re-run.
@@ -15,7 +15,7 @@ if [ -z "$world" ]; then
   exit 1
 fi
 
-echo "Activating hello-pack in world '$world'…"
+echo "Activating village-guard in world '$world'…"
 docker compose cp world_behavior_packs.json "bedrock:/data/worlds/$world/world_behavior_packs.json"
 docker compose restart bedrock
-echo "Done. The pack is active; use 'pnpm dev' in ../hello-pack for the reload loop."
+echo "Done. The pack is active; use 'pnpm dev' in ../village-guard for the reload loop."

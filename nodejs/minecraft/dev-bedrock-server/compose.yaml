@@ -1,12 +1,12 @@
 # Local Bedrock dev server for behavior-pack iteration.
 #
 # The daemon is remote (socket on another host), so bind mounts don't work —
-# files are pushed with `docker compose cp` from the pack's esbuild watch
-# (see ../hello-pack/build.mjs). Nothing here is bind-mounted.
+# files are pushed with `docker compose cp` from the pack's deploy watch
+# (see ../village-guard/deploy.mjs). Nothing here is bind-mounted.
 #
-#   docker compose up -d          # boots the server (downloads VERSION once)
-#   ../hello-pack: pnpm dev       # watch → cp built pack → /reload
-#   ./activate.sh                 # one-time: activate the pack in the world
+#   docker compose up -d              # boots the server (downloads VERSION once)
+#   ../village-guard: pnpm dev        # watch → cp built pack → /reload
+#   ./activate.sh                     # one-time: activate the pack in the world
 services:
   bedrock:
     image: itzg/minecraft-bedrock-server
