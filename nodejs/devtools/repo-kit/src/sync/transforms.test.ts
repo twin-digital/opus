@@ -24,3 +24,20 @@ describe('transforms.strip-package-version', () => {
     ])
   })
 })
+
+describe('transforms.strip-scope', () => {
+  const stripScope = transforms['strip-scope']
+
+  it.each([
+    ['@twin-digital/village-guard', 'village-guard'],
+    ['village-guard', 'village-guard'],
+    ['@scope/nested/name', 'nested/name'],
+    ['@scope/name', 'name'],
+  ])('reduces %j to %j', (input, expected) => {
+    expect(stripScope([input])).toEqual([expected])
+  })
+
+  it('maps every element of the array', () => {
+    expect(stripScope(['@twin-digital/a', 'b', '@scope/c'])).toEqual(['a', 'b', 'c'])
+  })
+})

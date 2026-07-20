@@ -37,6 +37,19 @@ export interface ArrayTarget {
 }
 
 /**
+ * Addresses a single value in a target JSON file by a JSON Pointer, for writing into an object (rather than an array
+ * element). Use when the destination is a fixed field — e.g. a Bedrock manifest's `/header/description` — where there
+ * is no array to match against.
+ */
+export interface PointerTarget {
+  /** Project-relative path of the JSON file to update. */
+  file: string
+
+  /** JSON Pointer within `file` at which to write the value. Parent objects must already exist. */
+  pointer: string
+}
+
+/**
  * Parses a structured-config file by extension. YAML is a superset of JSON, but parsing each with its own parser keeps
  * error messages accurate and avoids surprises with edge-case JSON.
  */
@@ -77,6 +90,34 @@ export const writeArrayTarget = async (
   const patched = applyPatch(original, [
     { opx: 'setMatching', path: target.array, where: target.where, set: target.set, value },
   ])
+
+  if (JSON.stringify(patched) === JSON.stringify(original)) {
+    return { result: 'skipped' }
+  }
+
+  await fsP.writeFile(targetPath, `${JSON.stringify(patched, null, 2)}\n`, 'utf-8')
+  return {
+    changedFiles: [target.file],
+    result: 'ok',
+  }
+}
+
+/**
+ * Writes `value` at `target.pointer` in `target.file` via an `add` operation (which creates or replaces the member,
+ * provided its parent object exists). Idempotent: writes only when the resulting document differs from what is already
+ * on disk, comparing the parsed documents so Prettier-owned formatting never triggers a spurious write. Mirrors
+ * {@link writeArrayTarget} for object destinations.
+ *
+ * @returns An `ok` result if the target file changed, or `skipped` if it was already in sync.
+ */
+export const writePointerTarget = async (
+  workspacePath: string,
+  target: PointerTarget,
+  value: unknown,
+): Promise<SyncResult> => {
+  const targetPath = path.join(workspacePath, target.file)
+  const original = JSON.parse(await fsP.readFile(targetPath, 'utf-8')) as object
+  const patched = applyPatch(original, [{ op: 'add', path: target.pointer, value }])
 
   if (JSON.stringify(patched) === JSON.stringify(original)) {
     return { result: 'skipped' }
