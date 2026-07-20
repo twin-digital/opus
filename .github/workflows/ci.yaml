@@ -25,6 +25,16 @@ env:
   CI: 1
   HUSKY: 0
   TURBO_TELEMETRY_DISABLED: 1
+  # turbo.json pins concurrency to 2 to protect memory on dev workstations running agentic
+  # workflows; CI runners are dedicated, so override to 4 (env beats turbo.json). Speeds up
+  # the in-run task fan-out independent of caching.
+  TURBO_CONCURRENCY: 4
+  # Pin the `--affected` base to an explicit commit SHA. turbo's auto-detection resolves the
+  # base by branch *name* (GITHUB_BASE_REF="main"), which fails here: the checkout is a detached
+  # merge commit with no local `main` branch, so `git` can't resolve a bare `main` (turbo #9320,
+  # unaffected by fetch-depth). Feeding a SHA sidesteps name resolution entirely. PRs use the PR
+  # base SHA; pushes to main use the pre-push SHA. If it's empty/unresolvable turbo runs everything.
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
   # Block dependency install scripts (pnpm `onlyBuiltDependencies`: esbuild/hnswlib-node/serverless).
   # They run arbitrary code, and this job is ungated and holds no deploy creds. The native artifacts
   # those scripts would produce aren't needed for build/lint/test (esbuild + hnswlib ship prebuilt),
@@ -36,14 +46,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      # checkout project
+      # Full history so the pinned TURBO_SCM_BASE commit and its merge-base with HEAD are present.
+      # The default shallow checkout (fetch-depth 1) fetches only the PR merge commit — not the
+      # base commit `--affected` diffs against — so turbo would fall back to "everything changed".
+      # fetch-depth: 2 covers the common case (merge commit's parents), but 0 is robust across
+      # multi-commit pushes and stale merge refs; the extra fetch is small next to the tasks it skips.
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
 
       # setup tools and install dependencies
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # run CI tasks (lint also runs the sherif dependency check via turbo's //#lint:deps task)
-      - run: pnpm run build
-      - run: pnpm run lint
-      - run: pnpm run test
+      # Persist turbo's local cache (.turbo/cache) across runs. GitHub scopes caches so a PR
+      # restores main's cache, replaying unchanged packages' task outputs instead of rerunning
+      # them. The unique key always saves a fresh entry; restore-keys falls back to the newest.
+      - name: Cache turbo outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # run CI tasks (lint also runs the sherif dependency check via turbo's //#lint:deps task).
+      # `--affected` limits each task to packages changed since TURBO_SCM_BASE (plus dependents),
+      # replaying the rest from cache; turbo runs everything if it can't resolve the range.
+      # turbo is invoked directly (not via `pnpm run <task> -- --affected`) because pnpm forwards
+      # past a `--`, so turbo would hand `--affected` to each package script instead of consuming it.
+      - run: pnpm exec turbo run build --affected
+      - run: pnpm exec turbo run lint --affected
+      - run: pnpm exec turbo run test --affected
