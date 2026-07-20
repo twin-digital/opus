@@ -277,6 +277,11 @@ jobs:
           while IFS=$'\t' read -r name dir tag; do
             pnpm build --filter "$name"
             pnpm --filter "$name" run release-assets
+            # GitHub computes sha256 digests for assets, but only as API
+            # metadata; SHA256SUMS is the downloadable companion so plain-URL
+            # consumers (ansible get_url checksum:, sha256sum -c) can verify
+            # without an API call.
+            (cd "$dir/.release-assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
             # The release normally already exists (changesets creates one per
             # tag); create it only if a partial publish failure left it missing.
             gh release upload "$tag" "$dir"/.release-assets/* --clobber ||
