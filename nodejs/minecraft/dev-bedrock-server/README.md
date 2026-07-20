@@ -6,18 +6,21 @@ built `dist/` syncs into the server's `development_behavior_packs` pool
 followed by a `/reload`, and the generated activation list syncs into the world
 followed by a restart.
 
-For the day-to-day dev loop, `dev.mjs` runs everything as one command — see the
+For the day-to-day dev loop, `dev.mjs` runs everything as one command (and
+`dev.mjs stop` stops the server) — see the
 [minecraft group README](../README.md). This file covers the server harness
 itself; the individual pieces `dev.mjs` orchestrates are:
 
 ```bash
-# from the repo root (add `--env-file .env` to the compose command if you
+# from the repo root (add `--env-file .env` to the compose commands if you
 # created one — compose only auto-loads a .env next to the compose file):
 pnpm build --filter './nodejs/minecraft/*'   # dist/ must exist before the watcher starts
 node nodejs/minecraft/dev-bedrock-server/generate-dev-config.mjs
 docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
-  -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
-pnpm exec turbo run watch --filter './nodejs/minecraft/*'   # separate terminal
+  -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up -d --wait
+docker compose -f ... -f ... watch --no-up      # deploy-on-change
+docker compose -f ... -f ... logs -f            # server output
+pnpm exec turbo run watch --filter './nodejs/minecraft/*'   # rebuild-on-save
 ```
 
 Server config comes from `MINECRAFT_*` variables in the repo-root `.env`

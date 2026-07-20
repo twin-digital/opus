@@ -280,10 +280,15 @@ jobs:
           # the JSON carries git tag names verbatim, and env values stay data.
           PACKAGES: ${{ steps.detect.outputs.packages }}
         run: |
-          # No -e at the top level: each package runs in its own -e subshell so
-          # one failure doesn't strand the remaining packages' assets (the loop
-          # equivalent of docker-build-publish's fail-fast: false).
+          # Each package runs in its own -e subshell so one failure doesn't
+          # strand the remaining packages' assets — the loop equivalent of
+          # docker-build-publish's fail-fast: false. `set +e` explicitly clears
+          # the runner-injected `bash -e` (which would abort the loop at the
+          # first failing subshell); the subshell must stay a bare command —
+          # guarding it with `||` would put it in a conditional context, where
+          # bash suppresses the *inner* set -e and masks mid-script failures.
           set -uo pipefail
+          set +e
           failed=()
           while IFS=$'\t' read -r name dir tag; do
             (

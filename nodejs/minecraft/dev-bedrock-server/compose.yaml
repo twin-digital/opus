@@ -5,12 +5,13 @@
 # `/reload`, and the generated activation list syncs into the world followed by
 # a restart. The watch rules live in compose.watch.yaml, generated per pack by
 # generate-dev-config.mjs (compose can't discover packs itself — glob paths and
-# symlinked dirs are silently ignored). Run with both files and the watcher
-# attached:
+# symlinked dirs are silently ignored). The server runs as a daemon; dev.mjs
+# orchestrates the whole loop, or by hand:
 #
 #   docker compose [--env-file .env] \
 #     -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
-#     -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
+#     -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up -d --wait
+#   docker compose … watch --no-up     # plus `logs -f` for server output
 #
 # Run compose from the REPO ROOT (so the -f paths resolve) and, if you created
 # a repo-root `.env` (copy .env.example — MINECRAFT_* overrides, pinned dev
