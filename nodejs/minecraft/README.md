@@ -16,7 +16,7 @@ One-time setup, from the repo root ([server config knobs](./dev-bedrock-server/R
 ```bash
 pnpm install
 pnpm build --filter './nodejs/minecraft/*'          # compose only watches paths that exist when it starts
-node nodejs/minecraft/dev-bedrock-server/generate-activation.mjs   # list every pack in the dev world
+node nodejs/minecraft/dev-bedrock-server/generate-dev-config.mjs   # per-pack watch rules + activation list
 ```
 
 Then two terminals, both from the repo root:
@@ -24,7 +24,8 @@ Then two terminals, both from the repo root:
 ```bash
 # 1 — server + deployer: syncs each built pack into the container and issues
 #     /reload; syncs activation-list changes and restarts.
-docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up --watch
+docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
+  -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
 
 # 2 — builder: rebuilds every pack on save (shared-lib edits rebuild the packs
 #     that bundle it).
@@ -35,5 +36,4 @@ Edit a pack's `src/*.ts` (or `mc-scripting-core/src/*.ts`), save, and the change
 is live in-game in about a second — no restart, nobody kicked.
 
 Adding a pack? Create the package with a `pack/manifest.json`, run `pnpm sync`,
-add its watch rule in `dev-bedrock-server/compose.yaml`, and re-run
-`generate-activation.mjs`.
+then re-run `generate-dev-config.mjs` — packs are discovered, not hand-listed.

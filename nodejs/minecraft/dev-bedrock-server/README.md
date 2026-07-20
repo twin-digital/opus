@@ -15,16 +15,22 @@ Compose is run from the **repo root** so it picks up the repo-root `.env`
 (`MINECRAFT_*` overrides). Copy `.env.example` → `.env` for the pinned dev seed;
 without it the server still boots (random world).
 
-## Pack activation
+## Generated per-pack config
 
-`docker compose watch` puts synced packs in the server's pool, but a pack isn't
-_applied_ until it's listed in the world's `world_behavior_packs.json`.
-`generate-activation.mjs` regenerates that list (into
-`activation/world_behavior_packs.json`, gitignored) from every package with a
-`pack/manifest.json` — uuid from the manifest, version from `package.json`, the
-same source the build injects into the shipped manifest. The compose watch rule
-ships it into the world and restarts the server. Re-run the script whenever you
-add a pack or a pack's version bumps.
+`generate-dev-config.mjs` discovers every package with a `pack/manifest.json`
+and emits two files (both gitignored — re-run it whenever you add a pack or a
+pack's version bumps):
+
+- **`compose.watch.yaml`** — a compose override with one `develop.watch` rule
+  per pack (sync built `dist/` → `/reload`) plus the activation rule below.
+  Generated because compose can't discover packs itself: glob watch paths and
+  symlinked directories are silently ignored, so each pack needs a literal
+  rule. Pass both files to compose: `-f compose.yaml -f compose.watch.yaml`.
+- **`activation/world_behavior_packs.json`** — the world's activation list. A
+  synced pack sits in the server's pool but isn't _applied_ until listed here;
+  uuid comes from the pack manifest, version from `package.json` (the same
+  source the build injects into the shipped manifest). Its watch rule ships it
+  into the world and restarts the server.
 
 ## Connect from your laptop
 

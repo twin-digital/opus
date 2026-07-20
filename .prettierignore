@@ -8,5 +8,6 @@ terraform
 
 # pnpm lockfile — managed by pnpm; never reformat
 pnpm-lock.yaml
-# generated dev-server pack activation list (see generate-activation.mjs)
+# generated dev-server config (see generate-dev-config.mjs)
 nodejs/minecraft/dev-bedrock-server/activation/world_behavior_packs.json
+nodejs/minecraft/dev-bedrock-server/compose.watch.yaml

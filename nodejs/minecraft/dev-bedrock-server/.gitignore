@@ -1,4 +1,5 @@
-# Generated on demand by generate-activation.mjs from every pack's manifest —
-# never committed. Lives in activation/ so compose watch can track the
-# directory (it exists from clone; single files can't be watched).
+# Generated on demand by generate-dev-config.mjs from every pack's manifest —
+# never committed. The activation list lives in activation/ so compose watch
+# can track the directory (it exists from clone; single files can't be watched).
 activation/world_behavior_packs.json
+compose.watch.yaml

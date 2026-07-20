@@ -4,9 +4,13 @@
 # Instead, `develop.watch` pushes files over the Docker API: each pack's built
 # dist/ syncs into the server's development_behavior_packs pool followed by a
 # `/reload`, and the generated activation list syncs into the world followed by
-# a restart. Run with the watcher attached:
+# a restart. The watch rules live in compose.watch.yaml, generated per pack by
+# generate-dev-config.mjs (compose can't discover packs itself — glob paths and
+# symlinked dirs are silently ignored). Run with both files and the watcher
+# attached:
 #
-#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up --watch
+#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
+#     -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
 #
 # Run compose from the REPO ROOT so it picks up the repo-root `.env`
 # (MINECRAFT_* overrides; copy .env.example → .env for the pinned dev seed).
@@ -33,28 +37,6 @@ services:
       LEVEL_SEED: '${MINECRAFT_LEVEL_SEED:-}' # empty → random world; set in .env to pin
       SERVER_NAME: '${MINECRAFT_SERVER_NAME:-dev-behavior-packs}'
       VERSION: '${MINECRAFT_VERSION:-1.26.31.1}' # match prod so @minecraft/server lines up
-    develop:
-      watch:
-        # One rule per pack: ship the built pack, then hot-reload scripts. A
-        # shared-lib edit rebuilds several packs and fires several reloads —
-        # harmless. New pack? Add a rule here and re-run generate-activation.mjs.
-        - path: ../hello-world/dist
-          target: /data/development_behavior_packs/hello-world
-          action: sync+exec
-          exec:
-            command: send-command reload
-        - path: ../village-guard/dist
-          target: /data/development_behavior_packs/village-guard
-          action: sync+exec
-          exec:
-            command: send-command reload
-        # Activation-list changes (new pack, version bump) need a restart — the
-        # server only rereads world_behavior_packs.json on boot.
-        - path: ./activation
-          target: /data/worlds/${MINECRAFT_LEVEL_NAME:-dev}
-          action: sync+restart
-          ignore:
-            - .gitkeep
     ports:
       # Published on all interfaces of the DOCKER HOST, so a Minecraft client on
       # the LAN connects at <docker-host-ip>:19132 (Bedrock → Add Server).
