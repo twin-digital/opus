@@ -23,9 +23,6 @@
       }
     }
   },
-  "bin": {
-    "mcpack-assets": "./bin/mcpack-assets.js"
-  },
   "files": [
     "dist",
     "!dist/**/*.d.ts.map"
@@ -43,9 +40,7 @@
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/tsdown-config": "workspace:*",
-    "@types/adm-zip": "^0.5.7",
     "@types/node": "catalog:",
-    "adm-zip": "^0.6.0",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",

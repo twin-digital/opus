@@ -11,6 +11,7 @@
     "docker-packages": "./bin/docker-packages.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
+    "mcpack-assets": "./bin/mcpack-assets.js",
     "release-asset-packages": "./bin/release-asset-packages.js",
     "squash": "./bin/squash.js",
     "test": "./bin/test.js",
@@ -20,6 +21,7 @@
     "clean": "node ./bin/clean.js"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "chalk": "catalog:",
     "chokidar": "^5.0.0",
     "execa": "catalog:",
