@@ -25,6 +25,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/serverless-dev-tools](./nodejs/devtools/serverless-dev-tools): CLI tools for local Serverless Framework development
 - [@twin-digital/tsconfig](./nodejs/devtools/tsconfig): Opinionated `tsconfig` files implementing modern defaults and familiar project layouts.
 - [@twin-digital/tsdown-config](./nodejs/devtools/tsdown-config): Shared tsdown bundle config for the monorepo: a base config plus per-package tsdown.config.d/ overrides.
+- [@twin-digital/vite-config](./nodejs/devtools/vite-config): Shared vite config for the monorepo: a base config plus per-package vite.config.d/ overrides.
 - [@twin-digital/vitest-config](./nodejs/devtools/vitest-config): Twin Digital's preferred vitest configuration.
 - [@twin-digital/codex](./nodejs/dolmenwood/codex): Implementation of the 'Codex' bot.
 - [@twin-digital/dolmenwood](./nodejs/dolmenwood/dolmenwood): Core game models and logic for Dolmenwood applications
