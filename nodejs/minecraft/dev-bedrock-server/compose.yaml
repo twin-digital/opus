@@ -1,0 +1,36 @@
+# Local Bedrock dev server for behavior-pack iteration.
+#
+# The daemon is remote (socket on another host), so bind mounts don't work —
+# files are pushed with `docker compose cp` from the pack's esbuild watch
+# (see ../hello-pack/build.mjs). Nothing here is bind-mounted.
+#
+#   docker compose up -d          # boots the server (downloads VERSION once)
+#   ../hello-pack: pnpm dev       # watch → cp built pack → /reload
+#   ./activate.sh                 # one-time: activate the pack in the world
+services:
+  bedrock:
+    image: itzg/minecraft-bedrock-server
+    container_name: mc-bedrock-dev
+    environment:
+      EULA: "TRUE"
+      VERSION: "1.26.31.1" # match prod so @minecraft/server lines up
+      LEVEL_NAME: dev
+      LEVEL_SEED: "-4879002305207299781"
+      SERVER_NAME: dev-behavior-packs
+      DIFFICULTY: normal
+      GAMEMODE: survival
+      ALLOW_LIST: "false" # dev server — no allowlist (see README)
+      ALLOW_CHEATS: "true" # needed for /reload and friends from the console
+      DEFAULT_PLAYER_PERMISSION_LEVEL: operator # every joiner is auto-opped (private dev server)
+    ports:
+      # Published on all interfaces of the DOCKER HOST, so a Minecraft client on
+      # the LAN connects at <docker-host-ip>:19132 (Bedrock → Add Server).
+      - "0.0.0.0:19132:19132/udp"
+    volumes:
+      - dev-data:/data # world + server.properties + packs live on the daemon host
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+volumes:
+  dev-data:

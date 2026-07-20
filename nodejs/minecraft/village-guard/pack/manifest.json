@@ -1,0 +1,25 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "village-guard",
+    "description": "Keeps all villagers invulnerable so you can establish a base without them being killed.",
+    "uuid": "bc204116-5457-41ee-8ec3-0bdc20daebff",
+    "version": [0, 1, 0],
+    "min_engine_version": [1, 26, 31]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "07b7e506-294e-42c6-a9ee-2df893191d49",
+      "version": [0, 1, 0],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.0.0"
+    }
+  ]
+}
