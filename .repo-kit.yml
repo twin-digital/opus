@@ -36,6 +36,12 @@ packages:
     # tsdown.config.ts importing this package, and a self-referential devDep.
     rules:
       bundle: false
+  '@twin-digital/vite-config':
+    # This IS the shared vite config helper (keyed on its `vite` dep), so it must
+    # not consume the vite feature itself — that would generate a vite.config.ts
+    # importing this package, and a self-referential devDep.
+    rules:
+      vite: false
 
 hooks:
   - description: Install dependencies
@@ -188,27 +194,13 @@ features:
         options:
           file: eslint.config.js
           content: |
-            import { existsSync, readdirSync } from 'node:fs'
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/eslint-config; per-package overrides go in a sibling
+            // eslint.config.d/*.js (default-exported flat-config fragments,
+            // appended in filename order) — never in this file.
+            import { defineProjectConfig } from '@twin-digital/eslint-config'
 
-            import base from '@twin-digital/eslint-config'
-
-            // Project overrides: any 'eslint.config.d/*.js' config fragments (composed in filename
-            // order) extend the shared base. repo-kit features and packages drop fragments there
-            // instead of editing this file.
-            const overridesDir = new URL('./eslint.config.d/', import.meta.url)
-
-            const overrides = []
-            if (existsSync(overridesDir)) {
-              const files = readdirSync(overridesDir)
-                .filter((file) => file.endsWith('.js'))
-                .sort()
-              for (const file of files) {
-                const fragment = await import(new URL(file, overridesDir).href)
-                overrides.push(...[fragment.default].flat())
-              }
-            }
-
-            export default [...base, ...overrides]
+            export default await defineProjectConfig(import.meta.url)
 
       - action: json-merge-patch
         options:
@@ -529,35 +521,15 @@ features:
         options:
           file: vite.config.ts
           content: |
-            import { existsSync, readdirSync } from 'node:fs'
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/vite-config; per-package overrides go in a sibling
+            // vite.config.d/*.js (default-exported partial configs, deep-merged
+            // in filename order) — never in this file.
+            import { defineConfig } from 'vite'
 
-            import { defaultClientConditions, defineConfig, mergeConfig, type UserConfig } from 'vite'
+            import { defineAppConfig } from '@twin-digital/vite-config'
 
-            // Base config: resolve workspace dependencies straight to their src/ (the monorepo's
-            // source-first convention, mirroring tsconfig's customConditions). Project overrides:
-            // any 'vite.config.d/*.js' config fragments (merged in filename order via mergeConfig)
-            // extend the base. repo-kit features and packages drop fragments there instead of
-            // editing this file.
-            const base: UserConfig = {
-              resolve: {
-                conditions: ['source', ...defaultClientConditions],
-              },
-            }
-
-            const fragmentsDir = new URL('./vite.config.d/', import.meta.url)
-
-            let config = base
-            if (existsSync(fragmentsDir)) {
-              const files = readdirSync(fragmentsDir)
-                .filter((file) => file.endsWith('.js'))
-                .sort()
-              for (const file of files) {
-                const fragment = (await import(new URL(file, fragmentsDir).href)) as { default: UserConfig }
-                config = mergeConfig(config, fragment.default)
-              }
-            }
-
-            export default defineConfig(config)
+            export default defineConfig(await defineAppConfig(import.meta.url))
       - name: Add vite scripts and dependencies
         action: json-merge-patch
         conditions:
@@ -569,6 +541,7 @@ features:
               dev: vite --host
               preview: vite preview
             devDependencies:
+              '@twin-digital/vite-config': workspace:*
               vite: 'catalog:'
   # CDK applications: keyed on the `aws-cdk` CLI dependency (apps synth/deploy; construct *libraries*
   # depend on aws-cdk-lib/constructs but not the CLI, so they don't match — and must not get the

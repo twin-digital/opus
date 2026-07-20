@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import jsLint from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import tsLint from 'typescript-eslint'
@@ -131,3 +134,29 @@ const config: ReturnType<(typeof tsLint)['config']> = defineConfig(
 )
 
 export default config
+
+/**
+ * Compose the shared base config with a package's per-package overrides: any
+ * `eslint.config.d/*.js` next to the calling `eslint.config.js` default-exports
+ * a flat-config fragment, appended in filename order. Pass `import.meta.url`.
+ *
+ * This is what the repo-kit-managed `eslint.config.js` calls, so the compose
+ * logic lives here once instead of being inlined into every package. Mirrors
+ * the `vite.config.d/` / `tsdown.config.d/` override pattern.
+ */
+export async function defineProjectConfig(configUrl: string): Promise<unknown[]> {
+  const overridesDir = new URL('./eslint.config.d/', configUrl)
+  const overrides: unknown[] = []
+
+  if (existsSync(fileURLToPath(overridesDir))) {
+    const files = readdirSync(fileURLToPath(overridesDir))
+      .filter((file) => file.endsWith('.js'))
+      .sort()
+    for (const file of files) {
+      const fragment = (await import(new URL(file, overridesDir).href)) as { default: unknown }
+      overrides.push(...[fragment.default].flat())
+    }
+  }
+
+  return [...config, ...overrides]
+}
