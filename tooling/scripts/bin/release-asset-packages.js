@@ -8,20 +8,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '../../..')
 
 /**
- * Detects Minecraft Bedrock behavior packs released at the current commit.
+ * Detects packages released at the current commit that produce GitHub release
+ * assets.
  *
  * This script:
  * 1. Gets all git tags on the current commit (HEAD)
  * 2. Parses package names and versions from tags (e.g., "@twin-digital/village-guard@0.1.0")
- * 3. Filters to packages that have a pack/manifest.json (the behavior-pack marker)
+ * 3. Filters to packages that expose a `release-assets` script (the well-known
+ *    hook: it writes the artifacts to attach into the package's .release-assets/)
  * 4. Outputs JSON array of package metadata for matrix builds
  *
- * Output format: [{name, version, path, tag, artifact}, ...]
+ * Output format: [{name, version, path, tag}, ...]
  * - name: npm package name (e.g., "@twin-digital/village-guard")
  * - version: semver version (e.g., "0.1.0")
  * - path: relative path from repo root (e.g., "nodejs/minecraft/village-guard")
- * - tag: the git tag / GitHub release the artifact attaches to
- * - artifact: the .mcpack filename to publish (e.g., "village-guard-0.1.0.mcpack")
+ * - tag: the git tag / GitHub release the artifacts attach to
  */
 
 async function main() {
@@ -51,28 +52,24 @@ async function main() {
         continue
       }
 
-      const packageDir = path.dirname(packageJsonPath)
-
-      // Only include behavior packs (marked by a committed pack manifest)
-      if (!fs.existsSync(path.join(packageDir, 'pack', 'manifest.json'))) {
+      // Only include packages that implement the release-assets hook
+      const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      if (!manifest.scripts?.['release-assets']) {
         continue
       }
-
-      const bareName = packageName.startsWith('@') ? packageName.split('/')[1] : packageName
 
       packages.push({
         name: packageName,
         version: version,
-        path: path.relative(repoRoot, packageDir),
+        path: path.relative(repoRoot, path.dirname(packageJsonPath)),
         tag: tag,
-        artifact: `${bareName}-${version}.mcpack`,
       })
     }
 
     // Output JSON for GitHub Actions matrix
     console.log(JSON.stringify(packages))
   } catch (error) {
-    console.error('Error detecting behavior-pack packages:', error.message)
+    console.error('Error detecting release-asset packages:', error.message)
     process.exit(1)
   }
 }

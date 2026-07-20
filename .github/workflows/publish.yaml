@@ -231,11 +231,12 @@ jobs:
           docker push ${{ matrix.package.imageName }}:$MINOR
           docker push ${{ matrix.package.imageName }}:$MAJOR
 
-  # Attach installable .mcpack artifacts (a zip of the built pack, manifest at
-  # the archive root — the Bedrock community's standard format) to the GitHub
-  # releases changesets created for behavior-pack packages. Deployment (ansible)
-  # and Bedrock clients both install straight from the release asset.
-  mcpack-publish:
+  # Attach build artifacts to the GitHub releases changesets created. Generic
+  # sweep: any released package exposing a `release-assets` script (the
+  # well-known hook, wired in by repo-kit — e.g. behavior packs produce an
+  # installable .mcpack) has the script run and everything it writes to the
+  # package's .release-assets/ uploaded to the package's release.
+  release-assets:
     needs: publish
     # Mirror docker-matrix: run on a release AND when publish failed (tags may
     # still exist); skip the "create Version Packages PR" runs.
@@ -254,7 +255,7 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # Restore-only: lets the pack builds replay CI's outputs.
+      # Restore-only: lets the builds replay CI's outputs.
       - name: Restore turbo cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -263,24 +264,24 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Detect released behavior packs
+      - name: Detect released packages with release assets
         id: detect
-        run: echo "packages=$(node ./tooling/scripts/bin/mc-pack-packages.js)" >> "$GITHUB_OUTPUT"
+        run: echo "packages=$(node ./tooling/scripts/bin/release-asset-packages.js)" >> "$GITHUB_OUTPUT"
 
-      - name: Build packs and attach .mcpack release assets
+      - name: Build and attach release assets
         if: steps.detect.outputs.packages != '[]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          while IFS=$'\t' read -r name dir tag artifact; do
+          while IFS=$'\t' read -r name dir tag; do
             pnpm build --filter "$name"
-            (cd "$dir/dist" && zip -r "$RUNNER_TEMP/$artifact" .)
+            pnpm --filter "$name" run release-assets
             # The release normally already exists (changesets creates one per
             # tag); create it only if a partial publish failure left it missing.
-            gh release upload "$tag" "$RUNNER_TEMP/$artifact" --clobber ||
-              gh release create "$tag" --verify-tag --title "$tag" "$RUNNER_TEMP/$artifact"
-          done < <(jq -r '.[] | [.name, .path, .tag, .artifact] | @tsv' <<< '${{ steps.detect.outputs.packages }}')
+            gh release upload "$tag" "$dir"/.release-assets/* --clobber ||
+              gh release create "$tag" --verify-tag --title "$tag" "$dir"/.release-assets/*
+          done < <(jq -r '.[] | [.name, .path, .tag] | @tsv' <<< '${{ steps.detect.outputs.packages }}')
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:

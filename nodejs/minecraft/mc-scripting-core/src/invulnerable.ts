@@ -16,7 +16,10 @@ export interface SetInvulnerableOptions {
   showParticles?: boolean
 }
 
-/** Worlds whose heal-on-hurt backstop is already subscribed. */
+// Worlds already carrying the heal-on-hurt subscription. A server session has
+// a single world instance (a dedicated server hosts one level), so this holds
+// at most one entry; keying on the injected world keeps the guard idempotent
+// per argument rather than per module lifetime.
 const guardedWorlds = new WeakSet<World>()
 
 /**

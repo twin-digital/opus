@@ -12,6 +12,7 @@ import { startVillagerGuard } from './villager-guard.js'
 startVillagerGuard()
 
 // This runs on every /reload, so the banner is your proof the dev loop works.
+// § sequences are Minecraft chat formatting codes (§a green, §7 gray).
 system.run(() => {
   world.sendMessage('§a[village-guard] loaded §7— villager guard active')
 })

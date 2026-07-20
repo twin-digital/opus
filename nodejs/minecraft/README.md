@@ -11,29 +11,23 @@ A pack is any package with a committed `pack/manifest.json`; repo-kit's `bedrock
 
 ## Dev loop
 
-One-time setup, from the repo root ([server config knobs](./dev-bedrock-server/README.md)):
+One command, from the repo root (after `pnpm install` — [server config
+knobs](./dev-bedrock-server/README.md)):
 
 ```bash
-pnpm install
-pnpm build --filter './nodejs/minecraft/*'          # compose only watches paths that exist when it starts
-node nodejs/minecraft/dev-bedrock-server/generate-dev-config.mjs   # per-pack watch rules + activation list
+node nodejs/minecraft/dev-bedrock-server/dev.mjs
 ```
 
-Then two terminals, both from the repo root:
+It builds every pack, regenerates the dev config (per-pack compose watch rules
 
-```bash
-# 1 — server + deployer: syncs each built pack into the container and issues
-#     /reload; syncs activation-list changes and restarts.
-docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
-  -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
-
-# 2 — builder: rebuilds every pack on save (shared-lib edits rebuild the packs
-#     that bundle it).
-pnpm exec turbo run watch --filter './nodejs/minecraft/*'
-```
+- world activation list), then runs the server (`docker compose up --watch`:
+  server logs + deploy-on-change) and the pack builders (`turbo run watch`)
+  together with interleaved `[server]` / `[build]` output. Ctrl+C stops both (the
+  world persists). The pieces can also be run separately — see the
+  [dev server README](./dev-bedrock-server/README.md).
 
 Edit a pack's `src/*.ts` (or `mc-scripting-core/src/*.ts`), save, and the change
 is live in-game in about a second — no restart, nobody kicked.
 
 Adding a pack? Create the package with a `pack/manifest.json`, run `pnpm sync`,
-then re-run `generate-dev-config.mjs` — packs are discovered, not hand-listed.
+and restart `dev.mjs` — packs are discovered, not hand-listed.

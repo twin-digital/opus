@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Entity, World } from '@minecraft/server'
 
-// @minecraft/server ships only type declarations (no runtime entry), so the
-// library imports it type-only and takes the world as an argument. Tests pass
-// plain duck-typed objects — no module mocking needed.
 import { INVULNERABLE_TAG, registerInvulnerabilityGuard, setInvulnerable } from './invulnerable.js'
 
 const makeEntity = (tags: string[] = []) => {

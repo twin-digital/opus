@@ -2,7 +2,7 @@
   "format_version": 2,
   "header": {
     "name": "village-guard",
-    "description": "Keeps all villagers invulnerable.",
+    "description": "Minecraft behavior pack which keeps all villagers invulnerable.",
     "uuid": "bc204116-5457-41ee-8ec3-0bdc20daebff",
     "min_engine_version": [1, 26, 31]
   },

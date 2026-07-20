@@ -1,15 +1,23 @@
 # Behavior-pack dev server
 
-Local, disposable Bedrock server (Docker) for iterating on behavior packs. The
-Docker daemon here is remote (socket on another host), so instead of bind
-mounts, **`docker compose watch` pushes files over the Docker API**: each
-pack's built `dist/` syncs into the server's `development_behavior_packs` pool
+Local, disposable Bedrock server (Docker) for iterating on behavior packs.
+**`docker compose watch` deploys into the running container**: each pack's
+built `dist/` syncs into the server's `development_behavior_packs` pool
 followed by a `/reload`, and the generated activation list syncs into the world
 followed by a restart.
 
-For the day-to-day dev loop (build once, `up --watch`, `turbo run watch`), see
-the [minecraft group README](../README.md). This file covers the server harness
-itself.
+For the day-to-day dev loop, `dev.mjs` runs everything as one command — see the
+[minecraft group README](../README.md). This file covers the server harness
+itself; the individual pieces `dev.mjs` orchestrates are:
+
+```bash
+# from the repo root:
+pnpm build --filter './nodejs/minecraft/*'   # dist/ must exist before the watcher starts
+node nodejs/minecraft/dev-bedrock-server/generate-dev-config.mjs
+docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
+  -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
+pnpm exec turbo run watch --filter './nodejs/minecraft/*'   # separate terminal
+```
 
 Compose is run from the **repo root** so it picks up the repo-root `.env`
 (`MINECRAFT_*` overrides). Copy `.env.example` → `.env` for the pinned dev seed;

@@ -1,7 +1,6 @@
 # Local Bedrock dev server for behavior-pack iteration.
 #
-# The daemon is remote (socket on another host), so bind mounts don't work.
-# Instead, `develop.watch` pushes files over the Docker API: each pack's built
+# `develop.watch` deploys packs into the running container: each pack's built
 # dist/ syncs into the server's development_behavior_packs pool followed by a
 # `/reload`, and the generated activation list syncs into the world followed by
 # a restart. The watch rules live in compose.watch.yaml, generated per pack by

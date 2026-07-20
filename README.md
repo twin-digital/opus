@@ -38,10 +38,10 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
-- [@twin-digital/hello-world](./nodejs/minecraft/hello-world): Greets players when they join.
+- [@twin-digital/hello-world](./nodejs/minecraft/hello-world): Minecraft behavior pack which greets players when they join.
 - [@twin-digital/mc-pack-config](./nodejs/minecraft/mc-pack-config): Shared tsdown config for Minecraft Bedrock behavior packs: bundle to dist/scripts, assemble the shippable manifest.
 - [@twin-digital/mc-scripting-core](./nodejs/minecraft/mc-scripting-core): Shared helpers for Minecraft Bedrock behavior packs.
-- [@twin-digital/village-guard](./nodejs/minecraft/village-guard): Keeps all villagers invulnerable.
+- [@twin-digital/village-guard](./nodejs/minecraft/village-guard): Minecraft behavior pack which keeps all villagers invulnerable.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.

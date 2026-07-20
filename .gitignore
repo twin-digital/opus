@@ -75,3 +75,6 @@ nodejs/dolmenwood/refbash/.data
 
 # local env overrides (see .env.example)
 /.env
+
+# per-package GitHub release artifacts (see the release-assets script hook)
+.release-assets/

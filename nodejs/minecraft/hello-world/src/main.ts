@@ -7,6 +7,8 @@ import { world, system } from '@minecraft/server'
 // world.sendMessage cannot run during a script's "early execution" (module load)
 // — but an event callback runs later, so this is fine. Registering the
 // subscription at top level is allowed.
+// § sequences are Minecraft chat formatting codes (§e yellow, §a green,
+// §7 gray) — cosmetic color so pack messages stand out from regular chat.
 world.afterEvents.playerSpawn.subscribe((event) => {
   if (event.initialSpawn) {
     world.sendMessage(`§eHello, ${event.player.name}! §7Welcome to the server.`)
