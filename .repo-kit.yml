@@ -30,6 +30,13 @@ packages:
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
       typescript-with-options: false
+  '@twin-digital/mc-scripting-core':
+    # @minecraft/server ships types only (no runtime entry), so vitest can't
+    # resolve it. This package hand-manages vitest.config.ts to alias it to a
+    # local stub; opt out of the generated `export default sharedConfig` (which
+    # would clobber the alias). The vitest devDeps/scripts the feature added stay.
+    rules:
+      test: false
   '@twin-digital/tsdown-config':
     # This IS the shared bundle helper (keyed on its dev-time `tsdown`), so it
     # must not consume the bundle feature itself — that would generate a
@@ -53,6 +60,9 @@ hooks:
   - description: Reformat renovate.json
     path: renovate.json
     run: pnpm exec prettier --write ./renovate.json
+  - description: Reformat pack manifest
+    path: pack/manifest.json
+    run: pnpm exec prettier --write ./pack/manifest.json
 
 features:
   - name: .nvmrc
@@ -607,3 +617,30 @@ features:
                 rules: { 'no-restricted-imports': ['error', srcImportBans] },
               },
             ]
+  - name: bedrock-pack
+    # A Bedrock behavior pack (any package with a pack/manifest.json) keeps its
+    # manifest identity in sync with package.json — the single source of truth.
+    # Version is not synced here: it's owned by the changesets release bump and
+    # injected into the shipped manifest at pack build time (see deploy.mjs).
+    conditions:
+      - exists: pack/manifest.json
+    actions:
+      - name: Sync manifest description from package.json
+        action: sync-json-value
+        options:
+          source:
+            file: package.json
+            pointer: /description
+          target:
+            file: pack/manifest.json
+            pointer: /header/description
+      - name: Sync manifest name from package.json (npm scope stripped)
+        action: sync-json-value
+        options:
+          source:
+            file: package.json
+            pointer: /name
+          transform: strip-scope
+          target:
+            file: pack/manifest.json
+            pointer: /header/name

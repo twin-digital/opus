@@ -1,8 +1,7 @@
 {
-  "private": true,
-  "name": "@twin-digital/mc-pack-core",
+  "name": "@twin-digital/mc-scripting-core",
   "version": "0.1.0",
-  "description": "Shared helpers for Minecraft Bedrock behavior packs (tags, invulnerability, events).",
+  "description": "Shared helpers for Minecraft Bedrock behavior packs.",
   "license": "ISC",
   "type": "module",
   "exports": {
@@ -32,7 +31,12 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@minecraft/server": ">=2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -40,14 +44,17 @@
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",

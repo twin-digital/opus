@@ -4,24 +4,33 @@
 # files are pushed with `docker compose cp` from the pack's deploy watch
 # (see ../village-guard/deploy.mjs). Nothing here is bind-mounted.
 #
-#   docker compose up -d              # boots the server (downloads VERSION once)
+# Run compose from the REPO ROOT so it picks up the repo-root `.env`
+# (MINECRAFT_* overrides; copy .env.example → .env for the pinned dev seed):
+#
+#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up -d
 #   ../village-guard: pnpm dev        # watch → cp built pack → /reload
-#   ./activate.sh                     # one-time: activate the pack in the world
+#   nodejs/minecraft/dev-bedrock-server/activate.sh   # activate packs in the world
+#
+# Every knob below is overridable via MINECRAFT_* in the repo-root .env, and
+# falls back to the default shown when unset — including LEVEL_SEED, which
+# defaults to empty (a random world).
+name: mc-bedrock-dev
 services:
   bedrock:
     image: itzg/minecraft-bedrock-server
     container_name: mc-bedrock-dev
     environment:
+      ALLOW_CHEATS: "${MINECRAFT_ALLOW_CHEATS:-true}" # needed for /reload and friends from the console
+      ALLOW_LIST: "${MINECRAFT_ALLOW_LIST:-false}" # dev server — no allowlist (see README)
+      CONTENT_LOG_CONSOLE_OUTPUT_ENABLED: "${MINECRAFT_CONTENT_LOG_CONSOLE_OUTPUT_ENABLED:-true}" # script errors → stdout
+      DEFAULT_PLAYER_PERMISSION_LEVEL: "${MINECRAFT_DEFAULT_PLAYER_PERMISSION_LEVEL:-operator}" # every joiner auto-opped (private dev)
+      DIFFICULTY: "${MINECRAFT_DIFFICULTY:-normal}"
       EULA: "TRUE"
-      VERSION: "1.26.31.1" # match prod so @minecraft/server lines up
-      LEVEL_NAME: dev
-      LEVEL_SEED: "-4879002305207299781"
-      SERVER_NAME: dev-behavior-packs
-      DIFFICULTY: normal
-      GAMEMODE: survival
-      ALLOW_LIST: "false" # dev server — no allowlist (see README)
-      ALLOW_CHEATS: "true" # needed for /reload and friends from the console
-      DEFAULT_PLAYER_PERMISSION_LEVEL: operator # every joiner is auto-opped (private dev server)
+      GAMEMODE: "${MINECRAFT_GAMEMODE:-survival}"
+      LEVEL_NAME: "${MINECRAFT_LEVEL_NAME:-dev}"
+      LEVEL_SEED: "${MINECRAFT_LEVEL_SEED:-}" # empty → random world; set in .env to pin
+      SERVER_NAME: "${MINECRAFT_SERVER_NAME:-dev-behavior-packs}"
+      VERSION: "${MINECRAFT_VERSION:-1.26.31.1}" # match prod so @minecraft/server lines up
     ports:
       # Published on all interfaces of the DOCKER HOST, so a Minecraft client on
       # the LAN connects at <docker-host-ip>:19132 (Bedrock → Add Server).

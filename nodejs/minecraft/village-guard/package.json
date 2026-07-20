@@ -2,7 +2,7 @@
   "private": true,
   "name": "@twin-digital/village-guard",
   "version": "0.1.0",
-  "description": "Behavior pack: keeps all villagers invulnerable so a base can be established without them being killed.",
+  "description": "Keeps all villagers invulnerable.",
   "license": "ISC",
   "type": "module",
   "exports": {
@@ -28,7 +28,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@twin-digital/mc-pack-core": "workspace:*"
+    "@twin-digital/mc-scripting-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@minecraft/server": ">=2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

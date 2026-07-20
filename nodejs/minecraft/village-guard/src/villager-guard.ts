@@ -1,6 +1,6 @@
 import { world, system, type Entity } from '@minecraft/server'
 
-import { setInvulnerable } from '@twin-digital/mc-pack-core'
+import { setInvulnerable } from '@twin-digital/mc-scripting-core'
 
 const VILLAGER = 'minecraft:villager_v2' // current villager type id
 const REASSERT_INTERVAL_TICKS = 100 // 5s — tops up Resistance and catches new arrivals
@@ -16,16 +16,20 @@ const REASSERT_INTERVAL_TICKS = 100 // 5s — tops up Resistance and catches new
 export const startVillagerGuard = (): void => {
   const protectIfVillager = (entity: Entity): void => {
     if (entity.typeId === VILLAGER) {
-      setInvulnerable(entity, true)
+      setInvulnerable(entity)
     }
   }
 
-  world.afterEvents.entitySpawn.subscribe((event) => protectIfVillager(event.entity))
-  world.afterEvents.entityLoad.subscribe((event) => protectIfVillager(event.entity))
+  world.afterEvents.entitySpawn.subscribe((event) => {
+    protectIfVillager(event.entity)
+  })
+  world.afterEvents.entityLoad.subscribe((event) => {
+    protectIfVillager(event.entity)
+  })
 
   system.runInterval(() => {
     for (const entity of world.getDimension('overworld').getEntities({ type: VILLAGER })) {
-      setInvulnerable(entity, true)
+      setInvulnerable(entity)
     }
   }, REASSERT_INTERVAL_TICKS)
 }

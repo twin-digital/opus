@@ -2,9 +2,11 @@
 // Generate world_behavior_packs.json from every behavior pack in the monorepo.
 //
 // A "behavior pack" is any package with a pack/manifest.json. We anchor the glob
-// at the monorepo root (not this dev harness) and collect each pack's header
-// uuid + version, so activating the dev world auto-includes every pack — no
-// hand-maintained list. activate.sh runs this before copying the file in.
+// at the monorepo root (not this dev harness) and collect each pack's uuid (from
+// the manifest) + version (from package.json, the source of truth the build
+// injects into the shipped manifest), so what's activated matches what deploy.mjs
+// ships. Activating the dev world auto-includes every pack — no hand-maintained
+// list. activate.sh runs this before copying the file in.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,7 +35,14 @@ for (const group of readdirSync(packsDir, { withFileTypes: true })) {
       continue
     }
     const { header } = JSON.parse(readFileSync(manifest, 'utf8'))
-    packs.push({ name: pkg.name, pack_id: header.uuid, version: header.version })
+    // Version comes from package.json (a semver string), converted to Bedrock's
+    // [major, minor, patch] triple, dropping any prerelease/build suffix.
+    const { version } = JSON.parse(readFileSync(join(packsDir, group.name, pkg.name, 'package.json'), 'utf8'))
+    const versionTriple = version
+      .split(/[-+]/)[0]
+      .split('.')
+      .map((part) => Number.parseInt(part, 10))
+    packs.push({ name: pkg.name, pack_id: header.uuid, version: versionTriple })
   }
 }
 

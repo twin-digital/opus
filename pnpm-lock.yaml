@@ -2001,7 +2001,7 @@ importers:
         specifier: 'catalog:'
         version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
 
-  nodejs/minecraft/mc-pack-core:
+  nodejs/minecraft/mc-scripting-core:
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -2018,9 +2018,15 @@ importers:
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.9(vitest@4.1.9)
       eslint:
         specifier: 'catalog:'
         version: 10.5.0
@@ -2042,12 +2048,15 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.9(@types/node@24.13.2)(@vitest/coverage-istanbul@4.1.9)(jsdom@27.2.0)(vite@7.3.5(@types/node@24.13.2)(terser@5.44.1)(tsx@4.22.4)(yaml@2.9.0))
 
   nodejs/minecraft/village-guard:
     dependencies:
-      '@twin-digital/mc-pack-core':
+      '@twin-digital/mc-scripting-core':
         specifier: workspace:*
-        version: link:../mc-pack-core
+        version: link:../mc-scripting-core
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
