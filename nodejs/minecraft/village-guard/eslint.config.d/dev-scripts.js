@@ -3,4 +3,4 @@
 // as dev-bedrock-server/build-activation.mjs. It's a `.mjs` outside the TS
 // program, so the type-aware lint's project service can't parse it; keep it out
 // of lint rather than force it into the typed build.
-export default [{ ignores: ['deploy.mjs'] }]
+export default [{ ignores: ['deploy.mjs', 'build-pack.mjs'] }]

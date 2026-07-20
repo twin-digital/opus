@@ -12,7 +12,8 @@ without it the server still boots (random world).
 
 ```bash
 # from the repo root:
-cp .env.example .env            # optional — pins the dev world seed
+# optional: add the MINECRAFT_* keys from .env.example to your repo-root .env
+# (pins the dev world seed); skip for a random world.
 docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up -d
 # wait a few seconds for the world to generate, then:
 pnpm install                    # links village-guard → mc-scripting-core

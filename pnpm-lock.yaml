@@ -2053,10 +2053,6 @@ importers:
         version: 4.1.9(@types/node@24.13.2)(@vitest/coverage-istanbul@4.1.9)(jsdom@27.2.0)(vite@7.3.5(@types/node@24.13.2)(terser@5.44.1)(tsx@4.22.4)(yaml@2.9.0))
 
   nodejs/minecraft/village-guard:
-    dependencies:
-      '@twin-digital/mc-scripting-core':
-        specifier: workspace:*
-        version: link:../mc-scripting-core
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -2067,6 +2063,9 @@ importers:
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
+      '@twin-digital/mc-scripting-core':
+        specifier: workspace:*
+        version: link:../mc-scripting-core
       '@twin-digital/opus-scripts':
         specifier: workspace:*
         version: link:../../../tooling/scripts
