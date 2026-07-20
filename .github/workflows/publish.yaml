@@ -96,6 +96,17 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
+      # Restore/save turbo's cache, keyed to the CI-validated commit so `publish-packages`'
+      # `turbo run build` replays CI's outputs instead of rebuilding before `changeset publish`.
+      # Newest cache is the restore-keys fallback.
+      - name: Cache turbo outputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
       # configure git to ignore executable bit on files and remove executable bits from all files
       # (except node_modules) to prevent publishing failures via github-api
       - name: Configure git file mode and remove executable bits
@@ -173,6 +184,16 @@ jobs:
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
+
+      # Restore-only: lets `artifact`'s `build` dependency replay CI's outputs. We don't save here —
+      # the containerized `.out/**` artifact would bloat the shared turbo cache and evict build entries.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
       - name: Build Docker image
         run: pnpm run artifact --filter=${{ matrix.package.name }}
