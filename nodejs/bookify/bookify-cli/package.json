@@ -45,6 +45,7 @@
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "catalog:",
     "eslint": "catalog:",

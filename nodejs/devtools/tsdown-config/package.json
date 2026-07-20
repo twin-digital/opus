@@ -1,7 +1,9 @@
 {
-  "name": "@twin-digital/serverless-dev-tools",
-  "version": "0.1.3",
-  "description": "CLI tools for local Serverless Framework development",
+  "private": true,
+  "name": "@twin-digital/tsdown-config",
+  "version": "0.1.0",
+  "description": "Shared tsdown bundle config for the monorepo: a base config plus per-package tsdown.config.d/ overrides.",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": {
@@ -21,11 +23,7 @@
       }
     }
   },
-  "bin": {
-    "sls-dev-tools": "./bin/run.js"
-  },
   "files": [
-    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],
@@ -36,16 +34,11 @@
     "lint:fix": "lint_fix",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@oclif/core": "^4.8.0",
-    "yaml": "catalog:"
-  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
-    "@twin-digital/tsdown-config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
@@ -59,15 +52,5 @@
   "engines": {
     "node": "24.x",
     "pnpm": "11.x"
-  },
-  "oclif": {
-    "bin": "sls-dev-tools",
-    "commands": {
-      "strategy": "explicit",
-      "target": "./dist/cli.js",
-      "identifier": "Commands"
-    },
-    "dirname": "sls-dev-tools",
-    "topicSeparator": " "
   }
 }
