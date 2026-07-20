@@ -24,14 +24,20 @@ nodejs/minecraft/dev-bedrock-server/activate.sh    # activates every pack in the
 ## The loop
 
 ```bash
-cd nodejs/minecraft/village-guard
+cd nodejs/minecraft/village-guard   # or hello-world, or any pack
 pnpm dev        # tsdown --watch: on save → cp built pack → send-command reload
 ```
 
-Edit `village-guard/src/*.ts` (or shared code in `mc-scripting-core/src/*.ts`),
-save, and the change is live in ~1s — no restart, nobody kicked. That's `/reload`
+Edit a pack's `src/*.ts` (or shared code in `mc-scripting-core/src/*.ts`), save,
+and the change is live in ~1s — no restart, nobody kicked. That's `/reload`
 re-running the script. tsdown bundles `mc-scripting-core`, so editing the shared
 lib rebuilds every pack that uses it.
+
+Each pack is independent: run `pnpm dev` in as many pack directories as you want
+(one terminal each) against the same server — `hello-world` and `village-guard`
+demonstrate the shape. `hello-world` is a minimal standalone pack (just
+`@minecraft/server`); `village-guard` shows consuming the shared `mc-scripting-core`
+lib.
 
 ## Connect from your laptop
 

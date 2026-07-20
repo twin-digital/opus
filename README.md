@@ -38,6 +38,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
+- [@twin-digital/hello-world](./nodejs/minecraft/hello-world): Greets players when they join.
 - [@twin-digital/mc-scripting-core](./nodejs/minecraft/mc-scripting-core): Shared helpers for Minecraft Bedrock behavior packs.
 - [@twin-digital/village-guard](./nodejs/minecraft/village-guard): Keeps all villagers invulnerable.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.

@@ -1,0 +1,54 @@
+{
+  "name": "@twin-digital/hello-world",
+  "version": "0.1.0",
+  "description": "Greets players when they join.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "deploy": "node deploy.mjs",
+    "dev": "node deploy.mjs --watch",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "prepack": "pnpm build",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@minecraft/server": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@minecraft/server": "^2.8.0",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}
