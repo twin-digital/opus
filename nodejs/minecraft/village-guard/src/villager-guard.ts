@@ -44,7 +44,7 @@ export const startVillagerGuard = (): void => {
   // The events cover arrivals; the recurring sweep covers what they can't:
   // Resistance is a finite-duration effect that would otherwise lapse on
   // long-loaded villagers, and the tag/effect can be stripped externally
-  // (commands, other packs). One filtered query over loaded overworld entities
-  // every 5s — negligible.
+  // (commands, other packs). One filtered query per dimension (three total)
+  // over loaded entities every 5s — negligible.
   system.runInterval(sweep, REASSERT_INTERVAL_TICKS)
 }

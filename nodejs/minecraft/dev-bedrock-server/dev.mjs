@@ -107,6 +107,12 @@ const spawnPrefixed = (label, color, command, args) => {
       shutdown(code ?? 1)
     }
   })
+  // A spawn failure (e.g. the binary missing from PATH) emits 'error', not
+  // 'exit' — unhandled it would crash dev.mjs and orphan the sibling child.
+  child.on('error', (error) => {
+    console.error(`${prefix}failed to start ${command}: ${error.message}`)
+    shutdown(1)
+  })
   children.push(child)
 }
 
@@ -128,8 +134,23 @@ const shutdown = (code) => {
     }
   }
   // Wait for the children — compose needs time to stop the container
-  // gracefully (world save) — with a force-exit backstop.
+  // gracefully (world save) — with a force-exit backstop. The backstop
+  // SIGKILLs anything still running: the children are detached, so exiting
+  // without killing them would leave the watchers running invisibly. (It
+  // cannot stop the daemon-side container itself — that needs
+  // `docker compose down`.)
   setTimeout(() => {
+    for (const child of children) {
+      if (exited(child)) {
+        continue
+      }
+      console.error(`force-killing unresponsive child ${child.pid}`)
+      try {
+        process.kill(-child.pid, 'SIGKILL')
+      } catch {
+        child.kill('SIGKILL')
+      }
+    }
     process.exit(code)
   }, 30_000).unref()
   Promise.all(

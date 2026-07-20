@@ -3,8 +3,10 @@ import type { Entity, World } from '@minecraft/server'
 /** Entities carrying this tag are kept invulnerable (Resistance + heal backstop). */
 export const INVULNERABLE_TAG = 'invulnerable'
 
-// Long duration, re-applied well before it lapses (see startVillagerGuard).
-// Effect durations are in ticks (20/sec) → ~1 hour.
+// Effect durations are in ticks (20/sec) → ~1 hour. Callers needing
+// indefinite protection must re-call setInvulnerable before that lapses
+// (e.g. on an interval); the heal backstop covers lapse gaps but cannot
+// prevent lethal unresistable damage.
 const RESISTANCE_TICKS = 20 * 60 * 60
 
 /** Options for {@link setInvulnerable}. */

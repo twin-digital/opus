@@ -32,16 +32,17 @@ while (!existsSync(join(root, 'pnpm-workspace.yaml')) && root !== dirname(root))
 // Semver string → Bedrock's [major, minor, patch] triple, dropping any
 // prerelease/build suffix. Strict: a malformed version would otherwise produce
 // a syntactically-valid activation entry the server silently refuses to load.
-// Must stay in sync with the build-time injection in @twin-digital/mc-pack-config.
+// (The whole string is shape-checked first — parseInt alone would coerce
+// '1.2.3rc' to [1,2,3].) @twin-digital/mc-pack-config's build-time injection
+// validates the same shape with the semver library; this standalone script
+// cannot import workspace packages.
+const SEMVER_TRIPLE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:[-+].*)?$/
 const parseVersionTriple = (semver, context) => {
-  const parts = semver
-    .split(/[-+]/)[0]
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
-  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) {
+  const match = SEMVER_TRIPLE.exec(semver)
+  if (match === null) {
     throw new Error(`${context}: version ${JSON.stringify(semver)} is not a major.minor.patch semver`)
   }
-  return parts
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
 }
 
 // Discover nodejs/<group>/<package>/pack/manifest.json across the whole repo.
@@ -76,13 +77,23 @@ for (const group of readdirSync(packsDir, { withFileTypes: true })) {
 packs.sort((a, b) => a.name.localeCompare(b.name))
 
 // Pack directory names become container paths (development_behavior_packs/<name>)
-// — same-named packs in different groups would collide on one target.
-const seen = new Map()
+// — same-named packs in different groups would collide on one target. And the
+// activation list keys on header.uuid, so a uuid shared between packs (a
+// copy-pasted manifest template) would fail arbitrarily at the server instead
+// of loudly here.
+const seenNames = new Map()
+const seenUuids = new Map()
 for (const pack of packs) {
-  if (seen.has(pack.name)) {
-    throw new Error(`duplicate pack directory name '${pack.name}': ${seen.get(pack.name)} and ${pack.dir}`)
+  if (seenNames.has(pack.name)) {
+    throw new Error(`duplicate pack directory name '${pack.name}': ${seenNames.get(pack.name)} and ${pack.dir}`)
   }
-  seen.set(pack.name, pack.dir)
+  seenNames.set(pack.name, pack.dir)
+  if (seenUuids.has(pack.pack_id)) {
+    throw new Error(
+      `duplicate pack uuid '${pack.pack_id}': ${seenUuids.get(pack.pack_id)} and ${pack.dir} — regenerate the copied manifest's header.uuid`,
+    )
+  }
+  seenUuids.set(pack.pack_id, pack.dir)
 }
 
 // --- activation/world_behavior_packs.json ---
@@ -92,7 +103,9 @@ writeFileSync(join(here, 'activation', 'world_behavior_packs.json'), `${JSON.str
 // --- compose.watch.yaml ---
 // Scalars are emitted JSON-encoded (valid YAML) so a name/path containing
 // YAML-significant characters breaks loudly at compose parse, not silently.
-const yamlScalar = (value) => JSON.stringify(value)
+// Literal dollars are doubled: compose interpolates ${VAR}/$VAR even inside
+// quoted scalars, and an unset var substitutes silently.
+const yamlScalar = (value) => JSON.stringify(value.replaceAll('$', '$$$$'))
 const packRules = packs
   .map(({ name, dir }) => {
     const distPath = relative(here, join(dir, 'dist')).replaceAll('\\', '/')
