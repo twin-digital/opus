@@ -7,6 +7,11 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '../../..')
 
+// Pin all commands to the repo root: the script's answers (tags, workspace
+// layout) must come from the repo it lives in, not whatever cwd it was
+// invoked from.
+const $$ = $({ cwd: repoRoot })
+
 /**
  * Detects packages released at the current commit that produce GitHub release
  * assets.
@@ -27,7 +32,7 @@ const repoRoot = path.resolve(__dirname, '../../..')
 
 async function main() {
   try {
-    const { stdout } = await $`git tag --points-at HEAD`
+    const { stdout } = await $$`git tag --points-at HEAD`
     const tags = stdout.trim().split('\n').filter(Boolean)
 
     if (tags.length === 0) {
@@ -82,7 +87,7 @@ async function main() {
  * Map every workspace package name to its directory.
  */
 async function listWorkspacePackages() {
-  const { stdout } = await $`pnpm list --json --recursive --depth=-1`
+  const { stdout } = await $$`pnpm list --json --recursive --depth=-1`
   const workspaces = JSON.parse(stdout)
 
   const dirs = new Map()
