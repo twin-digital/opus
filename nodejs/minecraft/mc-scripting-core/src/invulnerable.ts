@@ -40,10 +40,12 @@ export const registerInvulnerabilityGuard = (world: World): void => {
 
   world.afterEvents.entityHurt.subscribe((event) => {
     const entity = event.hurtEntity
-    if (!entity.hasTag(INVULNERABLE_TAG)) {
-      return
-    }
     try {
+      // Inside the try: the hit that fired this event can have killed/unloaded
+      // the entity, and every method throws on an invalid entity.
+      if (!entity.hasTag(INVULNERABLE_TAG)) {
+        return
+      }
       entity.getComponent('minecraft:health')?.resetToMaxValue()
     } catch {
       // Entity unloaded/invalidated between the hit and this heal — ignore.
@@ -56,8 +58,10 @@ export const registerInvulnerabilityGuard = (world: World): void => {
  *
  * The tag is the source of truth for "this should be protected": the Resistance
  * effect stops the damage up front, and the heal-on-hurt backstop keyed on the
- * same tag (see {@link registerInvulnerabilityGuard}) catches anything a large
- * single hit might slip through. Idempotent, and safe on an entity that has
+ * same tag (see {@link registerInvulnerabilityGuard}) covers effect-lapse
+ * windows and sub-lethal damage Resistance doesn't reduce. Lethal unresistable
+ * damage (the void, `/kill`) can still kill the entity — the heal runs after
+ * the hit and cannot revive. Idempotent, and safe on an entity that has
  * unloaded/invalidated between selection and this call.
  */
 export const setInvulnerable = (

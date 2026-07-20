@@ -266,27 +266,54 @@ jobs:
 
       - name: Detect released packages with release assets
         id: detect
-        run: echo "packages=$(node ./tooling/scripts/bin/release-asset-packages.js)" >> "$GITHUB_OUTPUT"
+        # Plain assignment first so a detect-script failure fails the step —
+        # embedded in `echo "$(...)"` the exit status would be discarded.
+        run: |
+          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
 
       - name: Build and attach release assets
         if: steps.detect.outputs.packages != '[]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed via the environment, not ${{ }}-spliced into the script:
+          # the JSON carries git tag names verbatim, and env values stay data.
+          PACKAGES: ${{ steps.detect.outputs.packages }}
         run: |
-          set -euo pipefail
+          # No -e at the top level: each package runs in its own -e subshell so
+          # one failure doesn't strand the remaining packages' assets (the loop
+          # equivalent of docker-build-publish's fail-fast: false).
+          set -uo pipefail
+          failed=()
           while IFS=$'\t' read -r name dir tag; do
-            pnpm build --filter "$name"
-            pnpm --filter "$name" run release-assets
-            # GitHub computes sha256 digests for assets, but only as API
-            # metadata; SHA256SUMS is the downloadable companion so plain-URL
-            # consumers (ansible get_url checksum:, sha256sum -c) can verify
-            # without an API call.
-            (cd "$dir/.release-assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
-            # The release normally already exists (changesets creates one per
-            # tag); create it only if a partial publish failure left it missing.
-            gh release upload "$tag" "$dir"/.release-assets/* --clobber ||
-              gh release create "$tag" --verify-tag --title "$tag" "$dir"/.release-assets/*
-          done < <(jq -r '.[] | [.name, .path, .tag] | @tsv' <<< '${{ steps.detect.outputs.packages }}')
+            (
+              set -euo pipefail
+              pnpm build --filter "$name"
+              pnpm --filter "$name" run release-assets
+              # GitHub computes sha256 digests for assets, but only as API
+              # metadata; SHA256SUMS is the downloadable companion so plain-URL
+              # consumers (ansible get_url checksum:, sha256sum -c) can verify
+              # without an API call.
+              (cd "$dir/.release-assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
+              # The release normally already exists (changesets creates one per
+              # tag); create it only when it is genuinely missing (a partial
+              # publish failure), so an upload error isn't misread as "no
+              # release" and reported as the wrong problem.
+              if ! gh release view "$tag" --json id > /dev/null 2>&1; then
+                gh release create "$tag" --verify-tag --title "$tag" --notes ""
+              fi
+              gh release upload "$tag" "$dir"/.release-assets/* --clobber
+            ) < /dev/null
+            rc=$?
+            if [ "$rc" -ne 0 ]; then
+              echo "::error::release assets failed for $tag (exit $rc)"
+              failed+=("$tag")
+            fi
+          done < <(jq -r '.[] | [.name, .path, .tag] | @tsv' <<< "$PACKAGES")
+          if [ "${#failed[@]}" -gt 0 ]; then
+            echo "::error::release-assets failed for: ${failed[*]}"
+            exit 1
+          fi
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:

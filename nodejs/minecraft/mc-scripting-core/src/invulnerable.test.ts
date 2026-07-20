@@ -17,6 +17,22 @@ const makeEntity = (tags: string[] = []) => {
   return { entity: spies as unknown as Entity, spies, health }
 }
 
+// An entity that has been unloaded/killed: every method throws, as the real
+// API does once an entity is invalid.
+const makeInvalidEntity = () => {
+  const throwing = () => {
+    throw new Error('entity invalidated')
+  }
+  return {
+    hasTag: throwing,
+    addTag: throwing,
+    removeTag: throwing,
+    addEffect: throwing,
+    removeEffect: throwing,
+    getComponent: throwing,
+  } as unknown as Entity
+}
+
 const makeWorld = () => {
   const hurtHandlers: ((event: { hurtEntity: Entity }) => void)[] = []
   const world = {
@@ -125,5 +141,25 @@ describe('registerInvulnerabilityGuard', () => {
     hurtHandlers[0]({ hurtEntity: entity })
 
     expect(health.resetToMaxValue).not.toHaveBeenCalled()
+  })
+
+  it('does not propagate when the hurt entity was invalidated by the hit', () => {
+    const { world, hurtHandlers } = makeWorld()
+    registerInvulnerabilityGuard(world)
+
+    expect(() => {
+      hurtHandlers[0]({ hurtEntity: makeInvalidEntity() })
+    }).not.toThrow()
+  })
+})
+
+describe('setInvulnerable on an invalidated entity', () => {
+  it('does not propagate when every entity method throws', () => {
+    expect(() => {
+      setInvulnerable(makeInvalidEntity())
+    }).not.toThrow()
+    expect(() => {
+      setInvulnerable(makeInvalidEntity(), { enabled: false })
+    }).not.toThrow()
   })
 })

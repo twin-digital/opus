@@ -10,11 +10,27 @@ interface BedrockManifest {
 }
 
 /**
+ * Semver string → Bedrock's `[major, minor, patch]` triple, dropping any
+ * prerelease/build suffix. Strict: a malformed version would otherwise
+ * produce a syntactically-valid manifest the server silently refuses to load.
+ * Must stay in sync with the copy in dev-bedrock-server/generate-dev-config.mjs
+ * (a standalone script that cannot import this package).
+ */
+const parseVersionTriple = (semver: string, context: string): number[] => {
+  const parts = semver
+    .split(/[-+]/)[0]
+    .split('.')
+    .map((part) => Number.parseInt(part, 10))
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) {
+    throw new Error(`${context}: version ${JSON.stringify(semver)} is not a major.minor.patch semver`)
+  }
+  return parts
+}
+
+/**
  * Copy the committed `pack/` template into `dist/` and inject the package.json
  * version (the changesets-owned bump) into the manifest's header and modules.
- * Bedrock wants a `[major, minor, patch]` triple, so the semver string is
- * parsed, dropping any prerelease/build suffix. The result is a complete,
- * installable behavior pack rooted at `dist/`.
+ * The result is a complete, installable behavior pack rooted at `dist/`.
  */
 const assemblePack = (packageDir: string): void => {
   const distDir = join(packageDir, 'dist')
@@ -23,10 +39,7 @@ const assemblePack = (packageDir: string): void => {
   const { version: semver } = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')) as {
     version: string
   }
-  const version = semver
-    .split(/[-+]/)[0]
-    .split('.')
-    .map((part) => Number.parseInt(part, 10))
+  const version = parseVersionTriple(semver, join(packageDir, 'package.json'))
 
   const manifestPath = join(distDir, 'manifest.json')
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as BedrockManifest

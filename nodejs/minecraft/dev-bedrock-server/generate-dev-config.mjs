@@ -14,9 +14,9 @@
 //
 //     docker compose -f compose.yaml -f compose.watch.yaml up --watch
 //
-// Re-run whenever you add a pack or a pack's version bumps. Versions come from
-// package.json (the source of truth the build injects into the shipped
-// manifest), uuids from the pack manifest.
+// Re-run whenever you add a pack or a pack's version bumps (dev.mjs does both
+// automatically). Versions come from package.json (the source of truth the
+// build injects into the shipped manifest), uuids from the pack manifest.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -27,6 +27,21 @@ const here = fileURLToPath(new URL('.', import.meta.url))
 let root = here
 while (!existsSync(join(root, 'pnpm-workspace.yaml')) && root !== dirname(root)) {
   root = dirname(root)
+}
+
+// Semver string → Bedrock's [major, minor, patch] triple, dropping any
+// prerelease/build suffix. Strict: a malformed version would otherwise produce
+// a syntactically-valid activation entry the server silently refuses to load.
+// Must stay in sync with the build-time injection in @twin-digital/mc-pack-config.
+const parseVersionTriple = (semver, context) => {
+  const parts = semver
+    .split(/[-+]/)[0]
+    .split('.')
+    .map((part) => Number.parseInt(part, 10))
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part) || part < 0)) {
+    throw new Error(`${context}: version ${JSON.stringify(semver)} is not a major.minor.patch semver`)
+  }
+  return parts
 }
 
 // Discover nodejs/<group>/<package>/pack/manifest.json across the whole repo.
@@ -46,29 +61,44 @@ for (const group of readdirSync(packsDir, { withFileTypes: true })) {
       continue
     }
     const { header } = JSON.parse(readFileSync(manifest, 'utf8'))
-    // Semver string → Bedrock's [major, minor, patch] triple, dropping any
-    // prerelease/build suffix.
+    if (typeof header?.uuid !== 'string' || header.uuid.length === 0) {
+      throw new Error(`${manifest}: pack manifest has no header.uuid`)
+    }
     const { version } = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'))
-    const versionTriple = version
-      .split(/[-+]/)[0]
-      .split('.')
-      .map((part) => Number.parseInt(part, 10))
-    packs.push({ name: pkg.name, dir: packageDir, pack_id: header.uuid, version: versionTriple })
+    packs.push({
+      name: pkg.name,
+      dir: packageDir,
+      pack_id: header.uuid,
+      version: parseVersionTriple(version, join(packageDir, 'package.json')),
+    })
   }
 }
 packs.sort((a, b) => a.name.localeCompare(b.name))
+
+// Pack directory names become container paths (development_behavior_packs/<name>)
+// — same-named packs in different groups would collide on one target.
+const seen = new Map()
+for (const pack of packs) {
+  if (seen.has(pack.name)) {
+    throw new Error(`duplicate pack directory name '${pack.name}': ${seen.get(pack.name)} and ${pack.dir}`)
+  }
+  seen.set(pack.name, pack.dir)
+}
 
 // --- activation/world_behavior_packs.json ---
 const activation = packs.map(({ pack_id, version }) => ({ pack_id, version }))
 writeFileSync(join(here, 'activation', 'world_behavior_packs.json'), `${JSON.stringify(activation, null, 2)}\n`)
 
 // --- compose.watch.yaml ---
+// Scalars are emitted JSON-encoded (valid YAML) so a name/path containing
+// YAML-significant characters breaks loudly at compose parse, not silently.
+const yamlScalar = (value) => JSON.stringify(value)
 const packRules = packs
   .map(({ name, dir }) => {
     const distPath = relative(here, join(dir, 'dist')).replaceAll('\\', '/')
     const path = distPath.startsWith('.') ? distPath : `./${distPath}`
-    return `        - path: ${path}
-          target: /data/development_behavior_packs/${name}
+    return `        - path: ${yamlScalar(path)}
+          target: ${yamlScalar(`/data/development_behavior_packs/${name}`)}
           action: sync+exec
           exec:
             command: send-command reload

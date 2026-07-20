@@ -8,11 +8,14 @@
 # symlinked dirs are silently ignored). Run with both files and the watcher
 # attached:
 #
-#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
+#   docker compose [--env-file .env] \
+#     -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
 #     -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up --watch
 #
-# Run compose from the REPO ROOT so it picks up the repo-root `.env`
-# (MINECRAFT_* overrides; copy .env.example → .env for the pinned dev seed).
+# Run compose from the REPO ROOT (so the -f paths resolve) and, if you created
+# a repo-root `.env` (copy .env.example — MINECRAFT_* overrides, pinned dev
+# seed), pass it with --env-file: compose only auto-loads a .env next to the
+# first compose file, never from the cwd. dev.mjs adds the flag automatically.
 # See README.md for the full dev loop; note that compose only watches paths
 # that exist when it starts, so build the packs once before `up --watch`.
 #

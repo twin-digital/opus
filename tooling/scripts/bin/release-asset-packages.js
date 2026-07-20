@@ -35,6 +35,10 @@ async function main() {
       return
     }
 
+    // One workspace listing for all tags; a failure here is a hard error —
+    // treating it as "package not found" would silently skip asset uploads.
+    const packageDirs = await listWorkspacePackages()
+
     const packages = []
 
     for (const tag of tags) {
@@ -46,14 +50,14 @@ async function main() {
 
       const [, packageName, version] = match
 
-      const packageJsonPath = await findPackageJson(packageName)
-      if (!packageJsonPath) {
-        console.error(`Warning: Could not find package.json for ${packageName}`, { stderr: true })
+      const packageDir = packageDirs.get(packageName)
+      if (!packageDir) {
+        console.error(`Warning: Could not find package for tag ${tag}`)
         continue
       }
 
       // Only include packages that implement the release-assets hook
-      const manifest = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'))
       if (!manifest.scripts?.['release-assets']) {
         continue
       }
@@ -61,7 +65,7 @@ async function main() {
       packages.push({
         name: packageName,
         version: version,
-        path: path.relative(repoRoot, path.dirname(packageJsonPath)),
+        path: path.relative(repoRoot, packageDir),
         tag: tag,
       })
     }
@@ -75,24 +79,19 @@ async function main() {
 }
 
 /**
- * Find package.json file for a given package name by searching the workspace
+ * Map every workspace package name to its directory.
  */
-async function findPackageJson(packageName) {
-  try {
-    const { stdout } = await $`pnpm list --json --recursive --depth=-1`
-    const workspaces = JSON.parse(stdout)
+async function listWorkspacePackages() {
+  const { stdout } = await $`pnpm list --json --recursive --depth=-1`
+  const workspaces = JSON.parse(stdout)
 
-    for (const workspace of workspaces) {
-      if (workspace.name === packageName) {
-        return workspace.path ? path.join(workspace.path, 'package.json') : null
-      }
+  const dirs = new Map()
+  for (const workspace of workspaces) {
+    if (workspace.name && workspace.path) {
+      dirs.set(workspace.name, workspace.path)
     }
-
-    return null
-  } catch (error) {
-    console.error(`Error finding package ${packageName}:`, error.message)
-    return null
   }
+  return dirs
 }
 
 main()

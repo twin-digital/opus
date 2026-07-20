@@ -9,28 +9,36 @@
 // 3. runs the server (docker compose up --watch: server logs + deploy-on-change)
 //    and the pack builders (turbo run watch) together, output interleaved with
 //    [server] / [build] prefixes
+// 4. once the world exists, reconciles its pack-activation list against the
+//    generated one (a stale list would otherwise never sync — compose watch
+//    only reacts to changes made while it is running)
 //
 // Ctrl+C stops both (compose stops the container; the world volume persists).
-import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { execFile as execFileCb, spawn, spawnSync } from 'node:child_process'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
+
+const execFile = promisify(execFileCb)
+const sleep = promisify(setTimeout)
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 
 // Walk up to the monorepo root (the dir with pnpm-workspace.yaml) — compose
-// must run from there to pick up the repo-root .env.
+// must run from there so the -f/--env-file paths below resolve.
 let root = here
 while (!existsSync(join(root, 'pnpm-workspace.yaml')) && root !== dirname(root)) {
   root = dirname(root)
 }
 
-// Each pack runs a persistent turbo `watch` task, and turbo.json caps global
-// concurrency low — size the limit to the pack count (plus headroom for the
-// one-off dependency builds turbo schedules first).
-const countPacks = () => {
-  let count = 0
+// Discover every behavior pack (any package with a pack/manifest.json) — the
+// same walk generate-dev-config.mjs uses. One list drives the build/watch
+// filters, the turbo concurrency limit, and the activation reconciler, so the
+// set of packs built always matches the set deployed.
+const discoverPacks = () => {
+  const packs = []
   const packsDir = join(root, 'nodejs')
   for (const group of readdirSync(packsDir, { withFileTypes: true })) {
     if (!group.isDirectory()) {
@@ -38,25 +46,40 @@ const countPacks = () => {
     }
     for (const pkg of readdirSync(join(packsDir, group.name), { withFileTypes: true })) {
       if (pkg.isDirectory() && existsSync(join(packsDir, group.name, pkg.name, 'pack', 'manifest.json'))) {
-        count += 1
+        packs.push(`./nodejs/${group.name}/${pkg.name}`)
       }
     }
   }
-  return count
+  return packs
 }
+const packDirs = discoverPacks()
+const packFilters = packDirs.flatMap((dir) => ['--filter', dir])
 
-const PACKS_FILTER = './nodejs/minecraft/*'
-const composeFiles = ['-f', join(here, 'compose.yaml'), '-f', join(here, 'compose.watch.yaml')]
+// Compose resolves its default .env from the first compose file's directory,
+// not the cwd — pass the repo-root .env explicitly (when present) so the
+// documented MINECRAFT_* overrides actually apply.
+const composeArgs = [
+  'compose',
+  ...(existsSync(join(root, '.env')) ? ['--env-file', '.env'] : []),
+  '-f',
+  join(here, 'compose.yaml'),
+  '-f',
+  join(here, 'compose.watch.yaml'),
+]
 
 const run = (command, args) => {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
+  if (result.error) {
+    console.error(`failed to run ${command}: ${result.error.message}`)
+    process.exit(1)
+  }
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
   }
 }
 
 console.log('▸ building packs…')
-run('pnpm', ['build', '--filter', PACKS_FILTER])
+run('pnpm', ['build', ...packFilters])
 console.log('▸ generating dev config…')
 run('node', [join(here, 'generate-dev-config.mjs')])
 
@@ -123,60 +146,92 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   shutdown(0)
 })
+// Detached children outlive the terminal session on their own, so a hangup
+// (closed terminal / dropped SSH) must trigger the same shutdown.
+process.on('SIGHUP', () => {
+  shutdown(0)
+})
 
 console.log('▸ starting server + watchers (Ctrl+C to stop)…')
-spawnPrefixed('server', '36', 'docker', ['compose', ...composeFiles, 'up', '--watch'])
+spawnPrefixed('server', '36', 'docker', [...composeArgs, 'up', '--watch'])
 spawnPrefixed('build', '33', 'pnpm', [
   'exec',
   'turbo',
   'run',
   'watch',
-  '--filter',
-  PACKS_FILTER,
-  `--concurrency=${countPacks() + 4}`,
+  ...packFilters,
+  `--concurrency=${packDirs.length + 4}`,
 ])
 
 // Compose watch only reacts to local changes made while it is running, and the
 // activation list is generated before compose starts — so a stale list in the
-// world (new pack, migrated world) would never sync on its own. Once the
-// server is up, compare the world's activation with the generated one; if it
-// differs, rewrite the local file, which fires the watch rule (sync + server
-// restart).
+// world (new pack, migrated world) would never sync on its own. Poll the
+// world's activation and, when it differs from the generated one, rewrite the
+// local file so the watch rule syncs it in and restarts the server; keep
+// polling until the world actually converges.
 const reconcileActivation = async () => {
   const activationPath = join(here, 'activation', 'world_behavior_packs.json')
   const desired = readFileSync(activationPath, 'utf8')
-  for (let attempt = 0; attempt < 24 && !shuttingDown; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 5000))
-    const result = spawnSync(
-      'docker',
-      [
-        'compose',
-        ...composeFiles,
-        'exec',
-        '-T',
-        'bedrock',
-        'sh',
-        '-c',
-        'cat "/data/worlds/${LEVEL_NAME:-dev}/world_behavior_packs.json" 2>/dev/null || echo __MISSING__',
-      ],
-      { cwd: root, encoding: 'utf8' },
-    )
-    if (result.status !== 0) {
-      continue // server still starting
-    }
-    let upToDate = false
+  const desiredJson = JSON.stringify(JSON.parse(desired))
+
+  // Report what the world has: __NO_WORLD__ while the server is still
+  // downloading/generating (don't restart it mid-boot), __MISSING__ when the
+  // world exists but has no activation file (fresh world — needs the sync).
+  const probe = async () => {
     try {
-      upToDate = JSON.stringify(JSON.parse(result.stdout)) === JSON.stringify(JSON.parse(desired))
+      const { stdout } = await execFile(
+        'docker',
+        [
+          ...composeArgs,
+          'exec',
+          '-T',
+          'bedrock',
+          'sh',
+          '-c',
+          'w="/data/worlds/${LEVEL_NAME:-dev}"; if [ ! -d "$w" ]; then echo __NO_WORLD__; elif [ ! -f "$w/world_behavior_packs.json" ]; then echo __MISSING__; else cat "$w/world_behavior_packs.json"; fi',
+        ],
+        { cwd: root },
+      )
+      return stdout
     } catch {
-      upToDate = false // missing or malformed in the world
+      return null // container not up yet
     }
-    if (upToDate) {
-      console.log('▸ world pack activation up to date')
-    } else {
+  }
+
+  const POLL_SECONDS = 5
+  const MAX_POLLS = 120 // 10 min — first boot downloads the server binary
+  let wrote = false
+  for (let attempt = 0; attempt < MAX_POLLS && !shuttingDown; attempt += 1) {
+    await sleep(POLL_SECONDS * 1000)
+    if (shuttingDown) {
+      return
+    }
+    const current = await probe()
+    if (current === null || current.includes('__NO_WORLD__')) {
+      continue // not up / still generating
+    }
+    let converged = false
+    try {
+      converged = JSON.stringify(JSON.parse(current)) === desiredJson
+    } catch {
+      converged = false // __MISSING__ or malformed
+    }
+    if (converged) {
+      console.log(wrote ? '▸ world pack activation updated' : '▸ world pack activation up to date')
+      return
+    }
+    // Rewrite (re-touch every few polls in case the first write raced compose
+    // watch's startup) and keep polling until the world reflects it.
+    if (!wrote || attempt % 6 === 0) {
       console.log('▸ updating world pack activation (server will restart)…')
       writeFileSync(activationPath, desired)
+      wrote = true
     }
-    return
+  }
+  if (!shuttingDown) {
+    console.warn(
+      '⚠ could not confirm the world pack activation converged — check `docker compose ps` and re-run generate-dev-config.mjs with the loop running',
+    )
   }
 }
 void reconcileActivation()

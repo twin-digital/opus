@@ -4,13 +4,12 @@ import { registerInvulnerabilityGuard, setInvulnerable } from '@twin-digital/mc-
 
 const VILLAGER = 'minecraft:villager_v2' // current villager type id
 const REASSERT_INTERVAL_TICKS = 100 // 5s — tops up Resistance and catches new arrivals
+const DIMENSIONS = ['minecraft:overworld', 'minecraft:nether', 'minecraft:the_end']
 
 /**
  * Keep every villager invulnerable: existing ones, ones that spawn (birth,
- * cured zombie), and ones whose chunk loads in.
- *
- * Villagers live in the overworld; iterating just that dimension keeps the
- * sweep cheap.
+ * cured zombie), and ones whose chunk loads in — in every dimension (a
+ * villager pushed through a portal keeps its protection topped up).
  */
 export const startVillagerGuard = (): void => {
   registerInvulnerabilityGuard(world)
@@ -22,8 +21,10 @@ export const startVillagerGuard = (): void => {
   }
 
   const sweep = (): void => {
-    for (const entity of world.getDimension('overworld').getEntities({ type: VILLAGER })) {
-      setInvulnerable(entity)
+    for (const dimension of DIMENSIONS) {
+      for (const entity of world.getDimension(dimension).getEntities({ type: VILLAGER })) {
+        setInvulnerable(entity)
+      }
     }
   }
 

@@ -11,7 +11,8 @@ For the day-to-day dev loop, `dev.mjs` runs everything as one command — see th
 itself; the individual pieces `dev.mjs` orchestrates are:
 
 ```bash
-# from the repo root:
+# from the repo root (add `--env-file .env` to the compose command if you
+# created one — compose only auto-loads a .env next to the compose file):
 pnpm build --filter './nodejs/minecraft/*'   # dist/ must exist before the watcher starts
 node nodejs/minecraft/dev-bedrock-server/generate-dev-config.mjs
 docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
@@ -19,9 +20,11 @@ docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
 pnpm exec turbo run watch --filter './nodejs/minecraft/*'   # separate terminal
 ```
 
-Compose is run from the **repo root** so it picks up the repo-root `.env`
-(`MINECRAFT_*` overrides). Copy `.env.example` → `.env` for the pinned dev seed;
-without it the server still boots (random world).
+Server config comes from `MINECRAFT_*` variables in the repo-root `.env`
+(copy `.env.example`; without it the server still boots with a random world).
+Compose never auto-loads a `.env` from the cwd — `dev.mjs` passes
+`--env-file .env` automatically; add the flag yourself when running compose
+by hand.
 
 ## Generated per-pack config
 
