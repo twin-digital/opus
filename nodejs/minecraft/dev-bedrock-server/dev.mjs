@@ -12,7 +12,7 @@
 //
 // Ctrl+C stops both (compose stops the container; the world volume persists).
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +24,25 @@ const here = fileURLToPath(new URL('.', import.meta.url))
 let root = here
 while (!existsSync(join(root, 'pnpm-workspace.yaml')) && root !== dirname(root)) {
   root = dirname(root)
+}
+
+// Each pack runs a persistent turbo `watch` task, and turbo.json caps global
+// concurrency low — size the limit to the pack count (plus headroom for the
+// one-off dependency builds turbo schedules first).
+const countPacks = () => {
+  let count = 0
+  const packsDir = join(root, 'nodejs')
+  for (const group of readdirSync(packsDir, { withFileTypes: true })) {
+    if (!group.isDirectory()) {
+      continue
+    }
+    for (const pkg of readdirSync(join(packsDir, group.name), { withFileTypes: true })) {
+      if (pkg.isDirectory() && existsSync(join(packsDir, group.name, pkg.name, 'pack', 'manifest.json'))) {
+        count += 1
+      }
+    }
+  }
+  return count
 }
 
 const PACKS_FILTER = './nodejs/minecraft/*'
@@ -88,4 +107,12 @@ process.on('SIGTERM', () => {
 
 console.log('▸ starting server + watchers (Ctrl+C to stop)…')
 spawnPrefixed('server', '36', 'docker', ['compose', ...composeFiles, 'up', '--watch'])
-spawnPrefixed('build', '33', 'pnpm', ['exec', 'turbo', 'run', 'watch', '--filter', PACKS_FILTER])
+spawnPrefixed('build', '33', 'pnpm', [
+  'exec',
+  'turbo',
+  'run',
+  'watch',
+  '--filter',
+  PACKS_FILTER,
+  `--concurrency=${countPacks() + 4}`,
+])
