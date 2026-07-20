@@ -71,7 +71,7 @@ jobs:
       # Mint AFTER install/generate so no AWS creds or App token are in the environment while
       # third-party dependency code is on disk.
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN_RENOVATE }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
