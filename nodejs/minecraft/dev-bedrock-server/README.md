@@ -12,7 +12,7 @@ docker compose up -d            # boots Bedrock (downloads VERSION on first run)
 # wait a few seconds for the world to generate, then:
 pnpm install                    # from repo root: links village-guard → mc-pack-core
 cd ../village-guard && pnpm build   # produces dist/main.js (mc-pack-core inlined)
-cd ../dev-bedrock-server && ./activate.sh   # lists the pack in world_behavior_packs.json
+cd ../dev-bedrock-server && ./activate.sh   # activates every pack in the world
 ```
 
 ## The loop
@@ -51,4 +51,8 @@ The server publishes `19132/udp` on the Docker host. In Minecraft Bedrock →
   line to bump in `village-guard/pack/manifest.json`.
 - **Laptop can't connect?** the allowlist is off on this dev world
   (`allowlist off`); on a fresh volume, run it again or set `allow-list=false`.
+- **Adding a pack:** `activate.sh` regenerates `world_behavior_packs.json` from
+  every package with a `pack/manifest.json` (via `build-activation.mjs`), so a new
+  pack is picked up automatically — just re-run `./activate.sh`. That file is
+  generated, not committed (gitignored).
 - **Reset the world:** `docker compose down -v` (drops the `dev-data` volume).

@@ -73,3 +73,4 @@ nodejs/dolmenwood/refbash/.data
 # do not ignore .claude directories in nested directories, since these are custom configs, skills, etc.
 !*/**/.claude
 
+nodejs/minecraft/dev-bedrock-server/world_behavior_packs.json
