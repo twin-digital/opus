@@ -30,13 +30,6 @@ packages:
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
       typescript-with-options: false
-  '@twin-digital/mc-scripting-core':
-    # @minecraft/server ships types only (no runtime entry), so vitest can't
-    # resolve it. This package hand-manages vitest.config.ts to alias it to a
-    # local stub; opt out of the generated `export default sharedConfig` (which
-    # would clobber the alias). The vitest devDeps/scripts the feature added stay.
-    rules:
-      test: false
   '@twin-digital/tsdown-config':
     # This IS the shared bundle helper (keyed on its dev-time `tsdown`), so it
     # must not consume the bundle feature itself — that would generate a
@@ -621,7 +614,8 @@ features:
     # A Bedrock behavior pack (any package with a pack/manifest.json) keeps its
     # manifest identity in sync with package.json — the single source of truth.
     # Version is not synced here: it's owned by the changesets release bump and
-    # injected into the shipped manifest at pack build time (see deploy.mjs).
+    # injected into the shipped manifest at pack build time (the shared tsdown
+    # fragment from @twin-digital/mc-pack-config assembles dist/manifest.json).
     conditions:
       - exists: pack/manifest.json
     actions:
@@ -644,3 +638,36 @@ features:
           target:
             file: pack/manifest.json
             pointer: /header/name
+      - name: Use the shared pack bundle config
+        action: write-file
+        options:
+          file: tsdown.config.d/bedrock-pack.ts
+          content: |
+            // Managed by repo-kit. A behavior pack bundles src/main.ts to
+            // dist/scripts/main.js, keeps @minecraft/* external (the game runtime
+            // provides them), and assembles the shippable manifest into dist/ so
+            // dist/ is a complete installable pack — see @twin-digital/mc-pack-config.
+            import { defineBedrockPackConfig } from '@twin-digital/mc-pack-config'
+
+            export default defineBedrockPackConfig(import.meta.url)
+      - name: Add pack scripts and dependencies
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            scripts:
+              build: build
+              watch: watch
+            devDependencies:
+              '@twin-digital/mc-pack-config': workspace:*
+      # Packs are deployed as pack folders, not consumed as modules: nothing
+      # imports them and they are not npm-published, so the library-shaped
+      # package.json fields the package-manifest feature adds don't apply.
+      - name: Remove library packaging fields
+        action: json-merge-patch
+        options:
+          file: package.json
+          patch: |
+            private: true
+            exports: null
+            files: null

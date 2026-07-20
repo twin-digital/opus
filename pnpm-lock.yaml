@@ -42,6 +42,9 @@ catalogs:
     '@middy/core':
       specifier: ^7.0.0
       version: 7.6.8
+    '@minecraft/server':
+      specifier: ^2.8.0
+      version: 2.8.0
     '@types/aws-lambda':
       specifier: ^8.10.159
       version: 8.10.162
@@ -2007,8 +2010,56 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.5.0)
       '@minecraft/server':
-        specifier: ^2.8.0
+        specifier: 'catalog:'
         version: 2.8.0(@minecraft/common@1.3.0)(@minecraft/vanilla-data@1.26.33)
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/mc-pack-config':
+        specifier: workspace:*
+        version: link:../mc-pack-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      eslint:
+        specifier: 'catalog:'
+        version: 10.5.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.5.0)
+      globals:
+        specifier: 'catalog:'
+        version: 17.6.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.4
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.18.3(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
+
+  nodejs/minecraft/mc-pack-config:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.5.0)
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
@@ -2055,7 +2106,7 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.5.0)
       '@minecraft/server':
-        specifier: ^2.8.0
+        specifier: 'catalog:'
         version: 2.8.0(@minecraft/common@1.3.0)(@minecraft/vanilla-data@1.26.33)
       '@twin-digital/eslint-config':
         specifier: workspace:*
@@ -2106,11 +2157,14 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.5.0)
       '@minecraft/server':
-        specifier: ^2.8.0
+        specifier: 'catalog:'
         version: 2.8.0(@minecraft/common@1.3.0)(@minecraft/vanilla-data@1.26.33)
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
+      '@twin-digital/mc-pack-config':
+        specifier: workspace:*
+        version: link:../mc-pack-config
       '@twin-digital/mc-scripting-core':
         specifier: workspace:*
         version: link:../mc-scripting-core

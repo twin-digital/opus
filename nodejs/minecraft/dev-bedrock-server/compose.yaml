@@ -1,15 +1,17 @@
 # Local Bedrock dev server for behavior-pack iteration.
 #
-# The daemon is remote (socket on another host), so bind mounts don't work —
-# files are pushed with `docker compose cp` from the pack's deploy watch
-# (see ../village-guard/deploy.mjs). Nothing here is bind-mounted.
+# The daemon is remote (socket on another host), so bind mounts don't work.
+# Instead, `develop.watch` pushes files over the Docker API: each pack's built
+# dist/ syncs into the server's development_behavior_packs pool followed by a
+# `/reload`, and the generated activation list syncs into the world followed by
+# a restart. Run with the watcher attached:
+#
+#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up --watch
 #
 # Run compose from the REPO ROOT so it picks up the repo-root `.env`
-# (MINECRAFT_* overrides; copy .env.example → .env for the pinned dev seed):
-#
-#   docker compose -f nodejs/minecraft/dev-bedrock-server/compose.yaml up -d
-#   ../village-guard: pnpm dev        # watch → cp built pack → /reload
-#   nodejs/minecraft/dev-bedrock-server/activate.sh   # activate packs in the world
+# (MINECRAFT_* overrides; copy .env.example → .env for the pinned dev seed).
+# See README.md for the full dev loop; note that compose only watches paths
+# that exist when it starts, so build the packs once before `up --watch`.
 #
 # Every knob below is overridable via MINECRAFT_* in the repo-root .env, and
 # falls back to the default shown when unset — including LEVEL_SEED, which
@@ -20,21 +22,43 @@ services:
     image: itzg/minecraft-bedrock-server
     container_name: mc-bedrock-dev
     environment:
-      ALLOW_CHEATS: "${MINECRAFT_ALLOW_CHEATS:-true}" # needed for /reload and friends from the console
-      ALLOW_LIST: "${MINECRAFT_ALLOW_LIST:-false}" # dev server — no allowlist (see README)
-      CONTENT_LOG_CONSOLE_OUTPUT_ENABLED: "${MINECRAFT_CONTENT_LOG_CONSOLE_OUTPUT_ENABLED:-true}" # script errors → stdout
-      DEFAULT_PLAYER_PERMISSION_LEVEL: "${MINECRAFT_DEFAULT_PLAYER_PERMISSION_LEVEL:-operator}" # every joiner auto-opped (private dev)
-      DIFFICULTY: "${MINECRAFT_DIFFICULTY:-normal}"
-      EULA: "TRUE"
-      GAMEMODE: "${MINECRAFT_GAMEMODE:-survival}"
-      LEVEL_NAME: "${MINECRAFT_LEVEL_NAME:-dev}"
-      LEVEL_SEED: "${MINECRAFT_LEVEL_SEED:-}" # empty → random world; set in .env to pin
-      SERVER_NAME: "${MINECRAFT_SERVER_NAME:-dev-behavior-packs}"
-      VERSION: "${MINECRAFT_VERSION:-1.26.31.1}" # match prod so @minecraft/server lines up
+      ALLOW_CHEATS: '${MINECRAFT_ALLOW_CHEATS:-true}' # needed for /reload and friends from the console
+      ALLOW_LIST: '${MINECRAFT_ALLOW_LIST:-false}' # dev server — no allowlist (see README)
+      CONTENT_LOG_CONSOLE_OUTPUT_ENABLED: '${MINECRAFT_CONTENT_LOG_CONSOLE_OUTPUT_ENABLED:-true}' # script errors → stdout
+      DEFAULT_PLAYER_PERMISSION_LEVEL: '${MINECRAFT_DEFAULT_PLAYER_PERMISSION_LEVEL:-operator}' # every joiner auto-opped (private dev)
+      DIFFICULTY: '${MINECRAFT_DIFFICULTY:-normal}'
+      EULA: 'TRUE'
+      GAMEMODE: '${MINECRAFT_GAMEMODE:-survival}'
+      LEVEL_NAME: '${MINECRAFT_LEVEL_NAME:-dev}'
+      LEVEL_SEED: '${MINECRAFT_LEVEL_SEED:-}' # empty → random world; set in .env to pin
+      SERVER_NAME: '${MINECRAFT_SERVER_NAME:-dev-behavior-packs}'
+      VERSION: '${MINECRAFT_VERSION:-1.26.31.1}' # match prod so @minecraft/server lines up
+    develop:
+      watch:
+        # One rule per pack: ship the built pack, then hot-reload scripts. A
+        # shared-lib edit rebuilds several packs and fires several reloads —
+        # harmless. New pack? Add a rule here and re-run generate-activation.mjs.
+        - path: ../hello-world/dist
+          target: /data/development_behavior_packs/hello-world
+          action: sync+exec
+          exec:
+            command: send-command reload
+        - path: ../village-guard/dist
+          target: /data/development_behavior_packs/village-guard
+          action: sync+exec
+          exec:
+            command: send-command reload
+        # Activation-list changes (new pack, version bump) need a restart — the
+        # server only rereads world_behavior_packs.json on boot.
+        - path: ./activation
+          target: /data/worlds/${MINECRAFT_LEVEL_NAME:-dev}
+          action: sync+restart
+          ignore:
+            - .gitkeep
     ports:
       # Published on all interfaces of the DOCKER HOST, so a Minecraft client on
       # the LAN connects at <docker-host-ip>:19132 (Bedrock → Add Server).
-      - "0.0.0.0:19132:19132/udp"
+      - '0.0.0.0:19132:19132/udp'
     volumes:
       - dev-data:/data # world + server.properties + packs live on the daemon host
     stdin_open: true

@@ -231,6 +231,57 @@ jobs:
           docker push ${{ matrix.package.imageName }}:$MINOR
           docker push ${{ matrix.package.imageName }}:$MAJOR
 
+  # Attach installable .mcpack artifacts (a zip of the built pack, manifest at
+  # the archive root — the Bedrock community's standard format) to the GitHub
+  # releases changesets created for behavior-pack packages. Deployment (ansible)
+  # and Bedrock clients both install straight from the release asset.
+  mcpack-publish:
+    needs: publish
+    # Mirror docker-matrix: run on a release AND when publish failed (tags may
+    # still exist); skip the "create Version Packages PR" runs.
+    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # upload release assets
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # read the tags the publish job just pushed; head_sha keeps it in lockstep
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-tags: true
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # Restore-only: lets the pack builds replay CI's outputs.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Detect released behavior packs
+        id: detect
+        run: echo "packages=$(node ./tooling/scripts/bin/mc-pack-packages.js)" >> "$GITHUB_OUTPUT"
+
+      - name: Build packs and attach .mcpack release assets
+        if: steps.detect.outputs.packages != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          while IFS=$'\t' read -r name dir tag artifact; do
+            pnpm build --filter "$name"
+            (cd "$dir/dist" && zip -r "$RUNNER_TEMP/$artifact" .)
+            # The release normally already exists (changesets creates one per
+            # tag); create it only if a partial publish failure left it missing.
+            gh release upload "$tag" "$RUNNER_TEMP/$artifact" --clobber ||
+              gh release create "$tag" --verify-tag --title "$tag" "$RUNNER_TEMP/$artifact"
+          done < <(jq -r '.[] | [.name, .path, .tag, .artifact] | @tsv' <<< '${{ steps.detect.outputs.packages }}')
+
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
     needs: [publish, docker-matrix, docker-build-publish]

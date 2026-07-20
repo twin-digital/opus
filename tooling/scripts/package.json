@@ -11,6 +11,7 @@
     "docker-packages": "./bin/docker-packages.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
+    "mc-pack-packages": "./bin/mc-pack-packages.js",
     "squash": "./bin/squash.js",
     "test": "./bin/test.js",
     "watch": "./bin/watch.js"

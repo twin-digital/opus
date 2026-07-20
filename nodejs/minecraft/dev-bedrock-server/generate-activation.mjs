@@ -1,12 +1,18 @@
 #!/usr/bin/env node
-// Generate world_behavior_packs.json from every behavior pack in the monorepo.
+// Generate activation/world_behavior_packs.json from every behavior pack in the
+// monorepo.
 //
-// A "behavior pack" is any package with a pack/manifest.json. We anchor the glob
-// at the monorepo root (not this dev harness) and collect each pack's uuid (from
-// the manifest) + version (from package.json, the source of truth the build
-// injects into the shipped manifest), so what's activated matches what deploy.mjs
-// ships. Activating the dev world auto-includes every pack — no hand-maintained
-// list. activate.sh runs this before copying the file in.
+// A pack lands in the server's development_behavior_packs pool when compose
+// watch syncs its dist/, but it isn't applied until it's listed in the world's
+// world_behavior_packs.json. This regenerates that list; compose watch (see
+// compose.yaml) ships it into the world and restarts the server. Re-run it
+// whenever you add a pack or bump a pack's version.
+//
+// A "behavior pack" is any package with a pack/manifest.json. We anchor the
+// walk at the monorepo root (not this dev harness) and collect each pack's uuid
+// (from the manifest) + version (from package.json, the source of truth the
+// build injects into the shipped manifest), so what's activated matches what
+// gets deployed.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -49,8 +55,8 @@ for (const group of readdirSync(packsDir, { withFileTypes: true })) {
 packs.sort((a, b) => a.name.localeCompare(b.name))
 const activation = packs.map(({ pack_id, version }) => ({ pack_id, version }))
 
-writeFileSync(join(here, 'world_behavior_packs.json'), `${JSON.stringify(activation, null, 2)}\n`)
+writeFileSync(join(here, 'activation', 'world_behavior_packs.json'), `${JSON.stringify(activation, null, 2)}\n`)
 console.log(
-  `world_behavior_packs.json: ${activation.length} pack(s)` +
+  `activation/world_behavior_packs.json: ${activation.length} pack(s)` +
     (packs.length ? ` — ${packs.map((p) => p.name).join(', ')}` : ''),
 )

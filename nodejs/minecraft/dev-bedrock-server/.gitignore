@@ -1,3 +1,4 @@
-# Generated on demand by build-activation.mjs (run via activate.sh) from every
-# pack's manifest — never committed.
-world_behavior_packs.json
+# Generated on demand by generate-activation.mjs from every pack's manifest —
+# never committed. Lives in activation/ so compose watch can track the
+# directory (it exists from clone; single files can't be watched).
+activation/world_behavior_packs.json

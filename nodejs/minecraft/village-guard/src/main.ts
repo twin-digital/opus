@@ -7,8 +7,8 @@ import { startVillagerGuard } from './villager-guard.js'
 // NOT — they must be deferred to system.run or an event callback, or the whole
 // module throws on load.
 //
-// The invulnerability heal-backstop registers itself lazily on first use (inside
-// startVillagerGuard's setInvulnerable calls), so there's nothing to wire up here.
+// startVillagerGuard wires up the invulnerability heal-backstop and the
+// villager-protection events/interval.
 startVillagerGuard()
 
 // This runs on every /reload, so the banner is your proof the dev loop works.

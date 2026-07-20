@@ -1,39 +1,23 @@
 {
+  "private": true,
   "name": "@twin-digital/village-guard",
   "version": "0.1.0",
   "description": "Keeps all villagers invulnerable.",
   "license": "ISC",
   "type": "module",
-  "exports": {
-    "./*": {
-      "import": {
-        "source": "./src/*.ts",
-        "types": "./dist/*.d.ts",
-        "import": "./dist/*.js"
-      }
-    }
-  },
-  "files": [
-    "dist",
-    "!dist/**/*.d.ts.map"
-  ],
   "scripts": {
     "build": "build",
     "clean": "clean",
-    "deploy": "node deploy.mjs",
-    "dev": "node deploy.mjs --watch",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "prepack": "pnpm build",
-    "typecheck": "tsc --noEmit"
-  },
-  "peerDependencies": {
-    "@minecraft/server": ">=2.0.0"
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
-    "@minecraft/server": "^2.8.0",
+    "@minecraft/server": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/mc-pack-config": "workspace:*",
     "@twin-digital/mc-scripting-core": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

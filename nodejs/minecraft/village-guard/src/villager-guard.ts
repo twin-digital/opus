@@ -1,6 +1,6 @@
 import { world, system, type Entity } from '@minecraft/server'
 
-import { setInvulnerable } from '@twin-digital/mc-scripting-core'
+import { registerInvulnerabilityGuard, setInvulnerable } from '@twin-digital/mc-scripting-core'
 
 const VILLAGER = 'minecraft:villager_v2' // current villager type id
 const REASSERT_INTERVAL_TICKS = 100 // 5s — tops up Resistance and catches new arrivals
@@ -14,6 +14,8 @@ const REASSERT_INTERVAL_TICKS = 100 // 5s — tops up Resistance and catches new
  * periodic sweep cheap.
  */
 export const startVillagerGuard = (): void => {
+  registerInvulnerabilityGuard(world)
+
   const protectIfVillager = (entity: Entity): void => {
     if (entity.typeId === VILLAGER) {
       setInvulnerable(entity)

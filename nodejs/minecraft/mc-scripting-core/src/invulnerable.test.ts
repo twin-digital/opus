@@ -1,18 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Entity } from '@minecraft/server'
+import { describe, expect, it, vi } from 'vitest'
+import type { Entity, World } from '@minecraft/server'
 
-// `@minecraft/server` is aliased to test/minecraft-server.stub.ts (see
-// vitest.config.ts). Re-importing after resetModules gives both the stub and the
-// module-under-test a fresh instance, resetting the one-shot `guardRegistered`
-// flag and the stub's captured handlers.
-let invulnerable: typeof import('./invulnerable.js')
-let stub: typeof import('../test/minecraft-server.stub.js')
-
-beforeEach(async () => {
-  vi.resetModules()
-  stub = await import('../test/minecraft-server.stub.js')
-  invulnerable = await import('./invulnerable.js')
-})
+// @minecraft/server ships only type declarations (no runtime entry), so the
+// library imports it type-only and takes the world as an argument. Tests pass
+// plain duck-typed objects — no module mocking needed.
+import { INVULNERABLE_TAG, registerInvulnerabilityGuard, setInvulnerable } from './invulnerable.js'
 
 const makeEntity = (tags: string[] = []) => {
   const set = new Set(tags)
@@ -28,13 +20,27 @@ const makeEntity = (tags: string[] = []) => {
   return { entity: spies as unknown as Entity, spies, health }
 }
 
+const makeWorld = () => {
+  const hurtHandlers: ((event: { hurtEntity: Entity }) => void)[] = []
+  const world = {
+    afterEvents: {
+      entityHurt: {
+        subscribe: (handler: (event: { hurtEntity: Entity }) => void) => {
+          hurtHandlers.push(handler)
+        },
+      },
+    },
+  }
+  return { world: world as unknown as World, hurtHandlers }
+}
+
 describe('setInvulnerable', () => {
   it('tags the entity and applies hidden Resistance by default', () => {
     const { entity, spies } = makeEntity()
 
-    invulnerable.setInvulnerable(entity)
+    setInvulnerable(entity)
 
-    expect(spies.addTag).toHaveBeenCalledWith(invulnerable.INVULNERABLE_TAG)
+    expect(spies.addTag).toHaveBeenCalledWith(INVULNERABLE_TAG)
     expect(spies.addEffect).toHaveBeenCalledWith('resistance', expect.any(Number), {
       amplifier: 255,
       showParticles: false,
@@ -44,7 +50,7 @@ describe('setInvulnerable', () => {
   it('forwards showParticles when requested', () => {
     const { entity, spies } = makeEntity()
 
-    invulnerable.setInvulnerable(entity, { showParticles: true })
+    setInvulnerable(entity, { showParticles: true })
 
     expect(spies.addEffect).toHaveBeenCalledWith('resistance', expect.any(Number), {
       amplifier: 255,
@@ -53,19 +59,19 @@ describe('setInvulnerable', () => {
   })
 
   it('clears the tag and effect when disabled', () => {
-    const { entity, spies } = makeEntity([invulnerable.INVULNERABLE_TAG])
+    const { entity, spies } = makeEntity([INVULNERABLE_TAG])
 
-    invulnerable.setInvulnerable(entity, { enabled: false })
+    setInvulnerable(entity, { enabled: false })
 
-    expect(spies.removeTag).toHaveBeenCalledWith(invulnerable.INVULNERABLE_TAG)
+    expect(spies.removeTag).toHaveBeenCalledWith(INVULNERABLE_TAG)
     expect(spies.removeEffect).toHaveBeenCalledWith('resistance')
     expect(spies.addEffect).not.toHaveBeenCalled()
   })
 
   it('does not re-add the tag when already present (idempotent)', () => {
-    const { entity, spies } = makeEntity([invulnerable.INVULNERABLE_TAG])
+    const { entity, spies } = makeEntity([INVULNERABLE_TAG])
 
-    invulnerable.setInvulnerable(entity)
+    setInvulnerable(entity)
 
     expect(spies.addTag).not.toHaveBeenCalled()
     expect(spies.addEffect).toHaveBeenCalled()
@@ -78,42 +84,48 @@ describe('setInvulnerable', () => {
     })
 
     expect(() => {
-      invulnerable.setInvulnerable(entity)
+      setInvulnerable(entity)
     }).not.toThrow()
   })
 })
 
-describe('lazy guard registration', () => {
-  it('registers the entityHurt backstop exactly once across many calls', () => {
-    invulnerable.setInvulnerable(makeEntity().entity)
-    invulnerable.setInvulnerable(makeEntity().entity)
-    invulnerable.registerInvulnerabilityGuard()
+describe('registerInvulnerabilityGuard', () => {
+  it('subscribes the entityHurt backstop exactly once per world', () => {
+    const { world, hurtHandlers } = makeWorld()
 
-    expect(stub.hurtHandlers).toHaveLength(1)
+    registerInvulnerabilityGuard(world)
+    registerInvulnerabilityGuard(world)
+
+    expect(hurtHandlers).toHaveLength(1)
   })
 
-  it('does not subscribe until the first use', () => {
-    expect(stub.hurtHandlers).toHaveLength(0)
+  it('guards each world independently', () => {
+    const first = makeWorld()
+    const second = makeWorld()
 
-    invulnerable.setInvulnerable(makeEntity().entity)
+    registerInvulnerabilityGuard(first.world)
+    registerInvulnerabilityGuard(second.world)
 
-    expect(stub.hurtHandlers).toHaveLength(1)
+    expect(first.hurtHandlers).toHaveLength(1)
+    expect(second.hurtHandlers).toHaveLength(1)
   })
 
   it('heals a tagged entity back to full when it is hurt', () => {
-    const { entity, health } = makeEntity([invulnerable.INVULNERABLE_TAG])
-    invulnerable.registerInvulnerabilityGuard()
+    const { entity, health } = makeEntity([INVULNERABLE_TAG])
+    const { world, hurtHandlers } = makeWorld()
+    registerInvulnerabilityGuard(world)
 
-    stub.hurtHandlers[0]({ hurtEntity: entity })
+    hurtHandlers[0]({ hurtEntity: entity })
 
     expect(health.resetToMaxValue).toHaveBeenCalledTimes(1)
   })
 
   it('ignores an untagged entity that is hurt', () => {
     const { entity, health } = makeEntity()
-    invulnerable.registerInvulnerabilityGuard()
+    const { world, hurtHandlers } = makeWorld()
+    registerInvulnerabilityGuard(world)
 
-    stub.hurtHandlers[0]({ hurtEntity: entity })
+    hurtHandlers[0]({ hurtEntity: entity })
 
     expect(health.resetToMaxValue).not.toHaveBeenCalled()
   })
