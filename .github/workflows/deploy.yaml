@@ -6,11 +6,8 @@ permissions:
   contents: read
 
 on:
-  # Watch for CI workflow to finish on main.
-  #
-  # `branches` is a cheap pre-filter, NOT a security control: it matches the triggering run's
-  # *head branch*, which for a PR from a fork is a branch name in the fork — and forks are created
-  # with a `main` branch. The `production` job re-checks provenance itself (see there).
+  # Watch for CI workflow to finish on main. `branches` is a pre-filter, not a security control —
+  # see "workflow_run provenance" in docs/CICD.md.
   workflow_run:
     branches: [main]
     types:
@@ -26,17 +23,8 @@ env:
 
 jobs:
   production:
-    # Only deploy when the triggering CI run succeeded, and only for a push to this repo's own main.
-    #
-    # This job checks out and executes `workflow_run.head_sha` with the production AWS role, so it
-    # verifies the triggering run's provenance. `event == 'push'` is the load-bearing check: a fork's
-    # PR produces a `pull_request` run, while a `push` run for this repo requires write access here.
-    # `head_repository` excludes fork-originated runs outright, and `head_branch` states the intended
-    # branch — `on.workflow_run.branches` cannot, since it matches the fork's branch name.
-    #
-    # `github.ref` is not usable: for `workflow_run` it is always the default branch, so it is `main`
-    # no matter what triggered the run. That also makes the `production` environment's branch policy
-    # a non-control here.
+    # Deploy only when CI succeeded for a push to this repo's own main; the provenance checks
+    # prevent unauthorized fork runs — see "workflow_run provenance" in docs/CICD.md.
     if: >-
       ${{ github.event.workflow_run.event == 'push' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -81,8 +69,7 @@ jobs:
   # app needs a different account, split this into per-account jobs (derive them from the deploy:cdk
   # dry-run rather than a hand-maintained list).
   cdk:
-    # Same provenance gate as `production` above — this job also checks out and executes
-    # `workflow_run.head_sha` with production credentials.
+    # Same provenance gate as `production` above.
     if: >-
       ${{ github.event.workflow_run.event == 'push' &&
           github.event.workflow_run.head_repository.full_name == github.repository &&

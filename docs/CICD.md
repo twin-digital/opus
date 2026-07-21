@@ -37,14 +37,18 @@ A `workflow_run` workflow runs in this repo's context **with secrets and a write
 the run that triggered it had neither** — and these workflows then check out and execute
 `workflow_run.head_sha`. So each credentialed job verifies where the triggering run came from:
 
-```
-workflow_run.event == 'push'
-workflow_run.head_repository.full_name == github.repository
-workflow_run.head_branch == 'main'
-```
+- **`workflow_run.event == 'push'`** carries the weight. `ci.yaml` also runs on `pull_request`, so a
+  fork's PR produces a `pull_request` run **in this repo** — while a `push` run for this repo can
+  only come from a push to a branch here, which requires write access.
+- **`workflow_run.head_repository.full_name == github.repository`** excludes fork-originated runs
+  outright.
+- **`workflow_run.head_branch == 'main'`** states the intended branch, which the trigger's
+  `branches` filter cannot (below).
 
-`event == 'push'` carries the weight: `ci.yaml` also runs on `pull_request`, and a fork's PR
-produces a `pull_request` run **in this repo**, whereas a `push` run requires write access here.
+In `publish.yaml` a `provenance` job evaluates this once and the other jobs gate on its output, so
+there is one definition and the run UI shows why a chain didn't proceed. `deploy.yaml`'s
+`production` and `cdk` jobs — both `environment: production`, both executing `head_sha` — carry the
+condition directly.
 
 Two things that look like controls but aren't, so don't substitute them:
 
