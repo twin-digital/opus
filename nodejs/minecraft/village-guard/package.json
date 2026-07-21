@@ -1,0 +1,40 @@
+{
+  "private": true,
+  "name": "@twin-digital/village-guard",
+  "version": "0.1.0",
+  "description": "Minecraft behavior pack which keeps all villagers invulnerable.",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "release-assets": "mcpack-assets",
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@minecraft/server": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/mc-pack-config": "workspace:*",
+    "@twin-digital/mc-scripting-core": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}
