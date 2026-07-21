@@ -1,0 +1,18 @@
+import { world, system } from '@minecraft/server'
+
+import { startVillagerGuard } from './villager-guard.js'
+
+// Registering event handlers and intervals is allowed during a script's "early
+// execution" (module load); native calls like world.sendMessage / runCommand are
+// NOT — they must be deferred to system.run or an event callback, or the whole
+// module throws on load.
+//
+// startVillagerGuard wires up the invulnerability heal-backstop and the
+// villager-protection events/interval.
+startVillagerGuard()
+
+// This runs on every /reload, so the banner is your proof the dev loop works.
+// § sequences are Minecraft chat formatting codes (§a green, §7 gray).
+system.run(() => {
+  world.sendMessage('§a[village-guard] loaded §7— villager guard active')
+})
