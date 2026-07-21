@@ -53,6 +53,9 @@ tmp
 # build outputs
 .out
 
+# per-package GitHub release assets (see the release-assets script hook)
+.release-assets
+
 # test outputs
 coverage
 coverage.json

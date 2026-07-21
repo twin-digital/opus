@@ -18,6 +18,7 @@
     "predev": "turbo run build",
     "prepare": "husky tooling/husky || true",
     "publish-packages": "turbo run build && changeset publish",
+    "release-assets": "turbo run release-assets",
     "squash": "node tooling/scripts/bin/squash.js",
     "sync": "repo-kit sync",
     "test": "turbo run test",

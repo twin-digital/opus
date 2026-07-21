@@ -65,6 +65,10 @@
     "//#lint:deps": {
       "inputs": ["**/package.json", "pnpm-workspace.yaml"]
     },
+    "release-assets": {
+      "cache": false,
+      "dependsOn": ["build"]
+    },
     "test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
       "inputs": ["src/**", "package.json", "vitest.config.ts", "tsconfig.json", "tsconfig.*.json"],
