@@ -11,8 +11,10 @@
     "docker-packages": "./bin/docker-packages.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
+    "release-asset-packages": "./bin/release-asset-packages.js",
     "squash": "./bin/squash.js",
     "test": "./bin/test.js",
+    "upload-release-assets": "./bin/upload-release-assets.js",
     "watch": "./bin/watch.js"
   },
   "scripts": {
