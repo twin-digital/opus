@@ -18,14 +18,14 @@ images publish to **GHCR**.
 
 ## Workflows
 
-| Workflow              | Trigger                                | Purpose                                                                                                                       |
-| --------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ci.yaml`             | every push (any branch); PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`.                                                                           |
-| `merge-checks.yaml`   | PRs to `main`                          | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
-| `deploy.yaml`         | CI completion on `main`                | Deploys **production** (stage `prod`).                                                                                        |
-| `deploy-preview.yaml` | CI completion (PR runs)                | Deploys the PR's **preview** stage (`pr-<number>`).                                                                           |
-| `destroy-preview.yml` | PR closed                              | Tears down that PR's preview stage.                                                                                           |
-| `publish.yaml`        | CI completion on `main`                | changesets release to npm, then GHCR image publish.                                                                           |
+| Workflow              | Trigger                         | Purpose                                                                                                                       |
+| --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yaml`             | pushes to `main`; PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`.                                                                           |
+| `merge-checks.yaml`   | PRs to `main`                   | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
+| `deploy.yaml`         | CI completion on `main`         | Deploys **production** (stage `prod`).                                                                                        |
+| `deploy-preview.yaml` | CI completion (PR runs)         | Deploys the PR's **preview** stage (`pr-<number>`).                                                                           |
+| `destroy-preview.yml` | PR closed                       | Tears down that PR's preview stage.                                                                                           |
+| `publish.yaml`        | CI completion on `main`         | changesets release to npm, then GHCR image publish.                                                                           |
 
 `deploy.yaml`, `deploy-preview.yaml`, and `publish.yaml` all chain off CI via `workflow_run`,
 so **infrastructure and releases only proceed after `ci.yaml` succeeds** — both production and
@@ -62,9 +62,6 @@ Either one gates on its own, which is the point — a single omission still fail
 
 Use `.result` rather than a job output: no step can fail to write it, and there is no empty-string
 case to reason about.
-
-Both workflows also default to `permissions: {}`, so a job that forgets to declare permissions gets
-none rather than the repository default.
 
 Both workflows also default to `permissions: {}`, so a job that forgets to declare permissions gets
 none rather than the repository default.
