@@ -30,6 +30,7 @@ jobs:
     outputs:
       hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
       published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
       # Mint a short-lived GitHub App installation token by signing the App JWT with AWS KMS
       # (the App private key never leaves KMS). Replaces the long-lived CHANGESETS_GITHUB_TOKEN PAT;
@@ -230,6 +231,69 @@ jobs:
           docker push ${{ matrix.package.imageName }}:$PATCH
           docker push ${{ matrix.package.imageName }}:$MINOR
           docker push ${{ matrix.package.imageName }}:$MAJOR
+
+  # Attach downloadable assets to the GitHub releases changesets just created.
+  # Any released package exposing a `release-assets` script (the well-known hook)
+  # has it run, and everything it writes to the package's `.release-assets/` is
+  # uploaded to that package's release. The hook is optional: packages without it
+  # simply get no GitHub-hosted assets.
+  release-assets:
+    needs: publish
+    # Only after an actual npm/tag release — skips the "Version Packages" PR runs.
+    if: needs.publish.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # upload assets to the releases
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # build assets from the exact released commit
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # Restore-only: lets the `release-assets` task's `build` dependency replay CI's outputs.
+      - name: Restore turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Generate and upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISHED_PACKAGES: ${{ needs.publish.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+
+          # turbo skips packages that don't define the script, so filtering on
+          # every published package is all the opt-in gating the hook needs.
+          mapfile -t filters < <(jq -r '.[] | "--filter=" + .name' <<< "$PUBLISHED_PACKAGES")
+          # Without filters turbo would run the hook repo-wide; nothing was released.
+          [ "${#filters[@]}" -gt 0 ] || exit 0
+          pnpm release-assets "${filters[@]}"
+
+          # Pair each published package with its workspace directory. The git tag
+          # changesets pushed — and so the release to attach to — is `<name>@<version>`.
+          workspaces=$(pnpm list --recursive --depth=-1 --json)
+          while IFS=$'\t' read -r name version dir; do
+            assets="$dir/.release-assets"
+            if ! compgen -G "$assets/*" > /dev/null; then
+              echo "No release assets for $name"
+              continue
+            fi
+            # GitHub records a sha256 per asset, but only as API metadata. SHA256SUMS
+            # is the downloadable companion, so plain-URL consumers (`sha256sum -c`,
+            # ansible `get_url checksum:`) can verify without an API call. Written via
+            # $RUNNER_TEMP so the file being created isn't itself a checksum input.
+            (cd "$assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
+            gh release upload "$name@$version" "$assets"/* --clobber
+          done < <(jq -r --argjson published "$PUBLISHED_PACKAGES" \
+            'INDEX(.[]; .name) as $ws | $published[] | [.name, .version, $ws[.name].path] | @tsv' <<< "$workspaces")
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:

@@ -50,7 +50,7 @@ Serverless Dashboard auth via `secrets.SERVERLESS_ACCESS_KEY`.
 
 ### Publish (`publish.yaml`)
 
-All three release jobs check out `github.event.workflow_run.head_sha` — the exact commit CI
+All release jobs check out `github.event.workflow_run.head_sha` — the exact commit CI
 validated — so the published version, its git tags, and the built images stay in lockstep (a
 newer `main` commit can't be released/built under the just-published version tags).
 
@@ -65,6 +65,22 @@ newer `main` commit can't be released/built under the just-published version tag
    image to `.out/`, which is then tagged `latest` / `major` / `minor` / `patch` and pushed to
    `ghcr.io`.
 4. **docker-status-check** — fails the run if any image build failed.
+5. **release-assets** — attaches downloadable files to the GitHub releases changesets created.
+   See [Release assets](#release-assets) below.
+
+#### Release assets
+
+A package publishes files to its GitHub release by defining a **`release-assets`** script that
+writes them into a `.release-assets/` directory in the package (creating it; the directory is
+gitignored). The script is the whole contract — it takes no arguments, and packages that don't
+define one simply get no GitHub-hosted assets.
+
+The `release-assets` job reads `publishedPackages` from the `changesets/action` output, runs
+`pnpm release-assets --filter <pkg>` for each (the turbo task depends on `build`, and turbo skips
+packages without the script), then per package generates a **`SHA256SUMS`** file and uploads the
+directory's contents to the `<name>@<version>` release. GitHub records a sha256 for each asset,
+but only as API metadata; `SHA256SUMS` is the downloadable companion so consumers fetching plain
+URLs can verify with `sha256sum -c`.
 
 ## Supply-chain scanning (dependency PRs)
 
