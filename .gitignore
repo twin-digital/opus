@@ -73,3 +73,6 @@ nodejs/dolmenwood/refbash/.data
 # do not ignore .claude directories in nested directories, since these are custom configs, skills, etc.
 !*/**/.claude
 
+
+# local env overrides (see .env.example)
+/.env
