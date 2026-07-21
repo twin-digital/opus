@@ -17,14 +17,34 @@
 // Re-run whenever you add a pack or a pack's version bumps (dev.mjs does this
 // automatically). Versions come from package.json (the source of truth the
 // build injects into the shipped manifest), uuids from the pack manifest.
-import { writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { discoverPacks, findRepoRoot } from './discover-packs.mjs'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
-const packs = discoverPacks(findRepoRoot())
+const root = findRepoRoot()
+const packs = discoverPacks(root)
+
+// The world directory is fixed at server start, so the activation rule's
+// target is baked in as a literal at generation time (same .env the server
+// gets) — leaving ${MINECRAFT_LEVEL_NAME} to compose-invocation-time
+// interpolation would let a manual `compose watch` without --env-file sync
+// into the wrong world.
+const readLevelName = () => {
+  const envPath = join(root, '.env')
+  if (existsSync(envPath)) {
+    for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+      const match = /^\s*MINECRAFT_LEVEL_NAME\s*=\s*(.*?)\s*$/.exec(line)
+      if (match) {
+        return match[1].replace(/^['"]|['"]$/g, '') || 'dev'
+      }
+    }
+  }
+  return process.env.MINECRAFT_LEVEL_NAME || 'dev'
+}
+const levelName = readLevelName()
 
 // --- activation/world_behavior_packs.json ---
 const activation = packs.map(({ packId, version }) => ({ pack_id: packId, version }))
@@ -59,7 +79,7 @@ services:
 ${packRules}        # Activation-list changes (new pack, version bump) need a restart — the
         # server only rereads world_behavior_packs.json on boot.
         - path: ./activation
-          target: /data/worlds/\${MINECRAFT_LEVEL_NAME:-dev}
+          target: ${yamlScalar(`/data/worlds/${levelName}`)}
           action: sync+restart
           ignore:
             - .gitkeep

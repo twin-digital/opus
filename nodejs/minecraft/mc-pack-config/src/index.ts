@@ -1,5 +1,5 @@
 import { cpSync, readFileSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parse as parseSemver } from 'semver'
@@ -48,9 +48,13 @@ const assemblePack = (packageDir: string): void => {
   }
 
   const distDir = join(packageDir, 'dist')
+  const templateManifest = join(packageDir, 'pack', 'manifest.json')
   cpSync(join(packageDir, 'pack'), distDir, {
     recursive: true,
-    filter: (source) => basename(source) !== 'manifest.json',
+    // Exclude exactly the root template (replaced by the versioned write
+    // below) — matching by basename would silently drop any nested
+    // manifest.json asset too.
+    filter: (source) => source !== templateManifest,
   })
   writeFileSync(join(distDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   console.log(`pack manifest → dist/manifest.json (v${version.join('.')})`)

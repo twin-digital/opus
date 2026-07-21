@@ -81,6 +81,48 @@ run('docker', [...composeArgs, 'up', '-d', '--wait'])
 // only ships changes made while it is running — so a stale list (new pack,
 // fresh world) is installed directly here, before the watchers attach.
 const compose = (...args) => execFile('docker', [...composeArgs, ...args], { cwd: root })
+
+// Renamed/removed packs leave stale folders in the pool — same uuid under the
+// old name, which the server may arbitrarily prefer over the live copy. The
+// pool is exclusively harness-fed, so prune it to exactly the current packs.
+const prunePool = async () => {
+  const keep = packs.map((pack) => pack.name).join(' ')
+  const { stdout } = await compose(
+    'exec',
+    '-T',
+    'bedrock',
+    'sh',
+    '-c',
+    `cd /data/development_behavior_packs 2>/dev/null || exit 0
+     for d in */; do
+       d="\${d%/}"
+       [ -d "$d" ] || continue
+       case " ${keep} " in
+         *" $d "*) ;;
+         *) echo "pruned stale pack folder: $d"; rm -rf "$d" ;;
+       esac
+     done`,
+  )
+  for (const line of stdout.split('\n').filter(Boolean)) {
+    console.log(`▸ ${line}`)
+  }
+}
+
+const waitHealthy = async () => {
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const { stdout } = await compose('ps', '--format', 'json', 'bedrock')
+    try {
+      if (JSON.parse(stdout).Health === 'healthy') {
+        return true
+      }
+    } catch {
+      // not up yet / unexpected output — keep waiting
+    }
+    await sleep(5000)
+  }
+  return false
+}
+
 const reconcileActivation = async () => {
   const activationPath = join(here, 'activation', 'world_behavior_packs.json')
   const desired = readFileSync(activationPath, 'utf8')
@@ -121,13 +163,25 @@ const reconcileActivation = async () => {
   const { stdout: level } = await compose('exec', '-T', 'bedrock', 'sh', '-c', 'echo "${LEVEL_NAME:-dev}"')
   await compose('cp', activationPath, `bedrock:/data/worlds/${level.trim()}/world_behavior_packs.json`)
   await compose('restart', 'bedrock')
+  if (!(await waitHealthy())) {
+    console.warn('⚠ server not healthy after restart — check the server logs')
+    return
+  }
   if (matches(await probe())) {
     console.log('▸ world pack activation installed')
   } else {
     console.warn('⚠ pack activation still differs after install — check the server logs')
   }
 }
-await reconcileActivation()
+try {
+  await prunePool()
+  await reconcileActivation()
+} catch (error) {
+  // A transient docker/compose failure here shouldn't kill the loop with a
+  // raw stack — warn and attach the watchers anyway.
+  const detail = error.stderr?.trim() || error.message
+  console.warn(`⚠ pack reconcile failed (${detail}) — continuing; check the server logs`)
+}
 
 // Attach the watchers: ordinary foreground children, interleaved output. If
 // any one exits (or fails to spawn), stop the rest and exit — and on Ctrl+C
@@ -139,10 +193,21 @@ const stopAll = (code) => {
     return
   }
   stopping = true
+  process.exitCode = code
   for (const child of children) {
     child.kill('SIGTERM')
   }
-  process.exitCode = code
+  // The pipe write ends are inherited by grandchildren (pnpm → turbo → task
+  // watchers), and dev.mjs can only exit once they reach EOF — if anything
+  // survives the SIGTERM, escalate so the shell always gets its prompt back.
+  setTimeout(() => {
+    for (const child of children) {
+      child.stdout?.destroy()
+      child.stderr?.destroy()
+      child.kill('SIGKILL')
+    }
+    process.exit(code)
+  }, 5000).unref()
 }
 const spawnPrefixed = (label, color, command, args) => {
   const child = spawn(command, args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] })
@@ -156,7 +221,9 @@ const spawnPrefixed = (label, color, command, args) => {
     if (!stopping) {
       console.log(`${prefix}exited (${code ?? 'signal'}) — detaching`)
     }
-    stopAll(code ?? 0)
+    // A null code here is an external signal death (our own SIGTERMs are
+    // behind the `stopping` guard) — report failure, not success.
+    stopAll(code ?? 1)
   })
   child.on('error', (error) => {
     console.error(`${prefix}failed to start ${command}: ${error.message}`)
