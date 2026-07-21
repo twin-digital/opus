@@ -232,11 +232,13 @@ jobs:
           docker push ${{ matrix.package.imageName }}:$MAJOR
 
   # Attach build artifacts to the GitHub releases changesets created. Generic
-  # sweep: any released package exposing a `release-assets` script (the
-  # well-known hook, wired in by repo-kit — e.g. behavior packs produce an
-  # installable .mcpack) has the script run and everything it writes to the
-  # package's .release-assets/ uploaded to the package's release.
-  release-assets:
+  # sweep, structurally identical to the docker-image pipeline: a detect job
+  # emits a matrix of released packages exposing a `release-assets` script
+  # (the well-known hook, wired in by repo-kit — e.g. behavior packs produce
+  # an installable .mcpack), and one job per package runs the hook and uploads
+  # everything it writes to .release-assets/ (plus SHA256SUMS) to the
+  # package's release.
+  release-assets-matrix:
     needs: publish
     # Mirror docker-matrix: run on a release AND when publish failed (tags may
     # still exist); skip the "create Version Packages PR" runs.
@@ -244,7 +246,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write # upload release assets
+      contents: read # this job only reads tags
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      has-packages: ${{ steps.detect.outputs.has-packages }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -255,7 +260,38 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # Restore-only: lets the builds replay CI's outputs.
+      - name: Detect released packages with release assets
+        id: detect
+        run: |
+          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          if [ "$packages" = "[]" ]; then
+            echo "has-packages=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-packages=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release-assets:
+    needs: release-assets-matrix
+    if: needs.release-assets-matrix.outputs.has-packages == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # upload release assets
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        package: ${{ fromJson(needs.release-assets-matrix.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      # Restore-only: lets the build replay CI's outputs.
       - name: Restore turbo cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -264,61 +300,18 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Detect released packages with release assets
-        id: detect
-        # Plain assignment first so a detect-script failure fails the step —
-        # embedded in `echo "$(...)"` the exit status would be discarded.
-        run: |
-          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
-          echo "packages=$packages" >> "$GITHUB_OUTPUT"
-
       - name: Build and attach release assets
-        if: steps.detect.outputs.packages != '[]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Passed via the environment, not ${{ }}-spliced into the script:
-          # the JSON carries git tag names verbatim, and env values stay data.
-          PACKAGES: ${{ steps.detect.outputs.packages }}
+          # the tag is a git ref name taken verbatim, and env values stay data.
+          PKG_NAME: ${{ matrix.package.name }}
+          PKG_DIR: ${{ matrix.package.path }}
+          PKG_TAG: ${{ matrix.package.tag }}
         run: |
-          # Each package runs in its own -e subshell so one failure doesn't
-          # strand the remaining packages' assets — the loop equivalent of
-          # docker-build-publish's fail-fast: false. `set +e` explicitly clears
-          # the runner-injected `bash -e` (which would abort the loop at the
-          # first failing subshell); the subshell must stay a bare command —
-          # guarding it with `||` would put it in a conditional context, where
-          # bash suppresses the *inner* set -e and masks mid-script failures.
-          set -uo pipefail
-          set +e
-          failed=()
-          while IFS=$'\t' read -r name dir tag; do
-            (
-              set -euo pipefail
-              pnpm build --filter "$name"
-              pnpm --filter "$name" run release-assets
-              # GitHub computes sha256 digests for assets, but only as API
-              # metadata; SHA256SUMS is the downloadable companion so plain-URL
-              # consumers (ansible get_url checksum:, sha256sum -c) can verify
-              # without an API call.
-              (cd "$dir/.release-assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
-              # The release normally already exists (changesets creates one per
-              # tag); create it only when it is genuinely missing (a partial
-              # publish failure), so an upload error isn't misread as "no
-              # release" and reported as the wrong problem.
-              if ! gh release view "$tag" --json id > /dev/null 2>&1; then
-                gh release create "$tag" --verify-tag --title "$tag" --notes ""
-              fi
-              gh release upload "$tag" "$dir"/.release-assets/* --clobber
-            ) < /dev/null
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo "::error::release assets failed for $tag (exit $rc)"
-              failed+=("$tag")
-            fi
-          done < <(jq -r '.[] | [.name, .path, .tag] | @tsv' <<< "$PACKAGES")
-          if [ "${#failed[@]}" -gt 0 ]; then
-            echo "::error::release-assets failed for: ${failed[*]}"
-            exit 1
-          fi
+          pnpm build --filter "$PKG_NAME"
+          pnpm --filter "$PKG_NAME" run release-assets
+          node ./tooling/scripts/bin/upload-release-assets.js "$PKG_TAG" "$PKG_DIR"
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:

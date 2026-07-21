@@ -15,6 +15,7 @@
     "release-asset-packages": "./bin/release-asset-packages.js",
     "squash": "./bin/squash.js",
     "test": "./bin/test.js",
+    "upload-release-assets": "./bin/upload-release-assets.js",
     "watch": "./bin/watch.js"
   },
   "scripts": {
