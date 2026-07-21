@@ -1,5 +1,11 @@
 # @twin-digital/eslint-config
 
+## 0.5.0
+
+### Minor Changes
+
+- da1e483: Add `defineProjectConfig(import.meta.url)`, which composes the shared config with a package's `eslint.config.d/*.js` overrides so the managed `eslint.config.js` is a one-line call.
+
 ## 0.4.1
 
 ### Patch Changes

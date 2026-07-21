@@ -1,5 +1,22 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.10
+
+### Patch Changes
+
+- da1e483: Regenerate the managed eslint and vite config files to call the shared config packages' compose helpers (`defineProjectConfig` / `defineAppConfig`) instead of inlining the composition. No behavior change.
+- 6b33da7: fix(deps): update dependency adm-zip to ^0.6.0 [security]
+- b3c1047: Extensible, DRY tsdown bundle config. The shared base config + the
+  per-package-override composition now live in a new `@twin-digital/tsdown-config`
+  package (`base` + `defineBundleConfig`), and the repo-kit `bundle` feature emits
+  a tiny `tsdown.config.ts` that just calls it. Packages diverge from the defaults
+  by dropping a `tsdown.config.d/*.ts` partial (shallow-merged over the base),
+  mirroring the `eslint.config.d/` / `vite.config.d/` pattern — no more inlined
+  merge logic duplicated into every package.
+- Updated dependencies [da1e483]
+  - @twin-digital/bookify@0.4.4
+  - @twin-digital/observability-lib@0.0.6
+
 ## 0.1.9
 
 ### Patch Changes

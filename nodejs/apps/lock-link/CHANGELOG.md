@@ -1,5 +1,13 @@
 # @twin-digital/lock-link
 
+## 0.1.2
+
+### Patch Changes
+
+- da1e483: Regenerate the managed eslint and vite config files to call the shared config packages' compose helpers (`defineProjectConfig` / `defineAppConfig`) instead of inlining the composition. No behavior change.
+- Updated dependencies [da1e483]
+  - @twin-digital/observability-lib@0.0.6
+
 ## 0.1.1
 
 ### Patch Changes

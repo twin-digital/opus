@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/vite-config",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared vite config for the monorepo: a base config plus per-package vite.config.d/ overrides.",
   "license": "ISC",
   "type": "module",

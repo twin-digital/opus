@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/credential-shelf",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Credential vendor sidecar — vends scoped, short-lived AWS and GitHub App credentials onto a read-only /creds shelf.",
   "type": "module",
   "exports": {
