@@ -42,6 +42,9 @@ catalogs:
     '@middy/core':
       specifier: ^7.0.0
       version: 7.6.8
+    '@minecraft/server':
+      specifier: ^2.8.0
+      version: 2.8.0
     '@types/aws-lambda':
       specifier: ^8.10.159
       version: 8.10.162
@@ -2001,6 +2004,57 @@ importers:
         specifier: 'catalog:'
         version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
 
+  nodejs/minecraft/mc-scripting-core:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.5.0)
+      '@minecraft/server':
+        specifier: 'catalog:'
+        version: 2.8.0(@minecraft/common@1.3.0)(@minecraft/vanilla-data@1.26.33)
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.9(vitest@4.1.9)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.5.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.5.0)
+      globals:
+        specifier: 'catalog:'
+        version: 17.6.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.4
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.9(@types/node@24.13.2)(@vitest/coverage-istanbul@4.1.9)(jsdom@27.2.0)(vite@7.3.5(@types/node@24.13.2)(terser@5.44.1)(tsx@4.22.4)(yaml@2.9.0))
+
   nodejs/music/launchpad-sim:
     dependencies:
       '@thrashplay/music':
@@ -3847,6 +3901,18 @@ packages:
   '@middy/util@7.6.8':
     resolution: {integrity: sha512-7ZFVcrQkNY4UJsgrERAplTruYDjiEv2ZNwvW3YSl3T3Fmgw+HJV1L8BrGA53LqLxe0xb2npesh8WO3ABIPYPbQ==}
     engines: {node: '>=22'}
+
+  '@minecraft/common@1.3.0':
+    resolution: {integrity: sha512-GLT8USFhvEyeTTFHZAgszbrnoT007hmXmK+aO4l+2A1up9/zwZ+4e8R8F0KcKrCWDjLEqkOJtPow0hQCcNJ++Q==}
+
+  '@minecraft/server@2.8.0':
+    resolution: {integrity: sha512-5VPlToP3IihUWrLHQJdNPSq++vPYnB+IZUVdO6kJ/VWVE29pN230f9SiCD28XU+Ujfh/EdjU3anktXG77pjWLA==}
+    peerDependencies:
+      '@minecraft/common': ^1.2.0
+      '@minecraft/vanilla-data': '>=1.20.70'
+
+  '@minecraft/vanilla-data@1.26.33':
+    resolution: {integrity: sha512-lYJCYHg12BRTQULjvo00eKVWzj7Und7WEBCUORTRfESylITVaiqJ0jPpVEKsmTu68gKKelGxk4ua8BU/1R/X0A==}
 
   '@mishieck/ink-titled-box@0.4.2':
     resolution: {integrity: sha512-4tRyg2n9dPGY66EEchpjHSs+QL5Wdv8kAjRLg/BnXVimwwIl38sLhgphw8dGCGIK2pFz+owLi4vuQBdOdJivBA==}
@@ -9908,6 +9974,15 @@ snapshots:
       '@middy/util': 7.6.8
 
   '@middy/util@7.6.8': {}
+
+  '@minecraft/common@1.3.0': {}
+
+  '@minecraft/server@2.8.0(@minecraft/common@1.3.0)(@minecraft/vanilla-data@1.26.33)':
+    dependencies:
+      '@minecraft/common': 1.3.0
+      '@minecraft/vanilla-data': 1.26.33
+
+  '@minecraft/vanilla-data@1.26.33': {}
 
   '@mishieck/ink-titled-box@0.4.2(ink@7.1.0(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(typescript@6.0.3)':
     dependencies:
