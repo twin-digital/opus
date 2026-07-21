@@ -15,7 +15,7 @@ on:
   # Whichever fires, the gate converges on the same decision; concurrency de-dupes.
   workflow_run:
     types: [completed]
-    workflows: ['CI']
+    workflows: ['CI/CD']
   pull_request:
     types: [labeled]
     branches: [main]
@@ -91,12 +91,12 @@ jobs:
             # CI already concluded successfully for this commit — closing the "label after CI" race.
             num="$PR_NUMBER"
             sha="$PR_HEAD_SHA"
-            # Select the run by its workflow display NAME ('CI') — the same identifier the workflow_run
-            # trigger keys on (workflows: ['CI']) — rather than the ci.yaml filename, so the two paths
+            # Select the run by its workflow display NAME ('CI/CD') — the same identifier the workflow_run
+            # trigger keys on (workflows: ['CI/CD']) — rather than the ci.yaml filename, so the two paths
             # can't diverge if the file is renamed. Takes the most recent COMPLETED run: if a re-run is
             # in flight over an older green run, it deploys the older green result (fine for a preview).
             concl=$(gh api "repos/${REPO}/actions/runs?head_sha=${sha}&event=pull_request" \
-              --jq '[.workflow_runs[] | select(.name == "CI" and .status == "completed")][0].conclusion // empty')
+              --jq '[.workflow_runs[] | select(.name == "CI/CD" and .status == "completed")][0].conclusion // empty')
             [[ "$concl" == "success" ]] \
               || skip "CI for ${sha} is '${concl:-not finished}'; the workflow_run path will deploy once it's green."
           fi

@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   # post-merge build on main; the publish/deploy jobs below hang off this run
