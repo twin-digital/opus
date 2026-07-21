@@ -60,9 +60,16 @@ behavior, not a condition anyone here maintains.
 
 **`workflow_call` keeps them deprivileged**
 
-- A called workflow gets **no secrets unless passed or inherited**; `environment:` on the inner job
-  resolves **that environment's** secrets —
+- A called workflow gets **no secrets unless passed or inherited** — and that includes environment
+  secrets. `environment:` on the inner job resolves that environment's **variables** regardless, but
+  its **secrets** only once the caller says `secrets: inherit`; otherwise they read as empty strings
+  with no error —
   [Reuse workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#passing-inputs-and-secrets-to-a-reusable-workflow)
+  · [actions/runner#1490](https://github.com/actions/runner/issues/1490)
+- `secrets: inherit` passes the **caller's** secrets, so it cannot leak more than the caller already
+  holds. Here that is nothing: this repo has no repo-level secrets, and the org's are
+  private-visibility while this repo is public — so `inherit` buys only the environment resolution
+  above
 - Caller `permissions:` is a **ceiling**: permissions "can only be maintained or reduced — not
   elevated" through the chain —
   [same](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#calling-a-reusable-workflow)
@@ -86,6 +93,10 @@ behavior, not a condition anyone here maintains.
 
 - Caller `env:` does not propagate into a called workflow (why `publish`/`deploy` are _called_, not
   inlined — `ci.yaml`'s `NPM_CONFIG_IGNORE_SCRIPTS` would otherwise break the release install).
+- An empty secret is silent. `configure-aws-credentials` given an empty `role-to-assume` falls
+  through to "Could not load credentials from any providers" rather than naming the missing input;
+  when a credential step fails right after a workflow restructure, check the step's echoed `with:`
+  block for the input that vanished before suspecting the trust policy.
 - A fork PR run cannot mint an OIDC token. It follows from the write-downgrade rule, but is nowhere
   stated — which is why the environment branch policies are kept as an independently documented
   second layer.
