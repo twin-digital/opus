@@ -34,42 +34,80 @@ still chains off CI via `workflow_run`, because it serves pull requests (see bel
 
 ### Fork pull requests and credentials
 
-Anyone can open a pull request from a fork, and its CI run executes **the fork's version of the
-workflow files** — an attacker can add jobs. What stops that reaching anything is the platform, not
-a condition anyone maintains:
+A fork's PR run executes **the fork's version of the workflow files**, so an attacker can add jobs.
+These are the platform guarantees that decide what such a run can reach — each is documented
+behavior, not a condition anyone here maintains.
 
-> With the exception of `GITHUB_TOKEN`, secrets are not passed to the runner when a workflow is
-> triggered from a forked repository. The `GITHUB_TOKEN` has read-only permissions in pull requests
-> from forked repositories.
+**Fork runs are deprivileged**
 
-A workflow's own `permissions:` block cannot override this: permissions are computed workflow-level
-first, job-level next, and the fork downgrade **last**. The settings that would relax it are
-[available to private repositories only](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#enabling-workflows-for-forks-of-private-repositories),
-and this repository is public.
+- Fork PR runs get **no secrets**, and `GITHUB_TOKEN` is **read-only** —
+  [Use secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
+- A workflow **cannot grant itself out of that**: the fork downgrade applies after workflow- and
+  job-level `permissions:`, and the setting that relaxes it is
+  [private repositories only](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#enabling-workflows-for-forks-of-private-repositories)
+  (this repo is public)
 
-Two consequences shape the design:
+**`workflow_run` re-privileges them**
 
-- **Privileged work runs only in the `push`-to-`main` CI run.** The caller jobs check
-  `github.event_name == 'push' && github.ref == 'refs/heads/main'`, which for a `push` event is the
-  branch actually pushed — so it requires write access here. That condition is scheduling, not the
-  security boundary; the boundary is that a fork PR run has no secrets to hand out.
-- **The `release` and `production` environment branch policies are live gates.** Both are pinned to
-  `main`, and they match against `github.ref`. A fork PR run has `github.ref` of
-  `refs/pull/<n>/merge`, so even a job that declared `environment: release` would be rejected
-  before reaching a runner.
+- A `workflow_run` workflow runs **with secrets and a write token even when the triggering run had
+  neither** —
+  [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run)
+- `github.ref` is **always the default branch** for `workflow_run`, so `github.ref` conditions and
+  environment branch policies are **inert** there —
+  [same](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run)
+- `on.workflow_run.branches` filters the **triggering run's head branch**, which a fork controls —
+  [same](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run)
 
-**This is why these workflows are not triggered by `workflow_run`.** A `workflow_run` workflow runs
-in this repository's context _with secrets and a write token even when the run that triggered it had
-neither_ — it re-privileges exactly what the fork rules deprivileged. Combined with checking out
-`workflow_run.head_sha`, that is the "pwn request" pattern behind several published advisories
-(GHSL-2024-320, GHSL-2024-226). Under `workflow_call` there is no such trigger to guard: the
-credentials are unreachable rather than merely gated, and `github.ref`-based controls like the
-environment branch policies start working, where under `workflow_run` they are inert (there,
-`github.ref` is always the default branch).
+**`workflow_call` keeps them deprivileged**
 
-If a future workflow does need `workflow_run`, it must verify the triggering run's provenance
-itself — `workflow_run.event`, `workflow_run.head_repository.full_name` — because
-`on.workflow_run.branches` matches the triggering run's _head branch_, which a fork controls.
+- A called workflow gets **no secrets unless passed or inherited**; `environment:` on the inner job
+  resolves **that environment's** secrets —
+  [Reuse workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#passing-inputs-and-secrets-to-a-reusable-workflow)
+- Caller `permissions:` is a **ceiling**: permissions "can only be maintained or reduced — not
+  elevated" through the chain —
+  [same](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#calling-a-reusable-workflow)
+- Environment **deployment branch policies evaluate `github.ref`** — truthful under `push`, so they
+  gate for real —
+  [Manage environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#creating-an-environment)
+
+**OIDC identity**
+
+- `sub` names **the repository the run belongs to** (`repo:OWNER/REPO:environment:NAME`) — for a
+  reusable workflow that is the **caller**, so a third-party caller of our public workflows cannot
+  match ours —
+  [OIDC reference](https://docs.github.com/en/actions/reference/security/oidc#example-subject-claims)
+  ·
+  [OIDC with reusable workflows](https://docs.github.com/actions/deployment/security-hardening-your-deployments/using-openid-connect-with-reusable-workflows)
+- `job_workflow_ref` names the **called** workflow and is identical for every caller, so it must
+  **never be the only pinned claim** — pin `sub` first —
+  [OIDC reference](https://docs.github.com/en/actions/reference/security/oidc#custom-claims-provided-by-github)
+
+**Relied on here, but not documented by GitHub** — verify before treating as load-bearing:
+
+- Caller `env:` does not propagate into a called workflow (why `publish`/`deploy` are _called_, not
+  inlined — `ci.yaml`'s `NPM_CONFIG_IGNORE_SCRIPTS` would otherwise break the release install).
+- A fork PR run cannot mint an OIDC token. It follows from the write-downgrade rule, but is nowhere
+  stated — which is why the environment branch policies are kept as an independently documented
+  second layer.
+- Whether `job_workflow_ref` is populated for jobs defined directly in a triggered workflow (the
+  docs describe only the reusable case).
+
+**What this forces.** Releasing and deploying live inside the `push`-to-`main` CI run as reusable
+workflows, so the credentials have no trigger of their own to guard and a fork PR run simply has
+nothing to hand out. Because those jobs run under `push`, `github.ref` is truthful, so the `release`
+and `production` branch policies act as a second gate that GitHub enforces independently of any
+condition in these files. `deploy-preview.yaml` keeps `workflow_run` because it must serve fork PRs
+— its decision job holds no credentials, and the deploy is opt-in behind a label only writers can
+apply.
+
+**Rules for new workflows**
+
+- Don't put credentials behind a `workflow_run` trigger. If one is unavoidable, gate on
+  `workflow_run.event` and `workflow_run.head_repository.full_name` — not on `branches:`,
+  `github.ref`, or `conclusion`, none of which constrain provenance.
+- Pin OIDC trust policies on `sub` first; add `job_workflow_ref` to narrow further.
+- Don't add a `tags:` filter to `ci.yaml` — tag pushes would retrigger CI and create a
+  publish → tag → CI → publish loop.
 
 ### Deploy (`deploy.yaml` / `deploy-preview.yaml`)
 
@@ -171,3 +209,41 @@ Environments scope their secrets to the jobs that declare them — `development`
 for deploys, `release` for publish. `production` and `release` restrict deployments to `main`;
 `development` requires a reviewer. The deploy/preview jobs check out with the default `github.token`
 (no dedicated PAT).
+
+## References
+
+Advisories illustrating what the rules above prevent — all three are workflows that ran privileged
+in the base repo's context on behalf of an untrusted pull request:
+
+- [GHSL-2024-226/227 — Cilium](https://securitylab.github.com/advisories/GHSL-2024-226_GHSL-2024-227_Cilium/):
+  a `workflow_run`-chained workflow read registry secrets while running attacker-controlled code,
+  allowing exfiltration by dumping runner memory. Its gate checked the triggering run's
+  **conclusion**, which says nothing about provenance.
+- [GHSL-2024-320/321 — Eclipse JDT](https://securitylab.github.com/advisories/GHSL-2024-320_GHSL-2024-321_Eclipse/):
+  a workflow triggered by PR-check completion interpolated an **attacker-controlled branch name**
+  into a bash `run:` block, leaking an org-write PAT.
+- [GHSL-2023-181 — PyTorch](https://securitylab.github.com/advisories/GHSL-2023-181_Pytorch/):
+  same primitive under `pull_request_target` — a malicious branch name expanded inside `run:`.
+
+Hence the house rule that event payload values reach `run:` through `env:`, never inline `${{ }}`.
+
+Platform direction:
+
+- [Safer `pull_request_target` defaults for `actions/checkout`](https://github.blog/changelog/2026-06-18-safer-pull_request_target-defaults-for-github-actions-checkout/)
+  (2026-06-18) — checkout v7 refuses fork-PR checkout by default under `pull_request_target`, and
+  under `workflow_run` when the triggering event was a `pull_request*` event; backported to all
+  supported majors on 2026-07-16. `deploy-preview.yaml` does exactly this, deliberately, and is
+  shielded only by its SHA pin until the next bump.
+
+Findings from the audit behind this design:
+
+- `on.workflow_run.branches` really does match the fork's branch: `cli/cli` has fork-PR runs whose
+  `head_branch` is `trunk` — the **fork's** default branch name, not the base repo's.
+- This repo has had **zero** fork-origin Actions runs, so the gap the `workflow_call` conversion
+  closed was never exercised.
+- The `preview` environment has no protection rules, making the write-access-only `preview` label
+  the sole gate before fork code meets preview deploy credentials.
+- The deploy roles previously also trusted `sub = repo:twin-digital/opus:ref:refs/heads/main`, which
+  under `workflow_run` (where `github.ref` is always the default branch) any non-environment job
+  could have matched. Removed in `twin-digital/aws`; the roles now pin the environment subject, and
+  the production roles additionally pin `job_workflow_ref`.
