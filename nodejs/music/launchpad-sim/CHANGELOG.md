@@ -1,5 +1,13 @@
 # @thrashplay/launchpad-sim
 
+## 0.2.9
+
+### Patch Changes
+
+- da1e483: Regenerate the managed eslint and vite config files to call the shared config packages' compose helpers (`defineProjectConfig` / `defineAppConfig`) instead of inlining the composition. No behavior change.
+- Updated dependencies [da1e483]
+  - @thrashplay/music@0.4.1
+
 ## 0.2.8
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @twin-digital/repo-kit
 
+## 0.4.0
+
+### Minor Changes
+
+- bbf3359: The `sync-json-value` action can now write to a single object field addressed by a JSON Pointer (`target: { file, pointer }`), in addition to the existing predicate-selected array element, and accepts an optional named `transform` applied to the value. Adds a `strip-scope` transform that reduces a scoped package name to its bare name.
+
+### Patch Changes
+
+- da1e483: Regenerate the managed eslint and vite config files to call the shared config packages' compose helpers (`defineProjectConfig` / `defineAppConfig`) instead of inlining the composition. No behavior change.
+- Updated dependencies [da1e483]
+  - @twin-digital/json-patch-x@0.3.1
+
 ## 0.3.3
 
 ### Patch Changes
