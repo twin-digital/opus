@@ -17,8 +17,10 @@ env:
 
 jobs:
   publish:
-    # only run when CI passed
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only for a successful CI run of a PUSH to main: the workflow_run
+    # `branches` filter matches the triggering run's head branch, which a fork
+    # PR can name `main` — the event type is the unspoofable gate.
+    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' }}
     # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
@@ -133,7 +135,7 @@ jobs:
     # npm-publish failure of unrelated packages shouldn't block image builds, which are gated
     # on their own tag detection below (docker-packages.js only emits packages tagged at HEAD).
     # Skips the "create Version Packages PR" runs (publish success + hasChangesets=true).
-    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
+    if: ${{ !cancelled() && github.event.workflow_run.event == 'push' && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -242,7 +244,7 @@ jobs:
     needs: publish
     # Mirror docker-matrix: run on a release AND when publish failed (tags may
     # still exist); skip the "create Version Packages PR" runs.
-    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
+    if: ${{ !cancelled() && github.event.workflow_run.event == 'push' && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -287,6 +289,9 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          # the write-capable GITHUB_TOKEN must not be readable by the build
+          # and release-assets scripts run below
+          persist-credentials: false
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
@@ -300,29 +305,39 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Build and attach release assets
+      # Two steps so GH_TOKEN (contents: write) is only in the environment of
+      # the upload — not of the package's build and release-assets scripts.
+      - name: Build release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Passed via the environment, not ${{ }}-spliced into the script:
-          # the tag is a git ref name taken verbatim, and env values stay data.
+          # values stay data.
           PKG_NAME: ${{ matrix.package.name }}
-          PKG_DIR: ${{ matrix.package.path }}
-          PKG_TAG: ${{ matrix.package.tag }}
         run: |
           pnpm build --filter "$PKG_NAME"
           pnpm --filter "$PKG_NAME" run release-assets
-          node ./tooling/scripts/bin/upload-release-assets.js "$PKG_TAG" "$PKG_DIR"
+
+      - name: Attach release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # the tag is a git ref name taken verbatim — env values stay data
+          PKG_DIR: ${{ matrix.package.path }}
+          PKG_TAG: ${{ matrix.package.tag }}
+        run: node ./tooling/scripts/bin/upload-release-assets.js "$PKG_TAG" "$PKG_DIR"
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
     needs: [publish, docker-matrix, docker-build-publish]
-    if: always() && needs.docker-matrix.outputs.has-packages == 'true'
+    if: ${{ !cancelled() && needs.docker-matrix.outputs.has-packages == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check Docker build results
         run: |
-          if [ "${{ needs.docker-build-publish.result }}" != "success" ]; then
+          result="${{ needs.docker-build-publish.result }}"
+          if [ "$result" = "skipped" ]; then
+            echo "Docker build skipped because an upstream job failed"
+            exit 1
+          elif [ "$result" != "success" ]; then
             echo "Docker build and publish failed"
             exit 1
           fi
