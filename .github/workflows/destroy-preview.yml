@@ -64,12 +64,15 @@ jobs:
       - name: Compute STAGE slug
         id: slugify
         shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # For PRs use `pr-<number>` as the stage; otherwise use 'preview'. The glob matches both
           # `pull_request` and `pull_request_target` (the trigger this workflow actually uses).
-          if [[ "${{ github.event_name }}" == pull_request* ]] && \
-             [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
-            RAW="pr-${{ github.event.pull_request.number }}"
+          if [[ "$EVENT" == pull_request* ]] && [[ "$BASE_REF" == "main" ]]; then
+            RAW="pr-${PR_NUMBER}"
           else
             RAW="preview"
           fi
