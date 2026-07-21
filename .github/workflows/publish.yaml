@@ -20,8 +20,9 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  # Skips unless the run came from a push to this repo's own main, which skips every job below
-  # it — see "workflow_run provenance" in docs/CICD.md.
+  # Authorizes the chain: skips unless the run came from a push to this repo's own main. Every
+  # other job must BOTH list `provenance` in `needs` and name `needs.provenance.result ==
+  # 'success'` in its `if` — see "workflow_run provenance" in docs/CICD.md.
   provenance:
     if: >-
       ${{ github.event.workflow_run.event == 'push' &&
@@ -39,7 +40,7 @@ jobs:
   publish:
     needs: provenance
     # only run when CI passed
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ needs.provenance.result == 'success' && github.event.workflow_run.conclusion == 'success' }}
     # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
@@ -187,7 +188,7 @@ jobs:
   # Build and publish Docker images in parallel
   docker-build-publish:
     needs: [provenance, docker-matrix]
-    if: ${{ needs.docker-matrix.outputs.has-packages == 'true' }}
+    if: ${{ needs.provenance.result == 'success' && needs.docker-matrix.outputs.has-packages == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -261,7 +262,7 @@ jobs:
   release-assets:
     needs: [provenance, publish]
     # Only after an actual npm/tag release — skips the "Version Packages" PR runs.
-    if: needs.publish.outputs.published == 'true'
+    if: ${{ needs.provenance.result == 'success' && needs.publish.outputs.published == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

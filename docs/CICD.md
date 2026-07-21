@@ -45,17 +45,26 @@ the run that triggered it had neither** — and these workflows then check out a
 - **`workflow_run.head_branch == 'main'`** states the intended branch, which the trigger's
   `branches` filter cannot (below).
 
-Both workflows express this the same way: a credential-free **`provenance`** job carries the
-condition in its own `if:`, and every other job lists it in `needs:`. An untrusted run skips
-`provenance`, and GitHub skips everything that needs it — so **a job added later that lists
-`needs: provenance` is gated even if its author writes no condition at all.** That's the reason the
-condition lives in the gate job rather than in an output the others compare against: a gate that
-ran and reported `false` would leave `needs:` inert, and a new job could join the workflow looking
-gated while running on fork-triggered events.
+Both workflows express this the same way. A credential-free **`provenance`** job carries the
+condition in its own `if:`, and **every other job does two things: lists `provenance` in `needs:`,
+and names `needs.provenance.result == 'success'` in its own `if:`.** Both are required, and no job
+is exempt.
 
-The exception is jobs whose `if:` uses `always()` or `!cancelled()`, which override skip
-propagation. Those must name the gate explicitly — `needs.provenance.result == 'success'` — as
-`docker-matrix` and `docker-status-check` do.
+Either one gates on its own, which is the point — a single omission still fails closed:
+
+- The `needs:` edge alone gates, because GitHub skips a job whose dependency was skipped. That
+  covers a new job whose author writes no condition.
+- The explicit clause alone gates, because it's evaluated regardless of the graph. That covers the
+  case the `needs:` edge does **not**: a job whose `if:` contains `always()`, `!cancelled()`, or
+  `failure()` suppresses the implicit `success()` and so **stops inheriting the skip**. Adding
+  `always()` to a job is an ordinary scheduling edit that would otherwise silently remove it from
+  the gate, with nothing in the diff to show a security control had gone.
+
+Use `.result` rather than a job output: no step can fail to write it, and there is no empty-string
+case to reason about.
+
+Both workflows also default to `permissions: {}`, so a job that forgets to declare permissions gets
+none rather than the repository default.
 
 Both workflows also default to `permissions: {}`, so a job that forgets to declare permissions gets
 none rather than the repository default.
