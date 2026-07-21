@@ -31,6 +31,36 @@ images publish to **GHCR**.
 so **infrastructure and releases only proceed after `ci.yaml` succeeds** — both production and
 preview deploys are gated on a passing CI run for that exact commit.
 
+### `workflow_run` provenance
+
+A `workflow_run` workflow runs in this repo's context **with secrets and a write token, even when
+the run that triggered it had neither** — and these workflows then check out and execute
+`workflow_run.head_sha`. So each credentialed job verifies where the triggering run came from:
+
+```
+workflow_run.event == 'push'
+workflow_run.head_repository.full_name == github.repository
+workflow_run.head_branch == 'main'
+```
+
+`event == 'push'` carries the weight: `ci.yaml` also runs on `pull_request`, and a fork's PR
+produces a `pull_request` run **in this repo**, whereas a `push` run requires write access here.
+
+Two things that look like controls but aren't, so don't substitute them:
+
+- **`on.workflow_run.branches: [main]`** matches the triggering run's _head branch_. For a fork PR
+  that is a branch name in the fork — and forks are created with a `main` branch. It's a pre-filter,
+  not a gate.
+- **`github.ref`** is always the default branch for `workflow_run` events, so `github.ref ==
+'refs/heads/main'` is unconditionally true. This also means the `release` / `production`
+  **environment branch policies never reject a `workflow_run` deployment**; treat those
+  environments as scoping secrets, not as branch gates.
+
+`deploy-preview.yaml` deliberately runs for fork PRs, and is built for it: the job that decides
+whether to deploy holds no credentials, and the deploy is opt-in via the `preview` label — which
+only someone with write access can apply. Applying that label to a fork PR is therefore the act
+that admits fork code to the deploy credentials.
+
 ### Deploy (`deploy.yaml` / `deploy-preview.yaml`)
 
 Both jobs check out `github.event.workflow_run.head_sha` — the exact commit CI validated, not
@@ -54,18 +84,20 @@ All release jobs check out `github.event.workflow_run.head_sha` — the exact co
 validated — so the published version, its git tags, and the built images stay in lockstep (a
 newer `main` commit can't be released/built under the just-published version tags).
 
-1. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
+1. **provenance** — verifies the triggering run came from a push to this repo's `main`
+   (see [`workflow_run` provenance](#workflow_run-provenance)); every job below gates on it.
+2. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
    changesets are pending) or, when none are pending, publishes packages with
    `pnpm publish-packages` and pushes git tags. Uses an OIDC→KMS-minted GitHub App token (for the
    GitHub side: the PR and tags) and `NPM_TOKEN` (from the `release` environment) for npm.
-2. **docker-matrix** — only after a publish (no pending changesets). `tooling/scripts/bin/docker-packages.js`
+3. **docker-matrix** — only after a publish (no pending changesets). `tooling/scripts/bin/docker-packages.js`
    reads the git tags on `HEAD` and selects the just-released packages that have a `Dockerfile`.
    (This is why the lookup must run on the same `head_sha` the publish job tagged.)
-3. **docker-build-publish** — matrix per package: `pnpm run artifact --filter <pkg>` builds the
+4. **docker-build-publish** — matrix per package: `pnpm run artifact --filter <pkg>` builds the
    image to `.out/`, which is then tagged `latest` / `major` / `minor` / `patch` and pushed to
    `ghcr.io`.
-4. **docker-status-check** — fails the run if any image build failed.
-5. **release-assets** — attaches downloadable files to the GitHub releases changesets created.
+5. **docker-status-check** — fails the run if any image build failed.
+6. **release-assets** — attaches downloadable files to the GitHub releases changesets created.
    See [Release assets](#release-assets) below.
 
 #### Release assets

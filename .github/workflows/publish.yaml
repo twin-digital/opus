@@ -1,7 +1,11 @@
 name: Publish
 
 on:
-  # watch for CI workflow to finish
+  # Watch for CI workflow to finish.
+  #
+  # `branches` is a cheap pre-filter, NOT a security control: it matches the triggering run's
+  # *head branch*, which for a PR from a fork is a branch name in the fork — and forks are created
+  # with a `main` branch. Every job below re-checks provenance via `is-release-commit` (see there).
   workflow_run:
     branches: [main]
     types:
@@ -16,9 +20,44 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
+  # Single source of truth for "did this run follow a real push to our own main?" — every
+  # credentialed job below gates on it.
+  #
+  # A `workflow_run` workflow runs in the base repo with secrets and a write token even when the
+  # triggering run had neither ("The workflow started by the workflow_run event is able to access
+  # secrets and write tokens, even if the previous workflow was not" — GitHub docs). Since the jobs
+  # below then check out `workflow_run.head_sha` and execute it, the triggering run's provenance is
+  # what has to be verified:
+  #
+  #   event == 'push'   — the release chain follows post-merge pushes to main. A fork's PR produces
+  #                       a `pull_request` run; a `push` run for this repo can only come from a push
+  #                       to a branch here, which requires write access.
+  #   head_repository   — excludes fork-originated runs outright.
+  #   head_branch       — states the intended branch, since `on.workflow_run.branches` matches the
+  #                       triggering run's head branch, which a fork controls.
+  #
+  # `github.ref` cannot do this job: for `workflow_run` it is always the default branch. That also
+  # means the `release`/`production` environment branch policies are not controls here.
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      trusted: ${{ steps.check.outputs.trusted }}
+    steps:
+      - id: check
+        env:
+          TRUSTED: >-
+            ${{ github.event.workflow_run.event == 'push' &&
+                github.event.workflow_run.head_repository.full_name == github.repository &&
+                github.event.workflow_run.head_branch == 'main' }}
+        run: |
+          echo "trusted=$TRUSTED" >> "$GITHUB_OUTPUT"
+          echo "Triggering run: event=${{ github.event.workflow_run.event }} repo=${{ github.event.workflow_run.head_repository.full_name }} branch=${{ github.event.workflow_run.head_branch }} → trusted=$TRUSTED"
+
   publish:
-    # only run when CI passed
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: provenance
+    # only run when CI passed, for a trusted push to main (see `provenance`)
+    if: ${{ needs.provenance.outputs.trusted == 'true' && github.event.workflow_run.conclusion == 'success' }}
     # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
@@ -129,12 +168,12 @@ jobs:
 
   # Prepare matrix of Docker packages to build
   docker-matrix:
-    needs: publish
+    needs: [provenance, publish]
     # Run on a release (publish succeeded, hasChangesets=false) AND when publish FAILED — an
     # npm-publish failure of unrelated packages shouldn't block image builds, which are gated
     # on their own tag detection below (docker-packages.js only emits packages tagged at HEAD).
     # Skips the "create Version Packages PR" runs (publish success + hasChangesets=true).
-    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
+    if: ${{ !cancelled() && needs.provenance.outputs.trusted == 'true' && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -165,8 +204,8 @@ jobs:
 
   # Build and publish Docker images in parallel
   docker-build-publish:
-    needs: docker-matrix
-    if: needs.docker-matrix.outputs.has-packages == 'true'
+    needs: [provenance, docker-matrix]
+    if: ${{ needs.provenance.outputs.trusted == 'true' && needs.docker-matrix.outputs.has-packages == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
