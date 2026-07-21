@@ -1,0 +1,59 @@
+{
+  "private": true,
+  "name": "@twin-digital/mc-pack-config",
+  "version": "0.1.0",
+  "description": "Shared tsdown config for Minecraft Bedrock behavior packs: bundle to dist/scripts, assemble the shippable manifest.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null,
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/semver": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "semver": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

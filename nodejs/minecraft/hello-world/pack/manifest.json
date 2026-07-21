@@ -1,0 +1,23 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "hello-world",
+    "description": "Minecraft behavior pack which greets players when they join.",
+    "uuid": "922a4dcb-b568-43a5-b9fd-43db61163484",
+    "min_engine_version": [1, 26, 31]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "b0aea646-4d1f-40db-a815-30117613ad4e",
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.0.0"
+    }
+  ]
+}

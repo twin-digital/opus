@@ -19,11 +19,13 @@
       "inputs": [
         "assets/**",
         "index.html",
+        "pack/**",
         "package.json",
         "src/**",
         "tsconfig.json",
         "tsconfig.*.json",
         "tsdown.config.ts",
+        "tsdown.config.d/**",
         "vite.config.ts",
         "vite.config.d/**"
       ],
