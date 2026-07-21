@@ -97,6 +97,10 @@ jobs:
       contents: write
       packages: write
       id-token: write
+    # Required for the called workflow's `environment:` secrets to resolve at all — without it the
+    # secrets context is empty and `secrets.NPM_TOKEN` reads as "". Grants nothing else: this repo
+    # has no repo-level secrets, and the org's are private-visibility (this repo is public).
+    secrets: inherit
     uses: ./.github/workflows/publish.yaml
 
   deploy:
@@ -105,4 +109,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # See the note on `publish` above — without this, `secrets.AWS_ROLE_ARN` and
+    # `secrets.AWS_CDK_ROLE_ARN` are empty and the OIDC assume never happens.
+    secrets: inherit
     uses: ./.github/workflows/deploy.yaml
