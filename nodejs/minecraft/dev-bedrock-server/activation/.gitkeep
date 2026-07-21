@@ -1,4 +1,0 @@
-This directory holds the generated world_behavior_packs.json (see
-generate-dev-config.mjs; gitignored). It is committed so the directory exists
-from clone — compose watch can only track directories that exist when it
-starts, and single files can't be watched at all.

@@ -1,18 +1,12 @@
-// Shared pack discovery for the dev harness: dev.mjs and
-// generate-dev-config.mjs both resolve packs from here, so the set of packs
-// built always matches the set deployed and activated. A pack is ANY workspace
-// package with a committed pack/manifest.json, wherever it lives — membership
-// comes from pnpm itself (the same source of truth repo-kit's bedrock-pack
-// feature and the release pipeline's detection use), not a hard-coded layout.
-//
-// Kept dependency-free by design — the harness is deliberately not a workspace
-// package (see pnpm-workspace.yaml), so version parsing re-implements the
-// shape check @twin-digital/mc-pack-config performs with the semver library
-// at build time.
-import { spawnSync } from 'node:child_process'
+// Shared pack discovery for the dev harness. A pack is ANY workspace package
+// with a committed pack/manifest.json, wherever it lives — membership comes
+// from pnpm itself (the same source of truth repo-kit's bedrock-pack feature
+// and the release pipeline's detection use), not a hard-coded layout.
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { execaSync } from 'execa'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 
@@ -25,36 +19,6 @@ export const findRepoRoot = () => {
   return root
 }
 
-// Semver string → Bedrock's [major, minor, patch] triple, dropping any
-// prerelease/build suffix. The pattern mirrors the semver library's grammar
-// (optional leading v, dotted alphanumeric prerelease/build) so this and the
-// build-time injection accept the same strings.
-const SEMVER_TRIPLE =
-  /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
-export const parseVersionTriple = (semver, context) => {
-  const match = SEMVER_TRIPLE.exec(semver)
-  if (match === null) {
-    throw new Error(`${context}: version ${JSON.stringify(semver)} is not a major.minor.patch semver`)
-  }
-  return [Number(match[1]), Number(match[2]), Number(match[3])]
-}
-
-/** Every workspace package, via pnpm (a failure here is a hard error). */
-const listWorkspacePackages = (root) => {
-  const result = spawnSync('pnpm', ['list', '--json', '--recursive', '--depth=-1'], {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-  })
-  if (result.error) {
-    throw new Error(`pnpm list failed: ${result.error.message}`)
-  }
-  if (result.status !== 0) {
-    throw new Error(`pnpm list failed:\n${result.stderr}`)
-  }
-  return JSON.parse(result.stdout)
-}
-
 /**
  * Every behavior pack in the workspace, sorted by name and validated:
  * - header.uuid present (the activation list keys on it)
@@ -62,13 +26,15 @@ const listWorkspacePackages = (root) => {
  * - uuids unique (a copy-pasted manifest template would otherwise produce a
  *   colliding activation list the server resolves arbitrarily)
  *
- * Returns [{ name, dir, relDir, packId, version }] — dir absolute, relDir
- * relative to the repo root (./…, usable as a turbo filter), version as a
- * Bedrock triple.
+ * Returns [{ name, dir, relDir, distDir, packId }] — dir/distDir absolute,
+ * relDir relative to the repo root (./…, usable as a turbo filter). Versions
+ * are not read here: the built dist/manifest.json (assembled and validated by
+ * @twin-digital/mc-pack-config) is the source of truth for what gets deployed.
  */
 export const discoverPacks = (root) => {
+  const { stdout } = execaSync('pnpm', ['list', '--json', '--recursive', '--depth=-1'], { cwd: root })
   const packs = []
-  for (const workspace of listWorkspacePackages(root)) {
+  for (const workspace of JSON.parse(stdout)) {
     if (!workspace.path) {
       continue
     }
@@ -80,13 +46,12 @@ export const discoverPacks = (root) => {
     if (typeof header?.uuid !== 'string' || header.uuid.length === 0) {
       throw new Error(`${manifestPath}: pack manifest has no header.uuid`)
     }
-    const { version } = JSON.parse(readFileSync(join(workspace.path, 'package.json'), 'utf8'))
     packs.push({
       name: basename(workspace.path),
       dir: workspace.path,
       relDir: `./${relative(root, workspace.path).replaceAll('\\', '/')}`,
+      distDir: join(workspace.path, 'dist'),
       packId: header.uuid,
-      version: parseVersionTriple(version, join(workspace.path, 'package.json')),
     })
   }
   packs.sort((a, b) => a.name.localeCompare(b.name))

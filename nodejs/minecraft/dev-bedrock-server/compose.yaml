@@ -1,24 +1,15 @@
-# Local Bedrock dev server for behavior-pack iteration.
-#
-# `develop.watch` deploys packs into the running container: each pack's built
-# dist/ syncs into the server's development_behavior_packs pool followed by a
-# `/reload`, and the generated activation list syncs into the world followed by
-# a restart. The watch rules live in compose.watch.yaml, generated per pack by
-# generate-dev-config.mjs (compose can't discover packs itself — glob paths and
-# symlinked dirs are silently ignored). The server runs as a daemon; dev.mjs
-# orchestrates the whole loop, or by hand:
+# Local Bedrock dev server for behavior-pack iteration. Compose has one job
+# here: define and run the server container as a daemon. Pack deployment is
+# handled by the harness (dev.mjs / deploy.mjs), which ships built packs over
+# the Docker API. Run the server by hand with:
 #
 #   docker compose [--env-file .env] \
-#     -f nodejs/minecraft/dev-bedrock-server/compose.yaml \
-#     -f nodejs/minecraft/dev-bedrock-server/compose.watch.yaml up -d --wait
-#   docker compose … watch --no-up     # plus `logs -f` for server output
+#     -f nodejs/minecraft/dev-bedrock-server/compose.yaml up -d --wait
 #
-# Run compose from the REPO ROOT (so the -f paths resolve) and, if you created
+# Run compose from the REPO ROOT (so the -f path resolves) and, if you created
 # a repo-root `.env` (copy .env.example — MINECRAFT_* overrides, pinned dev
 # seed), pass it with --env-file: compose only auto-loads a .env next to the
-# first compose file, never from the cwd. dev.mjs adds the flag automatically.
-# See README.md for the full dev loop; note that compose only watches paths
-# that exist when it starts, so build the packs once before `up --watch`.
+# compose file, never from the cwd. dev.mjs adds the flag automatically.
 #
 # Every knob below is overridable via MINECRAFT_* in the repo-root .env, and
 # falls back to the default shown when unset — including LEVEL_SEED, which

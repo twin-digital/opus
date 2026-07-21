@@ -4,55 +4,42 @@
 //   node nodejs/minecraft/dev-bedrock-server/dev.mjs        # start server + attach watchers
 //   node nodejs/minecraft/dev-bedrock-server/dev.mjs stop   # stop the server (compose down; world volume persists)
 //
-// Start: builds every pack (compose watch only tracks paths that exist when it
-// starts), regenerates the per-pack dev config, brings the server up as a
-// daemon (compose up -d --wait), installs the world's pack-activation list if
-// it is stale, then attaches the watchers with interleaved, prefixed output:
+// Start: builds every pack, brings the server up as a daemon (compose up -d
+// --wait), reconciles the server's pack state against the built packs (see
+// deploy.mjs), then watches:
 //
 //   [server] docker compose logs -f      — server output
-//   [deploy] docker compose watch        — sync built packs → /reload
+//   [deploy] in-process chokidar watcher — ship changed dist/ → /reload
 //   [build]  turbo run watch             — rebuild packs on save
 //
-// Ctrl+C detaches the watchers; the SERVER KEEPS RUNNING (re-run dev.mjs to
-// reattach, `dev.mjs stop` to stop it). The watchers are stateless, so no
-// signal choreography is needed — they die with the terminal's foreground
-// group.
-import { execFile as execFileCb, spawn, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { createInterface } from 'node:readline'
+// Ctrl+C detaches everything; the SERVER KEEPS RUNNING (re-run dev.mjs to
+// reattach, `dev.mjs stop` to stop it).
+import { existsSync } from 'node:fs'
+import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
 
+import { watch } from 'chokidar'
+import concurrently from 'concurrently'
+import { execaSync } from 'execa'
+
+import { createDeployer } from './deploy.mjs'
 import { discoverPacks, findRepoRoot } from './discover-packs.mjs'
-
-const execFile = promisify(execFileCb)
-const sleep = promisify(setTimeout)
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const root = findRepoRoot()
 
-// Compose resolves its default .env from the first compose file's directory,
-// not the cwd — pass the repo-root .env explicitly (when present) so the
-// documented MINECRAFT_* overrides actually apply.
+// Compose resolves its default .env from the compose file's directory, not the
+// cwd — pass the repo-root .env explicitly (when present) so the documented
+// MINECRAFT_* overrides actually apply.
 const composeArgs = [
   'compose',
   ...(existsSync(join(root, '.env')) ? ['--env-file', '.env'] : []),
   '-f',
   join(here, 'compose.yaml'),
-  '-f',
-  join(here, 'compose.watch.yaml'),
 ]
 
 const run = (command, args) => {
-  const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
-  if (result.error) {
-    console.error(`failed to run ${command}: ${result.error.message}`)
-    process.exit(1)
-  }
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1)
-  }
+  execaSync(command, args, { cwd: root, stdio: 'inherit' })
 }
 
 const mode = process.argv[2] ?? 'start'
@@ -71,175 +58,70 @@ const packFilters = packs.flatMap((pack) => ['--filter', pack.relDir])
 
 console.log('▸ building packs…')
 run('pnpm', ['build', ...packFilters])
-console.log('▸ generating dev config…')
-run('node', [join(here, 'generate-dev-config.mjs')])
 
 console.log('▸ starting server…')
 run('docker', [...composeArgs, 'up', '-d', '--wait'])
 
-// The world's activation list is only read at server boot, and compose watch
-// only ships changes made while it is running — so a stale list (new pack,
-// fresh world) is installed directly here, before the watchers attach.
-const compose = (...args) => execFile('docker', [...composeArgs, ...args], { cwd: root })
-
-// Renamed/removed packs leave stale folders in the pool — same uuid under the
-// old name, which the server may arbitrarily prefer over the live copy. The
-// pool is exclusively harness-fed, so prune it to exactly the current packs.
-const prunePool = async () => {
-  const keep = packs.map((pack) => pack.name).join(' ')
-  const { stdout } = await compose(
-    'exec',
-    '-T',
-    'bedrock',
-    'sh',
-    '-c',
-    `cd /data/development_behavior_packs 2>/dev/null || exit 0
-     for d in */; do
-       d="\${d%/}"
-       [ -d "$d" ] || continue
-       case " ${keep} " in
-         *" $d "*) ;;
-         *) echo "pruned stale pack folder: $d"; rm -rf "$d" ;;
-       esac
-     done`,
-  )
-  for (const line of stdout.split('\n').filter(Boolean)) {
-    console.log(`▸ ${line}`)
-  }
-}
-
-const waitHealthy = async () => {
-  for (let attempt = 0; attempt < 24; attempt += 1) {
-    const { stdout } = await compose('ps', '--format', 'json', 'bedrock')
-    try {
-      if (JSON.parse(stdout).Health === 'healthy') {
-        return true
-      }
-    } catch {
-      // not up yet / unexpected output — keep waiting
-    }
-    await sleep(5000)
-  }
-  return false
-}
-
-const reconcileActivation = async () => {
-  const activationPath = join(here, 'activation', 'world_behavior_packs.json')
-  const desired = readFileSync(activationPath, 'utf8')
-  const matches = (content) => {
-    try {
-      return JSON.stringify(JSON.parse(content)) === JSON.stringify(JSON.parse(desired))
-    } catch {
-      return false // missing or malformed
-    }
-  }
-  const probe = () =>
-    compose(
-      'exec',
-      '-T',
-      'bedrock',
-      'sh',
-      '-c',
-      'w="/data/worlds/${LEVEL_NAME:-dev}"; if [ ! -d "$w" ]; then echo __NO_WORLD__; else cat "$w/world_behavior_packs.json" 2>/dev/null || echo __MISSING__; fi',
-    ).then(({ stdout }) => stdout)
-
-  // The container is up (--wait), but on a very first boot the world may still
-  // be generating — wait for it briefly.
-  let current = await probe()
-  for (let attempt = 0; attempt < 24 && current.includes('__NO_WORLD__'); attempt += 1) {
-    await sleep(5000)
-    current = await probe()
-  }
-  if (current.includes('__NO_WORLD__')) {
-    console.warn('⚠ world never appeared — pack activation not installed (check the server logs)')
-    return
-  }
-  if (matches(current)) {
-    console.log('▸ world pack activation up to date')
-    return
-  }
-
-  console.log('▸ installing world pack activation (server will restart)…')
-  const { stdout: level } = await compose('exec', '-T', 'bedrock', 'sh', '-c', 'echo "${LEVEL_NAME:-dev}"')
-  await compose('cp', activationPath, `bedrock:/data/worlds/${level.trim()}/world_behavior_packs.json`)
-  await compose('restart', 'bedrock')
-  if (!(await waitHealthy())) {
-    console.warn('⚠ server not healthy after restart — check the server logs')
-    return
-  }
-  if (matches(await probe())) {
-    console.log('▸ world pack activation installed')
-  } else {
-    console.warn('⚠ pack activation still differs after install — check the server logs')
-  }
-}
+const deployer = createDeployer({ composeArgs, root })
 try {
-  await prunePool()
-  await reconcileActivation()
+  await deployer.reconcile(packs)
 } catch (error) {
   // A transient docker/compose failure here shouldn't kill the loop with a
   // raw stack — warn and attach the watchers anyway.
-  const detail = error.stderr?.trim() || error.message
-  console.warn(`⚠ pack reconcile failed (${detail}) — continuing; check the server logs`)
+  console.warn(`⚠ pack reconcile failed (${error.stderr?.trim() || error.message}) — continuing; check the server logs`)
 }
 
-// Attach the watchers: ordinary foreground children, interleaved output. If
-// any one exits (or fails to spawn), stop the rest and exit — and on Ctrl+C
-// everything dies with the foreground process group, server excluded.
-const children = []
-let stopping = false
-const stopAll = (code) => {
-  if (stopping) {
-    return
-  }
-  stopping = true
-  process.exitCode = code
-  for (const child of children) {
-    child.kill('SIGTERM')
-  }
-  // The pipe write ends are inherited by grandchildren (pnpm → turbo → task
-  // watchers), and dev.mjs can only exit once they reach EOF — if anything
-  // survives the SIGTERM, escalate so the shell always gets its prompt back.
-  setTimeout(() => {
-    for (const child of children) {
-      child.stdout?.destroy()
-      child.stderr?.destroy()
-      child.kill('SIGKILL')
+// Ship-on-change: watch every pack's dist/ (rewritten by turbo/tsdown on each
+// save) and deploy the changed packs after a short settle.
+const byDist = new Map(packs.map((pack) => [pack.distDir + sep, pack]))
+const changed = new Set()
+let timer
+const watcher = watch(
+  packs.map((pack) => pack.distDir),
+  { ignoreInitial: true },
+)
+watcher.on('all', (_event, path) => {
+  for (const [prefix, pack] of byDist) {
+    if (path.startsWith(prefix)) {
+      changed.add(pack)
     }
-    process.exit(code)
-  }, 5000).unref()
-}
-const spawnPrefixed = (label, color, command, args) => {
-  const child = spawn(command, args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] })
-  const prefix = `\x1b[${color}m[${label}]\x1b[0m `
-  for (const stream of [child.stdout, child.stderr]) {
-    createInterface({ input: stream }).on('line', (line) => {
-      process.stdout.write(`${prefix}${line}\n`)
-    })
   }
-  child.on('close', (code) => {
-    if (!stopping) {
-      console.log(`${prefix}exited (${code ?? 'signal'}) — detaching`)
+  clearTimeout(timer)
+  timer = setTimeout(() => {
+    const batch = [...changed]
+    changed.clear()
+    if (batch.length > 0) {
+      void deployer.deployPacks(batch)
     }
-    // A null code here is an external signal death (our own SIGTERMs are
-    // behind the `stopping` guard) — report failure, not success.
-    stopAll(code ?? 1)
-  })
-  child.on('error', (error) => {
-    console.error(`${prefix}failed to start ${command}: ${error.message}`)
-    stopAll(1)
-  })
-  children.push(child)
-}
+  }, 400)
+})
 
 console.log('▸ attaching watchers — Ctrl+C detaches, the server keeps running (`dev.mjs stop` stops it)…')
-spawnPrefixed('server', '36', 'docker', [...composeArgs, 'logs', '-f', '--no-log-prefix', '--tail', '5'])
-spawnPrefixed('deploy', '35', 'docker', [...composeArgs, 'watch', '--no-up'])
-spawnPrefixed('build', '33', 'pnpm', [
-  'exec',
-  'turbo',
-  'run',
-  'watch',
-  ...packFilters,
-  `--concurrency=${packs.length + 4}`,
-])
+const { result } = concurrently(
+  [
+    {
+      command: `docker ${composeArgs.join(' ')} logs -f --no-log-prefix --tail 5`,
+      name: 'server',
+      prefixColor: 'cyan',
+    },
+    {
+      command: `pnpm exec turbo run watch ${packFilters.join(' ')} --concurrency=${packs.length + 4}`,
+      name: 'build',
+      prefixColor: 'yellow',
+    },
+  ],
+  { cwd: root, killOthers: ['failure', 'success'], prefix: '[{name}]' },
+)
+try {
+  await result
+  process.exitCode = 0
+} catch (closeEvents) {
+  // Signal-killed children (Ctrl+C detach) are normal; anything else is a
+  // watcher failure worth a non-zero exit.
+  const abnormal =
+    Array.isArray(closeEvents) &&
+    closeEvents.some((event) => typeof event.exitCode === 'number' && event.exitCode !== 0)
+  process.exitCode = abnormal ? 1 : 0
+} finally {
+  await watcher.close()
+}

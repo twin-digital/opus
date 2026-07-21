@@ -2,8 +2,6 @@ packages:
   - nodejs/*/*
   - tooling/scripts
   - tooling/renovate-tools
-  # Not a package — a docker-compose Bedrock dev harness for the minecraft packs.
-  - '!nodejs/minecraft/dev-bedrock-server'
 
 catalog:
   '@aws-lambda-powertools/logger': ^2.30.0
