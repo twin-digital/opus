@@ -16,6 +16,8 @@ catalog:
   '@aws-sdk/client-ssm': ^3.958.0
   '@aws-sdk/lib-dynamodb': ^3.958.0
   '@eslint/js': ^10.0.0
+  '@minecraft/server': ^2.8.0
+  '@types/semver': ^7.7.0
   'aws-sdk-client-mock': ^4.1.0
   'aws-sdk-client-mock-vitest': ^7.0.1
   '@middy/core': ^7.0.0
@@ -31,6 +33,7 @@ catalog:
   lodash-es: ^4.17.22
   prettier: ^3.5.3
   prettier-package-json: ^2.8.0
+  semver: ^7.7.0
   serverless: 4.37.0
   ts-node: ^10.9.2
   tsdown: ^0.18.3
