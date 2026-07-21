@@ -273,8 +273,6 @@ jobs:
           # turbo skips packages that don't define the script, so filtering on
           # every published package is all the opt-in gating the hook needs.
           mapfile -t filters < <(jq -r '.[] | "--filter=" + .name' <<< "$PUBLISHED_PACKAGES")
-          # Without filters turbo would run the hook repo-wide; nothing was released.
-          [ "${#filters[@]}" -gt 0 ] || exit 0
           pnpm release-assets "${filters[@]}"
 
           # Pair each published package with its workspace directory. The git tag
@@ -282,7 +280,11 @@ jobs:
           workspaces=$(pnpm list --recursive --depth=-1 --json)
           while IFS=$'\t' read -r name version dir; do
             assets="$dir/.release-assets"
-            if ! compgen -G "$assets/*" > /dev/null; then
+            # A GitHub release asset is a flat file, so take the top-level regular files
+            # and ignore any directory the hook left behind. Sorted, for a SHA256SUMS
+            # that's byte-identical when the same release is re-run.
+            mapfile -t files < <(find "$assets" -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' 2>/dev/null | sort)
+            if [ "${#files[@]}" -eq 0 ]; then
               echo "No release assets for $name"
               continue
             fi
@@ -290,8 +292,8 @@ jobs:
             # is the downloadable companion, so plain-URL consumers (`sha256sum -c`,
             # ansible `get_url checksum:`) can verify without an API call. Written via
             # $RUNNER_TEMP so the file being created isn't itself a checksum input.
-            (cd "$assets" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
-            gh release upload "$name@$version" "$assets"/* --clobber
+            (cd "$assets" && sha256sum -- "${files[@]}" > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
+            gh release upload "$name@$version" "${files[@]/#/$assets/}" "$assets/SHA256SUMS" --clobber
           done < <(jq -r --argjson published "$PUBLISHED_PACKAGES" \
             'INDEX(.[]; .name) as $ws | $published[] | [.name, .version, $ws[.name].path] | @tsv' <<< "$workspaces")
 
