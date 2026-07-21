@@ -11,34 +11,35 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+# Deny by default; each job grants only what it needs.
+permissions: {}
+
 env:
   CI: 1
   HUSKY: 0
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
-  # Prevent unauthorized fork runs from reaching release credentials — see "workflow_run
-  # provenance" in docs/CICD.md. Every credentialed job below gates on this one.
+  # Skips unless the run came from a push to this repo's own main, which skips every job below
+  # it — see "workflow_run provenance" in docs/CICD.md.
   provenance:
+    if: >-
+      ${{ github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    outputs:
-      trusted: ${{ steps.check.outputs.trusted }}
+    permissions: {}
     steps:
-      - id: check
-        env:
-          TRUSTED: >-
-            ${{ github.event.workflow_run.event == 'push' &&
-                github.event.workflow_run.head_repository.full_name == github.repository &&
-                github.event.workflow_run.head_branch == 'main' }}
-        run: |
-          echo "trusted=$TRUSTED" >> "$GITHUB_OUTPUT"
-          echo "Triggering run: event=${{ github.event.workflow_run.event }} repo=${{ github.event.workflow_run.head_repository.full_name }} branch=${{ github.event.workflow_run.head_branch }} → trusted=$TRUSTED"
+      - env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "Release chain authorized for $BRANCH@$SHA"
 
   publish:
     needs: provenance
-    # only run when CI passed, for a trusted push to main (see `provenance`)
-    if: ${{ needs.provenance.outputs.trusted == 'true' && github.event.workflow_run.conclusion == 'success' }}
+    # only run when CI passed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
@@ -154,7 +155,7 @@ jobs:
     # npm-publish failure of unrelated packages shouldn't block image builds, which are gated
     # on their own tag detection below (docker-packages.js only emits packages tagged at HEAD).
     # Skips the "create Version Packages PR" runs (publish success + hasChangesets=true).
-    if: ${{ !cancelled() && needs.provenance.outputs.trusted == 'true' && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
+    if: ${{ !cancelled() && needs.provenance.result == 'success' && (needs.publish.result == 'failure' || needs.publish.outputs.hasChangesets == 'false') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -186,7 +187,7 @@ jobs:
   # Build and publish Docker images in parallel
   docker-build-publish:
     needs: [provenance, docker-matrix]
-    if: ${{ needs.provenance.outputs.trusted == 'true' && needs.docker-matrix.outputs.has-packages == 'true' }}
+    if: ${{ needs.docker-matrix.outputs.has-packages == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -258,7 +259,7 @@ jobs:
   # uploaded to that package's release. The hook is optional: packages without it
   # simply get no GitHub-hosted assets.
   release-assets:
-    needs: publish
+    needs: [provenance, publish]
     # Only after an actual npm/tag release — skips the "Version Packages" PR runs.
     if: needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
@@ -319,8 +320,8 @@ jobs:
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
-    needs: [publish, docker-matrix, docker-build-publish]
-    if: always() && needs.docker-matrix.outputs.has-packages == 'true'
+    needs: [provenance, publish, docker-matrix, docker-build-publish]
+    if: ${{ always() && needs.provenance.result == 'success' && needs.docker-matrix.outputs.has-packages == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

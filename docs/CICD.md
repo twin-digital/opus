@@ -45,10 +45,20 @@ the run that triggered it had neither** — and these workflows then check out a
 - **`workflow_run.head_branch == 'main'`** states the intended branch, which the trigger's
   `branches` filter cannot (below).
 
-In `publish.yaml` a `provenance` job evaluates this once and the other jobs gate on its output, so
-there is one definition and the run UI shows why a chain didn't proceed. `deploy.yaml`'s
-`production` and `cdk` jobs — both `environment: production`, both executing `head_sha` — carry the
-condition directly.
+Both workflows express this the same way: a credential-free **`provenance`** job carries the
+condition in its own `if:`, and every other job lists it in `needs:`. An untrusted run skips
+`provenance`, and GitHub skips everything that needs it — so **a job added later that lists
+`needs: provenance` is gated even if its author writes no condition at all.** That's the reason the
+condition lives in the gate job rather than in an output the others compare against: a gate that
+ran and reported `false` would leave `needs:` inert, and a new job could join the workflow looking
+gated while running on fork-triggered events.
+
+The exception is jobs whose `if:` uses `always()` or `!cancelled()`, which override skip
+propagation. Those must name the gate explicitly — `needs.provenance.result == 'success'` — as
+`docker-matrix` and `docker-status-check` do.
+
+Both workflows also default to `permissions: {}`, so a job that forgets to declare permissions gets
+none rather than the repository default.
 
 Two things that look like controls but aren't, so don't substitute them:
 
@@ -88,8 +98,8 @@ All release jobs check out `github.event.workflow_run.head_sha` — the exact co
 validated — so the published version, its git tags, and the built images stay in lockstep (a
 newer `main` commit can't be released/built under the just-published version tags).
 
-1. **provenance** — verifies the triggering run came from a push to this repo's `main`
-   (see [`workflow_run` provenance](#workflow_run-provenance)); every job below gates on it.
+1. **provenance** — skips unless the triggering run came from a push to this repo's `main`, which
+   skips every job below (see [`workflow_run` provenance](#workflow_run-provenance)).
 2. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
    changesets are pending) or, when none are pending, publishes packages with
    `pnpm publish-packages` and pushes git tags. Uses an OIDC→KMS-minted GitHub App token (for the
