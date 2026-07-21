@@ -18,26 +18,64 @@ images publish to **GHCR**.
 
 ## Workflows
 
-| Workflow              | Trigger                                | Purpose                                                                                                                       |
-| --------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ci.yaml`             | every push (any branch); PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`.                                                                           |
-| `merge-checks.yaml`   | PRs to `main`                          | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
-| `deploy.yaml`         | CI completion on `main`                | Deploys **production** (stage `prod`).                                                                                        |
-| `deploy-preview.yaml` | CI completion (PR runs)                | Deploys the PR's **preview** stage (`pr-<number>`).                                                                           |
-| `destroy-preview.yml` | PR closed                              | Tears down that PR's preview stage.                                                                                           |
-| `publish.yaml`        | CI completion on `main`                | changesets release to npm, then GHCR image publish.                                                                           |
+| Workflow              | Trigger                         | Purpose                                                                                                                       |
+| --------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yaml`             | pushes to `main`; PRs to `main` | The gate: `pnpm build` → `pnpm lint` → `pnpm test`, then release + deploy on `main`.                                          |
+| `merge-checks.yaml`   | PRs to `main`                   | Fails if `README.md` or repo-kit config is out of sync (runs `pnpm update-readme` / `pnpm sync` and checks for a dirty tree). |
+| `deploy.yaml`         | called by `ci.yaml` on `main`   | Deploys **production** (stage `prod`).                                                                                        |
+| `deploy-preview.yaml` | CI completion (PR runs)         | Deploys the PR's **preview** stage (`pr-<number>`).                                                                           |
+| `destroy-preview.yml` | PR closed                       | Tears down that PR's preview stage.                                                                                           |
+| `publish.yaml`        | called by `ci.yaml` on `main`   | changesets release to npm, then GHCR image publish.                                                                           |
 
-`deploy.yaml`, `deploy-preview.yaml`, and `publish.yaml` all chain off CI via `workflow_run`,
-so **infrastructure and releases only proceed after `ci.yaml` succeeds** — both production and
-preview deploys are gated on a passing CI run for that exact commit.
+`publish.yaml` and `deploy.yaml` are **reusable workflows** (`on: workflow_call`) that `ci.yaml`
+invokes from its own `main` run, with `needs: lint-build-test`, so **releases and production
+deploys only proceed after CI succeeds** on exactly the commit being released. `deploy-preview.yaml`
+still chains off CI via `workflow_run`, because it serves pull requests (see below).
+
+### Fork pull requests and credentials
+
+Anyone can open a pull request from a fork, and its CI run executes **the fork's version of the
+workflow files** — an attacker can add jobs. What stops that reaching anything is the platform, not
+a condition anyone maintains:
+
+> With the exception of `GITHUB_TOKEN`, secrets are not passed to the runner when a workflow is
+> triggered from a forked repository. The `GITHUB_TOKEN` has read-only permissions in pull requests
+> from forked repositories.
+
+A workflow's own `permissions:` block cannot override this: permissions are computed workflow-level
+first, job-level next, and the fork downgrade **last**. The settings that would relax it are
+[available to private repositories only](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#enabling-workflows-for-forks-of-private-repositories),
+and this repository is public.
+
+Two consequences shape the design:
+
+- **Privileged work runs only in the `push`-to-`main` CI run.** The caller jobs check
+  `github.event_name == 'push' && github.ref == 'refs/heads/main'`, which for a `push` event is the
+  branch actually pushed — so it requires write access here. That condition is scheduling, not the
+  security boundary; the boundary is that a fork PR run has no secrets to hand out.
+- **The `release` and `production` environment branch policies are live gates.** Both are pinned to
+  `main`, and they match against `github.ref`. A fork PR run has `github.ref` of
+  `refs/pull/<n>/merge`, so even a job that declared `environment: release` would be rejected
+  before reaching a runner.
+
+**This is why these workflows are not triggered by `workflow_run`.** A `workflow_run` workflow runs
+in this repository's context _with secrets and a write token even when the run that triggered it had
+neither_ — it re-privileges exactly what the fork rules deprivileged. Combined with checking out
+`workflow_run.head_sha`, that is the "pwn request" pattern behind several published advisories
+(GHSL-2024-320, GHSL-2024-226). Under `workflow_call` there is no such trigger to guard: the
+credentials are unreachable rather than merely gated, and `github.ref`-based controls like the
+environment branch policies start working, where under `workflow_run` they are inert (there,
+`github.ref` is always the default branch).
+
+If a future workflow does need `workflow_run`, it must verify the triggering run's provenance
+itself — `workflow_run.event`, `workflow_run.head_repository.full_name` — because
+`on.workflow_run.branches` matches the triggering run's _head branch_, which a fork controls.
 
 ### Deploy (`deploy.yaml` / `deploy-preview.yaml`)
 
-Both jobs check out `github.event.workflow_run.head_sha` — the exact commit CI validated, not
-whatever the branch points at by the time the deploy runs.
-
-- **production** (`deploy.yaml`) — fires when CI completes successfully on `main`. Deploys to
-  stage `prod` under the `production` environment.
+- **production** (`deploy.yaml`) — runs inside the `main` CI run, after `lint-build-test`, so it
+  deploys exactly the commit that was validated. Deploys to stage `prod` under the `production`
+  environment.
 - **preview** (`deploy-preview.yaml`) — fires when a CI run **for a PR** completes successfully.
   It filters to `workflow_run.event == 'pull_request'` (the push-triggered CI run for the same
   commit is ignored to avoid a double deploy), skips the changesets release PR, then resolves the
@@ -50,9 +88,9 @@ Serverless Dashboard auth via `secrets.SERVERLESS_ACCESS_KEY`.
 
 ### Publish (`publish.yaml`)
 
-All release jobs check out `github.event.workflow_run.head_sha` — the exact commit CI
-validated — so the published version, its git tags, and the built images stay in lockstep (a
-newer `main` commit can't be released/built under the just-published version tags).
+Runs inside the `main` CI run, after `lint-build-test`. Every job checks out that run's own
+commit, so the published version, its git tags, and the built images stay in lockstep — a newer
+`main` commit can't be released or built under the just-published version tags.
 
 1. **publish** — `changesets/action` either opens/updates the **"Version Packages"** PR (when
    changesets are pending) or, when none are pending, publishes packages with

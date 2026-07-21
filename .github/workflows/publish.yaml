@@ -1,14 +1,11 @@
 name: Publish
 
-on:
-  # watch for CI workflow to finish
-  workflow_run:
-    branches: [main]
-    types:
-      - completed
-    workflows: ['CI']
+# Called by ci.yaml on pushes to main, after lint-build-test passes. Not independently
+# triggerable, so there is no fork-reachable path to the credentials below.
+on: workflow_call
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Deny by default; each job grants only what it needs, within ci.yaml's ceiling.
+permissions: {}
 
 env:
   CI: 1
@@ -17,8 +14,6 @@ env:
 
 jobs:
   publish:
-    # only run when CI passed
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     # Scopes the NPM_TOKEN secret (the App-minter role ARN is a repo var).
     environment: release
     runs-on: ubuntu-latest
@@ -87,9 +82,6 @@ jobs:
       # checkout project (app token persisted as git creds → changesets' tag pushes trigger workflows)
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          # release the exact commit CI validated, not whatever main points at now —
-          # keeps the published version, its git tags, and the built images in lockstep
-          ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ steps.app-token.outputs.token }}
           fetch-tags: true
 
@@ -97,14 +89,14 @@ jobs:
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # Restore/save turbo's cache, keyed to the CI-validated commit so `publish-packages`'
+      # Restore/save turbo's cache, keyed to this run's commit so `publish-packages`'
       # `turbo run build` replays CI's outputs instead of rebuilding before `changeset publish`.
       # Newest cache is the restore-keys fallback.
       - name: Cache turbo outputs
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             turbo-${{ runner.os }}-
 
@@ -145,8 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          # read the tags the publish job just pushed; head_sha keeps it in lockstep
-          ref: ${{ github.event.workflow_run.head_sha }}
+          # read the tags the publish job just pushed
           fetch-tags: true
 
       - name: Setup dependencies
@@ -178,21 +169,18 @@ jobs:
       matrix:
         package: ${{ fromJson(needs.docker-matrix.outputs.packages) }}
     steps:
-      # build images from the exact released commit (matches docker-matrix's tag lookup)
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # Restore-only: lets `artifact`'s `build` dependency replay CI's outputs. We don't save here —
+      # Restore-only: lets `artifact`'s `build` dependency replay lint-build-test's outputs. We don't save here —
       # the containerized `.out/**` artifact would bloat the shared turbo cache and evict build entries.
       - name: Restore turbo cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             turbo-${{ runner.os }}-
 
@@ -247,19 +235,16 @@ jobs:
       contents: write # upload assets to the releases
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          # build assets from the exact released commit
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
-      # Restore-only: lets the `release-assets` task's `build` dependency replay CI's outputs.
+      # Restore-only: lets the `release-assets` task's `build` dependency replay lint-build-test's outputs.
       - name: Restore turbo cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.event.workflow_run.head_sha }}
+          key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             turbo-${{ runner.os }}-
 

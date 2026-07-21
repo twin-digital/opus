@@ -1,7 +1,7 @@
 name: CI
 
 on:
-  # post-merge build on main (also drives the publish/deploy `workflow_run` chain)
+  # post-merge build on main; the publish/deploy jobs below hang off this run
   push:
     branches: [main]
   # PR "merge-commit" build against main — the single source of the required
@@ -16,10 +16,14 @@ on:
       - reopened
       - synchronize
 
-# Cancel superseded runs for the same ref (a newer push obsoletes an in-flight run)
+# Cancel superseded runs for the same ref (a newer push obsoletes an in-flight run) — but never
+# on main, where a run may be mid-release. There, a newer run queues behind it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Deny by default; each job grants only what it needs.
+permissions: {}
 
 env:
   CI: 1
@@ -44,6 +48,8 @@ env:
 jobs:
   lint-build-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 20
     steps:
       # Full history so the pinned TURBO_SCM_BASE commit and its merge-base with HEAD are present.
@@ -78,3 +84,25 @@ jobs:
       - run: pnpm exec turbo run build --affected
       - run: pnpm exec turbo run lint --affected
       - run: pnpm exec turbo run test --affected
+
+  # Release and deploy run as part of this workflow, on pushes to main only. Keeping them here
+  # rather than on a `workflow_run` trigger is what makes fork pull requests structurally unable
+  # to reach these credentials — see "Fork pull requests and credentials" in docs/CICD.md.
+  #
+  # `permissions` is the ceiling for the called workflow, which narrows it further per job.
+  publish:
+    needs: lint-build-test
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/publish.yaml
+
+  deploy:
+    needs: lint-build-test
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yaml
