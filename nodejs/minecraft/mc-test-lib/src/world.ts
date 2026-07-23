@@ -5,8 +5,10 @@
  */
 import type { Dimension, Entity, EntityQueryOptions, World, WorldAfterEvents } from '@minecraft/server'
 
-import { notYetImplemented } from './internal/not-yet.js'
+import { NotImplementedError } from './errors.js'
+import { canonicalizeId } from './ids.js'
 import type { WorldStore } from './internal/store.js'
+import { installStubs } from './internal/stubs.js'
 import type { Equals, Expect } from './internal/type-checks.js'
 
 /** Canonical ids of the three vanilla dimensions every created world carries. */
@@ -59,6 +61,18 @@ export const WORLD_STUBS = [
 
 type _worldStubsExact = Expect<Equals<(typeof WORLD_STUBS)[number], WorldStubKey>>
 
+// Assigned in the class's static block so the control plane can reach the private store
+// without adding a member to the fake's surface.
+let storeOf!: (world: FakeWorld) => WorldStore
+
+/** Resolves a fake world's backing store; throws for anything else. */
+export const getWorldStore = (world: World): WorldStore => {
+  if (!(world instanceof FakeWorld)) {
+    throw new TypeError('expected a world created by this library (createWorld)')
+  }
+  return storeOf(world)
+}
+
 /**
  * Fake of `World`. Vended by `createWorld`; never constructed by a test directly. All fake
  * state hangs off the world a test creates — isolation between tests is object lifetime, not
@@ -70,7 +84,11 @@ export class FakeWorld {
 
   constructor(store: WorldStore) {
     this.#store = store
-    void this.#store
+  }
+
+  static {
+    storeOf = (world) => world.#store
+    installStubs(FakeWorld.prototype, 'World', WORLD_STUBS)
   }
 
   /**
@@ -78,7 +96,7 @@ export class FakeWorld {
    * live; every other signal property throws `NotImplementedError`, as does `beforeEvents`.
    */
   get afterEvents(): WorldAfterEvents {
-    return notYetImplemented()
+    return this.#store.afterEvents
   }
 
   /**
@@ -88,14 +106,16 @@ export class FakeWorld {
    * and the fake does not guess.
    */
   getDimension(dimensionId: string): Dimension {
-    void dimensionId
-    return notYetImplemented()
+    const dimension = this.#store.dimensions.get(canonicalizeId(dimensionId))
+    if (!dimension) {
+      throw new NotImplementedError(`World.getDimension('${dimensionId}') — only the vanilla dimensions exist`)
+    }
+    return dimension
   }
 
   /** Returns the live entity with the given id, or `undefined` — including once unloaded. */
   getEntity(id: string): Entity | undefined {
-    void id
-    return notYetImplemented()
+    return this.#store.entities.get(id)?.handle
   }
 }
 
@@ -160,8 +180,10 @@ export class FakeDimension {
   constructor(store: WorldStore, canonicalId: string) {
     this.#store = store
     this.#canonicalId = canonicalId
-    void this.#store
-    void this.#canonicalId
+  }
+
+  static {
+    installStubs(FakeDimension.prototype, 'Dimension', DIMENSION_STUBS)
   }
 
   /**
@@ -170,8 +192,12 @@ export class FakeDimension {
    * `undefined` counts as absent.
    */
   getEntities(options?: EntityQueryOptions): Entity[] {
-    void options
-    return notYetImplemented()
+    if (options !== undefined) {
+      throw new NotImplementedError('Dimension.getEntities with query options')
+    }
+    return [...this.#store.entities.values()]
+      .filter((record) => record.dimensionId === this.#canonicalId)
+      .map((record) => record.handle)
   }
 }
 

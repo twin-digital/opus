@@ -14,15 +14,35 @@ import type {
   WorldAfterEvents,
 } from '@minecraft/server'
 
-import { notYetImplemented } from './internal/not-yet.js'
+import { NotImplementedError } from './errors.js'
+import { installStubs } from './internal/stubs.js'
 import type { Equals, Expect } from './internal/type-checks.js'
+
+// Assigned in the class's static block so dispatch can reach the private subscriber set
+// without adding a member to the fakes' surface.
+let dispatch!: <TEvent>(signal: FakeEventSignal<TEvent>, event: TEvent) => void
 
 /**
  * Shared behaviour of the three shipped signal fakes. Subscribing with filtering options is
  * outside the built surface and throws `NotImplementedError`; delivery is synchronous, to a
  * snapshot of the subscribers registered when dispatch starts.
  */
-abstract class FakeEventSignal<TEvent> {
+export abstract class FakeEventSignal<TEvent> {
+  readonly #name: string
+  readonly #subscribers = new Set<(event: TEvent) => void>()
+
+  constructor(name: string) {
+    this.#name = name
+  }
+
+  static {
+    dispatch = (signal, event) => {
+      for (const callback of [...signal.#subscribers]) {
+        callback(event)
+      }
+    }
+  }
+
   /**
    * Adds a callback that will be called when the event fires. Returns the passed closure, for
    * use in future calls to `unsubscribe`. Filtering `options` are not modeled: any options
@@ -31,26 +51,18 @@ abstract class FakeEventSignal<TEvent> {
    * untyped because a test only ever sees the real signal's signature.)
    */
   subscribe(callback: (event: TEvent) => void, options?: unknown): (event: TEvent) => void {
-    void callback
-    void options
-    return notYetImplemented()
+    if (options !== undefined) {
+      throw new NotImplementedError(`${this.#name}.subscribe with filtering options`)
+    }
+    this.#subscribers.add(callback)
+    return callback
   }
 
   /** Removes a callback from being called when the event fires. */
   unsubscribe(callback: (event: TEvent) => void): void {
-    void callback
-    notYetImplemented()
+    this.#subscribers.delete(callback)
   }
 }
-
-/** Fake of `EntityHurtAfterEventSignal`. */
-export class FakeEntityHurtAfterEventSignal extends FakeEventSignal<EntityHurtAfterEvent> {}
-
-/** Fake of `EntityHealthChangedAfterEventSignal`. */
-export class FakeEntityHealthChangedAfterEventSignal extends FakeEventSignal<EntityHealthChangedAfterEvent> {}
-
-/** Fake of `EntityDieAfterEventSignal`. */
-export class FakeEntityDieAfterEventSignal extends FakeEventSignal<EntityDieAfterEvent> {}
 
 /**
  * Delivers an event to a fake signal's subscribers. Module-internal: behaving methods and the
@@ -58,9 +70,28 @@ export class FakeEntityDieAfterEventSignal extends FakeEventSignal<EntityDieAfte
  * fakes themselves carry only the real members.
  */
 export const dispatchEvent = <TEvent>(signal: FakeEventSignal<TEvent>, event: TEvent): void => {
-  void signal
-  void event
-  notYetImplemented()
+  dispatch(signal, event)
+}
+
+/** Fake of `EntityHurtAfterEventSignal`. */
+export class FakeEntityHurtAfterEventSignal extends FakeEventSignal<EntityHurtAfterEvent> {
+  constructor() {
+    super('EntityHurtAfterEventSignal')
+  }
+}
+
+/** Fake of `EntityHealthChangedAfterEventSignal`. */
+export class FakeEntityHealthChangedAfterEventSignal extends FakeEventSignal<EntityHealthChangedAfterEvent> {
+  constructor() {
+    super('EntityHealthChangedAfterEventSignal')
+  }
+}
+
+/** Fake of `EntityDieAfterEventSignal`. */
+export class FakeEntityDieAfterEventSignal extends FakeEventSignal<EntityDieAfterEvent> {
+  constructor() {
+    super('EntityDieAfterEventSignal')
+  }
 }
 
 /** The signal properties of `WorldAfterEvents` the first surface builds. */
@@ -137,9 +168,13 @@ type _afterEventsStubsExact = Expect<Equals<(typeof AFTER_EVENTS_STUBS)[number],
  */
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- stub members are installed on the prototype from AFTER_EVENTS_STUBS, whose completeness the Expect<Equals<...>> check above enforces
 export class FakeWorldAfterEvents {
-  readonly entityDie: FakeEntityDieAfterEventSignal = notYetImplemented()
-  readonly entityHealthChanged: FakeEntityHealthChangedAfterEventSignal = notYetImplemented()
-  readonly entityHurt: FakeEntityHurtAfterEventSignal = notYetImplemented()
+  readonly entityDie = new FakeEntityDieAfterEventSignal()
+  readonly entityHealthChanged = new FakeEntityHealthChangedAfterEventSignal()
+  readonly entityHurt = new FakeEntityHurtAfterEventSignal()
+
+  static {
+    installStubs(FakeWorldAfterEvents.prototype, 'WorldAfterEvents', AFTER_EVENTS_STUBS)
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging, @typescript-eslint/no-empty-object-type -- see class comment; the interface half of the merge intentionally adds only inherited members

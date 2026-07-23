@@ -6,8 +6,13 @@
  */
 import type { Entity, Vector3, World } from '@minecraft/server'
 
+import { FakeEntity, getEntityInternals } from './entity.js'
+import { dispatchEvent, FakeEventSignal, FakeWorldAfterEvents } from './events.js'
 import type { AttributeComponentId } from './ids.js'
-import { notYetImplemented } from './internal/not-yet.js'
+import { canonicalizeId } from './ids.js'
+import type { AttributeState, WorldStore } from './internal/store.js'
+import { invalidateRecord } from './internal/store.js'
+import { FakeDimension, FakeWorld, getWorldStore, VANILLA_DIMENSION_IDS } from './world.js'
 
 /**
  * Full value set of one attribute-shaped component in a spawn spec: current, default, min,
@@ -66,7 +71,18 @@ export interface EmittableSignal<TEvent> {
  * dimensions — a world without them is not a state the engine can exhibit — and starts
  * otherwise empty. Isolation between tests is object lifetime: make a new world per test.
  */
-export const createWorld = (): World => notYetImplemented()
+export const createWorld = (): World => {
+  const store: WorldStore = {
+    entities: new Map(),
+    dimensions: new Map(),
+    afterEvents: new FakeWorldAfterEvents(),
+    nextEntityOrdinal: 0,
+  }
+  for (const dimensionId of VANILLA_DIMENSION_IDS) {
+    store.dimensions.set(dimensionId, new FakeDimension(store, dimensionId))
+  }
+  return new FakeWorld(store)
+}
 
 /**
  * Spawns a fake entity into `world` with exactly the state named in `spec` — see
@@ -78,9 +94,43 @@ export const createWorld = (): World => notYetImplemented()
  * could not exhibit.
  */
 export const spawnFake = (world: World, spec: EntitySpawnSpec): Entity => {
-  void world
-  void spec
-  return notYetImplemented()
+  const store = getWorldStore(world)
+
+  const id = spec.id ?? String(-4294967296 - store.nextEntityOrdinal++)
+  if (store.entities.has(id)) {
+    throw new TypeError(`spawnFake: an entity with id '${id}' already exists`)
+  }
+
+  let dimensionId: string | undefined
+  if (spec.dimension !== undefined) {
+    dimensionId = canonicalizeId(spec.dimension)
+    if (!store.dimensions.has(dimensionId)) {
+      throw new TypeError(`spawnFake: '${spec.dimension}' is not a vanilla dimension`)
+    }
+  }
+
+  const components = new Map<string, AttributeState>()
+  for (const [componentId, attributes] of Object.entries(spec.components ?? {})) {
+    const canonicalId = canonicalizeId(componentId)
+    if (components.has(canonicalId)) {
+      throw new TypeError(`spawnFake: component '${canonicalId}' staged under both id forms`)
+    }
+    components.set(canonicalId, { ...attributes })
+  }
+
+  const entity = new FakeEntity(store, {
+    id,
+    typeId: canonicalizeId(spec.typeId),
+    nameTag: spec.nameTag ?? '',
+    location: spec.location === undefined ? undefined : { ...spec.location },
+    dimensionId,
+    tags: new Set(),
+    components,
+    effects: new Map(),
+    valid: true,
+  })
+  store.entities.set(id, getEntityInternals(entity).record)
+  return entity
 }
 
 /**
@@ -90,10 +140,8 @@ export const spawnFake = (world: World, spec: EntitySpawnSpec): Entity => {
  * the genuine path, `entity.getComponent(componentId)`.
  */
 export const addComponent = (entity: Entity, componentId: AttributeComponentId, spec: AttributeComponentSpec): void => {
-  void entity
-  void componentId
-  void spec
-  notYetImplemented()
+  const { record } = getEntityInternals(entity)
+  record.components.set(canonicalizeId(componentId), { ...spec })
 }
 
 /**
@@ -101,9 +149,8 @@ export const addComponent = (entity: Entity, componentId: AttributeComponentId, 
  * absence is already the answerable state. Surviving component handles turn invalid.
  */
 export const removeComponent = (entity: Entity, componentId: AttributeComponentId): void => {
-  void entity
-  void componentId
-  notYetImplemented()
+  const { record } = getEntityInternals(entity)
+  record.components.delete(canonicalizeId(componentId))
 }
 
 /**
@@ -113,8 +160,11 @@ export const removeComponent = (entity: Entity, componentId: AttributeComponentI
  * leaves, produced mid-test. Fires nothing; already-invalid entities are a no-op.
  */
 export const invalidate = (entity: Entity): void => {
-  void entity
-  notYetImplemented()
+  const { store, record } = getEntityInternals(entity)
+  if (!record.valid) {
+    return
+  }
+  invalidateRecord(store, record)
 }
 
 /**
@@ -136,7 +186,8 @@ export const invalidate = (entity: Entity): void => {
  * it a stale reference. Throws a `TypeError` if `signal` is not one of this library's fakes.
  */
 export const emit = <TEvent>(signal: EmittableSignal<TEvent>, event: TEvent): void => {
-  void signal
-  void event
-  notYetImplemented()
+  if (!(signal instanceof FakeEventSignal)) {
+    throw new TypeError('emit: expected an event signal from a world created by this library')
+  }
+  dispatchEvent(signal as FakeEventSignal<TEvent>, event)
 }

@@ -10,7 +10,7 @@ import type { FakeEntityAttributeComponent } from '../components.js'
 import type { FakeEffect } from '../effects.js'
 import type { FakeEntity } from '../entity.js'
 import type { FakeWorldAfterEvents } from '../events.js'
-import type { FakeDimension, FakeWorld } from '../world.js'
+import type { FakeDimension } from '../world.js'
 
 /** Full value set of one attribute-shaped component; no bound is derived from another. */
 export interface AttributeState {
@@ -29,7 +29,7 @@ export interface EffectState {
   /** Set when the effect is removed; surviving handles read this to answer `isValid`. */
   removed: boolean
   /** The one `Effect` handle vended for this state. */
-  handle?: FakeEffect
+  handle: FakeEffect
 }
 
 /**
@@ -53,7 +53,7 @@ export interface EntityRecord {
   effects: Map<string, EffectState>
   valid: boolean
   /** The one `Entity` handle vended for this record. */
-  handle?: FakeEntity
+  handle: FakeEntity
   /** Component handles vended so far, keyed by canonical component id. */
   componentHandles: Map<string, FakeEntityAttributeComponent>
 }
@@ -68,7 +68,15 @@ export interface WorldStore {
   /** The three vanilla dimensions, keyed by canonical dimension id. */
   dimensions: Map<string, FakeDimension>
   afterEvents: FakeWorldAfterEvents
-  world: FakeWorld
   /** Source of the synthetic, unique, opaque ids `spawnFake` assigns. */
   nextEntityOrdinal: number
+}
+
+/**
+ * Unloads a record: `isValid` turns false, the store stops answering for it, and it leaves
+ * its dimension's entity set. The record object itself survives for the handles that hold it.
+ */
+export const invalidateRecord = (store: WorldStore, record: EntityRecord): void => {
+  record.valid = false
+  store.entities.delete(record.id)
 }
