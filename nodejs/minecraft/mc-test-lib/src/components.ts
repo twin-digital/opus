@@ -97,9 +97,9 @@ export class FakeEntityAttributeComponent {
   /**
    * Sets the current value of this attribute and returns whether it was set. Validity is
    * checked first: an invalid owner throws `InvalidEntityError` even for a value that would
-   * be rejected. A value outside the staged min/max bounds throws `NotImplementedError` — the
-   * real API documents an out-of-bounds throw whose runtime class the fake cannot import, and
-   * it does not guess.
+   * be rejected. A value outside the staged bounds (inclusive on both ends) throws
+   * `NotImplementedError` — the real API documents an out-of-bounds throw whose runtime class
+   * the fake cannot import, and it does not guess.
    */
   setCurrentValue(value: number): boolean {
     void value

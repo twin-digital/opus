@@ -11,15 +11,6 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
       }
-    },
-    "./index": null,
-    "./index.js": null,
-    "./*": {
-      "import": {
-        "source": "./src/*.ts",
-        "types": "./dist/*.d.ts",
-        "import": "./dist/*.js"
-      }
     }
   },
   "files": [

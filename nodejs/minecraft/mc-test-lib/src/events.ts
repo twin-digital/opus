@@ -25,9 +25,10 @@ import type { Equals, Expect } from './internal/type-checks.js'
 abstract class FakeEventSignal<TEvent> {
   /**
    * Adds a callback that will be called when the event fires. Returns the passed closure, for
-   * use in future calls to `unsubscribe`. Filtering `options` are not modeled: passing any
-   * throws `NotImplementedError`. (Each real signal declares its own options type; the fake
-   * accepts the argument untyped because a test only ever sees the real signal's signature.)
+   * use in future calls to `unsubscribe`. Filtering `options` are not modeled: any options
+   * argument — even `{}` — throws `NotImplementedError`, while an explicit `undefined` counts
+   * as absent. (Each real signal declares its own options type; the fake accepts the argument
+   * untyped because a test only ever sees the real signal's signature.)
    */
   subscribe(callback: (event: TEvent) => void, options?: unknown): (event: TEvent) => void {
     void callback
@@ -145,6 +146,7 @@ export class FakeWorldAfterEvents {
 export interface FakeWorldAfterEvents extends Pick<WorldAfterEvents, AfterEventsStubKey> {}
 
 type _fakeAfterEventsAssignable = Expect<FakeWorldAfterEvents extends WorldAfterEvents ? true : false>
+type _fakeAfterEventsNoExtraMembers = Expect<Equals<keyof FakeWorldAfterEvents, keyof WorldAfterEvents>>
 
 type _hurtSignalAssignable = Expect<FakeEntityHurtAfterEventSignal extends EntityHurtAfterEventSignal ? true : false>
 type _healthChangedSignalAssignable = Expect<

@@ -297,3 +297,4 @@ export class FakeEntity {
 export interface FakeEntity extends Pick<Entity, EntityStubKey> {}
 
 type _fakeEntityAssignable = Expect<FakeEntity extends Entity ? true : false>
+type _fakeEntityNoExtraMembers = Expect<Equals<keyof FakeEntity, keyof Entity>>

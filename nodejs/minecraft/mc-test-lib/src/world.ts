@@ -83,8 +83,9 @@ export class FakeWorld {
 
   /**
    * Returns the dimension for a vanilla dimension id — bare or prefixed, e.g. `'overworld'`
-   * or `'minecraft:the_end'` — and throws an `Error` for any other id, as documented. The
-   * same handle is returned for the same dimension every time.
+   * or `'minecraft:the_end'` — the same handle for the same dimension every time. Any other
+   * id throws `NotImplementedError`: the real API documents a throw there but not its class,
+   * and the fake does not guess.
    */
   getDimension(dimensionId: string): Dimension {
     void dimensionId
@@ -102,6 +103,7 @@ export class FakeWorld {
 export interface FakeWorld extends Pick<World, WorldStubKey> {}
 
 type _fakeWorldAssignable = Expect<FakeWorld extends World ? true : false>
+type _fakeWorldNoExtraMembers = Expect<Equals<keyof FakeWorld, keyof World>>
 
 export const BUILT_DIMENSION_MEMBERS = ['getEntities'] as const
 
@@ -164,7 +166,8 @@ export class FakeDimension {
 
   /**
    * Returns the live entities whose spawn spec staged this dimension. Query options are not
-   * modeled: passing any throws `NotImplementedError`.
+   * modeled: any options argument — even `{}` — throws `NotImplementedError`; an explicit
+   * `undefined` counts as absent.
    */
   getEntities(options?: EntityQueryOptions): Entity[] {
     void options
@@ -176,3 +179,4 @@ export class FakeDimension {
 export interface FakeDimension extends Pick<Dimension, DimensionStubKey> {}
 
 type _fakeDimensionAssignable = Expect<FakeDimension extends Dimension ? true : false>
+type _fakeDimensionNoExtraMembers = Expect<Equals<keyof FakeDimension, keyof Dimension>>

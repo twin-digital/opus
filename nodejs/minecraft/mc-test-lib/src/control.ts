@@ -74,8 +74,8 @@ export const createWorld = (): World => notYetImplemented()
  * real class so it passes anywhere the real type is expected.
  *
  * Staging errors — a duplicate entity id, an unknown dimension, or the same component in
- * both id forms — throw immediately rather than producing a world the engine could not
- * exhibit.
+ * both id forms — throw a `TypeError` immediately rather than producing a world the engine
+ * could not exhibit.
  */
 export const spawnFake = (world: World, spec: EntitySpawnSpec): Entity => {
   void world
@@ -129,7 +129,7 @@ export const invalidate = (entity: Entity): void => {
  *
  * Because emit does not mutate, it can deliver to an entity the same staged hit has already
  * invalidated — the handler-under-test then sees the event exactly as the engine would hand
- * it a stale reference. Throws if `signal` is not one of this library's fakes.
+ * it a stale reference. Throws a `TypeError` if `signal` is not one of this library's fakes.
  */
 export const emit = <TEvent>(signal: EmittableSignal<TEvent>, event: TEvent): void => {
   void signal

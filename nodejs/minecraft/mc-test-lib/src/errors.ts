@@ -1,3 +1,7 @@
+import type { InvalidEntityError as DeclaredInvalidEntityError } from '@minecraft/server'
+
+import type { Expect } from './internal/type-checks.js'
+
 /**
  * Thrown by fake members whose real counterparts throw `InvalidEntityError` when the entity
  * reference has become invalid (unloaded or removed).
@@ -30,6 +34,8 @@ export class InvalidEntityError extends Error {
     this.type = type
   }
 }
+
+type _matchesDeclaredShape = Expect<InvalidEntityError extends DeclaredInvalidEntityError ? true : false>
 
 /**
  * Thrown when a test touches surface the fakes do not model: members outside the built slice,

@@ -17,7 +17,6 @@ export { livingMob } from './bases.js'
 export { InvalidEntityError, NotImplementedError } from './errors.js'
 export { EntityComponentTypes, EntityDamageCause } from './enums.js'
 export {
-  canonicalizeId,
   type AttributeComponentId,
   type CanonicalAttributeComponentId,
   type CanonicalEntityComponentId,

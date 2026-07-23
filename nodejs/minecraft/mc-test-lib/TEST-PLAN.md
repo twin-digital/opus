@@ -23,6 +23,18 @@ runtime value from `@minecraft/server` (`r:no-test-framework-dependency`,
   (`d:runtime-enum-mirrors`, `d:enum-mirrors-named-as-declared`).
 - **TY5 [type]** `AttributeComponentId` accepts `'health'` and `'minecraft:health'`, rejects
   `'minecraft:variant'` (`f:component-ids-are-derivable-from-types`, `d:ids-derived-not-transcribed`).
+- **TY6 [type]** the fakes carry no members beyond the real surface: `Equals<keyof FakeX, keyof RealX>`
+  holds for entity, world, dimension, after-events, component, and effect fakes — asserted in
+  source next to each class (`r:no-shadowing-of-real-api`).
+- **TY7 [type]** a spawn spec without `typeId` is rejected (`d:ids-auto-assigned-typeid-required`),
+  and an attribute spec missing any of its four fields (e.g. `{ current: 20 }`) is rejected
+  (`d:attribute-init-is-explicit`).
+
+## Package manifest (`src/package.test.ts`) — d:zero-runtime-dependencies, r:target-server-version, r:no-test-framework-dependency
+
+- **PK1** the manifest declares no `dependencies` at all; `@minecraft/server` appears only as
+  the pinned peer (`'2.8.0'`) and a dev dependency; no test framework appears outside
+  `devDependencies`.
 
 ## Errors (`src/errors.test.ts`) — d:library-defined-error-classes, f:invalid-entity-error-shape
 
@@ -35,7 +47,8 @@ runtime value from `@minecraft/server` (`r:no-test-framework-dependency`,
 ## Ids and enum mirrors (`src/ids.test.ts`) — d:canonical-prefixed-storage, f:namespace-prefix-is-optional
 
 - **ID1** `canonicalizeId('health') === 'minecraft:health'`; an already-prefixed id and a
-  custom-namespace id (`myns:thing`) pass through unchanged.
+  custom-namespace id (`myns:thing`) pass through unchanged. (Internal helper — imported by
+  the test directly; not part of the public index.)
 - **ID2** mirrors carry the declared values: spot-check `EntityComponentTypes.Health`,
   `EntityDamageCause.none`, `EntityDamageCause.void`, and both mirrors' key counts (68 / 36).
 
@@ -44,15 +57,16 @@ runtime value from `@minecraft/server` (`r:no-test-framework-dependency`,
 - **WD1** `createWorld()` returns a world whose three vanilla dimensions exist; bare and
   prefixed lookups return the same handle (`getDimension('overworld') ===
 getDimension('minecraft:overworld')`).
-- **WD2** `getDimension` with a non-vanilla id throws an `Error` (documented behaviour), not a
-  `NotImplementedError`.
+- **WD2** `getDimension` with a non-vanilla id throws `NotImplementedError` — the real API
+  documents a throw there but names no class, and the fake does not guess.
 - **WD3** two `createWorld()` calls share nothing: an entity spawned in one is invisible to the
   other (`getEntity` undefined, dimension entity sets empty) — isolation is object lifetime.
 - **WD4** `getEntity` returns the spawned handle by id, `undefined` for unknown ids, and
   `undefined` after `invalidate` (`r:invalidation-is-modeled`).
 - **WD5** a spawned entity with a staged dimension appears in that dimension's `getEntities()`;
   one without a staged dimension appears in none; an invalidated one leaves the set.
-- **WD6** `dimension.getEntities({ type: '...' })` — any options — throws `NotImplementedError`.
+- **WD6** `dimension.getEntities(options)` throws `NotImplementedError` for any options
+  argument including `{}`; an explicit `undefined` argument counts as absent and behaves.
 - **WD7** unbuilt world surface throws `NotImplementedError` naming the member:
   `world.beforeEvents`, `world.scoreboard`, `world.getAllPlayers`, and an unbuilt
   `afterEvents` signal (`world.afterEvents.entitySpawn`) (`d:first-signals-list`,
@@ -68,7 +82,7 @@ getDimension('minecraft:overworld')`).
 - **SP2** `typeId` canonicalizes: spawning with `'zombie'` reads back `'minecraft:zombie'`;
   spawning with `'minecraft:zombie'` reads the same.
 - **SP3** ids are unique and opaque across spawns; `spec.id` overrides; spawning a duplicate
-  live id throws.
+  live id throws a `TypeError`.
 - **SP4** `nameTag` defaults to `''`; a staged `nameTag` reads back; assignment via the real
   setter is observed by every read.
 - **SP5** unstaged `location` and `dimension` reads throw `NotImplementedError` naming the
@@ -76,8 +90,8 @@ getDimension('minecraft:overworld')`).
   `getDimension` handle identity).
 - **SP6** a staged health component reads back its full value set — current, default,
   effectiveMin, effectiveMax — exactly as written, none derived.
-- **SP7** staging the same component under both id forms (`health` and `minecraft:health`)
-  throws a staging error.
+- **SP7** staging errors throw `TypeError`: the same component under both id forms (`health`
+  and `minecraft:health`), and a `dimension` id that is not a vanilla dimension.
 - **SP8** a staged non-health attribute id (e.g. `'minecraft:movement'`) is readable through
   `getComponent` with the same attribute surface.
 
@@ -116,9 +130,10 @@ getDimension('minecraft:overworld')`).
   contract).
 - **DM4** event order for a lethal hit is exactly `entityHurt`, `entityHealthChanged`,
   `entityDie`; a non-lethal hit fires no `entityDie`; handlers see post-write health.
-- **DM5** `entityHurt` carries `damage` = requested amount and `hurtEntity` = the entity
-  handle; `entityHealthChanged` carries `oldValue`/`newValue`; `entityDie` carries
-  `deadEntity`.
+- **DM5** for an _unclamped_ hit, `entityHurt` carries `damage` = requested amount and
+  `hurtEntity` = the entity handle; `entityHealthChanged` carries `oldValue`/`newValue`;
+  `entityDie` carries `deadEntity`. (The `damage` value of a clamped hit has no fidelity
+  source and is deliberately left unasserted.)
 - **DM6** `damageSource`: cause `'none'` with no options; caller's `cause`/`damagingEntity`
   with `EntityApplyDamageOptions`; cause `'none'` plus `damagingProjectile` with the
   projectile options form (no cause field exists there).
@@ -131,22 +146,28 @@ getDimension('minecraft:overworld')`).
   is true and `id`/`typeId`/health reads still answer; the record is unchanged until
   `invalidate`.
 - **DM10** `kill()`: drives health to minimum, fires `entityHealthChanged` then `entityDie`
-  (no `entityHurt`), returns true, reference stays valid; on an already-dead entity returns
-  true and fires nothing; on an entity with no health component returns true and fires
-  nothing.
+  with `damageSource.cause === 'none'` (no `entityHurt`), returns true, reference stays
+  valid; on an already-dead entity returns true and fires nothing; on an entity with no
+  health component returns true and fires nothing.
 - **DM11** `remove()`: invalidates (`isValid` false, `getEntity` undefined) and fires no death
   event.
 - **DM12** non-health attribute writes (`minecraft:movement` `setCurrentValue`) fire no
   health events.
-- **DM13** reentrancy: a handler subscribed to `entityHurt` that heals the entity
-  (`resetToMaxValue`) observes its own `entityHealthChanged` firing synchronously, and the
-  final state reflects both writes — the motivating heal-on-hurt shape.
+- **DM13** reentrancy: the cascade of a write is determined at write time. A handler
+  subscribed to `entityHurt` that heals the entity (`resetToMaxValue`) observes the heal's
+  own `entityHealthChanged` synchronously during the hurt dispatch; the damaging write's
+  `entityHealthChanged` still fires afterwards with the values captured when the damage was
+  written (pre-heal `oldValue`/`newValue`), and a lethal hit's `entityDie` still fires even
+  when a hurt handler healed the entity mid-dispatch — in the engine, too, the death precedes
+  the after-event handlers. Final state reflects both writes — the motivating heal-on-hurt
+  shape.
 
 ## Components (`src/components.test.ts`) — d:per-member-guards, d:generic-throws-members-follow-owner, d:validity-guard-runs-first, d:control-plane-component-mutation
 
 - **CP1** `setCurrentValue` sets and returns true; reads reflect it across handles.
-- **CP2** `setCurrentValue` out of the staged bounds throws `NotImplementedError` (documented
-  throw, unimportable class — the fake does not guess).
+- **CP2** `setCurrentValue` outside the staged bounds throws `NotImplementedError` (documented
+  throw, unimportable class — the fake does not guess); bounds are inclusive — values _at_
+  min or max are set normally.
 - **CP3** resets go to the staged default/max/min values exactly.
 - **CP4** on an invalidated owner: `currentValue`, `defaultValue`, `effectiveMax`,
   `effectiveMin`, the resets, `setCurrentValue`, and `entity` all throw `InvalidEntityError`;
@@ -177,6 +198,9 @@ getDimension('minecraft:overworld')`).
 - **EF8** effect members on an invalidated owner throw `InvalidEntityError`; `isValid` false.
 - **EF9** an `EffectType`-shaped argument (`{ getName: () => 'resistance' }`) is accepted
   wherever an effect id is.
+- **EF10** removal is final for a handle: `removeEffect` then `addEffect` of the same type
+  creates fresh state — `getEffect` returns a live handle while the pre-removal handle stays
+  invalid.
 
 ## Invalidation (`src/invalidation.test.ts`) — r:invalidation-is-modeled, f:invalidation-throws-non-uniformly
 
@@ -189,21 +213,21 @@ getDimension('minecraft:overworld')`).
 - **IV3** invalidating twice is a no-op; `remove()` then `invalidate` likewise.
 - **IV4** invalidation is mid-test on live references: handles obtained before `invalidate`
   exhibit the stale-reference shape without re-fetching.
+- **IV5** `invalidate` fires no events — no subscriber on any of the three signals is called.
 
 ## Events and emit (`src/events.test.ts`) — d:control-plane-is-free-functions, d:emit-delivers-only, d:first-signals-list
 
-- **EV1** `subscribe` returns the passed closure; `unsubscribe` stops delivery; a closure
-  holds a single registration (subscribing it twice does not double-deliver — the engine's
-  semantics here are undocumented, so the fake keeps the simplest set shape), and
-  re-subscription after unsubscribe delivers again.
+- **EV1** `subscribe` returns the passed closure; `unsubscribe` stops delivery;
+  re-subscription after unsubscribe delivers again. (Subscribing the same closure twice has
+  no fidelity source; the plan deliberately does not assert either way.)
 - **EV2** `subscribe` with filtering options throws `NotImplementedError` on all three
-  signals.
+  signals, including an empty `{}`; an explicit `undefined` counts as absent.
 - **EV3** `emit` delivers the exact payload object to all subscribers of that signal and no
   other; it mutates nothing (health unchanged after emitting an `entityHurt`).
 - **EV4** `emit` delivers to a handler an event whose `hurtEntity` the test has already
   invalidated — the handler's guarded access throws `InvalidEntityError` inside the handler,
   the library's motivating scenario (`r:invalidation-is-modeled`).
-- **EV5** `emit` on a foreign object (not a library signal) throws.
+- **EV5** `emit` on a foreign object (not a library signal) throws a `TypeError`.
 - **EV6** delivery is synchronous and ordered: subscribers are called in subscription order
   during the `emit`/behaving call itself.
 - **EV7** unsubscribing a never-subscribed closure is a no-op.
