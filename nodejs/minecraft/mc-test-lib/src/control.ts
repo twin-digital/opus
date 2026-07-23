@@ -124,7 +124,11 @@ export const invalidate = (entity: Entity): void => {
  * helpers:
  *
  * ```typescript
- * emit(world.afterEvents.entityHurt, { damage: 4, damageSource: { cause: 'entityAttack' }, hurtEntity })
+ * emit(world.afterEvents.entityHurt, {
+ *   damage: 4,
+ *   damageSource: { cause: EntityDamageCause.entityAttack },
+ *   hurtEntity,
+ * })
  * ```
  *
  * Because emit does not mutate, it can deliver to an entity the same staged hit has already

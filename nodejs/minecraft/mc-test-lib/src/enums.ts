@@ -17,8 +17,12 @@ type MirrorOf<TEnum extends Record<string, string>> = {
  * Runtime mirror of the `EntityComponentTypes` enum, e.g.
  * `EntityComponentTypes.Health === 'minecraft:health'`. Import the value from this library and
  * the type from `@minecraft/server`; keys and values are identical to the declaration.
+ *
+ * The exported binding is typed as the declared enum object (string enums are nominal, so a
+ * plain literal would be rejected where the enum type is expected); the `satisfies` check on
+ * the underlying literal still pins every key and value.
  */
-export const EntityComponentTypes = {
+const entityComponentTypesValues = {
   AddRider: 'minecraft:addrider',
   Ageable: 'minecraft:ageable',
   Breathable: 'minecraft:breathable',
@@ -89,12 +93,17 @@ export const EntityComponentTypes = {
   WantsJockey: 'minecraft:wants_jockey',
 } as const satisfies MirrorOf<typeof DeclaredEntityComponentTypes>
 
+export const EntityComponentTypes = entityComponentTypesValues as unknown as typeof DeclaredEntityComponentTypes
+
 /**
  * Runtime mirror of the `EntityDamageCause` enum, e.g.
  * `EntityDamageCause.entityAttack === 'entityAttack'`. Import the value from this library and
  * the type from `@minecraft/server`; keys and values are identical to the declaration.
+ *
+ * Typed as the declared enum object so members pass where the engine expects an
+ * `EntityDamageCause` — building a `damageSource` for `emit`, or `applyDamage` options.
  */
-export const EntityDamageCause = {
+const entityDamageCauseValues = {
   anvil: 'anvil',
   blockExplosion: 'blockExplosion',
   campfire: 'campfire',
@@ -132,3 +141,5 @@ export const EntityDamageCause = {
   void: 'void',
   wither: 'wither',
 } as const satisfies MirrorOf<typeof DeclaredEntityDamageCause>
+
+export const EntityDamageCause = entityDamageCauseValues as unknown as typeof DeclaredEntityDamageCause
