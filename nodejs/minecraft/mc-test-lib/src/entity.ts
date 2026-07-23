@@ -214,7 +214,9 @@ export class FakeEntity {
     if (!this.#record.location) {
       throw new NotImplementedError('Entity.location (not staged in the spawn spec)')
     }
-    return this.#record.location
+    // snapshot: the engine materializes a fresh Vector3 per read, and the staged record must
+    // not be mutable through the returned object
+    return { ...this.#record.location }
   }
 
   /** Given name; `''` until set, exactly as the engine reports an unnamed entity. */

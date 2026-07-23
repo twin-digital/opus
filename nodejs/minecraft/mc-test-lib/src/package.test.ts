@@ -21,6 +21,16 @@ describe('package manifest', () => {
     expect(manifest.devDependencies?.['@minecraft/server']).toBeDefined()
   })
 
+  it('typechecks against exactly the pinned declarations', () => {
+    // The dev copy resolves via the workspace catalog (^2.8.0); every fidelity derivation is
+    // transcribed from 2.8.0, so a lockfile refresh that drifts the resolved version must
+    // fail loudly here rather than silently retarget the derivations.
+    const resolved = JSON.parse(
+      readFileSync(new URL('../node_modules/@minecraft/server/package.json', import.meta.url), 'utf8'),
+    ) as { version: string }
+    expect(resolved.version).toBe('2.8.0')
+  })
+
   it('references no test framework outside devDependencies', () => {
     const frameworks = ['vitest', 'jest', 'mocha', 'ava']
     for (const name of frameworks) {

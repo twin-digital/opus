@@ -94,6 +94,13 @@ getDimension('minecraft:overworld')`).
   and `minecraft:health`), and a `dimension` id that is not a vanilla dimension.
 - **SP8** a staged non-health attribute id (e.g. `'minecraft:movement'`) is readable through
   `getComponent` with the same attribute surface.
+- **SP9** an explicitly-undefined component value (a conditional override in a base spread)
+  means "not staged" — no empty state, and no false both-forms error when the other form is
+  real.
+- **SP10** `entity.location` returns a snapshot: mutating the returned vector does not
+  rewrite the staged record.
+- **SP11** ids are never reused: an invalidated entity's id is not reissued to a later auto
+  spawn, and auto ids skip ids the test staged explicitly.
 
 ## Bases (`src/bases.test.ts`) — d:bases-are-data, r:no-implicit-defaults
 
@@ -107,8 +114,10 @@ getDimension('minecraft:overworld')`).
 ## Entity behaviour (`src/entity.test.ts`) — r:fakes-behave-not-record, r:faithful-to-observable-api
 
 - **EN1** tags: `addTag` true then false on repeat; `hasTag`; `removeTag` true only when
-  present; `getTags` reflects state; two handles of the same entity observe one tag set
-  (`d:entities-are-handles`).
+  present; `getTags` reflects state; the `world.getEntity` read-back path observes the same
+  tag set — one handle is vended per record (`d:entities-are-handles`), so cross-handle
+  sharing is structurally guaranteed rather than separately observable. (Effects pin the
+  genuinely cross-handle case: EF3 observes replacement through an earlier `Effect` handle.)
 - **EN2** components: `getComponent`/`hasComponent` accept bare and prefixed ids for the same
   staged component; unknown and unmodeled ids answer `undefined`/`false`
   (`d:absence-is-answerable-for-any-id`).

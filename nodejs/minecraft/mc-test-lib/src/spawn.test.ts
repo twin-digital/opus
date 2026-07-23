@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createWorld, NotImplementedError, spawnFake } from './index.js'
+import { createWorld, invalidate, NotImplementedError, spawnFake } from './index.js'
 
 describe('spawnFake', () => {
   // SP1: a bare spawn stages nothing — absence reads exactly as the engine reports it.
@@ -98,6 +98,49 @@ describe('spawnFake', () => {
     ).toThrow(TypeError)
 
     expect(() => spawnFake(world, { typeId: 'zombie', dimension: 'myns:void' })).toThrow(TypeError)
+  })
+
+  // SP9: an explicitly-undefined component value means "not staged", never an empty state.
+  it('treats an undefined component value as not staged', () => {
+    const world = createWorld()
+    const entity = spawnFake(world, {
+      typeId: 'zombie',
+      components: { 'minecraft:health': undefined },
+    })
+    expect(entity.hasComponent('minecraft:health')).toBe(false)
+    expect(entity.getComponent('minecraft:health')).toBeUndefined()
+
+    const staged = spawnFake(world, {
+      typeId: 'zombie',
+      components: { health: undefined, 'minecraft:health': { current: 20, default: 20, min: 0, max: 20 } },
+    })
+    expect(staged.getComponent('minecraft:health')?.currentValue).toBe(20)
+  })
+
+  // SP10: reads return snapshots — the staged record is not mutable through them.
+  it('does not expose the staged location to mutation', () => {
+    const world = createWorld()
+    const entity = spawnFake(world, { typeId: 'zombie', location: { x: 1, y: 2, z: 3 } })
+
+    const read = entity.location
+    read.y = 99
+    expect(entity.location).toEqual({ x: 1, y: 2, z: 3 })
+  })
+
+  // SP11: ids are never reused, and auto ids avoid user-staged ids.
+  it('never reissues an id', () => {
+    const world = createWorld()
+    const auto = spawnFake(world, { typeId: 'zombie' })
+    invalidate(auto)
+    const next = spawnFake(world, { typeId: 'zombie' })
+    expect(next.id).not.toBe(auto.id)
+
+    const taken = spawnFake(world, { typeId: 'zombie' })
+    const claimed = String(Number(taken.id) - 1)
+    const user = spawnFake(world, { typeId: 'zombie', id: claimed })
+    const afterUser = spawnFake(world, { typeId: 'zombie' })
+    expect(afterUser.id).not.toBe(user.id)
+    expect(afterUser.isValid).toBe(true)
   })
 
   // SP8: any attribute-shaped id stages with the same surface.

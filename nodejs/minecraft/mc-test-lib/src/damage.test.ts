@@ -84,8 +84,10 @@ describe('applyDamage', () => {
     world.afterEvents.entityDie.subscribe((event) => deadEntities.push(event.deadEntity))
 
     entity.applyDamage(20)
-    expect(hurtEntities).toEqual([entity])
-    expect(deadEntities).toEqual([entity])
+    expect(hurtEntities).toHaveLength(1)
+    expect(hurtEntities[0]).toBe(entity)
+    expect(deadEntities).toHaveLength(1)
+    expect(deadEntities[0]).toBe(entity)
   })
 
   // DM6: damageSource carries the caller's options; cause defaults to none.
@@ -102,9 +104,17 @@ describe('applyDamage', () => {
     entity.applyDamage(1, { cause: EntityDamageCause.fire, damagingEntity: attacker })
     entity.applyDamage(1, { damagingProjectile: arrow, damagingEntity: attacker })
 
-    expect(sources[0]).toEqual({ cause: 'none', damagingEntity: undefined, damagingProjectile: undefined })
-    expect(sources[1]).toEqual({ cause: 'fire', damagingEntity: attacker, damagingProjectile: undefined })
-    expect(sources[2]).toEqual({ cause: 'none', damagingEntity: attacker, damagingProjectile: arrow })
+    // Handle fields are asserted by identity: FakeEntity keeps its state in private fields,
+    // so toEqual would treat any two handles as equal.
+    expect(sources[0]?.cause).toBe('none')
+    expect(sources[0]?.damagingEntity).toBeUndefined()
+    expect(sources[0]?.damagingProjectile).toBeUndefined()
+    expect(sources[1]?.cause).toBe('fire')
+    expect(sources[1]?.damagingEntity).toBe(attacker)
+    expect(sources[1]?.damagingProjectile).toBeUndefined()
+    expect(sources[2]?.cause).toBe('none')
+    expect(sources[2]?.damagingEntity).toBe(attacker)
+    expect(sources[2]?.damagingProjectile).toBe(arrow)
   })
 
   // DM9: a behaving death does not invalidate.

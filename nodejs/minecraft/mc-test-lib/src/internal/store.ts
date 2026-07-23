@@ -70,6 +70,11 @@ export interface WorldStore {
   afterEvents: FakeWorldAfterEvents
   /** Source of the synthetic, unique, opaque ids `spawnFake` assigns. */
   nextEntityOrdinal: number
+  /**
+   * Every id ever issued in this world, live or dead. Auto-assigned ids skip this set so an
+   * id is never reused — in the engine, too, an unloaded entity's id is not reissued.
+   */
+  usedIds: Set<string>
 }
 
 /**

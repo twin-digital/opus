@@ -77,6 +77,7 @@ export const createWorld = (): World => {
     dimensions: new Map(),
     afterEvents: new FakeWorldAfterEvents(),
     nextEntityOrdinal: 0,
+    usedIds: new Set(),
   }
   for (const dimensionId of VANILLA_DIMENSION_IDS) {
     store.dimensions.set(dimensionId, new FakeDimension(store, dimensionId))
@@ -96,10 +97,18 @@ export const createWorld = (): World => {
 export const spawnFake = (world: World, spec: EntitySpawnSpec): Entity => {
   const store = getWorldStore(world)
 
-  const id = spec.id ?? String(-4294967296 - store.nextEntityOrdinal++)
+  let id: string
+  if (spec.id === undefined) {
+    do {
+      id = String(-4294967296 - store.nextEntityOrdinal++)
+    } while (store.usedIds.has(id))
+  } else {
+    id = spec.id
+  }
   if (store.entities.has(id)) {
     throw new TypeError(`spawnFake: an entity with id '${id}' already exists`)
   }
+  store.usedIds.add(id)
 
   let dimensionId: string | undefined
   if (spec.dimension !== undefined) {
@@ -111,6 +120,10 @@ export const spawnFake = (world: World, spec: EntitySpawnSpec): Entity => {
 
   const components = new Map<string, AttributeState>()
   for (const [componentId, attributes] of Object.entries(spec.components ?? {})) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Partial values are undefined-bearing at runtime (e.g. a conditional override in a base spread); without this check an empty AttributeState would be staged
+    if (attributes === undefined) {
+      continue
+    }
     const canonicalId = canonicalizeId(componentId)
     if (components.has(canonicalId)) {
       throw new TypeError(`spawnFake: component '${canonicalId}' staged under both id forms`)
