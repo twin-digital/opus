@@ -47,6 +47,7 @@ describe('applyDamage', () => {
 
     const bare = spawnFake(world, { typeId: 'minecraft:zombie' })
     expect(bare.applyDamage(5)).toBe(false)
+    expect(seen).toEqual([])
 
     const dead = spawnMob(world)
     dead.applyDamage(20)
@@ -161,7 +162,7 @@ describe('health writes', () => {
       components: { 'minecraft:movement': { current: 0.5, default: 0.5, min: 0, max: 1 } },
     })
 
-    entity.getComponent('minecraft:movement')?.setCurrentValue(0)
+    expect(entity.getComponent('minecraft:movement')?.setCurrentValue(0)).toBe(true)
     expect(seen).toEqual([])
   })
 })

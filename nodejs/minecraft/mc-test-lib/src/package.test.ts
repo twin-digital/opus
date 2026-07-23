@@ -18,6 +18,7 @@ describe('package manifest', () => {
 
   it('pins @minecraft/server 2.8.0 as the peer range', () => {
     expect(manifest.peerDependencies).toEqual({ '@minecraft/server': '2.8.0' })
+    expect(manifest.devDependencies?.['@minecraft/server']).toBeDefined()
   })
 
   it('references no test framework outside devDependencies', () => {

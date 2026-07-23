@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createWorld, invalidate, InvalidEntityError, NotImplementedError, spawnFake } from './index.js'
+import { createWorld, invalidate, InvalidEntityError, livingMob, NotImplementedError, spawnFake } from './index.js'
 
 const spawn = () => {
   const world = createWorld()
@@ -40,12 +40,14 @@ describe('addEffect and getEffect', () => {
     expect(entity.getEffects()).toHaveLength(1)
   })
 
-  // EF4: no clock — duration reads as staged.
+  // EF4: no clock — duration reads as staged, however much else happens in between.
   it('never advances duration', () => {
-    const { entity } = spawn()
-    entity.addEffect('speed', 100)
-    entity.applyDamage(1)
-    expect(entity.getEffect('speed')?.duration).toBe(100)
+    const { world } = spawn()
+    const mob = spawnFake(world, { ...livingMob, typeId: 'minecraft:zombie' })
+    mob.addEffect('speed', 100)
+    expect(mob.applyDamage(5)).toBe(true)
+    mob.addEffect('resistance', 50)
+    expect(mob.getEffect('speed')?.duration).toBe(100)
   })
 
   // EF7: the signature-over-prose return choice.

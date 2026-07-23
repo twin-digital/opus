@@ -12,8 +12,8 @@ import {
 } from './index.js'
 
 describe('attribute writes', () => {
-  // CP1: writes hit the record; every handle observes them.
-  it('sets the current value and reflects it across handles', () => {
+  // CP1: writes hit the record and read back through both id forms of the access path.
+  it('sets the current value and reflects it across reads', () => {
     const world = createWorld()
     const entity = spawnFake(world, { ...livingMob, typeId: 'minecraft:zombie' })
     const first = entity.getComponent('minecraft:health')

@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { createWorld, invalidate, livingMob, NotImplementedError, spawnFake } from './index.js'
 
 describe('tags', () => {
-  // EN1: real semantics against the record; every handle observes the same tag set.
+  // EN1: real semantics against the record. (One handle is vended per record, so the
+  // getEntity read-back checks consistency of the access paths, not two distinct handles.)
   it('behaves per the documented tag contract', () => {
     const world = createWorld()
     const entity = spawnFake(world, { typeId: 'minecraft:zombie' })

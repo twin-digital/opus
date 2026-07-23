@@ -70,6 +70,15 @@ describe('subscribe and unsubscribe', () => {
     entity.applyDamage(1)
     seen.push('after')
     expect(seen).toEqual(['first', 'second', 'after'])
+
+    seen.length = 0
+    emit(world.afterEvents.entityHurt, {
+      damage: 1,
+      damageSource: { cause: EntityDamageCause.none },
+      hurtEntity: entity,
+    })
+    seen.push('after')
+    expect(seen).toEqual(['first', 'second', 'after'])
   })
 })
 
