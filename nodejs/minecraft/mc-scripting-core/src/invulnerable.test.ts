@@ -3,86 +3,132 @@ import type { Entity, World } from '@minecraft/server'
 
 import { INVULNERABLE_TAG, registerInvulnerabilityGuard, setInvulnerable } from './invulnerable.js'
 
-const makeEntity = (tags: string[] = []) => {
+const HEALTH_COMPONENT_ID = 'minecraft:health'
+
+/** Must match `RESISTANCE_TICKS` in the source: 20 ticks/sec → ~1 hour. */
+const RESISTANCE_TICKS = 20 * 60 * 60
+
+interface MakeEntityOptions {
+  tags?: string[]
+
+  /** Whether the entity has a health component. `false` makes `getComponent` return `undefined`. */
+  health?: boolean
+}
+
+/**
+ * A duck-typed {@link Entity}: tag methods are backed by a real `Set`, effect methods are inert
+ * spies, and `getComponent` honors its argument.
+ */
+const makeEntity = ({ tags = [], health: hasHealth = true }: MakeEntityOptions = {}) => {
   const set = new Set(tags)
   const health = { resetToMaxValue: vi.fn() }
+
   const spies = {
     hasTag: vi.fn((tag: string) => set.has(tag)),
-    addTag: vi.fn((tag: string) => set.add(tag)),
+    addTag: vi.fn((tag: string) => {
+      set.add(tag)
+      return true
+    }),
     removeTag: vi.fn((tag: string) => set.delete(tag)),
     addEffect: vi.fn(),
     removeEffect: vi.fn(),
-    getComponent: vi.fn(() => health),
+    getComponent: vi.fn((componentId: string) =>
+      hasHealth && componentId === HEALTH_COMPONENT_ID ? health : undefined,
+    ),
   }
+
   return { entity: spies as unknown as Entity, spies, health }
 }
 
-// An entity that has been unloaded/killed: every method throws, as the real
-// API does once an entity is invalid.
-const makeInvalidEntity = () => {
-  const throwing = () => {
-    throw new Error('entity invalidated')
-  }
-  return {
-    hasTag: throwing,
-    addTag: throwing,
-    removeTag: throwing,
-    addEffect: throwing,
-    removeEffect: throwing,
-    getComponent: throwing,
-  } as unknown as Entity
+// An entity that has been unloaded/killed: every method throws, as the real API does once an
+// entity is invalid. The proxy covers methods the source may start calling later.
+const makeInvalidEntity = () =>
+  new Proxy(
+    {},
+    {
+      get: () => () => {
+        throw new Error('entity invalidated')
+      },
+    },
+  ) as Entity
+
+type HurtHandler = (event: { hurtEntity: Entity }) => void
+
+interface MakeWorldOptions {
+  /** Number of leading `subscribe` calls that throw, simulating a failed registration. */
+  failSubscriptions?: number
 }
 
-const makeWorld = () => {
-  const hurtHandlers: ((event: { hurtEntity: Entity }) => void)[] = []
+/** A duck-typed {@link World} whose `entityHurt` subscribers can be driven via `emitHurt`. */
+const makeWorld = ({ failSubscriptions = 0 }: MakeWorldOptions = {}) => {
+  const handlers: HurtHandler[] = []
+  let remainingFailures = failSubscriptions
+
   const world = {
     afterEvents: {
       entityHurt: {
-        subscribe: (handler: (event: { hurtEntity: Entity }) => void) => {
-          hurtHandlers.push(handler)
+        subscribe: (handler: HurtHandler) => {
+          if (remainingFailures > 0) {
+            remainingFailures -= 1
+            throw new Error('subscribe failed')
+          }
+          handlers.push(handler)
         },
       },
     },
   }
-  return { world: world as unknown as World, hurtHandlers }
+
+  return {
+    world: world as unknown as World,
+    subscriberCount: () => handlers.length,
+    emitHurt: (hurtEntity: Entity) => {
+      if (handlers.length === 0) {
+        throw new Error('emitHurt called before any handler subscribed')
+      }
+      handlers.forEach((handler) => {
+        handler({ hurtEntity })
+      })
+    },
+  }
 }
 
-describe('setInvulnerable', () => {
-  it('tags the entity and applies hidden Resistance by default', () => {
-    const { entity, spies } = makeEntity()
-
-    setInvulnerable(entity)
-
-    expect(spies.addTag).toHaveBeenCalledWith(INVULNERABLE_TAG)
-    expect(spies.addEffect).toHaveBeenCalledWith('resistance', expect.any(Number), {
-      amplifier: 255,
-      showParticles: false,
-    })
+describe('INVULNERABLE_TAG', () => {
+  // Pinned literally: in-game selectors and other behavior packs match on this string, so a
+  // rename is a breaking change rather than an internal refactor.
+  it('is the tag other packs and selectors match on', () => {
+    expect(INVULNERABLE_TAG).toBe('invulnerable')
   })
+})
 
-  it('forwards showParticles when requested', () => {
+describe('setInvulnerable', () => {
+  it.each([
+    { label: 'hidden by default', options: undefined, showParticles: false },
+    { label: 'visible when requested', options: { showParticles: true }, showParticles: true },
+  ])('tags the entity and applies Resistance, $label', ({ options, showParticles }) => {
     const { entity, spies } = makeEntity()
 
-    setInvulnerable(entity, { showParticles: true })
+    setInvulnerable(entity, options)
 
-    expect(spies.addEffect).toHaveBeenCalledWith('resistance', expect.any(Number), {
+    expect(spies.addTag).toHaveBeenCalledExactlyOnceWith(INVULNERABLE_TAG)
+    expect(spies.addEffect).toHaveBeenCalledExactlyOnceWith('resistance', RESISTANCE_TICKS, {
       amplifier: 255,
-      showParticles: true,
+      showParticles,
     })
   })
 
   it('clears the tag and effect when disabled', () => {
-    const { entity, spies } = makeEntity([INVULNERABLE_TAG])
+    const { entity, spies } = makeEntity({ tags: [INVULNERABLE_TAG] })
 
     setInvulnerable(entity, { enabled: false })
 
-    expect(spies.removeTag).toHaveBeenCalledWith(INVULNERABLE_TAG)
-    expect(spies.removeEffect).toHaveBeenCalledWith('resistance')
+    expect(spies.removeTag).toHaveBeenCalledExactlyOnceWith(INVULNERABLE_TAG)
+    expect(spies.removeEffect).toHaveBeenCalledExactlyOnceWith('resistance')
+    expect(spies.addTag).not.toHaveBeenCalled()
     expect(spies.addEffect).not.toHaveBeenCalled()
   })
 
   it('does not re-add the tag when already present (idempotent)', () => {
-    const { entity, spies } = makeEntity([INVULNERABLE_TAG])
+    const { entity, spies } = makeEntity({ tags: [INVULNERABLE_TAG] })
 
     setInvulnerable(entity)
 
@@ -90,26 +136,24 @@ describe('setInvulnerable', () => {
     expect(spies.addEffect).toHaveBeenCalled()
   })
 
-  it('swallows errors from an unloaded/invalidated entity', () => {
-    const { entity, spies } = makeEntity()
-    spies.addEffect.mockImplementation(() => {
-      throw new Error('entity invalidated')
-    })
-
+  it.each([
+    { label: 'enabling', options: undefined },
+    { label: 'disabling', options: { enabled: false } },
+  ])('swallows errors from an unloaded/invalidated entity when $label', ({ options }) => {
     expect(() => {
-      setInvulnerable(entity)
+      setInvulnerable(makeInvalidEntity(), options)
     }).not.toThrow()
   })
 })
 
 describe('registerInvulnerabilityGuard', () => {
   it('subscribes the entityHurt backstop exactly once per world', () => {
-    const { world, hurtHandlers } = makeWorld()
+    const { world, subscriberCount } = makeWorld()
 
     registerInvulnerabilityGuard(world)
     registerInvulnerabilityGuard(world)
 
-    expect(hurtHandlers).toHaveLength(1)
+    expect(subscriberCount()).toBe(1)
   })
 
   it('guards each world independently', () => {
@@ -119,47 +163,69 @@ describe('registerInvulnerabilityGuard', () => {
     registerInvulnerabilityGuard(first.world)
     registerInvulnerabilityGuard(second.world)
 
-    expect(first.hurtHandlers).toHaveLength(1)
-    expect(second.hurtHandlers).toHaveLength(1)
+    expect(first.subscriberCount()).toBe(1)
+    expect(second.subscriberCount()).toBe(1)
+  })
+
+  it('stays retryable when subscribing throws', () => {
+    const { world, subscriberCount } = makeWorld({ failSubscriptions: 1 })
+
+    expect(() => {
+      registerInvulnerabilityGuard(world)
+    }).toThrow()
+    registerInvulnerabilityGuard(world)
+
+    expect(subscriberCount()).toBe(1)
   })
 
   it('heals a tagged entity back to full when it is hurt', () => {
-    const { entity, health } = makeEntity([INVULNERABLE_TAG])
-    const { world, hurtHandlers } = makeWorld()
+    const { entity, spies, health } = makeEntity({ tags: [INVULNERABLE_TAG] })
+    const { world, emitHurt } = makeWorld()
     registerInvulnerabilityGuard(world)
 
-    hurtHandlers[0]({ hurtEntity: entity })
+    emitHurt(entity)
 
-    expect(health.resetToMaxValue).toHaveBeenCalledTimes(1)
+    expect(spies.getComponent).toHaveBeenCalledExactlyOnceWith(HEALTH_COMPONENT_ID)
+    expect(health.resetToMaxValue).toHaveBeenCalledOnce()
   })
 
   it('ignores an untagged entity that is hurt', () => {
     const { entity, health } = makeEntity()
-    const { world, hurtHandlers } = makeWorld()
+    const { world, emitHurt } = makeWorld()
     registerInvulnerabilityGuard(world)
 
-    hurtHandlers[0]({ hurtEntity: entity })
+    emitHurt(entity)
 
     expect(health.resetToMaxValue).not.toHaveBeenCalled()
   })
 
-  it('does not propagate when the hurt entity was invalidated by the hit', () => {
-    const { world, hurtHandlers } = makeWorld()
+  it('tolerates a tagged entity with no health component', () => {
+    const { entity } = makeEntity({ tags: [INVULNERABLE_TAG], health: false })
+    const { world, emitHurt } = makeWorld()
     registerInvulnerabilityGuard(world)
 
     expect(() => {
-      hurtHandlers[0]({ hurtEntity: makeInvalidEntity() })
+      emitHurt(entity)
     }).not.toThrow()
   })
-})
 
-describe('setInvulnerable on an invalidated entity', () => {
-  it('does not propagate when every entity method throws', () => {
+  it('does not propagate when the hurt entity was invalidated by the hit', () => {
+    const { world, emitHurt } = makeWorld()
+    registerInvulnerabilityGuard(world)
+
     expect(() => {
-      setInvulnerable(makeInvalidEntity())
+      emitHurt(makeInvalidEntity())
     }).not.toThrow()
-    expect(() => {
-      setInvulnerable(makeInvalidEntity(), { enabled: false })
-    }).not.toThrow()
+  })
+
+  it('heals an entity tagged via setInvulnerable', () => {
+    const { entity, health } = makeEntity()
+    const { world, emitHurt } = makeWorld()
+    registerInvulnerabilityGuard(world)
+
+    setInvulnerable(entity)
+    emitHurt(entity)
+
+    expect(health.resetToMaxValue).toHaveBeenCalledOnce()
   })
 })

@@ -38,8 +38,9 @@ export const registerInvulnerabilityGuard = (world: World): void => {
   if (guardedWorlds.has(world)) {
     return
   }
-  guardedWorlds.add(world)
 
+  // Mark the world guarded only once the subscription is in place, so a throwing subscribe
+  // leaves it retryable rather than permanently flagged with no handler.
   world.afterEvents.entityHurt.subscribe((event) => {
     const entity = event.hurtEntity
     try {
@@ -53,6 +54,8 @@ export const registerInvulnerabilityGuard = (world: World): void => {
       // Entity unloaded/invalidated between the hit and this heal — ignore.
     }
   })
+
+  guardedWorlds.add(world)
 }
 
 /**
