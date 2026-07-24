@@ -9,6 +9,15 @@ packages:
       typescript-dependencies: false
       typescript-scripts-and-dependencies: false
       typescript-with-options: false
+  '@twin-digital/dev-bedrock-server':
+    # Plain-JS harness scripts (no TS source, no build output) — keep eslint,
+    # drop the TS build/typecheck/clean wiring.
+    rules:
+      clean: false
+      typescript: false
+      typescript-dependencies: false
+      typescript-scripts-and-dependencies: false
+      typescript-with-options: false
   '@twin-digital/eslint-config':
     rules:
       eslint: false

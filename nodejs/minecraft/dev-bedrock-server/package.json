@@ -1,0 +1,32 @@
+{
+  "private": true,
+  "name": "@twin-digital/dev-bedrock-server",
+  "version": "0.1.0",
+  "description": "Dockerized Bedrock dev server harness: hot-deploys the monorepo's behavior packs for live iteration.",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "lint": "lint",
+    "lint:fix": "lint_fix"
+  },
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "concurrently": "^9.2.0",
+    "execa": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

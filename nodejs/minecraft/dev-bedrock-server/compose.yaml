@@ -1,0 +1,45 @@
+# Local Bedrock dev server for behavior-pack iteration. Compose has one job
+# here: define and run the server container as a daemon. Pack deployment is
+# handled by the harness (dev.mjs / deploy.mjs), which ships built packs over
+# the Docker API. Run the server by hand with:
+#
+#   docker compose [--env-file .env] \
+#     -f nodejs/minecraft/dev-bedrock-server/compose.yaml up -d --wait
+#
+# Run compose from the REPO ROOT (so the -f path resolves) and, if you created
+# a repo-root `.env` (copy .env.example — MINECRAFT_* overrides, pinned dev
+# seed), pass it with --env-file: compose only auto-loads a .env next to the
+# compose file, never from the cwd. dev.mjs adds the flag automatically.
+#
+# Every knob below is overridable via MINECRAFT_* in the repo-root .env, and
+# falls back to the default shown when unset — including LEVEL_SEED, which
+# defaults to empty (a random world).
+name: mc-bedrock-dev
+services:
+  bedrock:
+    image: itzg/minecraft-bedrock-server
+    container_name: mc-bedrock-dev
+    environment:
+      ALLOW_CHEATS: '${MINECRAFT_ALLOW_CHEATS:-true}' # needed for /reload and friends from the console
+      ALLOW_LIST: '${MINECRAFT_ALLOW_LIST:-false}' # dev server — no allowlist (see README)
+      CONTENT_LOG_CONSOLE_OUTPUT_ENABLED: '${MINECRAFT_CONTENT_LOG_CONSOLE_OUTPUT_ENABLED:-true}' # script errors → stdout
+      DEFAULT_PLAYER_PERMISSION_LEVEL: '${MINECRAFT_DEFAULT_PLAYER_PERMISSION_LEVEL:-operator}' # every joiner auto-opped (private dev)
+      DIFFICULTY: '${MINECRAFT_DIFFICULTY:-normal}'
+      EULA: 'TRUE'
+      GAMEMODE: '${MINECRAFT_GAMEMODE:-survival}'
+      LEVEL_NAME: '${MINECRAFT_LEVEL_NAME:-dev}'
+      LEVEL_SEED: '${MINECRAFT_LEVEL_SEED:-}' # empty → random world; set in .env to pin
+      SERVER_NAME: '${MINECRAFT_SERVER_NAME:-dev-behavior-packs}'
+      VERSION: '${MINECRAFT_VERSION:-1.26.31.1}' # match prod so @minecraft/server lines up
+    ports:
+      # Published on all interfaces of the DOCKER HOST, so a Minecraft client on
+      # the LAN connects at <docker-host-ip>:19132 (Bedrock → Add Server).
+      - '0.0.0.0:19132:19132/udp'
+    volumes:
+      - dev-data:/data # world + server.properties + packs live on the daemon host
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+volumes:
+  dev-data:
