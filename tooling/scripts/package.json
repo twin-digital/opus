@@ -13,7 +13,9 @@
     "lint_fix": "./bin/lint_fix.js",
     "opus-test": "./bin/opus-test.js",
     "opus-test-watch": "./bin/opus-test-watch.js",
+    "release-asset-packages": "./bin/release-asset-packages.js",
     "squash": "./bin/squash.js",
+    "upload-release-assets": "./bin/upload-release-assets.js",
     "watch": "./bin/watch.js"
   },
   "scripts": {

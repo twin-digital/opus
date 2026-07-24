@@ -235,6 +235,10 @@ jobs:
       contents: write # upload assets to the releases
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # the write-capable GITHUB_TOKEN must not be reachable by the package
+          # build and release-assets scripts run below
+          persist-credentials: false
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
@@ -248,39 +252,48 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Generate and upload release assets
+      - name: Detect released packages with release assets
+        id: detect
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISHED_PACKAGES: ${{ needs.publish.outputs.publishedPackages }}
         run: |
           set -euo pipefail
+          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
 
-          # turbo skips packages that don't define the script, so filtering on
-          # every published package is all the opt-in gating the hook needs.
-          mapfile -t filters < <(jq -r '.[] | "--filter=" + .name' <<< "$PUBLISHED_PACKAGES")
+      # Two steps so GH_TOKEN (contents: write) is only in the environment of the upload —
+      # not of the package-authored build and release-assets scripts.
+      - name: Build release assets
+        env:
+          PACKAGES: ${{ steps.detect.outputs.packages }}
+        run: |
+          set -euo pipefail
+          lines=$(jq -r '.[] | "--filter=" + .name' <<< "$PACKAGES")
+          if [ -z "$lines" ]; then
+            echo "No released package defines a release-assets hook"
+            exit 0
+          fi
+          mapfile -t filters <<< "$lines"
+          # turbo runs each package's `build` first — the task depends on it.
           pnpm release-assets "${filters[@]}"
 
-          # Pair each published package with its workspace directory. The git tag
-          # changesets pushed — and so the release to attach to — is `<name>@<version>`.
-          workspaces=$(pnpm list --recursive --depth=-1 --json)
-          while IFS=$'\t' read -r name version dir; do
-            assets="$dir/.release-assets"
-            # A GitHub release asset is a flat file, so take the top-level regular files
-            # and ignore any directory the hook left behind. Sorted, for a SHA256SUMS
-            # that's byte-identical when the same release is re-run.
-            mapfile -t files < <(find "$assets" -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' 2>/dev/null | sort)
-            if [ "${#files[@]}" -eq 0 ]; then
-              echo "No release assets for $name"
-              continue
-            fi
-            # GitHub records a sha256 per asset, but only as API metadata. SHA256SUMS
-            # is the downloadable companion, so plain-URL consumers (`sha256sum -c`,
-            # ansible `get_url checksum:`) can verify without an API call. Written via
-            # $RUNNER_TEMP so the file being created isn't itself a checksum input.
-            (cd "$assets" && sha256sum -- "${files[@]}" > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
-            gh release upload "$name@$version" "${files[@]/#/$assets/}" "$assets/SHA256SUMS" --clobber
-          done < <(jq -r --argjson published "$PUBLISHED_PACKAGES" \
-            'INDEX(.[]; .name) as $ws | $published[] | [.name, .version, $ws[.name].path] | @tsv' <<< "$workspaces")
+      - name: Attach release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGES: ${{ steps.detect.outputs.packages }}
+        run: |
+          set -euo pipefail
+          # jq runs before the loop so its exit status is checked; a failure inside a
+          # process substitution would leave the loop silently empty.
+          rows=$(jq -r '.[] | [.tag, .path] | @tsv' <<< "$PACKAGES")
+          if [ -z "$rows" ]; then
+            exit 0
+          fi
+          # tag and path are workspace values taken verbatim — passed as arguments,
+          # never spliced into the script
+          while IFS=$'\t' read -r tag dir; do
+            node ./tooling/scripts/bin/upload-release-assets.js "$tag" "$dir"
+          done <<< "$rows"
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
