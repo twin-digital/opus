@@ -235,6 +235,12 @@ jobs:
       contents: write # upload assets to the releases
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # detection reads the tags the publish job just pushed
+          fetch-tags: true
+          # the write-capable GITHUB_TOKEN must not be readable by the package
+          # build and release-assets scripts run below
+          persist-credentials: false
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
@@ -248,39 +254,36 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Generate and upload release assets
+      - name: Detect released packages with release assets
+        id: detect
+        run: echo "packages=$(pnpm exec release-asset-packages)" >> "$GITHUB_OUTPUT"
+
+      # Two steps so GH_TOKEN (contents: write) is only in the environment of the
+      # upload — not of the package build and release-assets scripts.
+      - name: Build release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISHED_PACKAGES: ${{ needs.publish.outputs.publishedPackages }}
+          PACKAGES: ${{ steps.detect.outputs.packages }}
         run: |
           set -euo pipefail
-
-          # turbo skips packages that don't define the script, so filtering on
-          # every published package is all the opt-in gating the hook needs.
-          mapfile -t filters < <(jq -r '.[] | "--filter=" + .name' <<< "$PUBLISHED_PACKAGES")
+          mapfile -t filters < <(jq -r '.[] | "--filter=" + .name' <<< "$PACKAGES")
+          if [ "${#filters[@]}" -eq 0 ]; then
+            echo "No released package defines a release-assets hook"
+            exit 0
+          fi
+          pnpm build "${filters[@]}"
           pnpm release-assets "${filters[@]}"
 
-          # Pair each published package with its workspace directory. The git tag
-          # changesets pushed — and so the release to attach to — is `<name>@<version>`.
-          workspaces=$(pnpm list --recursive --depth=-1 --json)
-          while IFS=$'\t' read -r name version dir; do
-            assets="$dir/.release-assets"
-            # A GitHub release asset is a flat file, so take the top-level regular files
-            # and ignore any directory the hook left behind. Sorted, for a SHA256SUMS
-            # that's byte-identical when the same release is re-run.
-            mapfile -t files < <(find "$assets" -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' 2>/dev/null | sort)
-            if [ "${#files[@]}" -eq 0 ]; then
-              echo "No release assets for $name"
-              continue
-            fi
-            # GitHub records a sha256 per asset, but only as API metadata. SHA256SUMS
-            # is the downloadable companion, so plain-URL consumers (`sha256sum -c`,
-            # ansible `get_url checksum:`) can verify without an API call. Written via
-            # $RUNNER_TEMP so the file being created isn't itself a checksum input.
-            (cd "$assets" && sha256sum -- "${files[@]}" > "$RUNNER_TEMP/SHA256SUMS" && mv "$RUNNER_TEMP/SHA256SUMS" SHA256SUMS)
-            gh release upload "$name@$version" "${files[@]/#/$assets/}" "$assets/SHA256SUMS" --clobber
-          done < <(jq -r --argjson published "$PUBLISHED_PACKAGES" \
-            'INDEX(.[]; .name) as $ws | $published[] | [.name, .version, $ws[.name].path] | @tsv' <<< "$workspaces")
+      - name: Attach release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGES: ${{ steps.detect.outputs.packages }}
+        run: |
+          set -euo pipefail
+          # tag and path are git/workspace values taken verbatim — passed as
+          # arguments, never spliced into the script
+          while IFS=$'\t' read -r tag dir; do
+            pnpm exec upload-release-assets "$tag" "$dir"
+          done < <(jq -r '.[] | [.tag, .path] | @tsv' <<< "$PACKAGES")
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
