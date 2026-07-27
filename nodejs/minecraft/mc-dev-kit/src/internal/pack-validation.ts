@@ -115,7 +115,7 @@ function reportDuplicateUuids(entries: readonly WorkingEntry[]): void {
         code: 'duplicate-uuid',
         message: `the uuid ${uuid} is claimed by ${String(claiming.length)} packs: ${sourceDirs.join(', ')}`,
         uuid,
-        claimants: sourceDirs,
+        claimants: [...sourceDirs],
       })
     }
   }

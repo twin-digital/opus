@@ -51,6 +51,13 @@ export function completeManifests(entries: readonly WorkingEntry[]): void {
   }
 
   for (const entry of entries) {
+    // a package that cannot name itself is a fault of the package, whatever its manifest holds
+    if (typeof entry.package.packageJson.name !== 'string') {
+      entry.problems.push({
+        code: 'package-name-missing',
+        message: `the package at ${entry.packageDir} declares no name, so the pack cannot name its owning package`,
+      })
+    }
     completeEntry(entry, byUuid)
   }
 }
@@ -69,13 +76,6 @@ function completeEntry(entry: WorkingEntry, byUuid: Map<string, WorkingEntry>): 
   const manifest = entry.manifest
   if (!isRecord(manifest)) {
     return
-  }
-
-  if (typeof entry.package.packageJson.name !== 'string') {
-    entry.problems.push({
-      code: 'package-name-missing',
-      message: `the package at ${entry.packageDir} declares no name, so the pack cannot name its owning package`,
-    })
   }
 
   const formatVersion = manifest.format_version
@@ -211,6 +211,9 @@ function completeDependencies(
     const version = packageVersion(target.package, `${field}.version`, entry.problems)
     if (version !== undefined) {
       dependency.version = version
+    } else {
+      // never leave a placeholder standing in for a version completion could not produce
+      delete dependency.version
     }
   })
 }

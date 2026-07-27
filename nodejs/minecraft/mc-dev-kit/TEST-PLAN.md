@@ -241,6 +241,17 @@ Requirements: `dev-kit-provides-a-library`, `dev-kit-library-name`, `pack-discov
 109. The package's public entry point exports `discoverPacks` and each type the spec names, imported
      by package name so the export map is exercised as a consumer meets it
      (`r:dev-kit-provides-a-library`, `r:dev-kit-library-name`).
+     109a. Added at the final review gate:
+
+- `package-name-missing` is raised for a nameless package whose manifest is unreadable or is not a
+  JSON object, not only for one whose manifest completion could run (`manifest-completion`).
+- A `manifest.json` saved with a UTF-8 byte-order mark parses cleanly and raises no problem
+  (`pack-locator`), as it does under both package managers' own readers.
+- A matched dependency whose depended-on package has no usable version carries no version at all,
+  rather than keeping the placeholder the source wrote (`manifest-completion`).
+- Each claimant of a duplicated uuid carries its own `claimants` array, so a consumer mutating one
+  entry's problem does not reach another's (`pack-validation`).
+
 110. A valid entry's `manifest` is typed `PackManifest`, so `manifest.header.uuid` reads without a
      narrowing cast, while an invalid entry's is `unknown` and does not — the typed manifest is a
      spec commitment, `d:the-completed-manifest-is-reported-as-a-plain-object` being rejected.

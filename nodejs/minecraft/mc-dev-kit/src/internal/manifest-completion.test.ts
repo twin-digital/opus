@@ -67,6 +67,15 @@ describe('completeManifests', () => {
       expect(header(entry).name).toBe('nameless')
     })
 
+    it.each([
+      ['unreadable', undefined],
+      ['not a JSON object', [1, 2, 3]],
+    ])('reports package-name-missing where the manifest is %s', (_label, manifest) => {
+      const entry = complete(workingEntry({ packageJson: { version: '1.0.0' }, manifest }))
+
+      expect(codes(entry)).toContain('package-name-missing')
+    })
+
     it('reports package-name-missing even where productName completed the header cleanly', () => {
       const entry = complete(workingEntry({ packageJson: { productName: 'Pack One', version: '1.0.0' } }))
 
@@ -281,6 +290,17 @@ describe('completeManifests', () => {
         field: 'dependencies[0].version',
         packageDir: 'packages/mc-pack-2',
         value: 'nope',
+      })
+    })
+
+    it('leaves no placeholder standing where the depended-on version could not be read', () => {
+      const entry = complete(
+        dependent([{ uuid: 'dep-uuid', version: [0, 0, 0] }]),
+        dependency('dep-uuid', { name: 'mc-pack-2' }),
+      )
+
+      expect((entry.manifest as { dependencies: Record<string, unknown>[] }).dependencies[0]).toEqual({
+        uuid: 'dep-uuid',
       })
     })
 

@@ -120,6 +120,18 @@ describe('validatePacks', () => {
       }
     })
 
+    it('gives each claimant its own claimants array', () => {
+      const first = pack('behavior', { uuid: 'shared' }, 'packages/one')
+      const second = pack('behavior', { uuid: 'shared' }, 'packages/two')
+      validatePacks([first, second])
+
+      const claimantsOf = (entry: WorkingEntry): string[] =>
+        (entry.problems[0] as unknown as { claimants: string[] }).claimants
+      claimantsOf(first).push('packages/three/behavior_pack')
+
+      expect(claimantsOf(second)).toEqual(['packages/one/behavior_pack', 'packages/two/behavior_pack'])
+    })
+
     it('compares claimed uuids case-insensitively', () => {
       const first = pack('behavior', { uuid: 'SHARED' }, 'packages/one')
       const second = pack('behavior', { uuid: 'shared' }, 'packages/two')

@@ -14,7 +14,7 @@ import {
   type PackManifest,
   type Problem,
   type ValidPackEntry,
-} from './index.js'
+} from '@twin-digital/mc-dev-kit'
 
 /** The shape a consumer meets: the entry point, and the types it hands back. */
 describe('the kit as a consumer imports it', () => {

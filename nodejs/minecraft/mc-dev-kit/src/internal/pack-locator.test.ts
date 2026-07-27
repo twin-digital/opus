@@ -144,6 +144,17 @@ describe('locatePacks', () => {
       ])
     })
 
+    it('parses a manifest saved with a byte-order mark', async () => {
+      const entries = await locate(
+        solo({
+          'behavior_pack/manifest.json': `\uFEFF${JSON.stringify(packManifest('behavior'))}`,
+        }),
+      )
+
+      expect(entries[0].problems).toEqual([])
+      expect(entries[0].manifest).toMatchObject({ format_version: 2 })
+    })
+
     it('reports an unparseable manifest as the same one problem', async () => {
       const entries = await locate(solo({ 'behavior_pack/manifest.json': '{ "header": }' }))
 

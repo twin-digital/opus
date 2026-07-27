@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PackKind, Problem } from '../types.js'
 import type { CandidatePackage, WorkingEntry } from './candidate.js'
-import { isRecord, messageOf } from './json.js'
+import { isRecord, messageOf, parseJson } from './json.js'
 import { joinRelative } from './paths.js'
 
 /** The two fixed source paths, and the kind each declares. */
@@ -93,7 +93,7 @@ async function readManifest(manifestPath: string): Promise<ManifestRead | undefi
   }
 
   try {
-    return { value: JSON.parse(contents) }
+    return { value: parseJson(contents) }
   } catch (error) {
     return { error: messageOf(error) }
   }

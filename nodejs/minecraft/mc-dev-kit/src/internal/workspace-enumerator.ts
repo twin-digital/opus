@@ -4,6 +4,7 @@ import mapWorkspaces from '@npmcli/map-workspaces'
 import { findWorkspacePackages } from '@pnpm/workspace.find-packages'
 import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 import type { CandidatePackage } from './candidate.js'
+import { parseJson } from './json.js'
 import { toWorkspaceRelative } from './paths.js'
 
 /**
@@ -68,5 +69,5 @@ async function npmCandidates(workspaceRoot: string): Promise<CandidatePackage[]>
 
 async function readPackageJson(dir: string): Promise<Record<string, unknown>> {
   const contents = await readFile(path.join(dir, 'package.json'), 'utf8')
-  return JSON.parse(contents) as Record<string, unknown>
+  return parseJson(contents) as Record<string, unknown>
 }
