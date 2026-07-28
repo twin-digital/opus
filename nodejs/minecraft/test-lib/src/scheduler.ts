@@ -18,11 +18,16 @@ export interface SystemData {
   readonly beforeEvents: MC.SystemBeforeEvents
 }
 
-/** Records a callback against the tick it is due on, and hands back the handle that cancels it. */
-const schedule = (fake: object, kind: ScheduledRun['kind'], callback: () => void, interval: number): number => {
+/**
+ * Records a callback against the tick it is due on, and hands back the handle that cancels it.
+ * A delay below one tick is one tick — the next tick, as a bare `runTimeout` is — which is also
+ * what keeps an interval from being due again on the tick it just ran.
+ */
+const schedule = (fake: object, kind: ScheduledRun['kind'], callback: () => void, delay: number): number => {
   const server = serverOf(fake)
   const handle = server.nextRunHandle
   server.nextRunHandle += 1
+  const interval = delay >= 1 ? delay : 1
   server.scheduled.push({
     handle,
     kind,
@@ -65,6 +70,27 @@ registerBehaviour('System', {
 // Free functions
 // ---------------------------------------------------------------------------
 
+/** The first run still owing at the current tick, in scheduling order, or `undefined` when none is. */
+const nextDue = (state: ServerState): ScheduledRun | undefined =>
+  state.scheduled.find((run) => !run.cancelled && run.dueTick <= state.currentTick)
+
+/**
+ * Runs everything owing at the current tick, resolving each run from live state rather than from a
+ * snapshot, so a callback that schedules, clears, or advances ticks itself cannot corrupt the walk.
+ * Each run leaves the queue — or moves to its next period — *before* its callback is invoked, so a
+ * throw propagates out over consistent state and strands nothing.
+ */
+const runDue = (state: ServerState): void => {
+  for (let run = nextDue(state); run; run = nextDue(state)) {
+    if (run.kind === 'interval') {
+      run.dueTick = state.currentTick + run.interval
+    } else {
+      state.scheduled.splice(state.scheduled.indexOf(run), 1)
+    }
+    run.callback()
+  }
+}
+
 /**
  * Runs the callbacks scheduled up to `count` ticks ahead. The advance steps one tick at a time,
  * incrementing `currentTick` and then running every callback due at that tick in the order it was
@@ -72,7 +98,8 @@ registerBehaviour('System', {
  * only those due on the tick it lands on.
  *
  * A callback that throws propagates out of the advance: the engine's behaviour here is unobserved,
- * and swallowing it would hide the test's own bug.
+ * and swallowing it would hide the test's own bug. What it leaves behind is still coherent — the
+ * run that threw is spent, and the rest of that tick's work is owing and runs on the next advance.
  */
 export const advanceTicks = (server: ServerLike, count: number): void => {
   if (!Number.isInteger(count) || count < 0) {
@@ -83,21 +110,6 @@ export const advanceTicks = (server: ServerLike, count: number): void => {
   const state = serverOf(server.world)
   for (let step = 0; step < count; step += 1) {
     state.currentTick += 1
-    // Read once per tick: a callback scheduling another leaves it due on a later tick, not this one.
-    const due = state.scheduled.filter((run) => run.dueTick === state.currentTick)
-    for (const run of due) {
-      if (run.cancelled) {
-        continue
-      }
-      if (run.kind === 'interval') {
-        run.dueTick = state.currentTick + run.interval
-      } else {
-        const index = state.scheduled.indexOf(run)
-        if (index >= 0) {
-          state.scheduled.splice(index, 1)
-        }
-      }
-      run.callback()
-    }
+    runDue(state)
   }
 }

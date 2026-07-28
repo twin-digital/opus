@@ -5,6 +5,7 @@ import {
   createEntity,
   createServer,
   invalidate,
+  InvalidArgumentError,
   InvalidEntityError,
   NotImplementedError,
   UnsetValueError,
@@ -61,6 +62,19 @@ describe.each<[string, (server: FakeServer) => DynamicPropertyHolder]>([
     expect(holder.getDynamicProperty('count')).toBe(-3.5)
     expect(holder.getDynamicProperty('label')).toBe('hello')
     expect(holder.getDynamicProperty('spot')).toEqual({ x: 1, y: 2, z: 3 })
+  })
+
+  it('shares no Vector3 object with the caller, on the write or on the read', () => {
+    const holder = holderOf(createServer())
+    const written = { x: 1, y: 2, z: 3 }
+    holder.setDynamicProperty('spot', written)
+    written.x = 99
+    expect(holder.getDynamicProperty('spot')).toEqual({ x: 1, y: 2, z: 3 })
+
+    const read = holder.getDynamicProperty('spot') as MC.Vector3
+    read.y = 99
+    expect(holder.getDynamicProperty('spot')).toEqual({ x: 1, y: 2, z: 3 })
+    expect(holder.getDynamicProperty('spot')).not.toBe(read)
   })
 
   it('overwrites an existing value, including with a different type', () => {
@@ -224,6 +238,33 @@ describe('scoreboard objectives', () => {
     scoreboard.removeObjective('kills')
     expect(objective.isValid).toBe(false)
   })
+
+  it('refuses to read or write a removed objective', () => {
+    const { scoreboard } = createServer().world
+    const objective = scoreboard.addObjective('kills', 'Kills')
+    objective.setScore('global', 5)
+    scoreboard.removeObjective('kills')
+
+    expect(() => objective.id).toThrow(new Error("Failed to get property 'id'."))
+    expect(() => objective.displayName).toThrow(new Error("Failed to get property 'displayName'."))
+    expect(() => objective.getScore('global')).toThrow(new Error("Failed to call function 'getScore'."))
+    expect(() => {
+      objective.setScore('global', 9)
+    }).toThrow(new Error("Failed to call function 'setScore'."))
+    expect(() => objective.getScores()).toThrow(new Error("Failed to call function 'getScores'."))
+    expect(() => objective.getParticipants()).toThrow(new Error("Failed to call function 'getParticipants'."))
+  })
+
+  it('clears any display slot showing an objective it removes', () => {
+    const { scoreboard } = createServer().world
+    const objective = scoreboard.addObjective('kills', 'Kills')
+    const other = scoreboard.addObjective('deaths', 'Deaths')
+    scoreboard.setObjectiveAtDisplaySlot(SIDEBAR, { objective })
+    scoreboard.setObjectiveAtDisplaySlot(BELOW_NAME, { objective: other })
+    scoreboard.removeObjective('kills')
+    expect(scoreboard.getObjectiveAtDisplaySlot(SIDEBAR)).toBeUndefined()
+    expect(scoreboard.getObjectiveAtDisplaySlot(BELOW_NAME)?.objective).toBe(other)
+  })
 })
 
 describe('scores', () => {
@@ -300,6 +341,25 @@ describe('scores', () => {
     second.setScore('global', 2)
     expect(first.getScore('global')).toBe(1)
     expect(second.getScore('global')).toBe(2)
+  })
+
+  it('refuses a participant from another bundle, in both the entity and the identity form', () => {
+    const a = createServer()
+    const b = createServer()
+    const foreign = anEntity(b)
+    const objective = a.world.scoreboard.addObjective('kills', 'Kills')
+    expect(
+      thrownBy(() => {
+        objective.setScore(foreign, 1)
+      }),
+    ).toBeInstanceOf(InvalidArgumentError)
+    expect(thrownBy(() => objective.getScore(foreign))).toBeInstanceOf(InvalidArgumentError)
+    expect(
+      thrownBy(() => {
+        objective.setScore(foreign.scoreboardIdentity as MC.ScoreboardIdentity, 1)
+      }),
+    ).toBeInstanceOf(InvalidArgumentError)
+    expect(objective.getParticipants()).toEqual([])
   })
 
   it('throws NotImplementedError from addScore, hasParticipant and removeParticipant', () => {
@@ -384,10 +444,17 @@ describe('entity.scoreboardIdentity', () => {
     expect(entity.scoreboardIdentity?.getEntity()).toBe(entity)
   })
 
-  it('reads undefined on an invalidated entity', () => {
-    const entity = anEntity(createServer())
-    invalidate(entity)
-    expect(entity.scoreboardIdentity).toBeUndefined()
+  it('reads undefined on an invalidated entity, whether or not one was ever issued', () => {
+    const server = createServer()
+    const issued = anEntity(server)
+    const identity = issued.scoreboardIdentity
+    const never = anEntity(server)
+    invalidate(issued)
+    invalidate(never)
+    expect(issued.scoreboardIdentity).toBeUndefined()
+    expect(never.scoreboardIdentity).toBeUndefined()
+    // An identity captured while the entity was valid stays reachable, and follows it invalid.
+    expect(identity?.isValid).toBe(false)
   })
 
   it("keeps two bundles' scoreboards apart", () => {

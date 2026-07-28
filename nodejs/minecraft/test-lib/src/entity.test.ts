@@ -92,6 +92,24 @@ describe('createEntity', () => {
     expect(world.getEntity(assigned.id)).toBe(assigned)
   })
 
+  it('refuses a caller-supplied id another live entity already holds', () => {
+    const { server, world } = setup()
+    const first = createEntity(server, { typeId: SHEEP, id: '7' })
+    expectThrown(
+      () => createEntity(server, { typeId: COW, id: '7' }),
+      InvalidArgumentError,
+      'Invalid value passed to argument [1]. An entity with id 7 is already registered with this world.',
+    )
+    expect(world.getEntity('7')).toBe(first)
+  })
+
+  it('refuses an id a removed entity holds, since ids are never reissued', () => {
+    const { server } = setup()
+    const removed = createEntity(server, { typeId: SHEEP, id: '7' })
+    removed.remove()
+    expect(() => createEntity(server, { typeId: SHEEP, id: '7' })).toThrow(InvalidArgumentError)
+  })
+
   it('numbers ids per bundle', () => {
     const first = setup()
     const second = setup()

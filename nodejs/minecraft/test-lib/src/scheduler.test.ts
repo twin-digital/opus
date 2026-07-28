@@ -135,6 +135,21 @@ describe('runTimeout', () => {
     expect(calls).toBe(1)
   })
 
+  it('is due on the next tick for a delay of zero or less, and fires only once', () => {
+    const server = createServer()
+    const zero: number[] = []
+    const negative: number[] = []
+    server.system.runTimeout(() => {
+      zero.push(server.system.currentTick)
+    }, 0)
+    server.system.runTimeout(() => {
+      negative.push(server.system.currentTick)
+    }, -5)
+    advanceTicks(server, 5)
+    expect(zero).toEqual([1])
+    expect(negative).toEqual([1])
+  })
+
   it('is due on the next tick when the delay is omitted', () => {
     const server = createServer()
     const ticks: number[] = []
@@ -166,6 +181,17 @@ describe('runInterval', () => {
     }, 2)
     advanceTicks(server, 4)
     expect(ticks).toEqual([5, 7])
+  })
+
+  it('repeats every tick for an interval below one, rather than hanging the advance', () => {
+    const server = createServer()
+    const ticks: number[] = []
+    const handle = server.system.runInterval(() => {
+      ticks.push(server.system.currentTick)
+    }, 0)
+    advanceTicks(server, 3)
+    server.system.clearRun(handle)
+    expect(ticks).toEqual([1, 2, 3])
   })
 
   it('fires on every tick when the interval is omitted', () => {
@@ -241,6 +267,61 @@ describe('advanceTicks', () => {
     }, 2)
     advanceTicks(second, 2)
     expect(secondOrder).toEqual(['y', 'x'])
+  })
+
+  it('leaves consistent state behind a throwing callback', () => {
+    const server = createServer()
+    let thrower = 0
+    let sibling = 0
+    server.system.runTimeout(() => {
+      thrower += 1
+      throw new Error('deliberate')
+    }, 1)
+    server.system.runTimeout(() => {
+      sibling += 1
+    }, 1)
+    expect(() => {
+      advanceTicks(server, 1)
+    }).toThrow('deliberate')
+    // The run that threw is spent; the one it stranded is still owing and runs on the next advance.
+    advanceTicks(server, 1)
+    expect(thrower).toBe(1)
+    expect(sibling).toBe(1)
+    advanceTicks(server, 5)
+    expect(thrower).toBe(1)
+    expect(sibling).toBe(1)
+  })
+
+  it('advances a throwing interval to its next period rather than skipping a firing', () => {
+    const server = createServer()
+    const ticks: number[] = []
+    server.system.runInterval(() => {
+      ticks.push(server.system.currentTick)
+      throw new Error('deliberate')
+    }, 2)
+    for (const _attempt of [1, 2, 3]) {
+      expect(() => {
+        advanceTicks(server, 2)
+      }).toThrow('deliberate')
+    }
+    expect(ticks).toEqual([2, 4, 6])
+  })
+
+  it('survives a callback that advances ticks itself', () => {
+    const server = createServer()
+    const order: string[] = []
+    server.system.runTimeout(() => {
+      order.push(`outer@${String(server.system.currentTick)}`)
+      advanceTicks(server, 2)
+    }, 1)
+    server.system.runTimeout(() => {
+      order.push(`inner@${String(server.system.currentTick)}`)
+    }, 3)
+    advanceTicks(server, 1)
+    expect(order).toEqual(['outer@1', 'inner@3'])
+    expect(server.system.currentTick).toBe(3)
+    advanceTicks(server, 5)
+    expect(order).toEqual(['outer@1', 'inner@3'])
   })
 
   it('runs a callback scheduled from inside a callback on a later tick, not the current one', () => {

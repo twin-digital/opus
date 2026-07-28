@@ -24,9 +24,19 @@ import {
 // Dynamic properties
 // ---------------------------------------------------------------------------
 
+/**
+ * A stored value, detached from the caller's. The engine marshals a dynamic property across the
+ * native boundary, so neither a write nor a read shares an object with what a pack is holding.
+ */
+const detached = (value: DynamicPropertyValue): DynamicPropertyValue =>
+  typeof value === 'object' ? { x: value.x, y: value.y, z: value.z } : value
+
 /** The four members, over whichever per-object map the class they sit on keeps. */
 const dynamicProperties = (mapOf: (fake: object) => Map<string, DynamicPropertyValue>): ClassBehaviour => ({
-  getDynamicProperty: (fake: object, identifier: string) => mapOf(fake).get(identifier),
+  getDynamicProperty: (fake: object, identifier: string) => {
+    const value = mapOf(fake).get(identifier)
+    return value === undefined ? undefined : detached(value)
+  },
   getDynamicPropertyIds: (fake: object) => [...mapOf(fake).keys()],
   clearDynamicProperties: (fake: object) => {
     mapOf(fake).clear()
@@ -37,7 +47,7 @@ const dynamicProperties = (mapOf: (fake: object) => Map<string, DynamicPropertyV
     if (value === undefined) {
       map.delete(identifier)
     } else {
-      map.set(identifier, value)
+      map.set(identifier, detached(value))
     }
   },
 })
@@ -92,6 +102,15 @@ const identityFor = (server: ServerState, key: string, entity?: EntityData): MC.
 const identityOfEntity = (data: EntityData): MC.ScoreboardIdentity =>
   (data.scoreboardIdentity ??= identityFor(data.server, entityKey(data), data))
 
+/** All state is instance-scoped, so a participant from another bundle names nothing here. */
+const ownedBy = (server: ServerState, owner: ServerState, participant: object): void => {
+  if (owner !== server) {
+    throw new InvalidArgumentError(
+      `Invalid value passed to argument [0]. ${stateOf(participant).className} belongs to another server`,
+    )
+  }
+}
+
 /** The key and identity behind any of the three participant forms the declarations accept. */
 const resolveParticipant = (
   server: ServerState,
@@ -102,9 +121,12 @@ const resolveParticipant = (
     return { key, identity: identityFor(server, key) }
   }
   if (stateOf(participant).className === 'ScoreboardIdentity') {
-    return { key: dataOf<IdentityData>(participant).key, identity: participant as MC.ScoreboardIdentity }
+    const data = dataOf<IdentityData>(participant)
+    ownedBy(server, data.server, participant)
+    return { key: data.key, identity: participant as MC.ScoreboardIdentity }
   }
   const data = entityDataOf(participant as MC.Entity)
+  ownedBy(server, data.server, participant)
   return { key: entityKey(data), identity: identityOfEntity(data) }
 }
 
@@ -198,6 +220,12 @@ registerBehaviour('Scoreboard', {
       return false
     }
     server.scoreboard.objectives.delete(objectiveId)
+    // A slot showing it is cleared with it: a display slot never holds a dead objective.
+    for (const [slot, shown] of server.scoreboard.displaySlots) {
+      if (shown.objective === state.objective) {
+        server.scoreboard.displaySlots.delete(slot)
+      }
+    }
     stateOf(state.objective).valid = false
     return true
   },

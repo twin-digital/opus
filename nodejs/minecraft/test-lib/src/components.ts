@@ -12,7 +12,7 @@ import type * as MC from '@minecraft/server'
 import { killWithoutHealth } from './entity.js'
 import { ArgumentOutOfBoundsError, InvalidArgumentError, UnsetValueError } from './errors.js'
 import { dispatchAfter, dispatchBefore } from './events.js'
-import { ATTRIBUTE_COMPONENT_CLASSES, COMPONENT_CLASS_BY_ID, COMPONENT_CLASSES } from './generated/manifests.js'
+import { ATTRIBUTE_COMPONENT_CLASSES, COMPONENT_CLASSES, componentClassFor } from './generated/manifests.js'
 import { canonicalId, isAttributeComponentId, type EntityComponentId } from './ids.js'
 import { construct } from './runtime/construct.js'
 import { assertLiveEntity, isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
@@ -63,10 +63,10 @@ export const addComponent = <T extends EntityComponentId>(
 ): MC.EntityComponentTypeMap[T] => {
   assertLiveEntity(entity, 'addComponent')
   const id = canonicalId(componentId)
-  if (!Object.hasOwn(COMPONENT_CLASS_BY_ID, id)) {
+  const className = componentClassFor(id)
+  if (className === undefined) {
     throw new InvalidArgumentError(`Invalid value passed to argument [1]. ${componentId} is not a component id.`)
   }
-  const className = COMPONENT_CLASS_BY_ID[id]
   const data = entityDataOf(entity)
   if (data.components.has(id)) {
     throw new InvalidArgumentError(`Invalid value passed to argument [1]. ${id} is already attached to this entity.`)
@@ -80,7 +80,6 @@ export const addComponent = <T extends EntityComponentId>(
     // Filled the moment the fake exists: the state and the fake each need the other.
     component: undefined as unknown as MC.EntityComponent,
     attribute: isAttributeComponentId(id) ? attributeValuesOf(state) : undefined,
-    attached: true,
   }
   const component = construct(className, {
     data: { server: data.server, owner: data, state: componentState } satisfies ComponentData,
@@ -100,7 +99,6 @@ export const removeComponent = (entity: MC.Entity, componentId: EntityComponentI
     return false
   }
   data.components.delete(state.componentId)
-  state.attached = false
   // A detached reference goes stale exactly as one whose entity went invalid does.
   stateOf(state.component).valid = false
   return true
@@ -148,6 +146,8 @@ const writeHealth = (fake: object, next: number, damageSource: MC.EntityDamageSo
   const effectiveMin = numberOf(fake, 'effectiveMin')
   values.currentValue = next
   dispatchAfter(data.server, 'entityHealthChanged', { entity: data.owner.entity, oldValue, newValue: next })
+  // Death is settled by the value written, not by what a handler did after: in the engine the
+  // question cannot arise, since after-events are deferred past the whole call.
   if (next <= effectiveMin) {
     dispatchAfter(data.server, 'entityDie', { deadEntity: data.owner.entity, damageSource })
   }
@@ -203,8 +203,7 @@ const attributeBehaviour: ClassBehaviour = {
   },
 }
 
-// `COMPONENT_CLASS_BY_ID` carries every attachable class; `COMPONENT_CLASSES` adds the base classes.
-for (const className of new Set([...COMPONENT_CLASSES, ...Object.values(COMPONENT_CLASS_BY_ID)])) {
+for (const className of COMPONENT_CLASSES) {
   registerBehaviour(className, componentBehaviour)
 }
 
@@ -257,6 +256,11 @@ const entityComponentBehaviour: ClassBehaviour = {
     if (!dispatchBefore(data.server, 'entityHurt', before)) {
       return true
     }
+    // The handler ran inside this call and may have removed the entity or detached its health.
+    // Admission was already settled, so the boolean stands while the write and its cascade do not.
+    if (!isValidFake(stateOf(fake)) || data.components.get(HEALTH_ID)?.component !== health) {
+      return true
+    }
 
     const { damage } = before
     const oldValue = numberOf(health, 'currentValue')
@@ -288,12 +292,17 @@ const entityComponentBehaviour: ClassBehaviour = {
     }
 
     const damageSource = sourceOf('selfDestruct')
-    dispatchAfter(data.server, 'entityHurt', {
-      hurtEntity: data.entity,
-      damage: currentValue - effectiveMin,
-      damageSource,
+    // The health lost, captured before the write; handlers observe post-write state, so the write
+    // lands ahead of the whole cascade.
+    const damage = currentValue - effectiveMin
+    attributeOf(health).values.currentValue = effectiveMin
+    dispatchAfter(data.server, 'entityHurt', { hurtEntity: data.entity, damage, damageSource })
+    dispatchAfter(data.server, 'entityHealthChanged', {
+      entity: data.entity,
+      oldValue: currentValue,
+      newValue: effectiveMin,
     })
-    writeHealth(health, effectiveMin, damageSource)
+    dispatchAfter(data.server, 'entityDie', { deadEntity: data.entity, damageSource })
     return true
   },
 }

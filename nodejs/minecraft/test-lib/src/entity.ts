@@ -58,6 +58,11 @@ const assignId = (server: ServerState): string => {
 
 /** Builds an entity or player fake, registers it with the world, and hands back its state. */
 const create = (server: ServerState, options: PlayerOptions, isPlayer: boolean): EntityData => {
+  if (options.id !== undefined && server.entities.some((entity) => entity.id === options.id)) {
+    throw new InvalidArgumentError(
+      `Invalid value passed to argument [1]. An entity with id ${options.id} is already registered with this world.`,
+    )
+  }
   const data: EntityData = {
     server,
     // Filled the moment the fake exists: the state and the fake each need the other.
@@ -104,7 +109,8 @@ export const createPlayer = (server: ServerLike, options: PlayerOptions = {}): M
  * Puts a reference into the state the real API leaves a stale one in, at any point in a test —
  * including on a reference a handler is holding mid-event. Distinct from `remove()`, which
  * invalidates as part of removing: this reaches the entity that goes stale without leaving the
- * world, and the corpse a `kill()` left valid.
+ * world, and the corpse a `kill()` left valid. The entity stays registered, so the world and
+ * dimension lookups still list it — that staleness-in-place is the whole of what this models.
  */
 export const invalidate = (entity: MC.Entity): void => {
   stateOf(entity).valid = false
@@ -142,7 +148,6 @@ const supplied = <K extends keyof EntityData>(fake: object, field: K, member: st
 /** Every modelled `Entity` member; `Player` carries the same set plus its own. */
 const entityBehaviour: ClassBehaviour = {
   isValid: (fake: object) => isValidFake(stateOf(fake)),
-  scoreboardIdentity: (fake: object) => dataOf<EntityData>(fake).scoreboardIdentity,
 
   dimension: (fake: object) => supplied(fake, 'dimension', 'Entity.dimension'),
   location: (fake: object) => supplied(fake, 'location', 'Entity.location'),
@@ -183,6 +188,7 @@ const entityBehaviour: ClassBehaviour = {
     const data = dataOf<EntityData>(fake)
     // A notification: EntityRemoveBeforeEvent declares no cancel, so a handler gets no hold on it.
     deliver(data.server, 'world.beforeEvents', 'entityRemove', { removedEntity: data.entity })
+    // Detached and invalidated as one act: no handler can observe one without the other.
     data.registered = false
     stateOf(fake).valid = false
     dispatchAfter(data.server, 'entityRemove', { removedEntityId: data.id, typeId: data.typeId })

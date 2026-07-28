@@ -74,6 +74,37 @@ describe('matchesQuery - the honoured six', () => {
     expect(sheep(server, overworld, { typeId: COW }).matches({ type: SHEEP })).toBe(false)
   })
 
+  it('normalizes a bare type against the canonical typeId it stored', () => {
+    const { server, overworld } = setup()
+    const entity = sheep(server, overworld)
+    expect(entity.matches({ type: 'sheep' })).toBe(true)
+    expect(entity.matches({ type: 'cow' })).toBe(false)
+    expect(overworld.getEntities({ type: 'sheep' })).toEqual([entity])
+  })
+
+  it('normalizes a bare excludeTypes entry', () => {
+    const { server, overworld } = setup()
+    const dropped = sheep(server, overworld)
+    const kept = sheep(server, overworld, { typeId: COW })
+    expect(dropped.matches({ excludeTypes: ['sheep'] })).toBe(false)
+    expect(overworld.getEntities({ excludeTypes: ['sheep'] })).toEqual([kept])
+  })
+
+  it('matches a prefixed type against an entity created with the bare form', () => {
+    const { server, overworld } = setup()
+    const entity = createEntity(server, { typeId: 'sheep', dimension: overworld })
+    expect(entity.matches({ type: SHEEP })).toBe(true)
+  })
+
+  it('compares name and tags verbatim, with no id normalization', () => {
+    const { server, overworld } = setup()
+    const entity = sheep(server, overworld, { nameTag: 'sheep', tags: ['sheep'] })
+    expect(entity.matches({ name: 'sheep' })).toBe(true)
+    expect(entity.matches({ name: SHEEP })).toBe(false)
+    expect(entity.matches({ tags: ['sheep'] })).toBe(true)
+    expect(entity.matches({ tags: [SHEEP] })).toBe(false)
+  })
+
   it('drops an entity whose typeId is listed in excludeTypes', () => {
     const { server, overworld } = setup()
     expect(sheep(server, overworld).matches({ excludeTypes: [SHEEP] })).toBe(false)

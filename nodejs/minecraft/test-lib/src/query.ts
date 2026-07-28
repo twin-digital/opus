@@ -11,6 +11,7 @@
 import type * as MC from '@minecraft/server'
 
 import { NotImplementedError } from './errors.js'
+import { canonicalId } from './ids.js'
 
 /** The `EntityFilter`/`EntityQueryOptions` fields this cycle honours. */
 export const HONOURED_QUERY_FIELDS = ['type', 'tags', 'name', 'excludeTypes', 'excludeTags', 'excludeNames'] as const
@@ -72,10 +73,12 @@ export const matchesQuery = (entity: MC.Entity, options: MC.EntityQueryOptions |
     return true
   }
 
-  if (options.type !== undefined && entity.typeId !== options.type) {
+  // A type id normalizes on entry, as it does everywhere the library stores one; nameTag and the
+  // tag set are free strings the test supplied, so they compare verbatim.
+  if (options.type !== undefined && entity.typeId !== canonicalId(options.type)) {
     return false
   }
-  if (options.excludeTypes?.includes(entity.typeId) === true) {
+  if (options.excludeTypes?.some((type) => canonicalId(type) === entity.typeId) === true) {
     return false
   }
   if (options.name !== undefined && entity.nameTag !== options.name) {

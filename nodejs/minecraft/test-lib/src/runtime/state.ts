@@ -76,7 +76,6 @@ export interface ComponentState {
   readonly component: MC.EntityComponent
   /** The four attribute numbers, each unset until a caller supplies it. */
   readonly attribute?: AttributeValues
-  attached: boolean
 }
 
 /** The numbers an attribute-shaped component holds. An unsupplied one reads `UnsetValueError`. */

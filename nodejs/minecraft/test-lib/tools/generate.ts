@@ -259,6 +259,58 @@ const tableFor = (className: string): GuardTable | null => {
 }
 
 /**
+ * Checks the committed guard data against the surface just enumerated. The data is transcribed from
+ * engine sweeps and the generator is otherwise happy to ignore a row it cannot place, so a version
+ * bump that renames a member would quietly drop its guard — the one failure this data cannot afford.
+ */
+const checkGuardData = (): void => {
+  const unplaceable: string[] = []
+
+  for (const className of Object.keys(guardData.assignments)) {
+    if (!FAKED.includes(className)) {
+      unplaceable.push(`assignments names ${className}, which is not a faked class`)
+    }
+  }
+  for (const className of guardData.attributeComponentClasses) {
+    if (!componentClasses.includes(className)) {
+      unplaceable.push(`attributeComponentClasses names ${className}, which is not a component class`)
+    }
+  }
+
+  /** Every member name of every class one table governs. */
+  const membersGoverned = (table: GuardTable): Set<string> => {
+    const names = new Set<string>()
+    for (const className of FAKED) {
+      if (tableFor(className) !== table) {
+        continue
+      }
+      const { methods, properties } = surfaceFor(className)
+      for (const member of [...methods, ...properties]) {
+        names.add(member.name)
+      }
+    }
+    return names
+  }
+
+  for (const [tableName, table] of Object.entries(tables)) {
+    const governed = membersGoverned(table)
+    if (governed.size === 0) {
+      unplaceable.push(`table ${tableName} governs no faked class`)
+      continue
+    }
+    for (const member of [...table.readable, ...Object.keys(table.overrides)]) {
+      if (!governed.has(member)) {
+        unplaceable.push(`table ${tableName} names ${member}, which no class it governs declares`)
+      }
+    }
+  }
+
+  if (unplaceable.length > 0) {
+    fail(`guard-data.json no longer fits the declarations:\n  ${unplaceable.join('\n  ')}`)
+  }
+}
+
+/**
  * The guard prologue for one member: `null` where the member stays readable on an invalid owner,
  * otherwise the call that throws what the engine was observed to throw there.
  */
@@ -518,8 +570,14 @@ const manifestFile = (): string => {
       .map((name) => `'${name}'`)
       .join(', ')}] as const`,
     '',
+    '/** The class for a component id a caller supplied, which may name no component at all. */',
+    'export const componentClassFor = (id: string): (typeof FAKED_CLASSES)[number] | undefined =>',
+    '  (COMPONENT_CLASS_BY_ID as Readonly<Record<string, (typeof FAKED_CLASSES)[number] | undefined>>)[id]',
+    '',
     '/** The signal class behind each name on each container, as the declarations give them. */',
-    'export const SIGNAL_CLASS_BY_CONTAINER: Readonly<Record<string, Readonly<Record<string, string>>>> = {',
+    'export const SIGNAL_CLASS_BY_CONTAINER: Readonly<',
+    '  Record<string, Readonly<Record<string, (typeof FAKED_CLASSES)[number]>>>',
+    '> = {',
     ...SIGNAL_CONTAINERS.flatMap((container) => [
       `  ${container}: {`,
       ...signalMapOf(container).map(([name, className]) => `    '${name}': '${className}',`),
@@ -527,8 +585,14 @@ const manifestFile = (): string => {
     ]),
     '}',
     '',
-    '/** The class behind each canonical component id, as EntityComponentTypeMap gives it. */',
-    'export const COMPONENT_CLASS_BY_ID: Readonly<Record<string, string>> = {',
+    '/**',
+    ' * The class behind each canonical component id, as EntityComponentTypeMap gives it. The key and',
+    ' * value types tie this committed map to the declarations: an id the pinned version adds, or a',
+    ' * class it renames, fails to compile here rather than misbehaving at runtime.',
+    ' */',
+    'export const COMPONENT_CLASS_BY_ID: Readonly<',
+    '  Record<`${MC.EntityComponentTypes}`, (typeof FAKED_CLASSES)[number]>',
+    '> = {',
     ...componentClassById().map(([id, className]) => `  '${id}': '${className}',`),
     '}',
     '',
@@ -537,6 +601,8 @@ const manifestFile = (): string => {
 }
 
 // ---------------------------------------------------------------------------
+
+checkGuardData()
 
 fs.rmSync(fakesDir, { recursive: true, force: true })
 fs.mkdirSync(fakesDir, { recursive: true })

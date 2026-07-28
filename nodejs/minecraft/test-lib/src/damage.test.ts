@@ -6,7 +6,7 @@
 import type * as MC from '@minecraft/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { addComponent } from './components.js'
+import { addComponent, removeComponent } from './components.js'
 import { createEntity, invalidate } from './entity.js'
 import { createServer, type FakeServer } from './create-server.js'
 import { InvalidEntityError, UnsetValueError } from './errors.js'
@@ -122,6 +122,15 @@ describe('entity.applyDamage', () => {
     expect(healthInsideHandler).toBe(8)
     expect(damageInsideHandler).toBe(2)
     expect(delivered(records)[0]).toBe('entityHurtBefore')
+  })
+
+  it('writes health before the cascade, so a handler observes post-write state', () => {
+    let healthInHandler: number | undefined
+    server.world.afterEvents.entityHurt.subscribe(() => {
+      healthInHandler = health.currentValue
+    })
+    entity.applyDamage(2)
+    expect(healthInHandler).toBe(6)
   })
 
   it('entityHurt.hurtEntity is the damaged entity', () => {
@@ -326,6 +335,43 @@ describe('entity.applyDamage', () => {
     })
   })
 
+  describe('when a handler acts during the before-event', () => {
+    it('writes nothing and fires nothing when the handler removed the entity', () => {
+      server.world.beforeEvents.entityHurt.subscribe(() => {
+        entity.remove()
+      })
+      expect(entity.applyDamage(4)).toBe(true)
+      expect(afterEvents(records)).toEqual([])
+    })
+
+    it('writes nothing and fires nothing when the handler invalidated the entity', () => {
+      server.world.beforeEvents.entityHurt.subscribe(() => {
+        invalidate(entity)
+      })
+      expect(entity.applyDamage(4)).toBe(true)
+      expect(afterEvents(records)).toEqual([])
+    })
+
+    it('writes nothing and fires nothing when the handler detached the health component', () => {
+      server.world.beforeEvents.entityHurt.subscribe(() => {
+        removeComponent(entity, 'minecraft:health')
+      })
+      expect(entity.applyDamage(4)).toBe(true)
+      expect(afterEvents(records)).toEqual([])
+      expect(entity.getComponent('minecraft:health')).toBeUndefined()
+    })
+
+    it('leaves a re-attached health component untouched', () => {
+      server.world.beforeEvents.entityHurt.subscribe(() => {
+        removeComponent(entity, 'minecraft:health')
+        addComponent(entity, 'minecraft:health', [0, 8])
+      })
+      expect(entity.applyDamage(4)).toBe(true)
+      expect(afterEvents(records)).toEqual([])
+      expect(entity.getComponent('minecraft:health')?.currentValue).toBe(8)
+    })
+  })
+
   describe('unsupplied values and guards', () => {
     it('throws UnsetValueError when currentValue was never supplied', () => {
       const other = createEntity(server, { typeId: 'minecraft:sheep' })
@@ -433,6 +479,21 @@ describe('entity.kill', () => {
     it('raises no before-event', () => {
       entity.kill()
       expect(delivered(records)).not.toContain('entityHurtBefore')
+    })
+
+    it('writes health before the cascade, so a handler observes post-write state', () => {
+      let healthInHurtHandler: number | undefined
+      let healthInChangedHandler: number | undefined
+      server.world.afterEvents.entityHurt.subscribe(() => {
+        healthInHurtHandler = health.currentValue
+      })
+      server.world.afterEvents.entityHealthChanged.subscribe(() => {
+        healthInChangedHandler = health.currentValue
+      })
+      entity.kill()
+      expect(healthInHurtHandler).toBe(0)
+      expect(healthInChangedHandler).toBe(0)
+      expect(only(records, 'entityHurt').damage).toBe(8)
     })
 
     it('throws UnsetValueError when the health values are unset', () => {

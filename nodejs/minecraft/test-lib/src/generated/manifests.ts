@@ -3366,8 +3366,14 @@ export const ATTRIBUTE_COMPONENT_CLASSES = [
   'EntityUnderwaterMovementComponent',
 ] as const
 
+/** The class for a component id a caller supplied, which may name no component at all. */
+export const componentClassFor = (id: string): (typeof FAKED_CLASSES)[number] | undefined =>
+  (COMPONENT_CLASS_BY_ID as Readonly<Record<string, (typeof FAKED_CLASSES)[number] | undefined>>)[id]
+
 /** The signal class behind each name on each container, as the declarations give them. */
-export const SIGNAL_CLASS_BY_CONTAINER: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+export const SIGNAL_CLASS_BY_CONTAINER: Readonly<
+  Record<string, Readonly<Record<string, (typeof FAKED_CLASSES)[number]>>>
+> = {
   WorldAfterEvents: {
     blockContainerClosed: 'BlockContainerClosedAfterEventSignal',
     blockContainerOpened: 'BlockContainerOpenedAfterEventSignal',
@@ -3449,8 +3455,12 @@ export const SIGNAL_CLASS_BY_CONTAINER: Readonly<Record<string, Readonly<Record<
   },
 }
 
-/** The class behind each canonical component id, as EntityComponentTypeMap gives it. */
-export const COMPONENT_CLASS_BY_ID: Readonly<Record<string, string>> = {
+/**
+ * The class behind each canonical component id, as EntityComponentTypeMap gives it. The key and
+ * value types tie this committed map to the declarations: an id the pinned version adds, or a
+ * class it renames, fails to compile here rather than misbehaving at runtime.
+ */
+export const COMPONENT_CLASS_BY_ID: Readonly<Record<`${MC.EntityComponentTypes}`, (typeof FAKED_CLASSES)[number]>> = {
   'minecraft:addrider': 'EntityAddRiderComponent',
   'minecraft:ageable': 'EntityAgeableComponent',
   'minecraft:breathable': 'EntityBreathableComponent',

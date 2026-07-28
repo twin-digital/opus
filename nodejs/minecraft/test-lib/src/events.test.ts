@@ -1,6 +1,7 @@
 import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
+import { dispatchAfter } from './events.js'
 import {
   addComponent,
   advanceTicks,
@@ -12,6 +13,7 @@ import {
   withVanillaDimensions,
   type FakeServer,
 } from './index.js'
+import { serverOf } from './runtime/state.js'
 
 /** The 55 after-event signals the declarations carry, written out so the check is independent. */
 const WORLD_AFTER_EVENT_NAMES = [
@@ -521,6 +523,18 @@ describe('getHandlerErrors', () => {
     ])
   })
 
+  it('returns a snapshot rather than the live record', () => {
+    const server = createServer()
+    server.world.afterEvents.entityHurt.subscribe(() => {
+      throw new Error('deliberate')
+    })
+    emit(server.world.afterEvents.entityHurt, payload<MC.EntityHurtAfterEvent>({ damage: 1 }))
+    const held = getHandlerErrors(server)
+    emit(server.world.afterEvents.entityHurt, payload<MC.EntityHurtAfterEvent>({ damage: 1 }))
+    expect(held).toHaveLength(1)
+    expect(getHandlerErrors(server)).toHaveLength(2)
+  })
+
   it('records a non-Error throw as given', () => {
     const server = createServer()
     server.world.afterEvents.entityHurt.subscribe(() => {
@@ -825,5 +839,18 @@ describe('two bundles', () => {
     emit(a.world.afterEvents.entityHurt, payload<MC.EntityHurtAfterEvent>({ damage: 1 }))
     expect(getHandlerErrors(a)).toHaveLength(1)
     expect(getHandlerErrors(b)).toEqual([])
+  })
+})
+
+describe('the internal raise path', () => {
+  it('throws on a signal name no container answers to', () => {
+    const server = createServer()
+    const state = serverOf(server.world)
+    expect(() => {
+      dispatchAfter(state, 'entityHurted', {})
+    }).toThrow(TypeError)
+    expect(() => {
+      dispatchAfter(state, 'entityHurt', {})
+    }).not.toThrow()
   })
 })

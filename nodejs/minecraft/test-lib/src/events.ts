@@ -62,7 +62,8 @@ export const signalOf = (server: ServerState, scope: SignalScope, name: string):
 export const deliver = (server: ServerState, scope: SignalScope, name: string, payload: unknown): void => {
   const state = server.signals.get(signalKey(scope, name))
   if (!state) {
-    return
+    // The fakes raise events by name; a name no signal answers to is a typo, not an empty audience.
+    throw new TypeError(`@minecraft/server declares no signal ${scope}.${name}`)
   }
   for (const subscriber of [...state.subscribers]) {
     try {
@@ -189,4 +190,6 @@ export const emit = <P>(signal: EmittableSignal<P>, payload: P): void => {
  * carrying the signal and the error itself. The engine discards these; a test that asserts no
  * handler failed reads them here.
  */
-export const getHandlerErrors = (server: ServerLike): readonly HandlerError[] => serverOf(server.world).handlerErrors
+export const getHandlerErrors = (server: ServerLike): readonly HandlerError[] => [
+  ...serverOf(server.world).handlerErrors,
+]

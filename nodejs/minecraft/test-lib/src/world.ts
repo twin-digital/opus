@@ -23,7 +23,11 @@ export interface WorldData {
   readonly scoreboard: MC.Scoreboard
 }
 
-/** Every entity still registered with the world, in creation order. */
+/**
+ * Every entity still registered with the world, in creation order. Registration, not validity, is
+ * what this filters on: `invalidate()` models a reference gone stale on an entity that is *still in
+ * the world*, so a stale one is listed here and throws from the members a query happens to read.
+ */
 export const registeredEntities = (server: ServerState): EntityData[] =>
   server.entities.filter((entity) => entity.registered)
 

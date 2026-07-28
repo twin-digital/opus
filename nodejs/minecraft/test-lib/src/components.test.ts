@@ -714,6 +714,20 @@ describe('the health-write cascade', () => {
     expect(delivered(records).filter((signal) => signal === 'entityHurt')).toEqual([])
   })
 
+  it('settles death from the value written, not from what a handler did after', () => {
+    const health = addComponent(entity, 'minecraft:health', [0, 8])
+    let healed = false
+    server.world.afterEvents.entityHealthChanged.subscribe((payload) => {
+      if (payload.newValue === 0 && !healed) {
+        healed = true
+        health.setCurrentValue(8)
+      }
+    })
+    health.resetToMinValue()
+    expect(delivered(records)).toEqual(['entityHealthChanged', 'entityHealthChanged', 'entityDie'])
+    expect(health.currentValue).toBe(8)
+  })
+
   it('a write that changes nothing still fires entityHealthChanged', () => {
     addComponent(entity, 'minecraft:health', [0, 8]).setCurrentValue(8)
     expect(delivered(records)).toEqual(['entityHealthChanged'])

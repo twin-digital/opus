@@ -10,10 +10,15 @@
     "failed-property[:internalName] and failed-call[:name] (a plain Error). An override may name",
     "the string the engine puts in the message where it differs from the member's own name.",
     "",
-    "The entityComponent table — the other 61 components — is the one table without a sweep behind",
+    "The entityComponent table \u2014 the other 61 components \u2014 is the one table without a sweep behind",
     "it: it follows the declarations' own @throws split, which leaves isValid and typeId unannotated",
     "and names InvalidEntityError everywhere else. The screenDisplay table has the same footing:",
-    "every ScreenDisplay member but isValid is annotated {@link InvalidEntityError}."
+    "every ScreenDisplay member but isValid is annotated {@link InvalidEntityError}.",
+    "",
+    "The scoreboardObjective table has neither a sweep nor a named error class behind it: the",
+    "declarations say only that every member but isValid can throw when used. It reuses the effect",
+    "table's plain-Error shape, the library's existing answer for a handle whose backing state is",
+    "gone, so a removed objective refuses to read rather than answering from detached state."
   ],
   "tables": {
     "entity": {
@@ -53,6 +58,12 @@
       "defaultMethod": "failed-call",
       "overrides": {}
     },
+    "scoreboardObjective": {
+      "readable": ["isValid"],
+      "defaultProperty": "failed-property",
+      "defaultMethod": "failed-call",
+      "overrides": {}
+    },
     "screenDisplay": {
       "readable": ["isValid"],
       "defaultProperty": "invalid-entity-get",
@@ -64,6 +75,7 @@
     "Entity": "entity",
     "Player": "entity",
     "Effect": "effect",
+    "ScoreboardObjective": "scoreboardObjective",
     "ScreenDisplay": "screenDisplay"
   },
   "attributeComponentClasses": [
