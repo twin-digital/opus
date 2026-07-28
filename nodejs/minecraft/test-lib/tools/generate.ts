@@ -58,14 +58,20 @@ for (const symbol of moduleExports) {
 const classNamed = (name: string): DeclaredClass =>
   classes.get(name) ?? fail(`@minecraft/server declares no class ${name}`)
 
-/** The signal classes a container class exposes as properties (WorldAfterEvents' 55, and so on). */
-const signalsOf = (container: string): string[] => {
+/** The signals a container class exposes, as property name to signal class name. */
+const signalMapOf = (container: string): [string, string][] => {
   const { symbol, declaration } = classNamed(container)
   return checker
     .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
-    .map((property) => checker.typeToString(checker.getTypeOfSymbolAtLocation(property, declaration)))
-    .filter((name) => classes.has(name))
+    .map((property): [string, string] => [
+      property.name,
+      checker.typeToString(checker.getTypeOfSymbolAtLocation(property, declaration)),
+    ])
+    .filter(([, className]) => classes.has(className))
 }
+
+/** The signal classes a container class exposes as properties (WorldAfterEvents' 55, and so on). */
+const signalsOf = (container: string): string[] => signalMapOf(container).map(([, className]) => className)
 
 const componentClasses = [...classes.keys()].filter((name) => /^Entity.*Component$/.test(name))
 
@@ -80,6 +86,8 @@ const REGISTRY_CLASSES = [
   'EntityTypes',
   'ItemTypes',
 ]
+
+const SIGNAL_CONTAINERS = ['WorldAfterEvents', 'WorldBeforeEvents', 'SystemAfterEvents', 'SystemBeforeEvents']
 
 const FAKED = [
   ...new Set([
@@ -423,6 +431,25 @@ const classFile = (name: string): string => {
 // Manifests — committed, so a version bump reads as a diff of what moved
 // ---------------------------------------------------------------------------
 
+/** The canonical component ids of EntityComponentTypeMap, each with the class it maps to. */
+const componentClassById = (): [string, string][] => {
+  const symbol = moduleExports.find((exported) => exported.name === 'EntityComponentTypeMap')
+  if (!symbol) {
+    return fail('@minecraft/server declares no EntityComponentTypeMap')
+  }
+  return checker
+    .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
+    .filter((property) => property.name.startsWith('minecraft:'))
+    .map((property): [string, string] => {
+      const node = property.valueDeclaration ?? property.declarations?.[0]
+      if (!node) {
+        return fail(`EntityComponentTypeMap.${property.name} has no declaration`)
+      }
+      return [property.name, checker.typeToString(checker.getTypeOfSymbolAtLocation(property, node))]
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]))
+}
+
 const manifestFile = (): string => {
   const lines = [
     header('The faked classes and their members, as the pinned declarations give them.'),
@@ -468,6 +495,36 @@ const manifestFile = (): string => {
       '',
     )
   }
+  lines.push(
+    '/** Every class the generator emits a fake for. */',
+    `export const FAKED_CLASSES = [${FAKED.map((name) => `'${name}'`).join(', ')}] as const`,
+    '',
+    '/** The event-signal classes, which all share one subscribe/unsubscribe behaviour. */',
+    `export const SIGNAL_CLASSES = [${FAKED.filter((name) => name.endsWith('Signal'))
+      .map((name) => `'${name}'`)
+      .join(', ')}] as const`,
+    '',
+    '/** The entity component classes, and the attribute-shaped ones among them. */',
+    `export const COMPONENT_CLASSES = [${componentClasses.map((name) => `'${name}'`).join(', ')}] as const`,
+    `export const ATTRIBUTE_COMPONENT_CLASSES = [${guardData.attributeComponentClasses
+      .map((name) => `'${name}'`)
+      .join(', ')}] as const`,
+    '',
+    '/** The signal class behind each name on each container, as the declarations give them. */',
+    'export const SIGNAL_CLASS_BY_CONTAINER: Readonly<Record<string, Readonly<Record<string, string>>>> = {',
+    ...SIGNAL_CONTAINERS.flatMap((container) => [
+      `  ${container}: {`,
+      ...signalMapOf(container).map(([name, className]) => `    '${name}': '${className}',`),
+      '  },',
+    ]),
+    '}',
+    '',
+    '/** The class behind each canonical component id, as EntityComponentTypeMap gives it. */',
+    'export const COMPONENT_CLASS_BY_ID: Readonly<Record<string, string>> = {',
+    ...componentClassById().map(([id, className]) => `  '${id}': '${className}',`),
+    '}',
+    '',
+  )
   return lines.join('\n')
 }
 
@@ -485,7 +542,14 @@ fs.writeFileSync(
   path.join(outDir, 'index.ts'),
   [
     header('Every faked class, re-exported for the hand-written behaviour to construct.'),
-    ...FAKED.map((name) => `export { Fake${name} } from './fakes/${name}.js'`),
+    ...FAKED.map((name) => `import { Fake${name} } from './fakes/${name}.js'`),
+    '',
+    ...FAKED.map((name) => `export { Fake${name} }`),
+    '',
+    '/** Every fake class by the name of the type it stands in for, for construction by id. */',
+    'export const FAKE_CLASSES = {',
+    ...FAKED.map((name) => `  ${name}: Fake${name},`),
+    '}',
     '',
   ].join('\n'),
 )

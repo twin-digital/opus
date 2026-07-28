@@ -44,7 +44,8 @@ export const BlockContainerClosedAfterEventSignalManifest = {
 type _BlockContainerClosedAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.BlockContainerClosedAfterEventSignal,
-    (typeof BlockContainerClosedAfterEventSignalManifest)['methods'][number]['name'] | (typeof BlockContainerClosedAfterEventSignalManifest)['properties'][number]
+    | (typeof BlockContainerClosedAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof BlockContainerClosedAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _BlockContainerClosedAfterEventSignalComplete }
@@ -59,7 +60,8 @@ export const BlockContainerOpenedAfterEventSignalManifest = {
 type _BlockContainerOpenedAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.BlockContainerOpenedAfterEventSignal,
-    (typeof BlockContainerOpenedAfterEventSignalManifest)['methods'][number]['name'] | (typeof BlockContainerOpenedAfterEventSignalManifest)['properties'][number]
+    | (typeof BlockContainerOpenedAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof BlockContainerOpenedAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _BlockContainerOpenedAfterEventSignalComplete }
@@ -74,7 +76,8 @@ export const BlockExplodeAfterEventSignalManifest = {
 type _BlockExplodeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.BlockExplodeAfterEventSignal,
-    (typeof BlockExplodeAfterEventSignalManifest)['methods'][number]['name'] | (typeof BlockExplodeAfterEventSignalManifest)['properties'][number]
+    | (typeof BlockExplodeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof BlockExplodeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _BlockExplodeAfterEventSignalComplete }
@@ -119,7 +122,8 @@ export const ButtonPushAfterEventSignalManifest = {
 type _ButtonPushAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ButtonPushAfterEventSignal,
-    (typeof ButtonPushAfterEventSignalManifest)['methods'][number]['name'] | (typeof ButtonPushAfterEventSignalManifest)['properties'][number]
+    | (typeof ButtonPushAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ButtonPushAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ButtonPushAfterEventSignalComplete }
@@ -134,7 +138,8 @@ export const DataDrivenEntityTriggerAfterEventSignalManifest = {
 type _DataDrivenEntityTriggerAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.DataDrivenEntityTriggerAfterEventSignal,
-    (typeof DataDrivenEntityTriggerAfterEventSignalManifest)['methods'][number]['name'] | (typeof DataDrivenEntityTriggerAfterEventSignalManifest)['properties'][number]
+    | (typeof DataDrivenEntityTriggerAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof DataDrivenEntityTriggerAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _DataDrivenEntityTriggerAfterEventSignalComplete }
@@ -196,8 +201,7 @@ type _DimensionTypesComplete = AssertNever<
 export type { _DimensionTypesComplete }
 
 export const EffectManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['amplifier', 'displayName', 'duration', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.Effect>
 type _EffectComplete = AssertNever<
@@ -218,7 +222,8 @@ export const EffectAddAfterEventSignalManifest = {
 type _EffectAddAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EffectAddAfterEventSignal,
-    (typeof EffectAddAfterEventSignalManifest)['methods'][number]['name'] | (typeof EffectAddAfterEventSignalManifest)['properties'][number]
+    | (typeof EffectAddAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EffectAddAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EffectAddAfterEventSignalComplete }
@@ -233,15 +238,14 @@ export const EffectAddBeforeEventSignalManifest = {
 type _EffectAddBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EffectAddBeforeEventSignal,
-    (typeof EffectAddBeforeEventSignalManifest)['methods'][number]['name'] | (typeof EffectAddBeforeEventSignalManifest)['properties'][number]
+    | (typeof EffectAddBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof EffectAddBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _EffectAddBeforeEventSignalComplete }
 
 export const EffectTypeManifest = {
-  methods: [
-    { name: 'getName', minArity: 0, maxArity: 0 },
-  ],
+  methods: [{ name: 'getName', minArity: 0, maxArity: 0 }],
   properties: [],
 } as const satisfies ClassManifest<MC.EffectType>
 type _EffectTypeComplete = AssertNever<
@@ -277,7 +281,8 @@ export const EnchantmentTypesManifest = {
 type _EnchantmentTypesComplete = AssertNever<
   Exclude<
     keyof Omit<typeof MC.EnchantmentTypes, 'prototype'>,
-    (typeof EnchantmentTypesManifest)['methods'][number]['name'] | (typeof EnchantmentTypesManifest)['properties'][number]
+    | (typeof EnchantmentTypesManifest)['methods'][number]['name']
+    | (typeof EnchantmentTypesManifest)['properties'][number]
   >
 >
 export type { _EnchantmentTypesComplete }
@@ -331,7 +336,24 @@ export const EntityManifest = {
     { name: 'triggerEvent', minArity: 1, maxArity: 1 },
     { name: 'tryTeleport', minArity: 1, maxArity: 2 },
   ],
-  properties: ['dimension', 'id', 'isClimbing', 'isFalling', 'isInWater', 'isOnGround', 'isSleeping', 'isSneaking', 'isSprinting', 'isSwimming', 'isValid', 'localizationKey', 'location', 'nameTag', 'scoreboardIdentity', 'typeId'],
+  properties: [
+    'dimension',
+    'id',
+    'isClimbing',
+    'isFalling',
+    'isInWater',
+    'isOnGround',
+    'isSleeping',
+    'isSneaking',
+    'isSprinting',
+    'isSwimming',
+    'isValid',
+    'localizationKey',
+    'location',
+    'nameTag',
+    'scoreboardIdentity',
+    'typeId',
+  ],
 } as const satisfies ClassManifest<MC.Entity>
 type _EntityComplete = AssertNever<
   Exclude<
@@ -342,14 +364,14 @@ type _EntityComplete = AssertNever<
 export type { _EntityComplete }
 
 export const EntityAddRiderComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'entityType', 'isValid', 'spawnEvent', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityAddRiderComponent>
 type _EntityAddRiderComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityAddRiderComponent,
-    (typeof EntityAddRiderComponentManifest)['methods'][number]['name'] | (typeof EntityAddRiderComponentManifest)['properties'][number]
+    | (typeof EntityAddRiderComponentManifest)['methods'][number]['name']
+    | (typeof EntityAddRiderComponentManifest)['properties'][number]
   >
 >
 export type { _EntityAddRiderComponentComplete }
@@ -364,7 +386,8 @@ export const EntityAgeableComponentManifest = {
 type _EntityAgeableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityAgeableComponent,
-    (typeof EntityAgeableComponentManifest)['methods'][number]['name'] | (typeof EntityAgeableComponentManifest)['properties'][number]
+    | (typeof EntityAgeableComponentManifest)['methods'][number]['name']
+    | (typeof EntityAgeableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityAgeableComponentComplete }
@@ -381,20 +404,21 @@ export const EntityAttributeComponentManifest = {
 type _EntityAttributeComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityAttributeComponent,
-    (typeof EntityAttributeComponentManifest)['methods'][number]['name'] | (typeof EntityAttributeComponentManifest)['properties'][number]
+    | (typeof EntityAttributeComponentManifest)['methods'][number]['name']
+    | (typeof EntityAttributeComponentManifest)['properties'][number]
   >
 >
 export type { _EntityAttributeComponentComplete }
 
 export const EntityBaseMovementComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityBaseMovementComponent>
 type _EntityBaseMovementComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityBaseMovementComponent,
-    (typeof EntityBaseMovementComponentManifest)['methods'][number]['name'] | (typeof EntityBaseMovementComponentManifest)['properties'][number]
+    | (typeof EntityBaseMovementComponentManifest)['methods'][number]['name']
+    | (typeof EntityBaseMovementComponentManifest)['properties'][number]
   >
 >
 export type { _EntityBaseMovementComponentComplete }
@@ -404,84 +428,96 @@ export const EntityBreathableComponentManifest = {
     { name: 'getBreatheBlocks', minArity: 0, maxArity: 0 },
     { name: 'getNonBreatheBlocks', minArity: 0, maxArity: 0 },
   ],
-  properties: ['breathesAir', 'breathesLava', 'breathesSolids', 'breathesWater', 'entity', 'generatesBubbles', 'inhaleTime', 'isValid', 'suffocateTime', 'totalSupply', 'typeId'],
+  properties: [
+    'breathesAir',
+    'breathesLava',
+    'breathesSolids',
+    'breathesWater',
+    'entity',
+    'generatesBubbles',
+    'inhaleTime',
+    'isValid',
+    'suffocateTime',
+    'totalSupply',
+    'typeId',
+  ],
 } as const satisfies ClassManifest<MC.EntityBreathableComponent>
 type _EntityBreathableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityBreathableComponent,
-    (typeof EntityBreathableComponentManifest)['methods'][number]['name'] | (typeof EntityBreathableComponentManifest)['properties'][number]
+    | (typeof EntityBreathableComponentManifest)['methods'][number]['name']
+    | (typeof EntityBreathableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityBreathableComponentComplete }
 
 export const EntityCanClimbComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityCanClimbComponent>
 type _EntityCanClimbComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityCanClimbComponent,
-    (typeof EntityCanClimbComponentManifest)['methods'][number]['name'] | (typeof EntityCanClimbComponentManifest)['properties'][number]
+    | (typeof EntityCanClimbComponentManifest)['methods'][number]['name']
+    | (typeof EntityCanClimbComponentManifest)['properties'][number]
   >
 >
 export type { _EntityCanClimbComponentComplete }
 
 export const EntityCanFlyComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityCanFlyComponent>
 type _EntityCanFlyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityCanFlyComponent,
-    (typeof EntityCanFlyComponentManifest)['methods'][number]['name'] | (typeof EntityCanFlyComponentManifest)['properties'][number]
+    | (typeof EntityCanFlyComponentManifest)['methods'][number]['name']
+    | (typeof EntityCanFlyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityCanFlyComponentComplete }
 
 export const EntityCanPowerJumpComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityCanPowerJumpComponent>
 type _EntityCanPowerJumpComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityCanPowerJumpComponent,
-    (typeof EntityCanPowerJumpComponentManifest)['methods'][number]['name'] | (typeof EntityCanPowerJumpComponentManifest)['properties'][number]
+    | (typeof EntityCanPowerJumpComponentManifest)['methods'][number]['name']
+    | (typeof EntityCanPowerJumpComponentManifest)['properties'][number]
   >
 >
 export type { _EntityCanPowerJumpComponentComplete }
 
 export const EntityColor2ComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityColor2Component>
 type _EntityColor2ComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityColor2Component,
-    (typeof EntityColor2ComponentManifest)['methods'][number]['name'] | (typeof EntityColor2ComponentManifest)['properties'][number]
+    | (typeof EntityColor2ComponentManifest)['methods'][number]['name']
+    | (typeof EntityColor2ComponentManifest)['properties'][number]
   >
 >
 export type { _EntityColor2ComponentComplete }
 
 export const EntityColorComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityColorComponent>
 type _EntityColorComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityColorComponent,
-    (typeof EntityColorComponentManifest)['methods'][number]['name'] | (typeof EntityColorComponentManifest)['properties'][number]
+    | (typeof EntityColorComponentManifest)['methods'][number]['name']
+    | (typeof EntityColorComponentManifest)['properties'][number]
   >
 >
 export type { _EntityColorComponentComplete }
 
 export const EntityComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityComponent>
 type _EntityComponentComplete = AssertNever<
@@ -502,7 +538,8 @@ export const EntityContainerClosedAfterEventSignalManifest = {
 type _EntityContainerClosedAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityContainerClosedAfterEventSignal,
-    (typeof EntityContainerClosedAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityContainerClosedAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityContainerClosedAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityContainerClosedAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityContainerClosedAfterEventSignalComplete }
@@ -517,7 +554,8 @@ export const EntityContainerOpenedAfterEventSignalManifest = {
 type _EntityContainerOpenedAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityContainerOpenedAfterEventSignal,
-    (typeof EntityContainerOpenedAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityContainerOpenedAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityContainerOpenedAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityContainerOpenedAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityContainerOpenedAfterEventSignalComplete }
@@ -532,20 +570,21 @@ export const EntityDieAfterEventSignalManifest = {
 type _EntityDieAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityDieAfterEventSignal,
-    (typeof EntityDieAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityDieAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityDieAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityDieAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityDieAfterEventSignalComplete }
 
 export const EntityEnderInventoryComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['container', 'entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityEnderInventoryComponent>
 type _EntityEnderInventoryComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityEnderInventoryComponent,
-    (typeof EntityEnderInventoryComponentManifest)['methods'][number]['name'] | (typeof EntityEnderInventoryComponentManifest)['properties'][number]
+    | (typeof EntityEnderInventoryComponentManifest)['methods'][number]['name']
+    | (typeof EntityEnderInventoryComponentManifest)['properties'][number]
   >
 >
 export type { _EntityEnderInventoryComponentComplete }
@@ -561,7 +600,8 @@ export const EntityEquippableComponentManifest = {
 type _EntityEquippableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityEquippableComponent,
-    (typeof EntityEquippableComponentManifest)['methods'][number]['name'] | (typeof EntityEquippableComponentManifest)['properties'][number]
+    | (typeof EntityEquippableComponentManifest)['methods'][number]['name']
+    | (typeof EntityEquippableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityEquippableComponentComplete }
@@ -578,59 +618,60 @@ export const EntityExhaustionComponentManifest = {
 type _EntityExhaustionComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityExhaustionComponent,
-    (typeof EntityExhaustionComponentManifest)['methods'][number]['name'] | (typeof EntityExhaustionComponentManifest)['properties'][number]
+    | (typeof EntityExhaustionComponentManifest)['methods'][number]['name']
+    | (typeof EntityExhaustionComponentManifest)['properties'][number]
   >
 >
 export type { _EntityExhaustionComponentComplete }
 
 export const EntityFireImmuneComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityFireImmuneComponent>
 type _EntityFireImmuneComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityFireImmuneComponent,
-    (typeof EntityFireImmuneComponentManifest)['methods'][number]['name'] | (typeof EntityFireImmuneComponentManifest)['properties'][number]
+    | (typeof EntityFireImmuneComponentManifest)['methods'][number]['name']
+    | (typeof EntityFireImmuneComponentManifest)['properties'][number]
   >
 >
 export type { _EntityFireImmuneComponentComplete }
 
 export const EntityFloatsInLiquidComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityFloatsInLiquidComponent>
 type _EntityFloatsInLiquidComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityFloatsInLiquidComponent,
-    (typeof EntityFloatsInLiquidComponentManifest)['methods'][number]['name'] | (typeof EntityFloatsInLiquidComponentManifest)['properties'][number]
+    | (typeof EntityFloatsInLiquidComponentManifest)['methods'][number]['name']
+    | (typeof EntityFloatsInLiquidComponentManifest)['properties'][number]
   >
 >
 export type { _EntityFloatsInLiquidComponentComplete }
 
 export const EntityFlyingSpeedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityFlyingSpeedComponent>
 type _EntityFlyingSpeedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityFlyingSpeedComponent,
-    (typeof EntityFlyingSpeedComponentManifest)['methods'][number]['name'] | (typeof EntityFlyingSpeedComponentManifest)['properties'][number]
+    | (typeof EntityFlyingSpeedComponentManifest)['methods'][number]['name']
+    | (typeof EntityFlyingSpeedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityFlyingSpeedComponentComplete }
 
 export const EntityFrictionModifierComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityFrictionModifierComponent>
 type _EntityFrictionModifierComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityFrictionModifierComponent,
-    (typeof EntityFrictionModifierComponentManifest)['methods'][number]['name'] | (typeof EntityFrictionModifierComponentManifest)['properties'][number]
+    | (typeof EntityFrictionModifierComponentManifest)['methods'][number]['name']
+    | (typeof EntityFrictionModifierComponentManifest)['properties'][number]
   >
 >
 export type { _EntityFrictionModifierComponentComplete }
@@ -645,7 +686,8 @@ export const EntityHealAfterEventSignalManifest = {
 type _EntityHealAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHealAfterEventSignal,
-    (typeof EntityHealAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityHealAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityHealAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHealAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHealAfterEventSignalComplete }
@@ -660,21 +702,21 @@ export const EntityHealBeforeEventSignalManifest = {
 type _EntityHealBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHealBeforeEventSignal,
-    (typeof EntityHealBeforeEventSignalManifest)['methods'][number]['name'] | (typeof EntityHealBeforeEventSignalManifest)['properties'][number]
+    | (typeof EntityHealBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHealBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHealBeforeEventSignalComplete }
 
 export const EntityHealableComponentManifest = {
-  methods: [
-    { name: 'getFeedItems', minArity: 0, maxArity: 0 },
-  ],
+  methods: [{ name: 'getFeedItems', minArity: 0, maxArity: 0 }],
   properties: ['entity', 'forceUse', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityHealableComponent>
 type _EntityHealableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityHealableComponent,
-    (typeof EntityHealableComponentManifest)['methods'][number]['name'] | (typeof EntityHealableComponentManifest)['properties'][number]
+    | (typeof EntityHealableComponentManifest)['methods'][number]['name']
+    | (typeof EntityHealableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityHealableComponentComplete }
@@ -689,7 +731,8 @@ export const EntityHealthChangedAfterEventSignalManifest = {
 type _EntityHealthChangedAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHealthChangedAfterEventSignal,
-    (typeof EntityHealthChangedAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityHealthChangedAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityHealthChangedAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHealthChangedAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHealthChangedAfterEventSignalComplete }
@@ -706,7 +749,8 @@ export const EntityHealthComponentManifest = {
 type _EntityHealthComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityHealthComponent,
-    (typeof EntityHealthComponentManifest)['methods'][number]['name'] | (typeof EntityHealthComponentManifest)['properties'][number]
+    | (typeof EntityHealthComponentManifest)['methods'][number]['name']
+    | (typeof EntityHealthComponentManifest)['properties'][number]
   >
 >
 export type { _EntityHealthComponentComplete }
@@ -721,7 +765,8 @@ export const EntityHitBlockAfterEventSignalManifest = {
 type _EntityHitBlockAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHitBlockAfterEventSignal,
-    (typeof EntityHitBlockAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityHitBlockAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityHitBlockAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHitBlockAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHitBlockAfterEventSignalComplete }
@@ -736,7 +781,8 @@ export const EntityHitEntityAfterEventSignalManifest = {
 type _EntityHitEntityAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHitEntityAfterEventSignal,
-    (typeof EntityHitEntityAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityHitEntityAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityHitEntityAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHitEntityAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHitEntityAfterEventSignalComplete }
@@ -753,7 +799,8 @@ export const EntityHungerComponentManifest = {
 type _EntityHungerComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityHungerComponent,
-    (typeof EntityHungerComponentManifest)['methods'][number]['name'] | (typeof EntityHungerComponentManifest)['properties'][number]
+    | (typeof EntityHungerComponentManifest)['methods'][number]['name']
+    | (typeof EntityHungerComponentManifest)['properties'][number]
   >
 >
 export type { _EntityHungerComponentComplete }
@@ -768,7 +815,8 @@ export const EntityHurtAfterEventSignalManifest = {
 type _EntityHurtAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHurtAfterEventSignal,
-    (typeof EntityHurtAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityHurtAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityHurtAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHurtAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHurtAfterEventSignalComplete }
@@ -783,202 +831,214 @@ export const EntityHurtBeforeEventSignalManifest = {
 type _EntityHurtBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityHurtBeforeEventSignal,
-    (typeof EntityHurtBeforeEventSignalManifest)['methods'][number]['name'] | (typeof EntityHurtBeforeEventSignalManifest)['properties'][number]
+    | (typeof EntityHurtBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityHurtBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityHurtBeforeEventSignalComplete }
 
 export const EntityInventoryComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'additionalSlotsPerStrength',
+    'canBeSiphonedFrom',
+    'container',
+    'containerType',
+    'entity',
+    'inventorySize',
+    'isValid',
+    'private',
+    'restrictToOwner',
+    'typeId',
   ],
-  properties: ['additionalSlotsPerStrength', 'canBeSiphonedFrom', 'container', 'containerType', 'entity', 'inventorySize', 'isValid', 'private', 'restrictToOwner', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityInventoryComponent>
 type _EntityInventoryComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityInventoryComponent,
-    (typeof EntityInventoryComponentManifest)['methods'][number]['name'] | (typeof EntityInventoryComponentManifest)['properties'][number]
+    | (typeof EntityInventoryComponentManifest)['methods'][number]['name']
+    | (typeof EntityInventoryComponentManifest)['properties'][number]
   >
 >
 export type { _EntityInventoryComponentComplete }
 
 export const EntityIsBabyComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsBabyComponent>
 type _EntityIsBabyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsBabyComponent,
-    (typeof EntityIsBabyComponentManifest)['methods'][number]['name'] | (typeof EntityIsBabyComponentManifest)['properties'][number]
+    | (typeof EntityIsBabyComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsBabyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsBabyComponentComplete }
 
 export const EntityIsChargedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsChargedComponent>
 type _EntityIsChargedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsChargedComponent,
-    (typeof EntityIsChargedComponentManifest)['methods'][number]['name'] | (typeof EntityIsChargedComponentManifest)['properties'][number]
+    | (typeof EntityIsChargedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsChargedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsChargedComponentComplete }
 
 export const EntityIsChestedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsChestedComponent>
 type _EntityIsChestedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsChestedComponent,
-    (typeof EntityIsChestedComponentManifest)['methods'][number]['name'] | (typeof EntityIsChestedComponentManifest)['properties'][number]
+    | (typeof EntityIsChestedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsChestedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsChestedComponentComplete }
 
 export const EntityIsDyeableComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsDyeableComponent>
 type _EntityIsDyeableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsDyeableComponent,
-    (typeof EntityIsDyeableComponentManifest)['methods'][number]['name'] | (typeof EntityIsDyeableComponentManifest)['properties'][number]
+    | (typeof EntityIsDyeableComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsDyeableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsDyeableComponentComplete }
 
 export const EntityIsHiddenWhenInvisibleComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsHiddenWhenInvisibleComponent>
 type _EntityIsHiddenWhenInvisibleComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsHiddenWhenInvisibleComponent,
-    (typeof EntityIsHiddenWhenInvisibleComponentManifest)['methods'][number]['name'] | (typeof EntityIsHiddenWhenInvisibleComponentManifest)['properties'][number]
+    | (typeof EntityIsHiddenWhenInvisibleComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsHiddenWhenInvisibleComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsHiddenWhenInvisibleComponentComplete }
 
 export const EntityIsIgnitedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsIgnitedComponent>
 type _EntityIsIgnitedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsIgnitedComponent,
-    (typeof EntityIsIgnitedComponentManifest)['methods'][number]['name'] | (typeof EntityIsIgnitedComponentManifest)['properties'][number]
+    | (typeof EntityIsIgnitedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsIgnitedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsIgnitedComponentComplete }
 
 export const EntityIsIllagerCaptainComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsIllagerCaptainComponent>
 type _EntityIsIllagerCaptainComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsIllagerCaptainComponent,
-    (typeof EntityIsIllagerCaptainComponentManifest)['methods'][number]['name'] | (typeof EntityIsIllagerCaptainComponentManifest)['properties'][number]
+    | (typeof EntityIsIllagerCaptainComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsIllagerCaptainComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsIllagerCaptainComponentComplete }
 
 export const EntityIsSaddledComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsSaddledComponent>
 type _EntityIsSaddledComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsSaddledComponent,
-    (typeof EntityIsSaddledComponentManifest)['methods'][number]['name'] | (typeof EntityIsSaddledComponentManifest)['properties'][number]
+    | (typeof EntityIsSaddledComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsSaddledComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsSaddledComponentComplete }
 
 export const EntityIsShakingComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsShakingComponent>
 type _EntityIsShakingComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsShakingComponent,
-    (typeof EntityIsShakingComponentManifest)['methods'][number]['name'] | (typeof EntityIsShakingComponentManifest)['properties'][number]
+    | (typeof EntityIsShakingComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsShakingComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsShakingComponentComplete }
 
 export const EntityIsShearedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsShearedComponent>
 type _EntityIsShearedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsShearedComponent,
-    (typeof EntityIsShearedComponentManifest)['methods'][number]['name'] | (typeof EntityIsShearedComponentManifest)['properties'][number]
+    | (typeof EntityIsShearedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsShearedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsShearedComponentComplete }
 
 export const EntityIsStackableComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsStackableComponent>
 type _EntityIsStackableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsStackableComponent,
-    (typeof EntityIsStackableComponentManifest)['methods'][number]['name'] | (typeof EntityIsStackableComponentManifest)['properties'][number]
+    | (typeof EntityIsStackableComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsStackableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsStackableComponentComplete }
 
 export const EntityIsStunnedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsStunnedComponent>
 type _EntityIsStunnedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsStunnedComponent,
-    (typeof EntityIsStunnedComponentManifest)['methods'][number]['name'] | (typeof EntityIsStunnedComponentManifest)['properties'][number]
+    | (typeof EntityIsStunnedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsStunnedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsStunnedComponentComplete }
 
 export const EntityIsTamedComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityIsTamedComponent>
 type _EntityIsTamedComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityIsTamedComponent,
-    (typeof EntityIsTamedComponentManifest)['methods'][number]['name'] | (typeof EntityIsTamedComponentManifest)['properties'][number]
+    | (typeof EntityIsTamedComponentManifest)['methods'][number]['name']
+    | (typeof EntityIsTamedComponentManifest)['properties'][number]
   >
 >
 export type { _EntityIsTamedComponentComplete }
 
 export const EntityItemComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'itemStack', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityItemComponent>
 type _EntityItemComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityItemComponent,
-    (typeof EntityItemComponentManifest)['methods'][number]['name'] | (typeof EntityItemComponentManifest)['properties'][number]
+    | (typeof EntityItemComponentManifest)['methods'][number]['name']
+    | (typeof EntityItemComponentManifest)['properties'][number]
   >
 >
 export type { _EntityItemComponentComplete }
@@ -993,7 +1053,8 @@ export const EntityItemDropAfterEventSignalManifest = {
 type _EntityItemDropAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityItemDropAfterEventSignal,
-    (typeof EntityItemDropAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityItemDropAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityItemDropAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityItemDropAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityItemDropAfterEventSignalComplete }
@@ -1008,7 +1069,8 @@ export const EntityItemPickupAfterEventSignalManifest = {
 type _EntityItemPickupAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityItemPickupAfterEventSignal,
-    (typeof EntityItemPickupAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityItemPickupAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityItemPickupAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityItemPickupAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityItemPickupAfterEventSignalComplete }
@@ -1023,7 +1085,8 @@ export const EntityItemPickupBeforeEventSignalManifest = {
 type _EntityItemPickupBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityItemPickupBeforeEventSignal,
-    (typeof EntityItemPickupBeforeEventSignalManifest)['methods'][number]['name'] | (typeof EntityItemPickupBeforeEventSignalManifest)['properties'][number]
+    | (typeof EntityItemPickupBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityItemPickupBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityItemPickupBeforeEventSignalComplete }
@@ -1040,7 +1103,8 @@ export const EntityLavaMovementComponentManifest = {
 type _EntityLavaMovementComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityLavaMovementComponent,
-    (typeof EntityLavaMovementComponentManifest)['methods'][number]['name'] | (typeof EntityLavaMovementComponentManifest)['properties'][number]
+    | (typeof EntityLavaMovementComponentManifest)['methods'][number]['name']
+    | (typeof EntityLavaMovementComponentManifest)['properties'][number]
   >
 >
 export type { _EntityLavaMovementComponentComplete }
@@ -1050,12 +1114,24 @@ export const EntityLeashableComponentManifest = {
     { name: 'leashTo', minArity: 1, maxArity: 1 },
     { name: 'unleash', minArity: 0, maxArity: 0 },
   ],
-  properties: ['canBeStolen', 'entity', 'hardDistance', 'isLeashed', 'isValid', 'leashHolder', 'leashHolderEntityId', 'maxDistance', 'softDistance', 'typeId'],
+  properties: [
+    'canBeStolen',
+    'entity',
+    'hardDistance',
+    'isLeashed',
+    'isValid',
+    'leashHolder',
+    'leashHolderEntityId',
+    'maxDistance',
+    'softDistance',
+    'typeId',
+  ],
 } as const satisfies ClassManifest<MC.EntityLeashableComponent>
 type _EntityLeashableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityLeashableComponent,
-    (typeof EntityLeashableComponentManifest)['methods'][number]['name'] | (typeof EntityLeashableComponentManifest)['properties'][number]
+    | (typeof EntityLeashableComponentManifest)['methods'][number]['name']
+    | (typeof EntityLeashableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityLeashableComponentComplete }
@@ -1070,46 +1146,47 @@ export const EntityLoadAfterEventSignalManifest = {
 type _EntityLoadAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityLoadAfterEventSignal,
-    (typeof EntityLoadAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityLoadAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityLoadAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityLoadAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityLoadAfterEventSignalComplete }
 
 export const EntityMarkVariantComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityMarkVariantComponent>
 type _EntityMarkVariantComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMarkVariantComponent,
-    (typeof EntityMarkVariantComponentManifest)['methods'][number]['name'] | (typeof EntityMarkVariantComponentManifest)['properties'][number]
+    | (typeof EntityMarkVariantComponentManifest)['methods'][number]['name']
+    | (typeof EntityMarkVariantComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMarkVariantComponentComplete }
 
 export const EntityMovementAmphibiousComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementAmphibiousComponent>
 type _EntityMovementAmphibiousComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementAmphibiousComponent,
-    (typeof EntityMovementAmphibiousComponentManifest)['methods'][number]['name'] | (typeof EntityMovementAmphibiousComponentManifest)['properties'][number]
+    | (typeof EntityMovementAmphibiousComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementAmphibiousComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementAmphibiousComponentComplete }
 
 export const EntityMovementBasicComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementBasicComponent>
 type _EntityMovementBasicComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementBasicComponent,
-    (typeof EntityMovementBasicComponentManifest)['methods'][number]['name'] | (typeof EntityMovementBasicComponentManifest)['properties'][number]
+    | (typeof EntityMovementBasicComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementBasicComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementBasicComponentComplete }
@@ -1126,229 +1203,408 @@ export const EntityMovementComponentManifest = {
 type _EntityMovementComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementComponent,
-    (typeof EntityMovementComponentManifest)['methods'][number]['name'] | (typeof EntityMovementComponentManifest)['properties'][number]
+    | (typeof EntityMovementComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementComponentComplete }
 
 export const EntityMovementFlyComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementFlyComponent>
 type _EntityMovementFlyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementFlyComponent,
-    (typeof EntityMovementFlyComponentManifest)['methods'][number]['name'] | (typeof EntityMovementFlyComponentManifest)['properties'][number]
+    | (typeof EntityMovementFlyComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementFlyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementFlyComponentComplete }
 
 export const EntityMovementGenericComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementGenericComponent>
 type _EntityMovementGenericComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementGenericComponent,
-    (typeof EntityMovementGenericComponentManifest)['methods'][number]['name'] | (typeof EntityMovementGenericComponentManifest)['properties'][number]
+    | (typeof EntityMovementGenericComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementGenericComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementGenericComponentComplete }
 
 export const EntityMovementGlideComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'speedWhenTurning', 'startSpeed', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementGlideComponent>
 type _EntityMovementGlideComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementGlideComponent,
-    (typeof EntityMovementGlideComponentManifest)['methods'][number]['name'] | (typeof EntityMovementGlideComponentManifest)['properties'][number]
+    | (typeof EntityMovementGlideComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementGlideComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementGlideComponentComplete }
 
 export const EntityMovementHoverComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementHoverComponent>
 type _EntityMovementHoverComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementHoverComponent,
-    (typeof EntityMovementHoverComponentManifest)['methods'][number]['name'] | (typeof EntityMovementHoverComponentManifest)['properties'][number]
+    | (typeof EntityMovementHoverComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementHoverComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementHoverComponentComplete }
 
 export const EntityMovementJumpComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementJumpComponent>
 type _EntityMovementJumpComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementJumpComponent,
-    (typeof EntityMovementJumpComponentManifest)['methods'][number]['name'] | (typeof EntityMovementJumpComponentManifest)['properties'][number]
+    | (typeof EntityMovementJumpComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementJumpComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementJumpComponentComplete }
 
 export const EntityMovementSkipComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementSkipComponent>
 type _EntityMovementSkipComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementSkipComponent,
-    (typeof EntityMovementSkipComponentManifest)['methods'][number]['name'] | (typeof EntityMovementSkipComponentManifest)['properties'][number]
+    | (typeof EntityMovementSkipComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementSkipComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementSkipComponentComplete }
 
 export const EntityMovementSwayComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'maxTurn', 'swayAmplitude', 'swayFrequency', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityMovementSwayComponent>
 type _EntityMovementSwayComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityMovementSwayComponent,
-    (typeof EntityMovementSwayComponentManifest)['methods'][number]['name'] | (typeof EntityMovementSwayComponentManifest)['properties'][number]
+    | (typeof EntityMovementSwayComponentManifest)['methods'][number]['name']
+    | (typeof EntityMovementSwayComponentManifest)['properties'][number]
   >
 >
 export type { _EntityMovementSwayComponentComplete }
 
 export const EntityNavigationClimbComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationClimbComponent>
 type _EntityNavigationClimbComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationClimbComponent,
-    (typeof EntityNavigationClimbComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationClimbComponentManifest)['properties'][number]
+    | (typeof EntityNavigationClimbComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationClimbComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationClimbComponentComplete }
 
 export const EntityNavigationComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationComponent>
 type _EntityNavigationComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationComponent,
-    (typeof EntityNavigationComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationComponentManifest)['properties'][number]
+    | (typeof EntityNavigationComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationComponentComplete }
 
 export const EntityNavigationFloatComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationFloatComponent>
 type _EntityNavigationFloatComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationFloatComponent,
-    (typeof EntityNavigationFloatComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationFloatComponentManifest)['properties'][number]
+    | (typeof EntityNavigationFloatComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationFloatComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationFloatComponentComplete }
 
 export const EntityNavigationFlyComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationFlyComponent>
 type _EntityNavigationFlyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationFlyComponent,
-    (typeof EntityNavigationFlyComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationFlyComponentManifest)['properties'][number]
+    | (typeof EntityNavigationFlyComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationFlyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationFlyComponentComplete }
 
 export const EntityNavigationGenericComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationGenericComponent>
 type _EntityNavigationGenericComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationGenericComponent,
-    (typeof EntityNavigationGenericComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationGenericComponentManifest)['properties'][number]
+    | (typeof EntityNavigationGenericComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationGenericComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationGenericComponentComplete }
 
 export const EntityNavigationHoverComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationHoverComponent>
 type _EntityNavigationHoverComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationHoverComponent,
-    (typeof EntityNavigationHoverComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationHoverComponentManifest)['properties'][number]
+    | (typeof EntityNavigationHoverComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationHoverComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationHoverComponentComplete }
 
 export const EntityNavigationWalkComponentManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'avoidDamageBlocks',
+    'avoidPortals',
+    'avoidSun',
+    'avoidWater',
+    'canBreach',
+    'canBreakDoors',
+    'canFloat',
+    'canJump',
+    'canOpenDoors',
+    'canOpenIronDoors',
+    'canPassDoors',
+    'canPathFromAir',
+    'canPathOverLava',
+    'canPathOverWater',
+    'canSink',
+    'canSwim',
+    'canWalk',
+    'canWalkInLava',
+    'entity',
+    'isAmphibious',
+    'isValid',
+    'typeId',
   ],
-  properties: ['avoidDamageBlocks', 'avoidPortals', 'avoidSun', 'avoidWater', 'canBreach', 'canBreakDoors', 'canFloat', 'canJump', 'canOpenDoors', 'canOpenIronDoors', 'canPassDoors', 'canPathFromAir', 'canPathOverLava', 'canPathOverWater', 'canSink', 'canSwim', 'canWalk', 'canWalkInLava', 'entity', 'isAmphibious', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityNavigationWalkComponent>
 type _EntityNavigationWalkComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityNavigationWalkComponent,
-    (typeof EntityNavigationWalkComponentManifest)['methods'][number]['name'] | (typeof EntityNavigationWalkComponentManifest)['properties'][number]
+    | (typeof EntityNavigationWalkComponentManifest)['methods'][number]['name']
+    | (typeof EntityNavigationWalkComponentManifest)['properties'][number]
   >
 >
 export type { _EntityNavigationWalkComponentComplete }
 
 export const EntityOnFireComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'onFireTicksRemaining', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityOnFireComponent>
 type _EntityOnFireComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityOnFireComponent,
-    (typeof EntityOnFireComponentManifest)['methods'][number]['name'] | (typeof EntityOnFireComponentManifest)['properties'][number]
+    | (typeof EntityOnFireComponentManifest)['methods'][number]['name']
+    | (typeof EntityOnFireComponentManifest)['properties'][number]
   >
 >
 export type { _EntityOnFireComponentComplete }
 
 export const EntityProjectileComponentManifest = {
-  methods: [
-    { name: 'shoot', minArity: 1, maxArity: 2 },
+  methods: [{ name: 'shoot', minArity: 1, maxArity: 2 }],
+  properties: [
+    'airInertia',
+    'catchFireOnHurt',
+    'critParticlesOnProjectileHurt',
+    'destroyOnProjectileHurt',
+    'entity',
+    'gravity',
+    'hitEntitySound',
+    'hitGroundSound',
+    'hitParticle',
+    'isValid',
+    'lightningStrikeOnHit',
+    'liquidInertia',
+    'onFireTime',
+    'owner',
+    'shouldBounceOnHit',
+    'stopOnHit',
+    'typeId',
   ],
-  properties: ['airInertia', 'catchFireOnHurt', 'critParticlesOnProjectileHurt', 'destroyOnProjectileHurt', 'entity', 'gravity', 'hitEntitySound', 'hitGroundSound', 'hitParticle', 'isValid', 'lightningStrikeOnHit', 'liquidInertia', 'onFireTime', 'owner', 'shouldBounceOnHit', 'stopOnHit', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityProjectileComponent>
 type _EntityProjectileComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityProjectileComponent,
-    (typeof EntityProjectileComponentManifest)['methods'][number]['name'] | (typeof EntityProjectileComponentManifest)['properties'][number]
+    | (typeof EntityProjectileComponentManifest)['methods'][number]['name']
+    | (typeof EntityProjectileComponentManifest)['properties'][number]
   >
 >
 export type { _EntityProjectileComponentComplete }
 
 export const EntityPushThroughComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityPushThroughComponent>
 type _EntityPushThroughComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityPushThroughComponent,
-    (typeof EntityPushThroughComponentManifest)['methods'][number]['name'] | (typeof EntityPushThroughComponentManifest)['properties'][number]
+    | (typeof EntityPushThroughComponentManifest)['methods'][number]['name']
+    | (typeof EntityPushThroughComponentManifest)['properties'][number]
   >
 >
 export type { _EntityPushThroughComponentComplete }
@@ -1363,7 +1619,8 @@ export const EntityRemoveAfterEventSignalManifest = {
 type _EntityRemoveAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityRemoveAfterEventSignal,
-    (typeof EntityRemoveAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityRemoveAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityRemoveAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityRemoveAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityRemoveAfterEventSignalComplete }
@@ -1378,7 +1635,8 @@ export const EntityRemoveBeforeEventSignalManifest = {
 type _EntityRemoveBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityRemoveBeforeEventSignal,
-    (typeof EntityRemoveBeforeEventSignalManifest)['methods'][number]['name'] | (typeof EntityRemoveBeforeEventSignalManifest)['properties'][number]
+    | (typeof EntityRemoveBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityRemoveBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityRemoveBeforeEventSignalComplete }
@@ -1392,25 +1650,37 @@ export const EntityRideableComponentManifest = {
     { name: 'getRiders', minArity: 0, maxArity: 0 },
     { name: 'getSeats', minArity: 0, maxArity: 0 },
   ],
-  properties: ['controllingSeat', 'crouchingSkipInteract', 'entity', 'interactText', 'isValid', 'passengerMaxWidth', 'pullInEntities', 'riderCanInteract', 'seatCount', 'typeId'],
+  properties: [
+    'controllingSeat',
+    'crouchingSkipInteract',
+    'entity',
+    'interactText',
+    'isValid',
+    'passengerMaxWidth',
+    'pullInEntities',
+    'riderCanInteract',
+    'seatCount',
+    'typeId',
+  ],
 } as const satisfies ClassManifest<MC.EntityRideableComponent>
 type _EntityRideableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityRideableComponent,
-    (typeof EntityRideableComponentManifest)['methods'][number]['name'] | (typeof EntityRideableComponentManifest)['properties'][number]
+    | (typeof EntityRideableComponentManifest)['methods'][number]['name']
+    | (typeof EntityRideableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityRideableComponentComplete }
 
 export const EntityRidingComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'entityRidingOn', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityRidingComponent>
 type _EntityRidingComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityRidingComponent,
-    (typeof EntityRidingComponentManifest)['methods'][number]['name'] | (typeof EntityRidingComponentManifest)['properties'][number]
+    | (typeof EntityRidingComponentManifest)['methods'][number]['name']
+    | (typeof EntityRidingComponentManifest)['properties'][number]
   >
 >
 export type { _EntityRidingComponentComplete }
@@ -1427,33 +1697,34 @@ export const EntitySaturationComponentManifest = {
 type _EntitySaturationComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntitySaturationComponent,
-    (typeof EntitySaturationComponentManifest)['methods'][number]['name'] | (typeof EntitySaturationComponentManifest)['properties'][number]
+    | (typeof EntitySaturationComponentManifest)['methods'][number]['name']
+    | (typeof EntitySaturationComponentManifest)['properties'][number]
   >
 >
 export type { _EntitySaturationComponentComplete }
 
 export const EntityScaleComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityScaleComponent>
 type _EntityScaleComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityScaleComponent,
-    (typeof EntityScaleComponentManifest)['methods'][number]['name'] | (typeof EntityScaleComponentManifest)['properties'][number]
+    | (typeof EntityScaleComponentManifest)['methods'][number]['name']
+    | (typeof EntityScaleComponentManifest)['properties'][number]
   >
 >
 export type { _EntityScaleComponentComplete }
 
 export const EntitySkinIdComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntitySkinIdComponent>
 type _EntitySkinIdComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntitySkinIdComponent,
-    (typeof EntitySkinIdComponentManifest)['methods'][number]['name'] | (typeof EntitySkinIdComponentManifest)['properties'][number]
+    | (typeof EntitySkinIdComponentManifest)['methods'][number]['name']
+    | (typeof EntitySkinIdComponentManifest)['properties'][number]
   >
 >
 export type { _EntitySkinIdComponentComplete }
@@ -1468,20 +1739,21 @@ export const EntitySpawnAfterEventSignalManifest = {
 type _EntitySpawnAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntitySpawnAfterEventSignal,
-    (typeof EntitySpawnAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntitySpawnAfterEventSignalManifest)['properties'][number]
+    | (typeof EntitySpawnAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntitySpawnAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntitySpawnAfterEventSignalComplete }
 
 export const EntityStrengthComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'max', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityStrengthComponent>
 type _EntityStrengthComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityStrengthComponent,
-    (typeof EntityStrengthComponentManifest)['methods'][number]['name'] | (typeof EntityStrengthComponentManifest)['properties'][number]
+    | (typeof EntityStrengthComponentManifest)['methods'][number]['name']
+    | (typeof EntityStrengthComponentManifest)['properties'][number]
   >
 >
 export type { _EntityStrengthComponentComplete }
@@ -1496,21 +1768,30 @@ export const EntityTameMountComponentManifest = {
 type _EntityTameMountComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityTameMountComponent,
-    (typeof EntityTameMountComponentManifest)['methods'][number]['name'] | (typeof EntityTameMountComponentManifest)['properties'][number]
+    | (typeof EntityTameMountComponentManifest)['methods'][number]['name']
+    | (typeof EntityTameMountComponentManifest)['properties'][number]
   >
 >
 export type { _EntityTameMountComponentComplete }
 
 export const EntityTameableComponentManifest = {
-  methods: [
-    { name: 'tame', minArity: 1, maxArity: 1 },
+  methods: [{ name: 'tame', minArity: 1, maxArity: 1 }],
+  properties: [
+    'entity',
+    'getTameItems',
+    'isTamed',
+    'isValid',
+    'probability',
+    'tamedToPlayer',
+    'tamedToPlayerId',
+    'typeId',
   ],
-  properties: ['entity', 'getTameItems', 'isTamed', 'isValid', 'probability', 'tamedToPlayer', 'tamedToPlayerId', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityTameableComponent>
 type _EntityTameableComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityTameableComponent,
-    (typeof EntityTameableComponentManifest)['methods'][number]['name'] | (typeof EntityTameableComponentManifest)['properties'][number]
+    | (typeof EntityTameableComponentManifest)['methods'][number]['name']
+    | (typeof EntityTameableComponentManifest)['properties'][number]
   >
 >
 export type { _EntityTameableComponentComplete }
@@ -1525,7 +1806,8 @@ export const EntityTypeFamilyComponentManifest = {
 type _EntityTypeFamilyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityTypeFamilyComponent,
-    (typeof EntityTypeFamilyComponentManifest)['methods'][number]['name'] | (typeof EntityTypeFamilyComponentManifest)['properties'][number]
+    | (typeof EntityTypeFamilyComponentManifest)['methods'][number]['name']
+    | (typeof EntityTypeFamilyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityTypeFamilyComponentComplete }
@@ -1557,7 +1839,8 @@ export const EntityUnderwaterMovementComponentManifest = {
 type _EntityUnderwaterMovementComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityUnderwaterMovementComponent,
-    (typeof EntityUnderwaterMovementComponentManifest)['methods'][number]['name'] | (typeof EntityUnderwaterMovementComponentManifest)['properties'][number]
+    | (typeof EntityUnderwaterMovementComponentManifest)['methods'][number]['name']
+    | (typeof EntityUnderwaterMovementComponentManifest)['properties'][number]
   >
 >
 export type { _EntityUnderwaterMovementComponentComplete }
@@ -1572,33 +1855,34 @@ export const EntityUpgradeAfterEventSignalManifest = {
 type _EntityUpgradeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.EntityUpgradeAfterEventSignal,
-    (typeof EntityUpgradeAfterEventSignalManifest)['methods'][number]['name'] | (typeof EntityUpgradeAfterEventSignalManifest)['properties'][number]
+    | (typeof EntityUpgradeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof EntityUpgradeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _EntityUpgradeAfterEventSignalComplete }
 
 export const EntityVariantComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId', 'value'],
 } as const satisfies ClassManifest<MC.EntityVariantComponent>
 type _EntityVariantComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityVariantComponent,
-    (typeof EntityVariantComponentManifest)['methods'][number]['name'] | (typeof EntityVariantComponentManifest)['properties'][number]
+    | (typeof EntityVariantComponentManifest)['methods'][number]['name']
+    | (typeof EntityVariantComponentManifest)['properties'][number]
   >
 >
 export type { _EntityVariantComponentComplete }
 
 export const EntityWantsJockeyComponentManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['entity', 'isValid', 'typeId'],
 } as const satisfies ClassManifest<MC.EntityWantsJockeyComponent>
 type _EntityWantsJockeyComponentComplete = AssertNever<
   Exclude<
     keyof MC.EntityWantsJockeyComponent,
-    (typeof EntityWantsJockeyComponentManifest)['methods'][number]['name'] | (typeof EntityWantsJockeyComponentManifest)['properties'][number]
+    | (typeof EntityWantsJockeyComponentManifest)['methods'][number]['name']
+    | (typeof EntityWantsJockeyComponentManifest)['properties'][number]
   >
 >
 export type { _EntityWantsJockeyComponentComplete }
@@ -1613,7 +1897,8 @@ export const ExplosionAfterEventSignalManifest = {
 type _ExplosionAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ExplosionAfterEventSignal,
-    (typeof ExplosionAfterEventSignalManifest)['methods'][number]['name'] | (typeof ExplosionAfterEventSignalManifest)['properties'][number]
+    | (typeof ExplosionAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ExplosionAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ExplosionAfterEventSignalComplete }
@@ -1628,7 +1913,8 @@ export const ExplosionBeforeEventSignalManifest = {
 type _ExplosionBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ExplosionBeforeEventSignal,
-    (typeof ExplosionBeforeEventSignalManifest)['methods'][number]['name'] | (typeof ExplosionBeforeEventSignalManifest)['properties'][number]
+    | (typeof ExplosionBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof ExplosionBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _ExplosionBeforeEventSignalComplete }
@@ -1643,7 +1929,8 @@ export const GameRuleChangeAfterEventSignalManifest = {
 type _GameRuleChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.GameRuleChangeAfterEventSignal,
-    (typeof GameRuleChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof GameRuleChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof GameRuleChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof GameRuleChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _GameRuleChangeAfterEventSignalComplete }
@@ -1658,7 +1945,8 @@ export const ItemCompleteUseAfterEventSignalManifest = {
 type _ItemCompleteUseAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemCompleteUseAfterEventSignal,
-    (typeof ItemCompleteUseAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemCompleteUseAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemCompleteUseAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemCompleteUseAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemCompleteUseAfterEventSignalComplete }
@@ -1673,7 +1961,8 @@ export const ItemReleaseUseAfterEventSignalManifest = {
 type _ItemReleaseUseAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemReleaseUseAfterEventSignal,
-    (typeof ItemReleaseUseAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemReleaseUseAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemReleaseUseAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemReleaseUseAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemReleaseUseAfterEventSignalComplete }
@@ -1688,7 +1977,8 @@ export const ItemStartUseAfterEventSignalManifest = {
 type _ItemStartUseAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemStartUseAfterEventSignal,
-    (typeof ItemStartUseAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemStartUseAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemStartUseAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemStartUseAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemStartUseAfterEventSignalComplete }
@@ -1703,7 +1993,8 @@ export const ItemStartUseOnAfterEventSignalManifest = {
 type _ItemStartUseOnAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemStartUseOnAfterEventSignal,
-    (typeof ItemStartUseOnAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemStartUseOnAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemStartUseOnAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemStartUseOnAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemStartUseOnAfterEventSignalComplete }
@@ -1718,7 +2009,8 @@ export const ItemStopUseAfterEventSignalManifest = {
 type _ItemStopUseAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemStopUseAfterEventSignal,
-    (typeof ItemStopUseAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemStopUseAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemStopUseAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemStopUseAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemStopUseAfterEventSignalComplete }
@@ -1733,7 +2025,8 @@ export const ItemStopUseOnAfterEventSignalManifest = {
 type _ItemStopUseOnAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemStopUseOnAfterEventSignal,
-    (typeof ItemStopUseOnAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemStopUseOnAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemStopUseOnAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemStopUseOnAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemStopUseOnAfterEventSignalComplete }
@@ -1763,7 +2056,8 @@ export const ItemUseAfterEventSignalManifest = {
 type _ItemUseAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemUseAfterEventSignal,
-    (typeof ItemUseAfterEventSignalManifest)['methods'][number]['name'] | (typeof ItemUseAfterEventSignalManifest)['properties'][number]
+    | (typeof ItemUseAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemUseAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemUseAfterEventSignalComplete }
@@ -1778,7 +2072,8 @@ export const ItemUseBeforeEventSignalManifest = {
 type _ItemUseBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ItemUseBeforeEventSignal,
-    (typeof ItemUseBeforeEventSignalManifest)['methods'][number]['name'] | (typeof ItemUseBeforeEventSignalManifest)['properties'][number]
+    | (typeof ItemUseBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof ItemUseBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _ItemUseBeforeEventSignalComplete }
@@ -1793,7 +2088,8 @@ export const LeverActionAfterEventSignalManifest = {
 type _LeverActionAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.LeverActionAfterEventSignal,
-    (typeof LeverActionAfterEventSignalManifest)['methods'][number]['name'] | (typeof LeverActionAfterEventSignalManifest)['properties'][number]
+    | (typeof LeverActionAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof LeverActionAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _LeverActionAfterEventSignalComplete }
@@ -1808,7 +2104,8 @@ export const PistonActivateAfterEventSignalManifest = {
 type _PistonActivateAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PistonActivateAfterEventSignal,
-    (typeof PistonActivateAfterEventSignalManifest)['methods'][number]['name'] | (typeof PistonActivateAfterEventSignalManifest)['properties'][number]
+    | (typeof PistonActivateAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PistonActivateAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PistonActivateAfterEventSignalComplete }
@@ -1884,7 +2181,42 @@ export const PlayerManifest = {
     { name: 'triggerEvent', minArity: 1, maxArity: 1 },
     { name: 'tryTeleport', minArity: 1, maxArity: 2 },
   ],
-  properties: ['camera', 'clientSystemInfo', 'commandPermissionLevel', 'dimension', 'graphicsMode', 'id', 'inputInfo', 'inputPermissions', 'isClimbing', 'isEmoting', 'isFalling', 'isFlying', 'isGliding', 'isInWater', 'isJumping', 'isOnGround', 'isSleeping', 'isSneaking', 'isSprinting', 'isSwimming', 'isValid', 'level', 'localizationKey', 'location', 'locatorBar', 'name', 'nameTag', 'onScreenDisplay', 'playerPermissionLevel', 'scoreboardIdentity', 'selectedSlotIndex', 'totalXpNeededForNextLevel', 'typeId', 'xpEarnedAtCurrentLevel'],
+  properties: [
+    'camera',
+    'clientSystemInfo',
+    'commandPermissionLevel',
+    'dimension',
+    'graphicsMode',
+    'id',
+    'inputInfo',
+    'inputPermissions',
+    'isClimbing',
+    'isEmoting',
+    'isFalling',
+    'isFlying',
+    'isGliding',
+    'isInWater',
+    'isJumping',
+    'isOnGround',
+    'isSleeping',
+    'isSneaking',
+    'isSprinting',
+    'isSwimming',
+    'isValid',
+    'level',
+    'localizationKey',
+    'location',
+    'locatorBar',
+    'name',
+    'nameTag',
+    'onScreenDisplay',
+    'playerPermissionLevel',
+    'scoreboardIdentity',
+    'selectedSlotIndex',
+    'totalXpNeededForNextLevel',
+    'typeId',
+    'xpEarnedAtCurrentLevel',
+  ],
 } as const satisfies ClassManifest<MC.Player>
 type _PlayerComplete = AssertNever<
   Exclude<
@@ -1904,7 +2236,8 @@ export const PlayerBreakBlockAfterEventSignalManifest = {
 type _PlayerBreakBlockAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerBreakBlockAfterEventSignal,
-    (typeof PlayerBreakBlockAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerBreakBlockAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerBreakBlockAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerBreakBlockAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerBreakBlockAfterEventSignalComplete }
@@ -1919,7 +2252,8 @@ export const PlayerBreakBlockBeforeEventSignalManifest = {
 type _PlayerBreakBlockBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerBreakBlockBeforeEventSignal,
-    (typeof PlayerBreakBlockBeforeEventSignalManifest)['methods'][number]['name'] | (typeof PlayerBreakBlockBeforeEventSignalManifest)['properties'][number]
+    | (typeof PlayerBreakBlockBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerBreakBlockBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerBreakBlockBeforeEventSignalComplete }
@@ -1934,7 +2268,8 @@ export const PlayerButtonInputAfterEventSignalManifest = {
 type _PlayerButtonInputAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerButtonInputAfterEventSignal,
-    (typeof PlayerButtonInputAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerButtonInputAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerButtonInputAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerButtonInputAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerButtonInputAfterEventSignalComplete }
@@ -1949,7 +2284,8 @@ export const PlayerDimensionChangeAfterEventSignalManifest = {
 type _PlayerDimensionChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerDimensionChangeAfterEventSignal,
-    (typeof PlayerDimensionChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerDimensionChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerDimensionChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerDimensionChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerDimensionChangeAfterEventSignalComplete }
@@ -1964,7 +2300,8 @@ export const PlayerEmoteAfterEventSignalManifest = {
 type _PlayerEmoteAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerEmoteAfterEventSignal,
-    (typeof PlayerEmoteAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerEmoteAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerEmoteAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerEmoteAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerEmoteAfterEventSignalComplete }
@@ -1979,7 +2316,8 @@ export const PlayerGameModeChangeAfterEventSignalManifest = {
 type _PlayerGameModeChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerGameModeChangeAfterEventSignal,
-    (typeof PlayerGameModeChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerGameModeChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerGameModeChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerGameModeChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerGameModeChangeAfterEventSignalComplete }
@@ -1994,7 +2332,8 @@ export const PlayerGameModeChangeBeforeEventSignalManifest = {
 type _PlayerGameModeChangeBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerGameModeChangeBeforeEventSignal,
-    (typeof PlayerGameModeChangeBeforeEventSignalManifest)['methods'][number]['name'] | (typeof PlayerGameModeChangeBeforeEventSignalManifest)['properties'][number]
+    | (typeof PlayerGameModeChangeBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerGameModeChangeBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerGameModeChangeBeforeEventSignalComplete }
@@ -2009,7 +2348,8 @@ export const PlayerHotbarSelectedSlotChangeAfterEventSignalManifest = {
 type _PlayerHotbarSelectedSlotChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerHotbarSelectedSlotChangeAfterEventSignal,
-    (typeof PlayerHotbarSelectedSlotChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerHotbarSelectedSlotChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerHotbarSelectedSlotChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerHotbarSelectedSlotChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerHotbarSelectedSlotChangeAfterEventSignalComplete }
@@ -2024,7 +2364,8 @@ export const PlayerInputModeChangeAfterEventSignalManifest = {
 type _PlayerInputModeChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInputModeChangeAfterEventSignal,
-    (typeof PlayerInputModeChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInputModeChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerInputModeChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInputModeChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInputModeChangeAfterEventSignalComplete }
@@ -2039,7 +2380,8 @@ export const PlayerInputPermissionCategoryChangeAfterEventSignalManifest = {
 type _PlayerInputPermissionCategoryChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInputPermissionCategoryChangeAfterEventSignal,
-    (typeof PlayerInputPermissionCategoryChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInputPermissionCategoryChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerInputPermissionCategoryChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInputPermissionCategoryChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInputPermissionCategoryChangeAfterEventSignalComplete }
@@ -2054,7 +2396,8 @@ export const PlayerInteractWithBlockAfterEventSignalManifest = {
 type _PlayerInteractWithBlockAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInteractWithBlockAfterEventSignal,
-    (typeof PlayerInteractWithBlockAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInteractWithBlockAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerInteractWithBlockAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInteractWithBlockAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInteractWithBlockAfterEventSignalComplete }
@@ -2069,7 +2412,8 @@ export const PlayerInteractWithBlockBeforeEventSignalManifest = {
 type _PlayerInteractWithBlockBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInteractWithBlockBeforeEventSignal,
-    (typeof PlayerInteractWithBlockBeforeEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInteractWithBlockBeforeEventSignalManifest)['properties'][number]
+    | (typeof PlayerInteractWithBlockBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInteractWithBlockBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInteractWithBlockBeforeEventSignalComplete }
@@ -2084,7 +2428,8 @@ export const PlayerInteractWithEntityAfterEventSignalManifest = {
 type _PlayerInteractWithEntityAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInteractWithEntityAfterEventSignal,
-    (typeof PlayerInteractWithEntityAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInteractWithEntityAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerInteractWithEntityAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInteractWithEntityAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInteractWithEntityAfterEventSignalComplete }
@@ -2099,7 +2444,8 @@ export const PlayerInteractWithEntityBeforeEventSignalManifest = {
 type _PlayerInteractWithEntityBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInteractWithEntityBeforeEventSignal,
-    (typeof PlayerInteractWithEntityBeforeEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInteractWithEntityBeforeEventSignalManifest)['properties'][number]
+    | (typeof PlayerInteractWithEntityBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInteractWithEntityBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInteractWithEntityBeforeEventSignalComplete }
@@ -2114,7 +2460,8 @@ export const PlayerInventoryItemChangeAfterEventSignalManifest = {
 type _PlayerInventoryItemChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerInventoryItemChangeAfterEventSignal,
-    (typeof PlayerInventoryItemChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerInventoryItemChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerInventoryItemChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerInventoryItemChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerInventoryItemChangeAfterEventSignalComplete }
@@ -2129,7 +2476,8 @@ export const PlayerJoinAfterEventSignalManifest = {
 type _PlayerJoinAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerJoinAfterEventSignal,
-    (typeof PlayerJoinAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerJoinAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerJoinAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerJoinAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerJoinAfterEventSignalComplete }
@@ -2144,7 +2492,8 @@ export const PlayerLeaveAfterEventSignalManifest = {
 type _PlayerLeaveAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerLeaveAfterEventSignal,
-    (typeof PlayerLeaveAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerLeaveAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerLeaveAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerLeaveAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerLeaveAfterEventSignalComplete }
@@ -2159,7 +2508,8 @@ export const PlayerLeaveBeforeEventSignalManifest = {
 type _PlayerLeaveBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerLeaveBeforeEventSignal,
-    (typeof PlayerLeaveBeforeEventSignalManifest)['methods'][number]['name'] | (typeof PlayerLeaveBeforeEventSignalManifest)['properties'][number]
+    | (typeof PlayerLeaveBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerLeaveBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerLeaveBeforeEventSignalComplete }
@@ -2174,7 +2524,8 @@ export const PlayerPlaceBlockAfterEventSignalManifest = {
 type _PlayerPlaceBlockAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerPlaceBlockAfterEventSignal,
-    (typeof PlayerPlaceBlockAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerPlaceBlockAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerPlaceBlockAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerPlaceBlockAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerPlaceBlockAfterEventSignalComplete }
@@ -2189,7 +2540,8 @@ export const PlayerSpawnAfterEventSignalManifest = {
 type _PlayerSpawnAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerSpawnAfterEventSignal,
-    (typeof PlayerSpawnAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerSpawnAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerSpawnAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerSpawnAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerSpawnAfterEventSignalComplete }
@@ -2204,7 +2556,8 @@ export const PlayerSwingStartAfterEventSignalManifest = {
 type _PlayerSwingStartAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PlayerSwingStartAfterEventSignal,
-    (typeof PlayerSwingStartAfterEventSignalManifest)['methods'][number]['name'] | (typeof PlayerSwingStartAfterEventSignalManifest)['properties'][number]
+    | (typeof PlayerSwingStartAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PlayerSwingStartAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PlayerSwingStartAfterEventSignalComplete }
@@ -2219,7 +2572,8 @@ export const PressurePlatePopAfterEventSignalManifest = {
 type _PressurePlatePopAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PressurePlatePopAfterEventSignal,
-    (typeof PressurePlatePopAfterEventSignalManifest)['methods'][number]['name'] | (typeof PressurePlatePopAfterEventSignalManifest)['properties'][number]
+    | (typeof PressurePlatePopAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PressurePlatePopAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PressurePlatePopAfterEventSignalComplete }
@@ -2234,7 +2588,8 @@ export const PressurePlatePushAfterEventSignalManifest = {
 type _PressurePlatePushAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.PressurePlatePushAfterEventSignal,
-    (typeof PressurePlatePushAfterEventSignalManifest)['methods'][number]['name'] | (typeof PressurePlatePushAfterEventSignalManifest)['properties'][number]
+    | (typeof PressurePlatePushAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof PressurePlatePushAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _PressurePlatePushAfterEventSignalComplete }
@@ -2249,7 +2604,8 @@ export const ProjectileHitBlockAfterEventSignalManifest = {
 type _ProjectileHitBlockAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ProjectileHitBlockAfterEventSignal,
-    (typeof ProjectileHitBlockAfterEventSignalManifest)['methods'][number]['name'] | (typeof ProjectileHitBlockAfterEventSignalManifest)['properties'][number]
+    | (typeof ProjectileHitBlockAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ProjectileHitBlockAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ProjectileHitBlockAfterEventSignalComplete }
@@ -2264,7 +2620,8 @@ export const ProjectileHitEntityAfterEventSignalManifest = {
 type _ProjectileHitEntityAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ProjectileHitEntityAfterEventSignal,
-    (typeof ProjectileHitEntityAfterEventSignalManifest)['methods'][number]['name'] | (typeof ProjectileHitEntityAfterEventSignalManifest)['properties'][number]
+    | (typeof ProjectileHitEntityAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ProjectileHitEntityAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ProjectileHitEntityAfterEventSignalComplete }
@@ -2291,15 +2648,14 @@ type _ScoreboardComplete = AssertNever<
 export type { _ScoreboardComplete }
 
 export const ScoreboardIdentityManifest = {
-  methods: [
-    { name: 'getEntity', minArity: 0, maxArity: 0 },
-  ],
+  methods: [{ name: 'getEntity', minArity: 0, maxArity: 0 }],
   properties: ['displayName', 'id', 'isValid', 'type'],
 } as const satisfies ClassManifest<MC.ScoreboardIdentity>
 type _ScoreboardIdentityComplete = AssertNever<
   Exclude<
     keyof MC.ScoreboardIdentity,
-    (typeof ScoreboardIdentityManifest)['methods'][number]['name'] | (typeof ScoreboardIdentityManifest)['properties'][number]
+    | (typeof ScoreboardIdentityManifest)['methods'][number]['name']
+    | (typeof ScoreboardIdentityManifest)['properties'][number]
   >
 >
 export type { _ScoreboardIdentityComplete }
@@ -2319,7 +2675,8 @@ export const ScoreboardObjectiveManifest = {
 type _ScoreboardObjectiveComplete = AssertNever<
   Exclude<
     keyof MC.ScoreboardObjective,
-    (typeof ScoreboardObjectiveManifest)['methods'][number]['name'] | (typeof ScoreboardObjectiveManifest)['properties'][number]
+    | (typeof ScoreboardObjectiveManifest)['methods'][number]['name']
+    | (typeof ScoreboardObjectiveManifest)['properties'][number]
   >
 >
 export type { _ScoreboardObjectiveComplete }
@@ -2355,7 +2712,8 @@ export const ScriptEventCommandMessageAfterEventSignalManifest = {
 type _ScriptEventCommandMessageAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ScriptEventCommandMessageAfterEventSignal,
-    (typeof ScriptEventCommandMessageAfterEventSignalManifest)['methods'][number]['name'] | (typeof ScriptEventCommandMessageAfterEventSignalManifest)['properties'][number]
+    | (typeof ScriptEventCommandMessageAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof ScriptEventCommandMessageAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _ScriptEventCommandMessageAfterEventSignalComplete }
@@ -2370,7 +2728,8 @@ export const ShutdownBeforeEventSignalManifest = {
 type _ShutdownBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.ShutdownBeforeEventSignal,
-    (typeof ShutdownBeforeEventSignalManifest)['methods'][number]['name'] | (typeof ShutdownBeforeEventSignalManifest)['properties'][number]
+    | (typeof ShutdownBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof ShutdownBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _ShutdownBeforeEventSignalComplete }
@@ -2385,7 +2744,8 @@ export const StartupBeforeEventSignalManifest = {
 type _StartupBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.StartupBeforeEventSignal,
-    (typeof StartupBeforeEventSignalManifest)['methods'][number]['name'] | (typeof StartupBeforeEventSignalManifest)['properties'][number]
+    | (typeof StartupBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof StartupBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _StartupBeforeEventSignalComplete }
@@ -2412,27 +2772,27 @@ type _SystemComplete = AssertNever<
 export type { _SystemComplete }
 
 export const SystemAfterEventsManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['scriptEventReceive'],
 } as const satisfies ClassManifest<MC.SystemAfterEvents>
 type _SystemAfterEventsComplete = AssertNever<
   Exclude<
     keyof MC.SystemAfterEvents,
-    (typeof SystemAfterEventsManifest)['methods'][number]['name'] | (typeof SystemAfterEventsManifest)['properties'][number]
+    | (typeof SystemAfterEventsManifest)['methods'][number]['name']
+    | (typeof SystemAfterEventsManifest)['properties'][number]
   >
 >
 export type { _SystemAfterEventsComplete }
 
 export const SystemBeforeEventsManifest = {
-  methods: [
-  ],
+  methods: [],
   properties: ['shutdown', 'startup'],
 } as const satisfies ClassManifest<MC.SystemBeforeEvents>
 type _SystemBeforeEventsComplete = AssertNever<
   Exclude<
     keyof MC.SystemBeforeEvents,
-    (typeof SystemBeforeEventsManifest)['methods'][number]['name'] | (typeof SystemBeforeEventsManifest)['properties'][number]
+    | (typeof SystemBeforeEventsManifest)['methods'][number]['name']
+    | (typeof SystemBeforeEventsManifest)['properties'][number]
   >
 >
 export type { _SystemBeforeEventsComplete }
@@ -2447,7 +2807,8 @@ export const TargetBlockHitAfterEventSignalManifest = {
 type _TargetBlockHitAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.TargetBlockHitAfterEventSignal,
-    (typeof TargetBlockHitAfterEventSignalManifest)['methods'][number]['name'] | (typeof TargetBlockHitAfterEventSignalManifest)['properties'][number]
+    | (typeof TargetBlockHitAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof TargetBlockHitAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _TargetBlockHitAfterEventSignalComplete }
@@ -2462,7 +2823,8 @@ export const TripWireTripAfterEventSignalManifest = {
 type _TripWireTripAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.TripWireTripAfterEventSignal,
-    (typeof TripWireTripAfterEventSignalManifest)['methods'][number]['name'] | (typeof TripWireTripAfterEventSignalManifest)['properties'][number]
+    | (typeof TripWireTripAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof TripWireTripAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _TripWireTripAfterEventSignalComplete }
@@ -2477,7 +2839,8 @@ export const WeatherChangeAfterEventSignalManifest = {
 type _WeatherChangeAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.WeatherChangeAfterEventSignal,
-    (typeof WeatherChangeAfterEventSignalManifest)['methods'][number]['name'] | (typeof WeatherChangeAfterEventSignalManifest)['properties'][number]
+    | (typeof WeatherChangeAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof WeatherChangeAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _WeatherChangeAfterEventSignalComplete }
@@ -2492,7 +2855,8 @@ export const WeatherChangeBeforeEventSignalManifest = {
 type _WeatherChangeBeforeEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.WeatherChangeBeforeEventSignal,
-    (typeof WeatherChangeBeforeEventSignalManifest)['methods'][number]['name'] | (typeof WeatherChangeBeforeEventSignalManifest)['properties'][number]
+    | (typeof WeatherChangeBeforeEventSignalManifest)['methods'][number]['name']
+    | (typeof WeatherChangeBeforeEventSignalManifest)['properties'][number]
   >
 >
 export type { _WeatherChangeBeforeEventSignalComplete }
@@ -2527,7 +2891,17 @@ export const WorldManifest = {
     { name: 'setTimeOfDay', minArity: 1, maxArity: 1 },
     { name: 'stopMusic', minArity: 0, maxArity: 0 },
   ],
-  properties: ['afterEvents', 'beforeEvents', 'gameRules', 'isHardcore', 'primitiveShapesManager', 'scoreboard', 'seed', 'structureManager', 'tickingAreaManager'],
+  properties: [
+    'afterEvents',
+    'beforeEvents',
+    'gameRules',
+    'isHardcore',
+    'primitiveShapesManager',
+    'scoreboard',
+    'seed',
+    'structureManager',
+    'tickingAreaManager',
+  ],
 } as const satisfies ClassManifest<MC.World>
 type _WorldComplete = AssertNever<
   Exclude<
@@ -2538,27 +2912,97 @@ type _WorldComplete = AssertNever<
 export type { _WorldComplete }
 
 export const WorldAfterEventsManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'blockContainerClosed',
+    'blockContainerOpened',
+    'blockExplode',
+    'buttonPush',
+    'dataDrivenEntityTrigger',
+    'effectAdd',
+    'entityContainerClosed',
+    'entityContainerOpened',
+    'entityDie',
+    'entityHeal',
+    'entityHealthChanged',
+    'entityHitBlock',
+    'entityHitEntity',
+    'entityHurt',
+    'entityItemDrop',
+    'entityItemPickup',
+    'entityLoad',
+    'entityRemove',
+    'entitySpawn',
+    'entityUpgrade',
+    'explosion',
+    'gameRuleChange',
+    'itemCompleteUse',
+    'itemReleaseUse',
+    'itemStartUse',
+    'itemStartUseOn',
+    'itemStopUse',
+    'itemStopUseOn',
+    'itemUse',
+    'leverAction',
+    'pistonActivate',
+    'playerBreakBlock',
+    'playerButtonInput',
+    'playerDimensionChange',
+    'playerEmote',
+    'playerGameModeChange',
+    'playerHotbarSelectedSlotChange',
+    'playerInputModeChange',
+    'playerInputPermissionCategoryChange',
+    'playerInteractWithBlock',
+    'playerInteractWithEntity',
+    'playerInventoryItemChange',
+    'playerJoin',
+    'playerLeave',
+    'playerPlaceBlock',
+    'playerSpawn',
+    'playerSwingStart',
+    'pressurePlatePop',
+    'pressurePlatePush',
+    'projectileHitBlock',
+    'projectileHitEntity',
+    'targetBlockHit',
+    'tripWireTrip',
+    'weatherChange',
+    'worldLoad',
   ],
-  properties: ['blockContainerClosed', 'blockContainerOpened', 'blockExplode', 'buttonPush', 'dataDrivenEntityTrigger', 'effectAdd', 'entityContainerClosed', 'entityContainerOpened', 'entityDie', 'entityHeal', 'entityHealthChanged', 'entityHitBlock', 'entityHitEntity', 'entityHurt', 'entityItemDrop', 'entityItemPickup', 'entityLoad', 'entityRemove', 'entitySpawn', 'entityUpgrade', 'explosion', 'gameRuleChange', 'itemCompleteUse', 'itemReleaseUse', 'itemStartUse', 'itemStartUseOn', 'itemStopUse', 'itemStopUseOn', 'itemUse', 'leverAction', 'pistonActivate', 'playerBreakBlock', 'playerButtonInput', 'playerDimensionChange', 'playerEmote', 'playerGameModeChange', 'playerHotbarSelectedSlotChange', 'playerInputModeChange', 'playerInputPermissionCategoryChange', 'playerInteractWithBlock', 'playerInteractWithEntity', 'playerInventoryItemChange', 'playerJoin', 'playerLeave', 'playerPlaceBlock', 'playerSpawn', 'playerSwingStart', 'pressurePlatePop', 'pressurePlatePush', 'projectileHitBlock', 'projectileHitEntity', 'targetBlockHit', 'tripWireTrip', 'weatherChange', 'worldLoad'],
 } as const satisfies ClassManifest<MC.WorldAfterEvents>
 type _WorldAfterEventsComplete = AssertNever<
   Exclude<
     keyof MC.WorldAfterEvents,
-    (typeof WorldAfterEventsManifest)['methods'][number]['name'] | (typeof WorldAfterEventsManifest)['properties'][number]
+    | (typeof WorldAfterEventsManifest)['methods'][number]['name']
+    | (typeof WorldAfterEventsManifest)['properties'][number]
   >
 >
 export type { _WorldAfterEventsComplete }
 
 export const WorldBeforeEventsManifest = {
-  methods: [
+  methods: [],
+  properties: [
+    'effectAdd',
+    'entityHeal',
+    'entityHurt',
+    'entityItemPickup',
+    'entityRemove',
+    'explosion',
+    'itemUse',
+    'playerBreakBlock',
+    'playerGameModeChange',
+    'playerInteractWithBlock',
+    'playerInteractWithEntity',
+    'playerLeave',
+    'weatherChange',
   ],
-  properties: ['effectAdd', 'entityHeal', 'entityHurt', 'entityItemPickup', 'entityRemove', 'explosion', 'itemUse', 'playerBreakBlock', 'playerGameModeChange', 'playerInteractWithBlock', 'playerInteractWithEntity', 'playerLeave', 'weatherChange'],
 } as const satisfies ClassManifest<MC.WorldBeforeEvents>
 type _WorldBeforeEventsComplete = AssertNever<
   Exclude<
     keyof MC.WorldBeforeEvents,
-    (typeof WorldBeforeEventsManifest)['methods'][number]['name'] | (typeof WorldBeforeEventsManifest)['properties'][number]
+    | (typeof WorldBeforeEventsManifest)['methods'][number]['name']
+    | (typeof WorldBeforeEventsManifest)['properties'][number]
   >
 >
 export type { _WorldBeforeEventsComplete }
@@ -2573,7 +3017,491 @@ export const WorldLoadAfterEventSignalManifest = {
 type _WorldLoadAfterEventSignalComplete = AssertNever<
   Exclude<
     keyof MC.WorldLoadAfterEventSignal,
-    (typeof WorldLoadAfterEventSignalManifest)['methods'][number]['name'] | (typeof WorldLoadAfterEventSignalManifest)['properties'][number]
+    | (typeof WorldLoadAfterEventSignalManifest)['methods'][number]['name']
+    | (typeof WorldLoadAfterEventSignalManifest)['properties'][number]
   >
 >
 export type { _WorldLoadAfterEventSignalComplete }
+
+/** Every class the generator emits a fake for. */
+export const FAKED_CLASSES = [
+  'BiomeTypes',
+  'BlockContainerClosedAfterEventSignal',
+  'BlockContainerOpenedAfterEventSignal',
+  'BlockExplodeAfterEventSignal',
+  'BlockStates',
+  'BlockTypes',
+  'ButtonPushAfterEventSignal',
+  'DataDrivenEntityTriggerAfterEventSignal',
+  'Dimension',
+  'DimensionTypes',
+  'Effect',
+  'EffectAddAfterEventSignal',
+  'EffectAddBeforeEventSignal',
+  'EffectType',
+  'EffectTypes',
+  'EnchantmentTypes',
+  'Entity',
+  'EntityAddRiderComponent',
+  'EntityAgeableComponent',
+  'EntityAttributeComponent',
+  'EntityBaseMovementComponent',
+  'EntityBreathableComponent',
+  'EntityCanClimbComponent',
+  'EntityCanFlyComponent',
+  'EntityCanPowerJumpComponent',
+  'EntityColor2Component',
+  'EntityColorComponent',
+  'EntityComponent',
+  'EntityContainerClosedAfterEventSignal',
+  'EntityContainerOpenedAfterEventSignal',
+  'EntityDieAfterEventSignal',
+  'EntityEnderInventoryComponent',
+  'EntityEquippableComponent',
+  'EntityExhaustionComponent',
+  'EntityFireImmuneComponent',
+  'EntityFloatsInLiquidComponent',
+  'EntityFlyingSpeedComponent',
+  'EntityFrictionModifierComponent',
+  'EntityHealAfterEventSignal',
+  'EntityHealBeforeEventSignal',
+  'EntityHealableComponent',
+  'EntityHealthChangedAfterEventSignal',
+  'EntityHealthComponent',
+  'EntityHitBlockAfterEventSignal',
+  'EntityHitEntityAfterEventSignal',
+  'EntityHungerComponent',
+  'EntityHurtAfterEventSignal',
+  'EntityHurtBeforeEventSignal',
+  'EntityInventoryComponent',
+  'EntityIsBabyComponent',
+  'EntityIsChargedComponent',
+  'EntityIsChestedComponent',
+  'EntityIsDyeableComponent',
+  'EntityIsHiddenWhenInvisibleComponent',
+  'EntityIsIgnitedComponent',
+  'EntityIsIllagerCaptainComponent',
+  'EntityIsSaddledComponent',
+  'EntityIsShakingComponent',
+  'EntityIsShearedComponent',
+  'EntityIsStackableComponent',
+  'EntityIsStunnedComponent',
+  'EntityIsTamedComponent',
+  'EntityItemComponent',
+  'EntityItemDropAfterEventSignal',
+  'EntityItemPickupAfterEventSignal',
+  'EntityItemPickupBeforeEventSignal',
+  'EntityLavaMovementComponent',
+  'EntityLeashableComponent',
+  'EntityLoadAfterEventSignal',
+  'EntityMarkVariantComponent',
+  'EntityMovementAmphibiousComponent',
+  'EntityMovementBasicComponent',
+  'EntityMovementComponent',
+  'EntityMovementFlyComponent',
+  'EntityMovementGenericComponent',
+  'EntityMovementGlideComponent',
+  'EntityMovementHoverComponent',
+  'EntityMovementJumpComponent',
+  'EntityMovementSkipComponent',
+  'EntityMovementSwayComponent',
+  'EntityNavigationClimbComponent',
+  'EntityNavigationComponent',
+  'EntityNavigationFloatComponent',
+  'EntityNavigationFlyComponent',
+  'EntityNavigationGenericComponent',
+  'EntityNavigationHoverComponent',
+  'EntityNavigationWalkComponent',
+  'EntityOnFireComponent',
+  'EntityProjectileComponent',
+  'EntityPushThroughComponent',
+  'EntityRemoveAfterEventSignal',
+  'EntityRemoveBeforeEventSignal',
+  'EntityRideableComponent',
+  'EntityRidingComponent',
+  'EntitySaturationComponent',
+  'EntityScaleComponent',
+  'EntitySkinIdComponent',
+  'EntitySpawnAfterEventSignal',
+  'EntityStrengthComponent',
+  'EntityTameMountComponent',
+  'EntityTameableComponent',
+  'EntityTypeFamilyComponent',
+  'EntityTypes',
+  'EntityUnderwaterMovementComponent',
+  'EntityUpgradeAfterEventSignal',
+  'EntityVariantComponent',
+  'EntityWantsJockeyComponent',
+  'ExplosionAfterEventSignal',
+  'ExplosionBeforeEventSignal',
+  'GameRuleChangeAfterEventSignal',
+  'ItemCompleteUseAfterEventSignal',
+  'ItemReleaseUseAfterEventSignal',
+  'ItemStartUseAfterEventSignal',
+  'ItemStartUseOnAfterEventSignal',
+  'ItemStopUseAfterEventSignal',
+  'ItemStopUseOnAfterEventSignal',
+  'ItemTypes',
+  'ItemUseAfterEventSignal',
+  'ItemUseBeforeEventSignal',
+  'LeverActionAfterEventSignal',
+  'PistonActivateAfterEventSignal',
+  'Player',
+  'PlayerBreakBlockAfterEventSignal',
+  'PlayerBreakBlockBeforeEventSignal',
+  'PlayerButtonInputAfterEventSignal',
+  'PlayerDimensionChangeAfterEventSignal',
+  'PlayerEmoteAfterEventSignal',
+  'PlayerGameModeChangeAfterEventSignal',
+  'PlayerGameModeChangeBeforeEventSignal',
+  'PlayerHotbarSelectedSlotChangeAfterEventSignal',
+  'PlayerInputModeChangeAfterEventSignal',
+  'PlayerInputPermissionCategoryChangeAfterEventSignal',
+  'PlayerInteractWithBlockAfterEventSignal',
+  'PlayerInteractWithBlockBeforeEventSignal',
+  'PlayerInteractWithEntityAfterEventSignal',
+  'PlayerInteractWithEntityBeforeEventSignal',
+  'PlayerInventoryItemChangeAfterEventSignal',
+  'PlayerJoinAfterEventSignal',
+  'PlayerLeaveAfterEventSignal',
+  'PlayerLeaveBeforeEventSignal',
+  'PlayerPlaceBlockAfterEventSignal',
+  'PlayerSpawnAfterEventSignal',
+  'PlayerSwingStartAfterEventSignal',
+  'PressurePlatePopAfterEventSignal',
+  'PressurePlatePushAfterEventSignal',
+  'ProjectileHitBlockAfterEventSignal',
+  'ProjectileHitEntityAfterEventSignal',
+  'Scoreboard',
+  'ScoreboardIdentity',
+  'ScoreboardObjective',
+  'ScreenDisplay',
+  'ScriptEventCommandMessageAfterEventSignal',
+  'ShutdownBeforeEventSignal',
+  'StartupBeforeEventSignal',
+  'System',
+  'SystemAfterEvents',
+  'SystemBeforeEvents',
+  'TargetBlockHitAfterEventSignal',
+  'TripWireTripAfterEventSignal',
+  'WeatherChangeAfterEventSignal',
+  'WeatherChangeBeforeEventSignal',
+  'World',
+  'WorldAfterEvents',
+  'WorldBeforeEvents',
+  'WorldLoadAfterEventSignal',
+] as const
+
+/** The event-signal classes, which all share one subscribe/unsubscribe behaviour. */
+export const SIGNAL_CLASSES = [
+  'BlockContainerClosedAfterEventSignal',
+  'BlockContainerOpenedAfterEventSignal',
+  'BlockExplodeAfterEventSignal',
+  'ButtonPushAfterEventSignal',
+  'DataDrivenEntityTriggerAfterEventSignal',
+  'EffectAddAfterEventSignal',
+  'EffectAddBeforeEventSignal',
+  'EntityContainerClosedAfterEventSignal',
+  'EntityContainerOpenedAfterEventSignal',
+  'EntityDieAfterEventSignal',
+  'EntityHealAfterEventSignal',
+  'EntityHealBeforeEventSignal',
+  'EntityHealthChangedAfterEventSignal',
+  'EntityHitBlockAfterEventSignal',
+  'EntityHitEntityAfterEventSignal',
+  'EntityHurtAfterEventSignal',
+  'EntityHurtBeforeEventSignal',
+  'EntityItemDropAfterEventSignal',
+  'EntityItemPickupAfterEventSignal',
+  'EntityItemPickupBeforeEventSignal',
+  'EntityLoadAfterEventSignal',
+  'EntityRemoveAfterEventSignal',
+  'EntityRemoveBeforeEventSignal',
+  'EntitySpawnAfterEventSignal',
+  'EntityUpgradeAfterEventSignal',
+  'ExplosionAfterEventSignal',
+  'ExplosionBeforeEventSignal',
+  'GameRuleChangeAfterEventSignal',
+  'ItemCompleteUseAfterEventSignal',
+  'ItemReleaseUseAfterEventSignal',
+  'ItemStartUseAfterEventSignal',
+  'ItemStartUseOnAfterEventSignal',
+  'ItemStopUseAfterEventSignal',
+  'ItemStopUseOnAfterEventSignal',
+  'ItemUseAfterEventSignal',
+  'ItemUseBeforeEventSignal',
+  'LeverActionAfterEventSignal',
+  'PistonActivateAfterEventSignal',
+  'PlayerBreakBlockAfterEventSignal',
+  'PlayerBreakBlockBeforeEventSignal',
+  'PlayerButtonInputAfterEventSignal',
+  'PlayerDimensionChangeAfterEventSignal',
+  'PlayerEmoteAfterEventSignal',
+  'PlayerGameModeChangeAfterEventSignal',
+  'PlayerGameModeChangeBeforeEventSignal',
+  'PlayerHotbarSelectedSlotChangeAfterEventSignal',
+  'PlayerInputModeChangeAfterEventSignal',
+  'PlayerInputPermissionCategoryChangeAfterEventSignal',
+  'PlayerInteractWithBlockAfterEventSignal',
+  'PlayerInteractWithBlockBeforeEventSignal',
+  'PlayerInteractWithEntityAfterEventSignal',
+  'PlayerInteractWithEntityBeforeEventSignal',
+  'PlayerInventoryItemChangeAfterEventSignal',
+  'PlayerJoinAfterEventSignal',
+  'PlayerLeaveAfterEventSignal',
+  'PlayerLeaveBeforeEventSignal',
+  'PlayerPlaceBlockAfterEventSignal',
+  'PlayerSpawnAfterEventSignal',
+  'PlayerSwingStartAfterEventSignal',
+  'PressurePlatePopAfterEventSignal',
+  'PressurePlatePushAfterEventSignal',
+  'ProjectileHitBlockAfterEventSignal',
+  'ProjectileHitEntityAfterEventSignal',
+  'ScriptEventCommandMessageAfterEventSignal',
+  'ShutdownBeforeEventSignal',
+  'StartupBeforeEventSignal',
+  'TargetBlockHitAfterEventSignal',
+  'TripWireTripAfterEventSignal',
+  'WeatherChangeAfterEventSignal',
+  'WeatherChangeBeforeEventSignal',
+  'WorldLoadAfterEventSignal',
+] as const
+
+/** The entity component classes, and the attribute-shaped ones among them. */
+export const COMPONENT_CLASSES = [
+  'EntityAddRiderComponent',
+  'EntityAgeableComponent',
+  'EntityAttributeComponent',
+  'EntityBaseMovementComponent',
+  'EntityBreathableComponent',
+  'EntityCanClimbComponent',
+  'EntityCanFlyComponent',
+  'EntityCanPowerJumpComponent',
+  'EntityColor2Component',
+  'EntityColorComponent',
+  'EntityComponent',
+  'EntityEnderInventoryComponent',
+  'EntityEquippableComponent',
+  'EntityExhaustionComponent',
+  'EntityFireImmuneComponent',
+  'EntityFloatsInLiquidComponent',
+  'EntityFlyingSpeedComponent',
+  'EntityFrictionModifierComponent',
+  'EntityHealableComponent',
+  'EntityHealthComponent',
+  'EntityHungerComponent',
+  'EntityInventoryComponent',
+  'EntityIsBabyComponent',
+  'EntityIsChargedComponent',
+  'EntityIsChestedComponent',
+  'EntityIsDyeableComponent',
+  'EntityIsHiddenWhenInvisibleComponent',
+  'EntityIsIgnitedComponent',
+  'EntityIsIllagerCaptainComponent',
+  'EntityIsSaddledComponent',
+  'EntityIsShakingComponent',
+  'EntityIsShearedComponent',
+  'EntityIsStackableComponent',
+  'EntityIsStunnedComponent',
+  'EntityIsTamedComponent',
+  'EntityItemComponent',
+  'EntityLavaMovementComponent',
+  'EntityLeashableComponent',
+  'EntityMarkVariantComponent',
+  'EntityMovementAmphibiousComponent',
+  'EntityMovementBasicComponent',
+  'EntityMovementComponent',
+  'EntityMovementFlyComponent',
+  'EntityMovementGenericComponent',
+  'EntityMovementGlideComponent',
+  'EntityMovementHoverComponent',
+  'EntityMovementJumpComponent',
+  'EntityMovementSkipComponent',
+  'EntityMovementSwayComponent',
+  'EntityNavigationClimbComponent',
+  'EntityNavigationComponent',
+  'EntityNavigationFloatComponent',
+  'EntityNavigationFlyComponent',
+  'EntityNavigationGenericComponent',
+  'EntityNavigationHoverComponent',
+  'EntityNavigationWalkComponent',
+  'EntityOnFireComponent',
+  'EntityProjectileComponent',
+  'EntityPushThroughComponent',
+  'EntityRideableComponent',
+  'EntityRidingComponent',
+  'EntitySaturationComponent',
+  'EntityScaleComponent',
+  'EntitySkinIdComponent',
+  'EntityStrengthComponent',
+  'EntityTameableComponent',
+  'EntityTameMountComponent',
+  'EntityTypeFamilyComponent',
+  'EntityUnderwaterMovementComponent',
+  'EntityVariantComponent',
+  'EntityWantsJockeyComponent',
+] as const
+export const ATTRIBUTE_COMPONENT_CLASSES = [
+  'EntityExhaustionComponent',
+  'EntityHealthComponent',
+  'EntityHungerComponent',
+  'EntityLavaMovementComponent',
+  'EntityMovementComponent',
+  'EntitySaturationComponent',
+  'EntityUnderwaterMovementComponent',
+] as const
+
+/** The signal class behind each name on each container, as the declarations give them. */
+export const SIGNAL_CLASS_BY_CONTAINER: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  WorldAfterEvents: {
+    blockContainerClosed: 'BlockContainerClosedAfterEventSignal',
+    blockContainerOpened: 'BlockContainerOpenedAfterEventSignal',
+    blockExplode: 'BlockExplodeAfterEventSignal',
+    buttonPush: 'ButtonPushAfterEventSignal',
+    dataDrivenEntityTrigger: 'DataDrivenEntityTriggerAfterEventSignal',
+    effectAdd: 'EffectAddAfterEventSignal',
+    entityContainerClosed: 'EntityContainerClosedAfterEventSignal',
+    entityContainerOpened: 'EntityContainerOpenedAfterEventSignal',
+    entityDie: 'EntityDieAfterEventSignal',
+    entityHeal: 'EntityHealAfterEventSignal',
+    entityHealthChanged: 'EntityHealthChangedAfterEventSignal',
+    entityHitBlock: 'EntityHitBlockAfterEventSignal',
+    entityHitEntity: 'EntityHitEntityAfterEventSignal',
+    entityHurt: 'EntityHurtAfterEventSignal',
+    entityItemDrop: 'EntityItemDropAfterEventSignal',
+    entityItemPickup: 'EntityItemPickupAfterEventSignal',
+    entityLoad: 'EntityLoadAfterEventSignal',
+    entityRemove: 'EntityRemoveAfterEventSignal',
+    entitySpawn: 'EntitySpawnAfterEventSignal',
+    entityUpgrade: 'EntityUpgradeAfterEventSignal',
+    explosion: 'ExplosionAfterEventSignal',
+    gameRuleChange: 'GameRuleChangeAfterEventSignal',
+    itemCompleteUse: 'ItemCompleteUseAfterEventSignal',
+    itemReleaseUse: 'ItemReleaseUseAfterEventSignal',
+    itemStartUse: 'ItemStartUseAfterEventSignal',
+    itemStartUseOn: 'ItemStartUseOnAfterEventSignal',
+    itemStopUse: 'ItemStopUseAfterEventSignal',
+    itemStopUseOn: 'ItemStopUseOnAfterEventSignal',
+    itemUse: 'ItemUseAfterEventSignal',
+    leverAction: 'LeverActionAfterEventSignal',
+    pistonActivate: 'PistonActivateAfterEventSignal',
+    playerBreakBlock: 'PlayerBreakBlockAfterEventSignal',
+    playerButtonInput: 'PlayerButtonInputAfterEventSignal',
+    playerDimensionChange: 'PlayerDimensionChangeAfterEventSignal',
+    playerEmote: 'PlayerEmoteAfterEventSignal',
+    playerGameModeChange: 'PlayerGameModeChangeAfterEventSignal',
+    playerHotbarSelectedSlotChange: 'PlayerHotbarSelectedSlotChangeAfterEventSignal',
+    playerInputModeChange: 'PlayerInputModeChangeAfterEventSignal',
+    playerInputPermissionCategoryChange: 'PlayerInputPermissionCategoryChangeAfterEventSignal',
+    playerInteractWithBlock: 'PlayerInteractWithBlockAfterEventSignal',
+    playerInteractWithEntity: 'PlayerInteractWithEntityAfterEventSignal',
+    playerInventoryItemChange: 'PlayerInventoryItemChangeAfterEventSignal',
+    playerJoin: 'PlayerJoinAfterEventSignal',
+    playerLeave: 'PlayerLeaveAfterEventSignal',
+    playerPlaceBlock: 'PlayerPlaceBlockAfterEventSignal',
+    playerSpawn: 'PlayerSpawnAfterEventSignal',
+    playerSwingStart: 'PlayerSwingStartAfterEventSignal',
+    pressurePlatePop: 'PressurePlatePopAfterEventSignal',
+    pressurePlatePush: 'PressurePlatePushAfterEventSignal',
+    projectileHitBlock: 'ProjectileHitBlockAfterEventSignal',
+    projectileHitEntity: 'ProjectileHitEntityAfterEventSignal',
+    targetBlockHit: 'TargetBlockHitAfterEventSignal',
+    tripWireTrip: 'TripWireTripAfterEventSignal',
+    weatherChange: 'WeatherChangeAfterEventSignal',
+    worldLoad: 'WorldLoadAfterEventSignal',
+  },
+  WorldBeforeEvents: {
+    effectAdd: 'EffectAddBeforeEventSignal',
+    entityHeal: 'EntityHealBeforeEventSignal',
+    entityHurt: 'EntityHurtBeforeEventSignal',
+    entityItemPickup: 'EntityItemPickupBeforeEventSignal',
+    entityRemove: 'EntityRemoveBeforeEventSignal',
+    explosion: 'ExplosionBeforeEventSignal',
+    itemUse: 'ItemUseBeforeEventSignal',
+    playerBreakBlock: 'PlayerBreakBlockBeforeEventSignal',
+    playerGameModeChange: 'PlayerGameModeChangeBeforeEventSignal',
+    playerInteractWithBlock: 'PlayerInteractWithBlockBeforeEventSignal',
+    playerInteractWithEntity: 'PlayerInteractWithEntityBeforeEventSignal',
+    playerLeave: 'PlayerLeaveBeforeEventSignal',
+    weatherChange: 'WeatherChangeBeforeEventSignal',
+  },
+  SystemAfterEvents: {
+    scriptEventReceive: 'ScriptEventCommandMessageAfterEventSignal',
+  },
+  SystemBeforeEvents: {
+    shutdown: 'ShutdownBeforeEventSignal',
+    startup: 'StartupBeforeEventSignal',
+  },
+}
+
+/** The class behind each canonical component id, as EntityComponentTypeMap gives it. */
+export const COMPONENT_CLASS_BY_ID: Readonly<Record<string, string>> = {
+  'minecraft:addrider': 'EntityAddRiderComponent',
+  'minecraft:ageable': 'EntityAgeableComponent',
+  'minecraft:breathable': 'EntityBreathableComponent',
+  'minecraft:can_climb': 'EntityCanClimbComponent',
+  'minecraft:can_fly': 'EntityCanFlyComponent',
+  'minecraft:can_power_jump': 'EntityCanPowerJumpComponent',
+  'minecraft:color': 'EntityColorComponent',
+  'minecraft:color2': 'EntityColor2Component',
+  'minecraft:cursor_inventory': 'PlayerCursorInventoryComponent',
+  'minecraft:ender_inventory': 'EntityEnderInventoryComponent',
+  'minecraft:equippable': 'EntityEquippableComponent',
+  'minecraft:fire_immune': 'EntityFireImmuneComponent',
+  'minecraft:floats_in_liquid': 'EntityFloatsInLiquidComponent',
+  'minecraft:flying_speed': 'EntityFlyingSpeedComponent',
+  'minecraft:friction_modifier': 'EntityFrictionModifierComponent',
+  'minecraft:healable': 'EntityHealableComponent',
+  'minecraft:health': 'EntityHealthComponent',
+  'minecraft:inventory': 'EntityInventoryComponent',
+  'minecraft:is_baby': 'EntityIsBabyComponent',
+  'minecraft:is_charged': 'EntityIsChargedComponent',
+  'minecraft:is_chested': 'EntityIsChestedComponent',
+  'minecraft:is_dyeable': 'EntityIsDyeableComponent',
+  'minecraft:is_hidden_when_invisible': 'EntityIsHiddenWhenInvisibleComponent',
+  'minecraft:is_ignited': 'EntityIsIgnitedComponent',
+  'minecraft:is_illager_captain': 'EntityIsIllagerCaptainComponent',
+  'minecraft:is_saddled': 'EntityIsSaddledComponent',
+  'minecraft:is_shaking': 'EntityIsShakingComponent',
+  'minecraft:is_sheared': 'EntityIsShearedComponent',
+  'minecraft:is_stackable': 'EntityIsStackableComponent',
+  'minecraft:is_stunned': 'EntityIsStunnedComponent',
+  'minecraft:is_tamed': 'EntityIsTamedComponent',
+  'minecraft:item': 'EntityItemComponent',
+  'minecraft:lava_movement': 'EntityLavaMovementComponent',
+  'minecraft:leashable': 'EntityLeashableComponent',
+  'minecraft:mark_variant': 'EntityMarkVariantComponent',
+  'minecraft:movement': 'EntityMovementComponent',
+  'minecraft:movement.amphibious': 'EntityMovementAmphibiousComponent',
+  'minecraft:movement.basic': 'EntityMovementBasicComponent',
+  'minecraft:movement.fly': 'EntityMovementFlyComponent',
+  'minecraft:movement.generic': 'EntityMovementGenericComponent',
+  'minecraft:movement.glide': 'EntityMovementGlideComponent',
+  'minecraft:movement.hover': 'EntityMovementHoverComponent',
+  'minecraft:movement.jump': 'EntityMovementJumpComponent',
+  'minecraft:movement.skip': 'EntityMovementSkipComponent',
+  'minecraft:movement.sway': 'EntityMovementSwayComponent',
+  'minecraft:navigation.climb': 'EntityNavigationClimbComponent',
+  'minecraft:navigation.float': 'EntityNavigationFloatComponent',
+  'minecraft:navigation.fly': 'EntityNavigationFlyComponent',
+  'minecraft:navigation.generic': 'EntityNavigationGenericComponent',
+  'minecraft:navigation.hover': 'EntityNavigationHoverComponent',
+  'minecraft:navigation.walk': 'EntityNavigationWalkComponent',
+  'minecraft:onfire': 'EntityOnFireComponent',
+  'minecraft:player.exhaustion': 'EntityExhaustionComponent',
+  'minecraft:player.hunger': 'EntityHungerComponent',
+  'minecraft:player.saturation': 'EntitySaturationComponent',
+  'minecraft:projectile': 'EntityProjectileComponent',
+  'minecraft:push_through': 'EntityPushThroughComponent',
+  'minecraft:rideable': 'EntityRideableComponent',
+  'minecraft:riding': 'EntityRidingComponent',
+  'minecraft:scale': 'EntityScaleComponent',
+  'minecraft:skin_id': 'EntitySkinIdComponent',
+  'minecraft:strength': 'EntityStrengthComponent',
+  'minecraft:tameable': 'EntityTameableComponent',
+  'minecraft:tamemount': 'EntityTameMountComponent',
+  'minecraft:type_family': 'EntityTypeFamilyComponent',
+  'minecraft:underwater_movement': 'EntityUnderwaterMovementComponent',
+  'minecraft:variant': 'EntityVariantComponent',
+  'minecraft:wants_jockey': 'EntityWantsJockeyComponent',
+}
