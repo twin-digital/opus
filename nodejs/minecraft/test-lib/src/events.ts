@@ -20,7 +20,7 @@ import {
   WorldBeforeEventsManifest,
 } from './generated/manifests.js'
 import { construct } from './runtime/construct.js'
-import { registerBehaviour, type ClassBehaviour } from './runtime/member.js'
+import { registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
 import {
   dataOf,
   serverOf,
@@ -143,7 +143,7 @@ const signalBehaviour: ClassBehaviour = {
     // A filtered subscription is not modelled; honouring the call and dropping the filter would
     // deliver events the engine would have withheld.
     if (options !== undefined) {
-      throw new NotImplementedError('EventSignal.subscribe(options)')
+      throw new NotImplementedError(`${stateOf(fake).className}.subscribe`)
     }
     dataOf<SignalData>(fake).signal.subscribers.add(callback)
     return callback

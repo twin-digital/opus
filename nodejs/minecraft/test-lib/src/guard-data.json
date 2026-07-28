@@ -3,12 +3,16 @@
     "What each member of a faked class does when its owner is invalid, transcribed from the",
     "reflective sweeps of the engine (f:invalidation-guard-list-complete,",
     "f:attribute-guard-classes-observed, f:effect-members-throw-plain-error). This is an input to",
-    "tools/generate.mjs, which writes the matching prologue into every generated member.",
+    "tools/generate.ts, which writes the matching prologue into every generated member.",
     "",
     "A shape is one of: none (readable), invalid-entity-get, invalid-entity-set,",
     "invalid-entity-call (InvalidEntityError, whose message names that access shape),",
     "failed-property[:internalName] and failed-call[:name] (a plain Error). An override may name",
-    "the string the engine puts in the message where it differs from the member's own name."
+    "the string the engine puts in the message where it differs from the member's own name.",
+    "",
+    "The entityComponent table — the other 61 components — is the one table without a sweep behind",
+    "it: it follows the declarations' own @throws split, which leaves isValid and typeId unannotated",
+    "and names InvalidEntityError everywhere else."
   ],
   "tables": {
     "entity": {

@@ -6,6 +6,9 @@
  * `excludeTypes`, `excludeTags` and `excludeNames`. Each of the other eighteen throws
  * `NotImplementedError` naming the field it could not honour, so a test learns which filter was
  * dropped instead of reading a result that quietly ignored it.
+ *
+ * The matcher belongs to entity-model; the world and dimension lookups in `world.ts` import it
+ * rather than filtering themselves, so both routes run one mechanism.
  */
 
 import type * as MC from '@minecraft/server'

@@ -52,7 +52,8 @@ export type DynamicPropertyValue = boolean | number | string | MC.Vector3
 /** One scoreboard objective and the scores it holds per participant. */
 export interface ObjectiveState {
   readonly id: string
-  readonly displayName: string
+  /** Optional in the declarations, so an objective added without one has none to read. */
+  readonly displayName?: string
   readonly objective: MC.ScoreboardObjective
   /** Keyed by participant identity — an entity's scoreboard id, or a fake-player name. */
   readonly scores: Map<string, number>

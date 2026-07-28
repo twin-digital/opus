@@ -9,6 +9,7 @@
 
 import type * as MC from '@minecraft/server'
 
+import type { EntityComponentId } from './ids.js'
 import type { AttributeValues } from './runtime/state.js'
 
 /**
@@ -29,6 +30,6 @@ export const addComponent = (_entity: MC.Entity, _componentId: string, _state?: 
 }
 
 /** Detaches a component from a live entity, and answers whether it was there. */
-export const removeComponent = (_entity: MC.Entity, _componentId: string): boolean => {
+export const removeComponent = (_entity: MC.Entity, _componentId: EntityComponentId): boolean => {
   throw new Error('component detachment is not built yet')
 }
