@@ -116,9 +116,11 @@ export const createSignals = (server: ServerState): SignalContainers => {
       if (signalClass === undefined) {
         continue
       }
-      const state: SignalState = { scope, name, subscribers: new Set(), fake: {} }
-      const fake = construct(signalClass, { data: { server, signal: state } satisfies SignalData })
-      server.signals.set(signalKey(scope, name), { ...state, fake })
+      // One record, shared by the map and by the fake's own data: `fake` is filled in after the
+      // fake exists, so both routes read the same signal.
+      const state: SignalState = { scope, name, subscribers: new Set(), fake: undefined as unknown as object }
+      state.fake = construct(signalClass, { data: { server, signal: state } satisfies SignalData })
+      server.signals.set(signalKey(scope, name), state)
     }
     containers[className] = construct(className, { data: { server } satisfies ContainerData })
   }

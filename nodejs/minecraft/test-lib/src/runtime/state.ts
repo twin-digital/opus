@@ -32,7 +32,7 @@ export interface SignalState {
   readonly name: string
   readonly subscribers: Set<(payload: never) => void>
   /** The signal object the container hands out — the one a test passes to `emit`. */
-  readonly fake: object
+  fake: object
 }
 
 /** A callback `system` is holding until the test advances the tick it is due on. */

@@ -25,7 +25,11 @@ export type ComponentSpec = AttributeValues | number | readonly [min: number, ma
  * through data-driven paths these fakes do not model. The state argument is accepted only on one of
  * the seven attribute-shaped ids; passing it with any other id throws `InvalidArgumentError`.
  */
-export const addComponent = (_entity: MC.Entity, _componentId: string, _state?: ComponentSpec): MC.EntityComponent => {
+export const addComponent = <T extends EntityComponentId>(
+  _entity: MC.Entity,
+  _componentId: T,
+  _state?: ComponentSpec,
+): MC.EntityComponentTypeMap[T] => {
   throw new Error('component attachment is not built yet')
 }
 

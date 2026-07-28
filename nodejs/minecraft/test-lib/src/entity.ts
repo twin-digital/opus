@@ -52,6 +52,15 @@ export const invalidate = (_entity: MC.Entity): void => {
   throw new Error('invalidation is not built yet')
 }
 
+/**
+ * The `kill()` path for an entity carrying no health component: it fires `entityDie` with cause
+ * `selfDestruct` and nothing else, and leaves the reference valid and registered. `kill` itself is
+ * registered by the component model, which branches here when no health component is attached.
+ */
+export const killWithoutHealth = (_entity: MC.Entity): void => {
+  throw new Error('the health-less kill path is not built yet')
+}
+
 /** The `triggerEvent` calls made on an entity, in order. */
 export const getTriggeredEvents = (_entity: MC.Entity): readonly string[] => {
   throw new Error('trigger-event recording is not built yet')
