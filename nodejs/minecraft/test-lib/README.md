@@ -228,7 +228,7 @@ considered, which is not the same as a promise about it.
 | `for-in` over an entity                                                                                                       | modelled     | the generator defines the prototype members `enumerable: true`, so `for-in` walks the engine's 62 while `Object.keys` still reads 2                                                                                                                  |
 | items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes | not modelled | declared in full and throwing                                                                                                                                                                                                                        |
 | a filtered subscription — any options argument to `subscribe`                                                                 | divergence   | the call throws `NotImplementedError` naming the signal class; the engine honours the filter, and delivering unfiltered would hand a pack events the engine withholds                                                                                |
-| invalidation of a health-less corpse                                                                                          | divergence   | `kill()` on an entity carrying no health component leaves the reference valid; the engine eventually invalidates it, and when varies by type — a test that wants the corpse invalid says so with `invalidate()`                                      |
+| invalidation of a health-less corpse                                                                                          | divergence   | `kill()` on an entity carrying no health component leaves the reference valid; the engine invalidates it immediately and deterministically, unlike a killed mob's variable window — a test that wants the corpse invalid says so with `invalidate()` |
 | the basis the effect replacement rule compares on                                                                             | divergence   | the rule compares the duration the effect carries, which never decays; the engine compares the duration remaining, so the two agree on the tick an effect was applied and part company once ticks pass                                               |
 
 ## Divergences in detail
@@ -363,8 +363,10 @@ library starts no timer and awaits nothing.
 ### invalidation of a health-less corpse
 
 `kill()` on an entity carrying no health component fires `entityDie` and leaves the reference valid.
-The engine eventually invalidates a corpse, and when it does varies by entity type. A test that wants
-a dead reference invalid says so with `invalidate()`.
+The engine invalidates that reference immediately — an arrow reads `isValid === false` in the same
+statement sequence as the `kill()` call, and stays invalid — so this case is deterministic rather
+than the variable window a killed mob's corpse has. A test that wants the dead reference invalid
+says so with `invalidate()`.
 
 ## Keeping this in step
 
