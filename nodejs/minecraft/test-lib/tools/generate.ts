@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { format, resolveConfig } from 'prettier'
 import ts from 'typescript'
 
 import guardData from '../src/guard-data.json' with { type: 'json' }
@@ -284,8 +285,8 @@ const declaredTypeNames = moduleExports
 
 /** Members held as own data properties, so `Object.keys` reads what the engine's does. */
 const OWN_PROPERTIES: Readonly<Record<string, readonly string[] | undefined>> = {
-  Entity: ['id', 'typeId'],
-  Player: ['id', 'typeId'],
+  Entity: ['typeId', 'id'],
+  Player: ['typeId', 'id'],
 }
 
 const RUNTIME_IMPORTS = [
@@ -553,7 +554,10 @@ fs.writeFileSync(
     '',
   ].join('\n'),
 )
-fs.writeFileSync(path.join(outDir, 'manifests.ts'), manifestFile())
+// The manifests are committed, so they are written the way the repo formats everything else.
+const manifestPath = path.join(outDir, 'manifests.ts')
+const prettierConfig = await resolveConfig(manifestPath)
+fs.writeFileSync(manifestPath, await format(manifestFile(), { ...prettierConfig, filepath: manifestPath }))
 
 const memberCount = FAKED.reduce((total, name) => {
   const { methods, properties } = surfaceFor(name)

@@ -18,7 +18,7 @@ export interface OutputRecord {
 
 /** An error a subscriber threw, which the dispatch absorbed as the engine does. */
 export interface HandlerError {
-  /** The signal whose subscriber threw, as `afterEvents.entityHurt` names it on the world. */
+  /** The signal whose subscriber threw, fully qualified — `world.afterEvents.entityHurt`. */
   readonly signal: string
   readonly error: unknown
 }
