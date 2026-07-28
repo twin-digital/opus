@@ -28,5 +28,10 @@ export interface WorkingEntry {
   package: CandidatePackage
   /** what the source manifest parsed to; absent when it could not be read or parsed */
   manifest?: unknown
+  /**
+   * dotted paths of the fields whose form the source contradicted. One fault yields one problem,
+   * so every check and completion reading a named field is skipped.
+   */
+  formFaults: Set<string>
   problems: Problem[]
 }

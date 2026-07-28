@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { PackKind, Problem } from '../types.js'
+import type { PackKind } from '../types.js'
 import type { CandidatePackage, WorkingEntry } from './candidate.js'
-import { isRecord, messageOf, parseJson } from './json.js'
+import { messageOf, parseJson } from './json.js'
+import { checkManifestShape } from './manifest-shape.js'
 import { joinRelative } from './paths.js'
 
 /** The two fixed source paths, and the kind each declares. */
@@ -24,10 +25,10 @@ const ABSENT = new Set(['ENOENT', 'ENOTDIR'])
  * package directory and the kind, and the output tree is never read.
  *
  * A manifest that cannot be opened, read, or parsed is the single `manifest-unreadable` problem
- * and the entry carries no manifest. One that parses but whose root, `header`, `modules`, or
- * `dependencies` is not the container the format documents is `manifest-shape-invalid` naming the
- * offending field; the manifest is still reported as it parsed, and later stages skip the part
- * that is misshapen.
+ * and the entry carries no manifest. One that parses is checked against the shapes the format
+ * documents — containers first, then the form of every field `PackManifest` declares — and each
+ * fault is `manifest-shape-invalid` naming the offending field. The manifest is still reported as
+ * it parsed, and later stages skip the part that faulted.
  *
  * @param workspaceRoot - the absolute path of the workspace root
  * @param candidates - the packages to probe
@@ -53,6 +54,7 @@ export async function locatePacks(
         sourceDir: joinRelative(candidate.packageDir, directory),
         outputDir: joinRelative(candidate.packageDir, 'dist', directory),
         package: candidate,
+        formFaults: new Set(),
         problems: [],
       }
 
@@ -64,7 +66,9 @@ export async function locatePacks(
         })
       } else {
         entry.manifest = read.value
-        entry.problems.push(...shapeProblems(read.value))
+        const shape = checkManifestShape(read.value)
+        entry.formFaults = shape.faults
+        entry.problems.push(...shape.problems)
       }
 
       entries.push(entry)
@@ -97,52 +101,4 @@ async function readManifest(manifestPath: string): Promise<ManifestRead | undefi
   } catch (error) {
     return { error: messageOf(error) }
   }
-}
-
-/** One problem per misshapen container, naming the offending value and nothing derived from it. */
-function shapeProblems(manifest: unknown): Problem[] {
-  if (!isRecord(manifest)) {
-    return [
-      {
-        code: 'manifest-shape-invalid',
-        message: 'the manifest is not a JSON object',
-        field: '',
-      },
-    ]
-  }
-
-  const problems: Problem[] = []
-  if (manifest.header !== undefined && !isRecord(manifest.header)) {
-    problems.push({
-      code: 'manifest-shape-invalid',
-      message: 'header is not an object',
-      field: 'header',
-    })
-  }
-
-  for (const field of ['modules', 'dependencies'] as const) {
-    const value = manifest[field]
-    if (value === undefined) {
-      continue
-    }
-    if (!Array.isArray(value)) {
-      problems.push({
-        code: 'manifest-shape-invalid',
-        message: `${field} is not an array`,
-        field,
-      })
-      continue
-    }
-    value.forEach((element, index) => {
-      if (!isRecord(element)) {
-        problems.push({
-          code: 'manifest-shape-invalid',
-          message: `${field}[${String(index)}] is not an object`,
-          field: `${field}[${String(index)}]`,
-        })
-      }
-    })
-  }
-
-  return problems
 }

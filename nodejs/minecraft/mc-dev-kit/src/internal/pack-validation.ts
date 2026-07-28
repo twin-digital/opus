@@ -2,6 +2,7 @@ import type { PackKind } from '../types.js'
 import type { WorkingEntry } from './candidate.js'
 import { isRecord } from './json.js'
 import { sourceUuid } from './manifest-completion.js'
+import { classifyDependency } from './manifest-shape.js'
 
 /** The module types that carry a kind. Every other type is ignored, neither corroborating nor a fault. */
 const CORROBORATING: Record<PackKind, readonly string[]> = {
@@ -41,7 +42,7 @@ function validatePack(entry: WorkingEntry): void {
     return
   }
 
-  if (manifest.header === undefined || isRecord(manifest.header)) {
+  if ((manifest.header === undefined || isRecord(manifest.header)) && !entry.formFaults.has('header.uuid')) {
     if (sourceUuid(entry) === undefined) {
       entry.problems.push({
         code: 'manifest-missing-uuid',
@@ -57,6 +58,8 @@ function validatePack(entry: WorkingEntry): void {
   const modules: unknown[] = Array.isArray(manifest.modules) ? manifest.modules : []
   const foreign = entry.kind === 'behavior' ? CORROBORATING.resource : CORROBORATING.behavior
   let corroborated = false
+  // the kit cannot know what a module whose type faulted would have corroborated
+  const typeFaulted = modules.some((_module, index) => entry.formFaults.has(`modules[${String(index)}].type`))
 
   for (const [index, module] of modules.entries()) {
     if (!isRecord(module)) {
@@ -65,16 +68,18 @@ function validatePack(entry: WorkingEntry): void {
     const field = `modules[${String(index)}]`
     const type = module.type
     if (typeof type !== 'string') {
-      entry.problems.push({
-        code: 'module-missing-type',
-        message: `${field} declares no type; every module must`,
-        field,
-      })
+      if (!entry.formFaults.has(`${field}.type`)) {
+        entry.problems.push({
+          code: 'module-missing-type',
+          message: `${field} declares no type; every module must`,
+          field,
+        })
+      }
       continue
     }
     if (CORROBORATING[entry.kind].includes(type)) {
       corroborated = true
-    } else if (foreign.includes(type)) {
+    } else if (foreign.includes(type) && !typeFaulted) {
       entry.problems.push({
         code: 'foreign-kind-module',
         message: `${field} is a ${type} module, which belongs to the other kind of pack`,
@@ -84,7 +89,7 @@ function validatePack(entry: WorkingEntry): void {
     }
   }
 
-  if (!corroborated) {
+  if (!corroborated && !typeFaulted) {
     entry.problems.push({
       code: 'kind-not-corroborated',
       message: `no module corroborates the ${entry.kind} pack its directory declares`,
@@ -143,11 +148,12 @@ function propagateInvalidity(entries: readonly WorkingEntry[]): void {
       }
 
       dependencies.forEach((dependency, index) => {
-        // an entry naming both a uuid and a module_name is malformed, and is never resolved
+        // a malformed entry is never resolved, and neither is one whose uuid faulted
         if (
           !isRecord(dependency) ||
-          typeof dependency.uuid !== 'string' ||
-          typeof dependency.module_name === 'string'
+          classifyDependency(dependency) !== 'pack' ||
+          entry.formFaults.has(`dependencies[${String(index)}].uuid`) ||
+          typeof dependency.uuid !== 'string'
         ) {
           return
         }

@@ -89,6 +89,8 @@ export interface WorkingEntryOptions {
   packageJson?: Record<string, unknown>
   /** the source manifest as parsed; `undefined` stands for one that could not be read */
   manifest?: unknown
+  /** dotted paths the form pass faulted, as the locator would have recorded them */
+  formFaults?: string[]
 }
 
 /**
@@ -101,6 +103,7 @@ export function workingEntry({
   packageJson = { name: '@scope/mc-pack-1', version: '1.2.3' },
   packageName = typeof packageJson.name === 'string' ? packageJson.name : path.basename(packageDir),
   manifest = packManifest(kind),
+  formFaults = [],
 }: WorkingEntryOptions = {}): WorkingEntry {
   const directory = kind === 'behavior' ? 'behavior_pack' : 'resource_pack'
   const prefix = packageDir === '.' ? '' : `${packageDir}/`
@@ -118,6 +121,7 @@ export function workingEntry({
     outputDir: `${prefix}dist/${directory}`,
     package: candidate,
     manifest,
+    formFaults: new Set(formFaults),
     problems: [],
   }
 }

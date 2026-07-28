@@ -320,6 +320,40 @@ describe('discoverPacks', () => {
       ])
     })
 
+    it('reports a field whose form the source contradicts, and nothing that reads it', async () => {
+      const workspace = await writeWorkspace({
+        'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+        'package.json': { name: 'ws-root', version: '1.0.0' },
+        'packages/uuid/package.json': { name: 'uuid-pack', version: '1.0.0' },
+        'packages/uuid/behavior_pack/manifest.json': packManifest('behavior', {
+          header: { uuid: 42 },
+        }),
+        'packages/module-type/package.json': { name: 'module-type-pack', version: '1.0.0' },
+        'packages/module-type/behavior_pack/manifest.json': packManifest('behavior', {
+          header: { uuid: 'module-type' },
+          modules: [{ type: 7 }, { type: 'resources' }],
+        }),
+        'packages/module-version/package.json': { name: 'module-version-pack', version: '1.0.0' },
+        'packages/module-version/behavior_pack/manifest.json': packManifest('behavior', {
+          header: { uuid: 'module-version' },
+          modules: [{ type: 'data', version: 'not a version at all', uuid: 7 }],
+        }),
+      })
+
+      const entries = await discoverPacks({ workspace })
+
+      expect(entries.map((entry) => entry.problems.map((problem) => problem.code))).toEqual([
+        ['manifest-shape-invalid'],
+        ['manifest-shape-invalid'],
+        ['manifest-shape-invalid'],
+      ])
+      const shapeFields = entries.flatMap((entry) =>
+        entry.problems.flatMap((problem) => (problem.code === 'manifest-shape-invalid' ? [problem.field] : [])),
+      )
+
+      expect(shapeFields).toEqual(['modules[0].type', 'modules[0].uuid', 'header.uuid'])
+    })
+
     it('carries a pack whose kind the manifest contradicts', async () => {
       const workspace = await writeWorkspace({
         'package.json': { name: 'solo', version: '1.0.0' },

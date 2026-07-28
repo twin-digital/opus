@@ -2,6 +2,7 @@ import semver from 'semver'
 import type { Problem } from '../types.js'
 import type { CandidatePackage, WorkingEntry } from './candidate.js'
 import { isRecord } from './json.js'
+import { classifyDependency } from './manifest-shape.js'
 
 /** The values that leave a field unspecified without omitting it. */
 function isPlaceholder(value: unknown): boolean {
@@ -78,7 +79,8 @@ function completeEntry(entry: WorkingEntry, byUuid: Map<string, WorkingEntry>): 
     return
   }
 
-  const formatVersion = manifest.format_version
+  // a format version the kit cannot read restricts nothing, as a missing one does
+  const formatVersion = entry.formFaults.has('format_version') ? undefined : manifest.format_version
   completeHeader(entry, manifest, formatVersion)
   completeDependencies(entry, manifest, formatVersion, byUuid)
 }
@@ -91,13 +93,19 @@ function completeHeader(entry: WorkingEntry, manifest: Record<string, unknown>, 
   const header = isRecord(manifest.header) ? manifest.header : {}
   manifest.header = header
 
-  if (header.name !== undefined && header.name !== '') {
-    entry.problems.push({
-      code: 'header-name-specified',
-      message: 'header.name is completed from the owning package and must not be specified',
-    })
+  if (!entry.formFaults.has('header.name')) {
+    if (header.name !== undefined && header.name !== '') {
+      entry.problems.push({
+        code: 'header-name-specified',
+        message: 'header.name is completed from the owning package and must not be specified',
+      })
+    }
+    header.name = completedName(entry)
   }
-  header.name = completedName(entry)
+
+  if (entry.formFaults.has('header.version')) {
+    return
+  }
 
   if (formatVersion === 3 && Array.isArray(header.version)) {
     entry.problems.push({
@@ -150,17 +158,27 @@ function completeDependencies(
       return
     }
     const field = `dependencies[${String(index)}]`
-    const uuid = typeof dependency.uuid === 'string' ? dependency.uuid : undefined
-    const moduleName = typeof dependency.module_name === 'string' ? dependency.module_name : undefined
+    const names = classifyDependency(dependency)
 
-    if ((uuid === undefined) === (moduleName === undefined)) {
+    if (names === 'malformed') {
       entry.problems.push({
         code: 'dependency-entry-malformed',
-        message: `${field} carries ${uuid === undefined ? 'neither a uuid nor a module_name' : 'both a uuid and a module_name'}`,
+        message: `${field} carries ${dependency.uuid === undefined ? 'neither a uuid nor a module_name' : 'both a uuid and a module_name'}`,
         field,
       })
       return
     }
+
+    // a faulted uuid matches no pack, so every later check on the entry is skipped with it
+    if (entry.formFaults.has(`${field}.uuid`)) {
+      return
+    }
+    if (entry.formFaults.has(`${field}.version`)) {
+      return
+    }
+
+    const uuid = names === 'pack' ? (dependency.uuid as string) : undefined
+    const moduleName = names === 'module' ? (dependency.module_name as string) : undefined
 
     if (formatVersion === 3 && Array.isArray(dependency.version)) {
       entry.problems.push({
@@ -171,7 +189,7 @@ function completeDependencies(
     }
 
     if (moduleName !== undefined) {
-      if (isUnspecified(dependency.version)) {
+      if (!entry.formFaults.has(`${field}.module_name`) && isUnspecified(dependency.version)) {
         entry.problems.push({
           code: 'external-dependency-version-missing',
           message: `${field} names the built-in module ${moduleName}, which the workspace does not complete, so it must carry its own version`,

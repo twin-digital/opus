@@ -35,10 +35,51 @@ describe('validatePacks', () => {
       expect(codes(entry)).toContain('manifest-missing-uuid')
     })
 
-    it('reports a header uuid that is not a string', () => {
-      const entry = validate(workingEntry({ manifest: packManifest('behavior', { header: { uuid: 17 } }) }))
+    it('leaves a faulted header uuid to the form pass alone', () => {
+      const entry = validate(
+        workingEntry({
+          manifest: packManifest('behavior', { header: { uuid: 17 } }),
+          formFaults: ['header.uuid'],
+        }),
+      )
 
-      expect(codes(entry)).toContain('manifest-missing-uuid')
+      expect(codes(entry)).not.toContain('manifest-missing-uuid')
+    })
+
+    it('suppresses the corroboration checks where a module type faulted', () => {
+      const entry = validate(
+        workingEntry({
+          manifest: packManifest('behavior', { modules: [{ type: 7 }, { type: 'resources' }] }),
+          formFaults: ['modules[0].type'],
+        }),
+      )
+
+      expect(codes(entry)).toEqual([])
+    })
+
+    it('suppresses module-missing-type for the module whose type faulted', () => {
+      const entry = validate(
+        workingEntry({
+          manifest: packManifest('behavior', { modules: [{ type: 'data' }, { type: 7 }] }),
+          formFaults: ['modules[1].type'],
+        }),
+      )
+
+      expect(codes(entry)).toEqual([])
+    })
+
+    it.each([
+      ['uuid', 'modules[0].uuid'],
+      ['version', 'modules[0].version'],
+    ])('suppresses nothing downstream of a faulted module %s', (_label, fault) => {
+      const entry = validate(
+        workingEntry({
+          manifest: packManifest('behavior', { modules: [{ type: 'client_data' }] }),
+          formFaults: [fault],
+        }),
+      )
+
+      expect(codes(entry)).toEqual(['kind-not-corroborated'])
     })
 
     it('reports every module declaring no type', () => {
@@ -165,6 +206,21 @@ describe('validatePacks', () => {
         field: 'dependencies[0]',
         uuid: 'broken',
       })
+    })
+
+    it('never resolves a dependency whose uuid faulted', () => {
+      const broken = pack('behavior', { uuid: 'broken', modules: [] }, 'packages/broken')
+      const dependent = workingEntry({
+        packageDir: 'packages/dependent',
+        manifest: packManifest('behavior', {
+          header: { uuid: 'dependent', name: 'Pack', version: '1.0.0' },
+          dependencies: [{ uuid: 42, version: '1.0.0' }],
+        }),
+        formFaults: ['dependencies[0].uuid'],
+      })
+      validatePacks([broken, dependent])
+
+      expect(codes(dependent)).not.toContain('dependency-invalid')
     })
 
     it('propagates invalidity along dependency edges to a fixpoint', () => {

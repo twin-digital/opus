@@ -88,6 +88,34 @@ Requirements: `membership-from-source-manifest-presence`, `built-output-defaults
     of any code (`d:manifest-shape-faults-are-one-problem`).
 33. Absent `header`, `modules`, or `dependencies` is not a shape fault.
 
+## `manifest-shape` (`manifest-shape.test.ts`)
+
+Requirement: `manifest-fields-are-validated-by-form`. Added when the spec gained the form pass.
+
+33a. The container pass: a manifest root that is an array, a string, `null`, or a number is
+`manifest-shape-invalid` at `''`; a non-object `header`, a non-array `modules` or `dependencies`,
+and a non-object element of either are each one problem naming the offending value.
+
+33b. A container that faulted has none of its fields form-checked, so one fault stays one problem.
+
+33c. The form pass faults each row of the spec's table: `format_version`, `header.name`,
+`header.uuid`, `header.version`, `modules[].type`, `modules[].uuid`, `modules[].version`,
+`dependencies[].uuid`, `dependencies[].module_name`, `dependencies[].version`.
+
+33d. Form is tested and never value: a uuid is any string rather than the 8-4-4-4-12 spelling, a
+version is any string or three-number array whether or not it parses as SemVer, a `format_version`
+is any number or string, and a module type is not checked against any list.
+
+33e. A version is accepted as a string or a three-number array — placeholder included — and faulted
+when it is too short, too long, not all numbers, an object, or a number.
+
+33f. Absence is never a form fault.
+
+33g. Every field of a dependency entry the discriminator calls malformed is left unchecked, and the
+discriminator reads presence before any form check, so `{ uuid: 42 }` names a pack.
+
+33h. A manifest carrying several faults reports one problem per field.
+
 ## `manifest-completion` (`manifest-completion.test.ts`)
 
 Requirements: `kit-completes-partial-source-manifests`, `manifest-format-version-passes-through`,
@@ -241,7 +269,24 @@ Requirements: `dev-kit-provides-a-library`, `dev-kit-library-name`, `pack-discov
 109. The package's public entry point exports `discoverPacks` and each type the spec names, imported
      by package name so the export map is exercised as a consumer meets it
      (`r:dev-kit-provides-a-library`, `r:dev-kit-library-name`).
-     109a. Added at the final review gate:
+     108a. The suppression table — one fault, one problem — case per row:
+
+- `format_version` suppresses `array-version-at-format-version-3` (`manifest-completion`).
+- `header.name` suppresses `header-name-specified` and the name completion; `header.version`
+  suppresses `header-version-specified` and the version completion (`manifest-completion`).
+- `header.uuid` suppresses `manifest-missing-uuid` (`pack-validation`).
+- `modules[].type` suppresses `module-missing-type` for that module, and `kind-not-corroborated`
+  and `foreign-kind-module` for the manifest (`pack-validation`).
+- `modules[].uuid` and `modules[].version` suppress nothing downstream (`pack-validation`).
+- `dependencies[].uuid` suppresses every later check on that entry, `dependency-invalid` included;
+  `dependencies[].module_name` suppresses `external-dependency-version-missing`;
+  `dependencies[].version` suppresses the version checks and the completion
+  (`manifest-completion`, `pack-validation`).
+- End to end, a workspace whose packs fault `header.uuid`, `modules[0].type`, and
+  `modules[0].uuid`/`version` returns one `manifest-shape-invalid` each and nothing derived
+  (`discover-packs`).
+
+109a. Added at the final review gate:
 
 - `package-name-missing` is raised for a nameless package whose manifest is unreadable or is not a
   JSON object, not only for one whose manifest completion could run (`manifest-completion`).

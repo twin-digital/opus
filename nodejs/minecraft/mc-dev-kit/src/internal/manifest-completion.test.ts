@@ -30,6 +30,72 @@ const dependency = (
   })
 
 describe('completeManifests', () => {
+  describe('a faulted field', () => {
+    it('is neither specified nor unspecified: header.name reports and completes nothing', () => {
+      const entry = complete(
+        workingEntry({
+          manifest: packManifest('behavior', { header: { uuid: 'u', name: 7 } }),
+          formFaults: ['header.name'],
+        }),
+      )
+
+      expect(codes(entry)).not.toContain('header-name-specified')
+      expect(header(entry).name).toBe(7)
+    })
+
+    it('skips the version completion and its specified-field error', () => {
+      const entry = complete(
+        workingEntry({
+          manifest: packManifest('behavior', { header: { uuid: 'u', version: {} } }),
+          formFaults: ['header.version'],
+        }),
+      )
+
+      expect(codes(entry)).not.toContain('header-version-specified')
+      expect(header(entry).version).toEqual({})
+    })
+
+    it('leaves a format_version the kit cannot read restricting nothing', () => {
+      const entry = complete(
+        workingEntry({
+          manifest: packManifest('behavior', {
+            format_version: {},
+            header: { uuid: 'u', version: [1, 2, 0] },
+          }),
+          formFaults: ['format_version'],
+        }),
+      )
+
+      expect(codes(entry)).not.toContain('array-version-at-format-version-3')
+    })
+
+    it.each([
+      ['uuid', { uuid: 42, version: '9.9.9' }, 'dependencies[0].uuid'],
+      ['version', { uuid: 'dep-uuid', version: {} }, 'dependencies[0].version'],
+    ])('skips every dependency check where the entry %s faulted', (_label, dep, fault) => {
+      const entry = complete(
+        workingEntry({
+          manifest: packManifest('behavior', { dependencies: [dep] }),
+          formFaults: [fault],
+        }),
+        dependency('dep-uuid'),
+      )
+
+      expect(codes(entry)).toEqual([])
+    })
+
+    it('skips external-dependency-version-missing where module_name faulted', () => {
+      const entry = complete(
+        workingEntry({
+          manifest: packManifest('behavior', { dependencies: [{ module_name: 42 }] }),
+          formFaults: ['dependencies[0].module_name'],
+        }),
+      )
+
+      expect(codes(entry)).toEqual([])
+    })
+  })
+
   describe('header.name', () => {
     it('is completed from the package productName', () => {
       const entry = complete(workingEntry({ packageJson: { name: '@scope/mc-pack-1', productName: 'Pack One' } }))
