@@ -1,0 +1,60 @@
+{
+  "name": "@twin-digital/minecraft-test-lib",
+  "version": "0.1.0",
+  "description": "In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "prebuild": "node tools/generate.ts",
+    "build": "build",
+    "clean": "clean",
+    "generate": "node tools/generate.ts",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "prepare": "node tools/generate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pretypecheck": "node tools/generate.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@minecraft/server": "2.8.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@minecraft/common": "catalog:",
+    "@minecraft/server": "catalog:",
+    "@minecraft/vanilla-data": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}
