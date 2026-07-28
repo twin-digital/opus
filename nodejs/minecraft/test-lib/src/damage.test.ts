@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addComponent } from './components.js'
 import { createEntity, invalidate } from './entity.js'
 import { createServer, type FakeServer } from './create-server.js'
-import { ArgumentOutOfBoundsError, InvalidEntityError, UnsetValueError } from './errors.js'
+import { InvalidEntityError, UnsetValueError } from './errors.js'
 
 /** `EntityDamageCause` is types-only at runtime, so a cause is written as its string value. */
 const cause = (value: string): MC.EntityDamageCause => value as MC.EntityDamageCause
@@ -273,7 +273,7 @@ describe('entity.applyDamage', () => {
   })
 
   it('skips the bounds check on the damage path', () => {
-    expect(() => entity.applyDamage(100)).not.toThrow(ArgumentOutOfBoundsError)
+    expect(entity.applyDamage(100)).toBe(true)
     expect(health.currentValue).toBe(-92)
   })
 

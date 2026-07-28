@@ -1,9 +1,6 @@
 /**
  * The invalidation guard as the guard data gives it — on entities, attribute components and
  * effects — and the order a read that finds nothing resolves in.
- *
- * The fakes are built through the runtime seam: the guard is compiled into every member by the
- * generator, so it is testable ahead of the models that hang behind those members.
  */
 
 import { readFileSync } from 'node:fs'
@@ -13,14 +10,13 @@ import { describe, expect, it } from 'vitest'
 
 import type * as MC from '@minecraft/server'
 
+import { addComponent } from './components.js'
 import { createServer } from './create-server.js'
+import { createEntity, createPlayer, invalidate } from './entity.js'
 import { InvalidEntityError, NotImplementedError, UnsetValueError } from './errors.js'
 import { emit } from './events.js'
 import { ATTRIBUTE_COMPONENT_CLASSES, EntityManifest } from './generated/manifests.js'
-import { ATTRIBUTE_COMPONENT_IDS } from './ids.js'
-import { construct } from './runtime/construct.js'
-import { stateOf } from './runtime/member.js'
-import { serverOf, type ServerState } from './runtime/state.js'
+import { ATTRIBUTE_COMPONENT_IDS, type EntityComponentId } from './ids.js'
 
 type Fn = (...args: unknown[]) => unknown
 type Bag = Record<string, unknown>
@@ -28,23 +24,22 @@ type Server = ReturnType<typeof createServer>
 
 const loosely = (value: object): Record<string, Fn> => value as unknown as Record<string, Fn>
 
-const stateFor = (server: Server): ServerState => serverOf(server.world)
+/** A registered entity, reached the way a test reaches one. */
+const makeEntity = (server: Server, kind: 'Entity' | 'Player' = 'Entity'): MC.Entity =>
+  kind === 'Player' ?
+    createPlayer(server, { typeId: 'minecraft:sheep', id: '-42', name: 'Bob' })
+  : createEntity(server, { typeId: 'minecraft:sheep', id: '-42' })
 
-const makeEntity = (server: Server, className: 'Entity' | 'Player' = 'Entity'): MC.Entity =>
-  construct(className, {
-    data: { server: stateFor(server), typeId: 'minecraft:sheep', id: '-42' },
-    own: { typeId: 'minecraft:sheep', id: '-42' },
-  }) as MC.Entity
+/** A component attached to a live entity, whose validity it then follows. */
+const makeComponent = (entity: MC.Entity, componentId: string): MC.EntityComponent =>
+  addComponent(entity, componentId as EntityComponentId)
 
-/** A component hanging off an entity, whose validity it follows. */
-const makeComponent = (server: Server, entity: MC.Entity, className: string): object =>
-  construct(className, { data: { server: stateFor(server) }, owner: stateOf(entity) })
-
-const makeEffect = (server: Server, entity: MC.Entity): MC.Effect =>
-  construct('Effect', { data: { server: stateFor(server) }, owner: stateOf(entity) }) as MC.Effect
-
-const invalidateFake = (fake: object): void => {
-  stateOf(fake).valid = false
+const makeEffect = (entity: MC.Entity): MC.Effect => {
+  const effect = entity.addEffect('minecraft:speed', 20)
+  if (!effect) {
+    throw new Error('addEffect answered nothing')
+  }
+  return effect
 }
 
 const caughtFrom = (act: () => unknown): unknown => {
@@ -68,32 +63,32 @@ const placeholders = (count: number): unknown[] => Array.from({ length: count },
 describe('invalid entity', () => {
   it('keeps id readable', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(entity.id).toBe('-42')
   })
 
   it('keeps typeId readable', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(entity.typeId).toBe('minecraft:sheep')
   })
 
   it('reads isValid as false', () => {
     const entity = makeEntity(createServer())
     expect(entity.isValid).toBe(true)
-    invalidateFake(entity)
+    invalidate(entity)
     expect(entity.isValid).toBe(false)
   })
 
   it('reads scoreboardIdentity as undefined', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(entity.scoreboardIdentity).toBeUndefined()
   })
 
   it('throws InvalidEntityError for every other declared property', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const readable = new Set(['id', 'isValid', 'typeId', 'scoreboardIdentity'])
     const guarded = EntityManifest.properties.filter((name) => !readable.has(name))
     expect(guarded).toHaveLength(12)
@@ -104,25 +99,25 @@ describe('invalid entity', () => {
 
   it('names the get-property access shape', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => entity.location).toThrow(invalidEntityMessage('get property', 'location'))
   })
 
   it("names the set-property shape the engine uses for nameTag's read", () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => entity.nameTag).toThrow(invalidEntityMessage('set property', 'nameTag'))
   })
 
   it('names the call-function shape for localizationKey', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => entity.localizationKey).toThrow(invalidEntityMessage('call function', 'localizationKey'))
   })
 
   it('throws InvalidEntityError from every declared method called with correct arguments', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const wrong: string[] = []
     expect(EntityManifest.methods).toHaveLength(46)
     for (const { name, minArity } of EntityManifest.methods) {
@@ -136,7 +131,7 @@ describe('invalid entity', () => {
 
   it('reads a method without throwing', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const probed = [
       'kill',
       'teleport',
@@ -162,7 +157,7 @@ describe('invalid entity', () => {
     const entity = makeEntity(createServer())
     const bound = entity.kill.bind(entity)
     const unbound = entity.kill
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => bound()).toThrow(InvalidEntityError)
     expect(() => unbound.call(entity)).toThrow(InvalidEntityError)
   })
@@ -175,14 +170,14 @@ describe('invalid entity', () => {
       captured = entity.kill.bind(entity)
     })
     emit(server.world.afterEvents.entitySpawn, { entity, cause: 'Spawned' } as unknown as MC.EntitySpawnAfterEvent)
-    invalidateFake(entity)
+    invalidate(entity)
     expect(captured).toBeTypeOf('function')
     expect(() => captured?.()).toThrow(InvalidEntityError)
   })
 
   it("carries the entity's id and type on the error", () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const error = caughtFrom(() => entity.location) as InvalidEntityError
     expect(error.id).toBe('-42')
     expect(error.type).toBe('minecraft:sheep')
@@ -190,7 +185,7 @@ describe('invalid entity', () => {
 
   it('guards a Player the same way', () => {
     const player = makeEntity(createServer(), 'Player')
-    invalidateFake(player)
+    invalidate(player)
     expect(player.id).toBe('-42')
     expect(player.typeId).toBe('minecraft:sheep')
     expect(() => player.location).toThrow(InvalidEntityError)
@@ -205,8 +200,8 @@ describe('invalid attribute component', () => {
   const attached = (): { entity: MC.Entity; component: MC.EntityHealthComponent } => {
     const server = createServer()
     const entity = makeEntity(server)
-    const component = makeComponent(server, entity, 'EntityHealthComponent') as MC.EntityHealthComponent
-    invalidateFake(entity)
+    const component = makeComponent(entity, 'minecraft:health') as MC.EntityHealthComponent
+    invalidate(entity)
     return { entity, component }
   }
 
@@ -277,9 +272,9 @@ describe('invalid attribute component', () => {
   it('applies the same table to all seven attribute components', () => {
     const server = createServer()
     const entity = makeEntity(server)
-    const components = ATTRIBUTE_COMPONENT_CLASSES.map((className) => makeComponent(server, entity, className))
+    const components = ATTRIBUTE_COMPONENT_IDS.map((componentId) => makeComponent(entity, componentId))
     expect(components).toHaveLength(ATTRIBUTE_COMPONENT_IDS.length)
-    invalidateFake(entity)
+    invalidate(entity)
     for (const component of components) {
       expect(() => (component as MC.EntityAttributeComponent).currentValue).toThrow(
         new Error("Failed to get property 'current'."),
@@ -290,17 +285,17 @@ describe('invalid attribute component', () => {
   it('follows its owner rather than a flag of its own', () => {
     const server = createServer()
     const entity = makeEntity(server)
-    const component = makeComponent(server, entity, 'EntityHealthComponent') as MC.EntityHealthComponent
+    const component = makeComponent(entity, 'minecraft:health') as MC.EntityHealthComponent
     expect(() => component.currentValue).not.toThrow("Failed to get property 'current'.")
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => component.currentValue).toThrow("Failed to get property 'current'.")
   })
 
   it('keeps a non-attribute component readable on isValid and typeId and throws for the rest', () => {
     const server = createServer()
     const entity = makeEntity(server)
-    const component = makeComponent(server, entity, 'EntityIsBabyComponent') as MC.EntityIsBabyComponent
-    invalidateFake(entity)
+    const component = makeComponent(entity, 'minecraft:is_baby')
+    invalidate(entity)
     expect(component.isValid).toBe(false)
     expect(component.typeId).toBe('minecraft:is_baby')
     expect(() => component.entity).toThrow(InvalidEntityError)
@@ -315,8 +310,8 @@ describe('invalid effect', () => {
   const held = (): MC.Effect => {
     const server = createServer()
     const entity = makeEntity(server)
-    const effect = makeEffect(server, entity)
-    invalidateFake(entity)
+    const effect = makeEffect(entity)
+    invalidate(entity)
     return effect
   }
 
@@ -349,10 +344,9 @@ describe('invalid effect', () => {
   })
 
   it('throws the same way for an effect that was itself removed', () => {
-    const server = createServer()
-    const entity = makeEntity(server)
-    const effect = makeEffect(server, entity)
-    invalidateFake(effect)
+    const entity = makeEntity(createServer())
+    const effect = makeEffect(entity)
+    expect(entity.removeEffect('minecraft:speed')).toBe(true)
     expect(() => effect.amplifier).toThrow(new Error("Failed to get property 'amplifier'."))
     expect(effect.isValid).toBe(false)
   })
@@ -441,7 +435,7 @@ describe('read order', () => {
 
   it('rule 1 beats rule 2', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const error = caughtFrom(() => loosely(entity).addTag())
     expect(error).toBeInstanceOf(TypeError)
     expect(error).not.toBeInstanceOf(InvalidEntityError)
@@ -455,7 +449,7 @@ describe('read order', () => {
 
   it('rule 2 beats rule 3', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const error = caughtFrom(() => entity.getAABB())
     expect(error).toBeInstanceOf(InvalidEntityError)
     expect(error).not.toBeInstanceOf(NotImplementedError)
@@ -463,13 +457,13 @@ describe('read order', () => {
 
   it('rule 2 beats rule 4', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => entity.getDynamicProperty('never-set')).toThrow(InvalidEntityError)
   })
 
   it('rule 2 beats rule 5', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     const error = caughtFrom(() => entity.nameTag)
     expect(error).toBeInstanceOf(InvalidEntityError)
     expect(error).not.toBeInstanceOf(UnsetValueError)

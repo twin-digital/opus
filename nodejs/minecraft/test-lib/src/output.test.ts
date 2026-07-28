@@ -209,6 +209,7 @@ describe('output side effects', () => {
         display.setActionBar('a')
       }),
     ).toBeInstanceOf(InvalidEntityError)
+    expect(display.isValid).toBe(false)
   })
 
   it('throws NotImplementedError from the unmodelled ScreenDisplay members', () => {

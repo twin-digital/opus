@@ -302,12 +302,12 @@ describe('addEffect non-integer arguments', () => {
     expect(entity.getEffect(SPEED)).toBeUndefined()
   })
 
-  // 28 — pins the divergence so a later change to match the engine fails here on purpose
-  it('refuses NaN and Infinity with something other than the engine TypeError', () => {
+  // 28 — ruling 34: the fake's own shape, where the engine raises a TypeError ahead of the bounds
+  it('refuses NaN and Infinity with an ArgumentOutOfBoundsError', () => {
     const { entity } = setup()
 
-    expect(catchError(() => entity.addEffect(SPEED, 200, { amplifier: NaN }))).not.toBeInstanceOf(TypeError)
-    expect(catchError(() => entity.addEffect(SPEED, Infinity))).not.toBeInstanceOf(TypeError)
+    expect(catchError(() => entity.addEffect(SPEED, 200, { amplifier: NaN }))).toBeInstanceOf(ArgumentOutOfBoundsError)
+    expect(catchError(() => entity.addEffect(SPEED, Infinity))).toBeInstanceOf(ArgumentOutOfBoundsError)
   })
 })
 
@@ -380,13 +380,12 @@ describe('addEffect replacement rule', () => {
     expect(returned!.duration).toBe(300)
   })
 
-  // 34
+  // 34 — ruling 33; the guard table it then throws by is covered under 'invalid owner' below
   it('invalidates the replaced effect', () => {
     const { entity, base } = withBase()
     entity.addEffect(SPEED, 600, { amplifier: 2 })
 
     expect(base.isValid).toBe(false)
-    expect(() => base.duration).toThrow()
   })
 
   // 35
@@ -793,9 +792,15 @@ describe('addEffect and the effectAdd before-event', () => {
 })
 
 describe('Effect members on an invalid owner', () => {
-  /** The three routes an effect reference goes stale by. */
+  /** The four routes an effect reference goes stale by. */
   const routes: readonly [string, (server: ReturnType<typeof createServer>, entity: MC.Entity) => void][] = [
     ['removeEffect', (_server, entity) => entity.removeEffect(SPEED)],
+    [
+      'replacement',
+      (_server, entity) => {
+        entity.addEffect(SPEED, 600, { amplifier: 2 })
+      },
+    ],
     [
       'entity.remove()',
       (_server, entity) => {

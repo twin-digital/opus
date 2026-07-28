@@ -74,7 +74,33 @@ const signalMapOf = (container: string): [string, string][] => {
 /** The signal classes a container class exposes as properties (WorldAfterEvents' 55, and so on). */
 const signalsOf = (container: string): string[] => signalMapOf(container).map(([, className]) => className)
 
-const componentClasses = [...classes.keys()].filter((name) => /^Entity.*Component$/.test(name))
+/** The canonical component ids of EntityComponentTypeMap, each with the class it maps to. */
+const componentClassById = (): [string, string][] => {
+  const symbol = moduleExports.find((exported) => exported.name === 'EntityComponentTypeMap')
+  if (!symbol) {
+    return fail('@minecraft/server declares no EntityComponentTypeMap')
+  }
+  return checker
+    .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
+    .filter((property) => property.name.startsWith('minecraft:'))
+    .map((property): [string, string] => {
+      const node = property.valueDeclaration ?? property.declarations?.[0]
+      if (!node) {
+        return fail(`EntityComponentTypeMap.${property.name} has no declaration`)
+      }
+      return [property.name, checker.typeToString(checker.getTypeOfSymbolAtLocation(property, node))]
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]))
+}
+
+// Every class the type map names, plus the abstract bases the declarations carry. Reading the type
+// map is what catches `PlayerCursorInventoryComponent`, the one component not named `Entity*`.
+const componentClasses = [
+  ...new Set([
+    ...componentClassById().map(([, className]) => className),
+    ...[...classes.keys()].filter((name) => /^Entity.*Component$/.test(name)),
+  ]),
+].sort()
 
 /** The registries the server bundle carries, each declared and throwing. */
 const REGISTRY_CLASSES = [
@@ -431,25 +457,6 @@ const classFile = (name: string): string => {
 // ---------------------------------------------------------------------------
 // Manifests — committed, so a version bump reads as a diff of what moved
 // ---------------------------------------------------------------------------
-
-/** The canonical component ids of EntityComponentTypeMap, each with the class it maps to. */
-const componentClassById = (): [string, string][] => {
-  const symbol = moduleExports.find((exported) => exported.name === 'EntityComponentTypeMap')
-  if (!symbol) {
-    return fail('@minecraft/server declares no EntityComponentTypeMap')
-  }
-  return checker
-    .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(symbol))
-    .filter((property) => property.name.startsWith('minecraft:'))
-    .map((property): [string, string] => {
-      const node = property.valueDeclaration ?? property.declarations?.[0]
-      if (!node) {
-        return fail(`EntityComponentTypeMap.${property.name} has no declaration`)
-      }
-      return [property.name, checker.typeToString(checker.getTypeOfSymbolAtLocation(property, node))]
-    })
-    .sort((a, b) => a[0].localeCompare(b[0]))
-}
 
 const manifestFile = (): string => {
   const lines = [

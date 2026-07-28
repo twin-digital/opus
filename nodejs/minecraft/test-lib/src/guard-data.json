@@ -12,7 +12,8 @@
     "",
     "The entityComponent table — the other 61 components — is the one table without a sweep behind",
     "it: it follows the declarations' own @throws split, which leaves isValid and typeId unannotated",
-    "and names InvalidEntityError everywhere else."
+    "and names InvalidEntityError everywhere else. The screenDisplay table has the same footing:",
+    "every ScreenDisplay member but isValid is annotated {@link InvalidEntityError}."
   ],
   "tables": {
     "entity": {
@@ -51,12 +52,19 @@
       "defaultProperty": "failed-property",
       "defaultMethod": "failed-call",
       "overrides": {}
+    },
+    "screenDisplay": {
+      "readable": ["isValid"],
+      "defaultProperty": "invalid-entity-get",
+      "defaultMethod": "invalid-entity-call",
+      "overrides": {}
     }
   },
   "assignments": {
     "Entity": "entity",
     "Player": "entity",
-    "Effect": "effect"
+    "Effect": "effect",
+    "ScreenDisplay": "screenDisplay"
   },
   "attributeComponentClasses": [
     "EntityExhaustionComponent",

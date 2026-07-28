@@ -64,6 +64,10 @@ export interface ObjectiveState {
 export interface ScoreboardState {
   readonly objectives: Map<string, ObjectiveState>
   readonly displaySlots: Map<MC.DisplaySlotId, { objective: MC.ScoreboardObjective; sortOrder?: MC.ObjectiveSortOrder }>
+  /** Every participant identity the bundle has issued, keyed as the objectives key their scores. */
+  identities?: Map<string, MC.ScoreboardIdentity>
+  /** The next identity id to issue; the engine's are numbers with no promised spelling. */
+  nextIdentityId?: number
 }
 
 /** A component attached to an entity: the fake the test sees, and the values it holds. */
@@ -114,6 +118,8 @@ export interface EntityData {
   readonly triggeredEvents: string[]
   readonly output: OutputRecord[]
   scoreboardIdentity?: MC.ScoreboardIdentity
+  /** Built on first read of `onScreenDisplay`, so a player hands out one display object. */
+  screenDisplay?: MC.ScreenDisplay
   /** False once `remove()` has detached the entity from the world. */
   registered: boolean
 }

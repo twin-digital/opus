@@ -11,14 +11,22 @@ import { describe, expect, it } from 'vitest'
 import type * as MC from '@minecraft/server'
 
 import { createServer } from './create-server.js'
-import { createEntity } from './entity.js'
-import { NotImplementedError } from './errors.js'
+import { addComponent } from './components.js'
+import { createEntity, createPlayer, invalidate } from './entity.js'
+import {
+  ArgumentOutOfBoundsError,
+  InvalidArgumentError,
+  InvalidEntityError,
+  NotImplementedError,
+  UnsetValueError,
+} from './errors.js'
 import { getHandlerErrors } from './events.js'
 import { FAKE_CLASSES } from './generated/index.js'
 import * as manifests from './generated/manifests.js'
+import type { EntityComponentId } from './ids.js'
 import { withVanillaDimensions } from './presets.js'
 import { construct } from './runtime/construct.js'
-import { delegate, stateOf } from './runtime/member.js'
+import { delegate, stateOf, type FakeState } from './runtime/member.js'
 import { serverOf, type ServerState } from './runtime/state.js'
 import { advanceTicks } from './scheduler.js'
 
@@ -47,16 +55,9 @@ const placeholders = (count: number): unknown[] => Array.from({ length: count },
 
 const stateFor = (server: Server): ServerState => serverOf(server.world)
 
-/** An entity fake built straight from the generated class, with no entity model behind it. */
+/** A registered entity: the shape under test is the generated class's, whatever built it. */
 const makeEntity = (server: Server, typeId = 'minecraft:sheep', id = '-42'): MC.Entity =>
-  construct('Entity', {
-    data: { server: stateFor(server), typeId, id },
-    own: { typeId, id },
-  }) as MC.Entity
-
-const invalidateFake = (fake: object): void => {
-  stateOf(fake).valid = false
-}
+  createEntity(server, { typeId, id })
 
 const REGISTRY_NAMES = [
   'BiomeTypes',
@@ -222,7 +223,7 @@ describe('registry classes', () => {
         expect(() => (registry as Bag)[property]).toThrow(NotImplementedError)
       }
     }
-    expect(reached).toBeGreaterThan(0)
+    expect(reached).toBe(16)
   })
 
   it('name the member they did not model', () => {
@@ -277,7 +278,7 @@ describe('generated shape', () => {
 
   it('answers the same structural reads on an invalidated entity', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect('teleport' in entity).toBe(true)
     expect('nameTag' in entity).toBe(true)
     expect('notAMember' in entity).toBe(false)
@@ -306,7 +307,7 @@ describe('generated shape', () => {
 
   it('serialises the same two properties on an invalidated entity', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(JSON.stringify(entity)).toBe('{"typeId":"minecraft:sheep","id":"-42"}')
   })
 
@@ -320,7 +321,7 @@ describe('generated shape', () => {
 
   it('reaches 62 members through for-in on an invalidated entity', () => {
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     let count = 0
     for (const _name in entity) {
       count++
@@ -375,7 +376,7 @@ describe('generated shape', () => {
   })
 
   it('gives every faked class a constructor', () => {
-    expect(manifests.FAKED_CLASSES).toHaveLength(165)
+    expect(manifests.FAKED_CLASSES.length).toBe(Object.keys(FAKE_CLASSES).length)
     for (const name of manifests.FAKED_CLASSES) {
       const FakeClass: unknown = (FAKE_CLASSES as unknown as Bag)[name]
       expect(typeof FakeClass).toBe('function')
@@ -511,7 +512,7 @@ describe('arity', () => {
   it('runs ahead of the validity guard', async () => {
     const { InvalidEntityError } = await import('./errors.js')
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => loosely(entity).addTag()).toThrow(TypeError)
     expect(() => entity.addTag('x')).toThrow(InvalidEntityError)
   })
@@ -519,7 +520,7 @@ describe('arity', () => {
   it('runs ahead of the validity guard on a member declared with a range', async () => {
     const { InvalidEntityError } = await import('./errors.js')
     const entity = makeEntity(createServer())
-    invalidateFake(entity)
+    invalidate(entity)
     expect(() => loosely(entity).addEffect()).toThrow(
       new TypeError('Incorrect number of arguments to function. Expected 2-3, received 0'),
     )
@@ -543,6 +544,71 @@ describe('arity', () => {
   it('counts arguments rather than defined arguments', () => {
     const entity = makeEntity(createServer())
     expect(() => loosely(entity).addEffect('minecraft:speed', undefined)).not.toThrow(TypeError)
+  })
+
+  /**
+   * The 27 `Entity` methods the reflective sweep called with no arguments, and the `Expected` part
+   * of the `TypeError` the engine answered with. Transcribed, not derived: this is where the
+   * generator's own numbers meet the observation.
+   */
+  const OBSERVED_ARITY: readonly { member: string; expected: string }[] = [
+    { member: 'addEffect', expected: '2-3' },
+    { member: 'addItem', expected: '1' },
+    { member: 'addTag', expected: '1' },
+    { member: 'applyDamage', expected: '1-2' },
+    { member: 'applyImpulse', expected: '1' },
+    { member: 'applyKnockback', expected: '2' },
+    { member: 'getComponent', expected: '1' },
+    { member: 'getDynamicProperty', expected: '1' },
+    { member: 'getEffect', expected: '1' },
+    { member: 'getProperty', expected: '1' },
+    { member: 'hasComponent', expected: '1' },
+    { member: 'hasTag', expected: '1' },
+    { member: 'lookAt', expected: '1' },
+    { member: 'matches', expected: '1' },
+    { member: 'playAnimation', expected: '1-2' },
+    { member: 'removeEffect', expected: '1' },
+    { member: 'removeTag', expected: '1' },
+    { member: 'resetProperty', expected: '1' },
+    { member: 'runCommand', expected: '1' },
+    { member: 'setDynamicProperties', expected: '1' },
+    { member: 'setDynamicProperty', expected: '1-2' },
+    { member: 'setOnFire', expected: '1-2' },
+    { member: 'setProperty', expected: '2' },
+    { member: 'setRotation', expected: '1' },
+    { member: 'teleport', expected: '1-2' },
+    { member: 'triggerEvent', expected: '1' },
+    { member: 'tryTeleport', expected: '1-2' },
+  ]
+
+  it('reports the bounds the engine reported, for the 27 methods it was observed on', () => {
+    const entity = makeEntity(createServer())
+    expect(OBSERVED_ARITY).toHaveLength(27)
+    const wrong: string[] = []
+    for (const { member, expected } of OBSERVED_ARITY) {
+      const message = `Incorrect number of arguments to function. Expected ${expected}, received 0`
+      try {
+        loosely(entity)[member]()
+        wrong.push(`${member}: did not throw`)
+      } catch (error) {
+        if (!(error instanceof TypeError) || error.message !== message) {
+          wrong.push(`${member}: ${(error as Error).message}`)
+        }
+      }
+    }
+    expect(wrong).toEqual([])
+  })
+
+  it('derives those same bounds into the manifest', () => {
+    const declared = new Map(
+      manifestFor('Entity').methods.map(({ name, minArity, maxArity }) => [
+        name,
+        minArity === maxArity ? String(minArity) : `${String(minArity)}-${String(maxArity)}`,
+      ]),
+    )
+    for (const { member, expected } of OBSERVED_ARITY) {
+      expect(declared.get(member)).toBe(expected)
+    }
   })
 
   it("matches the declared minimum for every one of Entity's methods", () => {
@@ -600,6 +666,7 @@ describe('arity', () => {
 /** What one swept member did: the value it returned, or the error it threw. */
 interface Outcome {
   readonly returned?: unknown
+  readonly threw: boolean
   readonly error?: unknown
 }
 
@@ -625,81 +692,233 @@ const membersOf = (className: string): SweptMember[] => {
 const run = (target: object, member: SweptMember): Outcome => {
   try {
     return member.isMethod ?
-        { returned: loosely(target)[member.name].apply(target, member.args) }
-      : { returned: (target as Bag)[member.name] }
+        { returned: loosely(target)[member.name].apply(target, member.args), threw: false }
+      : { returned: (target as Bag)[member.name], threw: false }
   } catch (error) {
-    return { error }
+    return { threw: true, error }
   }
 }
 
+const ARITY_MESSAGE = /^Incorrect number of arguments to function\. Expected \d+(-\d+)?, received \d+$/
+const GUARD_MESSAGE = /^Failed to (get property|call function) '.+'\.$/
+const UNKNOWN_DIMENSION_MESSAGE = /^Dimension '.*' is invalid\.$/
+
+/** The errors a member is allowed to answer with once a behaviour stands behind it. */
+const isModelledFailure = (error: unknown): boolean => {
+  if (
+    error instanceof InvalidEntityError ||
+    error instanceof ArgumentOutOfBoundsError ||
+    error instanceof InvalidArgumentError ||
+    error instanceof UnsetValueError ||
+    error instanceof NotImplementedError
+  ) {
+    return true
+  }
+  if (error instanceof TypeError) {
+    return ARITY_MESSAGE.test(error.message)
+  }
+  if (error instanceof Error && error.constructor === Error) {
+    return GUARD_MESSAGE.test(error.message) || UNKNOWN_DIMENSION_MESSAGE.test(error.message)
+  }
+  return false
+}
+
+const describeOutcome = (outcome: Outcome): string =>
+  outcome.threw ?
+    `${(outcome.error as Error | undefined)?.constructor.name ?? typeof outcome.error}: ${String((outcome.error as Error | undefined)?.message)}`
+  : `returned ${typeof outcome.returned}`
+
 /**
- * Every declared member of every faked class, called at its declared minimum arity. The generator
- * is one program whose defects reproduce across all of them, so this walks the whole surface rather
- * than a sample: a member answering `undefined` with no behaviour registered behind it never
- * reached the delegation seam.
+ * Every declared member of every faked class, called at its declared minimum arity, on the real
+ * objects a bundle hands out wherever one exists. The generator is one program whose defects
+ * reproduce across all 1032 members, so every outcome is classified rather than sampled: a member
+ * with no behaviour behind it must say so with `NotImplementedError`, and one with a behaviour must
+ * answer or fail in a shape the library declares.
  */
 describe('the whole generated surface', () => {
-  const server = createServer()
-  const state = stateFor(server)
+  /**
+   * A factory per faked class, yielding the object a test would really hold. Anything a bundle
+   * hands out is taken from the bundle — a stateless stand-in would let a behaviour read
+   * `undefined` and pass — and anything a member can destroy is rebuilt for each member.
+   */
+  const factoriesOf = (server: ReturnType<typeof createServer>): Map<string, () => object> => {
+    const state = stateFor(server)
+    const factories = new Map<string, () => object>()
+    const fixed = (instance: object) => (): object => instance
 
-  /** The instance to call members on, and the class object the static-only registries keep them on. */
-  const targetsFor = (className: string): { instance: object; statics: object } => ({
-    instance: construct(className, { data: { server: state }, own: { typeId: 'minecraft:sheep', id: '1' } }),
-    statics: (FAKE_CLASSES as unknown as Bag)[className] as object,
-  })
+    const containers: Record<string, object> = {
+      WorldAfterEvents: server.world.afterEvents,
+      WorldBeforeEvents: server.world.beforeEvents,
+      SystemAfterEvents: server.system.afterEvents,
+      SystemBeforeEvents: server.system.beforeEvents,
+    }
+    factories.set('World', fixed(server.world))
+    factories.set('System', fixed(server.system))
+    factories.set('Scoreboard', fixed(server.world.scoreboard))
+    for (const [name, container] of Object.entries(containers)) {
+      factories.set(name, fixed(container))
+    }
+    for (const [containerName, signals] of Object.entries(manifests.SIGNAL_CLASS_BY_CONTAINER)) {
+      const container = containers[containerName] as Bag | undefined
+      for (const [signalName, className] of Object.entries(signals)) {
+        const signal = container?.[signalName]
+        if (typeof signal === 'object' && signal !== null) {
+          factories.set(className, fixed(signal))
+        }
+      }
+    }
 
-  it('answers every declared member without ever reading undefined off nothing', () => {
-    const fabricated: string[] = []
-    let swept = 0
+    withVanillaDimensions(server)
+    factories.set('Dimension', fixed(server.world.getDimension('overworld')))
+    // `remove()` invalidates the entity it is called on, so each member gets a live one.
+    factories.set('Entity', () => createEntity(server, { typeId: 'minecraft:sheep' }))
+    factories.set('Player', () => createPlayer(server, { name: 'Bob' }))
 
+    const attach = (componentId: string) => (): object => {
+      const host = createEntity(server, { typeId: 'minecraft:cow' })
+      return addComponent(host, componentId as EntityComponentId)
+    }
+    for (const [componentId, className] of Object.entries(manifests.COMPONENT_CLASS_BY_ID)) {
+      factories.set(className, attach(componentId))
+    }
+    factories.set('ScreenDisplay', () => createPlayer(server, { name: 'Screen' }).onScreenDisplay)
+    factories.set('ScoreboardObjective', () => {
+      const id = `sweep-${String(state.entities.length)}-${String(Math.random())}`
+      return server.world.scoreboard.addObjective(id, 'Sweep')
+    })
+    factories.set('Effect', () => {
+      const host = createEntity(server, { typeId: 'minecraft:cow' })
+      return host.addEffect('minecraft:speed', 20) as unknown as object
+    })
+
+    // The abstract component bases carry no id, so no test can hold one; they are swept over the
+    // state a real component keeps, which is the state their behaviour was written against.
+    const componentTemplate = (): { data: unknown; owner: FakeState | undefined } => {
+      const host = createEntity(server, { typeId: 'minecraft:pig' })
+      const componentState = stateOf(addComponent(host, 'minecraft:health') as unknown as object)
+      return { data: componentState.data, owner: componentState.owner }
+    }
     for (const className of manifests.FAKED_CLASSES) {
-      const { instance, statics } = targetsFor(className)
+      if (!factories.has(className)) {
+        const isComponent = (manifests.COMPONENT_CLASSES as readonly string[]).includes(className)
+        factories.set(className, () =>
+          isComponent ?
+            construct(className, componentTemplate())
+          : construct(className, { data: { server: state }, own: { typeId: 'minecraft:sheep', id: '1' } }),
+        )
+      }
+    }
+    return factories
+  }
+
+  /** A member with no registered behaviour is exactly one whose delegation reports itself missing. */
+  const hasBehaviour = (probe: object, className: string, member: SweptMember): boolean => {
+    try {
+      delegate(probe, className, member.name, member.args)
+      return true
+    } catch (error) {
+      return !(error instanceof NotImplementedError && error.member === `${className}.${member.name}`)
+    }
+  }
+
+  /** Every member name a generated class really emitted, own data properties and statics included. */
+  const emittedNames = (className: string, instance: object): Set<string> => {
+    const statics = (FAKE_CLASSES as unknown as Bag)[className] as object
+    const prototype = Object.getPrototypeOf(instance) as object
+    return new Set([
+      ...Object.getOwnPropertyNames(instance),
+      ...Object.getOwnPropertyNames(prototype).filter((name) => name !== 'constructor'),
+      ...Object.getOwnPropertyNames(statics).filter((name) => !['length', 'name', 'prototype'].includes(name)),
+    ])
+  }
+
+  it('classifies the outcome of every declared member of every faked class', () => {
+    const declared = manifests.FAKED_CLASSES.reduce((total, className) => {
+      const manifest = manifestFor(className)
+      return total + manifest.methods.length + manifest.properties.length
+    }, 0)
+    const targets = factoriesOf(createServer())
+    // A second bundle absorbs the delegation probe's own side effects.
+    const probes = factoriesOf(createServer())
+    const unexpected: string[] = []
+    let swept = 0
+    let unmodelled = 0
+    let ownProperties = 0
+
+    const missing: string[] = []
+    for (const className of manifests.FAKED_CLASSES) {
+      const statics = (FAKE_CLASSES as unknown as Bag)[className] as object
+      const emitted = emittedNames(className, targets.get(className)?.() ?? statics)
       for (const member of membersOf(className)) {
-        const target = member.name in instance ? instance : statics
         swept++
+        if (!emitted.has(member.name)) {
+          missing.push(`${className}.${member.name}`)
+        }
+        const instance = targets.get(className)?.() ?? statics
+        const target = member.name in instance ? instance : statics
         const outcome = run(target, member)
-        if (outcome.error !== undefined || outcome.returned !== undefined) {
+
+        // `typeId` and `id` are own data properties by the emission rule: no delegation behind them.
+        if (!member.isMethod && Object.getOwnPropertyNames(instance).includes(member.name)) {
+          ownProperties++
+          if (outcome.threw || outcome.returned === undefined) {
+            unexpected.push(`${className}.${member.name} is an own property but answered ${describeOutcome(outcome)}`)
+          }
           continue
         }
-        // An `undefined` is only honest if a registered behaviour answered with it.
-        try {
-          delegate(target, className, member.name, member.args)
-        } catch (error) {
-          if (error instanceof NotImplementedError) {
-            fabricated.push(`${className}.${member.name}`)
+
+        const probe = probes.get(className)?.() ?? statics
+        if (hasBehaviour(member.name in probe ? probe : statics, className, member)) {
+          if (outcome.threw && !isModelledFailure(outcome.error)) {
+            unexpected.push(`${className}.${member.name} — ${describeOutcome(outcome)}`)
           }
+          continue
+        }
+        unmodelled++
+        if (!(outcome.error instanceof NotImplementedError) || outcome.error.member !== `${className}.${member.name}`) {
+          unexpected.push(`${className}.${member.name} is unmodelled but answered ${describeOutcome(outcome)}`)
         }
       }
     }
 
-    expect(swept).toBeGreaterThanOrEqual(1000)
-    expect(fabricated).toEqual([])
+    expect(unexpected).toEqual([])
+    // The manifest counts the declarations; `missing` checks the classes really emitted them.
+    expect(missing).toEqual([])
+    expect(swept).toBe(declared)
+    expect(swept).toBeGreaterThanOrEqual(1037)
+    expect(unmodelled).toBeGreaterThan(0)
+    expect(ownProperties).toBe(4)
   })
 
-  it('names the class and member on every NotImplementedError it throws', () => {
-    const misnamed: string[] = []
-    for (const className of manifests.FAKED_CLASSES) {
-      const { instance, statics } = targetsFor(className)
-      for (const member of membersOf(className)) {
-        const target = member.name in instance ? instance : statics
-        const { error } = run(target, member)
-        if (error instanceof NotImplementedError && error.member !== `${className}.${member.name}`) {
-          misnamed.push(`${className}.${member.name} named ${error.member}`)
-        }
-      }
+  it('sweeps the real objects a bundle hands out, not stateless stand-ins', () => {
+    const factories = factoriesOf(createServer())
+    for (const className of ['World', 'System', 'Scoreboard', 'Dimension', 'Entity', 'Player', 'Effect']) {
+      const instance = factories.get(className)?.()
+      expect(instance).toBeDefined()
+      expect(stateOf(instance as object).className).toBe(className)
     }
-    expect(misnamed).toEqual([])
+    expect((factories.get('Dimension')?.() as MC.Dimension).id).toBe('minecraft:overworld')
+    expect((factories.get('Entity')?.() as MC.Entity).typeId).toBe('minecraft:sheep')
+    expect((factories.get('EntityHealthComponent')?.() as MC.EntityHealthComponent).typeId).toBe('minecraft:health')
+    for (const className of manifests.SIGNAL_CLASSES) {
+      expect(factories.get(className)?.()).toBeDefined()
+    }
   })
 
   it('reaches the members standing in for blocks, items, containers and custom commands', () => {
-    const entity = makeEntity(server)
+    const server = createServer()
+    const entity = createEntity(server, { typeId: 'minecraft:sheep' })
     // Items and blocks are declared on members of faked classes rather than faked in their own right.
     expect(() => loosely(entity).addItem('minecraft:test')).toThrow(NotImplementedError)
     expect(() => entity.getBlockStandingOn()).toThrow(NotImplementedError)
-    const inventory = construct('EntityInventoryComponent', { data: { server: state } })
-    expect(() => (inventory as unknown as MC.EntityInventoryComponent).container).toThrow(NotImplementedError)
-    // Custom commands are registered through the startup before-event, which exists and throws.
-    const startup = construct('StartupBeforeEventSignal', { data: { server: state } })
-    expect(typeof (startup as unknown as MC.StartupBeforeEventSignal).subscribe).toBe('function')
+    const inventory = addComponent(entity, 'minecraft:inventory')
+    expect(() => inventory.container).toThrow(NotImplementedError)
+    // Custom commands hang off the StartupEvent payload, which no fake behaviour raises. The signal
+    // is declared and subscribable; nothing in the library builds a registry behind it.
+    const handler = (): undefined => undefined
+    expect(server.system.beforeEvents.startup.subscribe(handler)).toBe(handler)
+    for (const name of ['StartupEvent', 'CustomCommandRegistry', 'BlockComponentRegistry', 'Container', 'ItemStack']) {
+      expect((FAKE_CLASSES as unknown as Bag)[name]).toBeUndefined()
+    }
   })
 })

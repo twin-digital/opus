@@ -268,6 +268,33 @@ describe('removeComponent', () => {
     expect(error.message).toBe("Failed to get property 'current'.")
   })
 
+  it('a detached attribute component throws InvalidEntityError where an invalid owner would', () => {
+    const held = addComponent(entity, 'minecraft:health', 20)
+    removeComponent(entity, 'minecraft:health')
+    expect(throws(() => held.setCurrentValue(1))).toBeInstanceOf(InvalidEntityError)
+    expect(throws(() => held.entity)).toBeInstanceOf(InvalidEntityError)
+  })
+
+  it('a detached attribute component throws the plain Error shapes on its resets', () => {
+    const held = addComponent(entity, 'minecraft:health', 20)
+    removeComponent(entity, 'minecraft:health')
+    const error = throws(() => {
+      held.resetToMinValue()
+    })
+    expect(error.constructor).toBe(Error)
+    expect(error.message).toBe("Failed to call function 'resetToMinValue'.")
+  })
+
+  it('a detached non-attribute component behaves as one on an invalid owner', () => {
+    const held = addComponent(entity, 'minecraft:color')
+    removeComponent(entity, 'minecraft:color')
+    expect(held.isValid).toBe(false)
+    expect(held.typeId).toBe('minecraft:color')
+    expect(throws(() => held.entity)).toBeInstanceOf(InvalidEntityError)
+    // The guard beats NotImplementedError on a detached reference too.
+    expect(throws(() => held.value)).toBeInstanceOf(InvalidEntityError)
+  })
+
   it('throws InvalidEntityError on an invalidated entity', () => {
     addComponent(entity, 'minecraft:health', 20)
     invalidate(entity)

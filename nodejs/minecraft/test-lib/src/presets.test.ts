@@ -294,8 +294,9 @@ describe('asSpawnedEntity', () => {
   })
 
   it('mutates and returns nothing', () => {
-    // Declared void: the preset supplies values on the entity it was handed, it builds nothing.
-    const mutatesOnly: (entity: MC.Entity) => void = asSpawnedEntity
-    expect(typeof mutatesOnly).toBe('function')
+    const entity = createEntity(createServer(), { typeId: 'minecraft:sheep' })
+    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression -- the void return is the claim
+    expect(asSpawnedEntity(entity)).toBeUndefined()
+    expect(entity.nameTag).toBe('')
   })
 })

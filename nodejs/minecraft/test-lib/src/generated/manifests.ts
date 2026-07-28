@@ -2274,6 +2274,19 @@ type _PlayerButtonInputAfterEventSignalComplete = AssertNever<
 >
 export type { _PlayerButtonInputAfterEventSignalComplete }
 
+export const PlayerCursorInventoryComponentManifest = {
+  methods: [{ name: 'clear', minArity: 0, maxArity: 0 }],
+  properties: ['entity', 'isValid', 'item', 'typeId'],
+} as const satisfies ClassManifest<MC.PlayerCursorInventoryComponent>
+type _PlayerCursorInventoryComponentComplete = AssertNever<
+  Exclude<
+    keyof MC.PlayerCursorInventoryComponent,
+    | (typeof PlayerCursorInventoryComponentManifest)['methods'][number]['name']
+    | (typeof PlayerCursorInventoryComponentManifest)['properties'][number]
+  >
+>
+export type { _PlayerCursorInventoryComponentComplete }
+
 export const PlayerDimensionChangeAfterEventSignalManifest = {
   methods: [
     { name: 'subscribe', minArity: 1, maxArity: 1 },
@@ -3150,6 +3163,7 @@ export const FAKED_CLASSES = [
   'PlayerBreakBlockAfterEventSignal',
   'PlayerBreakBlockBeforeEventSignal',
   'PlayerButtonInputAfterEventSignal',
+  'PlayerCursorInventoryComponent',
   'PlayerDimensionChangeAfterEventSignal',
   'PlayerEmoteAfterEventSignal',
   'PlayerGameModeChangeAfterEventSignal',
@@ -3334,12 +3348,13 @@ export const COMPONENT_CLASSES = [
   'EntityScaleComponent',
   'EntitySkinIdComponent',
   'EntityStrengthComponent',
-  'EntityTameableComponent',
   'EntityTameMountComponent',
+  'EntityTameableComponent',
   'EntityTypeFamilyComponent',
   'EntityUnderwaterMovementComponent',
   'EntityVariantComponent',
   'EntityWantsJockeyComponent',
+  'PlayerCursorInventoryComponent',
 ] as const
 export const ATTRIBUTE_COMPONENT_CLASSES = [
   'EntityExhaustionComponent',

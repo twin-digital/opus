@@ -133,7 +133,7 @@ describe('dynamic property scope', () => {
     expect(b.world.getDynamicPropertyIds()).toEqual([])
   })
 
-  it('throws InvalidEntityError from every member on an invalidated entity', () => {
+  it('throws InvalidEntityError from all four dynamic-property members on an invalidated entity', () => {
     const server = createServer()
     const entity = anEntity(server)
     entity.setDynamicProperty('k', 1)
