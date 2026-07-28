@@ -10,7 +10,7 @@
 import type * as minecraftcommon from '@minecraft/common'
 import type * as MC from '@minecraft/server'
 
-import { matchesQuery } from './query.js'
+import { assertQueryHonoured, matchesQuery } from './query.js'
 import { construct } from './runtime/construct.js'
 import { registerBehaviour } from './runtime/member.js'
 import { dataOf, serverOf, type DimensionData, type EntityData, type ServerState } from './runtime/state.js'
@@ -32,11 +32,14 @@ export const lookupEntities = (
   server: ServerState,
   options: MC.EntityQueryOptions | undefined,
   where: (entity: EntityData) => boolean,
-): MC.Entity[] =>
-  registeredEntities(server)
+): MC.Entity[] => {
+  // Ahead of the entities: a query that matched nothing still reports the filter it dropped.
+  assertQueryHonoured(options)
+  return registeredEntities(server)
     .filter((entity) => where(entity))
     .filter((entity) => matchesQuery(entity.entity, options))
     .map((entity) => entity.entity)
+}
 
 /** What a caller supplies to put a dimension on a world. */
 export interface DimensionSpec {

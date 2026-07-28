@@ -7,6 +7,7 @@
 import type * as MC from '@minecraft/server'
 
 import type { ServerLike } from './create-server.js'
+import { assertLiveEntity } from './runtime/member.js'
 import { entityDataOf, serverOf } from './runtime/state.js'
 import { registerDimension, type DimensionSpec } from './world.js'
 
@@ -41,7 +42,10 @@ const VANILLA_DIMENSIONS: readonly DimensionSpec[] = [
 export const withVanillaDimensions = (server: ServerLike): void => {
   const state = serverOf(server.world)
   for (const dimension of VANILLA_DIMENSIONS) {
-    registerDimension(state, dimension)
+    // Presets compose, so a second application keeps the dimension objects a test already holds.
+    if (!state.dimensions.has(dimension.id)) {
+      registerDimension(state, dimension)
+    }
   }
 }
 
@@ -55,6 +59,7 @@ export const withVanillaDimensions = (server: ServerLike): void => {
  * this preset simplifies past rather than modelling a per-type draw.
  */
 export const asSpawnedEntity = (entity: MC.Entity): void => {
+  assertLiveEntity(entity, 'asSpawnedEntity')
   const data = entityDataOf(entity)
   data.nameTag ??= ''
   data.rotation ??= { x: 0, y: 0 }

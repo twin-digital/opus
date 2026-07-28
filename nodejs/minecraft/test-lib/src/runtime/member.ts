@@ -69,6 +69,19 @@ export const guardInvalidEntity = (fake: object, shape: AccessShape, name: strin
   )
 }
 
+/**
+ * The check a control-plane free function makes before it reshapes an entity. Those functions act
+ * on a live entity, so one that has gone invalid refuses the way a member would.
+ */
+export const assertLiveEntity = (entity: object, called: string): void => {
+  const state = stateOf(entity)
+  if (isValidFake(state)) {
+    return
+  }
+  const { id, type } = identityOf(state)
+  throw new InvalidEntityError(id, type, `${called} was called on an entity that is no longer valid.`)
+}
+
 /** The plain `Error` an attribute component's value getters and an effect's members throw. */
 export const guardFailedProperty = (fake: object, name: string): void => {
   if (!isValidFake(stateOf(fake))) {

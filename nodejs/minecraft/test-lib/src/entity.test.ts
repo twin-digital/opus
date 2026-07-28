@@ -2,6 +2,7 @@ import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
 import { addComponent } from './components.js'
+import { EntityManifest } from './generated/manifests.js'
 import { createServer, type FakeServer } from './create-server.js'
 import { createEntity, createPlayer, getTriggeredEvents, invalidate } from './entity.js'
 import { InvalidArgumentError, InvalidEntityError, NotImplementedError, UnsetValueError } from './errors.js'
@@ -86,7 +87,7 @@ describe('createEntity', () => {
     const { server, world } = setup()
     const given = createEntity(server, { typeId: SHEEP, id: '1' })
     const assigned = createEntity(server, { typeId: SHEEP })
-    expect(assigned.id).not.toBe('1')
+    expect(assigned.id).toBe('2')
     expect(world.getEntity('1')).toBe(given)
     expect(world.getEntity(assigned.id)).toBe(assigned)
   })
@@ -880,7 +881,7 @@ describe('invalidate', () => {
         keys: Object.keys(subject),
         ownNames: Object.getOwnPropertyNames(subject),
         json: JSON.parse(JSON.stringify(subject)) as unknown,
-        walksMore: walked.length > Object.keys(subject).length,
+        walked: walked.length,
       }
     }
     const valid = shape(entity)
@@ -889,7 +890,7 @@ describe('invalidate', () => {
       keys: ['typeId', 'id'],
       ownNames: ['typeId', 'id'],
       json: { typeId: SHEEP, id: '1' },
-      walksMore: true,
+      walked: EntityManifest.methods.length + EntityManifest.properties.length,
     })
     expect(shape(entity)).toEqual(valid)
   })

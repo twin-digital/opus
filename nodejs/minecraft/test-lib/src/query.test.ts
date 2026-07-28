@@ -140,7 +140,10 @@ describe('matchesQuery - the honoured six', () => {
 
   it('reads no field a query does not name', () => {
     const { server, overworld } = setup()
-    expect(sheep(server, overworld).matches({ type: SHEEP })).toBe(true)
+    // nameTag, location and dimension are all unset: a matcher touching any of them would throw.
+    const entity = createEntity(server, { typeId: SHEEP })
+    expect(entity.matches({ type: SHEEP })).toBe(true)
+    expect(sheep(server, overworld).matches({ type: COW })).toBe(false)
   })
 })
 
@@ -239,6 +242,15 @@ describe('matchesQuery - the eighteen unhonoured fields', () => {
     )
   })
 
+  it('scans the query own fields ahead of the filter fields it inherits', () => {
+    const { server, overworld } = setup()
+    expectThrown(
+      () => sheep(server, overworld).matches({ families: ['mob'], closest: 1 }),
+      NotImplementedError,
+      notImplementedMessage('EntityQueryOptions.closest'),
+    )
+  })
+
   it('throws through dimension.getEntities', () => {
     const { server, overworld } = setup()
     sheep(server, overworld)
@@ -305,11 +317,12 @@ describe('lookups with honoured options', () => {
     expect(world.getPlayers({ tags: ['a'] })).toEqual([tagged])
   })
 
-  it('takes no options on world.getAllPlayers', () => {
+  it('reads no nameTag from the unfiltered world.getAllPlayers', () => {
     const { server, world } = setup()
     const named = createPlayer(server, { name: 'Alex' })
     const unnamed = createPlayer(server)
     named.nameTag = 'Alex'
+    // The second player has no nameTag: an unfiltered lookup must not read one.
     expect(world.getAllPlayers()).toEqual([named, unnamed])
   })
 
