@@ -244,7 +244,8 @@ const COVERAGE_ROWS: readonly (readonly [subject: string, coverage: string])[] =
   ['`entity.remove()`', 'modelled'],
   ['`entity.triggerEvent`', 'divergence'],
   ['`entity.kill()`', 'modelled'],
-  ['invalidation of a corpse after `kill()`', 'not modelled'],
+  ['invalidation after `kill()` on an entity with no health component', 'modelled'],
+  ["invalidation of a mob's corpse after `kill()`", 'not modelled'],
   ['the seven attribute-shaped components', 'modelled'],
   ['the other 61 entity components', 'not modelled'],
   ['runtime component attachment and detachment', 'not modelled'],
@@ -292,7 +293,6 @@ const COVERAGE_ROWS: readonly (readonly [subject: string, coverage: string])[] =
     'not modelled',
   ],
   ['a filtered subscription — any options argument to `subscribe`', 'divergence'],
-  ['invalidation of a health-less corpse', 'divergence'],
   ['the basis the effect replacement rule compares on', 'divergence'],
 ]
 
@@ -336,9 +336,9 @@ describe('the README coverage table', () => {
     expect(bare).toEqual([])
   })
 
-  it('carries the twenty divergences the design named', () => {
-    expect(divergences).toHaveLength(20)
-    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(20)
+  it('carries the nineteen divergences the design named', () => {
+    expect(divergences).toHaveLength(19)
+    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(19)
   })
 
   it('describes every divergence in a section of its own, named for its row', () => {
@@ -352,7 +352,6 @@ describe('the README coverage table', () => {
   it('carries the two divergences the spec has not yet stated', () => {
     // Both escalated to the spec's owner; the README is where their absence bites a reader.
     const subjects = rows.map((row) => row.subject)
-    expect(subjects).toContain('invalidation of a health-less corpse')
     expect(subjects).toContain('the basis the effect replacement rule compares on')
   })
 })

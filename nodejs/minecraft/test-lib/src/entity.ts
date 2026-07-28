@@ -109,7 +109,7 @@ export const createPlayer = (server: ServerLike, options: PlayerOptions = {}): M
  * Puts a reference into the state the real API leaves a stale one in, at any point in a test —
  * including on a reference a handler is holding mid-event. Distinct from `remove()`, which
  * invalidates as part of removing: this reaches the entity that goes stale without leaving the
- * world, and the corpse a `kill()` left valid. The entity stays registered, so the world and
+ * world, and the mob corpse a `kill()` left valid. The entity stays registered, so the world and
  * dimension lookups still list it — that staleness-in-place is the whole of what this models.
  */
 export const invalidate = (entity: MC.Entity): void => {
@@ -117,12 +117,16 @@ export const invalidate = (entity: MC.Entity): void => {
 }
 
 /**
- * The `kill()` path for an entity carrying no health component: it fires `entityDie` with cause
- * `selfDestruct` and nothing else, and leaves the reference valid and registered. `kill` itself is
- * registered by the component model, which branches here when no health component is attached.
+ * The `kill()` path for an entity carrying no health component: it invalidates the reference and
+ * fires `entityDie` with cause `selfDestruct`, and nothing else. The entity stays registered — only
+ * `remove()` detaches it — and the handler meets an invalid reference, which is what the engine's
+ * handler meets: an arrow reads `isValid` false in the same statement sequence as the call, and the
+ * engine delivers the event after that call returned. `kill` itself is registered by the component
+ * model, which branches here when no health component is attached.
  */
 export const killWithoutHealth = (entity: MC.Entity): void => {
   const { server } = entityDataOf(entity)
+  stateOf(entity).valid = false
   dispatchAfter(server, 'entityDie', {
     deadEntity: entity,
     damageSource: { cause: 'selfDestruct' as MC.EntityDamageCause },

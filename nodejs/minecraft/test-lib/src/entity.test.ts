@@ -729,14 +729,29 @@ describe('entity.kill on an entity with no health component', () => {
     expect(healthChanges).toEqual([])
   })
 
-  // Divergence with no coverage row: the engine invalidates a health-less corpse synchronously,
-  // where the spec rules kill() never invalidates — a test says so with invalidate().
-  it('leaves the reference valid', () => {
+  // The engine invalidates a health-less corpse within the call, so the fake does too.
+  it('invalidates the reference', () => {
     const { server } = setup()
     const entity = createEntity(server, { typeId: SHEEP, location: ORIGIN })
     entity.kill()
-    expect(entity.isValid).toBe(true)
-    expect(entity.location).toEqual(ORIGIN)
+    expect(entity.isValid).toBe(false)
+    expect(() => entity.location).toThrow(InvalidEntityError)
+    // The four readable members survive invalidation, as on any invalid reference.
+    expect(entity.typeId).toBe(SHEEP)
+  })
+
+  // The engine delivers entityDie after kill() returned, by which time the arrow is already gone.
+  it('invalidates before it raises entityDie, so the handler meets the dead reference', () => {
+    const { server, world } = setup()
+    const entity = createEntity(server, { typeId: SHEEP, location: ORIGIN })
+    const seen: boolean[] = []
+    world.afterEvents.entityDie.subscribe((event) => {
+      seen.push(event.deadEntity.isValid)
+    })
+
+    entity.kill()
+
+    expect(seen).toEqual([false])
   })
 
   it('leaves the entity registered', () => {

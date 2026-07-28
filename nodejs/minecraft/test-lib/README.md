@@ -146,7 +146,7 @@ Five rules, in this order. A member matching an earlier rule never reaches a lat
 `remove()` invalidates as part of removing: it raises the `entityRemove` before-event, then detaches
 the entity and invalidates every reference to it as one act, then raises the after-event.
 `invalidate(entity)` reaches the state `remove()` cannot — the reference that goes stale without
-leaving the world, and the corpse a `kill()` left valid — and may be called at any point, including
+leaving the world, and the mob corpse a `kill()` left valid — and may be called at any point, including
 on a reference a handler is holding mid-event.
 
 On an invalidated entity exactly four members stay readable: `id`, `isValid` (false), `typeId`, and
@@ -183,7 +183,8 @@ considered, which is not the same as a promise about it.
 | `entity.remove()`                                                                                                             | modelled     | raises the `entityRemove` before-event, then detaches from the registry and invalidates the reference as one act, then raises the after-event — the engine's own cascade, which raises no death event either                                         |
 | `entity.triggerEvent`                                                                                                         | divergence   | validates the prefixed id and records the call, changing no state; in the engine the event reshapes the entity                                                                                                                                       |
 | `entity.kill()`                                                                                                               | modelled     | the full cascade, on an entity with and without a health component                                                                                                                                                                                   |
-| invalidation of a corpse after `kill()`                                                                                       | not modelled | `kill()` leaves the reference valid; in the engine a corpse stays valid for several ticks and when it turns invalid varies by type, so a test says so with `invalidate()`. Distinct from `remove()`, which invalidates at once                       |
+| invalidation after `kill()` on an entity with no health component                                                             | modelled     | the reference goes invalid before `entityDie` is raised, as the engine's does within the call                                                                                                                                                        |
+| invalidation of a mob's corpse after `kill()`                                                                                 | not modelled | the corpse stays valid, as the engine's does inside the `entityDie` handler and for at least ~7 ticks after; the engine invalidates it by ~27 when it despawns and the boundary is unmeasured, so a test says so with `invalidate()`                 |
 | the seven attribute-shaped components                                                                                         | modelled     | all four values, the bounds check, and the health-write cascade                                                                                                                                                                                      |
 | the other 61 entity components                                                                                                | not modelled | attachable, carrying `typeId`, `isValid` and `entity`; every other member throws                                                                                                                                                                     |
 | runtime component attachment and detachment                                                                                   | not modelled | the engine reaches it through data-driven paths; a test uses the `addComponent` / `removeComponent` free functions                                                                                                                                   |
@@ -228,7 +229,6 @@ considered, which is not the same as a promise about it.
 | `for-in` over an entity                                                                                                       | modelled     | the generator defines the prototype members `enumerable: true`, so `for-in` walks the engine's 62 while `Object.keys` still reads 2                                                                                                                  |
 | items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes | not modelled | declared in full and throwing                                                                                                                                                                                                                        |
 | a filtered subscription — any options argument to `subscribe`                                                                 | divergence   | the call throws `NotImplementedError` naming the signal class; the engine honours the filter, and delivering unfiltered would hand a pack events the engine withholds                                                                                |
-| invalidation of a health-less corpse                                                                                          | divergence   | `kill()` on an entity carrying no health component leaves the reference valid; the engine invalidates it immediately and deterministically, unlike a killed mob's variable window — a test that wants the corpse invalid says so with `invalidate()` |
 | the basis the effect replacement rule compares on                                                                             | divergence   | the rule compares the duration the effect carries, which never decays; the engine compares the duration remaining, so the two agree on the tick an effect was applied and part company once ticks pass                                               |
 
 ## Divergences in detail
@@ -359,14 +359,6 @@ reads that log; against the engine there is nothing to read.
 Nothing runs on its own. `system.currentTick` starts at 0 and moves only under `advanceTicks`, which
 runs every intervening tick's callbacks rather than only those due on the tick it lands on. The
 library starts no timer and awaits nothing.
-
-### invalidation of a health-less corpse
-
-`kill()` on an entity carrying no health component fires `entityDie` and leaves the reference valid.
-The engine invalidates that reference immediately — an arrow reads `isValid === false` in the same
-statement sequence as the `kill()` call, and stays invalid — so this case is deterministic rather
-than the variable window a killed mob's corpse has. A test that wants the dead reference invalid
-says so with `invalidate()`.
 
 ## Keeping this in step
 
