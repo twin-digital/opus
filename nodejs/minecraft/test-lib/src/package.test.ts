@@ -215,144 +215,197 @@ describe('entry point', () => {
 /**
  * The spec is not checked into this repository, so the rows cannot be diffed against it
  * mechanically; what is enforced here is the whole of the rule the spec sets — every behaviour
- * ruled on carries a row, every row carries one of the three coverage words, and every divergence
- * row carries the difference itself and a section describing it.
+ * ruled on carries a row, every row carries a unique id and one of the three coverage words, and
+ * every divergence row carries the difference itself and a section describing it.
+ *
+ * Every behaviour the design ruled on, transcribed from the spec's own coverage table. Each entry is
+ * the row's stable id, the engine behaviour it names, and its coverage word. The README is what
+ * ships to a reader who has the library in hand and the spec nowhere near, so each of these must
+ * carry a row, and each divergence must carry a section describing the difference.
+ *
+ * The id is the row's identity; the two description columns are not. A reworded behaviour column is
+ * updated here alongside the README, while an id that changes means a row was split, removed or
+ * added, and the change is real.
  */
 /**
- * Every behaviour the design ruled on, transcribed from the spec's own coverage table plus the
- * rulings made while building. The README is what ships to a reader who has the library in hand and
- * the spec nowhere near, so each of these must carry a row, and each divergence must carry a
- * section describing the difference.
+ * Divergences the library ships that the design's coverage table does not yet carry a row for.
+ *
+ * `r:coverage-is-enumerated` binds the package, not the design: a user meeting one of these without
+ * warning is the failure the requirement exists to prevent, so the README documents it even while
+ * the design is silent. Each entry is a question open with the design's owner, and the list is
+ * asserted exactly so it cannot grow quietly.
+ *
+ * - `filtered-subscription` — a `subscribe` call carrying an options argument throws
+ *   `NotImplementedError`; honouring the call while dropping the filter would deliver events the
+ *   engine withholds. Raised as plan-opus#119.
  */
-const COVERAGE_ROWS: readonly (readonly [subject: string, coverage: string])[] = [
-  ['dimension registration and `world.getDimension` resolution', 'modelled'],
-  ['`getDimension` with an unknown id', 'modelled'],
-  ["the world's resting state — empty collections, no players, no objectives", 'modelled'],
-  ["a freshly constructed entity's components", 'divergence'],
-  ['the spawn frame of `minecraft:xp_orb`', 'divergence'],
-  ["per-type vanilla data — a sheep's fourteen components, its 8/8/0/8 health", 'not modelled'],
-  ['entity id assignment', 'divergence'],
-  ['`world.getEntity`, `getAllPlayers`, `getPlayers`, `dimension.getEntities`, `dimension.getPlayers`', 'modelled'],
-  ['`EntityQueryOptions` filtering, on the lookups and on `entity.matches`', 'divergence'],
-  ['entity tags — `addTag`, `removeTag`, `hasTag`, `getTags`', 'modelled'],
+const LIBRARY_RULINGS: readonly (readonly [id: string, subject: string, coverage: string])[] = [
+  ['filtered-subscription', 'a filtered subscription — any options argument to `subscribe`', 'divergence'],
+]
+
+const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: string])[] = [
+  ['dimension-registration-and-resolution', 'dimension registration and `world.getDimension` resolution', 'modelled'],
+  ['get-dimension-unknown-id', '`getDimension` with an unknown id', 'modelled'],
+  ['world-resting-state', "the world's resting state — empty collections, no players, no objectives", 'modelled'],
+  ['fresh-entity-components', "a freshly constructed entity's components", 'divergence'],
+  ['xp-orb-spawn-frame', 'the spawn frame of `minecraft:xp_orb`', 'divergence'],
   [
+    'per-type-vanilla-data',
+    "per-type vanilla data — a sheep's fourteen components, its 8/8/0/8 health",
+    'not modelled',
+  ],
+  ['entity-id-assignment', 'entity id assignment', 'divergence'],
+  [
+    'entity-lookups',
+    '`world.getEntity`, `getAllPlayers`, `getPlayers`, `dimension.getEntities`, `dimension.getPlayers`',
+    'modelled',
+  ],
+  [
+    'entity-query-options-filtering',
+    '`EntityQueryOptions` filtering, on the lookups and on `entity.matches`',
+    'divergence',
+  ],
+  ['entity-tags', 'entity tags — `addTag`, `removeTag`, `hasTag`, `getTags`', 'modelled'],
+  [
+    'positional-entity-lookups',
     'the other entity lookups — `getEntitiesAtBlockLocation`, `getEntitiesFromRay`, `getEntitiesFromViewDirection` and the rest',
     'not modelled',
   ],
-  ['`dimension.spawnEntity` placement', 'divergence'],
-  ['post-spawn motion', 'divergence'],
-  ['`entity.remove()`', 'modelled'],
-  ['`entity.triggerEvent`', 'divergence'],
-  ['`entity.kill()`', 'modelled'],
-  ['invalidation after `kill()` on an entity with no health component', 'modelled'],
-  ["invalidation of a mob's corpse after `kill()`", 'modelled'],
-  ['the seven attribute-shaped components', 'modelled'],
-  ['the other 61 entity components', 'not modelled'],
-  ['runtime component attachment and detachment', 'not modelled'],
-  ['bare and prefixed id tolerance', 'modelled'],
-  ['`setCurrentValue` bounds check', 'modelled'],
-  ['`applyDamage` cascade, order and payloads', 'modelled'],
-  ["`applyDamage`'s boolean", 'modelled'],
-  ['`applyDamage` cause defaults and the `damagingEntity` carry-through', 'modelled'],
-  ['the killing-hit boundary', 'modelled'],
-  ['`applyDamage` on an entity with no health component', 'modelled'],
-  ['the damage-invulnerability window', 'divergence'],
-  ["the engine's velocity-dependent projectile damage adjustment", 'divergence'],
-  ['`addEffect` / `getEffect` / `getEffects` / `removeEffect` and the amplifier-first replacement rule', 'modelled'],
-  ["`addEffect`'s argument bounds", 'modelled'],
-  ["`addEffect`'s non-integer arguments", 'modelled'],
-  ['`addEffect` on `NaN` or `Infinity`', 'divergence'],
-  ["the display name's amplifier mapping", 'modelled'],
-  ['effect duration decay and expiry', 'divergence'],
-  ['`Effect.displayName` for the 37 vanilla types', 'modelled'],
-  ['`Effect.displayName` in a locale other than the observed one', 'divergence'],
-  ['`Effect.displayName` for a custom effect type', 'divergence'],
-  ['signal existence, `subscribe` / `unsubscribe`, reference dedupe and subscription order', 'modelled'],
-  ['after-event dispatch timing', 'divergence'],
-  ['engine-raised signals outside the five after-events and three before-events the fakes raise', 'not modelled'],
-  ['before-event cancellation', 'modelled'],
-  ['what a cancelled call returns', 'modelled'],
-  ['before-event mutable payload fields', 'divergence'],
-  ['a subscriber that throws', 'divergence'],
-  ['the tick loop', 'divergence'],
-  ['`run` / `runTimeout` / `runInterval` / `clearRun` scheduling', 'modelled'],
-  ['`runJob` / `clearJob`', 'not modelled'],
-  ['dynamic properties on the world and on entities', 'modelled'],
-  ['`getDynamicPropertyTotalByteCount`', 'not modelled'],
-  ['the scoreboard — objectives, scores, participants, display slots', 'modelled'],
-  ['`sendMessage` and `onScreenDisplay` output', 'modelled'],
-  ['the invalidation guard on entities, attribute components and effects', 'modelled'],
-  ['reading — not calling — a guarded method on an invalidated reference', 'modelled'],
-  ['too few arguments checked ahead of the validity guard', 'modelled'],
-  ['extra arguments to a member', 'modelled'],
-  ['`in` on a declared but unmodelled member', 'modelled'],
-  ['`Object.keys`, spread and `JSON.stringify` over an entity', 'modelled'],
-  ['`for-in` over an entity', 'modelled'],
+  ['spawn-entity-placement', '`dimension.spawnEntity` placement', 'divergence'],
+  ['post-spawn-motion', 'post-spawn motion', 'divergence'],
+  ['entity-remove-cascade', '`entity.remove()`', 'modelled'],
+  ['trigger-event', '`entity.triggerEvent`', 'divergence'],
+  ['entity-kill-cascade', '`entity.kill()`', 'modelled'],
+  ['corpse-invalidation-after-kill', "invalidation of a mob's corpse after `kill()`", 'modelled'],
+  ['kill-invalidation-without-health', 'invalidation after `kill()` on an entity with no health component', 'modelled'],
+  ['attribute-shaped-components', 'the seven attribute-shaped components', 'modelled'],
+  ['non-attribute-components', 'the other 61 entity components', 'not modelled'],
+  ['runtime-component-mutation', 'runtime component attachment and detachment', 'not modelled'],
+  ['namespace-prefix-tolerance', 'bare and prefixed id tolerance', 'modelled'],
+  ['set-current-value-bounds', '`setCurrentValue` bounds check', 'modelled'],
+  ['apply-damage-cascade', '`applyDamage` cascade, order and payloads', 'modelled'],
+  ['apply-damage-boolean', "`applyDamage`'s boolean", 'modelled'],
+  ['apply-damage-cause-and-source', '`applyDamage` cause defaults and the `damagingEntity` carry-through', 'modelled'],
+  ['killing-hit-boundary', 'the killing-hit boundary', 'modelled'],
+  ['apply-damage-without-health', '`applyDamage` on an entity with no health component', 'modelled'],
+  ['damage-invulnerability-window', 'the damage-invulnerability window', 'divergence'],
+  ['projectile-damage-adjustment', "the engine's velocity-dependent projectile damage adjustment", 'divergence'],
   [
+    'effect-add-and-replacement-rule',
+    '`addEffect` / `getEffect` / `getEffects` / `removeEffect` and the amplifier-first replacement rule',
+    'modelled',
+  ],
+  ['add-effect-argument-bounds', "`addEffect`'s argument bounds", 'modelled'],
+  ['add-effect-non-integer-arguments', "`addEffect`'s non-integer arguments", 'modelled'],
+  ['add-effect-nan-and-infinity', '`addEffect` on `NaN` or `Infinity`', 'divergence'],
+  ['display-name-amplifier-mapping', "the display name's amplifier mapping", 'modelled'],
+  ['effect-duration-decay', 'effect duration decay', 'modelled'],
+  ['effect-duration-expiry-boundary', 'what the engine does when a duration reaches zero', 'not modelled'],
+  ['vanilla-effect-display-names', '`Effect.displayName` for the 37 vanilla types', 'modelled'],
+  ['effect-display-name-locale', '`Effect.displayName` in a locale other than the observed one', 'divergence'],
+  ['custom-effect-display-name', '`Effect.displayName` for a custom effect type', 'divergence'],
+  [
+    'signal-subscription',
+    'signal existence, `subscribe` / `unsubscribe`, reference dedupe and subscription order',
+    'modelled',
+  ],
+  ['after-event-dispatch-timing', 'after-event dispatch timing', 'divergence'],
+  [
+    'unraised-engine-signals',
+    'engine-raised signals outside the five after-events and three before-events the fakes raise',
+    'not modelled',
+  ],
+  ['before-event-cancellation', 'before-event cancellation', 'modelled'],
+  ['cancelled-call-return-value', 'what a cancelled call returns', 'modelled'],
+  ['before-event-payload-writes', 'before-event mutable payload fields', 'divergence'],
+  ['throwing-subscriber', 'a subscriber that throws', 'divergence'],
+  ['tick-loop', 'the tick loop', 'divergence'],
+  ['system-scheduling', '`run` / `runTimeout` / `runInterval` / `clearRun` scheduling', 'modelled'],
+  ['run-job', '`runJob` / `clearJob`', 'not modelled'],
+  ['dynamic-properties', 'dynamic properties on the world and on entities', 'modelled'],
+  ['dynamic-property-byte-count', '`getDynamicPropertyTotalByteCount`', 'not modelled'],
+  ['scoreboard', 'the scoreboard — objectives, scores, participants, display slots', 'modelled'],
+  ['message-and-title-output', '`sendMessage` and `onScreenDisplay` output', 'modelled'],
+  ['invalidation-guard', 'the invalidation guard on entities, attribute components and effects', 'modelled'],
+  ['guard-fires-at-call', 'reading — not calling — a guarded method on an invalidated reference', 'modelled'],
+  ['arity-before-guard', 'too few arguments checked ahead of the validity guard', 'modelled'],
+  ['extra-arguments', 'extra arguments to a member', 'modelled'],
+  ['in-operator-on-members', '`in` on a declared but unmodelled member', 'modelled'],
+  ['own-enumerable-properties', '`Object.keys`, spread and `JSON.stringify` over an entity', 'modelled'],
+  ['for-in-enumeration', '`for-in` over an entity', 'modelled'],
+  [
+    'out-of-scope-surfaces',
     'items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes',
     'not modelled',
   ],
-  ['a filtered subscription — any options argument to `subscribe`', 'divergence'],
-  ['the duration the replacement rule compares against', 'divergence'],
 ]
 
 describe('the README coverage table', () => {
   const readme = readFileSync(join(packageRoot, 'README.md'), 'utf8')
 
-  const rows = [...readme.matchAll(/^\|([^|\n]+)\|([^|\n]+)\|([^|\n]*)\|\s*$/gm)]
+  const rows = [...readme.matchAll(/^\|([^|\n]+)\|([^|\n]+)\|([^|\n]+)\|([^|\n]*)\|\s*$/gm)]
     .map((match) => ({
-      subject: match[1].trim(),
-      coverage: match[2].trim(),
-      description: match[3].trim(),
+      id: match[1].trim().replace(/^`|`$/g, ''),
+      subject: match[2].trim(),
+      coverage: match[3].trim(),
+      description: match[4].trim(),
     }))
     .filter((row) => ['modelled', 'not modelled', 'divergence'].includes(row.coverage))
 
-  const divergences = COVERAGE_ROWS.filter(([, coverage]) => coverage === 'divergence')
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  const documented = [...COVERAGE_ROWS, ...LIBRARY_RULINGS]
+  const divergences = documented.filter(([, , coverage]) => coverage === 'divergence')
 
   it('carries a row for every behaviour the design ruled on', () => {
-    const subjects = new Set(rows.map((row) => row.subject))
-    expect(COVERAGE_ROWS.map(([subject]) => subject).filter((subject) => !subjects.has(subject))).toEqual([])
-    expect(COVERAGE_ROWS).toHaveLength(63)
+    expect(COVERAGE_ROWS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
+    expect(COVERAGE_ROWS).toHaveLength(62)
+  })
+
+  it('carries a row for every divergence the library rules on alone', () => {
+    expect(LIBRARY_RULINGS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
+  })
+
+  it('names every row for the behaviour the design ruled on', () => {
+    const wrong = documented
+      .filter(([id, subject]) => byId.get(id)?.subject !== subject)
+      .map(([id, subject]) => `${id}: expected ${subject}, read ${String(byId.get(id)?.subject)}`)
+    expect(wrong).toEqual([])
   })
 
   it('gives every row the coverage the design ruled on', () => {
-    const bySubject = new Map(rows.map((row) => [row.subject, row]))
-    const wrong = COVERAGE_ROWS.filter(([subject, coverage]) => bySubject.get(subject)?.coverage !== coverage).map(
-      ([subject, coverage]) => `${subject}: expected ${coverage}, read ${String(bySubject.get(subject)?.coverage)}`,
+    const wrong = COVERAGE_ROWS.filter(([id, , coverage]) => byId.get(id)?.coverage !== coverage).map(
+      ([id, , coverage]) => `${id}: expected ${coverage}, read ${String(byId.get(id)?.coverage)}`,
     )
     expect(wrong).toEqual([])
   })
 
-  it('carries no row the design did not rule on', () => {
-    const ruled = new Set(COVERAGE_ROWS.map(([subject]) => subject))
-    expect(rows.map((row) => row.subject).filter((subject) => !ruled.has(subject))).toEqual([])
+  it("carries no row that is neither the design's nor a recorded library ruling", () => {
+    const known = new Set(documented.map(([id]) => id))
+    expect(rows.map((row) => row.id).filter((id) => !known.has(id))).toEqual([])
+  })
+
+  it('issues every id once', () => {
+    expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length)
   })
 
   it('carries the difference itself on every divergence row', () => {
-    const bySubject = new Map(rows.map((row) => [row.subject, row]))
-    const bare = divergences
-      .map(([subject]) => subject)
-      .filter((subject) => (bySubject.get(subject)?.description.length ?? 0) < 40)
+    const bare = divergences.map(([id]) => id).filter((id) => (byId.get(id)?.description.length ?? 0) < 40)
     expect(bare).toEqual([])
   })
 
-  it('carries the nineteen divergences the design named', () => {
-    expect(divergences).toHaveLength(19)
-    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(19)
+  it('carries the sixteen divergences the design named, plus the one the library rules alone', () => {
+    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(16)
+    expect(divergences).toHaveLength(17)
+    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(17)
   })
 
   it('describes every divergence in a section of its own, named for its row', () => {
     const start = readme.search(/^## Divergences in detail$/m)
     expect(start).toBeGreaterThanOrEqual(0)
     const headings = new Set([...readme.slice(start).matchAll(/^### (.+)$/gm)].map((match) => match[1].trim()))
-    expect(divergences.map(([subject]) => subject).filter((subject) => !headings.has(subject))).toEqual([])
+    const expected = divergences.map(([id, subject]) => `\`${id}\` — ${subject}`)
+    expect(expected.filter((heading) => !headings.has(heading))).toEqual([])
     expect(headings.size).toBe(divergences.length)
-  })
-
-  it('carries the two divergences the spec has not yet stated', () => {
-    // Both escalated to the spec's owner; the README is where their absence bites a reader.
-    const subjects = rows.map((row) => row.subject)
-    expect(subjects).toContain('the duration the replacement rule compares against')
   })
 })
 

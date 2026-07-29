@@ -3,7 +3,8 @@
  * replacement rule, the display-name table with its computed numeral, and the
  * `registerEffectBaseName` free function behind custom types and overrides.
  *
- * An effect's duration is the number applied and stays that number until the effect is removed:
+ * An effect's duration decays one per tick the test advances, and the effect is removed on the tick
+ * it reaches zero:
  * advancing ticks does not decay it and never expires an effect.
  */
 
@@ -105,11 +106,36 @@ const retire = (state: EffectState): void => {
 /**
  * Whether a re-add displaces what is already there: amplifier first, the duration only breaking a
  * tie. A lower amplifier never replaces whatever the duration, and an equal amplifier replaces on a
- * duration longer or equal. The engine compares the duration *remaining*; a fake duration never
- * decays, so this compares the duration stored with nothing to subtract.
+ * duration longer or equal. The comparison is against the duration *remaining*, as the engine's is:
+ * the stored number is already the remaining one, because it decays as the test advances.
  */
 const replaces = (existing: EffectState, amplifier: number, duration: number): boolean =>
   amplifier > existing.amplifier || (amplifier === existing.amplifier && duration >= existing.duration)
+
+/**
+ * Takes one tick off every live effect in the bundle, and retires the ones that reach zero.
+ *
+ * Called by `advanceTicks` between incrementing the tick and running that tick's callbacks, so a
+ * callback reads the value for its own tick, and an effect that runs out partway through a
+ * multi-tick advance is already gone for the remaining ticks.
+ *
+ * The expiry boundary is the library's own rule: nothing observed says what the engine does when a
+ * duration reaches zero, so an effect is never readable at 0 and the last tick it reads is 1.
+ */
+export const decayEffects = (server: ServerState): void => {
+  for (const entity of server.entities) {
+    for (const state of entity.effects.values()) {
+      if (!state.present) {
+        continue
+      }
+      state.duration -= 1
+      if (state.duration <= 0) {
+        retire(state)
+        entity.effects.delete(state.typeId)
+      }
+    }
+  }
+}
 
 /** The live effect an entity carries for a type, if it carries one. */
 const effectOf = (data: EntityData, typeId: string): EffectState | undefined => {

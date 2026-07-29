@@ -7,6 +7,7 @@
 import type * as MC from '@minecraft/server'
 
 import type { ServerLike } from './create-server.js'
+import { decayEffects } from './effects.js'
 import { InvalidArgumentError } from './errors.js'
 import { registerBehaviour, type FakeState } from './runtime/member.js'
 import { dataOf, serverOf, type ScheduledRun, type ServerState } from './runtime/state.js'
@@ -122,7 +123,10 @@ const runDue = (state: ServerState): void => {
 }
 
 /**
- * Runs the callbacks scheduled up to `count` ticks ahead. The advance steps one tick at a time,
+ * Runs the callbacks scheduled up to `count` ticks ahead. Each tick the advance takes, the state
+ * transitions land before that tick's callbacks: a corpse due to go stale does, every live effect
+ * loses one from its duration, and an effect reaching zero is gone — so a callback reads the world
+ * as of the tick it is running on. The advance steps one tick at a time,
  * incrementing `currentTick` and then running every callback due at that tick in the order it was
  * scheduled, before it steps again — so an advance runs every intervening tick's callbacks, not
  * only those due on the tick it lands on.
@@ -141,6 +145,7 @@ export const advanceTicks = (server: ServerLike, count: number): void => {
   for (let step = 0; step < count; step += 1) {
     state.currentTick += 1
     applyDueInvalidations(state)
+    decayEffects(state)
     runDue(state)
   }
 }
