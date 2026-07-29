@@ -84,7 +84,13 @@ parameter name, the duration shape uses `[1].` + no parameter name.
 | 35  | `leaves the existing effect's fake valid when it does not replace`         | after a refused re-add, the base `Effect` still reads `isValid === true`, `duration === 300`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | same                                                                                                                                                                                                                         |
 | 36  | `does not touch a different effect type`                                   | `speed` present, then `addEffect('minecraft:haste', 100)`: both read back independently and `getEffects()` has length 2.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | spec — replacement is per type                                                                                                                                                                                               |
 
-## 5. Durations never decay (divergence)
+> **Superseded in part.** Sections 4 and 5 below describe the non-decaying durations the design
+> ruled at capture time. plan-opus#114 reversed that: durations now decay one per advanced tick and
+> an effect is removed on the tick its duration stops being positive. The cases those sections name
+> were rewritten or replaced in `src/effects.test.ts`; the rest of this plan still stands, and it is
+> kept as the record of what was planned rather than being rewritten after the fact.
+
+## 5. Durations never decay (divergence, superseded)
 
 `describe('effect duration')`
 

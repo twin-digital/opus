@@ -1,6 +1,6 @@
 /**
  * Effects: `addEffect` with its return value, argument bounds and coercion, the amplifier-first
- * replacement rule, non-decaying durations, `getEffect` / `getEffects` / `removeEffect`, the
+ * replacement rule, decaying durations and expiry, `getEffect` / `getEffects` / `removeEffect`, the
  * `effectAdd` before-event, and the effect members on an invalid owner.
  */
 
@@ -347,18 +347,34 @@ describe('addEffect replacement rule', () => {
     expect(entity.getEffect(SPEED)).toBe(updated)
   })
 
-  // 31 — divergence: the engine compares the duration remaining, which decays one per tick. The fake
-  // compares the duration stored, which never decays, so a re-add shorter than the applied value is
-  // refused here where the engine (250 remaining after 150 ticks) would have taken it.
-  it('compares against the stored duration, so a re-add shorter than the applied value never replaces', () => {
+  // 31 — the comparison is against what remains, as the engine's is: 400 applied, 150 ticks gone,
+  // so 320 beats the 250 left and replaces where it would have lost to the applied number.
+  it('compares against the duration remaining, so a re-add can beat an aged effect', () => {
     const { server, entity } = setup()
     entity.addEffect(SPEED, 400, { amplifier: 1 })
     advanceTicks(server, 150)
+    expect(entity.getEffect(SPEED)!.duration).toBe(250)
 
     entity.addEffect(SPEED, 320, { amplifier: 1 })
 
+    expect(entity.getEffect(SPEED)!.duration).toBe(320)
+  })
+
+  // A losing re-add cannot tell the two comparison bases apart — anything under the remaining
+  // number is under the applied one too — so this pins what a refusal leaves behind instead.
+  it('leaves the survivor untouched and still decaying when a re-add is refused', () => {
+    const { server, entity } = setup()
+    entity.addEffect(SPEED, 400, { amplifier: 1 })
+    advanceTicks(server, 50)
+
+    entity.addEffect(SPEED, 200, { amplifier: 1 })
+
+    // 200 loses to the 350 left, so the aged effect survives and keeps decaying.
     expect(entity.getEffect(SPEED)!.amplifier).toBe(1)
-    expect(entity.getEffect(SPEED)!.duration).toBe(400)
+    expect(entity.getEffect(SPEED)!.duration).toBe(350)
+
+    advanceTicks(server, 10)
+    expect(entity.getEffect(SPEED)!.duration).toBe(340)
   })
 
   // 32
@@ -417,42 +433,146 @@ describe('effect duration', () => {
     expect(entity.getEffect(SPEED)!.duration).toBe(400)
   })
 
-  // 38 — divergence: the engine decays a duration one per tick
-  it('does not decay as ticks advance', () => {
+  it('gives the before-event the requested duration, not what remains of the effect it replaces', () => {
+    const { server, entity } = setup()
+    const seen: number[] = []
+    entity.addEffect(SPEED, 400, { amplifier: 1 })
+    advanceTicks(server, 150)
+    server.world.beforeEvents.effectAdd.subscribe((event) => {
+      seen.push(event.duration)
+    })
+
+    entity.addEffect(SPEED, 320, { amplifier: 1 })
+
+    // 320 as asked for — not the 250 remaining, and not the 320 the resulting effect carries.
+    expect(seen).toEqual([320])
+  })
+
+  // 38 — one per tick advanced, the rate the engine was measured at
+  it('loses one per tick the test advances', () => {
     const { server, entity } = setup()
     entity.addEffect(SPEED, 400)
+
     advanceTicks(server, 100)
+
+    expect(entity.getEffect(SPEED)!.duration).toBe(300)
+  })
+
+  it('takes one off every live effect, not just the first', () => {
+    const { server, entity } = setup()
+    entity.addEffect(SPEED, 5)
+    entity.addEffect(HASTE, 2)
+
+    advanceTicks(server, 2)
+
+    expect(entity.getEffect(SPEED)!.duration).toBe(3)
+    expect(entity.getEffect(HASTE)).toBeUndefined()
+    expect(entity.getEffects()).toHaveLength(1)
+  })
+
+  it('reads the same decayed number through every route to it', () => {
+    const { server, entity } = setup()
+    const handle = entity.addEffect(SPEED, 400)!
+
+    advanceTicks(server, 100)
+
+    expect(handle.duration).toBe(300)
+    expect(entity.getEffect(SPEED)!.duration).toBe(300)
+    expect(entity.getEffects()[0].duration).toBe(300)
+  })
+
+  // A handler may write any number onto the before-event and it is honoured unchecked, so the decay
+  // pass has to cope with one that is not a positive number rather than subtracting from it forever.
+  it('expires an effect whose handler-written duration is not a positive number', () => {
+    const { server, entity } = setup()
+    server.world.beforeEvents.effectAdd.subscribe((event) => {
+      ;(event as unknown as { duration: unknown }).duration = undefined
+    })
+    entity.addEffect(SPEED, 100)
+
+    advanceTicks(server, 1)
+
+    expect(entity.getEffect(SPEED)).toBeUndefined()
+    expect(entity.getEffects()).toEqual([])
+  })
+
+  it('decays nothing on a bundle the test never advances', () => {
+    const { entity } = setup()
+    entity.addEffect(SPEED, 400)
 
     expect(entity.getEffect(SPEED)!.duration).toBe(400)
   })
 
-  // 39 — divergence: the engine expires the effect
-  it('never expires the effect', () => {
+  it('decays only its own bundle', () => {
     const { server, entity } = setup()
-    entity.addEffect(SPEED, 20)
-    advanceTicks(server, 1000)
+    const other = setup()
+    entity.addEffect(SPEED, 100)
+    other.entity.addEffect(SPEED, 100)
 
-    const effect = entity.getEffect(SPEED)
-    expect(effect).toBeDefined()
-    expect(effect!.isValid).toBe(true)
-    expect(effect!.duration).toBe(20)
-    expect(entity.getEffects()).toHaveLength(1)
+    advanceTicks(server, 10)
+
+    expect(entity.getEffect(SPEED)!.duration).toBe(90)
+    expect(other.entity.getEffect(SPEED)!.duration).toBe(100)
   })
 
-  // 40
-  it('fires nothing as ticks pass over an effect', () => {
+  // The library's own expiry rule: removed on the tick it reaches 0, so 1 is the last readable value.
+  it('is readable at one and gone on the next tick', () => {
     const { server, entity } = setup()
-    const before = vi.fn()
-    const after = vi.fn()
-    server.world.beforeEvents.effectAdd.subscribe(before)
-    server.world.afterEvents.effectAdd.subscribe(after)
+    entity.addEffect(SPEED, 3)
 
+    advanceTicks(server, 2)
+    expect(entity.getEffect(SPEED)!.duration).toBe(1)
+
+    advanceTicks(server, 1)
+    expect(entity.getEffect(SPEED)).toBeUndefined()
+    expect(entity.getEffects()).toEqual([])
+  })
+
+  it('leaves a held handle in the state a removal leaves one', () => {
+    const { server, entity } = setup()
+    const effect = entity.addEffect(SPEED, 2)!
+
+    advanceTicks(server, 2)
+
+    expect(effect.isValid).toBe(false)
+    expect(() => effect.duration).toThrow("Failed to get property 'duration'.")
+  })
+
+  it('is already gone for the callbacks of the tick it expired on', () => {
+    const { server, entity } = setup()
+    entity.addEffect(SPEED, 2)
+    const seen: (number | undefined)[] = []
+    server.system.runInterval(() => {
+      seen.push(entity.getEffect(SPEED)?.duration)
+    }, 1)
+
+    advanceTicks(server, 3)
+
+    // Tick 1 reads 1, tick 2 is the expiry, tick 3 confirms it stays gone.
+    expect(seen).toEqual([1, undefined, undefined])
+  })
+
+  // 40 — 2.8.0 declares no effect-remove or effect-expire signal, so an expiry raises nothing at all
+  it('raises no signal whatsoever as ticks pass over an effect, expiry included', () => {
+    const { server, entity } = setup()
     entity.addEffect(SPEED, 20)
-    before.mockClear()
+
+    // Every declared signal, not just the effectAdd pair: an expiry has nothing to dispatch.
+    const delivered: string[] = []
+    const containers: unknown[] = [server.world.afterEvents, server.world.beforeEvents]
+    for (const container of containers) {
+      const signals = container as Record<string, { subscribe: (fn: () => void) => unknown }>
+      for (const name in signals) {
+        signals[name].subscribe(() => {
+          delivered.push(name)
+        })
+      }
+    }
+
     advanceTicks(server, 1000)
 
-    expect(before).not.toHaveBeenCalled()
-    expect(after).not.toHaveBeenCalled()
+    expect(delivered).toEqual([])
+    expect(entity.getEffect(SPEED)).toBeUndefined()
     expect(getHandlerErrors(server)).toEqual([])
   })
 })

@@ -660,8 +660,9 @@ describe('before-event payload writes', () => {
     })
     expect(entity.addEffect('minecraft:speed', 100)?.duration).toBe(600)
     expect(entity.getEffect('minecraft:speed')?.duration).toBe(600)
+    // Decay runs from the duration the handler wrote, not the one the call requested.
     advanceTicks(server, 5)
-    expect(entity.getEffect('minecraft:speed')?.duration).toBe(600)
+    expect(entity.getEffect('minecraft:speed')?.duration).toBe(595)
   })
 
   it('shortens a duration the same way', () => {
