@@ -229,7 +229,7 @@ considered, which is not the same as a promise about it.
 | `for-in` over an entity                                                                                                       | modelled     | the generator defines the prototype members `enumerable: true`, so `for-in` walks the engine's 62 while `Object.keys` still reads 2                                                                                                                  |
 | items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes | not modelled | declared in full and throwing                                                                                                                                                                                                                        |
 | a filtered subscription — any options argument to `subscribe`                                                                 | divergence   | the call throws `NotImplementedError` naming the signal class; the engine honours the filter, and delivering unfiltered would hand a pack events the engine withholds                                                                                |
-| the basis the effect replacement rule compares on                                                                             | divergence   | the rule compares the duration the effect carries, which never decays; the engine compares the duration remaining, so the two agree on the tick an effect was applied and part company once ticks pass                                               |
+| the duration the replacement rule compares against                                                                            | divergence   | the rule compares the duration the effect carries, which never decays; the engine compares the duration remaining, so the two agree on the tick an effect was applied and part company once ticks pass                                               |
 
 ## Divergences in detail
 
@@ -306,7 +306,7 @@ A duration reads back the value applied and stays that number until the effect i
 decays it one per tick and expires the effect at zero. `advanceTicks` never expires an effect, so a
 test that advances past an effect's duration finds it still present.
 
-### the basis the effect replacement rule compares on
+### the duration the replacement rule compares against
 
 Re-adding an effect replaces the present one when the new amplifier is higher, or when the amplifier
 is equal and the new duration is longer or equal. The fake compares against the duration the effect
