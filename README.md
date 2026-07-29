@@ -39,6 +39,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
 - [@twin-digital/mc-dev-kit](./nodejs/minecraft/mc-dev-kit): Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.
+- [@twin-digital/minecraft-test-lib](./nodejs/minecraft/test-lib): In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.

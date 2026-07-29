@@ -13,6 +13,11 @@ packages:
     rules:
       eslint: false
       eslint-config-bootstrap: false
+  '@twin-digital/minecraft-test-lib':
+    # One public entry point by design: every fake type and free function is reached from the
+    # package root, so the generated `./*` subpath exports would contradict the published surface.
+    rules:
+      package-manifest: false
   '@twin-digital/opus-scripts':
     rules:
       clean: false

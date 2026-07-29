@@ -5,6 +5,7 @@ terraform
 
 # automatically generated files
 **/CHANGELOG.md
+nodejs/minecraft/test-lib/src/generated
 
 # pnpm lockfile — managed by pnpm; never reformat
 pnpm-lock.yaml

@@ -19,6 +19,9 @@ catalog:
   'aws-sdk-client-mock': ^4.1.0
   'aws-sdk-client-mock-vitest': ^7.0.1
   '@middy/core': ^7.0.0
+  '@minecraft/common': ^1.2.0
+  '@minecraft/server': 2.8.0
+  '@minecraft/vanilla-data': ^1.26.33
   '@types/aws-lambda': ^8.10.159
   '@types/lodash-es': ^4.17.12
   '@types/node': 24.13.2
