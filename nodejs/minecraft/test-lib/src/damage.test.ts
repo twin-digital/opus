@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addComponent, removeComponent } from './components.js'
 import { createEntity, invalidate } from './entity.js'
 import { createServer, type FakeServer } from './create-server.js'
+import { advanceTicks } from './scheduler.js'
 import { InvalidEntityError, UnsetValueError } from './errors.js'
 
 /** `EntityDamageCause` is types-only at runtime, so a cause is written as its string value. */
@@ -470,10 +471,62 @@ describe('entity.kill', () => {
       expect(records).toEqual([])
     })
 
-    it('leaves the reference valid', () => {
+    it('leaves the reference valid, as the engine does inside the entityDie handler', () => {
       entity.kill()
       expect(entity.isValid).toBe(true)
       expect(entity.getComponent('minecraft:health')).toBe(health)
+    })
+
+    it('holds the corpse valid for twenty ticks and invalidates it on the twenty-first', () => {
+      entity.kill()
+
+      advanceTicks(server, 20)
+      expect(entity.isValid).toBe(true)
+      // A guarded member still answers, which is what "still valid" has to mean.
+      expect(entity.getTags()).toEqual([])
+
+      advanceTicks(server, 1)
+      expect(entity.isValid).toBe(false)
+      expect(() => entity.getTags()).toThrow(InvalidEntityError)
+    })
+
+    it('has already invalidated the corpse when a callback due on that tick runs', () => {
+      // The engine was measured through exactly this shape: a callback scheduled for the tick the
+      // boundary falls on, reading isValid.
+      const seen: boolean[] = []
+      entity.kill()
+      server.system.runTimeout(() => {
+        seen.push(entity.isValid)
+      }, 21)
+
+      advanceTicks(server, 21)
+
+      expect(seen).toEqual([false])
+    })
+
+    it('leaves the corpse registered with the world, since only remove() detaches', () => {
+      entity.kill()
+      advanceTicks(server, 21)
+
+      expect(entity.isValid).toBe(false)
+      expect(server.world.getEntity(entity.id)).toBe(entity)
+    })
+
+    it('times each corpse from its own kill', () => {
+      const second = createEntity(server, { typeId: 'minecraft:cow' })
+      addComponent(second, 'minecraft:health', 10)
+
+      entity.kill()
+      advanceTicks(server, 10)
+      second.kill()
+      advanceTicks(server, 11)
+
+      // The first is 21 ticks past its kill; the second only 11.
+      expect(entity.isValid).toBe(false)
+      expect(second.isValid).toBe(true)
+
+      advanceTicks(server, 10)
+      expect(second.isValid).toBe(false)
     })
 
     it('raises no before-event', () => {

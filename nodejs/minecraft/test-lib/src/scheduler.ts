@@ -8,8 +8,38 @@ import type * as MC from '@minecraft/server'
 
 import type { ServerLike } from './create-server.js'
 import { InvalidArgumentError } from './errors.js'
-import { registerBehaviour } from './runtime/member.js'
+import { registerBehaviour, type FakeState } from './runtime/member.js'
 import { dataOf, serverOf, type ScheduledRun, type ServerState } from './runtime/state.js'
+
+/**
+ * How long a killed mob's corpse stays valid: the engine invalidates it exactly 21 ticks after the
+ * call, a constant across every type and repeat measured.
+ */
+export const CORPSE_INVALIDATION_TICKS = 21
+
+/**
+ * Marks a reference to go invalid on a later tick — the corpse a `kill()` leaves, which the engine
+ * invalidates 21 ticks after the call. Nothing runs on its own, so it goes stale when a test
+ * advances that far and not before.
+ */
+export const invalidateAtTick = (server: ServerState, state: FakeState, atTick: number): void => {
+  server.pendingInvalidations.push({ state, atTick })
+}
+
+/**
+ * Invalidates whatever is due on the tick just reached, ahead of that tick's callbacks: the engine
+ * was measured through a callback scheduled for exactly that tick, and it read the reference
+ * invalid.
+ */
+const applyDueInvalidations = (server: ServerState): void => {
+  for (let index = server.pendingInvalidations.length - 1; index >= 0; index -= 1) {
+    const pending = server.pendingInvalidations[index]
+    if (pending.atTick <= server.currentTick) {
+      pending.state.valid = false
+      server.pendingInvalidations.splice(index, 1)
+    }
+  }
+}
 
 /** The state behind the `system` fake. */
 export interface SystemData {
@@ -110,6 +140,7 @@ export const advanceTicks = (server: ServerLike, count: number): void => {
   const state = serverOf(server.world)
   for (let step = 0; step < count; step += 1) {
     state.currentTick += 1
+    applyDueInvalidations(state)
     runDue(state)
   }
 }

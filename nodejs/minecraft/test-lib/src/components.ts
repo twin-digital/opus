@@ -15,6 +15,7 @@ import { dispatchAfter, dispatchBefore } from './events.js'
 import { ATTRIBUTE_COMPONENT_CLASSES, COMPONENT_CLASSES, componentClassFor } from './generated/manifests.js'
 import { canonicalId, isAttributeComponentId, type EntityComponentId } from './ids.js'
 import { construct } from './runtime/construct.js'
+import { CORPSE_INVALIDATION_TICKS, invalidateAtTick } from './scheduler.js'
 import { assertLiveEntity, isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
 import { dataOf, entityDataOf, type AttributeValues, type ComponentState, type EntityData } from './runtime/state.js'
 
@@ -303,6 +304,8 @@ const entityComponentBehaviour: ClassBehaviour = {
       newValue: effectiveMin,
     })
     dispatchAfter(data.server, 'entityDie', { deadEntity: data.entity, damageSource })
+    // The corpse stays valid, as the engine's does, and goes stale 21 ticks later.
+    invalidateAtTick(data.server, stateOf(fake), data.server.currentTick + CORPSE_INVALIDATION_TICKS)
     return true
   },
 }

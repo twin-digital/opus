@@ -7,7 +7,7 @@
 import type * as minecraftcommon from '@minecraft/common'
 import type * as MC from '@minecraft/server'
 
-import { stateOf } from './member.js'
+import { stateOf, type FakeState } from './member.js'
 
 /** A message or title a fake would have sent, captured instead of displayed. */
 export interface OutputRecord {
@@ -146,6 +146,8 @@ export interface ServerState {
   currentTick: number
   nextRunHandle: number
   readonly scheduled: ScheduledRun[]
+  /** Corpses due to go stale, and the tick each turns invalid on. */
+  readonly pendingInvalidations: { readonly state: FakeState; readonly atTick: number }[]
   /** Base display names registered for effect types, over the shipped vanilla table. */
   readonly effectBaseNames: Map<string, string>
   readonly dynamicProperties: Map<string, DynamicPropertyValue>

@@ -245,7 +245,7 @@ const COVERAGE_ROWS: readonly (readonly [subject: string, coverage: string])[] =
   ['`entity.triggerEvent`', 'divergence'],
   ['`entity.kill()`', 'modelled'],
   ['invalidation after `kill()` on an entity with no health component', 'modelled'],
-  ["invalidation of a mob's corpse after `kill()`", 'not modelled'],
+  ["invalidation of a mob's corpse after `kill()`", 'modelled'],
   ['the seven attribute-shaped components', 'modelled'],
   ['the other 61 entity components', 'not modelled'],
   ['runtime component attachment and detachment', 'not modelled'],

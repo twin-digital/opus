@@ -63,6 +63,7 @@ export const createServer = (): FakeServer => {
     currentTick: 0,
     nextRunHandle: 1,
     scheduled: [],
+    pendingInvalidations: [],
     effectBaseNames: new Map(),
     dynamicProperties: new Map(),
     scoreboard: { objectives: new Map(), displaySlots: new Map() },
