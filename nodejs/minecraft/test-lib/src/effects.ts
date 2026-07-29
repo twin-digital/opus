@@ -4,8 +4,8 @@
  * `registerEffectBaseName` free function behind custom types and overrides.
  *
  * An effect's duration decays one per tick the test advances, and the effect is removed on the tick
- * it reaches zero:
- * advancing ticks does not decay it and never expires an effect.
+ * its duration reaches zero. Nothing decays on its own: an effect on a bundle the test never
+ * advances reads back the number applied.
  */
 
 import type * as MC from '@minecraft/server'
@@ -129,7 +129,9 @@ export const decayEffects = (server: ServerState): void => {
         continue
       }
       state.duration -= 1
-      if (state.duration <= 0) {
+      // `> 0` rather than `<= 0`: a handler may write any number onto the before-event, and a
+      // duration that is not a positive number must still expire rather than decay forever.
+      if (!(state.duration > 0)) {
         retire(state)
         entity.effects.delete(state.typeId)
       }

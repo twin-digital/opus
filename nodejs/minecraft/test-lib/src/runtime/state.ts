@@ -86,7 +86,10 @@ export interface AttributeValues {
   effectiveMax?: number
 }
 
-/** An effect an entity carries. Its duration is the number applied, and never decays. */
+/**
+ * An effect an entity carries. Its duration is the number applied, decaying by one for each tick the
+ * test advances, and the effect is retired on the tick it stops being a positive number.
+ */
 export interface EffectState {
   readonly typeId: string
   readonly effect: MC.Effect

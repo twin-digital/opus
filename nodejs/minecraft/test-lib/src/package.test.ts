@@ -365,7 +365,9 @@ describe('the README coverage table', () => {
     expect(LIBRARY_RULINGS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
   })
 
-  it('names every row for the behaviour the design ruled on', () => {
+  // The id is the row's identity and the prose columns are not, so this is an internal-consistency
+  // check between two in-repo copies rather than a pin on the design's wording.
+  it('keeps the row subjects in step between the README and the list it is checked against', () => {
     const wrong = documented
       .filter(([id, subject]) => byId.get(id)?.subject !== subject)
       .map(([id, subject]) => `${id}: expected ${subject}, read ${String(byId.get(id)?.subject)}`)
