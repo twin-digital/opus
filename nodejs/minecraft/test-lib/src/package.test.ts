@@ -293,7 +293,7 @@ const COVERAGE_ROWS: readonly (readonly [subject: string, coverage: string])[] =
     'not modelled',
   ],
   ['a filtered subscription — any options argument to `subscribe`', 'divergence'],
-  ['the basis the effect replacement rule compares on', 'divergence'],
+  ['the duration the replacement rule compares against', 'divergence'],
 ]
 
 describe('the README coverage table', () => {
@@ -352,7 +352,7 @@ describe('the README coverage table', () => {
   it('carries the two divergences the spec has not yet stated', () => {
     // Both escalated to the spec's owner; the README is where their absence bites a reader.
     const subjects = rows.map((row) => row.subject)
-    expect(subjects).toContain('the basis the effect replacement rule compares on')
+    expect(subjects).toContain('the duration the replacement rule compares against')
   })
 })
 
