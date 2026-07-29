@@ -8,24 +8,54 @@ MIT. An RPG add-on in hexagonal architecture. Its own suite is 14 vitest spec fi
 and `application/`; `infrastructure/` — the layer that touches `@minecraft/server` — had no double
 and no tests. That layer is what this exercises.
 
-**Subject under test**: `src/infrastructure/combat-handler.ts`, **unmodified**. `CombatHandler.handle`
-takes an `EntityHurtAfterEvent` and reads everything from it, so no refactor was needed to reach it.
+**Subjects under test**, all **unmodified**: `combat-handler.ts`, `scoreboard-skill-repository.ts`
+(over `scoreboard-util.ts`), `minecraft-messenger.ts` and `passive-applier.ts`.
 
 ## Result
 
-Six tests, all passing, asserting on entity state rather than on calls — the victim now carries
-poison for 60 ticks, the victim's health is now 18. The pack's own 14 spec files still pass alongside.
+**14 tests across two files, all passing**, asserting on state rather than on calls — the victim now
+carries poison for 60 ticks, its health is now 10, the scoreboard now holds attack 20 for that
+player, that player's output log now reads action bar then message. The pack's own 14 spec files
+still pass alongside.
 
-**The tests discriminate.** Five mutations were applied to the pack's handler; four are behavioural
-and all four failed the suite:
+The two files split by how the pack reaches the engine. `combat-handler.test.ts` drives a handler
+that takes its event as a parameter — object substitution with no aliasing of `world` at all.
+`adapters.test.ts` drives the adapters that read the module-scope `world` singleton, which is how
+most packs are written, and which needs the alias to hold the fakes (see friction 1).
 
-| mutation                                       | caught              |
-| ---------------------------------------------- | ------------------- |
-| poison every 9 hits instead of 10              | ✅ 2 failed         |
-| drop the `instanceof Player` guard             | ✅ 1 failed         |
-| crit multiplier 1.5 → 2.0                      | ✅ 1 failed         |
-| per-attacker tally becomes global              | ✅ 2 failed         |
-| stop ignoring self-inflicted `override` damage | — equivalent mutant |
+### Paths exercised
+
+| library surface                                                                             | reached by                                   |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| effects, `applyDamage`, health component, entity identity                                   | `CombatHandler`                              |
+| **event dispatch end to end** — `applyDamage` raises `entityHurt`, a subscriber consumes it | the bus test, mirroring `main.ts:126`        |
+| **scoreboard** — objectives created on demand, scores per participant                       | `ScoreboardSkillRepository`                  |
+| **output capture** — `sendMessage`, `onScreenDisplay.setActionBar`, world broadcast         | `MinecraftMessenger`                         |
+| **`world.getAllPlayers`**, effects on players                                               | `PassiveApplier.tick`                        |
+| **`UnsetValueError`** on a value the test never supplied                                    | `PassiveApplier` reading `player.location.y` |
+
+The end-to-end case is the one worth calling out: no payload was hand-built. The fake raised
+`entityHurt` from `applyDamage` carrying `hurtEntity`, `damage` and a `damageSource` with `cause` and
+`damagingEntity`, and the pack's handler read all four without noticing anything.
+
+The `UnsetValueError` case is the design's "never fabricate" rule meeting real code: with mining 80
+the perk reads `player.location.y`, and a player created without a location refuses rather than
+answering `0`. The pack's own `try/catch` is around `addEffect`, not around the read, so it surfaces.
+
+**The tests discriminate.** Nine mutations were applied across the pack's handler, scoreboard helper
+and passive loop; eight are behavioural and all eight failed the suite:
+
+| mutation                                        | caught              |
+| ----------------------------------------------- | ------------------- |
+| poison every 9 hits instead of 10               | ✅ 2 failed         |
+| drop the `instanceof Player` guard              | ✅ 1 failed         |
+| crit multiplier 1.5 → 2.0                       | ✅ 1 failed         |
+| per-attacker tally becomes global               | ✅ 2 failed         |
+| stop ignoring self-inflicted `override` damage  | — equivalent mutant |
+| `writeScore` drops the value                    | ✅ 5 failed         |
+| scores keyed by objective only, not participant | ✅ 5 failed         |
+| passive effect duration 80 → 40                 | ✅ 1 failed         |
+| suppression window ignored                      | ✅ 1 failed         |
 
 The survivor is not a gap: the `override` short-circuit is redundant with the `entityAttack` check
 below it, so removing it changes nothing observable. Worth reporting upstream as dead defensive code.
@@ -80,6 +110,19 @@ const brand = (member) => ({
 export const Player = brand('onScreenDisplay') // a member Entity does not have
 ```
 
+### 3. Most packs reach `world` by module import, not by parameter
+
+`CombatHandler` takes its event as a parameter, so object substitution reaches it directly. The other
+three adapters do `import { world } from '@minecraft/server'` and call `world.getAllPlayers()` or
+`world.scoreboard` at use time — the shape the survey found in most packs, and the shape
+`r:object-substitution-not-module-mocking` says is outside the library's reach.
+
+In practice the consumer's alias closes it: the stub exports `world` and `system` as live bindings
+plus a `__useServer(server)` setter, the test calls it in `beforeEach`, and the adapter reads the
+fake at call time. That is the consumer's own test configuration rather than anything the library
+does, and it is what made eight of these fourteen tests possible. Worth stating in the README so a
+consumer does not conclude the library cannot reach their pack.
+
 That works — the `instanceof Player` mutation above was caught because of it — but it asks the
 consumer to know which member distinguishes a player from an entity. Exporting brand predicates
 (`isPlayer`, `isEntity`) would make the stub exact instead of inferred.
@@ -94,7 +137,8 @@ validation/
   vitest.config.ts              # resolve.alias: '@minecraft/server' -> ./stub/minecraft-server.js
   stub/minecraft-server.js      # re-exports the generated enums; Player/Entity as Symbol.hasInstance brands
   stub/enums.generated.js       # 64 enums, generated from the pinned index.d.ts
-  combat-handler.test.ts        # the six tests
+  combat-handler.test.ts        # six tests, injected event, no world aliasing
+  adapters.test.ts              # eight tests over the module-scope world singleton
   marron-town-mod/              # git clone --depth 1, pinned at 2c025b4
 ```
 
