@@ -12,7 +12,9 @@ components, effects, damage, events, `system` scheduling, dynamic properties, sc
 output — against the share that falls in items / blocks / containers / UI, which throw
 `NotImplementedError` this cycle. The top of that ranking was then opened and read. Two candidates
 (`marron-town-mod`, `LushWay/Scripts`) came from a separate GitHub code search for packs that
-already run `vitest`; neither is in the survey sample.
+already run `vitest`. Of those two only `marron-town-mod` is outside the survey sample;
+`LushWay/Scripts` is an accepted repo in `packs.json` (corrected against the full re-check recorded
+in the planning repository's `pack-testing-survey`).
 
 ## A prerequisite that applies to every candidate
 
