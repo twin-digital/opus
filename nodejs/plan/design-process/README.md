@@ -19,7 +19,7 @@ non-zero when findings exist. Two rule groups run:
 
 - **Tree-state rules** — pool identity and `$ref` resolution, schema validation of every
   structured file against the pool schema its `version` names, id format and uniqueness, no
-  `proposed` decisions, no open questions, citations resolve (and never to a question), model
+  `proposed` decisions, no open questions, citations resolve (never to a question, and no in-force `because:` or `informed_by:` rests on a retired fact), model
   bindings resolve, preset adoption rules, dense increment numbering, implementation-record
   naming and claim scope.
 - **Change rules** — compared against `--base` (default `origin/main`, then `main`): published
