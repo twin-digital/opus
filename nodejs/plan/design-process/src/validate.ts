@@ -2,11 +2,11 @@ import { Ajv2020 } from 'ajv/dist/2020.js'
 
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
-import { loadApiPool, loadFactIds, loadSchemaPool } from './pools.js'
+import { loadApiPool, loadFacts, loadSchemaPool } from './pools.js'
 
 import type { ErrorObject, ValidateFunction } from 'ajv'
 import type { Product, ProductsTree } from './load.js'
-import type { SchemaPool } from './pools.js'
+import type { FactsPool, SchemaPool } from './pools.js'
 import type { FileTree } from './tree.js'
 import type { Finding, QuestionEntry } from './types.js'
 
@@ -26,7 +26,7 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
   findings.push(...schemaPool.findings)
   const apiPool = loadApiPool(head)
   findings.push(...apiPool.findings)
-  const factIds = loadFactIds(head)
+  const facts = loadFacts(head)
 
   findings.push(...checkSchemaRefsResolve(schemaPool))
 
@@ -41,7 +41,7 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
     findings.push(...checkIds(product))
     findings.push(...checkDecisionRules(product))
     findings.push(...checkQuestionRules(product))
-    findings.push(...checkCitations(product, factIds))
+    findings.push(...checkCitations(product, facts))
     findings.push(...checkModel(product, schemaPool.entries, apiPool.entries))
     findings.push(...checkPresets(product, productsTree))
     findings.push(...checkRecords(product, productsTree))
@@ -330,14 +330,21 @@ const checkQuestionRules = (product: Product): Finding[] => {
   return findings
 }
 
-const checkCitations = (product: Product, factIds: Set<string>): Finding[] => {
+const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
   const findings: Finding[] = []
   const { requirements, decisions } = productEntries(product)
   const requirementIds = new Set(requirements.map((entry) => entry.id))
   const decisionIds = new Set(decisions.map((entry) => entry.id))
   const known = new Set([...requirementIds, ...decisionIds])
+  const fold = foldProduct(product)
+  const inForce = coverableClaimIds(fold)
+  for (const [id, { entry }] of fold.decisions) {
+    if (entry.status === 'rejected') {
+      inForce.add(id) // a rejected entry awaiting replacement still cites live inputs
+    }
+  }
 
-  const checkCitation = (citation: string, path: string, context: string) => {
+  const checkCitation = (citation: string, path: string, context: string, entryInForce: boolean) => {
     if (QUESTION_ID.test(citation)) {
       findings.push({
         rule: 'citation-not-question',
@@ -355,12 +362,19 @@ const checkCitations = (product: Product, factIds: Set<string>): Finding[] => {
         })
       }
     } else if (citation.startsWith('f:')) {
-      if (!factIds.has(citation.slice(2))) {
+      if (!facts.ids.has(citation.slice(2))) {
         findings.push({
           rule: 'citation-resolves',
           claims: ['d-eaw3u72o'],
           path,
           message: `${context} cites ${citation}, which the facts pool does not declare`,
+        })
+      } else if (entryInForce && facts.retired.has(citation.slice(2))) {
+        findings.push({
+          rule: 'citation-fact-retired',
+          claims: ['d-eaw3u72o', 'd-o99k4ld8'],
+          path,
+          message: `${context} is in force and cites retired fact ${citation}; move the citation to its replacement, or take the entry out of force before the fact retires`,
         })
       }
     } else {
@@ -378,7 +392,7 @@ const checkCitations = (product: Product, factIds: Set<string>): Finding[] => {
     if (decisionsSource) {
       for (const entry of decisionsSource.data.decisions ?? []) {
         for (const citation of entry.because ?? []) {
-          checkCitation(citation, decisionsSource.path, entry.id)
+          checkCitation(citation, decisionsSource.path, entry.id, inForce.has(entry.id))
         }
         if (entry.supersedes !== undefined && !decisionIds.has(entry.supersedes)) {
           findings.push({
@@ -404,13 +418,8 @@ const checkCitations = (product: Product, factIds: Set<string>): Finding[] => {
     if (requirementsSource) {
       for (const entry of requirementsSource.data.requirements ?? []) {
         for (const citation of entry.informed_by ?? []) {
-          if (QUESTION_ID.test(citation)) {
-            findings.push({
-              rule: 'citation-not-question',
-              claims: ['r-m36ie8ee'],
-              path: requirementsSource.path,
-              message: `${entry.id} cites open question ${citation}; nothing rests on an open question`,
-            })
+          if (QUESTION_ID.test(citation) || CLAIM_ID.test(citation) || citation.startsWith('f:')) {
+            checkCitation(citation, requirementsSource.path, entry.id, inForce.has(entry.id))
           }
         }
         if (entry.amends !== undefined && !requirementIds.has(entry.amends)) {

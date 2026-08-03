@@ -114,6 +114,84 @@ describe('validateTree — tree-state rules', () => {
     expect(findings.filter((finding) => finding.rule === 'citation-resolves')).toHaveLength(1)
   })
 
+  it('fails an in-force citation of a retired fact, in because and informed_by alike', () => {
+    const files = demoProduct()
+    files['facts/demo.yml'] = yaml([
+      {
+        id: 'old-finding',
+        claim: 'superseded observation\n',
+        backing: 'tested',
+        status: 'retired',
+        superseded_by: 'new-finding',
+      },
+      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+    ])
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '1',
+      decisions: [
+        {
+          id: 'd-cccccccc',
+          statement: 'rests on stale evidence.\n',
+          status: 'accepted',
+          supersedes: 'd-aaaaaaaa',
+          because: ['f:old-finding'],
+        },
+      ],
+    })
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [
+        { id: 'r-cccccccc', statement: 'first, amended.\n', amends: 'r-aaaaaaaa', informed_by: ['f:old-finding'] },
+      ],
+    })
+    const findings = check(files).filter((finding) => finding.rule === 'citation-fact-retired')
+    expect(findings).toHaveLength(2)
+  })
+
+  it('allows an out-of-force entry to keep citing a fact that later retired', () => {
+    const files = demoProduct()
+    files['facts/demo.yml'] = yaml([
+      {
+        id: 'old-finding',
+        claim: 'superseded observation\n',
+        backing: 'tested',
+        status: 'retired',
+        superseded_by: 'new-finding',
+      },
+      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+    ])
+    // d-aaaaaaaa cites the retired fact but is superseded by d-cccccccc in increment 002
+    files['products/demo/increments/001/decisions.yaml'] = yaml({
+      version: '1',
+      decisions: [
+        {
+          id: 'd-aaaaaaaa',
+          statement: 'the first thing is done the simple way.\n',
+          status: 'accepted',
+          because: ['f:old-finding'],
+        },
+        {
+          id: 'd-bbbbbbbb',
+          statement: 'the second thing builds on the first.\n',
+          status: 'delegated',
+          because: ['d-aaaaaaaa'],
+        },
+      ],
+    })
+    expect(check(files)).toEqual([])
+  })
+
+  it('resolves informed_by citations like because citations', () => {
+    const files = demoProduct()
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [
+        { id: 'r-cccccccc', statement: 'first, amended.\n', amends: 'r-aaaaaaaa', informed_by: ['f:no-such-fact'] },
+      ],
+    })
+    expect(rules(check(files))).toContain('citation-resolves')
+  })
+
   it('fails a model binding no pool schema holds (r-bua9wl1s)', () => {
     const files = demoProduct()
     files['products/demo/increments/002/requirements.yaml'] = yaml({

@@ -194,9 +194,17 @@ const checkDenseVersions = (entries: Map<string, PoolEntry>, rule: string, claim
   return findings
 }
 
-/** Fact ids declared in the repo-wide `facts/` pool. */
-export const loadFactIds = (tree: FileTree): Set<string> => {
+export interface FactsPool {
+  /** Every declared fact id, whatever its status. */
+  ids: Set<string>
+  /** The subset whose entries carry `status: retired`. */
+  retired: Set<string>
+}
+
+/** Fact ids and statuses declared in the repo-wide `facts/` pool. */
+export const loadFacts = (tree: FileTree): FactsPool => {
   const ids = new Set<string>()
+  const retired = new Set<string>()
   for (const path of tree.paths().filter((p) => p.startsWith('facts/') && isYamlPath(p))) {
     let doc: unknown
     try {
@@ -206,12 +214,18 @@ export const loadFactIds = (tree: FileTree): Set<string> => {
     }
     if (Array.isArray(doc)) {
       for (const entry of doc) {
-        const id = typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>).id : undefined
-        if (typeof id === 'string') {
-          ids.add(id)
+        if (typeof entry !== 'object' || entry === null) {
+          continue
+        }
+        const record = entry as Record<string, unknown>
+        if (typeof record.id === 'string') {
+          ids.add(record.id)
+          if (record.status === 'retired') {
+            retired.add(record.id)
+          }
         }
       }
     }
   }
-  return ids
+  return { ids, retired }
 }
