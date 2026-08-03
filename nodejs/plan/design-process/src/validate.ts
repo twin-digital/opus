@@ -44,7 +44,7 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
     findings.push(...checkCitations(product, factIds))
     findings.push(...checkModel(product, schemaPool.entries, apiPool.entries))
     findings.push(...checkPresets(product, productsTree))
-    findings.push(...checkRecords(product))
+    findings.push(...checkRecords(product, productsTree))
   }
 
   if (options.base) {
@@ -558,7 +558,7 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
   return findings
 }
 
-const checkRecords = (product: Product): Finding[] => {
+const checkRecords = (product: Product, productsTree: ProductsTree): Finding[] => {
   const findings: Finding[] = []
   const byTarget = new Map<number, number[]>()
   for (const record of product.records) {
@@ -603,8 +603,19 @@ const checkRecords = (product: Product): Finding[] => {
     ordinals.push(record.fileOrdinal)
     byTarget.set(record.data.target, ordinals)
 
-    const coverable = coverableClaimIds(foldProduct(product, record.data.target))
+    const fold = foldProduct(product, record.data.target)
+    const coverable = coverableClaimIds(fold)
+    for (const preset of fold.presets.values()) {
+      const presetProduct = productsTree.products.get(preset.entry.name)
+      if (presetProduct && preset.entry.version !== undefined) {
+        for (const id of foldProduct(presetProduct, preset.entry.version).requirements.keys()) {
+          coverable.add(id)
+        }
+      }
+    }
+    const covered = new Set<string>()
     for (const coverage of record.data.coverage ?? []) {
+      covered.add(coverage.claim)
       if (!coverable.has(coverage.claim)) {
         findings.push({
           rule: 'record-claim-in-force',
@@ -613,6 +624,15 @@ const checkRecords = (product: Product): Finding[] => {
           message: `coverage names ${coverage.claim}, which is not a claim in force at increment ${record.data.target}`,
         })
       }
+    }
+    const missing = [...coverable].filter((id) => !covered.has(id)).sort()
+    if (missing.length > 0) {
+      findings.push({
+        rule: 'record-coverage-complete',
+        claims: ['r-tue7kfgt', 'd-rr1qmw72'],
+        path: record.path,
+        message: `coverage misses ${missing.length} claim(s) in force at increment ${record.data.target}: ${missing.join(', ')}`,
+      })
     }
   }
   for (const [target, ordinals] of byTarget) {

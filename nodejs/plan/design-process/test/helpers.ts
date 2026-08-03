@@ -112,3 +112,10 @@ export const demoProduct = (): Files => ({
     ],
   }),
 })
+
+/** Coverage for every claim in force at demo increment 2 — records must be complete. */
+export const demoCoverage = (): { claim: string; covered_by: { kind: string }[] }[] =>
+  ['r-bbbbbbbb', 'r-cccccccc', 'd-bbbbbbbb', 'd-cccccccc'].map((claim) => ({
+    claim,
+    covered_by: [{ kind: 'attestation' }],
+  }))

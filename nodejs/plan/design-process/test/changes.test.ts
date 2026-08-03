@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { GitTree } from '../src/tree.js'
 import { validateTree } from '../src/validate.js'
-import { demoProduct, makeGitRepo, yaml } from './helpers.js'
+import { demoCoverage, demoProduct, makeGitRepo, yaml } from './helpers.js'
 
 import type { Finding } from '../src/types.js'
 
@@ -103,7 +103,7 @@ describe('validateTree — change rules', () => {
       product: 'demo',
       target: 2,
       packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
-      coverage: [{ claim: 'r-cccccccc', covered_by: [{ kind: 'attestation' }] }],
+      coverage: demoCoverage(),
     })
     const { root, tree } = makeGitRepo(files)
     write(
@@ -140,7 +140,7 @@ describe('validateTree — change rules', () => {
         product: 'demo',
         target: 2,
         packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
-        coverage: [{ claim: 'r-cccccccc', covered_by: [{ kind: 'attestation' }] }],
+        coverage: demoCoverage(),
       }),
     )
     expect(checkAgainstMain(root, tree)).toEqual([])

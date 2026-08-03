@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { validateTree } from '../src/validate.js'
-import { demoProduct, makeRepo, poolFiles, yaml } from './helpers.js'
+import { demoCoverage, demoProduct, makeRepo, poolFiles, yaml } from './helpers.js'
 
 import type { Finding } from '../src/types.js'
 
@@ -224,7 +224,7 @@ describe('validateTree — implementation records', () => {
     target: 2,
     built_at: '2026-08-01',
     packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
-    coverage: [{ claim: 'r-cccccccc', covered_by: [{ kind: 'attestation' }] }],
+    coverage: demoCoverage(),
     ...overrides,
   })
 
@@ -249,7 +249,7 @@ describe('validateTree — implementation records', () => {
   it('fails coverage naming a claim not in force at the target (d-0nl6sd96)', () => {
     const files = demoProduct()
     files['implementations/demo/002-1.yaml'] = yaml(
-      record({ coverage: [{ claim: 'r-aaaaaaaa', covered_by: [{ kind: 'attestation' }] }] }),
+      record({ coverage: [...demoCoverage(), { claim: 'r-aaaaaaaa', covered_by: [{ kind: 'attestation' }] }] }),
     )
     expect(rules(check(files))).toContain('record-claim-in-force')
   })
@@ -258,6 +258,35 @@ describe('validateTree — implementation records', () => {
     const files = demoProduct()
     files['implementations/demo/002-2.yaml'] = yaml(record())
     expect(rules(check(files))).toContain('record-ordinal-dense')
+  })
+
+  it('fails a record whose coverage misses a claim in force at its target (d-rr1qmw72)', () => {
+    const files = demoProduct()
+    files['implementations/demo/002-1.yaml'] = yaml(
+      record({ coverage: demoCoverage().filter((entry) => entry.claim !== 'd-bbbbbbbb') }),
+    )
+    const findings = check(files)
+    expect(rules(findings)).toContain('record-coverage-complete')
+    expect(findings.find((finding) => finding.rule === 'record-coverage-complete')?.message).toContain('d-bbbbbbbb')
+  })
+
+  it('requires coverage of adopted preset requirements (d-rr1qmw72)', () => {
+    const files = demoProduct()
+    files['products/nodejs-library/product.yaml'] = yaml({ version: '1', kind: 'requirement-preset' })
+    files['products/nodejs-library/increments/001/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-pppppppp', statement: 'the library behaves.\n' }],
+    })
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [
+        { id: 'r-cccccccc', statement: 'the product does the first thing faster.\n', amends: 'r-aaaaaaaa' },
+      ],
+      presets: [{ name: 'nodejs-library', version: 1 }],
+    })
+    files['implementations/demo/002-1.yaml'] = yaml(record())
+    const findings = check(files)
+    expect(findings.find((finding) => finding.rule === 'record-coverage-complete')?.message).toContain('r-pppppppp')
   })
 
   it('fails a schema-invalid record (d-i47qv6oa)', () => {
