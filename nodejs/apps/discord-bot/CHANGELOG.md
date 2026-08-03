@@ -1,5 +1,11 @@
 # @twin-digital/discord-bot
 
+## 0.1.4
+
+### Patch Changes
+
+- da1e483: Regenerate the managed eslint and vite config files to call the shared config packages' compose helpers (`defineProjectConfig` / `defineAppConfig`) instead of inlining the composition. No behavior change.
+
 ## 0.1.3
 
 ### Patch Changes

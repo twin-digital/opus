@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/tsdown-config",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared tsdown bundle config for the monorepo: a base config plus per-package tsdown.config.d/ overrides.",
   "license": "ISC",
   "type": "module",
