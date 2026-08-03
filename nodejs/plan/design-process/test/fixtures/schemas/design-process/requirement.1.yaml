@@ -1,0 +1,59 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/requirement@1
+title: requirement
+description: one requirement entry, wherever a requirements source carries it
+type: object
+additionalProperties: false
+required: [id, statement]
+properties:
+  id:
+    type: string
+    pattern: '^r-[0-9a-z]{8}$'
+  title:
+    type: string
+  statement:
+    type: string
+  rationale:
+    type: string
+    description: what a casual reversal would cost, where the statement alone does not warn of it
+  verification:
+    type: array
+    minItems: 2
+    description: |
+      one ordered procedure, present only where the statement is not self-verifying. do steps
+      are performed; verify steps assert about what a preceding do surfaced, and all must hold.
+      the first step is a do, and steps exercise the requirement's intent through the product's
+      published surfaces.
+    prefixItems:
+      - type: object
+        additionalProperties: false
+        required: [do]
+        properties:
+          do:
+            type: string
+    items:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [do]
+          properties:
+            do:
+              type: string
+        - type: object
+          additionalProperties: false
+          required: [verify]
+          properties:
+            verify:
+              type: string
+    contains:
+      required: [verify]
+  facets:
+    $ref: '/design-process/common@1#/$defs/facets'
+  informed_by:
+    type: array
+    minItems: 1
+    items:
+      type: string
+  amends:
+    type: string
+    pattern: '^r-[0-9a-z]{8}$'

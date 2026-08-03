@@ -1,0 +1,254 @@
+import { foldProduct } from './fold.js'
+import { loadProducts } from './load.js'
+
+import type { Fold, FoldedClaim } from './fold.js'
+import type { Product, ProductsTree } from './load.js'
+import type { FileTree } from './tree.js'
+import type { CoverageEntry, DecisionEntry, RequirementEntry } from './types.js'
+
+export interface ProjectOptions {
+  at?: number
+  facet?: string
+}
+
+/** Render the projection of a product at an increment: the fold, joined and ordered for a reader. */
+export const projectProduct = (tree: FileTree, productId: string, options: ProjectOptions = {}): string => {
+  const productsTree: ProductsTree = loadProducts(tree)
+  const product = productsTree.products.get(productId)
+  if (!product) {
+    throw new Error(
+      `no product ${JSON.stringify(productId)}; declared products: ${[...productsTree.products.keys()].join(', ') || '(none)'}`,
+    )
+  }
+  const fold = foldProduct(product, options.at)
+  const lines: string[] = []
+  const facetFilter = options.facet
+
+  const hasFacet = (facets: string | string[] | undefined): boolean => {
+    if (facetFilter === undefined) {
+      return true
+    }
+    return facets !== undefined && (Array.isArray(facets) ? facets : [facets]).includes(facetFilter)
+  }
+
+  lines.push(`# ${product.id} @ ${fold.at}`, '')
+  if (product.declaration?.data.kind !== undefined) {
+    lines.push(`kind: ${product.declaration.data.kind}`, '')
+  }
+
+  // adopted presets, and the requirements they contribute
+  const adopted: { name: string; version: number; requirements: Map<string, FoldedClaim<RequirementEntry>> }[] = []
+  for (const { entry } of fold.presets.values()) {
+    const preset = productsTree.products.get(entry.name)
+    if (preset && entry.version !== undefined) {
+      adopted.push({
+        name: entry.name,
+        version: entry.version,
+        requirements: foldProduct(preset, entry.version).requirements,
+      })
+    }
+  }
+  if (adopted.length > 0) {
+    lines.push('## presets', '')
+    for (const preset of adopted) {
+      lines.push(`- ${preset.name}@${preset.version} (${preset.requirements.size} requirements)`)
+    }
+    lines.push('')
+  }
+
+  const requirements = [...fold.requirements.values()].filter(({ entry }) => hasFacet(entry.facets))
+  lines.push(`## requirements (${requirements.length} in force${adopted.length > 0 ? ', plus adopted below' : ''})`, '')
+  for (const { entry, increment } of requirements) {
+    lines.push(...renderRequirement(entry, increment))
+  }
+  for (const preset of adopted) {
+    for (const { entry, increment } of preset.requirements.values()) {
+      if (hasFacet(entry.facets)) {
+        lines.push(...renderRequirement(entry, increment, `${preset.name}@${preset.version}`))
+      }
+    }
+  }
+
+  const decisions = orderByBecause([...fold.decisions.values()]).filter(({ entry }) => hasFacet(entry.facets))
+  const counts = { accepted: 0, tolerated: 0, delegated: 0, rejected: 0, proposed: 0 }
+  for (const { entry } of decisions) {
+    counts[entry.status] += 1
+  }
+  lines.push(
+    `## decisions (${decisions.length} in force: ${counts.accepted} accepted, ${counts.tolerated} tolerated, ${counts.rejected} rejected; ${counts.delegated} delegated — abstained, not reviewed)`,
+    '',
+  )
+  for (const { entry, increment } of decisions) {
+    lines.push(...renderDecision(entry, increment))
+  }
+
+  if (fold.model.size > 0) {
+    lines.push('## model', '')
+    for (const { entry } of fold.model.values()) {
+      lines.push(
+        `- **${entry.name}** → ${entry.schema ?? entry.api}${entry.description !== undefined ? ` — ${entry.description.trim()}` : ''}`,
+      )
+    }
+    lines.push('')
+  }
+
+  lines.push(...renderCoverage(product, fold))
+  lines.push(...renderDelta(product, fold))
+  lines.push(...renderQuestions(product, fold))
+
+  return `${lines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd()}\n`
+}
+
+const formatFacets = (facets: string | string[] | undefined): string =>
+  facets === undefined ? '' : ` [${(Array.isArray(facets) ? facets : [facets]).join(', ')}]`
+
+const renderRequirement = (entry: RequirementEntry, increment: number, adoptedFrom?: string): string[] => {
+  const lines = [
+    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatFacets(entry.facets)}`,
+    '',
+    `_declared by increment ${increment}${adoptedFrom !== undefined ? `, adopted from ${adoptedFrom}` : ''}_`,
+    '',
+    entry.statement.trim(),
+    '',
+  ]
+  if (entry.verification) {
+    lines.push('verification:', '')
+    for (const step of entry.verification) {
+      lines.push('do' in step ? `- do: ${step.do}` : `- verify: ${step.verify}`)
+    }
+    lines.push('')
+  }
+  return lines
+}
+
+const renderDecision = (entry: DecisionEntry, increment: number): string[] => {
+  const pinned =
+    entry.pinned !== undefined && entry.pinned !== false ?
+      `, pinned: ${entry.pinned.reason}${entry.pinned.notes !== undefined ? ` (${entry.pinned.notes})` : ''}`
+    : ''
+  const lines = [
+    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatFacets(entry.facets)}`,
+    '',
+    `_${entry.status}${pinned}; declared by increment ${increment}_`,
+    '',
+    entry.statement.trim(),
+    '',
+  ]
+  if (entry.status === 'rejected' && entry.rejection_reason !== undefined) {
+    lines.push(`rejected because: ${entry.rejection_reason.trim()}`, '')
+  }
+  if (entry.because && entry.because.length > 0) {
+    lines.push(`because: ${entry.because.join(', ')}`, '')
+  }
+  if (entry.revisit_when && entry.revisit_when.length > 0) {
+    lines.push(`revisit when: ${entry.revisit_when.map((condition) => condition.trim()).join('; ')}`, '')
+  }
+  return lines
+}
+
+/** Order decisions so that cited decisions precede the decisions built on them; file order breaks ties. */
+const orderByBecause = (decisions: FoldedClaim<DecisionEntry>[]): FoldedClaim<DecisionEntry>[] => {
+  const byId = new Map(decisions.map((claim) => [claim.entry.id, claim]))
+  const visited = new Set<string>()
+  const ordered: FoldedClaim<DecisionEntry>[] = []
+  const visit = (claim: FoldedClaim<DecisionEntry>, trail: Set<string>) => {
+    if (visited.has(claim.entry.id) || trail.has(claim.entry.id)) {
+      return
+    }
+    trail.add(claim.entry.id)
+    for (const citation of claim.entry.because ?? []) {
+      const cited = byId.get(citation)
+      if (cited) {
+        visit(cited, trail)
+      }
+    }
+    trail.delete(claim.entry.id)
+    visited.add(claim.entry.id)
+    ordered.push(claim)
+  }
+  for (const claim of decisions) {
+    visit(claim, new Set())
+  }
+  return ordered
+}
+
+const renderCoverage = (product: Product, fold: Fold): string[] => {
+  const coverageByClaim = new Map<string, CoverageEntry>()
+  for (const record of product.records) {
+    if (typeof record.data.target !== 'number' || record.data.target > fold.at) {
+      continue
+    }
+    for (const entry of record.data.coverage ?? []) {
+      coverageByClaim.set(entry.claim, entry)
+    }
+  }
+  const claims = [
+    ...[...fold.requirements.values()].map(({ entry }) => entry.id),
+    ...[...fold.decisions.values()].filter(({ entry }) => entry.status !== 'rejected').map(({ entry }) => entry.id),
+  ]
+  const lines = ['## coverage', '']
+  let uncovered = 0
+  let attestationOnly = 0
+  for (const claim of claims) {
+    const entry = coverageByClaim.get(claim)
+    if (!entry) {
+      uncovered += 1
+      lines.push(`- ${claim}: none`)
+      continue
+    }
+    const kinds = entry.covered_by.map((coverage) => coverage.kind)
+    if (kinds.every((kind) => kind === 'attestation')) {
+      attestationOnly += 1
+    }
+    lines.push(`- ${claim}: ${kinds.join(', ')}`)
+  }
+  lines.push(
+    '',
+    `${claims.length} claims in force: ${claims.length - uncovered} covered, ${uncovered} uncovered, ${attestationOnly} on attestation alone`,
+    '',
+  )
+  return lines
+}
+
+const renderDelta = (product: Product, fold: Fold): string[] => {
+  const previous = product.increments.filter((increment) => increment.number < fold.at).at(-1)
+  const lines = [`## changes at increment ${fold.at}`, '']
+  const added = [
+    ...[...fold.requirements.values()].filter((claim) => claim.increment === fold.at).map((claim) => claim.entry.id),
+    ...[...fold.decisions.values()].filter((claim) => claim.increment === fold.at).map((claim) => claim.entry.id),
+  ]
+  const closed = fold.outOfForce.filter((entry) => entry.increment === fold.at)
+  if (added.length === 0 && closed.length === 0) {
+    lines.push('(nothing declared)', '')
+    return lines
+  }
+  if (added.length > 0) {
+    lines.push(`added: ${added.join(', ')}`)
+  }
+  for (const entry of closed) {
+    lines.push(
+      entry.how === 'superseded' ? `superseded: ${entry.id} by ${entry.by}` : `retired: ${entry.id} — ${entry.by}`,
+    )
+  }
+  lines.push('')
+  if (previous) {
+    lines.push(`_previous increment: ${previous.number}_`, '')
+  }
+  return lines
+}
+
+const renderQuestions = (product: Product, fold: Fold): string[] => {
+  const lines: string[] = []
+  for (const increment of product.increments.filter((candidate) => candidate.number <= fold.at)) {
+    for (const question of increment.questions?.data.questions ?? []) {
+      lines.push(`- ${question.id} (${question.answer}): ${question.question.trim()}`)
+    }
+  }
+  if (lines.length === 0) {
+    return []
+  }
+  return ['## open questions blocking settle', '', ...lines, '']
+}
