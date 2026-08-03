@@ -2,14 +2,13 @@
 
 Tooling for the twin-digital incremental design process: the merge-gate validator, the
 projection, and the opaque-id generator. The process itself is defined by the documents shipped
-from the [plan-opus](https://github.com/twin-digital/plan-opus) repository under
-`docs/design-process/`.
+from the [plan-opus](https://github.com/twin-digital/plan-opus) repository under `docs/`.
 
 ## Usage
 
 ```sh
 design-process check [--root <dir>] [--base <ref>] [--static-only]
-design-process project <product> [--root <dir>] [--at <n>] [--facet <facet>]
+design-process show <product> [--root <dir>] [--at <n>] [--facet <facet>]
 design-process id <r|d|q> [--root <dir>] [--count <n>]
 ```
 
@@ -34,7 +33,7 @@ Findings cite the requirement or decision id each rule enforces, e.g.:
 ✖ [published-immutable] products/demo/increments/001/decisions.yaml: edited in a published increment (r-caao9k3z)
 ```
 
-### project
+### show
 
 Renders the folded, effective state of a product at an increment as markdown: requirements
 (local and adopted), decisions ordered by `because:` topology with statuses and pins, model

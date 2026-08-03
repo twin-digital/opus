@@ -44,7 +44,7 @@ program
   })
 
 program
-  .command('project')
+  .command('show')
   .description('render the folded, effective state of a product at an increment')
   .argument('<product>', 'product id (the products/<id> directory name)')
   .option('--root <dir>', 'repository root', '.')
