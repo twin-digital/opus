@@ -1,0 +1,21 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/question@1
+title: question
+description: one open question — an ask put to the owner while an increment is a draft
+type: object
+additionalProperties: false
+required: [id, question, answer]
+properties:
+  id:
+    type: string
+    pattern: '^q-[0-9a-z]{8}$'
+  question:
+    type: string
+  answer:
+    enum: [fact, requirement, decision]
+    description: |
+      the kind of foundation that would answer the question, which is what routes it to an
+      actor: a fact sends someone to measure, a decision needs a call someone is competent to
+      make, and a requirement is owner fiat nobody else can supply.
+  facets:
+    $ref: '/design-process/common@1#/$defs/facets'

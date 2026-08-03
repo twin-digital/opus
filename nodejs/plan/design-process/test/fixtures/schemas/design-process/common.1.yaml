@@ -1,0 +1,12 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/common@1
+title: common
+description: shared definitions the design-process schemas depend on
+$defs:
+  facets:
+    oneOf:
+      - type: string
+      - type: array
+        minItems: 1
+        items:
+          type: string

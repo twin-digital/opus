@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/questions@1
+title: questions
+description: a draft increment's open questions; never present on a published increment
+type: object
+additionalProperties: false
+required: [version]
+properties:
+  version:
+    const: '1'
+  questions:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/question@1'
