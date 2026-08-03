@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "description": "Validator, projection, and id generator for the twin-digital incremental design process.",
   "type": "module",
+  "exports": {
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
   "bin": {
     "design-process": "./bin/design-process.js"
   },
