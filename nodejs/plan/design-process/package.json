@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/design-process",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Validator, projection, and id generator for the twin-digital incremental design process.",
   "type": "module",
   "exports": {
