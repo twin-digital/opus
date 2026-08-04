@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 
 import { parse, stringify } from 'yaml'
 
-import { readStore, writeStore } from './backlog-store.js'
+import { readStore, updateStore } from './backlog-store.js'
 import { generateIds } from './ids.js'
 
 import type { StoreOptions } from './backlog-store.js'
@@ -140,14 +140,14 @@ export const addItem = (options: StoreOptions, input: NewItem): BacklogItem => {
     throw new Error(`${JSON.stringify(input.product)} is not a product id`)
   }
   const content = composeContent(input)
-  const files = readStore(options)
-  const taken = new Set([...files.keys()].flatMap((path) => ITEM_PATH.exec(path)?.[2] ?? []))
-  const id = generateIds('b', 1, taken)[0]
-  const path = `${input.product}/${id}.md`
-  const item = parseItem(path, formatItem({ tags: input.tags ?? [], content }))
-  files.set(path, formatItem(item))
-  writeStore(options, files, `backlog: add ${id} — ${item.title}`)
-  return item
+  return updateStore(options, (files) => {
+    const taken = new Set([...files.keys()].flatMap((path) => ITEM_PATH.exec(path)?.[2] ?? []))
+    const id = generateIds('b', 1, taken)[0]
+    const path = `${input.product}/${id}.md`
+    const item = parseItem(path, formatItem({ tags: input.tags ?? [], content }))
+    files.set(path, formatItem(item))
+    return { files, message: `backlog: add ${id} — ${item.title}`, result: item }
+  })
 }
 
 export interface ItemPatch {
@@ -162,48 +162,46 @@ export interface ItemPatch {
   product?: string
 }
 
-export const updateItem = (options: StoreOptions, id: string, patch: ItemPatch): BacklogItem => {
-  const files = readStore(options)
-  const current = allItems(files).find((candidate) => candidate.id === id)
-  if (current === undefined) {
-    throw new Error(`no backlog item ${JSON.stringify(id)}`)
-  }
+export const updateItem = (options: StoreOptions, id: string, patch: ItemPatch): BacklogItem =>
+  updateStore(options, (files) => {
+    const current = allItems(files).find((candidate) => candidate.id === id)
+    if (current === undefined) {
+      throw new Error(`no backlog item ${JSON.stringify(id)}`)
+    }
 
-  let content = patch.body === undefined ? current.content : patch.body.trim()
-  if (patch.title !== undefined) {
-    const heading = HEADING.exec(content)
-    content =
-      heading && content.startsWith(heading[0]) ?
-        `# ${patch.title}${content.slice(heading[0].length)}`
-      : `# ${patch.title}${content.length === 0 ? '' : `\n\n${content}`}`
-  }
+    let content = patch.body === undefined ? current.content : patch.body.trim()
+    if (patch.title !== undefined) {
+      const heading = HEADING.exec(content)
+      content =
+        heading && content.startsWith(heading[0]) ?
+          `# ${patch.title}${content.slice(heading[0].length)}`
+        : `# ${patch.title}${content.length === 0 ? '' : `\n\n${content}`}`
+    }
 
-  let tags = patch.tags ?? current.tags
-  tags = [...tags, ...(patch.addTags ?? [])].filter((tag) => !(patch.removeTags ?? []).includes(tag))
-  tags = [...new Set(tags)]
+    let tags = patch.tags ?? current.tags
+    tags = [...tags, ...(patch.addTags ?? [])].filter((tag) => !(patch.removeTags ?? []).includes(tag))
+    tags = [...new Set(tags)]
 
-  const product = patch.product ?? current.product
-  const path = `${product}/${id}.md`
-  files.delete(current.path)
-  const item = parseItem(path, formatItem({ tags, content }))
-  files.set(path, formatItem(item))
-  writeStore(options, files, `backlog: update ${id} — ${item.title}`)
-  return item
-}
+    const product = patch.product ?? current.product
+    const path = `${product}/${id}.md`
+    files.delete(current.path)
+    const item = parseItem(path, formatItem({ tags, content }))
+    files.set(path, formatItem(item))
+    return { files, message: `backlog: update ${id} — ${item.title}`, result: item }
+  })
 
-export const deleteItems = (options: StoreOptions, ids: string[]): BacklogItem[] => {
-  const files = readStore(options)
-  const items = allItems(files).filter((item) => ids.includes(item.id))
-  const missing = ids.filter((id) => !items.some((item) => item.id === id))
-  if (missing.length > 0) {
-    throw new Error(`no backlog item ${missing.map((id) => JSON.stringify(id)).join(', ')}`)
-  }
-  for (const item of items) {
-    files.delete(item.path)
-  }
-  writeStore(options, files, describeDrain('delete', items))
-  return items
-}
+export const deleteItems = (options: StoreOptions, ids: string[]): BacklogItem[] =>
+  updateStore(options, (files) => {
+    const items = allItems(files).filter((item) => ids.includes(item.id))
+    const missing = ids.filter((id) => !items.some((item) => item.id === id))
+    if (missing.length > 0) {
+      throw new Error(`no backlog item ${missing.map((id) => JSON.stringify(id)).join(', ')}`)
+    }
+    for (const item of items) {
+      files.delete(item.path)
+    }
+    return { files, message: describeDrain('delete', items), result: items }
+  })
 
 export interface SentItem {
   item: BacklogItem
@@ -224,29 +222,29 @@ export const sendItems = (options: StoreOptions, incrementDir: string, filter: I
   if (filter.ids === undefined && filter.product === undefined && (filter.tags ?? []).length === 0) {
     throw new Error('select what to send: --item, --product, or --tag')
   }
-  const files = readStore(options)
-  const items = allItems(files).filter((item) => matches(item, filter))
-  if (filter.ids !== undefined) {
-    const missing = filter.ids.filter((id) => !items.some((item) => item.id === id))
-    if (missing.length > 0) {
-      throw new Error(`no backlog item ${missing.map((id) => JSON.stringify(id)).join(', ')}`)
+  return updateStore(options, (files) => {
+    const items = allItems(files).filter((item) => matches(item, filter))
+    if (filter.ids !== undefined) {
+      const missing = filter.ids.filter((id) => !items.some((item) => item.id === id))
+      if (missing.length > 0) {
+        throw new Error(`no backlog item ${missing.map((id) => JSON.stringify(id)).join(', ')}`)
+      }
     }
-  }
-  if (items.length === 0) {
-    return []
-  }
+    if (items.length === 0) {
+      return { files, result: [] }
+    }
 
-  const sent: SentItem[] = []
-  for (const item of items) {
-    const path = `${dir}/${DRAFTS_SUBDIR}/${item.id}.md`
-    const absolute = join(options.root, path)
-    mkdirSync(dirname(absolute), { recursive: true })
-    writeFileSync(absolute, formatItem(item))
-    files.delete(item.path)
-    sent.push({ item, path })
-  }
-  writeStore(options, files, describeDrain(`send to ${dir}`, items))
-  return sent
+    const sent: SentItem[] = []
+    for (const item of items) {
+      const path = `${dir}/${DRAFTS_SUBDIR}/${item.id}.md`
+      const absolute = join(options.root, path)
+      mkdirSync(dirname(absolute), { recursive: true })
+      writeFileSync(absolute, formatItem(item))
+      files.delete(item.path)
+      sent.push({ item, path })
+    }
+    return { files, message: describeDrain(`send to ${dir}`, items), result: sent }
+  })
 }
 
 const describeDrain = (verb: string, items: BacklogItem[]): string =>

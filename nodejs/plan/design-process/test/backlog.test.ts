@@ -40,14 +40,22 @@ const repo = (): StoreOptions => {
 }
 
 /** A repo whose `origin` is a bare clone, so pushes have somewhere to go. */
-const repoWithRemote = (): StoreOptions => {
+const repoWithRemote = (): StoreOptions & { remotePath: string } => {
   const options = repo()
-  const remote = mkdtempSync(join(tmpdir(), 'design-process-remote-'))
-  roots.push(remote)
-  execFileSync('git', ['init', '--bare', '-b', 'main', remote])
-  git(options.root, 'remote', 'add', 'origin', remote)
+  const remotePath = mkdtempSync(join(tmpdir(), 'design-process-remote-'))
+  roots.push(remotePath)
+  execFileSync('git', ['init', '--bare', '-b', 'main', remotePath])
+  git(options.root, 'remote', 'add', 'origin', remotePath)
   git(options.root, 'push', 'origin', 'main')
-  return { ...options, push: true, offline: false }
+  return { ...options, push: true, offline: false, remotePath }
+}
+
+/** A second clone of the same remote, standing in for whoever else is writing the backlog. */
+const rivalClone = (remotePath: string): StoreOptions => {
+  const root = mkdtempSync(join(tmpdir(), 'design-process-rival-'))
+  roots.push(root)
+  execFileSync('git', ['clone', '--quiet', remotePath, root])
+  return { root, push: true, offline: false }
 }
 
 describe('the item file — d-ubltnjpp', () => {
@@ -280,5 +288,32 @@ describe('send to capture — r-9qhjtznd, d-wpih0mc1', () => {
   it('refuses to run with no selector', () => {
     const { options } = seeded()
     expect(() => sendItems(options, target, {})).toThrow(/--item, --product, or --tag/)
+  })
+})
+
+describe('a concurrent write — d-5pzfayi8', () => {
+  /** Alice's local view of the branch, one commit behind what Bob has already pushed. */
+  const staleAgainstRival = (): { alice: StoreOptions; rivalTitle: string } => {
+    const alice = repoWithRemote()
+    addItem(alice, { product: 'demo', title: 'alice first' })
+    addItem(rivalClone(alice.remotePath), { product: 'demo', title: 'bob' })
+    return { alice: { ...alice, offline: true }, rivalTitle: 'bob' }
+  }
+
+  it('rebuilds on the commit that beat it, keeping both items', () => {
+    const { alice } = staleAgainstRival()
+    const added = addItem(alice, { product: 'demo', title: 'alice second' })
+    const titles = listItems({ ...alice, offline: false }).map((item) => item.title)
+    expect(titles.sort()).toEqual(['alice first', 'alice second', 'bob'])
+    expect(titles).toContain(added.title)
+  })
+
+  it('leaves the branch where it was when the retries run out', () => {
+    const { alice } = staleAgainstRival()
+    const before = git(alice.root, 'rev-parse', `refs/heads/${BACKLOG_BRANCH}`).trim()
+    expect(() => addItem({ ...alice, retries: 0 }, { product: 'demo', title: 'alice second' })).toThrow(
+      /moved under this change/,
+    )
+    expect(git(alice.root, 'rev-parse', `refs/heads/${BACKLOG_BRANCH}`).trim()).toBe(before)
   })
 })

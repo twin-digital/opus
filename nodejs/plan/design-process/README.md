@@ -127,7 +127,16 @@ An item is free markdown. Its first heading is the title, and optional YAML fron
 
 `list` and `search` print one item per line — id, product, title, tags — with the product always
 present. `search` matches ids, titles, and bodies case-insensitively. `--tag` repeats and
-requires every tag named.
+requires every tag named. `--json` emits id, product, title, and tags as structured data.
+
+`show` prints one item's markdown, frontmatter stripped.
+
+`update` revises an item in place, keeping its id: `--title` replaces the first heading,
+`--file` replaces the body, `--tag` replaces the tag set outright while `--add-tag` and
+`--remove-tag` adjust it, and `--product` moves the item to another product.
+
+`delete` drops one or more items by id; an id the backlog does not hold fails the whole command
+and writes nothing.
 
 `send` copies the selected items into `<increment-dir>/drafts/backlog/<id>.md` and deletes them
 from the branch in the same action, printing `<id>\t<path>` per item. The target is a
@@ -142,4 +151,27 @@ $ design-process backlog list
 b-sqdqsq1l  increment-process  index the backlog by tag  tooling
 $ design-process backlog send products/increment-process/increments/fold-cache --tag tooling
 b-sqdqsq1l	products/increment-process/increments/fold-cache/drafts/backlog/b-sqdqsq1l.md
+```
+
+#### Concurrent writes
+
+Two people writing the backlog at once race for the branch. The loser's push is rejected; the
+tool puts the local branch back, refetches the tip, re-applies the change over what the winner
+left, and pushes again — so neither item is lost and no manual recovery is needed. Four attempts
+are made by default. When they all fail the command exits non-zero, saying the branch moved, and
+the local branch is left exactly where it started.
+
+## Importing the package
+
+The package ships one entry point. Its named exports are the operations behind the subcommands —
+`validateTree`, `projectProduct`, `generateIds`, `resolveFold`, `diffFolds`,
+`findLandingConflicts`, and the backlog operations — with the types their signatures name.
+Everything else under `src/` is implementation and moves freely between versions.
+
+```ts
+import { diffFolds, renderFoldDiff, resolveFold } from '@twin-digital/design-process'
+
+const from = resolveFold('.', 'increment-process', { kind: 'increment', number: 9 })
+const to = resolveFold('.', 'increment-process')
+process.stdout.write(renderFoldDiff(diffFolds('increment-process', from.fold, to.fold)))
 ```
