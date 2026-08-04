@@ -21,7 +21,7 @@ export interface DecisionEntry {
   id: string
   title?: string
   statement: string
-  status: 'proposed' | 'accepted' | 'tolerated' | 'delegated' | 'rejected'
+  status: 'proposed' | 'accepted' | 'tolerated' | 'delegated' | 'rejected' | 'deferred'
   rejection_reason?: string
   pinned?: false | { reason: 'data-format' | 'public-api' | 'other'; notes?: string }
   because?: string[]

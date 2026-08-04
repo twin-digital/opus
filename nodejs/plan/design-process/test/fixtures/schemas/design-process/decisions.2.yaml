@@ -1,0 +1,31 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/decisions@2
+title: decisions
+description: a per-increment decisions source
+type: object
+additionalProperties: false
+required: [version]
+anyOf:
+  - required: [decisions]
+  - required: [retires]
+properties:
+  version:
+    const: '2'
+  decisions:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/decision@2'
+  retires:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, reason]
+      properties:
+        id:
+          type: string
+          pattern: '^d-[0-9a-z]{8}$'
+        reason:
+          type: string

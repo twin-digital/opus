@@ -21,7 +21,9 @@ non-zero when findings exist. Two rule groups run:
   structured file against the pool schema its `version` names, id format and uniqueness, no
   `proposed` decisions, no open questions, citations resolve (never to a question, and no in-force `because:` or `informed_by:` rests on a retired fact), model
   bindings resolve, preset adoption rules, dense increment numbering, implementation-record
-  naming and claim scope.
+  naming and claim scope, and record coverage completeness — every requirement and ruled
+  decision in force at the record's target, adopted preset requirements included; deferred
+  decisions are excluded, and no coverage entry may name one.
 - **Change rules** — compared against `--base` (default `origin/main`, then `main`): published
   increments are immutable, shipped implementation records are immutable, pool versions bound by
   a published increment are immutable (directly or through a bound schema's `$ref`), and a new
@@ -36,9 +38,10 @@ Findings cite the requirement or decision id each rule enforces, e.g.:
 ### show
 
 Renders the folded, effective state of a product at an increment as markdown: requirements
-(local and adopted), decisions ordered by `because:` topology with statuses and pins, model
-bindings, coverage joined from the `implementations/` pool with uncovered and attestation-only
-counts, and what the increment changed.
+(local and adopted), decisions ordered by `because:` topology with statuses and pins (deferred
+entries counted beside the rulings), model bindings, coverage joined from the
+`implementations/` pool with uncovered and attestation-only counts (deferred decisions
+excluded, the summary naming how many), and what the increment changed.
 
 ### id
 

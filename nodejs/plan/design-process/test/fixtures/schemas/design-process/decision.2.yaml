@@ -1,0 +1,60 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/decision@2
+title: decision
+description: one decision entry, wherever a decisions source carries it
+type: object
+additionalProperties: false
+required: [id, statement, status]
+properties:
+  id:
+    type: string
+    pattern: '^d-[0-9a-z]{8}$'
+  title:
+    type: string
+  statement:
+    type: string
+  status:
+    enum: [proposed, accepted, tolerated, delegated, rejected, deferred]
+  rejection_reason:
+    type: string
+    description: the owner's reason, required when status is rejected
+  pinned:
+    oneOf:
+      - const: false
+      - type: object
+        additionalProperties: false
+        required: [reason]
+        properties:
+          reason:
+            enum: [data-format, public-api, other]
+          notes:
+            type: string
+        if:
+          properties:
+            reason:
+              const: other
+        then:
+          required: [notes]
+  because:
+    type: array
+    minItems: 1
+    items:
+      type: string
+  revisit_when:
+    type: array
+    minItems: 1
+    description: rare, deliberate revisit conditions the owner sets — not a falsification regime; most decisions carry none
+    items:
+      type: string
+  supersedes:
+    type: string
+    pattern: '^d-[0-9a-z]{8}$'
+  facets:
+    $ref: '/design-process/common@1#/$defs/facets'
+if:
+  properties:
+    status:
+      const: rejected
+  required: [status]
+then:
+  required: [rejection_reason]

@@ -113,6 +113,30 @@ export const demoProduct = (): Files => ({
   }),
 })
 
+/** demoProduct with increment 002's decisions as a version-2 source carrying a deferred entry. */
+export const demoWithDeferred = (): Files => {
+  const files = demoProduct()
+  files['products/demo/increments/002/decisions.yaml'] = yaml({
+    version: '2',
+    decisions: [
+      {
+        id: 'd-cccccccc',
+        title: 'replacement choice',
+        statement: 'the first thing is done the fast way.\n',
+        status: 'tolerated',
+        supersedes: 'd-aaaaaaaa',
+      },
+      {
+        id: 'd-dddddddd',
+        title: 'third thing, deferred',
+        statement: 'how the third thing is done awaits its answer.\n',
+        status: 'deferred',
+      },
+    ],
+  })
+  return files
+}
+
 /** Coverage for every claim in force at demo increment 2 — records must be complete. */
 export const demoCoverage = (): { claim: string; covered_by: { kind: string }[] }[] =>
   ['r-bbbbbbbb', 'r-cccccccc', 'd-bbbbbbbb', 'd-cccccccc'].map((claim) => ({

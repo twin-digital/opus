@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { projectProduct } from '../src/project.js'
-import { demoProduct, makeRepo, yaml } from './helpers.js'
+import { demoProduct, demoWithDeferred, makeRepo, yaml } from './helpers.js'
 
 describe('projectProduct (r-2gcehlp8)', () => {
   it('renders the effective sets at the newest increment', () => {
@@ -45,6 +45,33 @@ describe('projectProduct (r-2gcehlp8)', () => {
     expect(projection).toContain('- r-cccccccc: attestation')
     expect(projection).toContain('- r-bbbbbbbb: none')
     expect(projection).toContain('4 claims in force: 1 covered, 3 uncovered, 1 on attestation alone')
+  })
+
+  it('counts deferred entries beside the rulings (d-4nez3mjh)', () => {
+    const { tree } = makeRepo(demoWithDeferred())
+    expect(projectProduct(tree, 'demo')).toContain('1 deferred — awaiting their answers')
+  })
+
+  it('renders a deferred entry like any other, its status line deferred (d-4nez3mjh)', () => {
+    const { tree } = makeRepo(demoWithDeferred())
+    const projection = projectProduct(tree, 'demo')
+    expect(projection).toContain('### d-dddddddd')
+    expect(projection).toContain('_deferred; declared by increment 2_')
+  })
+
+  it('omits deferred decisions from the coverage claims and names the exclusion (d-4nez3mjh)', () => {
+    const files = demoWithDeferred()
+    files['implementations/demo/002-1.yaml'] = yaml({
+      version: '1',
+      product: 'demo',
+      target: 2,
+      packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
+      coverage: [{ claim: 'r-cccccccc', covered_by: [{ kind: 'attestation' }] }],
+    })
+    const { tree } = makeRepo(files)
+    const projection = projectProduct(tree, 'demo')
+    expect(projection).not.toContain('- d-dddddddd:')
+    expect(projection).toContain('1 deferred excluded')
   })
 
   it('shows what the increment changed against the fold before it (d-j50yturh)', () => {
