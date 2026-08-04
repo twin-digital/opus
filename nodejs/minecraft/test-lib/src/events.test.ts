@@ -263,22 +263,8 @@ describe('subscription', () => {
     expect(order).toEqual(['b', 'a'])
   })
 
-  it('throws NotImplementedError for a filtered subscribe', () => {
-    const { world } = createServer()
-    let calls = 0
-    const error = thrownBy(() =>
-      world.afterEvents.entityHurt.subscribe(
-        () => {
-          calls += 1
-        },
-        { entityTypes: ['minecraft:sheep'] },
-      ),
-    )
-    expect(error).toBeInstanceOf(NotImplementedError)
-    expect((error as NotImplementedError).member).toBe('EntityHurtAfterEventSignal.subscribe')
-    emit(world.afterEvents.entityHurt, payload<MC.EntityHurtAfterEvent>({ damage: 1 }))
-    expect(calls).toBe(0)
-  })
+  // A filtered subscribe is subscribe-filter.test.ts's subject: the options argument filters
+  // delivery on the five raised signals and throws only on a field the fakes do not honour.
 
   it('does not deliver to a handler subscribed during the dispatch that is running', () => {
     const { world } = createServer()
