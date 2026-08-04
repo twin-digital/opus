@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { findLandingConflicts, loadDraftIncrements } from '../src/conflicts.js'
+import { findLandingConflicts, loadLandingIncrements } from '../src/conflicts.js'
 import { DirTree } from '../src/tree.js'
 import { validateTree } from '../src/validate.js'
 import { resolveFold } from '../src/version.js'
@@ -25,7 +25,7 @@ const draft = (files: Files): { root: string; head: ReturnType<typeof resolveFol
   return { root, head }
 }
 
-describe('loadDraftIncrements', () => {
+describe('loadLandingIncrements', () => {
   it('reads slug-named increment directories the validator skips', () => {
     const { root } = draft({
       'products/demo/increments/faster-thing/decisions.yaml': yaml({
@@ -33,7 +33,7 @@ describe('loadDraftIncrements', () => {
         decisions: [{ id: 'd-eeeeeeee', statement: 'a draft ruling.\n', status: 'accepted' }],
       }),
     })
-    const increments = loadDraftIncrements(new DirTree(root), 'demo')
+    const increments = loadLandingIncrements(new DirTree(root), 'demo')
     expect(increments.map((increment) => increment.dir)).toEqual(['001', '002', 'faster-thing'])
     expect(increments.find((increment) => increment.dir === 'faster-thing')?.number).toBeUndefined()
   })
@@ -93,13 +93,25 @@ describe('findLandingConflicts — r-0701ctqx', () => {
     ])
   })
 
+  it('covers a draft increment at its wip directory (d-x0q4xgd8)', () => {
+    const { root, head } = draft({
+      'products/demo/increments/wip-003-faster-thing/requirements.yaml': yaml({
+        version: '1',
+        requirements: [{ id: 'r-bbbbbbbb', statement: 'a second declaration of one id.\n' }],
+      }),
+    })
+    expect(findLandingConflicts(new DirTree(root), head, 'demo').map((finding) => finding.rule)).toEqual([
+      'landing-duplicate-id',
+    ])
+  })
+
   it('ignores increments already published at the head', () => {
     const { root, head } = draft({})
     expect(findLandingConflicts(new DirTree(root), head, 'demo')).toEqual([])
   })
 })
 
-describe('the validator is unchanged — d-yu9hbn3h', () => {
+describe('the name finding is what keeps a draft out of main — d-1qn5jzgd', () => {
   const slugTree = (): string => {
     const { root } = makeRepo(demoProduct())
     roots.push(root)

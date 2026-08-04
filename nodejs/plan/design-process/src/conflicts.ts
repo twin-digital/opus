@@ -10,8 +10,8 @@ const CLAIM = ['r-0701ctqx']
 
 const SOURCE_PATH = /^products\/([^/]+)\/increments\/([^/]+)\/(requirements|decisions)\.ya?ml$/
 
-/** One increment directory on a draft branch — slug-named or numbered. */
-export interface DraftIncrement {
+/** One increment directory on a draft branch — a wip directory, otherwise slug-named or numbered. */
+export interface LandingIncrement {
   dir: string
   /** The number the directory name carries, when it is a zero-padded number. */
   number?: number
@@ -20,11 +20,11 @@ export interface DraftIncrement {
 }
 
 /**
- * A product's increment directories in `tree`, slug-named ones included. The validator skips
- * slug directories by design (`d-yu9hbn3h`); the landing check has to read them.
+ * A product's increment directories in `tree`, unnumbered ones included — a draft increment at its
+ * `wip-<NNN>-<slug>` directory (`d-x0q4xgd8`) among them.
  */
-export const loadDraftIncrements = (tree: FileTree, productId: string): DraftIncrement[] => {
-  const byDir = new Map<string, DraftIncrement>()
+export const loadLandingIncrements = (tree: FileTree, productId: string): LandingIncrement[] => {
+  const byDir = new Map<string, LandingIncrement>()
   for (const path of tree.paths()) {
     const match = SOURCE_PATH.exec(path)
     if (match?.[1] !== productId) {
@@ -48,11 +48,11 @@ export const loadDraftIncrements = (tree: FileTree, productId: string): DraftInc
 }
 
 /**
- * The rulings a landing would introduce: every increment directory that is slug-named, or
- * numbered above the head fold — what this branch would add to the sequence.
+ * The rulings a landing would introduce: every increment directory that carries no published
+ * number — a wip directory among them — or is numbered above the head fold.
  */
-export const landingIncrements = (tree: FileTree, productId: string, headAt: number): DraftIncrement[] =>
-  loadDraftIncrements(tree, productId).filter(
+export const landingIncrements = (tree: FileTree, productId: string, headAt: number): LandingIncrement[] =>
+  loadLandingIncrements(tree, productId).filter(
     (increment) => increment.number === undefined || increment.number > headAt,
   )
 

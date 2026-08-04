@@ -1,6 +1,6 @@
 import { formatIncrement } from './version.js'
 
-import type { Fold } from './fold.js'
+import type { Fold, IncrementRef } from './fold.js'
 
 export type ClaimKind = 'requirement' | 'decision'
 
@@ -8,7 +8,7 @@ export interface AddedClaim {
   id: string
   kind: ClaimKind
   title?: string
-  increment: number
+  increment: IncrementRef
 }
 
 /** An entry the later fold closed: `by` names the replacement, or the retirement's reason. */
@@ -16,7 +16,7 @@ export interface ClosedClaim {
   id: string
   kind: ClaimKind
   by: string
-  increment: number
+  increment: IncrementRef
 }
 
 export interface FoldDiff {
@@ -31,6 +31,9 @@ export interface FoldDiff {
   /** Entries closed by a `retires:` entry; `by` carries the recorded reason. */
   retired: ClosedClaim[]
 }
+
+/** An increment as the diff names it: a padded published number, or a draft's directory name. */
+const formatRef = (ref: IncrementRef): string => (typeof ref === 'number' ? formatIncrement(ref) : ref)
 
 /** What changed between two versions of a product's fold. The later version may not precede the earlier. */
 export const diffFolds = (productId: string, from: Fold, to: Fold): FoldDiff => {
@@ -53,7 +56,7 @@ export const diffFolds = (productId: string, from: Fold, to: Fold): FoldDiff => 
   const superseded: ClosedClaim[] = []
   const retired: ClosedClaim[] = []
   for (const entry of to.outOfForce) {
-    if (entry.increment <= from.at) {
+    if (typeof entry.increment === 'number' && entry.increment <= from.at) {
       continue
     }
     const closed: ClosedClaim = { id: entry.id, kind: entry.kind, by: entry.by, increment: entry.increment }
@@ -80,7 +83,7 @@ export const renderFoldDiff = (diff: FoldDiff): string => {
     lines.push(`## added (${diff.added.length})`, '')
     for (const claim of diff.added) {
       lines.push(
-        `- ${claim.id} (${formatIncrement(claim.increment)}) [${claim.kind}]${claim.title === undefined ? '' : ` — ${claim.title}`}`,
+        `- ${claim.id} (${formatRef(claim.increment)}) [${claim.kind}]${claim.title === undefined ? '' : ` — ${claim.title}`}`,
       )
     }
     lines.push('')
@@ -96,7 +99,7 @@ export const renderFoldDiff = (diff: FoldDiff): string => {
     }
     lines.push(`## ${heading} (${entries.length})`, '')
     for (const entry of entries) {
-      lines.push(`- ${entry.id} (${formatIncrement(entry.increment)}) ${describe(entry)}`)
+      lines.push(`- ${entry.id} (${formatRef(entry.increment)}) ${describe(entry)}`)
     }
     lines.push('')
   }

@@ -45,5 +45,5 @@ export { DirTree, GitTree, resolveGitRef } from './tree.js'
 export type { FileTree } from './tree.js'
 
 // the shapes those operations return or fold over
-export type { Fold, FoldedClaim, OutOfForce } from './fold.js'
+export type { Fold, FoldedClaim, IncrementRef, OutOfForce } from './fold.js'
 export type { DecisionEntry, Finding, ModelEntry, PresetEntry, RequirementEntry } from './types.js'

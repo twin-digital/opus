@@ -5,13 +5,19 @@ import { loadProducts } from './load.js'
 import { loadApiPool, loadFacts, loadSchemaPool } from './pools.js'
 
 import type { ErrorObject, ValidateFunction } from 'ajv'
-import type { Product, ProductsTree } from './load.js'
+import type { IncrementSources, Product, ProductsTree } from './load.js'
 import type { FactsPool, SchemaPool } from './pools.js'
 import type { FileTree } from './tree.js'
 import type { Finding, QuestionEntry } from './types.js'
 
 const CLAIM_ID = /^[rd]-[0-9a-z]{8}$/
 const QUESTION_ID = /^q-[0-9a-z]{8}$/
+
+/**
+ * Every increment directory a rule reads: the published ones, and the draft increments in flight
+ * that the gate checks as they are worked (d-1qn5jzgd).
+ */
+const allIncrements = (product: Product): IncrementSources[] => [...product.increments, ...product.drafts]
 
 export interface ValidateOptions {
   /** Base tree (ordinarily main) enabling the change rules; omitted, only tree-state rules run. */
@@ -120,7 +126,7 @@ const structuredFiles = (product: Product): StructuredFile[] => {
   if (product.declaration) {
     files.push({ path: product.declaration.path, entity: 'product', data: product.declaration.data })
   }
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     for (const kind of ['requirements', 'decisions', 'questions'] as const) {
       const source = increment[kind]
       if (source) {
@@ -205,6 +211,28 @@ const checkIncrementNumbering = (product: Product): Finding[] => {
       })
     }
   }
+  const byOrdinal = new Map<number, string[]>()
+  for (const draft of product.drafts) {
+    findings.push({
+      rule: 'increment-dir-name',
+      claims: ['d-x0q4xgd8', 'd-1qn5jzgd'],
+      path: draft.dir,
+      message: 'draft increment in flight; the landing rename claims its number before the merge',
+    })
+    byOrdinal.set(draft.ordinal, [...(byOrdinal.get(draft.ordinal) ?? []), draft.name])
+  }
+  for (const [ordinal, names] of byOrdinal) {
+    if (names.length > 1) {
+      findings.push({
+        rule: 'draft-ordinal-unique',
+        claims: ['d-x0q4xgd8'],
+        path: `${product.dir}/increments`,
+        message: `${names.join(' and ')} share the ordinal ${String(ordinal).padStart(3, '0')}, so they carry no relative order`,
+      })
+    }
+  }
+
+  // the density gate reads published numbers only: a wip ordinal is not one (d-1qn5jzgd)
   const numbers = new Set(product.increments.map((increment) => increment.number))
   const max = Math.max(0, ...numbers)
   const missing = Array.from({ length: max }, (_, index) => index + 1).filter((n) => !numbers.has(n))
@@ -227,7 +255,7 @@ interface OwnedEntry {
 const productEntries = (product: Product): { requirements: OwnedEntry[]; decisions: OwnedEntry[] } => {
   const requirements: OwnedEntry[] = []
   const decisions: OwnedEntry[] = []
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const requirementsSource = increment.requirements
     for (const entry of requirementsSource?.data.requirements ?? []) {
       requirements.push({ id: entry.id, path: requirementsSource?.path ?? increment.dir })
@@ -266,7 +294,7 @@ const checkIds = (product: Product): Finding[] => {
       seen.set(id, path)
     }
   }
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const source = increment.questions
     if (!source) {
       continue
@@ -297,7 +325,7 @@ const checkIds = (product: Product): Finding[] => {
 
 const checkDecisionRules = (product: Product): Finding[] => {
   const findings: Finding[] = []
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const source = increment.decisions
     for (const entry of source?.data.decisions ?? []) {
       if (entry.status === 'proposed') {
@@ -315,7 +343,7 @@ const checkDecisionRules = (product: Product): Finding[] => {
 
 const checkQuestionRules = (product: Product): Finding[] => {
   const findings: Finding[] = []
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const source = increment.questions
     const questions = source?.data.questions ?? []
     if (source && questions.length > 0) {
@@ -336,7 +364,7 @@ const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
   const requirementIds = new Set(requirements.map((entry) => entry.id))
   const decisionIds = new Set(decisions.map((entry) => entry.id))
   const known = new Set([...requirementIds, ...decisionIds])
-  const fold = foldProduct(product)
+  const fold = foldProduct(product, undefined, true)
   const inForce = coverableClaimIds(fold)
   for (const [id, { entry }] of fold.decisions) {
     if (entry.status === 'rejected' || entry.status === 'deferred') {
@@ -387,7 +415,7 @@ const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
     }
   }
 
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const decisionsSource = increment.decisions
     if (decisionsSource) {
       for (const entry of decisionsSource.data.decisions ?? []) {
@@ -448,7 +476,7 @@ const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
 
 const checkModel = (product: Product, schemas: Map<string, unknown>, apis: Map<string, unknown>): Finding[] => {
   const findings: Finding[] = []
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const source = increment.requirements
     if (!source) {
       continue
@@ -487,7 +515,7 @@ const checkModel = (product: Product, schemas: Map<string, unknown>, apis: Map<s
 
 const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] => {
   const findings: Finding[] = []
-  for (const increment of product.increments) {
+  for (const increment of allIncrements(product)) {
     const presets = increment.requirements?.data.presets ?? []
     const path = increment.requirements?.path
     const byName = new Map<string, Set<string>>()
@@ -550,7 +578,7 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
           })
         }
       }
-      const localIds = new Set(foldProduct(product).requirements.keys())
+      const localIds = new Set(foldProduct(product, undefined, true).requirements.keys())
       const presetFold = foldProduct(preset, entry.version)
       for (const id of presetFold.requirements.keys()) {
         if (localIds.has(id)) {
