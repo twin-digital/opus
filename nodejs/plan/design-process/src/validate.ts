@@ -339,8 +339,8 @@ const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
   const fold = foldProduct(product)
   const inForce = coverableClaimIds(fold)
   for (const [id, { entry }] of fold.decisions) {
-    if (entry.status === 'rejected') {
-      inForce.add(id) // a rejected entry awaiting replacement still cites live inputs
+    if (entry.status === 'rejected' || entry.status === 'deferred') {
+      inForce.add(id) // in force for citations though not coverable: rejected awaits replacement, deferred its answer
     }
   }
 
@@ -614,6 +614,9 @@ const checkRecords = (product: Product, productsTree: ProductsTree): Finding[] =
 
     const fold = foldProduct(product, record.data.target)
     const coverable = coverableClaimIds(fold)
+    const deferred = new Set(
+      [...fold.decisions.values()].filter(({ entry }) => entry.status === 'deferred').map(({ entry }) => entry.id),
+    )
     for (const preset of fold.presets.values()) {
       const presetProduct = productsTree.products.get(preset.entry.name)
       if (presetProduct && preset.entry.version !== undefined) {
@@ -625,7 +628,14 @@ const checkRecords = (product: Product, productsTree: ProductsTree): Finding[] =
     const covered = new Set<string>()
     for (const coverage of record.data.coverage ?? []) {
       covered.add(coverage.claim)
-      if (!coverable.has(coverage.claim)) {
+      if (deferred.has(coverage.claim)) {
+        findings.push({
+          rule: 'record-covers-deferred',
+          claims: ['d-3orwwaze'],
+          path: record.path,
+          message: `coverage names ${coverage.claim}, a deferred decision; nothing covers a deferral until its answer lands`,
+        })
+      } else if (!coverable.has(coverage.claim)) {
         findings.push({
           rule: 'record-claim-in-force',
           claims: ['d-0nl6sd96'],
@@ -638,7 +648,7 @@ const checkRecords = (product: Product, productsTree: ProductsTree): Finding[] =
     if (missing.length > 0) {
       findings.push({
         rule: 'record-coverage-complete',
-        claims: ['r-tue7kfgt', 'd-rr1qmw72'],
+        claims: ['r-tue7kfgt', 'd-3orwwaze'],
         path: record.path,
         message: `coverage misses ${missing.length} claim(s) in force at increment ${record.data.target}: ${missing.join(', ')}`,
       })

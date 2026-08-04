@@ -91,11 +91,11 @@ export const foldProduct = (product: Product, at?: number): Fold => {
   return fold
 }
 
-/** Claims coverage may cite: in force at the fold, and (for decisions) ruled rather than rejected or proposed. */
+/** Claims coverage may cite: in force at the fold, and (for decisions) ruled rather than rejected, proposed, or deferred. */
 export const coverableClaimIds = (fold: Fold): Set<string> => {
   const ids = new Set<string>(fold.requirements.keys())
   for (const [id, { entry }] of fold.decisions) {
-    if (entry.status !== 'rejected' && entry.status !== 'proposed') {
+    if (entry.status !== 'rejected' && entry.status !== 'proposed' && entry.status !== 'deferred') {
       ids.add(id)
     }
   }

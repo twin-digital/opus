@@ -414,7 +414,7 @@ describe('validateTree — implementation records', () => {
     expect(rules(check(files))).toContain('record-ordinal-dense')
   })
 
-  it('fails a record whose coverage misses a claim in force at its target (d-rr1qmw72)', () => {
+  it('fails a record whose coverage misses a claim in force at its target (d-3orwwaze)', () => {
     const files = demoProduct()
     files['implementations/demo/002-1.yaml'] = yaml(
       record({ coverage: demoCoverage().filter((entry) => entry.claim !== 'd-bbbbbbbb') }),
@@ -424,7 +424,7 @@ describe('validateTree — implementation records', () => {
     expect(findings.find((finding) => finding.rule === 'record-coverage-complete')?.message).toContain('d-bbbbbbbb')
   })
 
-  it('requires coverage of adopted preset requirements (d-rr1qmw72)', () => {
+  it('requires coverage of adopted preset requirements (d-3orwwaze)', () => {
     const files = demoProduct()
     files['products/nodejs-library/product.yaml'] = yaml({ version: '1', kind: 'requirement-preset' })
     files['products/nodejs-library/increments/001/requirements.yaml'] = yaml({

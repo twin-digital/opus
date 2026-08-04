@@ -75,7 +75,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     counts[entry.status] += 1
   }
   lines.push(
-    `## decisions (${decisions.length} in force: ${counts.accepted} accepted, ${counts.tolerated} tolerated, ${counts.rejected} rejected; ${counts.delegated} delegated — abstained, not reviewed)`,
+    `## decisions (${decisions.length} in force: ${counts.accepted} accepted, ${counts.tolerated} tolerated, ${counts.rejected} rejected; ${counts.delegated} delegated — abstained, not reviewed; ${counts.deferred} deferred — awaiting their answers)`,
     '',
   )
   for (const { entry, increment } of decisions) {
@@ -185,9 +185,13 @@ const renderCoverage = (product: Product, fold: Fold): string[] => {
       coverageByClaim.set(entry.claim, entry)
     }
   }
+  const rulings = [...fold.decisions.values()].filter(
+    ({ entry }) => entry.status !== 'rejected' && entry.status !== 'deferred',
+  )
+  const deferred = [...fold.decisions.values()].filter(({ entry }) => entry.status === 'deferred').length
   const claims = [
     ...[...fold.requirements.values()].map(({ entry }) => entry.id),
-    ...[...fold.decisions.values()].filter(({ entry }) => entry.status !== 'rejected').map(({ entry }) => entry.id),
+    ...rulings.map(({ entry }) => entry.id),
   ]
   const lines = ['## coverage', '']
   let uncovered = 0
@@ -207,7 +211,7 @@ const renderCoverage = (product: Product, fold: Fold): string[] => {
   }
   lines.push(
     '',
-    `${claims.length} claims in force: ${claims.length - uncovered} covered, ${uncovered} uncovered, ${attestationOnly} on attestation alone`,
+    `${claims.length} claims in force: ${claims.length - uncovered} covered, ${uncovered} uncovered, ${attestationOnly} on attestation alone; ${deferred} deferred excluded`,
     '',
   )
   return lines
