@@ -201,30 +201,116 @@ export interface FactsPool {
   retired: Set<string>
 }
 
+/** One fact or run entry, with the file it was declared in for finding locations. */
+export interface PoolItem {
+  /** The declared id, or `''` when the entry has no string id. */
+  id: string
+  kind: 'fact' | 'run'
+  data: Record<string, unknown>
+  path: string
+}
+
+/** One loaded `facts/` or `evidence/` file: its entries, and whether they came wrapped. */
+export interface PoolFile {
+  path: string
+  kind: 'fact' | 'run'
+  /** true when the file is a `{version, facts|runs: [...]}` wrapper; false for a bare sequence. */
+  wrapped: boolean
+  /** The wrapper mapping when `wrapped`, for validation against its file schema. */
+  wrapper?: Record<string, unknown>
+  items: PoolItem[]
+}
+
+/** The repo-wide facts + runs pool. Facts and runs share one id namespace. */
+export interface Pool {
+  files: PoolFile[]
+  facts: PoolItem[]
+  runs: PoolItem[]
+  /** id -> first declaring entry, across facts and runs. */
+  byId: Map<string, PoolItem>
+  /** Entries whose id was already declared by an earlier entry. */
+  duplicates: PoolItem[]
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
+
+// Accepts both the current bare sequence and the later `{version, facts|runs: [...]}` wrapper.
+// An evidence/ mapping without the runs wrapper is probe artifact material and is skipped.
+const loadPoolFile = (tree: FileTree, path: string, kind: 'fact' | 'run'): PoolFile | undefined => {
+  let doc: unknown
+  try {
+    doc = parse(tree.read(path))
+  } catch {
+    return undefined
+  }
+  const wrapperKey = kind === 'fact' ? 'facts' : 'runs'
+  let entries: unknown[]
+  let wrapped = false
+  let wrapper: Record<string, unknown> | undefined
+  if (Array.isArray(doc)) {
+    entries = doc
+  } else {
+    const record = asRecord(doc)
+    if (record && 'version' in record && Array.isArray(record[wrapperKey])) {
+      wrapped = true
+      wrapper = record
+      entries = record[wrapperKey] as unknown[]
+    } else {
+      return undefined
+    }
+  }
+  const items: PoolItem[] = entries.map((entry) => {
+    const data = asRecord(entry) ?? {}
+    return { id: typeof data.id === 'string' ? data.id : '', kind, data, path }
+  })
+  return { path, kind, wrapped, wrapper, items }
+}
+
+/** Load the repo-wide `facts/` and `evidence/` pools into fact and run entries. */
+export const loadPool = (tree: FileTree): Pool => {
+  const files: PoolFile[] = []
+  for (const path of tree.paths().filter((p) => p.startsWith('facts/') && isYamlPath(p))) {
+    const file = loadPoolFile(tree, path, 'fact')
+    if (file) {
+      files.push(file)
+    }
+  }
+  for (const path of tree.paths().filter((p) => p.startsWith('evidence/') && isYamlPath(p))) {
+    const file = loadPoolFile(tree, path, 'run')
+    if (file) {
+      files.push(file)
+    }
+  }
+  const facts = files.filter((file) => file.kind === 'fact').flatMap((file) => file.items)
+  const runs = files.filter((file) => file.kind === 'run').flatMap((file) => file.items)
+  const byId = new Map<string, PoolItem>()
+  const duplicates: PoolItem[] = []
+  // runs load before facts so a run: source resolves the same way whichever came first
+  for (const item of [...runs, ...facts]) {
+    if (item.id === '') {
+      continue
+    }
+    if (byId.has(item.id)) {
+      duplicates.push(item)
+    } else {
+      byId.set(item.id, item)
+    }
+  }
+  return { files, facts, runs, byId, duplicates }
+}
+
 /** Fact ids and statuses declared in the repo-wide `facts/` pool. */
 export const loadFacts = (tree: FileTree): FactsPool => {
   const ids = new Set<string>()
   const retired = new Set<string>()
-  for (const path of tree.paths().filter((p) => p.startsWith('facts/') && isYamlPath(p))) {
-    let doc: unknown
-    try {
-      doc = parse(tree.read(path))
-    } catch {
+  for (const item of loadPool(tree).facts) {
+    if (item.id === '') {
       continue
     }
-    if (Array.isArray(doc)) {
-      for (const entry of doc) {
-        if (typeof entry !== 'object' || entry === null) {
-          continue
-        }
-        const record = entry as Record<string, unknown>
-        if (typeof record.id === 'string') {
-          ids.add(record.id)
-          if (record.status === 'retired') {
-            retired.add(record.id)
-          }
-        }
-      }
+    ids.add(item.id)
+    if (item.data.status === 'retired') {
+      retired.add(item.id)
     }
   }
   return { ids, retired }

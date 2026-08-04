@@ -101,7 +101,14 @@ describe('validateTree — tree-state rules', () => {
 
   it('resolves f: citations against the facts pool', () => {
     const files = demoProduct()
-    files['facts/demo.yml'] = yaml([{ id: 'a-real-fact', claim: 'something observed\n', backing: 'documented' }])
+    files['facts/demo.yml'] = yaml([
+      {
+        id: 'a-real-fact',
+        claim: 'something observed\n',
+        backing: 'assumed',
+        sources: [{ description: 'the mechanism this fact assumes' }],
+      },
+    ])
     files['products/demo/increments/002/decisions.yaml'] = yaml({
       version: '1',
       decisions: [
@@ -120,11 +127,18 @@ describe('validateTree — tree-state rules', () => {
       {
         id: 'old-finding',
         claim: 'superseded observation\n',
-        backing: 'tested',
+        backing: 'assumed',
         status: 'retired',
+        reason: 'superseded',
         superseded_by: 'new-finding',
+        sources: [{ description: 'the mechanism the earlier observation assumed' }],
       },
-      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+      {
+        id: 'new-finding',
+        claim: 'current observation\n',
+        backing: 'assumed',
+        sources: [{ description: 'the mechanism this observation assumes' }],
+      },
     ])
     files['products/demo/increments/002/decisions.yaml'] = yaml({
       version: '1',
@@ -154,11 +168,18 @@ describe('validateTree — tree-state rules', () => {
       {
         id: 'old-finding',
         claim: 'superseded observation\n',
-        backing: 'tested',
+        backing: 'assumed',
         status: 'retired',
+        reason: 'superseded',
         superseded_by: 'new-finding',
+        sources: [{ description: 'the mechanism the earlier observation assumed' }],
       },
-      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+      {
+        id: 'new-finding',
+        claim: 'current observation\n',
+        backing: 'assumed',
+        sources: [{ description: 'the mechanism this observation assumes' }],
+      },
     ])
     // d-aaaaaaaa cites the retired fact but is superseded by d-cccccccc in increment 002
     files['products/demo/increments/001/decisions.yaml'] = yaml({
@@ -278,11 +299,18 @@ describe('validateTree — deferred decisions', () => {
       {
         id: 'old-finding',
         claim: 'superseded observation\n',
-        backing: 'tested',
+        backing: 'assumed',
         status: 'retired',
+        reason: 'superseded',
         superseded_by: 'new-finding',
+        sources: [{ description: 'the mechanism the earlier observation assumed' }],
       },
-      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+      {
+        id: 'new-finding',
+        claim: 'current observation\n',
+        backing: 'assumed',
+        sources: [{ description: 'the mechanism this observation assumes' }],
+      },
     ])
     files['products/demo/increments/002/decisions.yaml'] = yaml({
       version: '2',

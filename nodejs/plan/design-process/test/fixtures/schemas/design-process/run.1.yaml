@@ -1,0 +1,45 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/run@1
+title: run
+description: one execution under evidence/ that a tested fact rests on
+type: object
+additionalProperties: false
+required: [id, command, output, ran_at]
+properties:
+  id:
+    type: string
+    pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+  command:
+    type: string
+  output:
+    type: string
+  ran_at:
+    type: string
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  environment:
+    type: string
+  status:
+    enum: [active, retired]
+    description: active when absent
+  reason:
+    enum: [superseded, stale, invalid]
+    description: required when status is retired
+  superseded_by:
+    type: string
+    pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+    description: required when reason is superseded
+allOf:
+  - if:
+      properties:
+        status:
+          const: retired
+      required: [status]
+    then:
+      required: [reason]
+  - if:
+      properties:
+        reason:
+          const: superseded
+      required: [reason]
+    then:
+      required: [superseded_by]

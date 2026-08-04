@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/facts@1
+title: facts
+description: a facts/ file — its version and the facts it declares
+type: object
+additionalProperties: false
+required: [version, facts]
+properties:
+  version:
+    const: '1'
+  facts:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/fact@1'

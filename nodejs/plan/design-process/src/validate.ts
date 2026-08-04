@@ -1,5 +1,6 @@
 import { Ajv2020 } from 'ajv/dist/2020.js'
 
+import { checkEvidenceBar } from './evidence-bar.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { loadApiPool, loadFacts, loadSchemaPool } from './pools.js'
@@ -37,6 +38,8 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
   findings.push(...checkSchemaRefsResolve(schemaPool))
 
   const ajv = buildAjv(schemaPool, findings)
+
+  findings.push(...checkEvidenceBar(head, schemaPool, ajv))
 
   const productsTree = loadProducts(head)
   findings.push(...productsTree.findings)
