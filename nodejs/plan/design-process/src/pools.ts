@@ -210,20 +210,20 @@ export interface PoolItem {
   path: string
 }
 
-/** One loaded `facts/` or `evidence/` file: its entries, and whether they came wrapped. */
+/** One loaded `facts/` or `evidence/` file: the `{version, facts|runs: [...]}` mapping and its entries. */
 export interface PoolFile {
   path: string
   kind: 'fact' | 'run'
-  /** true when the file is a `{version, facts|runs: [...]}` wrapper; false for a bare sequence. */
-  wrapped: boolean
-  /** The wrapper mapping when `wrapped`, for validation against its file schema. */
-  wrapper?: Record<string, unknown>
+  /** The whole mapping, for validation against its file schema. */
+  wrapper: Record<string, unknown>
   items: PoolItem[]
 }
 
 /** The repo-wide facts + runs pool. Facts and runs share one id namespace. */
 export interface Pool {
   files: PoolFile[]
+  /** Pool files the loader could not read: an unparseable file is itself a finding (d-qo2qelw4). */
+  findings: Finding[]
   facts: PoolItem[]
   runs: PoolItem[]
   /** id -> first declaring entry, across facts and runs. */
@@ -235,49 +235,51 @@ export interface Pool {
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 
-// Accepts both the current bare sequence and the later `{version, facts|runs: [...]}` wrapper.
-// An evidence/ mapping without the runs wrapper is probe artifact material and is skipped.
-const loadPoolFile = (tree: FileTree, path: string, kind: 'fact' | 'run'): PoolFile | undefined => {
+// The `{version, facts|runs: [...]}` wrapper is what marks a pool file (d-yc56w54u). Anything else
+// under facts/ or evidence/ — a probe's fixtures and inputs — is artifact material and is skipped.
+const loadPoolFile = (
+  tree: FileTree,
+  path: string,
+  kind: 'fact' | 'run',
+  findings: Finding[],
+): PoolFile | undefined => {
   let doc: unknown
   try {
     doc = parse(tree.read(path))
-  } catch {
+  } catch (error) {
+    // the file's facts and runs would otherwise leave the pool with no signal (d-qo2qelw4)
+    findings.push({
+      rule: 'pool-file-parse',
+      claims: ['r-xxa1st52', 'd-qo2qelw4'],
+      path,
+      message: `not parseable as YAML: ${error instanceof Error ? error.message : String(error)}`,
+    })
     return undefined
   }
   const wrapperKey = kind === 'fact' ? 'facts' : 'runs'
-  let entries: unknown[]
-  let wrapped = false
-  let wrapper: Record<string, unknown> | undefined
-  if (Array.isArray(doc)) {
-    entries = doc
-  } else {
-    const record = asRecord(doc)
-    if (record && 'version' in record && Array.isArray(record[wrapperKey])) {
-      wrapped = true
-      wrapper = record
-      entries = record[wrapperKey] as unknown[]
-    } else {
-      return undefined
-    }
+  const wrapper = asRecord(doc)
+  if (!wrapper || !('version' in wrapper) || !Array.isArray(wrapper[wrapperKey])) {
+    return undefined
   }
-  const items: PoolItem[] = entries.map((entry) => {
+  const items: PoolItem[] = (wrapper[wrapperKey] as unknown[]).map((entry) => {
     const data = asRecord(entry) ?? {}
     return { id: typeof data.id === 'string' ? data.id : '', kind, data, path }
   })
-  return { path, kind, wrapped, wrapper, items }
+  return { path, kind, wrapper, items }
 }
 
 /** Load the repo-wide `facts/` and `evidence/` pools into fact and run entries. */
 export const loadPool = (tree: FileTree): Pool => {
   const files: PoolFile[] = []
+  const findings: Finding[] = []
   for (const path of tree.paths().filter((p) => p.startsWith('facts/') && isYamlPath(p))) {
-    const file = loadPoolFile(tree, path, 'fact')
+    const file = loadPoolFile(tree, path, 'fact', findings)
     if (file) {
       files.push(file)
     }
   }
   for (const path of tree.paths().filter((p) => p.startsWith('evidence/') && isYamlPath(p))) {
-    const file = loadPoolFile(tree, path, 'run')
+    const file = loadPoolFile(tree, path, 'run', findings)
     if (file) {
       files.push(file)
     }
@@ -297,7 +299,7 @@ export const loadPool = (tree: FileTree): Pool => {
       byId.set(item.id, item)
     }
   }
-  return { files, facts, runs, byId, duplicates }
+  return { files, findings, facts, runs, byId, duplicates }
 }
 
 /** Fact ids and statuses declared in the repo-wide `facts/` pool. */

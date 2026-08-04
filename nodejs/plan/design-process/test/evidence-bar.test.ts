@@ -9,13 +9,17 @@ import type { Finding } from '../src/types.js'
 const check = (files: Record<string, string>): Finding[] => validateTree(makeRepo(files).tree)
 const rules = (findings: Finding[]): string[] => findings.map((finding) => finding.rule)
 
+/** A sequence of entries becomes the pool file the wrapper marks; anything else is written as given. */
+const poolFile = (entries: unknown, key: 'facts' | 'runs'): string =>
+  yaml(Array.isArray(entries) ? { version: '1', [key]: entries } : entries)
+
 /** A tree with the pool schemas, one in-repo source file, and one run output file. */
 const base = (facts: unknown, runs?: unknown, extra: Record<string, string> = {}): Record<string, string> => ({
   ...poolFiles(),
   'docs/note.md': 'The observed behavior is stable across runs.\n',
   'evidence/probe/out.txt': 'measured latency was 12ms under load.\n',
-  'facts/pool.yml': yaml(facts),
-  ...(runs === undefined ? {} : { 'evidence/probe/runs.yml': yaml(runs) }),
+  'facts/pool.yml': poolFile(facts, 'facts'),
+  ...(runs === undefined ? {} : { 'evidence/probe/runs.yml': poolFile(runs, 'runs') }),
   ...extra,
 })
 
@@ -48,19 +52,26 @@ const testedFact = {
 }
 
 describe('evidence bar — clean pool', () => {
-  it('passes valid bare facts and runs', () => {
+  it('passes a valid pool', () => {
     expect(check(base([documentedFact, assumedFact, testedFact], [runEntry]))).toEqual([])
-  })
-
-  it('passes wrapped facts and runs', () => {
-    const files = base({ version: '1', facts: [documentedFact] }, { version: '1', runs: [runEntry] })
-    expect(check(files)).toEqual([])
   })
 
   it('skips an evidence mapping without the runs wrapper', () => {
     const files = base([documentedFact])
     files['evidence/probe/compose.yaml'] = yaml({ services: { db: { image: 'postgres' } } })
     expect(check(files)).toEqual([])
+  })
+
+  it('reads an unwrapped top-level sequence as artifact material, not a pool file (d-yc56w54u)', () => {
+    // a probe's fixture that happens to be a sequence must not load as runs and fail entry shape
+    const files = base([documentedFact])
+    files['evidence/probe/inputs.yml'] = yaml([{ name: 'alpha' }, { name: 'beta' }])
+    files['facts/loose.yml'] = yaml([documentedFact])
+    expect(check(files)).toEqual([])
+
+    const pool = loadPool(makeRepo(files).tree)
+    expect(pool.files.map((file) => file.path)).toEqual(['facts/pool.yml'])
+    expect(pool.runs).toEqual([])
   })
 })
 
@@ -201,8 +212,38 @@ describe('evidence bar — artifacts, supersession, uniqueness (rules 6, 7, 8)',
   })
 })
 
-describe('pool loader — shape tolerance', () => {
-  it('loads bare and wrapped facts alike into ids/retired', () => {
+describe('evidence bar — unparseable pool files (d-qo2qelw4)', () => {
+  it('reports a facts file that does not parse rather than dropping it', () => {
+    const files = base([documentedFact])
+    files['facts/broken.yml'] = 'claim: "unterminated\n  - [\n'
+    const findings = check(files).filter((finding) => finding.rule === 'pool-file-parse')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.path).toBe('facts/broken.yml')
+  })
+
+  it('reports an evidence file that does not parse', () => {
+    const files = base([documentedFact])
+    files['evidence/probe/broken.yml'] = 'runs: [\n  - id: "oops\n'
+    expect(rules(check(files))).toContain('pool-file-parse')
+  })
+})
+
+describe('evidence bar — uncited run output (d-te89mei4)', () => {
+  it('fails a run whose output is missing even when no fact cites it', () => {
+    const files = base([documentedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
+    const findings = check(files).filter((finding) => finding.rule === 'run-output-missing')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.path).toBe('evidence/probe/runs.yml')
+  })
+
+  it('reports one finding, not two, when a fact does cite that run', () => {
+    const files = base([testedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
+    expect(check(files).filter((finding) => finding.rule === 'run-output-missing')).toHaveLength(1)
+  })
+})
+
+describe('pool loader', () => {
+  it('loads facts into ids/retired', () => {
     const { tree } = makeRepo(base([documentedFact, { ...assumedFact, status: 'retired', reason: 'stale' }]))
     const facts = loadFacts(tree)
     expect(facts.ids.has('behavior-is-stable')).toBe(true)
