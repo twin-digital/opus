@@ -37,6 +37,7 @@ const formatAjvError = (error: ErrorObject): string =>
 export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Ajv2020): Finding[] => {
   const findings: Finding[] = []
   const pool = loadPool(tree)
+  findings.push(...pool.findings)
 
   checkSchemas(pool, schemaPool, ajv, findings)
 
@@ -44,6 +45,7 @@ export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Aj
     checkFact(item, pool, tree, findings)
   }
   for (const item of pool.runs) {
+    checkRunOutput(item, tree, findings)
     checkSupersededBy(item, pool, findings)
   }
 
@@ -210,18 +212,9 @@ const checkRunSource = (
         message: `${tag}: run source ${JSON.stringify(runId)} is retired`,
       })
     }
-    if (typeof run.data.output === 'string') {
-      const output = run.data.output
-      if (!tree.has(output)) {
-        findings.push({
-          rule: 'run-output-missing',
-          claims: CLAIMS,
-          path,
-          message: `${tag}: run ${JSON.stringify(runId)} records output ${JSON.stringify(output)}, which is not in the tree`,
-        })
-      } else if (quote !== undefined) {
-        quoteFinding(tree.read(output), quote, tag, `run ${JSON.stringify(runId)}`, path, findings)
-      }
+    // output existence is checked once per run entry; the quote belongs to the citing source
+    if (typeof run.data.output === 'string' && quote !== undefined && tree.has(run.data.output)) {
+      quoteFinding(tree.read(run.data.output), quote, tag, `run ${JSON.stringify(runId)}`, path, findings)
     }
   }
 
@@ -234,6 +227,24 @@ const checkRunSource = (
       message: `${tag}: run source ${JSON.stringify(runId)} on a ${backing ?? 'un-backed'} fact; a run backs only a tested fact`,
     })
   }
+}
+
+/**
+ * A run's recorded output exists in the tree, whether or not a fact cites the run yet
+ * (d-te89mei4). The entry's own claim about the tree is checked where it is made, so a broken
+ * output surfaces in the commit that breaks it rather than in the later one that cites it.
+ */
+const checkRunOutput = (item: PoolItem, tree: FileTree, findings: Finding[]): void => {
+  const output = item.data.output
+  if (typeof output !== 'string' || tree.has(output)) {
+    return // absent, or a non-string the schema already flags
+  }
+  findings.push({
+    rule: 'run-output-missing',
+    claims: [...CLAIMS, 'd-te89mei4'],
+    path: item.path,
+    message: `${item.id || '(unnamed run)'}: records output ${JSON.stringify(output)}, which is not in the tree`,
+  })
 }
 
 const quoteFinding = (

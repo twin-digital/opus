@@ -201,6 +201,36 @@ describe('evidence bar — artifacts, supersession, uniqueness (rules 6, 7, 8)',
   })
 })
 
+describe('evidence bar — unparseable pool files (d-qo2qelw4)', () => {
+  it('reports a facts file that does not parse rather than dropping it', () => {
+    const files = base([documentedFact])
+    files['facts/broken.yml'] = 'claim: "unterminated\n  - [\n'
+    const findings = check(files).filter((finding) => finding.rule === 'pool-file-parse')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.path).toBe('facts/broken.yml')
+  })
+
+  it('reports an evidence file that does not parse', () => {
+    const files = base([documentedFact])
+    files['evidence/probe/broken.yml'] = 'runs: [\n  - id: "oops\n'
+    expect(rules(check(files))).toContain('pool-file-parse')
+  })
+})
+
+describe('evidence bar — uncited run output (d-te89mei4)', () => {
+  it('fails a run whose output is missing even when no fact cites it', () => {
+    const files = base([documentedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
+    const findings = check(files).filter((finding) => finding.rule === 'run-output-missing')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.path).toBe('evidence/probe/runs.yml')
+  })
+
+  it('reports one finding, not two, when a fact does cite that run', () => {
+    const files = base([testedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
+    expect(check(files).filter((finding) => finding.rule === 'run-output-missing')).toHaveLength(1)
+  })
+})
+
 describe('pool loader — shape tolerance', () => {
   it('loads bare and wrapped facts alike into ids/retired', () => {
     const { tree } = makeRepo(base([documentedFact, { ...assumedFact, status: 'retired', reason: 'stale' }]))

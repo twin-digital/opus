@@ -84,6 +84,12 @@ non-zero when findings exist. Two rule groups run:
   naming and claim scope, and record coverage completeness — every requirement and ruled
   decision in force at the record's target, the preset closure's requirements included; deferred
   decisions are excluded, and no coverage entry may name one.
+- **Evidence-bar rules** — the repo-wide `facts/` and `evidence/` pools: entry and wrapper shape
+  against the pool schemas, the backing's source floor, verbatim quotes at in-repo sources (an
+  off-repo url — one carrying a scheme — is not read), `run:` sources resolving to a live run on a
+  tested fact, `superseded_by` resolution, and id uniqueness across the shared fact/run namespace.
+  A pool file that does not parse as YAML is itself a finding, never a silent drop. A run's
+  recorded `output` must exist in the tree whether or not a fact cites the run yet.
 - **Draft-increment rules** — a `wip-<NNN>-<slug>` directory always draws the
   `increment-dir-name` finding, so `check` never exits 0 while a draft increment is in flight;
   the landing rename clears it and nothing else does. Two drafts sharing an ordinal draw

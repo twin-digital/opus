@@ -224,6 +224,8 @@ export interface PoolFile {
 /** The repo-wide facts + runs pool. Facts and runs share one id namespace. */
 export interface Pool {
   files: PoolFile[]
+  /** Pool files the loader could not read: an unparseable file is itself a finding (d-qo2qelw4). */
+  findings: Finding[]
   facts: PoolItem[]
   runs: PoolItem[]
   /** id -> first declaring entry, across facts and runs. */
@@ -237,11 +239,23 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
 
 // Accepts both the current bare sequence and the later `{version, facts|runs: [...]}` wrapper.
 // An evidence/ mapping without the runs wrapper is probe artifact material and is skipped.
-const loadPoolFile = (tree: FileTree, path: string, kind: 'fact' | 'run'): PoolFile | undefined => {
+const loadPoolFile = (
+  tree: FileTree,
+  path: string,
+  kind: 'fact' | 'run',
+  findings: Finding[],
+): PoolFile | undefined => {
   let doc: unknown
   try {
     doc = parse(tree.read(path))
-  } catch {
+  } catch (error) {
+    // the file's facts and runs would otherwise leave the pool with no signal (d-qo2qelw4)
+    findings.push({
+      rule: 'pool-file-parse',
+      claims: ['r-xxa1st52', 'd-qo2qelw4'],
+      path,
+      message: `not parseable as YAML: ${error instanceof Error ? error.message : String(error)}`,
+    })
     return undefined
   }
   const wrapperKey = kind === 'fact' ? 'facts' : 'runs'
@@ -270,14 +284,15 @@ const loadPoolFile = (tree: FileTree, path: string, kind: 'fact' | 'run'): PoolF
 /** Load the repo-wide `facts/` and `evidence/` pools into fact and run entries. */
 export const loadPool = (tree: FileTree): Pool => {
   const files: PoolFile[] = []
+  const findings: Finding[] = []
   for (const path of tree.paths().filter((p) => p.startsWith('facts/') && isYamlPath(p))) {
-    const file = loadPoolFile(tree, path, 'fact')
+    const file = loadPoolFile(tree, path, 'fact', findings)
     if (file) {
       files.push(file)
     }
   }
   for (const path of tree.paths().filter((p) => p.startsWith('evidence/') && isYamlPath(p))) {
-    const file = loadPoolFile(tree, path, 'run')
+    const file = loadPoolFile(tree, path, 'run', findings)
     if (file) {
       files.push(file)
     }
@@ -297,7 +312,7 @@ export const loadPool = (tree: FileTree): Pool => {
       byId.set(item.id, item)
     }
   }
-  return { files, facts, runs, byId, duplicates }
+  return { files, findings, facts, runs, byId, duplicates }
 }
 
 /** Fact ids and statuses declared in the repo-wide `facts/` pool. */
