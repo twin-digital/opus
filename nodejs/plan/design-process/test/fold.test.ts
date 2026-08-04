@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { coverableClaimIds, foldProduct } from '../src/fold.js'
 import { loadProducts } from '../src/load.js'
-import { demoProduct, makeRepo, yaml } from './helpers.js'
+import { demoProduct, demoWithDeferred, makeRepo, yaml } from './helpers.js'
 
 import type { Product } from '../src/load.js'
 
@@ -87,5 +87,13 @@ describe('coverableClaimIds (d-0nl6sd96)', () => {
     expect(claims.has('d-cccccccc')).toBe(false)
     expect(claims.has('d-bbbbbbbb')).toBe(true)
     expect(claims.has('r-cccccccc')).toBe(true)
+  })
+
+  it('excludes deferred decisions from the coverable set while they stay in force (d-3orwwaze)', () => {
+    const fold = foldProduct(loadDemo(demoWithDeferred()))
+    expect(fold.decisions.has('d-dddddddd')).toBe(true)
+    const claims = coverableClaimIds(fold)
+    expect(claims.has('d-dddddddd')).toBe(false)
+    expect(claims.has('d-cccccccc')).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { validateTree } from '../src/validate.js'
-import { demoCoverage, demoProduct, makeRepo, poolFiles, yaml } from './helpers.js'
+import { demoCoverage, demoProduct, demoWithDeferred, makeRepo, poolFiles, yaml } from './helpers.js'
 
 import type { Finding } from '../src/types.js'
 
@@ -220,6 +220,82 @@ describe('validateTree — tree-state rules', () => {
       decisions: [{ id: 'd-ffffffff', statement: 'x\n', status: 'accepted' }],
     })
     expect(rules(check(files))).toContain('increment-sequence-dense')
+  })
+})
+
+describe('validateTree — deferred decisions', () => {
+  it('accepts a deferred decision in a version-2 decisions source (d-uz9wis6a)', () => {
+    expect(check(demoWithDeferred())).toEqual([])
+  })
+
+  it('fails a version-1 decisions source carrying deferred (d-uz9wis6a)', () => {
+    const files = demoProduct()
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '1',
+      decisions: [{ id: 'd-dddddddd', statement: 'x\n', status: 'deferred' }],
+    })
+    expect(rules(check(files))).toContain('source-validates')
+  })
+
+  it('still fails a proposed decision in a version-2 source (r-0axqvtcc)', () => {
+    const files = demoProduct()
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '2',
+      decisions: [{ id: 'd-dddddddd', statement: 'x\n', status: 'proposed' }],
+    })
+    expect(rules(check(files))).toContain('no-proposed-decision')
+  })
+
+  it('fails a record coverage entry naming a deferred decision (d-3orwwaze)', () => {
+    const files = demoWithDeferred()
+    files['implementations/demo/002-1.yaml'] = yaml({
+      version: '1',
+      product: 'demo',
+      target: 2,
+      packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
+      coverage: [...demoCoverage(), { claim: 'd-dddddddd', covered_by: [{ kind: 'attestation' }] }],
+    })
+    const findings = check(files)
+    expect(rules(findings)).toContain('record-covers-deferred')
+    expect(findings.find((finding) => finding.rule === 'record-covers-deferred')?.claims).toContain('d-3orwwaze')
+  })
+
+  it('accepts a record omitting a deferred decision — a deferral is not a gap (d-3orwwaze)', () => {
+    const files = demoWithDeferred()
+    files['implementations/demo/002-1.yaml'] = yaml({
+      version: '1',
+      product: 'demo',
+      target: 2,
+      packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
+      coverage: demoCoverage(),
+    })
+    expect(check(files)).toEqual([])
+  })
+
+  it('fails an in-force deferred decision citing a retired fact (d-3orwwaze)', () => {
+    const files = demoWithDeferred()
+    files['facts/demo.yml'] = yaml([
+      {
+        id: 'old-finding',
+        claim: 'superseded observation\n',
+        backing: 'tested',
+        status: 'retired',
+        superseded_by: 'new-finding',
+      },
+      { id: 'new-finding', claim: 'current observation\n', backing: 'tested' },
+    ])
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '2',
+      decisions: [
+        {
+          id: 'd-dddddddd',
+          statement: 'awaits its answer, resting on stale evidence.\n',
+          status: 'deferred',
+          because: ['f:old-finding'],
+        },
+      ],
+    })
+    expect(rules(check(files))).toContain('citation-fact-retired')
   })
 })
 

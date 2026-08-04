@@ -70,7 +70,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
   }
 
   const decisions = orderByBecause([...fold.decisions.values()]).filter(({ entry }) => hasFacet(entry.facets))
-  const counts = { accepted: 0, tolerated: 0, delegated: 0, rejected: 0, proposed: 0 }
+  const counts = { accepted: 0, tolerated: 0, delegated: 0, rejected: 0, proposed: 0, deferred: 0 }
   for (const { entry } of decisions) {
     counts[entry.status] += 1
   }
