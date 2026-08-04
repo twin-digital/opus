@@ -5,16 +5,46 @@ import { DirTree, GitTree } from './tree.js'
 import type { Fold } from './fold.js'
 import type { FileTree } from './tree.js'
 
-/**
- * A fold version as the tooling accepts it: exactly three digits name an increment number,
- * anything else names a git ref.
- */
+/** A fold version: an increment number, or a git ref. */
 export type FoldVersion = { kind: 'increment'; number: number } | { kind: 'ref'; ref: string }
 
-const THREE_DIGITS = /^\d{3}$/
+/**
+ * The arguments of one fold-version flag pair — the bare flag takes an increment, its `-ref`
+ * counterpart takes a git ref — with the flag names used in error messages.
+ */
+export interface FoldVersionFlags {
+  /** The increment argument, as given: `9`, `09`, and `009` are the same increment. */
+  increment?: string
+  /** The git ref argument, as given. */
+  ref?: string
+  /** The pair's flag names, increment first: `['--at', '--at-ref']`. */
+  names: [string, string]
+}
 
-export const parseFoldVersion = (value: string): FoldVersion =>
-  THREE_DIGITS.test(value) ? { kind: 'increment', number: Number(value) } : { kind: 'ref', ref: value }
+const DIGITS = /^\d+$/
+
+/**
+ * Read one fold-version flag pair. Undefined when neither member was given; throws when both
+ * were, or when the increment argument is not a number.
+ */
+export const parseFoldVersion = ({ increment, ref, names }: FoldVersionFlags): FoldVersion | undefined => {
+  const [incrementFlag, refFlag] = names
+  if (increment !== undefined && ref !== undefined) {
+    throw new Error(`give ${incrementFlag} or ${refFlag}, not both`)
+  }
+  if (ref !== undefined) {
+    return { kind: 'ref', ref }
+  }
+  if (increment === undefined) {
+    return undefined
+  }
+  if (!DIGITS.test(increment)) {
+    throw new Error(
+      `${incrementFlag} takes an increment number; for a git ref use ${refFlag} ${JSON.stringify(increment)}`,
+    )
+  }
+  return { kind: 'increment', number: Number(increment) }
+}
 
 /** Format an increment number the way directories and the tooling's output name it. */
 export const formatIncrement = (number: number): string => String(number).padStart(3, '0')

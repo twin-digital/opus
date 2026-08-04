@@ -11,12 +11,13 @@ Every command takes `--root <dir>` (default `.`) naming the repository root.
 
 ```sh
 design-process check [--base <ref>] [--static-only]
-design-process show <product> [--at <version>] [--facet <facet>]
+design-process show <product> [--at <increment> | --at-ref <gitref>] [--facet <facet>]
 design-process id <r|d|q> [--count <n>]
 
-design-process where <product> [--at <version>] [--next]
-design-process diff <product> --from <version> [--to <version>] [--json]
-design-process conflicts <product> [--against <version>]
+design-process where <product> [--at <increment> | --at-ref <gitref>] [--next]
+design-process diff <product> (--from <increment> | --from-ref <gitref>)
+                              [--to <increment> | --to-ref <gitref>] [--json]
+design-process conflicts <product> [--against <increment> | --against-ref <gitref>]
 
 design-process backlog add <product> [--title <text>] [--tag <tag>]... [--file <path>]
 design-process backlog list [--product <id>] [--tag <tag>]... [--json]
@@ -30,10 +31,15 @@ design-process backlog send <increment-dir> [--item <id>]... [--product <id>] [-
 
 ### Fold versions
 
-Wherever a command takes a fold version, **exactly three digits name an increment number and
-anything else names a git ref**; a ref resolves to the product's latest published increment
-there. `--at 009` folds the working tree at increment 9; `--at 9`, `--at main`, and
-`--at 3f2a1c0` are all refs.
+Wherever a command takes a fold version it takes **two parameters, not one**: the bare parameter
+names an increment, and its `-ref` counterpart names a git ref — `--at` and `--at-ref`, `--from`
+and `--from-ref`, `--to` and `--to-ref`, `--against` and `--against-ref`. Giving both members of
+a pair is an error.
+
+An increment parameter takes the number with or without padding: `--at 9`, `--at 09`, and
+`--at 009` are the same increment. A ref parameter takes anything git resolves — `--at-ref main`,
+`--at-ref origin/main`, `--at-ref 3f2a1c0` — and folds at the product's latest published
+increment there.
 
 ### check
 
@@ -73,24 +79,25 @@ every id mentioned under `products/`. Backlog ids (`b-`) are minted by `backlog 
 
 ### where
 
-Prints the product's latest published increment at a fold version, zero-padded to three digits
-and nothing else, so it drops into a shell substitution. `--next` prints the number a landing
-would claim instead — `001` for a product with no increments yet. Without `--next`, a product
-that has published nothing at that version exits non-zero.
+Prints the product's latest published increment, zero-padded to three digits and nothing else, so
+it drops into a shell substitution. It reads the working tree by default, `--at-ref` another git
+ref. `--next` prints the number a landing would claim instead — `001` for a product with no
+increments yet. Without `--next`, a product that has published nothing there exits non-zero.
 
 ```sh
 $ design-process where increment-process
 011
-$ design-process where increment-process --next
+$ design-process where increment-process --at-ref origin/main --next
 012
 ```
 
 ### diff
 
 Reports what changed between two versions of a product's fold: the foundations added, the
-requirements amended, the decisions superseded, and the entries retired. `--to` defaults to the
-working tree, so `--from 010` alone answers "what has this branch changed since 010". Empty
-sections are omitted; `--json` emits the same delta as structured data.
+requirements amended, the decisions superseded, and the entries retired. One of `--from` or
+`--from-ref` is required; the later fold defaults to the working tree, so `--from 010` alone
+answers "what has this branch changed since 010". Empty sections are omitted; `--json` emits the
+same delta as structured data.
 
 ```
 # increment-process: 009 → 011
@@ -108,7 +115,8 @@ sections are omitted; `--json` emits the same delta as structured data.
 
 Checks a draft's rulings against the fold at head before it lands: an id the head already
 declares, and an `amends:`, `supersedes:`, or `retires:` aimed at an entry the head has already
-closed. It reads slug-named increment directories, which `check` refuses by design, and covers
+closed. The head defaults to `origin/main`, then `main`; name another with `--against-ref`, or an
+increment with `--against`. It reads slug-named increment directories, which `check` refuses by design, and covers
 every directory that is slug-named or numbered above the head. Overlap the tooling cannot see —
 two drafts ruling the same choice under different ids — is the owner's scan of open drafts.
 Findings print in `check`'s shape and exit non-zero.

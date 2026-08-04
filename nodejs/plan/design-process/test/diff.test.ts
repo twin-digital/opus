@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { diffFolds, renderFoldDiff } from '../src/diff.js'
-import { parseFoldVersion, resolveFold } from '../src/version.js'
+import { resolveFold } from '../src/version.js'
 
 import { demoProduct, makeRepo, removeRepo, writeFiles, yaml } from './helpers.js'
 
@@ -19,16 +19,16 @@ const repo = (extra: Record<string, string> = {}): string => {
   return root
 }
 
-const diffAt = (root: string, from: string, to: string) =>
+const diffAt = (root: string, from: number, to: number) =>
   diffFolds(
     'demo',
-    resolveFold(root, 'demo', parseFoldVersion(from)).fold,
-    resolveFold(root, 'demo', parseFoldVersion(to)).fold,
+    resolveFold(root, 'demo', { kind: 'increment', number: from }).fold,
+    resolveFold(root, 'demo', { kind: 'increment', number: to }).fold,
   )
 
 describe('diffFolds — r-v6mknsh7', () => {
   it('names the foundations a landing added', () => {
-    const delta = diffAt(repo(), '001', '002')
+    const delta = diffAt(repo(), 1, 2)
     expect(delta.added.map((claim) => claim.id).sort()).toEqual(['d-cccccccc', 'r-cccccccc'])
     expect(delta.added.find((claim) => claim.id === 'r-cccccccc')).toMatchObject({
       kind: 'requirement',
@@ -38,7 +38,7 @@ describe('diffFolds — r-v6mknsh7', () => {
   })
 
   it('reports an amended requirement apart from a superseded decision', () => {
-    const delta = diffAt(repo(), '001', '002')
+    const delta = diffAt(repo(), 1, 2)
     expect(delta.amended).toEqual([{ id: 'r-aaaaaaaa', kind: 'requirement', by: 'r-cccccccc', increment: 2 }])
     expect(delta.superseded).toEqual([{ id: 'd-aaaaaaaa', kind: 'decision', by: 'd-cccccccc', increment: 2 }])
     expect(delta.retired).toEqual([])
@@ -51,7 +51,7 @@ describe('diffFolds — r-v6mknsh7', () => {
         retires: [{ id: 'r-bbbbbbbb', reason: 'the second thing is gone' }],
       }),
     })
-    const delta = diffAt(root, '002', '003')
+    const delta = diffAt(root, 2, 3)
     expect(delta.retired).toEqual([
       { id: 'r-bbbbbbbb', kind: 'requirement', by: 'the second thing is gone', increment: 3 },
     ])
@@ -59,18 +59,18 @@ describe('diffFolds — r-v6mknsh7', () => {
   })
 
   it('excludes closures that happened at or before the earlier version', () => {
-    const delta = diffAt(repo(), '002', '002')
+    const delta = diffAt(repo(), 2, 2)
     expect(delta).toMatchObject({ added: [], amended: [], superseded: [], retired: [] })
   })
 
   it('refuses a later version that precedes the earlier', () => {
-    expect(() => diffAt(repo(), '002', '001')).toThrow(/precedes/)
+    expect(() => diffAt(repo(), 2, 1)).toThrow(/precedes/)
   })
 })
 
 describe('renderFoldDiff', () => {
   it('heads the report with the two versions and omits empty sections', () => {
-    const rendered = renderFoldDiff(diffAt(repo(), '001', '002'))
+    const rendered = renderFoldDiff(diffAt(repo(), 1, 2))
     expect(rendered).toMatch(/^# demo: 001 → 002\n/)
     expect(rendered).toContain('## added (2)')
     expect(rendered).toContain('- r-cccccccc (002) [requirement] — first, amended')
@@ -80,6 +80,6 @@ describe('renderFoldDiff', () => {
   })
 
   it('says so when nothing changed', () => {
-    expect(renderFoldDiff(diffAt(repo(), '002', '002'))).toContain('(no change)')
+    expect(renderFoldDiff(diffAt(repo(), 2, 2))).toContain('(no change)')
   })
 })

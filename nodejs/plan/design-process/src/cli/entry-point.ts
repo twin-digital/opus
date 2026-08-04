@@ -24,9 +24,6 @@ program
 
 const rootOption = (command: Command): Command => command.option('--root <dir>', 'repository root', '.')
 
-/** Every option that names a fold version takes the same form: three digits, or a git ref. */
-const versionHelp = 'a fold version: exactly three digits name an increment, anything else a git ref'
-
 program
   .command('check')
   .description('apply every design rule in force; any finding blocks the merge')
@@ -61,10 +58,11 @@ program
   .description('render the folded, effective state of a product at a fold version')
   .argument('<product>', 'product id (the products/<id> directory name)')
   .option('--root <dir>', 'repository root', '.')
-  .option('--at <version>', `fold at this version — ${versionHelp} (default: the working tree's newest)`)
+  .option('--at <increment>', "fold at this increment number, padded or not (default: the working tree's newest)")
+  .option('--at-ref <gitref>', "fold at this git ref's newest increment")
   .option('--facet <facet>', 'show only claims carrying this facet')
-  .action((productId: string, options: { root: string; at?: string; facet?: string }) => {
-    const version = options.at === undefined ? undefined : parseFoldVersion(options.at)
+  .action((productId: string, options: { root: string; at?: string; atRef?: string; facet?: string }) => {
+    const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
     const resolved = resolveFold(options.root, productId, version)
     process.stdout.write(projectProduct(resolved.tree, productId, { at: resolved.at, facet: options.facet }))
   })
@@ -90,10 +88,11 @@ program
   .description("name a product's latest published increment at a fold version")
   .argument('<product>', 'product id')
   .option('--root <dir>', 'repository root', '.')
-  .option('--at <version>', `${versionHelp} (default: the working tree)`)
+  .option('--at <increment>', 'report at this increment number, padded or not (default: the working tree)')
+  .option('--at-ref <gitref>', 'report the newest increment published at this git ref')
   .option('--next', 'print the number a landing would claim instead', false)
-  .action((productId: string, options: { root: string; at?: string; next: boolean }) => {
-    const version = options.at === undefined ? undefined : parseFoldVersion(options.at)
+  .action((productId: string, options: { root: string; at?: string; atRef?: string; next: boolean }) => {
+    const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
     const resolved = resolveFold(options.root, productId, version)
     if (options.next) {
       process.stdout.write(`${formatIncrement(resolved.at + 1)}\n`)
@@ -111,30 +110,59 @@ program
   .command('diff')
   .description("report what changed between two versions of a product's fold")
   .argument('<product>', 'product id')
-  .requiredOption('--from <version>', `the earlier version — ${versionHelp}`)
-  .option('--to <version>', `the later version — ${versionHelp} (default: the working tree)`)
+  .option('--from <increment>', 'the earlier fold, at this increment number, padded or not')
+  .option('--from-ref <gitref>', "the earlier fold, at this git ref's newest increment")
+  .option('--to <increment>', 'the later fold, at this increment number (default: the working tree)')
+  .option('--to-ref <gitref>', "the later fold, at this git ref's newest increment")
   .option('--root <dir>', 'repository root', '.')
   .option('--json', 'emit the delta as JSON', false)
-  .action((productId: string, options: { root: string; from: string; to?: string; json: boolean }) => {
-    const from = resolveFold(options.root, productId, parseFoldVersion(options.from))
-    const to = resolveFold(options.root, productId, options.to === undefined ? undefined : parseFoldVersion(options.to))
-    const delta = diffFolds(productId, from.fold, to.fold)
-    process.stdout.write(options.json ? `${JSON.stringify(delta, undefined, 2)}\n` : renderFoldDiff(delta))
-  })
+  .action(
+    (
+      productId: string,
+      options: { root: string; from?: string; fromRef?: string; to?: string; toRef?: string; json: boolean },
+    ) => {
+      const fromVersion = parseFoldVersion({
+        increment: options.from,
+        ref: options.fromRef,
+        names: ['--from', '--from-ref'],
+      })
+      if (fromVersion === undefined) {
+        program.error('design-process: diff needs an earlier fold; pass --from or --from-ref')
+        return
+      }
+      const from = resolveFold(options.root, productId, fromVersion)
+      const to = resolveFold(
+        options.root,
+        productId,
+        parseFoldVersion({ increment: options.to, ref: options.toRef, names: ['--to', '--to-ref'] }),
+      )
+      const delta = diffFolds(productId, from.fold, to.fold)
+      process.stdout.write(options.json ? `${JSON.stringify(delta, undefined, 2)}\n` : renderFoldDiff(delta))
+    },
+  )
 
 program
   .command('conflicts')
   .description("check a draft's rulings against the fold at head before it lands")
   .argument('<product>', 'product id')
   .option('--root <dir>', 'repository root', '.')
-  .option('--against <version>', `the head to check against — ${versionHelp} (default: origin/main, then main)`)
-  .action((productId: string, options: { root: string; against?: string }) => {
-    const against = options.against ?? resolveGitRef(options.root, ['origin/main', 'main'])
-    if (against === undefined) {
-      program.error('design-process: no head resolvable; pass --against')
-      return
+  .option('--against <increment>', 'check against this increment number, padded or not')
+  .option('--against-ref <gitref>', "check against this git ref's fold (default: origin/main, then main)")
+  .action((productId: string, options: { root: string; against?: string; againstRef?: string }) => {
+    let version = parseFoldVersion({
+      increment: options.against,
+      ref: options.againstRef,
+      names: ['--against', '--against-ref'],
+    })
+    if (version === undefined) {
+      const ref = resolveGitRef(options.root, ['origin/main', 'main'])
+      if (ref === undefined) {
+        program.error('design-process: no head resolvable; pass --against or --against-ref')
+        return
+      }
+      version = { kind: 'ref', ref }
     }
-    const head = resolveFold(options.root, productId, parseFoldVersion(against))
+    const head = resolveFold(options.root, productId, version)
     const findings = findLandingConflicts(new DirTree(options.root), head, productId)
     if (findings.length === 0) {
       process.stdout.write(`landing check passed: no conflicts against ${formatIncrement(head.at)}\n`)

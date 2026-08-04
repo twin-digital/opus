@@ -18,7 +18,7 @@ export type { IdKind } from './ids.js'
 
 // where — fold versions and their resolution
 export { formatIncrement, parseFoldVersion, resolveFold } from './version.js'
-export type { FoldVersion, ResolvedFold } from './version.js'
+export type { FoldVersion, FoldVersionFlags, ResolvedFold } from './version.js'
 
 // diff
 export { diffFolds, renderFoldDiff } from './diff.js'
