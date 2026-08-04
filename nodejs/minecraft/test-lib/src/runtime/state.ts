@@ -26,11 +26,14 @@ export interface HandlerError {
 /** Which family of signals a key belongs to. The world and `system` each carry both. */
 export type SignalScope = 'world.afterEvents' | 'world.beforeEvents' | 'system.afterEvents' | 'system.beforeEvents'
 
-/** One signal's subscribers, in subscription order and deduplicated by reference. */
+/**
+ * One signal's subscribers, in subscription order and deduplicated by reference, each with the
+ * options argument it subscribed with — `undefined` where it subscribed unfiltered.
+ */
 export interface SignalState {
   readonly scope: SignalScope
   readonly name: string
-  readonly subscribers: Set<(payload: never) => void>
+  readonly subscribers: Map<(payload: never) => void, unknown>
   /** The signal object the container hands out — the one a test passes to `emit`. */
   fake: object
 }

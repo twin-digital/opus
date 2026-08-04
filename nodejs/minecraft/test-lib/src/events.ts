@@ -4,7 +4,8 @@
  * isolation with the record behind `getHandlerErrors`, and the `emit` free function.
  *
  * Every declared signal exists and accepts subscribers. Only a small set is raised by the fakes'
- * own behaviour; any other signal is driven by a test calling `emit`.
+ * own behaviour; any other signal is driven by a test calling `emit`. A subscriber may carry an
+ * options argument, whose filtering is `subscribe-filter.ts`'s subject.
  */
 
 import type * as MC from '@minecraft/server'
@@ -20,6 +21,7 @@ import {
   WorldBeforeEventsManifest,
 } from './generated/manifests.js'
 import { construct } from './runtime/construct.js'
+import { admits, assertFilterHonoured } from './subscribe-filter.js'
 import { registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
 import {
   dataOf,
@@ -65,9 +67,12 @@ export const deliver = (server: ServerState, scope: SignalScope, name: string, p
     // The fakes raise events by name; a name no signal answers to is a typo, not an empty audience.
     throw new TypeError(`@minecraft/server declares no signal ${scope}.${name}`)
   }
-  for (const subscriber of [...state.subscribers]) {
+  for (const [subscriber, options] of [...state.subscribers]) {
     try {
-      ;(subscriber as (value: unknown) => void)(payload)
+      // A filtered subscriber sees only what its options admit; an unfiltered one sees everything.
+      if (admits(scope, name, options, payload)) {
+        ;(subscriber as (value: unknown) => void)(payload)
+      }
     } catch (error) {
       server.handlerErrors.push({ signal: signalKey(scope, name), error })
     }
@@ -119,7 +124,7 @@ export const createSignals = (server: ServerState): SignalContainers => {
       }
       // One record, shared by the map and by the fake's own data: `fake` is filled in after the
       // fake exists, so both routes read the same signal.
-      const state: SignalState = { scope, name, subscribers: new Set(), fake: undefined as unknown as object }
+      const state: SignalState = { scope, name, subscribers: new Map(), fake: undefined as unknown as object }
       state.fake = construct(signalClass, { data: { server, signal: state } satisfies SignalData })
       server.signals.set(signalKey(scope, name), state)
     }
@@ -143,12 +148,11 @@ export const createSignals = (server: ServerState): SignalContainers => {
  */
 const signalBehaviour: ClassBehaviour = {
   subscribe: (fake: object, callback: (payload: never) => void, options?: unknown) => {
-    // A filtered subscription is not modelled; honouring the call and dropping the filter would
-    // deliver events the engine would have withheld.
-    if (options !== undefined) {
-      throw new NotImplementedError(`${stateOf(fake).className}.subscribe`)
-    }
-    dataOf<SignalData>(fake).signal.subscribers.add(callback)
+    const { signal } = dataOf<SignalData>(fake)
+    // The refusal lands here rather than at a dispatch that would have consulted the filter, and
+    // ahead of the subscription, so a call the fake cannot honour leaves nothing subscribed.
+    assertFilterHonoured(stateOf(fake).className, signal.scope, signal.name, options)
+    signal.subscribers.set(callback, options)
     return callback
   },
   unsubscribe: (fake: object, callback: (payload: never) => void) => {

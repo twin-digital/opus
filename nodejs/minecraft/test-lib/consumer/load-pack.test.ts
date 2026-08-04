@@ -42,3 +42,17 @@ describe('error identity across the reset', () => {
     expect(caught).toBeInstanceOf(NotImplementedError)
   })
 })
+
+describe('a fake built by one module generation', () => {
+  it('is recognised by a free function reached through another', async () => {
+    // The pack reaches the library through the alias, by absolute path; this file reaches it by
+    // bare specifier, and loadPack's reset puts a module boundary between the two. The free
+    // functions imported at the top of this file must still recognise what loadPack handed back.
+    const server = await loadPack(() => import('./pack.js'))
+    const player = createPlayer(server, {})
+    expect(() => {
+      advanceTicks(server, 1)
+    }).not.toThrow()
+    expect(player.typeId).toBe('minecraft:player')
+  })
+})
