@@ -32,8 +32,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "prepare": "node tools/generate.ts",
-    "test": "vitest run",
-    "test:consumer": "vitest run --config vitest.consumer.config.ts",
+    "test": "vitest run && vitest run --config vitest.consumer.config.ts",
     "test:watch": "vitest",
     "pretypecheck": "node tools/generate.ts",
     "typecheck": "tsc --noEmit"
