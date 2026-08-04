@@ -7,7 +7,7 @@ import { failedCallMessage, failedPropertyMessage, InvalidEntityError, NotImplem
 export { NotImplementedError } from '../errors.js'
 
 /** Where a generated member's state lives. A symbol, so it stays out of `Object.keys` and `for-in`. */
-const kState = Symbol('minecraft-test-lib.state')
+const kState = Symbol.for('minecraft-test-lib.state')
 
 /**
  * The per-instance record behind every fake. `own` holds the values emitted as own data properties

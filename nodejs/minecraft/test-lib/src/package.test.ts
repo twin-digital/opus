@@ -7,7 +7,7 @@
  */
 
 import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
@@ -19,6 +19,7 @@ import { createEntity, createPlayer } from './entity.js'
 import { InvalidEntityError } from './errors.js'
 import type { _EntityComplete, _PlayerComplete, _WorldComplete } from './generated/manifests.js'
 import { FAKED_CLASSES } from './generated/manifests.js'
+import { SERVER_VERSION } from './generated/shim/version.js'
 import { ATTRIBUTE_COMPONENT_IDS, type CanonicalAttributeComponentId, type _AttributeIdsComplete } from './ids.js'
 import * as library from './index.js'
 import { withVanillaDimensions } from './presets.js'
@@ -39,6 +40,7 @@ interface PackageManifest {
   readonly dependencies?: Readonly<Record<string, string>>
   readonly optionalDependencies?: Readonly<Record<string, string>>
   readonly peerDependencies?: Readonly<Record<string, string>>
+  readonly peerDependenciesMeta?: Readonly<Record<string, { readonly optional?: boolean } | undefined>>
   readonly devDependencies?: Readonly<Record<string, string>>
 }
 
@@ -66,8 +68,14 @@ describe('package manifest', () => {
     expect(entry?.require).toBeUndefined()
   })
 
-  it('exports one entry point and no subpaths', () => {
-    expect(Object.keys(manifest.exports ?? {})).toEqual(['.'])
+  it('exports the root barrel and one runner-tooling subpath, and nothing else', () => {
+    expect(Object.keys(manifest.exports ?? {})).toEqual(['.', './vitest'])
+  })
+
+  it('publishes neither the aliased surface nor the sibling stubs as a subpath', () => {
+    const paths = Object.keys(manifest.exports ?? {})
+    expect(paths.some((path) => path.includes('shim') || path.includes('server-ui'))).toBe(false)
+    expect(paths.some((path) => path.includes('*'))).toBe(false)
   })
 
   it('ships type declarations', () => {
@@ -80,16 +88,44 @@ describe('package manifest', () => {
     expect(Object.keys(manifest.optionalDependencies ?? {})).toEqual([])
   })
 
-  it('peers @minecraft/server at the pinned version', () => {
-    expect(manifest.peerDependencies).toEqual({ '@minecraft/server': '2.8.0' })
+  it('declares no @minecraft/server peer range — nothing gates an install on an engine pin', () => {
+    expect(Object.keys(manifest.peerDependencies ?? {})).not.toContain('@minecraft/server')
   })
 
-  it('depends on no test framework outside devDependencies', () => {
-    const runners = ['vitest', 'jest', 'mocha', 'chai', 'sinon']
+  it('states the derived version inertly, and compares it to nothing', () => {
+    expect(SERVER_VERSION).toBe('2.8.0')
+    const offenders: string[] = []
+    for (const file of sourceFiles(join(packageRoot, 'src'))) {
+      if (file.endsWith('.test.ts')) {
+        continue
+      }
+      const source = readFileSync(file, 'utf8')
+      if (/SERVER_VERSION\s*[!=]==?/.test(source) || /console\.(warn|error)/.test(source)) {
+        offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('makes a test framework an optional peer, reached only from the runner subpath', () => {
+    const runners = ['jest', 'mocha', 'chai', 'sinon']
     const shipped = [...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]
     for (const runner of runners) {
       expect(shipped).not.toContain(runner)
     }
+    expect(Object.keys(manifest.dependencies ?? {})).not.toContain('vitest')
+    expect(manifest.peerDependenciesMeta?.vitest?.optional).toBe(true)
+
+    const offenders: string[] = []
+    for (const file of sourceFiles(join(packageRoot, 'src'))) {
+      if (file.endsWith('.test.ts') || file.includes(`${sep}vitest${sep}`)) {
+        continue
+      }
+      if (/from '(vitest|jest|mocha|chai|sinon)'/.test(readFileSync(file, 'utf8'))) {
+        offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
   })
 })
 
@@ -119,8 +155,13 @@ const ERROR_CLASSES = [
   'InvalidArgumentError',
   'InvalidEntityError',
   'NotImplementedError',
+  'ShimNotInstalledError',
+  'ShimServerInUseError',
   'UnsetValueError',
 ] as const
+
+/** What the root barrel adds for the module-import route. */
+const SHIM_CONTROLS = ['__useServer', 'currentServer'] as const
 
 describe('entry point', () => {
   const exported = library as unknown as Record<string, unknown>
@@ -137,7 +178,7 @@ describe('entry point', () => {
     }
   })
 
-  it('exports the five error classes', () => {
+  it('exports the error classes', () => {
     for (const name of ERROR_CLASSES) {
       const value = exported[name] as { prototype: unknown }
       expect(typeof value).toBe('function')
@@ -157,9 +198,22 @@ describe('entry point', () => {
     ])
   })
 
+  it('exports the shim controls', () => {
+    for (const name of SHIM_CONTROLS) {
+      expect(typeof exported[name]).toBe('function')
+    }
+  })
+
   it('exports nothing beyond its documented surface', () => {
     expect(Object.keys(exported).sort()).toEqual(
-      [...FREE_FUNCTIONS, ...PRESETS, ...ERROR_CLASSES, 'ATTRIBUTE_COMPONENT_IDS'].sort(),
+      [
+        ...FREE_FUNCTIONS,
+        ...PRESETS,
+        ...ERROR_CLASSES,
+        ...SHIM_CONTROLS,
+        'ATTRIBUTE_COMPONENT_IDS',
+        'SERVER_VERSION',
+      ].sort(),
     )
   })
 
@@ -187,7 +241,7 @@ describe('entry point', () => {
     expect(offenders).toEqual([])
   })
 
-  it('holds no module-level mutable state', () => {
+  it('holds no module-level mutable state beyond the bindings a test installs', () => {
     const a = createServer()
     const b = createServer()
     expect(serverOf(a.world)).not.toBe(serverOf(b.world))

@@ -11,6 +11,13 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
       }
+    },
+    "./vitest": {
+      "import": {
+        "source": "./src/vitest/index.ts",
+        "types": "./dist/vitest/index.d.ts",
+        "import": "./dist/vitest/index.js"
+      }
     }
   },
   "files": [
@@ -26,17 +33,24 @@
     "lint:fix": "lint_fix",
     "prepare": "node tools/generate.ts",
     "test": "vitest run",
+    "test:consumer": "vitest run --config vitest.consumer.config.ts",
     "test:watch": "vitest",
     "pretypecheck": "node tools/generate.ts",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@minecraft/server": "2.8.0"
+    "vitest": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@minecraft/common": "catalog:",
     "@minecraft/server": "catalog:",
+    "@minecraft/server-ui": "2.1.0",
     "@minecraft/vanilla-data": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
