@@ -1,16 +1,39 @@
 # @twin-digital/design-process
 
 Tooling for the twin-digital incremental design process: the merge-gate validator, the
-projection, and the opaque-id generator. The process itself is defined by the documents shipped
-from the [plan-opus](https://github.com/twin-digital/plan-opus) repository under `docs/`.
+projection, the opaque-id generator, the cross-increment backlog, and the fold resolver and
+diff. The process itself is defined by the documents shipped from the
+[plan-opus](https://github.com/twin-digital/plan-opus) repository under `docs/`.
 
 ## Usage
 
+Every command takes `--root <dir>` (default `.`) naming the repository root.
+
 ```sh
-design-process check [--root <dir>] [--base <ref>] [--static-only]
-design-process show <product> [--root <dir>] [--at <n>] [--facet <facet>]
-design-process id <r|d|q> [--root <dir>] [--count <n>]
+design-process check [--base <ref>] [--static-only]
+design-process show <product> [--at <version>] [--facet <facet>]
+design-process id <r|d|q> [--count <n>]
+
+design-process where <product> [--at <version>] [--next]
+design-process diff <product> --from <version> [--to <version>] [--json]
+design-process conflicts <product> [--against <version>]
+
+design-process backlog add <product> [--title <text>] [--tag <tag>]... [--file <path>]
+design-process backlog list [--product <id>] [--tag <tag>]... [--json]
+design-process backlog search <query> [--product <id>] [--tag <tag>]... [--json]
+design-process backlog show <id>
+design-process backlog update <id> [--title <text>] [--tag <tag>]... [--add-tag <tag>]...
+                                   [--remove-tag <tag>]... [--file <path>] [--product <id>]
+design-process backlog delete <id>...
+design-process backlog send <increment-dir> [--item <id>]... [--product <id>] [--tag <tag>]...
 ```
+
+### Fold versions
+
+Wherever a command takes a fold version, **exactly three digits name an increment number and
+anything else names a git ref**; a ref resolves to the product's latest published increment
+there. `--at 009` folds the working tree at increment 9; `--at 9`, `--at main`, and
+`--at 3f2a1c0` are all refs.
 
 ### check
 
@@ -46,4 +69,77 @@ excluded, the summary naming how many), and what the increment changed.
 ### id
 
 Generates opaque ids — `{r|d|q}-` plus 8 random lowercase base36 characters — unique against
-every id mentioned under `products/`.
+every id mentioned under `products/`. Backlog ids (`b-`) are minted by `backlog add`, not here.
+
+### where
+
+Prints the product's latest published increment at a fold version, zero-padded to three digits
+and nothing else, so it drops into a shell substitution. `--next` prints the number a landing
+would claim instead — `001` for a product with no increments yet. Without `--next`, a product
+that has published nothing at that version exits non-zero.
+
+```sh
+$ design-process where increment-process
+011
+$ design-process where increment-process --next
+012
+```
+
+### diff
+
+Reports what changed between two versions of a product's fold: the foundations added, the
+requirements amended, the decisions superseded, and the entries retired. `--to` defaults to the
+working tree, so `--from 010` alone answers "what has this branch changed since 010". Empty
+sections are omitted; `--json` emits the same delta as structured data.
+
+```
+# increment-process: 009 → 011
+
+## added (22)
+
+- r-hbihi1xh (010) [requirement] — future work has a home outside any increment
+...
+## superseded (1)
+
+- d-aaaaaaaa (011) by d-cccccccc
+```
+
+### conflicts
+
+Checks a draft's rulings against the fold at head before it lands: an id the head already
+declares, and an `amends:`, `supersedes:`, or `retires:` aimed at an entry the head has already
+closed. It reads slug-named increment directories, which `check` refuses by design, and covers
+every directory that is slug-named or numbered above the head. Overlap the tooling cannot see —
+two drafts ruling the same choice under different ids — is the owner's scan of open drafts.
+Findings print in `check`'s shape and exit non-zero.
+
+### backlog
+
+Future work captured outside any increment. Items live on an orphan `backlog` branch, one file
+per item at `<product>/<id>.md`, and every write commits to that branch and pushes it to the
+remote — using git plumbing, so the working tree and the checked-out branch are untouched.
+`--no-push` commits locally; `--offline` skips the fetch that refreshes the local view;
+`--remote <name>` names the remote (default `origin`).
+
+An item is free markdown. Its first heading is the title, and optional YAML frontmatter carries
+`tags` and nothing else. `add` takes the body from stdin or `--file` (`-` for stdin); give
+`--title` to head an untitled body, or begin the body with a heading and omit it.
+
+`list` and `search` print one item per line — id, product, title, tags — with the product always
+present. `search` matches ids, titles, and bodies case-insensitively. `--tag` repeats and
+requires every tag named.
+
+`send` copies the selected items into `<increment-dir>/drafts/backlog/<id>.md` and deletes them
+from the branch in the same action, printing `<id>\t<path>` per item. The target is a
+repo-relative `products/<product>/increments/<name>` — a slug-named draft as readily as a
+numbered increment. Select with `--item` (repeatable), `--product`, or `--tag`; at least one is
+required.
+
+```sh
+$ design-process backlog add increment-process --title "index the backlog by tag" --tag tooling
+b-sqdqsq1l
+$ design-process backlog list
+b-sqdqsq1l  increment-process  index the backlog by tag  tooling
+$ design-process backlog send products/increment-process/increments/fold-cache --tag tooling
+b-sqdqsq1l	products/increment-process/increments/fold-cache/drafts/backlog/b-sqdqsq1l.md
+```
