@@ -50,7 +50,7 @@
     "@eslint/js": "catalog:",
     "@minecraft/common": "catalog:",
     "@minecraft/server": "catalog:",
-    "@minecraft/server-ui": "2.1.0",
+    "@minecraft/server-ui": "catalog:",
     "@minecraft/vanilla-data": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
