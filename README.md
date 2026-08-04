@@ -42,7 +42,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/minecraft-test-lib](./nodejs/minecraft/test-lib): In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
-- [@twin-digital/design-process](./nodejs/plan/design-process): Validator, projection, and id generator for the twin-digital incremental design process.
+- [@twin-digital/design-process](./nodejs/plan/design-process): Validator, projection, backlog, and fold tools for the twin-digital incremental design process.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.
 
