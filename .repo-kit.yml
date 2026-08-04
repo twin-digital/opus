@@ -22,8 +22,14 @@ packages:
   '@twin-digital/minecraft-test-lib':
     # One public entry point by design: every fake type and free function is reached from the
     # package root, so the generated `./*` subpath exports would contradict the published surface.
+    #
+    # Two suites by design: `consumer/` exercises the package the way a consumer installs it, under
+    # the shipped vitest plugin, so it needs its own config and cannot resolve `@minecraft/server`
+    # under the default one. The generated `test` script and `vitest.config.ts` run one suite with
+    # no excludes, which both drops that suite and points the default one at tests it cannot run.
     rules:
       package-manifest: false
+      test: false
   '@twin-digital/opus-scripts':
     rules:
       clean: false
