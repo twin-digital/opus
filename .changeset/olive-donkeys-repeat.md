@@ -1,5 +1,5 @@
 ---
-"@twin-digital/design-process": minor
+'@twin-digital/design-process': minor
 ---
 
 The backlog, parallel drafting, and a single entry point.
