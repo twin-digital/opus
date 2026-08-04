@@ -128,6 +128,18 @@ type _ButtonPushAfterEventSignalComplete = AssertNever<
 >
 export type { _ButtonPushAfterEventSignalComplete }
 
+export const ComponentManifest = {
+  methods: [],
+  properties: ['isValid', 'typeId'],
+} as const satisfies ClassManifest<MC.Component>
+type _ComponentComplete = AssertNever<
+  Exclude<
+    keyof MC.Component,
+    (typeof ComponentManifest)['methods'][number]['name'] | (typeof ComponentManifest)['properties'][number]
+  >
+>
+export type { _ComponentComplete }
+
 export const DataDrivenEntityTriggerAfterEventSignalManifest = {
   methods: [
     { name: 'subscribe', minArity: 1, maxArity: 2 },
@@ -3045,6 +3057,7 @@ export const FAKED_CLASSES = [
   'BlockStates',
   'BlockTypes',
   'ButtonPushAfterEventSignal',
+  'Component',
   'DataDrivenEntityTriggerAfterEventSignal',
   'Dimension',
   'DimensionTypes',

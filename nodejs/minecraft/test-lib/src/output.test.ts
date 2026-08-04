@@ -243,11 +243,13 @@ describe('output side effects', () => {
     )
   })
 
-  it('accepts extra arguments to an output member', () => {
+  it('refuses a surplus argument to an output member', () => {
     const server = createServer()
     const player = aPlayer(server)
     const bare = player as unknown as Record<string, (...args: unknown[]) => unknown>
-    expect(() => bare.sendMessage('hi', 'extra')).not.toThrow()
-    expect(getOutput(player)).toEqual([{ kind: 'message', value: 'hi' }])
+    expect(() => bare.sendMessage('hi', 'extra')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 1, received 2'),
+    )
+    expect(getOutput(player)).toEqual([])
   })
 })

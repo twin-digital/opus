@@ -376,9 +376,11 @@ describe('entity.getComponent / getComponents / hasComponent', () => {
     expect((error as InvalidEntityError).type).toBe('minecraft:sheep')
   })
 
-  it('extra arguments pass through', () => {
-    const component = addComponent(entity, 'minecraft:health', 20)
-    expect(callLoose(entity, 'getComponent', 'minecraft:health', 'extra')).toBe(component)
+  it('refuses a surplus argument', () => {
+    addComponent(entity, 'minecraft:health', 20)
+    expect(() => callLoose(entity, 'getComponent', 'minecraft:health', 'extra')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 1, received 2'),
+    )
   })
 })
 

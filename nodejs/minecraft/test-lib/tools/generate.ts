@@ -59,6 +59,25 @@ for (const symbol of moduleExports) {
 const classNamed = (name: string): DeclaredClass =>
   classes.get(name) ?? fail(`@minecraft/server declares no class ${name}`)
 
+/** The class a declaration extends, as the declarations name it, or `null` for a root class. */
+const baseOf = (name: string): string | null => {
+  const clause = classNamed(name).declaration.heritageClauses?.find(
+    (heritage) => heritage.token === ts.SyntaxKind.ExtendsKeyword,
+  )
+  const expression = clause?.types[0]?.expression
+  return expression && ts.isIdentifier(expression) ? expression.text : null
+}
+
+/** Whether a declared class's ancestry reaches `Error`. */
+const isErrorClass = (name: string): boolean => {
+  for (let current = baseOf(name); current !== null; current = classes.has(current) ? baseOf(current) : null) {
+    if (current === 'Error') {
+      return true
+    }
+  }
+  return false
+}
+
 /** The signals a container class exposes, as property name to signal class name. */
 const signalMapOf = (container: string): [string, string][] => {
   const { symbol, declaration } = classNamed(container)
@@ -118,6 +137,7 @@ const SIGNAL_CONTAINERS = ['WorldAfterEvents', 'WorldBeforeEvents', 'SystemAfter
 
 const FAKED = [
   ...new Set([
+    'Component',
     'Entity',
     'Player',
     'World',
@@ -402,18 +422,19 @@ const preamble = (what: string, body: string): string[] => {
 }
 
 /**
- * The arity check a method opens with, or `null` where it requires no argument. Only the minimum is
- * enforced; the message names both bounds, which is why the manifest carries both.
+ * The arity check a method opens with, or `null` where no call can miss either bound. Both bounds
+ * are enforced; the message names both where they differ, which is why the manifest carries both.
  */
 const arityCheck = (method: Method): string | null => {
-  if (method.minArity === 0) {
+  if (method.minArity === 0 && method.maxArity === Infinity) {
     return null
   }
   const expected =
     method.maxArity === Infinity || method.maxArity === method.minArity ?
       `'${String(method.minArity)}'`
     : `'${String(method.minArity)}-${String(method.maxArity)}'`
-  return `checkArity(arguments.length, ${String(method.minArity)}, ${expected})`
+  const max = method.maxArity === Infinity ? 'Infinity' : String(method.maxArity)
+  return `checkArity(arguments.length, ${String(method.minArity)}, ${max}, ${expected})`
 }
 
 /**
@@ -601,6 +622,132 @@ const manifestFile = (): string => {
 }
 
 // ---------------------------------------------------------------------------
+// The aliased `@minecraft/server` surface — values, classes and singleton bindings only
+// ---------------------------------------------------------------------------
+
+/** Every exported enum, with its members' declared constant values. */
+const declaredEnums = (): { name: string; members: [string, string | number][] }[] =>
+  moduleExports
+    .flatMap((symbol) => {
+      const declaration = symbol.declarations?.find((node) => ts.isEnumDeclaration(node))
+      if (!declaration) {
+        return []
+      }
+      const members = declaration.members.map((member): [string, string | number] => {
+        const value = checker.getConstantValue(member)
+        if (value === undefined) {
+          return fail(`${symbol.name}.${member.name.getText(source)} has no constant value`)
+        }
+        return [member.name.getText(source).replace(/^['"]|['"]$/g, ''), value]
+      })
+      return [{ name: symbol.name, members }]
+    })
+    .sort(byName)
+
+/** Every module-level constant the declarations carry, less the two singletons. */
+const declaredConstants = (): { name: string; value: string | number }[] =>
+  moduleExports
+    .flatMap((symbol) => {
+      const declaration = symbol.declarations?.find((node) => ts.isVariableDeclaration(node))
+      if (!declaration || SINGLETONS.includes(symbol.name)) {
+        return []
+      }
+      const initializerType = checker.getTypeOfSymbolAtLocation(symbol, declaration)
+      if (!initializerType.isLiteral()) {
+        return fail(`${symbol.name} is a module constant with no literal type`)
+      }
+      return [{ name: symbol.name, value: initializerType.value as string | number }]
+    })
+    .sort(byName)
+
+/** The two module-scope bindings a test points at its own fakes; they are not generated. */
+const SINGLETONS = ['world', 'system']
+
+/**
+ * Declared classes the library's own hand-written class stands in for. One class object per name,
+ * so a pack's `catch (e) { e instanceof InvalidEntityError }` catches what the fakes actually
+ * throw rather than a second class of the same name.
+ */
+const LIBRARY_ERROR_CLASSES: Readonly<Record<string, string | undefined>> = {
+  InvalidEntityError: 'InvalidEntityError',
+}
+
+const literal = (value: string | number): string => (typeof value === 'string' ? `'${value}'` : String(value))
+
+const shimSurfaceFile = (): string => {
+  const classNames = [...classes.keys()].sort()
+  const faked = classNames.filter((name) => FAKED.includes(name))
+  const libraryErrors = classNames.filter((name) => LIBRARY_ERROR_CLASSES[name] !== undefined)
+  const errors = classNames.filter((name) => isErrorClass(name) && LIBRARY_ERROR_CLASSES[name] === undefined)
+  const placeholders = classNames.filter(
+    (name) => !FAKED.includes(name) && !isErrorClass(name) && LIBRARY_ERROR_CLASSES[name] === undefined,
+  )
+
+  const lines = [
+    header('The aliased @minecraft/server surface: enum values, constants and classes.'),
+    "import { NotImplementedError } from '../../errors.js'",
+    ...libraryErrors.map((name) => `import { ${LIBRARY_ERROR_CLASSES[name]} } from '../../errors.js'`),
+    `import { ${faked.map((name) => `Fake${name}`).join(', ')} } from '../index.js'`,
+    '',
+    '/** The @minecraft/server version every value below was derived from. */',
+    `export const DERIVED_FROM = '${serverVersion}'`,
+    '',
+    '// --- enums, frozen so a consumer cannot reshape the surface under another test ---',
+    '',
+  ]
+
+  for (const { name, members } of declaredEnums()) {
+    lines.push(
+      `export const ${name} = Object.freeze({`,
+      ...members.map(([member, value]) => `  ${JSON.stringify(member)}: ${literal(value)},`),
+      '})',
+      '',
+    )
+  }
+
+  lines.push('// --- module-level constants ---', '')
+  for (const { name, value } of declaredConstants()) {
+    lines.push(`export const ${name} = ${literal(value)}`, '')
+  }
+
+  lines.push(
+    '// --- classes the fakes implement: the fake class itself, so `instanceof` answers by identity ---',
+    '',
+    `export { ${faked.map((name) => `Fake${name} as ${name}`).join(', ')} }`,
+    '',
+    "// --- classes the library's own hand-written class stands in for: one class object per name ---",
+    '',
+    ...libraryErrors.map((name) => `export { ${LIBRARY_ERROR_CLASSES[name]} as ${name} }`),
+    '',
+    '// --- declared error classes: real Error subclasses, their declared fields left to the thrower ---',
+    '',
+  )
+  for (const name of errors) {
+    lines.push(`export class ${name} extends Error {`, `  override readonly name = '${name}'`, '}', '')
+  }
+
+  lines.push(
+    '// --- every other declared class: present, and loud about being unimplemented ---',
+    '',
+    'const placeholder = (name: string): new (...args: never[]) => object =>',
+    '  ({',
+    '    [name]: class {',
+    '      constructor() {',
+    '        throw new NotImplementedError(name)',
+    '      }',
+    '    },',
+    '  })[name] as new (...args: never[]) => object',
+    '',
+  )
+  for (const name of placeholders) {
+    lines.push(`export const ${name} = placeholder('${name}')`)
+  }
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+// ---------------------------------------------------------------------------
 
 checkGuardData()
 
@@ -612,11 +759,22 @@ for (const name of FAKED) {
   fs.writeFileSync(path.join(fakesDir, `${name}.ts`), contents)
 }
 
+// The declared inheritance, spliced onto the flat generated classes. Every member is written out on
+// every class, so the chain adds no lookups — what it adds is the `instanceof` the engine answers:
+// a player is an Entity, a health component is an EntityComponent.
+const inheritance = FAKED.flatMap((name) => {
+  const base = baseOf(name)
+  return base !== null && FAKED.includes(base) ? [[name, base] as const] : []
+})
+
 fs.writeFileSync(
   path.join(outDir, 'index.ts'),
   [
     header('Every faked class, re-exported for the hand-written behaviour to construct.'),
     ...FAKED.map((name) => `import { Fake${name} } from './fakes/${name}.js'`),
+    '',
+    '// The declared inheritance, as the pinned declarations give it.',
+    ...inheritance.map(([name, base]) => `Object.setPrototypeOf(Fake${name}.prototype, Fake${base}.prototype)`),
     '',
     ...FAKED.map((name) => `export { Fake${name} }`),
     '',
@@ -627,6 +785,10 @@ fs.writeFileSync(
     '',
   ].join('\n'),
 )
+
+const shimDir = path.join(outDir, 'shim')
+fs.mkdirSync(shimDir, { recursive: true })
+fs.writeFileSync(path.join(shimDir, 'surface.ts'), shimSurfaceFile())
 // The manifests are committed, so they are written the way the repo formats everything else.
 const manifestPath = path.join(outDir, 'manifests.ts')
 const prettierConfig = await resolveConfig(manifestPath)
