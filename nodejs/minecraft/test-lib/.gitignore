@@ -2,3 +2,4 @@
 # them are committed, so a version bump reads as a diff of what moved.
 src/generated/fakes/
 src/generated/index.ts
+src/generated/shim/

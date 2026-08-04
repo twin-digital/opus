@@ -58,6 +58,39 @@ export class UnsetValueError extends Error {
   }
 }
 
+/**
+ * Thrown by any access to the module-scope `world` or `system` before a test has installed a
+ * server. Reading the binding itself is not the failure — reaching through it is.
+ */
+export class ShimNotInstalledError extends Error {
+  constructor(readonly binding: string) {
+    super(
+      `${binding} was reached before a server was installed. Add the vitest plugin to your config, ` +
+        `or call __useServer(createServer()) before the code under test evaluates.`,
+    )
+    this.name = 'ShimNotInstalledError'
+  }
+}
+
+/**
+ * Thrown by `__useServer` when the server it would replace is still live — a pack's module-scope
+ * subscriptions or scheduled runs are bound to it, and repointing the bindings would strand them.
+ */
+export class ShimServerInUseError extends Error {
+  constructor(
+    readonly subscribers: number,
+    readonly scheduledRuns: number,
+  ) {
+    super(
+      `the installed server is still in use: ${String(subscribers)} subscriber(s) and ` +
+        `${String(scheduledRuns)} scheduled run(s) are bound to it. Repointing the bindings would ` +
+        `strand them. Use loadPack() from '@twin-digital/minecraft-test-lib/vitest' for a fresh ` +
+        `evaluation, or __useServer() to unset first.`,
+    )
+    this.name = 'ShimServerInUseError'
+  }
+}
+
 /** The message the engine's plain `Error` carries for a property read on an invalid owner. */
 export const failedPropertyMessage = (name: string): string => `Failed to get property '${name}'.`
 

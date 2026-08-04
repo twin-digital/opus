@@ -7,7 +7,7 @@ import { failedCallMessage, failedPropertyMessage, InvalidEntityError, NotImplem
 export { NotImplementedError } from '../errors.js'
 
 /** Where a generated member's state lives. A symbol, so it stays out of `Object.keys` and `for-in`. */
-const kState = Symbol('minecraft-test-lib.state')
+const kState = Symbol.for('minecraft-test-lib.state')
 
 /**
  * The per-instance record behind every fake. `own` holds the values emitted as own data properties
@@ -97,12 +97,13 @@ export const guardFailedCall = (fake: object, name: string): void => {
 }
 
 /**
- * The engine's arity check, which runs ahead of the validity guard. Only the minimum is enforced;
- * extra arguments pass through, as the engine has never been observed rejecting them. `expected`
- * is pre-rendered by the generator, since the message names both bounds where they differ.
+ * The engine's arity check, which runs ahead of the validity guard. Both bounds are enforced — at
+ * least the declared required parameter count and at most the declared parameter count — in the
+ * engine's one message shape for either direction. `expected` is pre-rendered by the generator,
+ * since the message names both bounds where they differ.
  */
-export const checkArity = (received: number, minimum: number, expected: string): void => {
-  if (received < minimum) {
+export const checkArity = (received: number, minimum: number, maximum: number, expected: string): void => {
+  if (received < minimum || received > maximum) {
     throw new TypeError(`Incorrect number of arguments to function. Expected ${expected}, received ${String(received)}`)
   }
 }

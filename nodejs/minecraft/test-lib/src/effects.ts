@@ -88,6 +88,24 @@ const checkDuration = (value: number): number => {
   return duration
 }
 
+/**
+ * What a duration reaching the add through `EffectAddBeforeEvent.duration` is worth. The engine
+ * validates the field write by a different path from `addEffect`'s own duration argument, and the
+ * two disagree (`f:handler-written-effect-duration-is-validated-separately`): the write is
+ * truncated toward zero, dropped entirely at or below zero — so `addEffect` returns `undefined` and
+ * nothing is attached, where the argument would have thrown — and clamped to the maximum above it,
+ * where the argument would have thrown for that too.
+ *
+ * `undefined` here means the add is dropped.
+ */
+const validateWrittenDuration = (written: number): number | undefined => {
+  const truncated = truncate(written)
+  if (truncated <= 0) {
+    return undefined
+  }
+  return Math.min(truncated, DURATION_BOUNDS.max)
+}
+
 /** The entity an effect hangs off. An effect is always built with its owner's state. */
 const ownerDataOf = (fake: object): EntityData => {
   const { owner } = stateOf(fake)
@@ -119,8 +137,10 @@ const replaces = (existing: EffectState, amplifier: number, duration: number): b
  * callback reads the value for its own tick, and an effect that runs out partway through a
  * multi-tick advance is already gone for the remaining ticks.
  *
- * The expiry boundary is the library's own rule: nothing observed says what the engine does when a
- * duration reaches zero, so an effect is never readable at 0 and the last tick it reads is 1.
+ * The expiry boundary is the engine's own, measured: an effect is removed on the tick its decaying
+ * duration would reach 0, so 0 is never readable and the last tick it reads is 1
+ * (`f:effect-expiry-boundary-observed`). Nothing is dispatched on the way — 2.8.0 declares no
+ * effect-remove or effect-expire signal.
  */
 export const decayEffects = (server: ServerState): void => {
   for (const entity of server.entities) {
@@ -158,12 +178,24 @@ const addEffect = (
   const data = dataOf<EntityData>(fake)
   const { server } = data
 
+  // What the field holds: the call's own duration until a handler writes over it.
+  let written = duration
+
   // `effectType` carries the display name, resolved lazily: raising the event for a type with no
   // registered base must not throw before a handler asks for the name.
   const payload = {
     cancel: false,
-    duration,
     entity: data.entity,
+    get duration(): number {
+      return written
+    },
+    set duration(value: number) {
+      // The engine's own setter refuses these, and the field keeps what the caller requested.
+      if (!Number.isFinite(value)) {
+        throw new TypeError('NaN value is not supported. Function return value expected type: number')
+      }
+      written = value
+    },
     get effectType(): string {
       return requireDisplayName(server, typeId, amplifier, 'EffectAddBeforeEvent.effectType')
     },
@@ -173,8 +205,10 @@ const addEffect = (
     return undefined
   }
 
-  // A handler's write is honoured as given: the bounds check is on the call's own arguments.
-  const applied = payload.duration
+  const applied = validateWrittenDuration(written)
+  if (applied === undefined) {
+    return undefined
+  }
   const existing = effectOf(data, typeId)
   if (existing) {
     if (!replaces(existing, amplifier, applied)) {

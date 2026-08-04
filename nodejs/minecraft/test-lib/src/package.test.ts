@@ -7,7 +7,7 @@
  */
 
 import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
@@ -19,6 +19,7 @@ import { createEntity, createPlayer } from './entity.js'
 import { InvalidEntityError } from './errors.js'
 import type { _EntityComplete, _PlayerComplete, _WorldComplete } from './generated/manifests.js'
 import { FAKED_CLASSES } from './generated/manifests.js'
+import { SERVER_VERSION } from './generated/shim/version.js'
 import { ATTRIBUTE_COMPONENT_IDS, type CanonicalAttributeComponentId, type _AttributeIdsComplete } from './ids.js'
 import * as library from './index.js'
 import { withVanillaDimensions } from './presets.js'
@@ -39,6 +40,7 @@ interface PackageManifest {
   readonly dependencies?: Readonly<Record<string, string>>
   readonly optionalDependencies?: Readonly<Record<string, string>>
   readonly peerDependencies?: Readonly<Record<string, string>>
+  readonly peerDependenciesMeta?: Readonly<Record<string, { readonly optional?: boolean } | undefined>>
   readonly devDependencies?: Readonly<Record<string, string>>
 }
 
@@ -66,8 +68,14 @@ describe('package manifest', () => {
     expect(entry?.require).toBeUndefined()
   })
 
-  it('exports one entry point and no subpaths', () => {
-    expect(Object.keys(manifest.exports ?? {})).toEqual(['.'])
+  it('exports the root barrel and one runner-tooling subpath, and nothing else', () => {
+    expect(Object.keys(manifest.exports ?? {})).toEqual(['.', './vitest'])
+  })
+
+  it('publishes neither the aliased surface nor the sibling stubs as a subpath', () => {
+    const paths = Object.keys(manifest.exports ?? {})
+    expect(paths.some((path) => path.includes('shim') || path.includes('server-ui'))).toBe(false)
+    expect(paths.some((path) => path.includes('*'))).toBe(false)
   })
 
   it('ships type declarations', () => {
@@ -80,16 +88,44 @@ describe('package manifest', () => {
     expect(Object.keys(manifest.optionalDependencies ?? {})).toEqual([])
   })
 
-  it('peers @minecraft/server at the pinned version', () => {
-    expect(manifest.peerDependencies).toEqual({ '@minecraft/server': '2.8.0' })
+  it('declares no @minecraft/server peer range — nothing gates an install on an engine pin', () => {
+    expect(Object.keys(manifest.peerDependencies ?? {})).not.toContain('@minecraft/server')
   })
 
-  it('depends on no test framework outside devDependencies', () => {
-    const runners = ['vitest', 'jest', 'mocha', 'chai', 'sinon']
+  it('states the derived version inertly, and compares it to nothing', () => {
+    expect(SERVER_VERSION).toBe('2.8.0')
+    const offenders: string[] = []
+    for (const file of sourceFiles(join(packageRoot, 'src'))) {
+      if (file.endsWith('.test.ts')) {
+        continue
+      }
+      const source = readFileSync(file, 'utf8')
+      if (/SERVER_VERSION\s*[!=]==?/.test(source) || /console\.(warn|error)/.test(source)) {
+        offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('makes a test framework an optional peer, reached only from the runner subpath', () => {
+    const runners = ['jest', 'mocha', 'chai', 'sinon']
     const shipped = [...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {})]
     for (const runner of runners) {
       expect(shipped).not.toContain(runner)
     }
+    expect(Object.keys(manifest.dependencies ?? {})).not.toContain('vitest')
+    expect(manifest.peerDependenciesMeta?.vitest?.optional).toBe(true)
+
+    const offenders: string[] = []
+    for (const file of sourceFiles(join(packageRoot, 'src'))) {
+      if (file.endsWith('.test.ts') || file.includes(`${sep}vitest${sep}`)) {
+        continue
+      }
+      if (/from '(vitest|jest|mocha|chai|sinon)'/.test(readFileSync(file, 'utf8'))) {
+        offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
   })
 })
 
@@ -119,8 +155,13 @@ const ERROR_CLASSES = [
   'InvalidArgumentError',
   'InvalidEntityError',
   'NotImplementedError',
+  'ShimNotInstalledError',
+  'ShimServerInUseError',
   'UnsetValueError',
 ] as const
+
+/** What the root barrel adds for the module-import route. */
+const SHIM_CONTROLS = ['__useServer', 'currentServer'] as const
 
 describe('entry point', () => {
   const exported = library as unknown as Record<string, unknown>
@@ -137,7 +178,7 @@ describe('entry point', () => {
     }
   })
 
-  it('exports the five error classes', () => {
+  it('exports the error classes', () => {
     for (const name of ERROR_CLASSES) {
       const value = exported[name] as { prototype: unknown }
       expect(typeof value).toBe('function')
@@ -157,9 +198,22 @@ describe('entry point', () => {
     ])
   })
 
+  it('exports the shim controls', () => {
+    for (const name of SHIM_CONTROLS) {
+      expect(typeof exported[name]).toBe('function')
+    }
+  })
+
   it('exports nothing beyond its documented surface', () => {
     expect(Object.keys(exported).sort()).toEqual(
-      [...FREE_FUNCTIONS, ...PRESETS, ...ERROR_CLASSES, 'ATTRIBUTE_COMPONENT_IDS'].sort(),
+      [
+        ...FREE_FUNCTIONS,
+        ...PRESETS,
+        ...ERROR_CLASSES,
+        ...SHIM_CONTROLS,
+        'ATTRIBUTE_COMPONENT_IDS',
+        'SERVER_VERSION',
+      ].sort(),
     )
   })
 
@@ -187,7 +241,7 @@ describe('entry point', () => {
     expect(offenders).toEqual([])
   })
 
-  it('holds no module-level mutable state', () => {
+  it('holds no module-level mutable state beyond the bindings a test installs', () => {
     const a = createServer()
     const b = createServer()
     expect(serverOf(a.world)).not.toBe(serverOf(b.world))
@@ -228,20 +282,15 @@ describe('entry point', () => {
  * added, and the change is real.
  */
 /**
- * Divergences the library ships that the design's coverage table does not yet carry a row for.
+ * Divergences the library ships that the design's coverage table does not carry a row for.
  *
  * `r:coverage-is-enumerated` binds the package, not the design: a user meeting one of these without
- * warning is the failure the requirement exists to prevent, so the README documents it even while
- * the design is silent. Each entry is a question open with the design's owner, and the list is
- * asserted exactly so it cannot grow quietly.
- *
- * - `filtered-subscription` — a `subscribe` call carrying an options argument throws
- *   `NotImplementedError`; honouring the call while dropping the filter would deliver events the
- *   engine withholds. Raised as plan-opus#119.
+ * warning is the failure the requirement exists to prevent, so the README would document it even
+ * while the design was silent. The list is asserted exactly so it cannot grow quietly. It is empty:
+ * the one entry it held — a filtered subscription throwing outright — is the design's own ruling
+ * now, and the row moved into the table below.
  */
-const LIBRARY_RULINGS: readonly (readonly [id: string, subject: string, coverage: string])[] = [
-  ['filtered-subscription', 'a filtered subscription — any options argument to `subscribe`', 'divergence'],
-]
+const LIBRARY_RULINGS: readonly (readonly [id: string, subject: string, coverage: string])[] = []
 
 const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: string])[] = [
   ['dimension-registration-and-resolution', 'dimension registration and `world.getDimension` resolution', 'modelled'],
@@ -300,7 +349,7 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
   ['add-effect-nan-and-infinity', '`addEffect` on `NaN` or `Infinity`', 'divergence'],
   ['display-name-amplifier-mapping', "the display name's amplifier mapping", 'modelled'],
   ['effect-duration-decay', 'effect duration decay', 'modelled'],
-  ['effect-duration-expiry-boundary', 'what the engine does when a duration reaches zero', 'not modelled'],
+  ['effect-duration-expiry-boundary', 'what the engine does when a duration reaches zero', 'modelled'],
   ['vanilla-effect-display-names', '`Effect.displayName` for the 37 vanilla types', 'modelled'],
   ['effect-display-name-locale', '`Effect.displayName` in a locale other than the observed one', 'divergence'],
   ['custom-effect-display-name', '`Effect.displayName` for a custom effect type', 'divergence'],
@@ -309,6 +358,7 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
     'signal existence, `subscribe` / `unsubscribe`, reference dedupe and subscription order',
     'modelled',
   ],
+  ['filtered-subscription', 'a filtered subscription — an options argument to `subscribe`', 'modelled'],
   ['after-event-dispatch-timing', 'after-event dispatch timing', 'divergence'],
   [
     'unraised-engine-signals',
@@ -328,7 +378,7 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
   ['message-and-title-output', '`sendMessage` and `onScreenDisplay` output', 'modelled'],
   ['invalidation-guard', 'the invalidation guard on entities, attribute components and effects', 'modelled'],
   ['guard-fires-at-call', 'reading — not calling — a guarded method on an invalidated reference', 'modelled'],
-  ['arity-before-guard', 'too few arguments checked ahead of the validity guard', 'modelled'],
+  ['arity-before-guard', 'argument count checked ahead of the validity guard', 'modelled'],
   ['extra-arguments', 'extra arguments to a member', 'modelled'],
   ['in-operator-on-members', '`in` on a declared but unmodelled member', 'modelled'],
   ['own-enumerable-properties', '`Object.keys`, spread and `JSON.stringify` over an entity', 'modelled'],
@@ -338,6 +388,12 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
     'items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes',
     'not modelled',
   ],
+  ['module-import-resolution', "a pack's `import` of `@minecraft/server`", 'modelled'],
+  ['module-singleton-bindings', 'the module-scope `world` and `system`', 'divergence'],
+  ['class-identity-and-instanceof', '`instanceof` against a class the module exports', 'modelled'],
+  ['enum-and-constant-values', 'enum members and module-level constants', 'modelled'],
+  ['unimplemented-surface-classes', 'classes the module exports that the fakes do not implement', 'not modelled'],
+  ['sibling-script-modules', 'the other `@minecraft/*` script modules — `@minecraft/server-ui` first', 'not modelled'],
 ]
 
 describe('the README coverage table', () => {
@@ -358,7 +414,7 @@ describe('the README coverage table', () => {
 
   it('carries a row for every behaviour the design ruled on', () => {
     expect(COVERAGE_ROWS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
-    expect(COVERAGE_ROWS).toHaveLength(62)
+    expect(COVERAGE_ROWS).toHaveLength(69)
   })
 
   it('carries a row for every divergence the library rules on alone', () => {
@@ -395,8 +451,9 @@ describe('the README coverage table', () => {
     expect(bare).toEqual([])
   })
 
-  it('carries the sixteen divergences the design named, plus the one the library rules alone', () => {
-    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(16)
+  it('carries the seventeen divergences the design named, and none the library rules alone', () => {
+    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(17)
+    expect(LIBRARY_RULINGS).toHaveLength(0)
     expect(divergences).toHaveLength(17)
     expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(17)
   })

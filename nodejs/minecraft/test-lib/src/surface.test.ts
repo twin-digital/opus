@@ -487,26 +487,27 @@ describe('arity', () => {
     expect(caught).not.toBeInstanceOf(NotImplementedError)
   })
 
-  it('enforces the minimum only', () => {
+  it('accepts a call between the two bounds', () => {
     const entity = makeEntity(createServer())
     expect(() => entity.addEffect('minecraft:speed', 10)).not.toThrow(TypeError)
   })
 
-  it('ignores extra arguments', () => {
+  it('rejects the first surplus argument, in the same message shape', () => {
     const entity = makeEntity(createServer())
-    expect(loosely(entity).addTag('a', 'b', 'c')).toBe(true)
-    expect(entity.hasTag('a')).toBe(true)
+    expect(() => loosely(entity).addTag('a', 'b')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 1, received 2'),
+    )
+    expect(entity.hasTag('a')).toBe(false)
   })
 
-  it('ignores extra arguments on a member declared with a range', () => {
+  it('rejects a surplus argument past the maximum of a range', () => {
     const entity = makeEntity(createServer())
-    let caught: unknown
-    try {
-      loosely(entity).addEffect('minecraft:speed', 10, {}, 'extra')
-    } catch (error) {
-      caught = error
-    }
-    expect(caught).not.toBeInstanceOf(TypeError)
+    expect(() => loosely(entity).addEffect('minecraft:speed', 10, {}, 'extra')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 2-3, received 4'),
+    )
+    expect(() => loosely(entity).addEffect('minecraft:speed', 10, {}, 'extra', 'more')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 2-3, received 5'),
+    )
   })
 
   it('runs ahead of the validity guard', async () => {
@@ -535,10 +536,20 @@ describe('arity', () => {
     }).toThrow(NotImplementedError)
   })
 
-  it('checks nothing on a member declaring no required parameter', () => {
+  it('throws on the first surplus argument to a zero-arity member', () => {
     const entity = makeEntity(createServer())
     expect(() => entity.getTags()).not.toThrow(TypeError)
-    expect(() => loosely(entity).getTags('junk')).not.toThrow(TypeError)
+    expect(() => loosely(entity).getTags('junk')).toThrow(
+      new TypeError('Incorrect number of arguments to function. Expected 0, received 1'),
+    )
+  })
+
+  it('rejects a surplus argument ahead of the validity guard', async () => {
+    const { InvalidEntityError } = await import('./errors.js')
+    const entity = makeEntity(createServer())
+    invalidate(entity)
+    expect(() => loosely(entity).getTags('junk')).toThrow(TypeError)
+    expect(() => entity.getTags()).toThrow(InvalidEntityError)
   })
 
   it('counts arguments rather than defined arguments', () => {

@@ -483,17 +483,17 @@ describe('effect duration', () => {
 
   // A handler may write any number onto the before-event and it is honoured unchecked, so the decay
   // pass has to cope with one that is not a positive number rather than subtracting from it forever.
-  it('expires an effect whose handler-written duration is not a positive number', () => {
+  it('refuses a handler-written duration that is not a number, leaving the requested one', () => {
     const { server, entity } = setup()
     server.world.beforeEvents.effectAdd.subscribe((event) => {
       ;(event as unknown as { duration: unknown }).duration = undefined
     })
     entity.addEffect(SPEED, 100)
 
+    // The setter threw, handler isolation absorbed it, and the add ran on what the call asked for.
+    expect(entity.getEffect(SPEED)!.duration).toBe(100)
     advanceTicks(server, 1)
-
-    expect(entity.getEffect(SPEED)).toBeUndefined()
-    expect(entity.getEffects()).toEqual([])
+    expect(entity.getEffect(SPEED)!.duration).toBe(99)
   })
 
   it('decays nothing on a bundle the test never advances', () => {
@@ -837,14 +837,16 @@ describe('addEffect and the effectAdd before-event', () => {
   })
 
   // 65 — ruling 22: the bounds check is on the call's own arguments, not on the written value
-  it('honours a handler write of an out-of-bounds duration without re-checking the bounds', () => {
+  it('drops the add on a handler write of zero, where the argument would have thrown', () => {
     const { server, entity } = setup()
     server.world.beforeEvents.effectAdd.subscribe((event) => {
       event.duration = 0
     })
 
-    expect(entity.addEffect(SPEED, 200)!.duration).toBe(0)
-    expect(entity.getEffect(SPEED)!.duration).toBe(0)
+    // The field write and the call argument take different validation paths, and disagree here.
+    expect(entity.addEffect(SPEED, 200)).toBeUndefined()
+    expect(entity.getEffect(SPEED)).toBeUndefined()
+    expect(() => entity.addEffect(SPEED, 0)).toThrow(ArgumentOutOfBoundsError)
   })
 
   // 66

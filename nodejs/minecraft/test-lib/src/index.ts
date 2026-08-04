@@ -11,10 +11,14 @@
  * installMyPack(server)
  * ```
  *
- * The library never replaces or intercepts the `@minecraft/server` module import: a fake reaches
- * the code under test only as an object the test passes in. Everything the real API cannot express
- * — construction, invalidation, event emission, and reads the real surface has no member for — is
- * a free function over the fakes rather than a member the engine does not have.
+ * A suite that injects fake objects into code under test stays supported exactly as written. Code
+ * that reaches the engine through a direct `@minecraft/server` import is reached the other way,
+ * by pointing the module-scope bindings at the same bundle — see
+ * `@twin-digital/minecraft-test-lib/vitest` for the one configuration entry that arranges it.
+ *
+ * Everything the real API cannot express — construction, invalidation, event emission, and reads
+ * the real surface has no member for — is a free function over the fakes rather than a member the
+ * engine does not have.
  */
 
 export { createServer, type FakeServer, type ServerLike } from './create-server.js'
@@ -33,11 +37,16 @@ export { getOutput } from './output.js'
 export { asSpawnedEntity, withVanillaDimensions } from './presets.js'
 export { advanceTicks } from './scheduler.js'
 
+export { __useServer, currentServer } from './shim/bindings.js'
+export { SERVER_VERSION } from './generated/shim/version.js'
+
 export {
   ArgumentOutOfBoundsError,
   InvalidArgumentError,
   InvalidEntityError,
   NotImplementedError,
+  ShimNotInstalledError,
+  ShimServerInUseError,
   UnsetValueError,
 } from './errors.js'
 
