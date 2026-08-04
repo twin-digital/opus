@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
+import { diffFolds } from '../src/diff.js'
 import { foldProduct } from '../src/fold.js'
 import { loadProducts } from '../src/load.js'
 import { projectProduct } from '../src/project.js'
 import { validateTree } from '../src/validate.js'
-import { demoCoverage, demoProduct, makeRepo, yaml } from './helpers.js'
+import { latestPublished, resolveFold } from '../src/version.js'
+import { demoCoverage, demoProduct, makeRepo, removeRepo, yaml } from './helpers.js'
 
 import type { Files } from './helpers.js'
 import type { Finding } from '../src/types.js'
@@ -61,7 +63,9 @@ describe('the draft increment directory (d-x0q4xgd8)', () => {
       })
       const product = demo(files)
       expect(product.drafts).toEqual([])
-      expect(rules(check(files))).toContain('increment-dir-name')
+      const finding = check(files).find((candidate) => candidate.rule === 'increment-dir-name')
+      expect(finding?.message).toContain('wip-<NNN>-<slug>')
+      expect(finding?.claims).toContain('d-x0q4xgd8')
       // not read as an increment at all: its claims do not project
       expect(projectProduct(makeRepo(files).tree, 'demo')).not.toContain('r-dddddddd')
     },
@@ -237,5 +241,40 @@ describe('the projection of a tree holding a draft increment (r-4z3yd1ri, d-x1mh
     const projection = projectProduct(makeRepo(withDraft()).tree, 'demo', { at })
     expect(projection).toContain(`# demo @ ${at}`)
     expect(projection).not.toContain('r-dddddddd')
+  })
+})
+
+describe('the readers other than show stay published-only (d-5smb6h2g)', () => {
+  const root = (): string => {
+    const made = makeRepo(withDraft())
+    roots.push(made.root)
+    return made.root
+  }
+  const roots: string[] = []
+  afterEach(() => {
+    for (const path of roots.splice(0)) {
+      removeRepo(path)
+    }
+  })
+
+  it('resolves a fold at the newest published increment, the draft excluded', () => {
+    const resolved = resolveFold(root(), 'demo')
+    expect(resolved.at).toBe(2)
+    expect(resolved.fold.drafts).toEqual([])
+    expect(resolved.fold.requirements.has('r-dddddddd')).toBe(false)
+  })
+
+  it('leaves a draft out of the diff, since the later fold is published state', () => {
+    const dir = root()
+    const diff = diffFolds(
+      'demo',
+      resolveFold(dir, 'demo', { kind: 'increment', number: 1 }).fold,
+      resolveFold(dir, 'demo').fold,
+    )
+    expect(diff.added.map((claim) => claim.id)).not.toContain('r-dddddddd')
+  })
+
+  it('reports the newest published increment for where', () => {
+    expect(latestPublished(makeRepo(withDraft()).tree, 'demo')).toBe(2)
   })
 })
