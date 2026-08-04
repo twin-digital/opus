@@ -1,7 +1,7 @@
 import { foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 
-import type { Fold, FoldedClaim } from './fold.js'
+import type { Fold, FoldedClaim, IncrementRef } from './fold.js'
 import type { Product, ProductsTree } from './load.js'
 import type { FileTree } from './tree.js'
 import type { CoverageEntry, DecisionEntry, RequirementEntry } from './types.js'
@@ -20,7 +20,9 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
       `no product ${JSON.stringify(productId)}; declared products: ${[...productsTree.products.keys()].join(', ') || '(none)'}`,
     )
   }
-  const fold = foldProduct(product, options.at)
+  // an asked-for increment names published state; the default projection is the tree as it stands,
+  // drafts included (d-x1mhu3a3)
+  const fold = foldProduct(product, options.at, options.at === undefined)
   const lines: string[] = []
   const facetFilter = options.facet
 
@@ -31,7 +33,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     return facets !== undefined && (Array.isArray(facets) ? facets : [facets]).includes(facetFilter)
   }
 
-  lines.push(`# ${product.id} @ ${fold.at}`, '')
+  lines.push(`# ${product.id} @ ${fold.label}`, '')
   if (product.declaration?.data.kind !== undefined) {
     lines.push(`kind: ${product.declaration.data.kind}`, '')
   }
@@ -105,7 +107,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
 const formatFacets = (facets: string | string[] | undefined): string =>
   facets === undefined ? '' : ` [${(Array.isArray(facets) ? facets : [facets]).join(', ')}]`
 
-const renderRequirement = (entry: RequirementEntry, increment: number, adoptedFrom?: string): string[] => {
+const renderRequirement = (entry: RequirementEntry, increment: IncrementRef, adoptedFrom?: string): string[] => {
   const lines = [
     `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatFacets(entry.facets)}`,
     '',
@@ -124,7 +126,7 @@ const renderRequirement = (entry: RequirementEntry, increment: number, adoptedFr
   return lines
 }
 
-const renderDecision = (entry: DecisionEntry, increment: number): string[] => {
+const renderDecision = (entry: DecisionEntry, increment: IncrementRef): string[] => {
   const pinned =
     entry.pinned !== undefined && entry.pinned !== false ?
       `, pinned: ${entry.pinned.reason}${entry.pinned.notes !== undefined ? ` (${entry.pinned.notes})` : ''}`
@@ -218,13 +220,17 @@ const renderCoverage = (product: Product, fold: Fold): string[] => {
 }
 
 const renderDelta = (product: Product, fold: Fold): string[] => {
-  const previous = product.increments.filter((increment) => increment.number < fold.at).at(-1)
-  const lines = [`## changes at increment ${fold.at}`, '']
-  const added = [
-    ...[...fold.requirements.values()].filter((claim) => claim.increment === fold.at).map((claim) => claim.entry.id),
-    ...[...fold.decisions.values()].filter((claim) => claim.increment === fold.at).map((claim) => claim.entry.id),
+  const folded: IncrementRef[] = [
+    ...product.increments.filter((increment) => increment.number <= fold.at).map((increment) => increment.number),
+    ...fold.drafts,
   ]
-  const closed = fold.outOfForce.filter((entry) => entry.increment === fold.at)
+  const previous = folded.at(-2)
+  const lines = [`## changes at increment ${fold.label}`, '']
+  const added = [
+    ...[...fold.requirements.values()].filter((claim) => claim.increment === fold.label).map((claim) => claim.entry.id),
+    ...[...fold.decisions.values()].filter((claim) => claim.increment === fold.label).map((claim) => claim.entry.id),
+  ]
+  const closed = fold.outOfForce.filter((entry) => entry.increment === fold.label)
   if (added.length === 0 && closed.length === 0) {
     lines.push('(nothing declared)', '')
     return lines
@@ -238,15 +244,19 @@ const renderDelta = (product: Product, fold: Fold): string[] => {
     )
   }
   lines.push('')
-  if (previous) {
-    lines.push(`_previous increment: ${previous.number}_`, '')
+  if (previous !== undefined) {
+    lines.push(`_previous increment: ${previous}_`, '')
   }
   return lines
 }
 
 const renderQuestions = (product: Product, fold: Fold): string[] => {
   const lines: string[] = []
-  for (const increment of product.increments.filter((candidate) => candidate.number <= fold.at)) {
+  const sources = [
+    ...product.increments.filter((candidate) => candidate.number <= fold.at),
+    ...product.drafts.filter((candidate) => fold.drafts.includes(candidate.name)),
+  ]
+  for (const increment of sources) {
     for (const question of increment.questions?.data.questions ?? []) {
       lines.push(`- ${question.id} (${question.answer}): ${question.question.trim()}`)
     }

@@ -64,7 +64,9 @@ program
   .action((productId: string, options: { root: string; at?: string; atRef?: string; facet?: string }) => {
     const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
     const resolved = resolveFold(options.root, productId, version)
-    process.stdout.write(projectProduct(resolved.tree, productId, { at: resolved.at, facet: options.facet }))
+    // with no version asked for, the projection reads the tree as it stands — drafts included
+    const at = version === undefined ? undefined : resolved.at
+    process.stdout.write(projectProduct(resolved.tree, productId, { at, facet: options.facet }))
   })
 
 program

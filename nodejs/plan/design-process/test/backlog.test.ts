@@ -249,7 +249,7 @@ describe('send to capture — r-9qhjtznd, d-wpih0mc1', () => {
     return { options, ids }
   }
 
-  const target = 'products/demo/increments/parallel-planning'
+  const target = 'products/demo/increments/wip-001-parallel-planning'
 
   it("copies one item into the increment's drafts and drains it in the same action", () => {
     const { options, ids } = seeded()
@@ -274,7 +274,7 @@ describe('send to capture — r-9qhjtznd, d-wpih0mc1', () => {
     expect(listItems(options)).toHaveLength(2)
   })
 
-  it('targets a numbered increment as readily as a slug-named draft', () => {
+  it("targets a numbered increment as readily as a draft increment's wip directory", () => {
     const { options, ids } = seeded()
     const sent = sendItems(options, 'products/demo/increments/003', { ids: [ids[2]] })
     expect(existsSync(join(options.root, sent[0].path))).toBe(true)
