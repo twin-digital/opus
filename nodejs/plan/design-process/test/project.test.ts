@@ -26,6 +26,37 @@ describe('projectProduct (r-2gcehlp8)', () => {
     expect(projection.indexOf('### d-aaaaaaaa')).toBeLessThan(projection.indexOf('### d-bbbbbbbb'))
   })
 
+  it('renders the whole preset closure, a twice-reached preset once (d-wis1whfn)', () => {
+    const files = demoProduct()
+    const preset = (name: string, id: string, adopts?: { name: string; version: number }[]): void => {
+      files[`products/${name}/product.yaml`] = yaml({ version: '1', kind: 'requirement-preset' })
+      files[`products/${name}/increments/001/requirements.yaml`] = yaml({
+        version: '1',
+        requirements: [{ id, title: name, statement: `${name} behaves.\n` }],
+        ...(adopts ? { presets: adopts } : {}),
+      })
+    }
+    preset('monorepo-package', 'r-mpmpmpmp')
+    preset('nodejs', 'r-njnjnjnj', [{ name: 'monorepo-package', version: 1 }])
+    preset('nodejs-library', 'r-nlnlnlnl', [{ name: 'nodejs', version: 1 }])
+    preset('minecraft-addon', 'r-mamamama', [{ name: 'monorepo-package', version: 1 }])
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      presets: [
+        { name: 'nodejs-library', version: 1 },
+        { name: 'minecraft-addon', version: 1 },
+      ],
+    })
+
+    const projection = projectProduct(makeRepo(files).tree, 'demo')
+    expect(projection.match(/^- monorepo-package@1 /gm)).toHaveLength(1)
+    expect(projection).toContain('- monorepo-package@1 (1 requirements, via nodejs-library → nodejs)')
+    expect(projection).toContain('adopted from monorepo-package@1')
+    for (const id of ['r-mpmpmpmp', 'r-njnjnjnj', 'r-nlnlnlnl', 'r-mamamama']) {
+      expect(projection).toContain(`### ${id}`)
+    }
+  })
+
   it('labels rulings and counts abstentions (r-gc7a3m56)', () => {
     const { tree } = makeRepo(demoProduct())
     expect(projectProduct(tree, 'demo')).toContain('1 delegated — abstained, not reviewed')

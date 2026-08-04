@@ -1,5 +1,6 @@
 import { foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
+import { resolvePresetClosure } from './presets.js'
 
 import type { Fold, FoldedClaim, IncrementRef } from './fold.js'
 import type { Product, ProductsTree } from './load.js'
@@ -38,22 +39,14 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     lines.push(`kind: ${product.declaration.data.kind}`, '')
   }
 
-  // adopted presets, and the requirements they contribute
-  const adopted: { name: string; version: number; requirements: Map<string, FoldedClaim<RequirementEntry>> }[] = []
-  for (const { entry } of fold.presets.values()) {
-    const preset = productsTree.products.get(entry.name)
-    if (preset && entry.version !== undefined) {
-      adopted.push({
-        name: entry.name,
-        version: entry.version,
-        requirements: foldProduct(preset, entry.version).requirements,
-      })
-    }
-  }
+  // the preset closure the product's declarations reach, and the requirements it contributes
+  const adopted = resolvePresetClosure(product, productsTree, fold).presets
   if (adopted.length > 0) {
     lines.push('## presets', '')
     for (const preset of adopted) {
-      lines.push(`- ${preset.name}@${preset.version} (${preset.requirements.size} requirements)`)
+      // a preset the product did not adopt directly names the presets it came through
+      const via = preset.via.length > 2 ? `, via ${preset.via.slice(1, -1).join(' → ')}` : ''
+      lines.push(`- ${preset.name}@${preset.version} (${preset.requirements.size} requirements${via})`)
     }
     lines.push('')
   }

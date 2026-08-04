@@ -78,9 +78,11 @@ non-zero when findings exist. Two rule groups run:
 - **Tree-state rules** — pool identity and `$ref` resolution, schema validation of every
   structured file against the pool schema its `version` names, id format and uniqueness, no
   `proposed` decisions, no open questions, citations resolve (never to a question, and no in-force `because:` or `informed_by:` rests on a retired fact), model
-  bindings resolve, preset adoption rules, dense increment numbering, implementation-record
+  bindings resolve, preset adoption rules (each hop resolves, is a `requirement-preset`, and pins
+  a published version; the closure is acyclic, pins one version per preset, and holds no
+  requirement id declared twice), dense increment numbering, implementation-record
   naming and claim scope, and record coverage completeness — every requirement and ruled
-  decision in force at the record's target, adopted preset requirements included; deferred
+  decision in force at the record's target, the preset closure's requirements included; deferred
   decisions are excluded, and no coverage entry may name one.
 - **Draft-increment rules** — a `wip-<NNN>-<slug>` directory always draws the
   `increment-dir-name` finding, so `check` never exits 0 while a draft increment is in flight;
@@ -103,7 +105,8 @@ Findings cite the requirement or decision id each rule enforces, e.g.:
 ### show
 
 Renders the folded, effective state of a product at an increment as markdown: requirements
-(local and adopted), decisions ordered by `because:` topology with statuses and pins (deferred
+(local, and adopted through the preset closure — each preset listed once, with the presets an
+indirectly reached one came through), decisions ordered by `because:` topology with statuses and pins (deferred
 entries counted beside the rulings), model bindings, coverage joined from the
 `implementations/` pool with uncovered and attestation-only counts (deferred decisions
 excluded, the summary naming how many), and what the increment changed.

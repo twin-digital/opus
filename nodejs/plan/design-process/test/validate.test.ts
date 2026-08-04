@@ -381,21 +381,133 @@ describe('validateTree — presets (r-bwtud1e5)', () => {
     expect(rules(check(files))).toContain('preset-adopt-and-drop')
   })
 
-  it('fails a preset that itself adopts a preset (d-k48jh86c)', () => {
-    const preset = presetProduct()
-    preset['products/nodejs-library/increments/001/requirements.yaml'] = yaml({
-      version: '1',
-      requirements: [{ id: 'r-pppppppp', statement: 'the library behaves.\n' }],
-      presets: [{ name: 'other', version: 1 }],
-    })
-    const findings = check(withPreset({ name: 'nodejs-library', version: 1 }, preset))
-    expect(rules(findings)).toContain('preset-adopts-preset')
-  })
-
   it('fails an adopted requirement colliding with a product-local one', () => {
     expect(rules(check(withPreset({ name: 'nodejs-library', version: 1 }, presetProduct('r-bbbbbbbb'))))).toContain(
       'preset-conflict',
     )
+  })
+
+  it('does not read a retired product-local declaration as a collision (d-wlkql151)', () => {
+    // the motivating move: r-bbbbbbbb leaves the product for a preset the product adopts
+    const files = withPreset({ name: 'nodejs-library', version: 1 }, presetProduct('r-bbbbbbbb'))
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      presets: [{ name: 'nodejs-library', version: 1 }],
+      retires: [{ id: 'r-bbbbbbbb', reason: 'moved into the nodejs-library preset.\n' }],
+    })
+    expect(check(files)).toEqual([])
+  })
+})
+
+describe('validateTree — preset closures (d-wis1whfn)', () => {
+  /** A preset product at increment 1: its own requirements, and the presets it adopts. */
+  const preset = (
+    name: string,
+    requirementIds: string[],
+    adopts: { name: string; version: number }[] = [],
+    increment = 1,
+  ): Record<string, string> => {
+    const source: Record<string, unknown> = { version: '1' }
+    if (requirementIds.length > 0) {
+      source.requirements = requirementIds.map((id) => ({ id, statement: `${name} behaves.\n` }))
+    }
+    if (adopts.length > 0) {
+      source.presets = adopts
+    }
+    return {
+      [`products/${name}/product.yaml`]: yaml({ version: '1', kind: 'requirement-preset' }),
+      [`products/${name}/increments/${String(increment).padStart(3, '0')}/requirements.yaml`]: yaml(source),
+    }
+  }
+
+  /** The real hierarchy: a diamond over monorepo-package, reached by two paths. */
+  const hierarchy = (): Record<string, string> => ({
+    ...preset('monorepo-package', ['r-mpmpmpmp']),
+    ...preset('nodejs', ['r-njnjnjnj'], [{ name: 'monorepo-package', version: 1 }]),
+    ...preset('nodejs-library', ['r-nlnlnlnl'], [{ name: 'nodejs', version: 1 }]),
+    ...preset('minecraft-addon', ['r-mamamama'], [{ name: 'monorepo-package', version: 1 }]),
+  })
+
+  const adopting = (
+    adopts: { name: string; version: number }[],
+    presetFiles: Record<string, string>,
+  ): Record<string, string> => {
+    const files = { ...demoProduct(), ...presetFiles }
+    files['products/demo/increments/002/requirements.yaml'] = yaml({ version: '1', presets: adopts })
+    return files
+  }
+
+  const diamond = (): Record<string, string> =>
+    adopting(
+      [
+        { name: 'nodejs-library', version: 1 },
+        { name: 'minecraft-addon', version: 1 },
+      ],
+      hierarchy(),
+    )
+
+  it('accepts a preset that adopts a preset', () => {
+    expect(check(adopting([{ name: 'nodejs-library', version: 1 }], hierarchy()))).toEqual([])
+  })
+
+  it('accepts a preset reached by two paths, contributing once', () => {
+    expect(check(diamond())).toEqual([])
+  })
+
+  it('fails a cycle, naming the path that closes it', () => {
+    const files = adopting([{ name: 'left', version: 1 }], {
+      ...preset('left', ['r-leftleft'], [{ name: 'right', version: 1 }]),
+      ...preset('right', ['r-rightrig'], [{ name: 'left', version: 1 }]),
+    })
+    const cycles = check(files).filter((finding) => finding.rule === 'preset-cycle')
+    expect(cycles.map((finding) => finding.message)).toContain('preset adoption cycles: demo → left → right → left')
+  })
+
+  it('fails one preset reached at two versions in one closure', () => {
+    const files = diamond()
+    Object.assign(files, preset('monorepo-package', ['r-mpmpmpm2'], [], 2))
+    files['products/minecraft-addon/increments/001/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-mamamama', statement: 'minecraft-addon behaves.\n' }],
+      presets: [{ name: 'monorepo-package', version: 2 }],
+    })
+    const findings = check(files).filter((finding) => finding.rule === 'preset-version-conflict')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.message).toBe(
+      'monorepo-package is reached at version 1 by demo → nodejs-library → nodejs → monorepo-package and at version 2 by demo → minecraft-addon → monorepo-package',
+    )
+  })
+
+  it('fails two presets in one closure declaring one requirement id (d-wlkql151)', () => {
+    const files = adopting(
+      [
+        { name: 'nodejs-library', version: 1 },
+        { name: 'minecraft-addon', version: 1 },
+      ],
+      { ...hierarchy(), ...preset('minecraft-addon', ['r-njnjnjnj'], [{ name: 'monorepo-package', version: 1 }]) },
+    )
+    const findings = check(files).filter((finding) => finding.rule === 'preset-conflict')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.message).toBe('nodejs@1 and adopted minecraft-addon@1 both declare r-njnjnjnj')
+  })
+
+  it('holds a record to covering the requirements the whole closure contributes', () => {
+    const files = adopting([{ name: 'nodejs-library', version: 1 }], hierarchy())
+    files['implementations/demo/002-1.yaml'] = yaml({
+      version: '1',
+      product: 'demo',
+      target: 2,
+      built_at: '2026-08-01',
+      packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
+      coverage: ['r-aaaaaaaa', 'r-bbbbbbbb', 'd-bbbbbbbb', 'd-cccccccc', 'r-nlnlnlnl'].map((claim) => ({
+        claim,
+        covered_by: [{ kind: 'attestation' }],
+      })),
+    })
+    const missing = check(files).filter((finding) => finding.rule === 'record-coverage-complete')
+    expect(missing).toHaveLength(1)
+    expect(missing[0]?.message).toContain('r-mpmpmpmp')
+    expect(missing[0]?.message).toContain('r-njnjnjnj')
   })
 })
 

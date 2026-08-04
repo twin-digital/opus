@@ -4,10 +4,13 @@ import { checkEvidenceBar } from './evidence-bar.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { loadApiPool, loadFacts, loadSchemaPool } from './pools.js'
+import { closureRequirementIds, resolvePresetClosure } from './presets.js'
 
 import type { ErrorObject, ValidateFunction } from 'ajv'
+import type { Fold } from './fold.js'
 import type { IncrementSources, Product, ProductsTree } from './load.js'
 import type { FactsPool, SchemaPool } from './pools.js'
+import type { PresetClosure } from './presets.js'
 import type { FileTree } from './tree.js'
 import type { Finding, QuestionEntry } from './types.js'
 
@@ -531,7 +534,7 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
       if (statuses.size > 1) {
         findings.push({
           rule: 'preset-adopt-and-drop',
-          claims: ['d-k48jh86c'],
+          claims: ['d-a8hiceqo'],
           path,
           message: `${name} is both adopted and dropped in one increment`,
         })
@@ -554,7 +557,7 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
       if (preset.declaration?.data.kind !== 'requirement-preset') {
         findings.push({
           rule: 'preset-kind',
-          claims: ['d-k48jh86c'],
+          claims: ['d-wis1whfn'],
           path,
           message: `adopts ${entry.name}, whose kind is ${JSON.stringify(preset.declaration?.data.kind)} rather than requirement-preset`,
         })
@@ -568,31 +571,42 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
           path,
           message: `adopts ${entry.name}@${entry.version}, but its newest published increment is ${maxIncrement}`,
         })
+      }
+    }
+  }
+
+  const fold = foldProduct(product, undefined, true)
+  const closure = resolvePresetClosure(product, productsTree, fold)
+  findings.push(...closure.findings)
+  findings.push(...checkPresetConflicts(product, fold, closure))
+  return findings
+}
+
+/**
+ * The collision the gate blocks on: two declarations in force of one requirement id, by the product
+ * and a preset in its closure or by two of those presets (d-wlkql151). A retired declaration is
+ * absent from its fold, so it collides with nothing; an id reached twice is one declaration.
+ */
+const checkPresetConflicts = (product: Product, fold: Fold, closure: PresetClosure): Finding[] => {
+  const findings: Finding[] = []
+  const declaredBy = new Map<string, string>()
+  for (const id of fold.requirements.keys()) {
+    declaredBy.set(id, product.id)
+  }
+  for (const preset of closure.presets) {
+    const source = `${preset.name}@${preset.version}`
+    for (const id of preset.requirements.keys()) {
+      const other = declaredBy.get(id)
+      if (other === undefined) {
+        declaredBy.set(id, source)
         continue
       }
-      for (const presetIncrement of preset.increments) {
-        const presetSource = presetIncrement.requirements
-        if (presetSource && (presetSource.data.presets ?? []).length > 0) {
-          findings.push({
-            rule: 'preset-adopts-preset',
-            claims: ['d-k48jh86c'],
-            path: presetSource.path,
-            message: `${preset.id} is a preset and may not adopt presets`,
-          })
-        }
-      }
-      const localIds = new Set(foldProduct(product, undefined, true).requirements.keys())
-      const presetFold = foldProduct(preset, entry.version)
-      for (const id of presetFold.requirements.keys()) {
-        if (localIds.has(id)) {
-          findings.push({
-            rule: 'preset-conflict',
-            claims: ['r-bwtud1e5'],
-            path,
-            message: `adopted ${entry.name}@${entry.version} and this product both declare ${id}`,
-          })
-        }
-      }
+      findings.push({
+        rule: 'preset-conflict',
+        claims: ['r-bwtud1e5', 'd-wlkql151'],
+        path: product.dir,
+        message: `${other} and adopted ${source} both declare ${id}`,
+      })
     }
   }
   return findings
@@ -648,13 +662,8 @@ const checkRecords = (product: Product, productsTree: ProductsTree): Finding[] =
     const deferred = new Set(
       [...fold.decisions.values()].filter(({ entry }) => entry.status === 'deferred').map(({ entry }) => entry.id),
     )
-    for (const preset of fold.presets.values()) {
-      const presetProduct = productsTree.products.get(preset.entry.name)
-      if (presetProduct && preset.entry.version !== undefined) {
-        for (const id of foldProduct(presetProduct, preset.entry.version).requirements.keys()) {
-          coverable.add(id)
-        }
-      }
+    for (const id of closureRequirementIds(resolvePresetClosure(product, productsTree, fold))) {
+      coverable.add(id)
     }
     const covered = new Set<string>()
     for (const coverage of record.data.coverage ?? []) {

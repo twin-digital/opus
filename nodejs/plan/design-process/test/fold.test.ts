@@ -49,7 +49,7 @@ describe('foldProduct (d-g5cs9o4i)', () => {
     expect(foldProduct(loadDemo(files)).model.size).toBe(0)
   })
 
-  it('folds presets by name; dropped removes (d-k48jh86c)', () => {
+  it('folds presets by name; dropped removes (d-wis1whfn)', () => {
     const files = demoProduct()
     files['products/demo/increments/001/requirements.yaml'] = yaml({
       version: '1',
