@@ -37,6 +37,7 @@ const formatAjvError = (error: ErrorObject): string =>
 export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Ajv2020): Finding[] => {
   const findings: Finding[] = []
   const pool = loadPool(tree)
+  findings.push(...pool.findings)
 
   checkSchemas(pool, schemaPool, ajv, findings)
 
@@ -45,6 +46,7 @@ export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Aj
   }
   for (const item of pool.runs) {
     checkSupersededBy(item, pool, findings)
+    checkRunOutputExists(item, tree, findings)
   }
 
   // rule 8: ids are unique across the whole pool (facts and runs share one namespace)
@@ -252,6 +254,21 @@ const quoteFinding = (
       message: `${tag}: quote for ${locator} is not present verbatim at its source`,
     })
   }
+}
+
+// every run's recorded output must exist in the tree, whether or not any fact cites the run.
+const checkRunOutputExists = (item: PoolItem, tree: FileTree, findings: Finding[]): void => {
+  const output = item.data.output
+  if (typeof output !== 'string' || tree.has(output)) {
+    return
+  }
+  const tag = item.id || '(unnamed run)'
+  findings.push({
+    rule: 'run-output-exists',
+    claims: CLAIMS,
+    path: item.path,
+    message: `${tag}: records output ${JSON.stringify(output)}, which is not in the tree`,
+  })
 }
 
 // rule 7: superseded_by resolves to some pool entry (fact or run) and is not the entry itself.

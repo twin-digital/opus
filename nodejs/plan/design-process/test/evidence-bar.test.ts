@@ -62,6 +62,18 @@ describe('evidence bar — clean pool', () => {
     files['evidence/probe/compose.yaml'] = yaml({ services: { db: { image: 'postgres' } } })
     expect(check(files)).toEqual([])
   })
+
+  it('reports a malformed facts pool file rather than dropping it', () => {
+    const files = base([documentedFact])
+    files['facts/broken.yaml'] = 'id: x\n  bad: : indent:\n:::\n'
+    expect(rules(check(files))).toContain('pool-parse')
+  })
+
+  it('reports a malformed evidence pool file rather than dropping it', () => {
+    const files = base([documentedFact])
+    files['evidence/probe/broken.yaml'] = 'runs: [unterminated\n'
+    expect(rules(check(files))).toContain('pool-parse')
+  })
 })
 
 describe('evidence bar — schema shape (rule 1)', () => {
@@ -153,6 +165,12 @@ describe('evidence bar — run sources (rule 5)', () => {
   it('fails when the run output file is missing', () => {
     const files = base([testedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
     expect(rules(check(files))).toContain('run-output-missing')
+  })
+
+  it('fails an uncited run whose output file is missing', () => {
+    // documentedFact cites no run, so only the unconditional existence check can fire
+    const files = base([documentedFact], [{ ...runEntry, output: 'evidence/probe/gone.txt' }])
+    expect(rules(check(files))).toContain('run-output-exists')
   })
 
   it('fails when the quote is absent from the run output', () => {
