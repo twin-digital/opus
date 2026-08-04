@@ -21,6 +21,7 @@ catalog:
   '@middy/core': ^7.0.0
   '@minecraft/common': ^1.2.0
   '@minecraft/server': 2.8.0
+  '@minecraft/server-ui': 2.1.0
   '@minecraft/vanilla-data': ^1.26.33
   '@types/aws-lambda': ^8.10.159
   '@types/lodash-es': ^4.17.12
