@@ -84,8 +84,11 @@ non-zero when findings exist. Two rule groups run:
   naming and claim scope, and record coverage completeness — every requirement and ruled
   decision in force at the record's target, the preset closure's requirements included; deferred
   decisions are excluded, and no coverage entry may name one.
-- **Evidence-bar rules** — the repo-wide `facts/` and `evidence/` pools: entry and wrapper shape
-  against the pool schemas, the backing's source floor, verbatim quotes at in-repo sources (an
+- **Evidence-bar rules** — the repo-wide `facts/` and `evidence/` pools. A pool file is a
+  `version:` mapping carrying a `facts:` or `runs:` sequence; anything else under those
+  directories — a probe's fixtures and inputs — is artifact material and contributes no entries.
+  Checked: file shape against `/design-process/facts@1` and `/design-process/runs@1` (which carry
+  the entry schemas), the backing's source floor, verbatim quotes at in-repo sources (an
   off-repo url — one carrying a scheme — is not read), `run:` sources resolving to a live run on a
   tested fact, `superseded_by` resolution, and id uniqueness across the shared fact/run namespace.
   A pool file that does not parse as YAML is itself a finding, never a silent drop. A run's

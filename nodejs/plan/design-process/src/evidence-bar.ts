@@ -62,18 +62,12 @@ export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Aj
   return findings
 }
 
-// rule 1: entry (and wrapper) shape via the pool schemas, when the tree ships them.
+// rule 1: file shape via the pool schemas, when the tree ships them; facts@1/runs@1 $ref the
+// entry schemas, so one validation covers the version, the sequence, and every entry in it.
 const checkSchemas = (pool: Pool, schemaPool: SchemaPool, ajv: Ajv2020, findings: Finding[]): void => {
   for (const file of pool.files) {
-    if (file.wrapped && file.wrapper) {
-      const wrapperId = `/design-process/${file.kind === 'fact' ? 'facts' : 'runs'}@1`
-      validateAgainst(ajv, schemaPool, wrapperId, file.wrapper, file.path, findings)
-    } else {
-      const entryId = `/design-process/${file.kind}@1`
-      for (const item of file.items) {
-        validateAgainst(ajv, schemaPool, entryId, item.data, item.path, findings)
-      }
-    }
+    const wrapperId = `/design-process/${file.kind === 'fact' ? 'facts' : 'runs'}@1`
+    validateAgainst(ajv, schemaPool, wrapperId, file.wrapper, file.path, findings)
   }
 }
 

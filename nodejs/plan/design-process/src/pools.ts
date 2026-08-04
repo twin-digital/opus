@@ -210,14 +210,12 @@ export interface PoolItem {
   path: string
 }
 
-/** One loaded `facts/` or `evidence/` file: its entries, and whether they came wrapped. */
+/** One loaded `facts/` or `evidence/` file: the `{version, facts|runs: [...]}` mapping and its entries. */
 export interface PoolFile {
   path: string
   kind: 'fact' | 'run'
-  /** true when the file is a `{version, facts|runs: [...]}` wrapper; false for a bare sequence. */
-  wrapped: boolean
-  /** The wrapper mapping when `wrapped`, for validation against its file schema. */
-  wrapper?: Record<string, unknown>
+  /** The whole mapping, for validation against its file schema. */
+  wrapper: Record<string, unknown>
   items: PoolItem[]
 }
 
@@ -237,8 +235,8 @@ export interface Pool {
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 
-// Accepts both the current bare sequence and the later `{version, facts|runs: [...]}` wrapper.
-// An evidence/ mapping without the runs wrapper is probe artifact material and is skipped.
+// The `{version, facts|runs: [...]}` wrapper is what marks a pool file (d-yc56w54u). Anything else
+// under facts/ or evidence/ — a probe's fixtures and inputs — is artifact material and is skipped.
 const loadPoolFile = (
   tree: FileTree,
   path: string,
@@ -259,26 +257,15 @@ const loadPoolFile = (
     return undefined
   }
   const wrapperKey = kind === 'fact' ? 'facts' : 'runs'
-  let entries: unknown[]
-  let wrapped = false
-  let wrapper: Record<string, unknown> | undefined
-  if (Array.isArray(doc)) {
-    entries = doc
-  } else {
-    const record = asRecord(doc)
-    if (record && 'version' in record && Array.isArray(record[wrapperKey])) {
-      wrapped = true
-      wrapper = record
-      entries = record[wrapperKey] as unknown[]
-    } else {
-      return undefined
-    }
+  const wrapper = asRecord(doc)
+  if (!wrapper || !('version' in wrapper) || !Array.isArray(wrapper[wrapperKey])) {
+    return undefined
   }
-  const items: PoolItem[] = entries.map((entry) => {
+  const items: PoolItem[] = (wrapper[wrapperKey] as unknown[]).map((entry) => {
     const data = asRecord(entry) ?? {}
     return { id: typeof data.id === 'string' ? data.id : '', kind, data, path }
   })
-  return { path, kind, wrapped, wrapper, items }
+  return { path, kind, wrapper, items }
 }
 
 /** Load the repo-wide `facts/` and `evidence/` pools into fact and run entries. */
