@@ -53,7 +53,7 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
     findings.push(...checkIds(product))
     findings.push(...checkDecisionRules(product))
     findings.push(...checkQuestionRules(product))
-    findings.push(...checkCitations(product, facts))
+    findings.push(...checkCitations(product, facts, productsTree))
     findings.push(...checkModel(product, schemaPool.entries, surfacePool.entries))
     findings.push(...checkPresets(product, productsTree))
     findings.push(...checkRecords(product, productsTree))
@@ -364,14 +364,20 @@ const checkQuestionRules = (product: Product): Finding[] => {
   return findings
 }
 
-const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
+const checkCitations = (product: Product, facts: FactsPool, productsTree: ProductsTree): Finding[] => {
   const findings: Finding[] = []
   const { requirements, decisions } = productEntries(product)
   const requirementIds = new Set(requirements.map((entry) => entry.id))
   const decisionIds = new Set(decisions.map((entry) => entry.id))
-  const known = new Set([...requirementIds, ...decisionIds])
   const fold = foldProduct(product, undefined, true)
+  // a requirement in force through an adopted preset is folded, projected, and covered, so it is
+  // citable: citations resolve against the folded requirement set, adopted ones included
+  const adopted = closureRequirementIds(resolvePresetClosure(product, productsTree, fold))
+  const known = new Set([...requirementIds, ...decisionIds, ...adopted])
   const inForce = coverableClaimIds(fold)
+  for (const id of adopted) {
+    inForce.add(id)
+  }
   for (const [id, { entry }] of fold.decisions) {
     if (entry.status === 'rejected' || entry.status === 'deferred') {
       inForce.add(id) // in force for citations though not coverable: rejected awaits replacement, deferred its answer

@@ -10,27 +10,40 @@ diff. The process itself is defined by the documents shipped from the
 Every command takes `--root <dir>` (default `.`) naming the repository root.
 
 ```sh
-design-process check [--base <ref>] [--static-only]
-design-process show <product> [--at <increment> | --at-ref <gitref>] [--facet <facet>]
-design-process id <r|d|q> [--count <n>]
+design-process check [--base <ref>] [--static-only] [--json]
+design-process show <product> [--at <increment> | --at-ref <gitref>] [--facet <facet>] [--json]
+design-process id <r|d|q> [--count <n>] [--json]
 
-design-process where <product> [--at <increment> | --at-ref <gitref>] [--next]
+design-process where <product> [--at <increment> | --at-ref <gitref>] [--next] [--json]
 design-process diff <product> (--from <increment> | --from-ref <gitref>)
                               [--to <increment> | --to-ref <gitref>] [--json]
-design-process conflicts <product> [--against <increment> | --against-ref <gitref>]
+design-process conflicts <product> [--against <increment> | --against-ref <gitref>] [--json]
 
-design-process increment <product>
+design-process increment [product] [--pr <url>]
 design-process land <product>
 
-design-process backlog add <product> [--title <text>] [--tag <tag>]... [--file <path>]
+design-process backlog add <product> [--title <text>] [--tag <tag>]... [--file <path>] [--json]
 design-process backlog list [--product <id>] [--tag <tag>]... [--json]
 design-process backlog search <query> [--product <id>] [--tag <tag>]... [--json]
-design-process backlog show <id>
+design-process backlog show <id> [--json]
 design-process backlog update <id> [--title <text>] [--tag <tag>]... [--add-tag <tag>]...
-                                   [--remove-tag <tag>]... [--file <path>] [--product <id>]
-design-process backlog delete <id>...
-design-process backlog send <increment-dir> [--item <id>]... [--product <id>] [--tag <tag>]...
+                                   [--remove-tag <tag>]... [--file <path>] [--product <id>] [--json]
+design-process backlog delete <id>... [--json]
+design-process backlog send <increment-dir> [--item <id>]... [--product <id>] [--tag <tag>]... [--json]
 ```
+
+### Output streams and `--json`
+
+A command's main output — the data it exists to produce — goes to stdout, and stdout carries
+nothing else. The progress and warning lines around it go to stderr: an unresolvable base ref, a
+passing check's note, the tally of a failing one, and an empty result's note. So
+`design-process check > findings.txt` leaves a file holding the findings and nothing more.
+
+The seven commands with a machine-readable main output take `--json` and render it as JSON:
+`check` and `conflicts` emit the findings array, `show` the folded projection as data, `id` the
+ids, `where` the increment it names, `diff` the delta, and each `backlog` subcommand its items.
+`increment` is a full-screen session whose output is the screen and `land` is a step sequence
+written for a person; neither has a structured value behind it, so neither takes the flag.
 
 ### Fold versions
 
@@ -181,26 +194,79 @@ Findings print in `check`'s shape and exit non-zero.
 
 ### increment
 
-A full-screen session over the draft the working tree holds: the owner rules every open entry
-and publishes without leaving it. It opens on the master list of what the draft still carries —
-its proposed decisions, then its open questions — beside a pane holding the selected entry in
-full: statement, pinning proposal, what it supersedes, and what it cites. The list shows each
-entry's staged ruling beside it.
+A full-screen session over a draft's **pull request**: the owner rules every entry it carries and
+publishes without leaving it. What it renders is the authored surface
+`/design-process/ratify-screen@1` in the planning repository's `surfaces/` pool.
 
-| key               | what it does                                                           |
-| ----------------- | ---------------------------------------------------------------------- |
-| `j` / `k`, arrows | move through the list; the pane follows                                |
-| page up / down    | scroll an entry taller than the pane                                   |
-| `a` `t` `g` `r`   | rule the selected decision accepted, tolerated, delegated, or rejected |
-| enter             | answer the selected question, then `f`/`r`/`d` for the route it takes  |
-| `b`               | the bulk action: set every still-unruled decision to one status        |
-| `w`               | write the staged rulings to the draft's sources and commit them        |
-| `l`               | land, offered once every entry is ruled                                |
-| `q`, ctrl-c       | leave; a session abandoned before a write leaves the tree untouched    |
+`--pr <url>` names the pull request to work. Given one, the session resolves it to its head
+branch: where the current tree is already on that branch it works in place, and otherwise it
+fetches the branch, runs in a temporary git worktree made from it, and removes the worktree when
+the session ends. Given no `--pr`, it takes the branch the working directory is on and works the
+pull request whose head is that branch — and where the branch has none, it pushes the branch and
+opens one, since a branch carrying a draft and no pull request is a draft nobody has posted yet.
+
+The product argument is optional: the draft the pull request's diff names carries it. Where the
+diff carries several drafts a selection screen comes first, and naming a product narrows it.
+
+Four things it refuses instead, saying which: the branch is the repository's default branch; the
+tree holds no draft increment; the tree has uncommitted changes; and the head branch lives on a
+fork the local clone cannot push to.
+
+The ratify list holds **every decision the draft carries**, in whatever status, and every question
+still open — a draft is worked over several sittings, and a list holding only what is still open
+would hide the rulings the owner is deciding against. Any of them is re-ruled from the list. A
+header spans the top naming the product, the increment directory, the branch, and the pull
+request, then the draft's changed inputs the list does not hold — schemas, surfaces, facts,
+evidence, and drafts, counted from the branch's merge-base with the head — and how many review
+threads are unresolved.
+
+| key                 | what it does                                                                     |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `j` / `k`, arrows   | move through the list; the pane follows                                          |
+| page up / down      | scroll an entry taller than the pane                                             |
+| `a` `t` `g` `r` `d` | rule the selected decision accepted, tolerated, delegated, rejected, or deferred |
+| enter               | answer the selected question, then `f`/`r`/`d` for the route it takes            |
+| `n`                 | leave a note on the selected entry; it settles nothing and gates nothing         |
+| `b`                 | the bulk action: set every still-unruled decision to one status                  |
+| `w`                 | write the staged rulings, commit, and push                                       |
+| `l`                 | land, offered once nothing is proposed and no question is open                   |
+| `q`, ctrl-c         | leave; a session abandoned before a write leaves the tree untouched              |
 
 A rejection is refused without the owner's reason. An answer routed to a requirement or a
 decision writes a placeholder entry into the draft carrying its generated id and the answer as
 its text, for the owner to state; a fact-routed answer closes the question and writes nothing.
+A deferred decision is settled for the purpose of landing: it is not proposed, and it does not
+hold the landing closed.
+
+Cited ids — a `because:`, what an entry supersedes — are resolved against the product's entries
+and the repo-wide facts pool and shown as the title with the id beside it; one that resolves to
+nothing is shown as the id alone, since a dangling citation is a merge-gate finding rather than
+the session's to report.
+
+#### What a submit writes
+
+Every field the session writes from text the owner typed — a rejection's reason, a routed
+answer, the placeholder statement it writes — is stored as a YAML block scalar whatever its
+length, so a colon, a leading dash, a `#`, or a quote in the owner's prose cannot break the file.
+The write is an edit to the spans it ruled: every other byte stays where it was found, the
+surrounding entries' scalar styles included, so the pull request's diff shows what the sitting
+did.
+
+The commit body names each status the set took and how many entries took it —
+`3 accepted, 1 rejected` — counting answered questions as their own clause, and a sitting that
+changed nothing writes no commit. After committing, the submit pushes the branch; a push the
+remote refuses is reported and the commit left standing.
+
+A submit carrying notes posts exactly one `COMMENT` review to the pull request, after the commit
+and the push. Each note is a comment against the lines of the entry it concerns; a note the
+diff does not reach goes into the review's body naming the entry. No submit approves — approving
+stays the landing's own step, because an approval posted earlier is dismissed by the next push.
+
+The review is the owner's, so it is what the owner's token is spent on: a GitHub personal access
+token typed at the terminal the first time a session posts something, with the input not echoed,
+held in memory for the rest of that session and nowhere else. Opening the pull request, pushing,
+and the merge use the credentials the environment already holds. A session that cannot obtain a
+token still stages, commits, and pushes, and reports the notes it could not post.
 
 ### land
 
@@ -292,8 +358,8 @@ the local branch is left exactly where it started.
 ## Importing the package
 
 The package ships one entry point. Its named exports are the operations behind the subcommands —
-`validateTree`, `projectProduct`, `generateIds`, `resolveFold`, `diffFolds`,
-`findLandingConflicts`, and the backlog operations — with the types their signatures name.
+`validateTree`, `projectProduct`, `projectProductData`, `generateIds`, `resolveFold`, `diffFolds`,
+`findLandingConflicts`, `runIncrementSession`, and the backlog operations — with the types their signatures name.
 Everything else under `src/` is implementation and moves freely between versions.
 
 An increment names itself with `IncrementRef = number | string`: a published number, or a draft

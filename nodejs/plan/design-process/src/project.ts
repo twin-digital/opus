@@ -98,6 +98,88 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     .trimEnd()}\n`
 }
 
+/** The projection as data, for `--json`: the same fold the rendered projection reads (r-rn6wxdn4). */
+export interface ProjectionData {
+  product: string
+  at: IncrementRef
+  presets: { name: string; version: number; via: string[]; requirements: string[] }[]
+  requirements: (RequirementEntry & { increment: IncrementRef; adopted_from?: string })[]
+  decisions: (DecisionEntry & { increment: IncrementRef })[]
+  model: { name: string; schema?: string; surface?: string; description?: string }[]
+  coverage: { claim: string; adopted_from?: string; covered_by: CoverageEntry['covered_by'] | null }[]
+  open_questions: { id: string; answer: string; question: string }[]
+}
+
+/** The folded, effective state of a product at an increment, as data rather than as a page. */
+export const projectProductData = (tree: FileTree, productId: string, options: ProjectOptions = {}): ProjectionData => {
+  const productsTree: ProductsTree = loadProducts(tree)
+  const product = productsTree.products.get(productId)
+  if (!product) {
+    throw new Error(`no product ${JSON.stringify(productId)}`)
+  }
+  const fold = foldProduct(product, options.at, options.at === undefined)
+  const adopted = resolvePresetClosure(product, productsTree, fold).presets
+  const coverageByClaim = new Map<string, CoverageEntry>()
+  for (const record of product.records) {
+    if (typeof record.data.target === 'number' && record.data.target <= fold.at) {
+      for (const entry of record.data.coverage ?? []) {
+        coverageByClaim.set(entry.claim, entry)
+      }
+    }
+  }
+  const coverable = coverableClaimIds(fold)
+  const claims: { id: string; adopted_from?: string }[] = [
+    ...[...fold.requirements.keys()].map((id) => ({ id })),
+    ...adopted.flatMap((preset) =>
+      [...preset.requirements.keys()].map((id) => ({ id, adopted_from: `${preset.name}@${preset.version}` })),
+    ),
+    ...[...fold.decisions.keys()].filter((id) => coverable.has(id)).map((id) => ({ id })),
+  ].filter((claim, index, all) => all.findIndex((other) => other.id === claim.id) === index)
+
+  return {
+    product: product.id,
+    at: fold.label,
+    presets: adopted.map((preset) => ({
+      name: preset.name,
+      version: preset.version,
+      via: preset.via,
+      requirements: [...preset.requirements.keys()],
+    })),
+    requirements: [
+      ...[...fold.requirements.values()].map(({ entry, increment }) => ({ ...entry, increment })),
+      ...adopted.flatMap((preset) =>
+        [...preset.requirements.values()].map(({ entry, increment }) => ({
+          ...entry,
+          increment,
+          adopted_from: `${preset.name}@${preset.version}`,
+        })),
+      ),
+    ],
+    decisions: orderByBecause([...fold.decisions.values()]).map(({ entry, increment }) => ({ ...entry, increment })),
+    model: [...fold.model.values()].map(({ entry }) => ({
+      name: entry.name,
+      schema: entry.schema,
+      surface: entry.surface ?? entry.api,
+      description: entry.description,
+    })),
+    coverage: claims.map((claim) => ({
+      claim: claim.id,
+      adopted_from: claim.adopted_from,
+      covered_by: coverageByClaim.get(claim.id)?.covered_by ?? null,
+    })),
+    open_questions: [
+      ...product.increments.filter((candidate) => candidate.number <= fold.at),
+      ...product.drafts.filter((candidate) => fold.drafts.includes(candidate.name)),
+    ].flatMap((increment) =>
+      (increment.questions?.data.questions ?? []).map((question) => ({
+        id: question.id,
+        answer: question.answer,
+        question: question.question.trim(),
+      })),
+    ),
+  }
+}
+
 const formatFacets = (facets: string | string[] | undefined): string =>
   facets === undefined ? '' : ` [${(Array.isArray(facets) ? facets : [facets]).join(', ')}]`
 
