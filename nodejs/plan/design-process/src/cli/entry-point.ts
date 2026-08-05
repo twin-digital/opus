@@ -7,7 +7,7 @@ import { findLandingConflicts } from '../conflicts.js'
 import { diffFolds, renderFoldDiff } from '../diff.js'
 import { generateIds, collectIds } from '../ids.js'
 import { landIncrement, landingBlockers } from '../land.js'
-import { projectProduct } from '../project.js'
+import { projectProduct, projectProductData } from '../project.js'
 import { runIncrementSession } from '../session/run.js'
 import { readSecret } from '../session/secret.js'
 import { DirTree, GitTree, resolveGitRef } from '../tree.js'
@@ -27,13 +27,39 @@ program
 
 const rootOption = (command: Command): Command => command.option('--root <dir>', 'repository root', '.')
 
-program
-  .command('check')
+/** Every command renders its main output as JSON on request (r-rn6wxdn4). */
+const jsonOption = (command: Command): Command => command.option('--json', 'render the main output as JSON', false)
+
+const writeJson = (value: unknown): void => {
+  process.stdout.write(`${JSON.stringify(value, undefined, 2)}\n`)
+}
+
+/**
+ * The findings a command produces are its main output and go to stdout; the progress and warning
+ * lines around them are diagnostics and go to stderr (d-m7i568id, r-d474vggq, r-tbmrw430).
+ */
+const reportFindings = (findings: Finding[], json: boolean, passed: string, failed: string): void => {
+  if (json) {
+    writeJson(findings)
+  } else {
+    for (const finding of findings) {
+      process.stdout.write(formatFinding(finding))
+    }
+  }
+  if (findings.length === 0) {
+    process.stderr.write(`${passed}\n`)
+    return
+  }
+  process.stderr.write(`${failed}: ${findings.length}\n`)
+  process.exitCode = 1
+}
+
+jsonOption(program.command('check'))
   .description('apply every design rule in force; any finding blocks the merge')
   .option('--root <dir>', 'repository root', '.')
   .option('--base <ref>', 'git ref the change rules compare against (default: origin/main, then main)')
   .option('--static-only', 'skip the change rules that need a base ref', false)
-  .action((options: { root: string; base?: string; staticOnly: boolean }) => {
+  .action((options: { root: string; base?: string; staticOnly: boolean; json: boolean }) => {
     const head = new DirTree(options.root)
     let base: GitTree | undefined
     if (!options.staticOnly) {
@@ -44,71 +70,71 @@ program
         base = new GitTree(options.root, ref)
       }
     }
-    const findings = validateTree(head, { base })
-    if (findings.length === 0) {
-      process.stdout.write('design check passed\n')
-      return
-    }
-    for (const finding of findings) {
-      process.stdout.write(formatFinding(finding))
-    }
-    process.stdout.write(`design check failed: ${findings.length} finding(s)\n`)
-    process.exitCode = 1
+    reportFindings(validateTree(head, { base }), options.json, 'design check passed', 'design check failed')
   })
 
-program
-  .command('show')
+jsonOption(program.command('show'))
   .description('render the folded, effective state of a product at a fold version')
   .argument('<product>', 'product id (the products/<id> directory name)')
   .option('--root <dir>', 'repository root', '.')
   .option('--at <increment>', "fold at this increment number, padded or not (default: the working tree's newest)")
   .option('--at-ref <gitref>', "fold at this git ref's newest increment")
   .option('--facet <facet>', 'show only claims carrying this facet')
-  .action((productId: string, options: { root: string; at?: string; atRef?: string; facet?: string }) => {
-    const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
-    const resolved = resolveFold(options.root, productId, version)
-    // with no version asked for, the projection reads the tree as it stands — drafts included
-    const at = version === undefined ? undefined : resolved.at
-    process.stdout.write(projectProduct(resolved.tree, productId, { at, facet: options.facet }))
-  })
+  .action(
+    (productId: string, options: { root: string; at?: string; atRef?: string; facet?: string; json: boolean }) => {
+      const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
+      const resolved = resolveFold(options.root, productId, version)
+      // with no version asked for, the projection reads the tree as it stands — drafts included
+      const at = version === undefined ? undefined : resolved.at
+      if (options.json) {
+        writeJson(projectProductData(resolved.tree, productId, { at, facet: options.facet }))
+        return
+      }
+      process.stdout.write(projectProduct(resolved.tree, productId, { at, facet: options.facet }))
+    },
+  )
 
-program
-  .command('id')
+jsonOption(program.command('id'))
   .description('generate opaque ids, unique against everything under products/')
   .argument('<kind>', 'r (requirement), d (decision), or q (question)')
   .option('--root <dir>', 'repository root', '.')
   .option('--count <n>', 'how many ids to generate', '1')
-  .action((kind: string, options: { root: string; count: string }) => {
+  .action((kind: string, options: { root: string; count: string; json: boolean }) => {
     if (kind !== 'r' && kind !== 'd' && kind !== 'q') {
       program.error(`kind must be r, d, or q; got ${JSON.stringify(kind)}`)
     }
     const taken = collectIds(new DirTree(options.root))
-    for (const id of generateIds(kind as IdKind, Number(options.count), taken)) {
+    const ids = generateIds(kind as IdKind, Number(options.count), taken)
+    if (options.json) {
+      writeJson(ids)
+      return
+    }
+    for (const id of ids) {
       process.stdout.write(`${id}\n`)
     }
   })
 
-program
-  .command('where')
+jsonOption(program.command('where'))
   .description("name a product's latest published increment at a fold version")
   .argument('<product>', 'product id')
   .option('--root <dir>', 'repository root', '.')
   .option('--at <increment>', 'report at this increment number, padded or not (default: the working tree)')
   .option('--at-ref <gitref>', 'report the newest increment published at this git ref')
   .option('--next', 'print the number a landing would claim instead', false)
-  .action((productId: string, options: { root: string; at?: string; atRef?: string; next: boolean }) => {
+  .action((productId: string, options: { root: string; at?: string; atRef?: string; next: boolean; json: boolean }) => {
     const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
     const resolved = resolveFold(options.root, productId, version)
-    if (options.next) {
-      process.stdout.write(`${formatIncrement(resolved.at + 1)}\n`)
-      return
-    }
-    if (resolved.at === 0) {
+    if (!options.next && resolved.at === 0) {
       process.stderr.write(`design-process: ${productId} has published no increment there\n`)
       process.exitCode = 1
       return
     }
-    process.stdout.write(`${formatIncrement(resolved.at)}\n`)
+    const increment = formatIncrement(options.next ? resolved.at + 1 : resolved.at)
+    if (options.json) {
+      writeJson({ product: productId, increment })
+      return
+    }
+    process.stdout.write(`${increment}\n`)
   })
 
 program
@@ -146,14 +172,13 @@ program
     },
   )
 
-program
-  .command('conflicts')
+jsonOption(program.command('conflicts'))
   .description("check a draft's rulings against the fold at head before it lands")
   .argument('<product>', 'product id')
   .option('--root <dir>', 'repository root', '.')
   .option('--against <increment>', 'check against this increment number, padded or not')
   .option('--against-ref <gitref>', "check against this git ref's fold (default: origin/main, then main)")
-  .action((productId: string, options: { root: string; against?: string; againstRef?: string }) => {
+  .action((productId: string, options: { root: string; against?: string; againstRef?: string; json: boolean }) => {
     let version = parseFoldVersion({
       increment: options.against,
       ref: options.againstRef,
@@ -168,25 +193,22 @@ program
       version = { kind: 'ref', ref }
     }
     const head = resolveFold(options.root, productId, version)
-    const findings = findLandingConflicts(new DirTree(options.root), head, productId)
-    if (findings.length === 0) {
-      process.stdout.write(`landing check passed: no conflicts against ${formatIncrement(head.at)}\n`)
-      return
-    }
-    for (const finding of findings) {
-      process.stdout.write(formatFinding(finding))
-    }
-    process.stdout.write(`landing check failed: ${findings.length} conflict(s)\n`)
-    process.exitCode = 1
+    reportFindings(
+      findLandingConflicts(new DirTree(options.root), head, productId),
+      options.json,
+      `landing check passed: no conflicts against ${formatIncrement(head.at)}`,
+      'landing check failed',
+    )
   })
 
 program
   .command('increment')
-  .description("rule a draft's open entries and land it, in one full-screen session")
-  .argument('<product>', 'product id')
+  .description("rule a draft's entries and land it, in one full-screen session over its pull request")
+  .argument('[product]', 'product id; the draft the pull request carries names it where it is omitted')
   .option('--root <dir>', 'repository root', '.')
-  .action(async (productId: string, options: { root: string }) => {
-    process.exitCode = await runIncrementSession({ root: options.root, product: productId })
+  .option('--pr <url>', "the pull request to work; the working directory's branch supplies one where it is omitted")
+  .action(async (productId: string | undefined, options: { root: string; pr?: string }) => {
+    process.exitCode = await runIncrementSession({ root: options.root, product: productId, pr: options.pr })
   })
 
 program
@@ -262,15 +284,19 @@ const readBody = (file?: string): string | undefined => {
 
 const collect = (value: string, previous: string[]): string[] => [...previous, value]
 
-writeOptions(backlog.command('add'))
+jsonOption(writeOptions(backlog.command('add')))
   .description('capture an item; the body comes from stdin or --file')
   .argument('<product>', 'the product the item belongs to')
   .option('--title <text>', 'the item title, written as the first heading')
   .option('--tag <tag>', 'a tag, repeatable', collect, [])
   .option('--file <path>', 'read the body from this file, or - for stdin')
-  .action((product: string, options: StoreFlags & { title?: string; tag: string[]; file?: string }) => {
+  .action((product: string, options: StoreFlags & { title?: string; tag: string[]; file?: string; json: boolean }) => {
     const body = options.title !== undefined && options.file === undefined ? readBody() : readBody(options.file ?? '-')
     const item = addItem(store(options), { product, title: options.title, tags: options.tag, body })
+    if (options.json) {
+      writeJson({ id: item.id })
+      return
+    }
     process.stdout.write(`${item.id}\n`)
   })
 
@@ -293,14 +319,19 @@ storeOptions(backlog.command('search'))
     emit(searchItems(store(options), query, { product: options.product, tags: options.tag }), options.json)
   })
 
-storeOptions(backlog.command('show'))
+jsonOption(storeOptions(backlog.command('show')))
   .description("print one item's markdown")
   .argument('<id>', 'the item id')
-  .action((id: string, options: StoreFlags) => {
-    process.stdout.write(readItem(store(options), id).content)
+  .action((id: string, options: StoreFlags & { json: boolean }) => {
+    const item = readItem(store(options), id)
+    if (options.json) {
+      writeJson({ id: item.id, product: item.product, title: item.title, tags: item.tags, content: item.content })
+      return
+    }
+    process.stdout.write(item.content)
   })
 
-writeOptions(backlog.command('update'))
+jsonOption(writeOptions(backlog.command('update')))
   .description('revise an item')
   .argument('<id>', 'the item id')
   .option('--title <text>', 'replace the title')
@@ -319,9 +350,10 @@ writeOptions(backlog.command('update'))
         removeTag: string[]
         file?: string
         product?: string
+        json: boolean
       },
     ) => {
-      updateItem(store(options), id, {
+      const updated = updateItem(store(options), id, {
         title: options.title,
         tags: options.tag.length > 0 ? options.tag : undefined,
         addTags: options.addTag,
@@ -329,32 +361,47 @@ writeOptions(backlog.command('update'))
         body: options.file === undefined ? undefined : readBody(options.file),
         product: options.product,
       })
+      if (options.json) {
+        writeJson({ id: updated.id, product: updated.product, title: updated.title, tags: updated.tags })
+      }
     },
   )
 
-writeOptions(backlog.command('delete'))
+jsonOption(writeOptions(backlog.command('delete')))
   .description('drop items from the backlog')
   .argument('<id...>', 'the item ids')
-  .action((ids: string[], options: StoreFlags) => {
+  .action((ids: string[], options: StoreFlags & { json: boolean }) => {
     deleteItems(store(options), ids)
+    if (options.json) {
+      writeJson({ deleted: ids })
+    }
   })
 
-writeOptions(backlog.command('send'))
+jsonOption(writeOptions(backlog.command('send')))
   .description("copy items into an increment's drafts and drain them from the backlog")
   .argument('<increment-dir>', 'products/<product>/increments/<name> — a slug-named draft or a numbered increment')
   .addOption(new Option('--item <id>', 'send this item, repeatable').argParser(collect).default([]))
   .option('--product <id>', "send all of a product's items")
   .option('--tag <tag>', 'send items carrying this tag, repeatable', collect, [])
-  .action((incrementDir: string, options: StoreFlags & { item: string[]; product?: string; tag: string[] }) => {
-    const sent = sendItems(store(options), incrementDir, {
-      ids: options.item.length > 0 ? options.item : undefined,
-      product: options.product,
-      tags: options.tag,
-    })
-    for (const entry of sent) {
-      process.stdout.write(`${entry.item.id}\t${entry.path}\n`)
-    }
-  })
+  .action(
+    (
+      incrementDir: string,
+      options: StoreFlags & { item: string[]; product?: string; tag: string[]; json: boolean },
+    ) => {
+      const sent = sendItems(store(options), incrementDir, {
+        ids: options.item.length > 0 ? options.item : undefined,
+        product: options.product,
+        tags: options.tag,
+      })
+      if (options.json) {
+        writeJson(sent.map((entry) => ({ id: entry.item.id, path: entry.path })))
+        return
+      }
+      for (const entry of sent) {
+        process.stdout.write(`${entry.item.id}\t${entry.path}\n`)
+      }
+    },
+  )
 
 const emit = (items: BacklogItem[], json: boolean): void => {
   if (json) {
