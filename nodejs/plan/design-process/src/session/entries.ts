@@ -1,3 +1,6 @@
+import { loadProducts } from '../load.js'
+
+import type { DraftIncrement } from '../load.js'
 import type { FileTree } from '../tree.js'
 
 /** What a question routes to — the kind of foundation that would answer it. */
@@ -29,6 +32,40 @@ export interface OpenEntry {
  * the proposed decisions first within an increment, then its open questions. This is the master
  * list the session opens on (d-9g0poz7v).
  */
-export const collectOpenEntries = (_tree: FileTree, _productId: string): OpenEntry[] => {
-  throw new Error('not implemented')
+export const collectOpenEntries = (tree: FileTree, productId: string): OpenEntry[] => {
+  const product = loadProducts(tree).products.get(productId)
+  if (product === undefined) {
+    throw new Error(`no product ${JSON.stringify(productId)} in this tree`)
+  }
+  return product.drafts.flatMap(draftEntries)
+}
+
+/** A draft's proposed decisions in source order, then its open questions. */
+const draftEntries = (draft: DraftIncrement): OpenEntry[] => {
+  const decisions = (draft.decisions?.data.decisions ?? [])
+    .filter((entry) => entry.status === 'proposed')
+    .map(
+      (entry): OpenEntry => ({
+        kind: 'decision',
+        id: entry.id,
+        title: entry.title,
+        text: entry.statement,
+        increment: draft.name,
+        path: draft.decisions?.path ?? `${draft.dir}/decisions.yaml`,
+        pinned: entry.pinned,
+        supersedes: entry.supersedes,
+        because: entry.because,
+      }),
+    )
+  const questions = (draft.questions?.data.questions ?? []).map(
+    (entry): OpenEntry => ({
+      kind: 'question',
+      id: entry.id,
+      text: entry.question,
+      increment: draft.name,
+      path: draft.questions?.path ?? `${draft.dir}/questions.yaml`,
+      route: entry.answer,
+    }),
+  )
+  return [...decisions, ...questions]
 }

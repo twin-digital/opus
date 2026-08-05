@@ -210,17 +210,23 @@ program
       approvingToken: () => readSecret({ prompt: "the owner's approving token: " }).then((token) => token || undefined),
     })
     for (const step of result.steps) {
-      process.stdout.write(`${step.status === 'ok' ? '✔' : '✖'} ${step.step}${step.detail ? `: ${step.detail}` : ''}\n`)
+      const mark =
+        step.status === 'ok' ? '✔'
+        : step.status === 'skipped' ? '·'
+        : '✖'
+      process.stdout.write(`${mark} ${step.step}${step.detail === undefined ? '' : `: ${step.detail}`}\n`)
     }
     if (!result.landed) {
       process.exitCode = 1
       return
     }
-    process.stdout.write(
-      result.awaitingApproval ?
-        `landed as ${result.number}; the pull request awaits the owner's approval\n`
-      : `landed as ${result.number}\n`,
-    )
+    process.stdout.write(`landed as ${result.number}\n`)
+    if (result.awaitingApproval === true) {
+      process.stdout.write("the pull request awaits the owner's approval\n")
+    }
+    if (result.awaitingMerge === true) {
+      process.stdout.write('the pull request is approved and awaits a manual merge\n')
+    }
   })
 
 const backlog = program.command('backlog').description('the cross-increment backlog, on the orphan `backlog` branch')

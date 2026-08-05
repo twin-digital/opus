@@ -3,7 +3,9 @@ import { PassThrough } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { landIncrement, LAND_STEPS, landingBlockers } from '../src/land.js'
+import { collectOpenEntries } from '../src/session/entries.js'
 import { readSecret } from '../src/session/secret.js'
+import { emptyStaging, stageRuling } from '../src/session/staging.js'
 import { DirTree } from '../src/tree.js'
 
 import { demoProduct, makeRepo, removeRepo, yaml } from './helpers.js'
@@ -49,6 +51,9 @@ interface Call {
   args: string[]
 }
 
+/** What `gh pr view` reports for the branch: the landing discovers the pull request (d-8vsionnz). */
+const PR_VIEW = JSON.stringify({ url: 'https://github.com/twin-digital/plan-opus/pull/42' })
+
 const recorder = (fail?: string): { run: CommandRunner; calls: Call[] } => {
   const calls: Call[] = []
   const run: CommandRunner = (command, args) => {
@@ -56,7 +61,7 @@ const recorder = (fail?: string): { run: CommandRunner; calls: Call[] } => {
     if (fail !== undefined && args.join(' ').includes(fail)) {
       throw new Error(`${command} failed`)
     }
-    return ''
+    return command === 'gh' && args[1] === 'view' ? PR_VIEW : ''
   }
   return { run, calls }
 }
@@ -108,14 +113,15 @@ describe('the landing sequence is fixed — d-qzpfyc6s', () => {
 
   it('approves after the push, since a push dismisses an approval', async () => {
     const order: string[] = []
+    const { run } = recorder()
     const result = await landIncrement({
       root: repo(settled()),
       product: 'demo',
-      run: (command, args) => {
+      run: (command, args, runOptions) => {
         if (args.includes('push')) {
           order.push('push')
         }
-        return ''
+        return run(command, args, runOptions)
       },
       approvingToken: () => Promise.resolve('t'),
       approve: () => {
@@ -125,6 +131,54 @@ describe('the landing sequence is fixed — d-qzpfyc6s', () => {
     })
     expect(result.landed).toBe(true)
     expect(order).toEqual(['push', 'approve'])
+  })
+})
+
+describe('the landing discovers the pull request and opens none — d-8vsionnz', () => {
+  it('publishes, skips the approval, and opens nothing when the branch has no pull request', async () => {
+    const { run, calls } = recorder()
+    const noPullRequest: CommandRunner = (command, args, options) => {
+      if (command === 'gh' && args[1] === 'view') {
+        throw new Error('no pull request found for branch')
+      }
+      return run(command, args, options)
+    }
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run: noPullRequest,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.reject(new Error('the approval must not be attempted')),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.awaitingApproval).toBe(true)
+    expect(result.steps.find((step) => step.step === 'approve')?.status).toBe('skipped')
+    expect(result.steps.find((step) => step.step === 'auto-merge')?.status).toBe('skipped')
+    expect(calls.some((call) => call.args.includes('create'))).toBe(false)
+  })
+
+  it('reports an approved pull request awaiting a manual merge when auto-merge is refused', async () => {
+    const { run } = recorder()
+    const refusing: CommandRunner = (command, args, options) => {
+      if (command === 'gh' && args[1] === 'merge') {
+        throw new Error('auto-merge is not enabled for this repository')
+      }
+      return run(command, args, options)
+    }
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run: refusing,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.awaitingApproval).toBeUndefined()
+    expect(result.awaitingMerge).toBe(true)
+    expect(result.steps.find((step) => step.step === 'approve')?.status).toBe('ok')
+    const merge = result.steps.find((step) => step.step === 'auto-merge')
+    expect(merge?.status).toBe('skipped')
+    expect(merge?.detail).toContain('merge it once the gate is green')
   })
 })
 
@@ -140,6 +194,27 @@ describe('an unsettled draft publishes nothing — r-2keswxn8', () => {
     expect(result.landed).toBe(false)
     expect(result.steps.some((step) => step.status === 'ok')).toBe(false)
     expect(calls).toEqual([])
+  })
+
+  it('counts an entry the staged set is about to settle as settled, since apply runs first', async () => {
+    const root = repo(unsettled())
+    const entries = collectOpenEntries(new DirTree(root), 'demo')
+    const staged = stageRuling(emptyStaging(), {
+      kind: 'question',
+      id: 'q-11111111',
+      answer: 'measured at 12ms.',
+      route: 'fact',
+    })
+    const result = await landIncrement({
+      root,
+      product: 'demo',
+      run: recorder().run,
+      staged: { entries, staged },
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.steps.find((step) => step.step === 'apply')?.status).toBe('ok')
   })
 })
 
