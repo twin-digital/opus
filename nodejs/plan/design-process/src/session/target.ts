@@ -32,6 +32,7 @@ export interface DraftChoice {
 export type TargetRefusal =
   | { reason: 'default-branch'; branch: string }
   | { reason: 'no-draft' }
+  | { reason: 'no-pull-request'; pr: string }
   | { reason: 'uncommitted-changes' }
   | { reason: 'unpushable-fork'; branch: string }
   | { reason: 'no-increment-on-pull-request'; pullRequest: PullRequest }
@@ -43,6 +44,8 @@ export const refusalMessage = (refusal: TargetRefusal): string => {
       return `${refusal.branch} is the repository's default branch, which carries no draft`
     case 'no-draft':
       return 'this tree holds no draft increment; there is nothing to rule'
+    case 'no-pull-request':
+      return `${refusal.pr} names no pull request this clone can read`
     case 'uncommitted-changes':
       return 'this tree has uncommitted changes; commit them before ruling over them'
     case 'unpushable-fork':
@@ -60,7 +63,7 @@ export interface TargetOptions {
   /** `[product]`; narrows the drafts the pull request's diff carries. */
   product?: string
   /** Asked only where the diff carries several drafts after the product narrows them. */
-  choose?: (choices: DraftChoice[]) => Promise<DraftChoice>
+  choose?: (choices: DraftChoice[], on: { branch: string; pullRequest: number }) => Promise<DraftChoice>
   /** Injected by the tests; defaults to spawning the real command. */
   run?: CommandRunner
 }
@@ -226,11 +229,13 @@ export const resolveSessionTarget = async (
     }
   }
   if (view === undefined) {
-    return { refused: { reason: 'no-draft' } }
+    return {
+      refused: options.pr === undefined ? { reason: 'no-draft' } : { reason: 'no-pull-request', pr: options.pr },
+    }
   }
   const pullRequest = pullRequestAt(view.url, view.number)
   if (pullRequest === undefined) {
-    return { refused: { reason: 'no-draft' } }
+    return { refused: { reason: 'no-pull-request', pr: view.url } }
   }
   if (view.isCrossRepository === true) {
     return { refused: { reason: 'unpushable-fork', branch: view.headRefName } }
@@ -244,7 +249,10 @@ export const resolveSessionTarget = async (
   if ('refused' in tree) {
     return tree
   }
-  const chosen = choices.length === 1 ? choices[0] : await pick(choices, options.choose)
+  const chosen =
+    choices.length === 1 ?
+      choices[0]
+    : await pick(choices, { branch: view.headRefName, pullRequest: view.number }, options.choose)
   return {
     root: tree.root,
     product: chosen.product,
@@ -261,5 +269,8 @@ const narrow = (choices: DraftChoice[], product?: string): DraftChoice[] => {
   return narrowed.length === 0 ? choices : narrowed
 }
 
-const pick = async (choices: DraftChoice[], choose?: TargetOptions['choose']): Promise<DraftChoice> =>
-  choose === undefined ? choices[0] : choose(choices)
+const pick = async (
+  choices: DraftChoice[],
+  on: { branch: string; pullRequest: number },
+  choose?: TargetOptions['choose'],
+): Promise<DraftChoice> => (choose === undefined ? choices[0] : choose(choices, on))

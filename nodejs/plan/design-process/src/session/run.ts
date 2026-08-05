@@ -77,7 +77,7 @@ export const runIncrementSession = async (options: SessionOptions): Promise<numb
     pr: options.pr,
     product: options.product,
     run,
-    choose: (choices) => chooseDraft(choices, input, output, viewport()),
+    choose: (choices, on) => chooseDraft(choices, on, input, output, viewport()),
   })
   if ('refused' in target) {
     process.stderr.write(`design-process: ${refusalMessage(target.refused)}\n`)
@@ -168,6 +168,7 @@ const drive = (input: Readable, session: { state: SessionState }, draw: () => vo
 /** The select-draft screen, shown only where the diff carries more than one draft (d-pm6a29v6). */
 const chooseDraft = (
   choices: DraftChoice[],
+  on: { branch: string; pullRequest: number },
   input: Readable & Terminal,
   output: Writable,
   viewport: { rows: number; columns: number },
@@ -175,7 +176,7 @@ const chooseDraft = (
   new Promise((resolve) => {
     let selected = 0
     const draw = () => {
-      output.write(CLEAR + renderSelectDraft(choices, selected, { branch: '', pullRequest: 0 }, viewport).join('\n'))
+      output.write(CLEAR + renderSelectDraft(choices, selected, on, viewport).join('\n'))
     }
     emitKeypressEvents(input)
     const raw = input.isTTY === true && typeof input.setRawMode === 'function'

@@ -95,6 +95,12 @@ describe('the session finds the pull request it works — d-7i1l1kfy', () => {
     expect(await resolve({})).toEqual({ refused: { reason: 'no-draft' } })
   })
 
+  it('refuses a --pr url naming no pull request it can read', async () => {
+    expect(await resolve({}, { pr: 'https://github.com/a/b/pull/9' })).toEqual({
+      refused: { reason: 'no-pull-request', pr: 'https://github.com/a/b/pull/9' },
+    })
+  })
+
   it('refuses a pull request whose diff touches no increment', async () => {
     expect(await resolve({ view: { ...VIEW, files: [{ path: 'README.md' }] } })).toMatchObject({
       refused: { reason: 'no-increment-on-pull-request' },
@@ -142,8 +148,9 @@ describe('the pull request’s diff names the draft — d-pm6a29v6', () => {
     const target = await resolveSessionTarget({
       root: '/repo',
       run: runner({ view: twoDrafts }),
-      choose: (choices) => {
+      choose: (choices, on) => {
         offered = choices
+        expect(on).toEqual({ branch: VIEW.headRefName, pullRequest: 197 })
         return Promise.resolve(choices[1])
       },
     })
