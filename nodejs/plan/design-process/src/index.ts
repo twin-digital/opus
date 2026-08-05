@@ -8,9 +8,9 @@
 export { validateTree } from './validate.js'
 export type { ValidateOptions } from './validate.js'
 
-// show
-export { projectProduct, projectProductData } from './project.js'
-export type { ProjectionData, ProjectOptions } from './project.js'
+// show — the rendered projection only; the data behind `--json` is not a published shape
+export { projectProduct } from './project.js'
+export type { ProjectOptions } from './project.js'
 
 // increment — the ratify session over a draft's pull request
 export { runIncrementSession } from './session/run.js'

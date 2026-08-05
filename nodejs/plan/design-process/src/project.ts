@@ -98,7 +98,11 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     .trimEnd()}\n`
 }
 
-/** The projection as data, for `--json`: the same fold the rendered projection reads (r-rn6wxdn4). */
+/**
+ * The projection as data, for `--json`: the same fold the rendered projection reads (r-rn6wxdn4).
+ * The serialised form is not a published shape and changes without notice — it is neither exported
+ * from the package's entry point nor held to a contract in the pools.
+ */
 export interface ProjectionData {
   product: string
   at: IncrementRef
