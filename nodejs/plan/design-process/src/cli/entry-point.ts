@@ -6,7 +6,10 @@ import { addItem, deleteItems, listItems, readItem, searchItems, sendItems, upda
 import { findLandingConflicts } from '../conflicts.js'
 import { diffFolds, renderFoldDiff } from '../diff.js'
 import { generateIds, collectIds } from '../ids.js'
+import { landIncrement, landingBlockers } from '../land.js'
 import { projectProduct } from '../project.js'
+import { runIncrementSession } from '../session/run.js'
+import { readSecret } from '../session/secret.js'
 import { DirTree, GitTree, resolveGitRef } from '../tree.js'
 import { validateTree } from '../validate.js'
 import { formatIncrement, parseFoldVersion, resolveFold } from '../version.js'
@@ -175,6 +178,49 @@ program
     }
     process.stdout.write(`landing check failed: ${findings.length} conflict(s)\n`)
     process.exitCode = 1
+  })
+
+program
+  .command('increment')
+  .description("rule a draft's open entries and land it, in one full-screen session")
+  .argument('<product>', 'product id')
+  .option('--root <dir>', 'repository root', '.')
+  .action(async (productId: string, options: { root: string }) => {
+    process.exitCode = await runIncrementSession({ root: options.root, product: productId })
+  })
+
+program
+  .command('land')
+  .description('run the landing sequence over the draft the working tree holds, without a session')
+  .argument('<product>', 'product id')
+  .option('--root <dir>', 'repository root', '.')
+  .action(async (productId: string, options: { root: string }) => {
+    const blockers = landingBlockers(new DirTree(options.root), productId)
+    if (blockers.length > 0) {
+      for (const blocker of blockers) {
+        process.stderr.write(`design-process: ${blocker}\n`)
+      }
+      process.stderr.write('design-process: the draft is unsettled; nothing was published\n')
+      process.exitCode = 1
+      return
+    }
+    const result = await landIncrement({
+      root: options.root,
+      product: productId,
+      approvingToken: () => readSecret({ prompt: "the owner's approving token: " }).then((token) => token || undefined),
+    })
+    for (const step of result.steps) {
+      process.stdout.write(`${step.status === 'ok' ? '✔' : '✖'} ${step.step}${step.detail ? `: ${step.detail}` : ''}\n`)
+    }
+    if (!result.landed) {
+      process.exitCode = 1
+      return
+    }
+    process.stdout.write(
+      result.awaitingApproval ?
+        `landed as ${result.number}; the pull request awaits the owner's approval\n`
+      : `landed as ${result.number}\n`,
+    )
   })
 
 const backlog = program.command('backlog').description('the cross-increment backlog, on the orphan `backlog` branch')
