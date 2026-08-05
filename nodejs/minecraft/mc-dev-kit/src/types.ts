@@ -14,11 +14,16 @@ export type ManifestVersion = string | [number, number, number]
 /**
  * A pack manifest module. `type` states what the module holds; `data` and `script` corroborate a
  * behavior pack and `resources` a resource pack, and any other type is ignored.
+ *
+ * `entry` is the kit's to write: a source manifest specifying one is `module-entry-specified`, and
+ * a completed script module carries the pack-relative path of its built bundle.
  */
 export interface ManifestModule {
   type: string
   uuid?: string
   version?: ManifestVersion
+  /** the built script's path relative to the pack root, written by completion */
+  entry?: string
   [key: string]: unknown
 }
 
@@ -81,6 +86,7 @@ export type Problem =
   | { code: 'array-version-at-format-version-3'; message: string; field: string }
   | { code: 'header-name-specified'; message: string }
   | { code: 'header-version-specified'; message: string }
+  | { code: 'module-entry-specified'; message: string; field: string }
   | { code: 'package-name-missing'; message: string }
   | { code: 'package-version-missing'; message: string; field: string; packageDir: string }
   | {
@@ -122,6 +128,12 @@ export interface PackEntryBase {
   sourceDir: string
   /** workspace-relative, e.g. `packages/mc-pack-1/dist/behavior_pack`, reported whether or not it exists */
   outputDir: string
+  /**
+   * where a behavior pack's bundled script module belongs — `scripts/main.js` within `outputDir` —
+   * reported whether or not it exists, and `null` for a resource pack, which has no script. The
+   * location is computed from the pack's kind; nothing is probed and no source `entry` is read.
+   */
+  scriptOutput: string | null
 }
 
 /** A pack the kit resolved whole: every detail is present and nothing is in doubt. */
@@ -167,6 +179,20 @@ export interface PackCriteria {
   /** the header uuid */
   uuid?: string
   status?: 'valid' | 'invalid'
+}
+
+/** The workspace root an ascent found, and the package sitting at it. */
+export interface WorkspaceRoot {
+  /** the absolute path of the workspace root directory */
+  root: string
+  /** the root package's declared name, or its directory basename where it declares none */
+  packageName: string
+}
+
+/** Options for {@link resolveWorkspaceRoot}. */
+export interface WorkspaceRootOptions {
+  /** where the ascent starts; defaults to `process.cwd()`, and a relative path resolves against it */
+  from?: string
 }
 
 /** Options for {@link discoverPacks}. */

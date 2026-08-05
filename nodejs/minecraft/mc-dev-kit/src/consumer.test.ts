@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest'
 import { packManifest, writeWorkspace } from '../test/fixture.js'
 import {
   discoverPacks,
+  resolveWorkspaceRoot,
   type DiscoverOptions,
   type InvalidPackEntry,
   type ManifestDependency,
@@ -14,7 +15,10 @@ import {
   type PackManifest,
   type Problem,
   type ValidPackEntry,
+  type WorkspaceRoot,
+  type WorkspaceRootOptions,
 } from '@twin-digital/mc-dev-kit'
+import { packBuild, type PackBuildOptions } from '@twin-digital/mc-dev-kit/build'
 
 /** The shape a consumer meets: the entry point, and the types it hands back. */
 describe('the kit as a consumer imports it', () => {
@@ -31,6 +35,32 @@ describe('the kit as a consumer imports it', () => {
     expectTypeOf<ManifestModule>().toHaveProperty('type')
     expectTypeOf<ManifestVersion>().toEqualTypeOf<string | [number, number, number]>()
     expectTypeOf<ManifestDependency[]>().toEqualTypeOf<NonNullable<PackManifest['dependencies']>>()
+  })
+
+  it('exports workspace-root resolution, and the types it speaks', () => {
+    expectTypeOf(resolveWorkspaceRoot).toBeFunction()
+    expectTypeOf(resolveWorkspaceRoot).returns.resolves.toEqualTypeOf<WorkspaceRoot | undefined>()
+    expectTypeOf<WorkspaceRoot>().toEqualTypeOf<{ root: string; packageName: string }>()
+    expectTypeOf<WorkspaceRootOptions>().toHaveProperty('from')
+  })
+
+  it('exports the build fragment from its own subpath, so the discovery half names no bundler', () => {
+    expectTypeOf(packBuild).toBeFunction()
+    expectTypeOf<PackBuildOptions>().toEqualTypeOf<{ packageDir: string }>()
+  })
+
+  it('reports where a built script belongs on every entry, null where a pack has none', async () => {
+    const workspace = await writeWorkspace({
+      'package.json': { name: 'solo', version: '1.0.0' },
+      'behavior_pack/manifest.json': packManifest('behavior'),
+      'resource_pack/manifest.json': packManifest('resource'),
+    })
+
+    const [behavior, resource] = await discoverPacks({ workspace })
+
+    expectTypeOf(behavior.scriptOutput).toEqualTypeOf<string | null>()
+    expect(behavior.scriptOutput).toBe('dist/behavior_pack/scripts/main.js')
+    expect(resource.scriptOutput).toBeNull()
   })
 
   it('hands back data, typed so a valid entry reads its manifest without a cast', async () => {

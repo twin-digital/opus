@@ -99,6 +99,9 @@ export function checkManifestShape(manifest: unknown): ManifestShape {
     if (module.version !== undefined && !isVersion(module.version)) {
       fault(`${at}.version`, 'a string or an array of three numbers')
     }
+    if (module.entry !== undefined && !isString(module.entry)) {
+      fault(`${at}.entry`, 'a string')
+    }
   })
 
   checkElements(manifest.dependencies, 'dependencies', fault, (dependency, at) => {

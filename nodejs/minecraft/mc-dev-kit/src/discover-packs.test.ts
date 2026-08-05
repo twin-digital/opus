@@ -53,6 +53,7 @@ describe('discoverPacks', () => {
       packageDir: 'packages/mc-pack-1',
       sourceDir: 'packages/mc-pack-1/behavior_pack',
       outputDir: 'packages/mc-pack-1/dist/behavior_pack',
+      scriptOutput: 'packages/mc-pack-1/dist/behavior_pack/scripts/main.js',
       uuid: 'pack-1-behavior',
       version: '1.2.3',
       manifest: expect.objectContaining({
