@@ -24,6 +24,8 @@ export interface WorkingEntry {
   packageDir: string
   sourceDir: string
   outputDir: string
+  /** where the built script belongs, or `null` for a resource pack */
+  scriptOutput: string | null
   /** the package the pack belongs to */
   package: CandidatePackage
   /** what the source manifest parsed to; absent when it could not be read or parsed */

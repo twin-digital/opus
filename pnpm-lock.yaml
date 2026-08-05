@@ -2024,9 +2024,15 @@ importers:
       '@pnpm/workspace.read-manifest':
         specifier: ^1000.1.7
         version: 1000.3.1
+      adm-zip:
+        specifier: ^0.6.0
+        version: 0.6.0
       semver:
         specifier: ^7.7.3
         version: 7.8.5
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.0
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -2043,6 +2049,9 @@ importers:
       '@twin-digital/vitest-config':
         specifier: workspace:*
         version: link:../../devtools/vitest-config
+      '@types/adm-zip':
+        specifier: ^0.5.7
+        version: 0.5.8
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
@@ -2067,6 +2076,9 @@ importers:
       prettier-package-json:
         specifier: 'catalog:'
         version: 2.8.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.18.3(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

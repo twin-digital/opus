@@ -9,6 +9,7 @@ const valid: ValidPackEntry = {
   packageDir: 'packages/mc-pack-1',
   sourceDir: 'packages/mc-pack-1/behavior_pack',
   outputDir: 'packages/mc-pack-1/dist/behavior_pack',
+  scriptOutput: 'packages/mc-pack-1/dist/behavior_pack/scripts/main.js',
   uuid: 'aaaaaaaa-1111-2222-3333-444444444444',
   version: '1.2.3',
   manifest: {
@@ -29,6 +30,7 @@ const invalid: InvalidPackEntry = {
   packageDir: 'packages/mc-pack-1',
   sourceDir: 'packages/mc-pack-1/resource_pack',
   outputDir: 'packages/mc-pack-1/dist/resource_pack',
+  scriptOutput: null,
   problems: [{ code: 'manifest-unreadable', message: 'unreadable', error: 'ENOENT' }],
 }
 

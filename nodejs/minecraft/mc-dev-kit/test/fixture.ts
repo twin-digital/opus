@@ -119,6 +119,7 @@ export function workingEntry({
     packageDir,
     sourceDir: `${prefix}${directory}`,
     outputDir: `${prefix}dist/${directory}`,
+    scriptOutput: kind === 'behavior' ? `${prefix}dist/${directory}/scripts/main.js` : null,
     package: candidate,
     manifest,
     formFaults: new Set(formFaults),

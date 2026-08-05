@@ -456,3 +456,64 @@ describe('completeManifests', () => {
     })
   })
 })
+
+describe("a module's entry", () => {
+  /** The completed modules of a behavior pack whose modules the case states. */
+  const modulesOf = (modules: unknown[], formFaults: string[] = []): Record<string, unknown>[] => {
+    const entry = complete(workingEntry({ manifest: packManifest('behavior', { modules }), formFaults }))
+    return (entry.manifest as { modules: Record<string, unknown>[] }).modules
+  }
+
+  const problemsOf = (modules: unknown[], formFaults: string[] = []): WorkingEntry =>
+    complete(workingEntry({ manifest: packManifest('behavior', { modules }), formFaults }))
+
+  it("is written on a behavior pack's script module, computed from the kind", () => {
+    const modules = modulesOf([{ type: 'script', uuid: 'm', version: [1, 0, 0] }])
+
+    expect(modules[0]?.entry).toBe('scripts/main.js')
+  })
+
+  it('is reported and overwritten when the source specified it', () => {
+    const entry = problemsOf([{ type: 'script', uuid: 'm', entry: 'scripts/elsewhere.js' }])
+
+    expect(entry.problems).toContainEqual(
+      expect.objectContaining({ code: 'module-entry-specified', field: 'modules[0].entry' }),
+    )
+    expect((entry.manifest as { modules: Record<string, unknown>[] }).modules[0]?.entry).toBe('scripts/main.js')
+  })
+
+  it('is dropped from a module that gets none, so a specified value never reaches the consumer', () => {
+    const modules = modulesOf([{ type: 'data', uuid: 'm', entry: 'scripts/nope.js' }])
+
+    expect(modules[0]).not.toHaveProperty('entry')
+  })
+
+  it('is reported once per module that specified one', () => {
+    const entry = problemsOf([
+      { type: 'script', uuid: 'a', entry: 'a.js' },
+      { type: 'data', uuid: 'b', entry: 'b.js' },
+    ])
+
+    expect(
+      entry.problems.filter((problem) => problem.code === 'module-entry-specified').map((problem) => problem.field),
+    ).toEqual(['modules[0].entry', 'modules[1].entry'])
+  })
+
+  it('is not written on a resource pack, which has no script location', () => {
+    const entry = complete(
+      workingEntry({
+        kind: 'resource',
+        manifest: packManifest('resource', { modules: [{ type: 'script', uuid: 'm' }] }),
+      }),
+    )
+
+    expect((entry.manifest as { modules: Record<string, unknown>[] }).modules[0]).not.toHaveProperty('entry')
+  })
+
+  it('suppresses only its own report when the source form faulted, and still completes', () => {
+    const entry = problemsOf([{ type: 'script', uuid: 'm', entry: 7 }], ['modules[0].entry'])
+
+    expect(codes(entry)).not.toContain('module-entry-specified')
+    expect((entry.manifest as { modules: Record<string, unknown>[] }).modules[0]?.entry).toBe('scripts/main.js')
+  })
+})
