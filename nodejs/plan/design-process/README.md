@@ -216,18 +216,23 @@ The steps run in order and stop at the first that fails, reporting what to fix:
 4. **check** — the full design check, as the merge gate runs it
 5. **commit** — commit the landing on the branch
 6. **push** — push the branch
-7. **approve** — approve the pull request as the owner
-8. **auto-merge** — set the pull request to merge once the gate is green
+7. **open** — open the pull request where the branch has none
+8. **approve** — approve the pull request as the owner
+9. **auto-merge** — set the pull request to merge once the gate is green
 
-The approval follows the push, because a push after an approval dismisses it. The approving
-token is typed in when the sequence reaches the approval, with the input not echoed, and is held
-in memory for that one request: nothing writes it to a file, to the environment, or to a command
-line, and a second landing asks again. Push and auto-merge use the credentials the environment
-already holds.
+An increment is published by merging, and `main` admits a change only through a pull request, so
+the landing opens one where the branch has none: after the push, since the remote must carry the
+branch first, and before the approval. Where the branch already has a pull request the open step
+is a no-op and says so; the landing never opens a second one. The title is
+`plan(<product>): land increment <NNN> [<NNN>]` and the body one line —
+`Publishes increment <NNN> of <product>.`
 
-The landing discovers the pull request the branch already has and opens none. Where the branch
-has no pull request, or no token is given, the increment still publishes and the approval and
-auto-merge report `skipped`.
+The approval follows the open, and both follow the push, because a push after an approval
+dismisses it. The approving token is typed in when the sequence reaches the approval, with the
+input not echoed, and is held in memory for that one request: nothing writes it to a file, to the
+environment, or to a command line, and a second landing asks again. Push, open, and auto-merge
+use the credentials the environment already holds. Where no token is given, the increment still
+publishes and the approval and auto-merge report `skipped`.
 
 The merge method comes from the repository, not from a default: the auto-merge step reads
 `allow_merge_commit`, `allow_squash_merge`, and `allow_rebase_merge` and sets the one enabled,

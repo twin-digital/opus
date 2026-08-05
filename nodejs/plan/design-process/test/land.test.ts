@@ -51,8 +51,13 @@ interface Call {
   args: string[]
 }
 
-/** What `gh pr view` reports for the branch: the landing discovers the pull request (d-8vsionnz). */
-const PR_VIEW = JSON.stringify({ url: 'https://github.com/twin-digital/plan-opus/pull/42' })
+const PR_URL = 'https://github.com/twin-digital/plan-opus/pull/42'
+
+/** What `gh pr view` reports when the branch already has one; absent, the open step makes one. */
+const PR_VIEW = JSON.stringify({ url: PR_URL })
+
+/** What `gh pr create` prints: the url of the pull request it opened. */
+const PR_CREATED = `${PR_URL}\n`
 
 interface MergeFlags {
   allow_merge_commit?: boolean
@@ -63,7 +68,14 @@ interface MergeFlags {
 /** plan-opus, where increments land: merge commits only, squash and rebase disabled. */
 const PLAN_OPUS: MergeFlags = { allow_merge_commit: true, allow_squash_merge: false, allow_rebase_merge: false }
 
-const recorder = (fail?: string, repository: MergeFlags = PLAN_OPUS): { run: CommandRunner; calls: Call[] } => {
+interface Repo {
+  /** Whether the branch already has a pull request; false makes `gh pr view` fail as gh does. */
+  pullRequest?: boolean
+  merge?: MergeFlags
+}
+
+const recorder = (fail?: string, repo: Repo = {}): { run: CommandRunner; calls: Call[] } => {
+  const { pullRequest = true, merge = PLAN_OPUS } = repo
   const calls: Call[] = []
   const run: CommandRunner = (command, args) => {
     calls.push({ command, args })
@@ -74,11 +86,24 @@ const recorder = (fail?: string, repository: MergeFlags = PLAN_OPUS): { run: Com
       return ''
     }
     if (args[1] === 'view') {
+      if (!pullRequest) {
+        throw new Error('no pull requests found for branch')
+      }
       return PR_VIEW
     }
-    return args[0] === 'api' ? JSON.stringify(repository) : ''
+    if (args[1] === 'create') {
+      return PR_CREATED
+    }
+    return args[0] === 'api' ? JSON.stringify(merge) : ''
   }
   return { run, calls }
+}
+
+/** The value `gh pr create` was given for one flag. */
+const created = (calls: Call[], flag: string): string | undefined => {
+  const call = calls.find((candidate) => candidate.command === 'gh' && candidate.args[1] === 'create')
+  const at = call?.args.indexOf(flag) ?? -1
+  return at === -1 ? undefined : call?.args[at + 1]
 }
 
 /** The flag `gh pr merge` was given, or undefined when the landing never called it. */
@@ -87,8 +112,8 @@ const mergeFlag = (calls: Call[]): string | undefined =>
     .find((call) => call.command === 'gh' && call.args[1] === 'merge')
     ?.args.find((arg) => arg.startsWith('--') && arg !== '--auto')
 
-describe('the landing sequence is fixed — d-qzpfyc6s', () => {
-  it('is the published order', () => {
+describe('the landing sequence is fixed — d-h418ljtp', () => {
+  it('is the published order, the open between the push and the approval', () => {
     expect([...LAND_STEPS]).toEqual([
       'apply',
       'conflicts',
@@ -96,6 +121,7 @@ describe('the landing sequence is fixed — d-qzpfyc6s', () => {
       'check',
       'commit',
       'push',
+      'open',
       'approve',
       'auto-merge',
     ])
@@ -132,15 +158,18 @@ describe('the landing sequence is fixed — d-qzpfyc6s', () => {
     expect(result.steps.some((step) => step.step === 'commit' && step.status === 'ok')).toBe(false)
   })
 
-  it('approves after the push, since a push dismisses an approval', async () => {
+  it('pushes, then opens, then approves — the remote must carry the branch, and a push dismisses an approval', async () => {
     const order: string[] = []
-    const { run } = recorder()
+    const { run } = recorder(undefined, { pullRequest: false })
     const result = await landIncrement({
       root: repo(settled()),
       product: 'demo',
       run: (command, args, runOptions) => {
         if (args.includes('push')) {
           order.push('push')
+        }
+        if (command === 'gh' && args[1] === 'create') {
+          order.push('open')
         }
         return run(command, args, runOptions)
       },
@@ -151,33 +180,68 @@ describe('the landing sequence is fixed — d-qzpfyc6s', () => {
       },
     })
     expect(result.landed).toBe(true)
-    expect(order).toEqual(['push', 'approve'])
+    expect(order).toEqual(['push', 'open', 'approve'])
   })
 })
 
-describe('the landing discovers the pull request and opens none — d-8vsionnz', () => {
-  it('publishes, skips the approval, and opens nothing when the branch has no pull request', async () => {
+describe('the landing opens the pull request it merges through — d-h418ljtp', () => {
+  it('opens the pull request where the branch has none, and approves the one it opened', async () => {
+    const { run, calls } = recorder(undefined, { pullRequest: false })
+    const approved: number[] = []
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run,
+      approvingToken: () => Promise.resolve('t'),
+      approve: (_token, pullRequest) => {
+        approved.push(pullRequest.number)
+        return Promise.resolve()
+      },
+    })
+    expect(result.landed).toBe(true)
+    expect(result.awaitingApproval).toBeUndefined()
+    expect(result.steps.find((step) => step.step === 'open')?.detail).toBe('opened #42')
+    expect(approved).toEqual([42])
+    expect(created(calls, '--title')).toBe('plan(demo): land increment 003 [003]')
+    expect(created(calls, '--body')).toBe('Publishes increment 003 of demo.\n')
+  })
+
+  it('opens no second pull request where the branch already has one', async () => {
     const { run, calls } = recorder()
-    const noPullRequest: CommandRunner = (command, args, options) => {
-      if (command === 'gh' && args[1] === 'view') {
-        throw new Error('no pull request found for branch')
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.steps.find((step) => step.step === 'open')?.status).toBe('ok')
+    expect(result.steps.find((step) => step.step === 'open')?.detail).toBe('#42 is already open')
+    expect(calls.some((call) => call.command === 'gh' && call.args[1] === 'create')).toBe(false)
+  })
+
+  it('stops the sequence when the pull request cannot be opened, rather than reporting it published', async () => {
+    const { run } = recorder(undefined, { pullRequest: false })
+    const refusing: CommandRunner = (command, args, options) => {
+      if (command === 'gh' && args[1] === 'create') {
+        throw new Error('gh: a pull request could not be created')
       }
       return run(command, args, options)
     }
     const result = await landIncrement({
       root: repo(settled()),
       product: 'demo',
-      run: noPullRequest,
+      run: refusing,
       approvingToken: () => Promise.resolve('t'),
       approve: () => Promise.reject(new Error('the approval must not be attempted')),
     })
-    expect(result.landed).toBe(true)
-    expect(result.awaitingApproval).toBe(true)
-    expect(result.steps.find((step) => step.step === 'approve')?.status).toBe('skipped')
-    expect(result.steps.find((step) => step.step === 'auto-merge')?.status).toBe('skipped')
-    expect(calls.some((call) => call.args.includes('create'))).toBe(false)
+    expect(result.landed).toBe(false)
+    expect(result.steps.find((step) => step.step === 'open')?.status).toBe('failed')
+    expect(result.steps.some((step) => step.step === 'approve')).toBe(false)
   })
+})
 
+describe('the merge method is the one the repository permits — d-8vsionnz', () => {
   it('reports an approved pull request awaiting a manual merge when auto-merge is refused', async () => {
     const { run } = recorder()
     const refusing: CommandRunner = (command, args, options) => {
@@ -201,11 +265,8 @@ describe('the landing discovers the pull request and opens none — d-8vsionnz',
     expect(merge?.status).toBe('skipped')
     expect(merge?.detail).toContain('merge it once the gate is green')
   })
-})
-
-describe('the merge method is the one the repository permits — d-8vsionnz', () => {
   const landWith = async (repository: MergeFlags) => {
-    const { run, calls } = recorder(undefined, repository)
+    const { run, calls } = recorder(undefined, { merge: repository })
     const result = await landIncrement({
       root: repo(settled()),
       product: 'demo',
