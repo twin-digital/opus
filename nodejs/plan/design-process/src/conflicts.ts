@@ -1,6 +1,7 @@
 import { parse } from 'yaml'
 
 import { collectIds } from './ids.js'
+import { loadProducts } from './load.js'
 
 import type { Fold } from './fold.js'
 import type { FileTree } from './tree.js'
@@ -8,7 +9,7 @@ import type { DecisionsSource, Finding, RequirementsSource } from './types.js'
 
 const CLAIM = ['r-0701ctqx']
 
-const SOURCE_PATH = /^products\/([^/]+)\/increments\/([^/]+)\/(requirements|decisions)\.ya?ml$/
+const SOURCE_PATH = /^(products\/.+)\/increments\/([^/]+)\/(requirements|decisions)\.ya?ml$/
 
 /** One increment directory on a draft branch — a wip directory, otherwise slug-named or numbered. */
 export interface LandingIncrement {
@@ -25,9 +26,13 @@ export interface LandingIncrement {
  */
 export const loadLandingIncrements = (tree: FileTree, productId: string): LandingIncrement[] => {
   const byDir = new Map<string, LandingIncrement>()
+  const root = loadProducts(tree).products.get(productId)?.dir
+  if (root === undefined) {
+    return []
+  }
   for (const path of tree.paths()) {
     const match = SOURCE_PATH.exec(path)
-    if (match?.[1] !== productId) {
+    if (match?.[1] !== root) {
       continue
     }
     const [, , dir, kind] = match as unknown as [string, string, string, 'requirements' | 'decisions']

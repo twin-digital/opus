@@ -13,7 +13,8 @@ export type { StoreOptions } from './backlog-store.js'
 
 export const ITEM_ID = /^b-[0-9a-z]{8}$/
 const ITEM_PATH = /^([^/]+)\/(b-[0-9a-z]{8})\.md$/
-const INCREMENT_DIR = /^products\/[^/]+\/increments\/[^/]+$/
+/** `<product root>/increments/<name>`, the root sitting at any depth under products/ (d-34t7y2iq). */
+const INCREMENT_DIR = /^products\/(?:[^/]+\/)+increments\/[^/]+$/
 const HEADING = /^ {0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/m
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/
 

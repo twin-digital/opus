@@ -19,6 +19,9 @@ design-process diff <product> (--from <increment> | --from-ref <gitref>)
                               [--to <increment> | --to-ref <gitref>] [--json]
 design-process conflicts <product> [--against <increment> | --against-ref <gitref>]
 
+design-process increment <product>
+design-process land <product>
+
 design-process backlog add <product> [--title <text>] [--tag <tag>]... [--file <path>]
 design-process backlog list [--product <id>] [--tag <tag>]... [--json]
 design-process backlog search <query> [--product <id>] [--tag <tag>]... [--json]
@@ -175,6 +178,63 @@ draft increment at its wip directory among them — and every directory numbered
 Overlap the tooling cannot see —
 two drafts ruling the same choice under different ids — is the owner's scan of open drafts.
 Findings print in `check`'s shape and exit non-zero.
+
+### increment
+
+A full-screen session over the draft the working tree holds: the owner rules every open entry
+and publishes without leaving it. It opens on the master list of what the draft still carries —
+its proposed decisions, then its open questions — beside a pane holding the selected entry in
+full: statement, pinning proposal, what it supersedes, and what it cites. The list shows each
+entry's staged ruling beside it.
+
+| key               | what it does                                                           |
+| ----------------- | ---------------------------------------------------------------------- |
+| `j` / `k`, arrows | move through the list; the pane follows                                |
+| page up / down    | scroll an entry taller than the pane                                   |
+| `a` `t` `g` `r`   | rule the selected decision accepted, tolerated, delegated, or rejected |
+| enter             | answer the selected question, then `f`/`r`/`d` for the route it takes  |
+| `b`               | the bulk action: set every still-unruled decision to one status        |
+| `w`               | write the staged rulings to the draft's sources and commit them        |
+| `l`               | land, offered once every entry is ruled                                |
+| `q`, ctrl-c       | leave; a session abandoned before a write leaves the tree untouched    |
+
+A rejection is refused without the owner's reason. An answer routed to a requirement or a
+decision writes a placeholder entry into the draft carrying its generated id and the answer as
+its text, for the owner to state; a fact-routed answer closes the question and writes nothing.
+
+### land
+
+The landing sequence, non-interactive, for an agent or a script with no session to land from.
+The interactive command runs the same sequence. It refuses before any step runs while the draft
+carries a proposed decision or an open question, naming each.
+
+The steps run in order and stop at the first that fails, reporting what to fix:
+
+1. **apply** — write any rulings the session staged
+2. **conflicts** — the `conflicts` check against the head, `origin/main` then `main`
+3. **rename** — `git mv` the wip directory into the number the head yields
+4. **check** — the full design check, as the merge gate runs it
+5. **commit** — commit the landing on the branch
+6. **push** — push the branch
+7. **approve** — approve the pull request as the owner
+8. **auto-merge** — set the pull request to merge once the gate is green
+
+The approval follows the push, because a push after an approval dismisses it. The approving
+token is typed in when the sequence reaches the approval, with the input not echoed, and is held
+in memory for that one request: nothing writes it to a file, to the environment, or to a command
+line, and a second landing asks again. Push and auto-merge use the credentials the environment
+already holds.
+
+The landing discovers the pull request the branch already has and opens none. Where the branch
+has no pull request, or no token is given, the increment still publishes and the approval and
+auto-merge report `skipped`.
+
+The merge method comes from the repository, not from a default: the auto-merge step reads
+`allow_merge_commit`, `allow_squash_merge`, and `allow_rebase_merge` and sets the one enabled,
+preferring a merge commit, then a squash, then a rebase where more than one is. Where the
+repository enables none, or cannot be asked, the pull request is reported approved and awaiting
+a manual merge rather than set with a guessed method — as it is where the repository refuses
+auto-merge outright.
 
 ### backlog
 

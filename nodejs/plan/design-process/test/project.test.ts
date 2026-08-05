@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { projectProduct } from '../src/project.js'
+import { validateTree } from '../src/validate.js'
 import { demoProduct, demoWithDeferred, makeRepo, yaml } from './helpers.js'
 
 describe('projectProduct (r-2gcehlp8)', () => {
@@ -76,6 +77,66 @@ describe('projectProduct (r-2gcehlp8)', () => {
     expect(projection).toContain('- r-cccccccc: attestation')
     expect(projection).toContain('- r-bbbbbbbb: none')
     expect(projection).toContain('4 claims in force: 1 covered, 3 uncovered, 1 on attestation alone')
+  })
+
+  it('counts adopted preset requirements among the coverable claims (d-3orwwaze)', () => {
+    const files = demoProduct()
+    files['products/nodejs-library/product.yaml'] = yaml({ version: '1', kind: 'requirement-preset' })
+    files['products/nodejs-library/increments/001/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-nlnlnlnl', title: 'adopted', statement: 'the package behaves.\n' }],
+    })
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [
+        {
+          id: 'r-cccccccc',
+          title: 'first, amended',
+          statement: 'the product does the first thing faster.\n',
+          amends: 'r-aaaaaaaa',
+        },
+      ],
+      presets: [{ name: 'nodejs-library', version: 1 }],
+    })
+    const { tree } = makeRepo(files)
+    const projection = projectProduct(tree, 'demo')
+    expect(projection).toContain('- r-nlnlnlnl (adopted from nodejs-library@1): none')
+    expect(projection).toContain('5 claims in force: 0 covered, 5 uncovered')
+  })
+
+  it('names the same coverable claims the record validator enforces (d-3orwwaze)', () => {
+    const files = demoProduct()
+    files['products/nodejs-library/product.yaml'] = yaml({ version: '1', kind: 'requirement-preset' })
+    files['products/nodejs-library/increments/001/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-nlnlnlnl', title: 'adopted', statement: 'the package behaves.\n' }],
+    })
+    files['products/demo/increments/002/requirements.yaml'] = yaml({
+      version: '1',
+      requirements: [
+        {
+          id: 'r-cccccccc',
+          title: 'first, amended',
+          statement: 'the product does the first thing faster.\n',
+          amends: 'r-aaaaaaaa',
+        },
+      ],
+      presets: [{ name: 'nodejs-library', version: 1 }],
+    })
+    files['implementations/demo/002-1.yaml'] = yaml({
+      version: '1',
+      product: 'demo',
+      target: 2,
+      packages: [{ path: 'nodejs/demo', version: '1.0.0' }],
+      // exactly what the projection lists as in force
+      coverage: ['r-bbbbbbbb', 'r-cccccccc', 'r-nlnlnlnl', 'd-bbbbbbbb', 'd-cccccccc'].map((claim) => ({
+        claim,
+        covered_by: [{ kind: 'attestation' }],
+      })),
+    })
+    const { tree } = makeRepo(files)
+    expect(projectProduct(tree, 'demo')).toContain('5 claims in force: 5 covered, 0 uncovered')
+    expect(validateTree(tree).filter((finding) => finding.rule.startsWith('record-'))).toEqual([])
   })
 
   it('counts deferred entries beside the rulings (d-4nez3mjh)', () => {
