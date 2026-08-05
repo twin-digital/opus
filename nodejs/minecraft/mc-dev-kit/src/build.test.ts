@@ -86,27 +86,37 @@ describe('packBuild', () => {
   })
 })
 
-describe.todo('the plugin builds the package', () => {
-  it.todo('takes the package’s packs from the kit’s pack set, resolving the root by ascent')
-  it.todo('fails naming the file when the kit’s enumeration rejects')
-  it.todo('fails naming the package directory when the kit reports no pack')
-  it.todo('fails with the kit’s problems printed when a pack is invalid, building no sibling pack')
-  it.todo('fails when the pack set reports a script location that is not the configured one')
-  it.todo('marks each module_name dependency of the completed manifests external')
-  it.todo('fails an undeclared @minecraft/ import only where nothing importable resolves')
-  it.todo('writes the completed manifest as two-space JSON with a trailing newline')
-  it.todo('copies every other pack file verbatim, dotfiles and unknown extensions included')
-  it.todo('copies nothing under behavior_pack/scripts/')
-  it.todo('creates no output directory for an empty source directory')
-  it.todo('writes a file only where its bytes differ from what already sits there')
-  it.todo('drops an unchanged chunk before the bundler writes it')
-  it.todo('prunes output the build did not write, with no clean step first')
-  it.todo('prunes a chunk no pack claims')
-  it.todo('writes no report of which packs changed')
-  it.todo('builds a resource-pack-only package, applying no script location check')
-  it.todo('fails at buildStart when the virtual entry was configured over sources on disk')
-  it.todo('fails when a declared script module has no sources')
-  it.todo(
-    'registers the pack source directories, source manifests, package.json, and each depended-on package.json as watch inputs',
-  )
+// the plugin's own build cases run against real builds, in internal/pack-build.test.ts
+
+const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8')
+
+describe('the export is documented', () => {
+  it('states how a consuming package takes the export up', () => {
+    expect(readme).toMatch(/^## Build$/m)
+    expect(readme).toMatch(/import \{ packBuild \} from '@twin-digital\/mc-dev-kit\/build'/)
+    expect(readme).toMatch(/packBuild\(\{ packageDir/)
+  })
+
+  it('states what using it produces', () => {
+    for (const produced of [
+      'dist/<kind>_pack/manifest.json',
+      'dist/behavior_pack/scripts/main.js',
+      'copied verbatim',
+      'What fails the build',
+    ]) {
+      expect(readme, produced).toContain(produced)
+    }
+  })
+
+  it('carries the same documentation as TSDoc on the exported function', async () => {
+    const source = await readFile(new URL('./build.ts', import.meta.url), 'utf8')
+    const tsdoc = source.slice(
+      source.indexOf('/**', source.indexOf('PackBuildOptions')),
+      source.indexOf('export function packBuild'),
+    )
+
+    expect(tsdoc).toContain('@param options')
+    expect(tsdoc).toContain('@returns')
+    expect(tsdoc).toContain('packBuild')
+  })
 })

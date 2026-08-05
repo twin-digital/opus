@@ -46,11 +46,12 @@ export interface PackBuildOptions {
 export function packBuild(options: PackBuildOptions): UserConfig {
   const packageDir = path.resolve(options.packageDir)
   const scriptSource = path.join(packageDir, SCRIPT_SOURCE)
+  const virtualEntry = !existsSync(scriptSource)
 
   return {
     clean: false,
     dts: false,
-    entry: [existsSync(scriptSource) ? scriptSource : PACK_ENTRY],
+    entry: [virtualEntry ? PACK_ENTRY : scriptSource],
     format: 'esm',
     inputOptions: { resolve: { conditionNames: ['source'] } },
     minify: false,
@@ -58,7 +59,7 @@ export function packBuild(options: PackBuildOptions): UserConfig {
     outDir: path.join(packageDir, 'dist', 'behavior_pack', 'scripts'),
     outputOptions: { entryFileNames: 'main.js' },
     platform: 'neutral',
-    plugins: [packBuildPlugin({ packageDir })],
+    plugins: [packBuildPlugin({ packageDir, virtualEntry })],
     shims: false,
     sourcemap: false,
     target: 'es2022',

@@ -1,4 +1,8 @@
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import AdmZip from 'adm-zip'
+import { listFiles } from './build-outputs.js'
+import { isRecord, parseJson } from './json.js'
 
 /** Where the release hook looks for what a package publishes. */
 export const RELEASE_ASSETS = '.release-assets'
@@ -26,6 +30,48 @@ export const PACK_MEMBERS = [
  * @throws naming the missing directory when the package's output tree is absent — the command
  *   never runs a build itself
  */
-export function archivePackage(packageDir: string): Promise<string> {
-  return Promise.reject(new Error(`pack archiving is not implemented yet (${path.resolve(packageDir)})`))
+export async function archivePackage(packageDir: string): Promise<string> {
+  const root = path.resolve(packageDir)
+  const outputTree = path.join(root, 'dist')
+  const identity = await readIdentity(root)
+
+  const addon = new AdmZip()
+  let members = 0
+
+  for (const [directory, member] of PACK_MEMBERS) {
+    const packDir = path.join(outputTree, directory)
+    const files = await listFiles(packDir)
+    if (files.length === 0) {
+      continue
+    }
+
+    const pack = new AdmZip()
+    for (const file of files.sort()) {
+      pack.addFile(path.relative(packDir, file).split(path.sep).join('/'), await readFile(file))
+    }
+    addon.addFile(member, pack.toBuffer())
+    members += 1
+  }
+
+  if (members === 0) {
+    throw new Error(`no built output tree at ${outputTree}: build the package before archiving it`)
+  }
+
+  const assets = path.join(root, RELEASE_ASSETS)
+  await rm(assets, { force: true, recursive: true })
+  await mkdir(assets, { recursive: true })
+
+  const archive = path.join(assets, `${identity.name}-${identity.version}.mcaddon`)
+  await writeFile(archive, addon.toBuffer())
+  return archive
+}
+
+/** The archive's name and version, from the package's own `package.json`. */
+async function readIdentity(packageDir: string): Promise<{ name: string; version: string }> {
+  const manifestPath = path.join(packageDir, 'package.json')
+  const parsed = parseJson(await readFile(manifestPath, 'utf8'))
+  if (!isRecord(parsed) || typeof parsed.name !== 'string' || typeof parsed.version !== 'string') {
+    throw new Error(`${manifestPath} declares no name and version to build an archive name from`)
+  }
+  return { name: parsed.name.replace(/^@[^/]+\//, ''), version: parsed.version }
 }
