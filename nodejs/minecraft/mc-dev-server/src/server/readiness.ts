@@ -47,7 +47,80 @@ export class ReadinessTimeoutError extends Error {
   }
 }
 
-/** Waits for the next world-load pack stack line the container emits. */
-export const waitForWorldLoad = (_compose: ComposeClient, _timeoutMs: number): Promise<PackStackLine> => {
-  throw new Error('not implemented: waitForWorldLoad')
+/** Every world-load line a log holds, in order. */
+export const allPackStacks = (log: string): PackStackLine[] => {
+  const found: PackStackLine[] = []
+  for (const line of log.split('\n')) {
+    const match = matchPackStack(line)
+    if (match !== undefined) {
+      found.push(match)
+    }
+  }
+  return found
+}
+
+/**
+ * What the container log already said before the operation that causes a world load.
+ *
+ * Readiness is a poll of the log rather than a follow of it, because a follow cannot be attached
+ * before the container exists — which is exactly the case a `start` is in — and attaching after the
+ * operation would miss a load that had already happened. The mark is what tells the load this run
+ * caused from one already in the log, and it needs no clock: a longer log with more world loads in
+ * it, or a shorter one, both mean the container has loaded a world since.
+ */
+export interface LogMark {
+  loads: number
+  length: number
+}
+
+/** Takes the mark. Called before whatever is going to cause the load. */
+export const markLog = async (compose: ComposeClient): Promise<LogMark> => {
+  try {
+    const log = await compose.logs()
+    return { loads: allPackStacks(log).length, length: log.length }
+  } catch {
+    // no container yet, which is a log with nothing in it
+    return { loads: 0, length: 0 }
+  }
+}
+
+/** The world load a mark says is new, or `undefined` while the log still shows only old ones. */
+export const loadSince = (mark: LogMark, log: string): PackStackLine | undefined => {
+  const stacks = allPackStacks(log)
+  const restarted = log.length < mark.length
+  return (
+      restarted ? stacks.length > 0 : stacks.length > mark.loads
+    ) ?
+      stacks.at(-1)
+    : undefined
+}
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+/** Waits for the world load the operation since `mark` caused. */
+export const waitForWorldLoad = async (
+  compose: ComposeClient,
+  mark: LogMark,
+  timeoutMs: number,
+  pollMs = 2_000,
+): Promise<PackStackLine> => {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    let load: PackStackLine | undefined
+    try {
+      load = loadSince(mark, await compose.logs())
+    } catch {
+      load = undefined
+    }
+    if (load !== undefined) {
+      return load
+    }
+    if (Date.now() >= deadline) {
+      throw new ReadinessTimeoutError(Math.round(timeoutMs / 1000))
+    }
+    await delay(pollMs)
+  }
 }

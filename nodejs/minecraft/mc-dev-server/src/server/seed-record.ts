@@ -1,4 +1,9 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { formatSeed } from '../seed.js'
+import { HARNESS_DIR, WORLDS_RECORD } from './layout.js'
 
 import type { ComposeClient } from '../docker/compose.js'
 
@@ -55,12 +60,24 @@ export const withWorld = (record: WorldsRecord, level: string, seed: bigint): Wo
   worlds: { ...record.worlds, [level]: { seed: formatSeed(seed) } },
 })
 
-/** Reads the record off the volume. */
-export const readWorldsRecord = (_compose: ComposeClient): Promise<WorldsRecord> => {
-  throw new Error('not implemented: readWorldsRecord')
+/** Reads the record off the volume. A volume that holds none reads as empty. */
+export const readWorldsRecord = async (compose: ComposeClient): Promise<WorldsRecord> => {
+  const result = await compose.exec(['cat', WORLDS_RECORD])
+  return result.exitCode === 0 ? parseWorldsRecord(result.stdout) : { version: 1, worlds: {} }
 }
 
-/** Writes the record onto the volume, before the world it describes is generated. */
-export const writeWorldsRecord = (_compose: ComposeClient, _record: WorldsRecord): Promise<void> => {
-  throw new Error('not implemented: writeWorldsRecord')
+/**
+ * Writes the record onto the volume. It travels by `cp` like everything else the harness puts on
+ * the server, so no bind mount is needed and a remote daemon is served the same as a local one.
+ */
+export const writeWorldsRecord = async (compose: ComposeClient, record: WorldsRecord): Promise<void> => {
+  await compose.exec(['mkdir', '-p', HARNESS_DIR])
+  const staging = await mkdtemp(join(tmpdir(), 'mc-dev-server-worlds-'))
+  try {
+    const local = join(staging, 'worlds.json')
+    await writeFile(local, renderWorldsRecord(record), 'utf8')
+    await compose.copyIn(local, WORLDS_RECORD)
+  } finally {
+    await rm(staging, { recursive: true, force: true })
+  }
 }

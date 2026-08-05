@@ -4,7 +4,7 @@ import { parseSeed } from '../seed.js'
 
 import type { Spawn } from '../config/types.js'
 import type { CommandLineSettings } from '../settings/resolve.js'
-import type { CommandContext } from '../start/start.js'
+import type { CommandContext } from '../start/run.js'
 import type { OutputStream } from '../stream.js'
 
 /** The three verbs, each named explicitly — there is no bare default invocation. */

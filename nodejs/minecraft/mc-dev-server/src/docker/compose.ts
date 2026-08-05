@@ -57,6 +57,38 @@ export const createComposeRunner = (file: string): ComposeRunner => {
   }
 }
 
+/**
+ * The streaming half of the seam: a long-running compose invocation whose output is delivered a
+ * line at a time. `logs --follow` is the only thing the harness runs this way.
+ */
+export type ComposeFollower = (args: readonly string[], onLine: (line: string) => void) => LogFollow
+
+/** A follower against the real `docker` command. */
+export const createComposeFollower = (file: string): ComposeFollower => {
+  return (args, onLine) => {
+    const subprocess = execa('docker', composeArgv(file, args), { reject: false, all: true, buffer: false })
+    let rest = ''
+    subprocess.all.on('data', (chunk: Buffer | string) => {
+      const text = rest + chunk.toString()
+      const lines = text.split('\n')
+      rest = lines.pop() ?? ''
+      for (const line of lines) {
+        onLine(line)
+      }
+    })
+    return {
+      stop: () => {
+        subprocess.kill('SIGTERM')
+        subprocess.all.destroy()
+        subprocess.unref()
+      },
+    }
+  }
+}
+
+/** How far back a reattach reads the container log looking for the world-load line. */
+export const LOG_TAIL_LINES = 5000
+
 /** What the running container reports about itself. */
 export interface RunningContainer {
   image: string
@@ -85,10 +117,10 @@ export interface ComposeClient {
   copyIn(hostPath: string, containerPath: string): Promise<void>
   /** copies a container path out to the host */
   copyOut(containerPath: string, hostPath: string): Promise<void>
-  /** the container log as it stands */
-  logs(): Promise<string>
-  /** follows the container log from now on */
-  followLogs(onLine: (line: string) => void): LogFollow
+  /** the last `tail` lines of the container log as it stands */
+  logs(options?: { tail?: number }): Promise<string>
+  /** follows the container log, replaying the last `tail` lines first */
+  followLogs(onLine: (line: string) => void, options?: { tail?: number }): LogFollow
 }
 
 const service = SERVICE_NAME
@@ -121,8 +153,19 @@ export const parsePsOutput = (stdout: string): RunningContainer | undefined => {
   return undefined
 }
 
+/** The argv a log read takes. `--tail` bounds how far back a reattach looks for the world load. */
+export const logsArgv = (tail: number, follow = false): string[] => [
+  'logs',
+  '--no-color',
+  '--no-log-prefix',
+  '--tail',
+  String(tail),
+  ...(follow ? ['--follow'] : []),
+  service,
+]
+
 /** A client over a runner. Everything the harness does to the server goes through one of these. */
-export const createComposeClient = (run: ComposeRunner): ComposeClient => ({
+export const createComposeClient = (run: ComposeRunner, follow?: ComposeFollower): ComposeClient => ({
   up: async () => {
     ok(await run(['up', '--detach', '--no-recreate']), 'compose up')
   },
@@ -140,8 +183,11 @@ export const createComposeClient = (run: ComposeRunner): ComposeClient => ({
   copyOut: async (containerPath, hostPath) => {
     ok(await run(['cp', `${service}:${containerPath}`, hostPath]), 'compose cp')
   },
-  logs: async () => ok(await run(['logs', '--no-color', '--no-log-prefix', service]), 'compose logs').stdout,
-  followLogs: () => {
-    throw new Error('not implemented: followLogs')
+  logs: async (options) => ok(await run(logsArgv(options?.tail ?? LOG_TAIL_LINES)), 'compose logs').stdout,
+  followLogs: (onLine, options) => {
+    if (follow === undefined) {
+      throw new Error('this compose client cannot follow logs')
+    }
+    return follow(logsArgv(options?.tail ?? LOG_TAIL_LINES, true), onLine)
   },
 })

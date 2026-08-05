@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { lastPackStack, matchPackStack } from './readiness.js'
+import { allPackStacks, lastPackStack, loadSince, matchPackStack } from './readiness.js'
 
 const loaded =
   '[2026-08-05 02:19:55:389 INFO] Pack Stack - [00] probe pack1 (id: a1111111-1111-4111-8111-111111111111, version: 1.0.0) @ development_behavior_packs/a1111111-1111-4111-8111-111111111111'
@@ -29,5 +29,36 @@ describe('the world-load pack stack line', () => {
 
   it('reports nothing when no world has loaded', () => {
     expect(lastPackStack('starting\n')).toBeUndefined()
+  })
+})
+
+describe('waiting for the world load a run caused', () => {
+  const none = '[2026-07-24 21:30:04:703 INFO] Pack Stack - None'
+  const withPack = '[2026-08-05 02:19:55:389 INFO] Pack Stack - [00] probe pack1 (id: a1, version: 1.0.0)'
+
+  // the load a run caused is told from one already in the log, without consulting any clock
+  it('reports nothing while the log still shows only the loads it already had', () => {
+    const log = `${none}\n`
+
+    expect(loadSince({ loads: 1, length: log.length }, log)).toBeUndefined()
+  })
+
+  it('reports the load once a new one appears', () => {
+    const before = `${none}\n`
+    const after = `${before}noise\n${withPack}\n`
+
+    expect(loadSince({ loads: 1, length: before.length }, after)?.none).toBe(false)
+  })
+
+  // a recreated container starts a fresh log, which is shorter rather than longer
+  it('reports the load of a container whose log started over', () => {
+    const before = `${none}\n`.repeat(50)
+    const after = `${withPack}\n`
+
+    expect(loadSince({ loads: 50, length: before.length }, after)?.none).toBe(false)
+  })
+
+  it('counts every load a log holds', () => {
+    expect(allPackStacks([none, 'noise', withPack].join('\n'))).toHaveLength(2)
   })
 })
