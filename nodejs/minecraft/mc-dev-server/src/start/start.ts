@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { discoverPacks } from '@twin-digital/mc-dev-kit'
 
-import { declaresScript, packageManagerFor, runBuild, startWatch } from '../build/scripts.js'
+import { declaresScript, packageManagerFor, runBuild, startWatch } from '../package-scripts/scripts.js'
 import { confirmOnStdin } from '../cli/confirm.js'
 import { createReconcileQueue, invalidSelected, invalidSelectionMessage } from '../deploy/reconcile.js'
 import { setWorldSpawn, stopServer } from '../server/console.js'
@@ -28,7 +28,7 @@ import {
   withDaemon,
 } from './run.js'
 
-import type { WatchProcess } from '../build/scripts.js'
+import type { WatchProcess } from '../package-scripts/scripts.js'
 import type { ReconcileContext } from '../deploy/reconcile.js'
 import type { ComposeClient } from '../docker/compose.js'
 import type { PackStackLine } from '../server/readiness.js'

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { startWatch } from '../build/scripts.js'
+import { startWatch } from '../package-scripts/scripts.js'
 import { createFakeServer } from '../docker/fake-server.test.helpers.js'
 import { createOutputStream } from '../stream.js'
 import { watchBuiltOutput } from '../watch/output-watcher.js'
