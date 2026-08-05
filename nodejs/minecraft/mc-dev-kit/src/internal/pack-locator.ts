@@ -16,6 +16,13 @@ const PACK_DIRECTORIES: readonly (readonly [PackKind, string])[] = [
 const ABSENT = new Set(['ENOENT', 'ENOTDIR'])
 
 /**
+ * Where a behavior pack's bundled script belongs, relative to the pack's output root. Computed
+ * from the kind and never probed or read from the manifest, so it is reported for an unbuilt pack
+ * and for one holding no script sources at all.
+ */
+export const BUILT_SCRIPT = 'scripts/main.js'
+
+/**
  * Probes each candidate's two fixed source manifest paths — `behavior_pack/manifest.json` and
  * `resource_pack/manifest.json` — and builds an entry for each one found.
  *
@@ -47,12 +54,14 @@ export async function locatePacks(
         continue
       }
 
+      const outputDir = joinRelative(candidate.packageDir, 'dist', directory)
       const entry: WorkingEntry = {
         kind,
         packageName: packageNameOf(candidate),
         packageDir: candidate.packageDir,
         sourceDir: joinRelative(candidate.packageDir, directory),
-        outputDir: joinRelative(candidate.packageDir, 'dist', directory),
+        outputDir,
+        scriptOutput: kind === 'behavior' ? joinRelative(outputDir, BUILT_SCRIPT) : null,
         package: candidate,
         formFaults: new Set(),
         problems: [],
