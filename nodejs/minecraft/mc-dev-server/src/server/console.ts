@@ -26,10 +26,35 @@ export const setWorldSpawn = async (compose: ComposeClient, spawn: Spawn): Promi
   await sendCommand(compose, ['setworldspawn', String(spawn[0]), String(spawn[1]), String(spawn[2])])
 }
 
+/** The server did not go down within the time a stop was given. */
+export class StopTimeoutError extends Error {
+  constructor(seconds: number) {
+    super(`the server was still running ${seconds}s after the console stop`)
+    this.name = 'StopTimeoutError'
+  }
+}
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
 /**
  * Takes the server down through its own console `stop`, waited for, so the world is written before
- * the process goes down. Never a container kill.
+ * the process goes down. Never a container kill. Waiting is polling the container's own state: the
+ * console acknowledges nothing, and the container exiting is what says the world was written.
  */
-export const stopServer = (_compose: ComposeClient, _timeoutMs: number): Promise<void> => {
-  throw new Error('not implemented: stopServer')
+export const stopServer = async (compose: ComposeClient, timeoutMs: number, pollMs = 500): Promise<void> => {
+  await sendCommand(compose, ['stop'])
+
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    if ((await compose.running()) === undefined) {
+      return
+    }
+    if (Date.now() >= deadline) {
+      throw new StopTimeoutError(Math.round(timeoutMs / 1000))
+    }
+    await delay(pollMs)
+  }
 }

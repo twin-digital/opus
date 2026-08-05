@@ -17,7 +17,7 @@ export const stubPayload = (entry: ValidPackEntry): Record<string, string> => {
     'manifest.json': `${JSON.stringify(entry.manifest, undefined, 2)}\n`,
   }
 
-  const scriptOutput = (entry as ValidPackEntry & { scriptOutput?: string | null }).scriptOutput
+  const { scriptOutput } = entry
   const declaresScript = entry.manifest.modules.some((module) => module.type === 'script')
   if (declaresScript && typeof scriptOutput === 'string') {
     files[posix.relative(entry.outputDir, scriptOutput)] = STUB_SCRIPT

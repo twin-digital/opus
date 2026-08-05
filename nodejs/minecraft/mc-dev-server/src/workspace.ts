@@ -1,4 +1,4 @@
-import { findWorkspaceRoot } from '@twin-digital/mc-dev-kit'
+import { resolveWorkspaceRoot } from '@twin-digital/mc-dev-kit'
 
 /** The workspace a run addresses, and the compose project name derived from it. */
 export interface Workspace {
@@ -37,7 +37,7 @@ export const projectNameFor = (packageName: string): string => {
  * from a subdirectory addresses the same server as one started from the root.
  */
 export const resolveWorkspace = async (from: string): Promise<Workspace> => {
-  const found = await findWorkspaceRoot(from)
+  const found = await resolveWorkspaceRoot({ from })
   if (found === undefined) {
     throw new NoWorkspaceError(from)
   }
