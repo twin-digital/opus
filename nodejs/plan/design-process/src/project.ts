@@ -1,9 +1,10 @@
-import { foldProduct } from './fold.js'
+import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { resolvePresetClosure } from './presets.js'
 
 import type { Fold, FoldedClaim, IncrementRef } from './fold.js'
 import type { Product, ProductsTree } from './load.js'
+import type { AdoptedPreset } from './presets.js'
 import type { FileTree } from './tree.js'
 import type { CoverageEntry, DecisionEntry, RequirementEntry } from './types.js'
 
@@ -87,7 +88,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     lines.push('')
   }
 
-  lines.push(...renderCoverage(product, fold))
+  lines.push(...renderCoverage(product, fold, adopted))
   lines.push(...renderDelta(product, fold))
   lines.push(...renderQuestions(product, fold))
 
@@ -170,7 +171,7 @@ const orderByBecause = (decisions: FoldedClaim<DecisionEntry>[]): FoldedClaim<De
   return ordered
 }
 
-const renderCoverage = (product: Product, fold: Fold): string[] => {
+const renderCoverage = (product: Product, fold: Fold, adopted: AdoptedPreset[]): string[] => {
   const coverageByClaim = new Map<string, CoverageEntry>()
   for (const record of product.records) {
     if (typeof record.data.target !== 'number' || record.data.target > fold.at) {
@@ -180,29 +181,35 @@ const renderCoverage = (product: Product, fold: Fold): string[] => {
       coverageByClaim.set(entry.claim, entry)
     }
   }
-  const rulings = [...fold.decisions.values()].filter(
-    ({ entry }) => entry.status !== 'rejected' && entry.status !== 'deferred',
-  )
   const deferred = [...fold.decisions.values()].filter(({ entry }) => entry.status === 'deferred').length
-  const claims = [
-    ...[...fold.requirements.values()].map(({ entry }) => entry.id),
-    ...rulings.map(({ entry }) => entry.id),
-  ]
+  // exactly what a record must cover, adopted preset requirements included (d-3orwwaze); the
+  // validator reads the same set, so a reconciliation from here holds at the gate
+  const coverable = coverableClaimIds(fold)
+  const claims: { id: string; from?: string }[] = [
+    ...[...fold.requirements.values()].map(({ entry }) => ({ id: entry.id })),
+    ...adopted.flatMap((preset) =>
+      [...preset.requirements.keys()].map((id) => ({ id, from: `${preset.name}@${preset.version}` })),
+    ),
+    ...[...fold.decisions.values()]
+      .filter(({ entry }) => coverable.has(entry.id))
+      .map(({ entry }) => ({ id: entry.id })),
+  ].filter((claim, index, all) => all.findIndex((other) => other.id === claim.id) === index)
   const lines = ['## coverage', '']
   let uncovered = 0
   let attestationOnly = 0
   for (const claim of claims) {
-    const entry = coverageByClaim.get(claim)
+    const origin = claim.from === undefined ? '' : ` (adopted from ${claim.from})`
+    const entry = coverageByClaim.get(claim.id)
     if (!entry) {
       uncovered += 1
-      lines.push(`- ${claim}: none`)
+      lines.push(`- ${claim.id}${origin}: none`)
       continue
     }
     const kinds = entry.covered_by.map((coverage) => coverage.kind)
     if (kinds.every((kind) => kind === 'attestation')) {
       attestationOnly += 1
     }
-    lines.push(`- ${claim}: ${kinds.join(', ')}`)
+    lines.push(`- ${claim.id}${origin}: ${kinds.join(', ')}`)
   }
   lines.push(
     '',

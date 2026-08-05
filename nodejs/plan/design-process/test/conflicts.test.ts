@@ -129,7 +129,7 @@ describe('the name finding is what keeps a draft out of main — d-1qn5jzgd', ()
     const name = findings.filter((finding) => finding.rule === 'increment-dir-name')
     expect(name).toHaveLength(1)
     expect(name[0]?.message).toContain('"faster-thing"')
-    expect(name[0]?.claims).toEqual(['d-kn05wb30'])
+    expect(name[0]?.claims).toEqual(['d-34t7y2iq'])
   })
 
   it('clears the finding once the landing rename numbers the directory', () => {
