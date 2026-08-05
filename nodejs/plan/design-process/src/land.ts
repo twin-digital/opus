@@ -302,6 +302,33 @@ const approveStep = async (
   return true
 }
 
+/**
+ * The merge methods `gh pr merge` can set, in the order the landing prefers them. A repository
+ * enables its own, and enabling more than one is rare; where it has, the first here wins.
+ */
+const MERGE_METHODS = [
+  { flag: '--merge', enabled: 'allow_merge_commit' },
+  { flag: '--squash', enabled: 'allow_squash_merge' },
+  { flag: '--rebase', enabled: 'allow_rebase_merge' },
+] as const
+
+/** The method the repository permits, asked of the repository rather than assumed. */
+const mergeMethod = (run: CommandRunner, root: string, pullRequest: PullRequest): string | undefined => {
+  let raw: string
+  try {
+    raw = run('gh', ['api', `repos/${pullRequest.owner}/${pullRequest.repo}`], { cwd: root })
+  } catch {
+    return undefined
+  }
+  let repository: Record<string, unknown>
+  try {
+    repository = JSON.parse(raw) as Record<string, unknown>
+  } catch {
+    return undefined
+  }
+  return MERGE_METHODS.find((method) => repository[method.enabled] === true)?.flag
+}
+
 /** Set the merge to complete on its own once the gate is green, with the environment's own credentials. */
 const autoMerge = (
   steps: StepResult[],
@@ -318,8 +345,17 @@ const autoMerge = (
     })
     return false
   }
+  const method = mergeMethod(run, root, pullRequest)
+  if (method === undefined) {
+    steps.push({
+      step: 'auto-merge',
+      status: 'skipped',
+      detail: 'the repository names no merge method this landing can set; merge it once the gate is green',
+    })
+    return false
+  }
   try {
-    run('gh', ['pr', 'merge', String(pullRequest.number), '--squash', '--auto'], { cwd: root })
+    run('gh', ['pr', 'merge', String(pullRequest.number), method, '--auto'], { cwd: root })
   } catch (error) {
     // a repository that refuses auto-merge leaves an approved pull request to merge by hand
     steps.push({
@@ -329,6 +365,10 @@ const autoMerge = (
     })
     return false
   }
-  steps.push({ step: 'auto-merge', status: 'ok', detail: `#${pullRequest.number} merges when the gate is green` })
+  steps.push({
+    step: 'auto-merge',
+    status: 'ok',
+    detail: `#${pullRequest.number} merges ${method.slice(2)} when the gate is green`,
+  })
   return true
 }

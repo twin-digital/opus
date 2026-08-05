@@ -54,17 +54,38 @@ interface Call {
 /** What `gh pr view` reports for the branch: the landing discovers the pull request (d-8vsionnz). */
 const PR_VIEW = JSON.stringify({ url: 'https://github.com/twin-digital/plan-opus/pull/42' })
 
-const recorder = (fail?: string): { run: CommandRunner; calls: Call[] } => {
+interface MergeFlags {
+  allow_merge_commit?: boolean
+  allow_squash_merge?: boolean
+  allow_rebase_merge?: boolean
+}
+
+/** plan-opus, where increments land: merge commits only, squash and rebase disabled. */
+const PLAN_OPUS: MergeFlags = { allow_merge_commit: true, allow_squash_merge: false, allow_rebase_merge: false }
+
+const recorder = (fail?: string, repository: MergeFlags = PLAN_OPUS): { run: CommandRunner; calls: Call[] } => {
   const calls: Call[] = []
   const run: CommandRunner = (command, args) => {
     calls.push({ command, args })
     if (fail !== undefined && args.join(' ').includes(fail)) {
       throw new Error(`${command} failed`)
     }
-    return command === 'gh' && args[1] === 'view' ? PR_VIEW : ''
+    if (command !== 'gh') {
+      return ''
+    }
+    if (args[1] === 'view') {
+      return PR_VIEW
+    }
+    return args[0] === 'api' ? JSON.stringify(repository) : ''
   }
   return { run, calls }
 }
+
+/** The flag `gh pr merge` was given, or undefined when the landing never called it. */
+const mergeFlag = (calls: Call[]): string | undefined =>
+  calls
+    .find((call) => call.command === 'gh' && call.args[1] === 'merge')
+    ?.args.find((arg) => arg.startsWith('--') && arg !== '--auto')
 
 describe('the landing sequence is fixed — d-qzpfyc6s', () => {
   it('is the published order', () => {
@@ -179,6 +200,79 @@ describe('the landing discovers the pull request and opens none — d-8vsionnz',
     const merge = result.steps.find((step) => step.step === 'auto-merge')
     expect(merge?.status).toBe('skipped')
     expect(merge?.detail).toContain('merge it once the gate is green')
+  })
+})
+
+describe('the merge method is the one the repository permits — d-8vsionnz', () => {
+  const landWith = async (repository: MergeFlags) => {
+    const { run, calls } = recorder(undefined, repository)
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    return { result, calls }
+  }
+
+  it('sets a merge commit where that is what the repository allows', async () => {
+    const { result, calls } = await landWith(PLAN_OPUS)
+    expect(mergeFlag(calls)).toBe('--merge')
+    expect(result.steps.find((step) => step.step === 'auto-merge')?.status).toBe('ok')
+  })
+
+  it('sets a squash where that is what the repository allows', async () => {
+    const { calls } = await landWith({ allow_merge_commit: false, allow_squash_merge: true, allow_rebase_merge: false })
+    expect(mergeFlag(calls)).toBe('--squash')
+  })
+
+  it('sets a rebase where that is what the repository allows', async () => {
+    const { calls } = await landWith({ allow_merge_commit: false, allow_squash_merge: false, allow_rebase_merge: true })
+    expect(mergeFlag(calls)).toBe('--rebase')
+  })
+
+  it('prefers merge, then squash, then rebase where the repository allows several', async () => {
+    const all = await landWith({ allow_merge_commit: true, allow_squash_merge: true, allow_rebase_merge: true })
+    expect(mergeFlag(all.calls)).toBe('--merge')
+    const withoutMerge = await landWith({
+      allow_merge_commit: false,
+      allow_squash_merge: true,
+      allow_rebase_merge: true,
+    })
+    expect(mergeFlag(withoutMerge.calls)).toBe('--squash')
+  })
+
+  it('leaves the approved pull request to a manual merge when the repository allows none', async () => {
+    const { result, calls } = await landWith({
+      allow_merge_commit: false,
+      allow_squash_merge: false,
+      allow_rebase_merge: false,
+    })
+    expect(mergeFlag(calls)).toBeUndefined()
+    expect(result.landed).toBe(true)
+    expect(result.awaitingMerge).toBe(true)
+    expect(result.steps.find((step) => step.step === 'auto-merge')?.detail).toContain('merge it once the gate is green')
+  })
+
+  it('leaves it to a manual merge when the repository cannot be asked, rather than guessing a flag', async () => {
+    const { run } = recorder()
+    const silent: CommandRunner = (command, args, options) => {
+      if (command === 'gh' && args[0] === 'api') {
+        throw new Error('gh: could not reach the api')
+      }
+      return run(command, args, options)
+    }
+    const result = await landIncrement({
+      root: repo(settled()),
+      product: 'demo',
+      run: silent,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.awaitingMerge).toBe(true)
+    expect(result.steps.find((step) => step.step === 'auto-merge')?.status).toBe('skipped')
   })
 })
 

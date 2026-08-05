@@ -227,8 +227,14 @@ already holds.
 
 The landing discovers the pull request the branch already has and opens none. Where the branch
 has no pull request, or no token is given, the increment still publishes and the approval and
-auto-merge report `skipped`. Where the repository refuses auto-merge, the pull request is
-reported approved and awaiting a manual merge.
+auto-merge report `skipped`.
+
+The merge method comes from the repository, not from a default: the auto-merge step reads
+`allow_merge_commit`, `allow_squash_merge`, and `allow_rebase_merge` and sets the one enabled,
+preferring a merge commit, then a squash, then a rebase where more than one is. Where the
+repository enables none, or cannot be asked, the pull request is reported approved and awaiting
+a manual merge rather than set with a guessed method — as it is where the repository refuses
+auto-merge outright.
 
 ### backlog
 
