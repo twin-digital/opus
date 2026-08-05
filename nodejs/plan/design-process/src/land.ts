@@ -15,10 +15,21 @@ import type { Staged } from './session/staging.js'
 import type { FileTree } from './tree.js'
 
 /**
- * The landing sequence, in the order it runs (d-qzpfyc6s). The approval follows the push, because
- * a push after an approval dismisses it.
+ * The landing sequence, in the order it runs (d-h418ljtp). The pull request opens after the push,
+ * since the remote must carry the branch first, and the approval follows the open — a push after
+ * an approval dismisses it, and an increment is published by merging (d-6x6l6ws7).
  */
-export const LAND_STEPS = ['apply', 'conflicts', 'rename', 'check', 'commit', 'push', 'approve', 'auto-merge'] as const
+export const LAND_STEPS = [
+  'apply',
+  'conflicts',
+  'rename',
+  'check',
+  'commit',
+  'push',
+  'open',
+  'approve',
+  'auto-merge',
+] as const
 
 export type LandStep = (typeof LAND_STEPS)[number]
 
@@ -198,7 +209,21 @@ export const landIncrement = async (options: LandOptions): Promise<LandResult> =
     return { steps, landed: false }
   }
 
-  const pullRequest = discoverPullRequest(run, root)
+  let pullRequest: PullRequest | undefined
+  if (
+    !step('open', () => {
+      const existing = discoverPullRequest(run, root)
+      if (existing !== undefined) {
+        pullRequest = existing
+        return `#${existing.number} is already open`
+      }
+      pullRequest = openPullRequest(run, root, product, number)
+      return `opened #${pullRequest.number}`
+    })
+  ) {
+    return { steps, landed: false }
+  }
+
   const approved = await approveStep(steps, options, pullRequest)
   const merging = autoMerge(steps, run, root, pullRequest, approved)
   return {
@@ -238,10 +263,14 @@ const writeStaged = (root: string, staged: LandOptions['staged'], run: CommandRu
 const draftDirs = (tree: FileTree, product: string): string[] =>
   (loadProducts(tree).products.get(product)?.drafts ?? []).map((draft) => draft.dir)
 
-/**
- * The pull request the current branch already has. Finding none, the approval and the auto-merge
- * are skipped and nothing opens one (d-8vsionnz).
- */
+const PULL_URL = /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/
+
+const pullRequestAt = (url: unknown): PullRequest | undefined => {
+  const match = PULL_URL.exec(String(url))
+  return match === null ? undefined : { owner: match[1], repo: match[2], number: Number(match[3]) }
+}
+
+/** The pull request the current branch already has, if any; the open step makes one where not. */
 const discoverPullRequest = (run: CommandRunner, root: string): PullRequest | undefined => {
   let raw: string
   try {
@@ -249,14 +278,36 @@ const discoverPullRequest = (run: CommandRunner, root: string): PullRequest | un
   } catch {
     return undefined
   }
-  let url: unknown
   try {
-    url = (JSON.parse(raw) as { url?: unknown }).url
+    return pullRequestAt((JSON.parse(raw) as { url?: unknown }).url)
   } catch {
     return undefined
   }
-  const match = /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(String(url))
-  return match === null ? undefined : { owner: match[1], repo: match[2], number: Number(match[3]) }
+}
+
+/**
+ * Open the pull request the landing merges through: `main` admits a change only through one, and
+ * an increment is published by merging (d-6x6l6ws7, d-h418ljtp). The title and body carry the
+ * increment and the product and nothing else — the squash of this pull request is the record.
+ */
+const openPullRequest = (run: CommandRunner, root: string, product: string, number: string): PullRequest => {
+  const output = run(
+    'gh',
+    [
+      'pr',
+      'create',
+      '--title',
+      `plan(${product}): land increment ${number} [${number}]`,
+      '--body',
+      `Publishes increment ${number} of ${product}.\n`,
+    ],
+    { cwd: root },
+  )
+  const opened = pullRequestAt(output.trim().split(/\s+/).at(-1))
+  if (opened === undefined) {
+    throw new Error(`gh pr create named no pull request: ${JSON.stringify(output.trim())}`)
+  }
+  return opened
 }
 
 /** Approve as the owner, with the token the owner types and nothing else (d-uap9qjz9). */
@@ -284,7 +335,7 @@ const approveStep = async (
   pullRequest: PullRequest | undefined,
 ): Promise<boolean> => {
   if (pullRequest === undefined) {
-    steps.push({ step: 'approve', status: 'skipped', detail: 'this branch has no pull request' })
+    steps.push({ step: 'approve', status: 'skipped', detail: 'the open step named no pull request' })
     return false
   }
   const token = await options.approvingToken?.()
@@ -341,7 +392,7 @@ const autoMerge = (
     steps.push({
       step: 'auto-merge',
       status: 'skipped',
-      detail: pullRequest === undefined ? 'this branch has no pull request' : 'the approval was not given',
+      detail: pullRequest === undefined ? 'the open step named no pull request' : 'the approval was not given',
     })
     return false
   }

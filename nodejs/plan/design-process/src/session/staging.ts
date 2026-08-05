@@ -156,6 +156,8 @@ export const applyStaged = (read: (path: string) => string, entries: OpenEntry[]
     }
     const path = `${dir}/decisions.yaml`
     const source = (sourceOf(path) as DecisionsSource | undefined) ?? { version: '2' }
+    // the session is the only caller, so the owner authored the answer and the entry is ruled;
+    // an autonomous agent's answer would enter delegated (d-k85itgcv)
     source.decisions = [
       ...(source.decisions ?? []),
       { ...statedFromAnswer(ruling.entryId, entry, ruling.answer), status: 'accepted' },
