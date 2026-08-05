@@ -13,8 +13,13 @@ const IGNORED_DIRS = new Set(['.git', 'node_modules'])
 
 export class DirTree implements FileTree {
   private cached: string[] | undefined
+  // declared and assigned rather than a parameter property: the in-repo bin runs this source
+  // through node's type stripping, which does not support them
+  readonly root: string
 
-  constructor(readonly root: string) {}
+  constructor(root: string) {
+    this.root = root
+  }
 
   paths(): string[] {
     if (this.cached === undefined) {
@@ -42,10 +47,13 @@ export class DirTree implements FileTree {
 export class GitTree implements FileTree {
   private cached: string[] | undefined
 
-  constructor(
-    readonly root: string,
-    readonly ref: string,
-  ) {}
+  readonly root: string
+  readonly ref: string
+
+  constructor(root: string, ref: string) {
+    this.root = root
+    this.ref = ref
+  }
 
   paths(): string[] {
     this.cached ??= execFileSync('git', ['-C', this.root, 'ls-tree', '-r', '--name-only', '-z', this.ref], {
