@@ -40,6 +40,8 @@ export interface QuestionEntry {
 export interface ModelEntry {
   name: string
   schema?: string
+  /** A surface reference; `requirements@1` sources spell the same key `api:` (d-pe4j25wq). */
+  surface?: string
   api?: string
   description?: string
   status?: 'bound' | 'unbound'

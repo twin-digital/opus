@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractApiIdentity, loadApiPool, loadSchemaPool, parseIdentity } from '../src/pools.js'
+import { extractSurfaceIdentity, loadSchemaPool, loadSurfacePool, parseIdentity } from '../src/pools.js'
 import { makeRepo, poolFiles } from './helpers.js'
 
 describe('schema pool (r-2fytqadu)', () => {
@@ -18,7 +18,7 @@ describe('schema pool (r-2fytqadu)', () => {
     expect(pool.findings.map((finding) => finding.rule)).toContain('schema-identity-unique')
   })
 
-  it('fails an $id without the leading slash (d-3wjypyx6)', () => {
+  it('fails an $id without the leading slash (d-qwquvf78)', () => {
     const files = poolFiles()
     files['schemas/demo/bad.yaml'] =
       '$schema: https://json-schema.org/draft/2020-12/schema\n$id: demo/bad@1\ntype: object\n'
@@ -35,40 +35,49 @@ describe('schema pool (r-2fytqadu)', () => {
   })
 })
 
-describe('api pool (r-lll68661, d-u3u3sbmb)', () => {
-  it('extracts identity from a typescript header', () => {
-    expect(extractApiIdentity('apis/mc/server.ts', '// api: /mc-test-lib/server@2\nexport interface Server {}\n')).toBe(
-      '/mc-test-lib/server@2',
-    )
+describe('surface pool (r-j232vwp4, d-rui9z0lc)', () => {
+  it('extracts identity from a typescript comment (d-ds6mco0p)', () => {
+    expect(
+      extractSurfaceIdentity(
+        'surfaces/mc/server.ts',
+        '// surface: /mc-test-lib/server@2\nexport interface Server {}\n',
+      ),
+    ).toBe('/mc-test-lib/server@2')
   })
 
-  it('extracts identity from a yaml comment header', () => {
-    expect(extractApiIdentity('apis/mc/server.yaml', '# api: /mc-test-lib/server@1\nname: server\n')).toBe(
+  it('extracts identity from a yaml comment (d-tjitou0m)', () => {
+    expect(extractSurfaceIdentity('surfaces/mc/server.yaml', '# surface: /mc-test-lib/server@1\nname: server\n')).toBe(
       '/mc-test-lib/server@1',
     )
   })
 
-  it('extracts identity from openapi info.x-api-id', () => {
+  it('extracts identity from openapi info.x-api-id (d-6ier9trn)', () => {
     expect(
-      extractApiIdentity('apis/http/api.yaml', 'openapi: 3.1.0\ninfo:\n  title: t\n  x-api-id: /demo/http@1\n'),
+      extractSurfaceIdentity('surfaces/http/api.yaml', 'openapi: 3.1.0\ninfo:\n  title: t\n  x-api-id: /demo/http@1\n'),
     ).toBe('/demo/http@1')
   })
 
-  it('fails a file with no identity header, a malformed identity, and a duplicate', () => {
+  it('extracts identity from markdown frontmatter (d-4n77krzi)', () => {
+    expect(
+      extractSurfaceIdentity('surfaces/docs/page.md', '---\nio.twindigital.surface: /demo/page@1\n---\n\n# Page\n'),
+    ).toBe('/demo/page@1')
+  })
+
+  it('fails a file with no identity, a malformed identity, and a duplicate', () => {
     const { tree } = makeRepo({
-      'apis/a/one.ts': '// api: /demo/surface@1\n',
-      'apis/a/two.ts': '// api: /demo/surface@1\n',
-      'apis/a/three.ts': '// api: no-slash@1\n',
-      'apis/a/four.ts': 'export {}\n',
+      'surfaces/a/one.ts': '// surface: /demo/screen@1\n',
+      'surfaces/a/two.ts': '// surface: /demo/screen@1\n',
+      'surfaces/a/three.ts': '// surface: no-slash@1\n',
+      'surfaces/a/four.ts': 'export {}\n',
     })
-    const rules = loadApiPool(tree).findings.map((finding) => finding.rule)
-    expect(rules).toContain('api-identity-unique')
-    expect(rules.filter((rule) => rule === 'api-identity')).toHaveLength(2)
+    const rules = loadSurfacePool(tree).findings.map((finding) => finding.rule)
+    expect(rules).toContain('surface-identity-unique')
+    expect(rules.filter((rule) => rule === 'surface-identity')).toHaveLength(2)
   })
 
   it('fails versions that are not dense per name', () => {
-    const { tree } = makeRepo({ 'apis/a/one.ts': '// api: /demo/surface@2\n' })
-    expect(loadApiPool(tree).findings.map((finding) => finding.rule)).toContain('api-versions-dense')
+    const { tree } = makeRepo({ 'surfaces/a/one.ts': '// surface: /demo/screen@2\n' })
+    expect(loadSurfacePool(tree).findings.map((finding) => finding.rule)).toContain('surface-versions-dense')
   })
 })
 

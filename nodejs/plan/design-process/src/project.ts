@@ -82,7 +82,7 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     lines.push('## model', '')
     for (const { entry } of fold.model.values()) {
       lines.push(
-        `- **${entry.name}** → ${entry.schema ?? entry.api}${entry.description !== undefined ? ` — ${entry.description.trim()}` : ''}`,
+        `- **${entry.name}** → ${entry.schema ?? entry.surface ?? entry.api}${entry.description !== undefined ? ` — ${entry.description.trim()}` : ''}`,
       )
     }
     lines.push('')

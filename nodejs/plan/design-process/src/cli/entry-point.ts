@@ -182,11 +182,12 @@ program
 
 program
   .command('increment')
-  .description("rule a draft's open entries and land it, in one full-screen session")
-  .argument('<product>', 'product id')
+  .description("rule a draft's entries and land it, in one full-screen session over its pull request")
+  .argument('[product]', 'product id; the draft the pull request carries names it where it is omitted')
   .option('--root <dir>', 'repository root', '.')
-  .action(async (productId: string, options: { root: string }) => {
-    process.exitCode = await runIncrementSession({ root: options.root, product: productId })
+  .option('--pr <url>', "the pull request to work; the working directory's branch supplies one where it is omitted")
+  .action(async (productId: string | undefined, options: { root: string; pr?: string }) => {
+    process.exitCode = await runIncrementSession({ root: options.root, product: productId, pr: options.pr })
   })
 
 program
