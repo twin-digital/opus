@@ -19,6 +19,12 @@ packages:
     # exports would contradict the published surface.
     rules:
       package-manifest: false
+  '@twin-digital/mc-dev-kit':
+    # tsdown is a devDependency for the types its exported build fragment names, not a bundler this
+    # package builds with: it ships as a tsc-emitted library. The generated tsdown.config.ts would
+    # switch its build and inline its runtime dependencies.
+    rules:
+      bundle: false
   '@twin-digital/minecraft-test-lib':
     # One public entry point by design: every fake type and free function is reached from the
     # package root, so the generated `./*` subpath exports would contradict the published surface.
