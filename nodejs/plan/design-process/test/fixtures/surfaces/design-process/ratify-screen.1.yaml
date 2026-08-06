@@ -1,0 +1,132 @@
+# surface: /design-process/ratify-screen@1
+#
+# What ratify mode renders. The pane layouts and the form of each field are this surface.
+# Which entries the list holds, and how a cited id is resolved, are decisions.
+
+screen:
+  layout: the header across the top; below it, the entry list on the left and the detail pane on the right
+  selection: moving through the list moves the pane
+
+# The frame a render is diffed against. What it fixes is the arrangement, the order of
+# things, and the form of each field — everything the sections below state in words.
+# Column widths, the separator and rule glyphs, the selection marker, the truncation
+# width, and colour are the implementer's; a snapshot differing from this mock only in
+# those is conformant.
+mock:
+  ratify: |
+    increment-process · wip-001-ratify-view · plan/increment-process/ratify-view · #197
+    also changed: schemas (1), surfaces (1), drafts (2)                      3 unresolved
+    ──────────────────────────────────────────────────────────────────────────────────────
+    ›the contract pools are schemas an…  │ THE CONTRACT POOLS ARE SCHEMAS AND SURFACES [d-qwquvf78]
+     d-qwquvf78                          │
+                                         │ schemas live under `schemas/` and public surfaces
+     surface identity is a per-tech he…  │ under `surfaces/`, identity declared in-file: schemas
+     d-0qrp80dx                accepted  │ as JSON Schema — draft 2020-12, authored as YAML —
+                                         │ with `$id` root-relative.
+     the model is a block of the requi…  │
+     d-pe4j25wq                deferred  │ ─────────────────────────────────────────────────────
+                                         │ pinned(data-format)
+     the screen's shape is an authored…  │
+     d-9zot40jn                          │ because:
+                                         │   - authored surfaces are shared and versioned [r-j232vwp4]
+     deferring is offered beside the f…  │   - foundations have defined shapes and meanings [r-gq90gngs]
+     d-4xkyfjzu                rejected  │
+                                         │ supersedes:
+                                         │   - the contract pools [d-3wjypyx6]
+
+  select-draft: |
+    plan/increment-process/ratify-view · #197
+    ──────────────────────────────────────────────────────────────────────────────────────
+    two drafts on this pull request:
+
+     ›increment-process · wip-001-ratify-view
+      minecraft-addon · wip-002-dev-loop
+
+  text-entry: |
+    rejection reason ─────────────────────────────────────────────────────────────────────
+    the header should not count drafts, since running a survey makes that count█
+
+  secret: |
+    github token ─────────────────────────────────────────────────────────────────────────
+    █
+
+text-entry:
+  applies-to:
+    - a rejection's reason
+    - a note on an entry
+    - the owner's token
+  cursor:
+    present: whenever the field has focus
+    form: a block at the insertion point, distinguishable from the surrounding text
+    notes: the field shows where the next character lands, empty or not
+  secret:
+    cursor: present
+    text: not echoed
+
+select-draft:
+  shown-when: the pull request's diff carries more than one draft
+  entry:
+    lines: 1
+    form: '<product> · <increment-directory>'
+  on-choice: the ordinary view, on the chosen draft
+
+header:
+  present-in: every mode
+  identity:
+    form: '<product> · <increment-directory> · <branch> · #<pr-number>'
+  other-inputs:
+    form: 'also changed: <kind> (<count>), <kind> (<count>)'
+    kinds:
+      - schemas
+      - surfaces
+      - facts
+      - evidence
+      - drafts
+    absent: the line is omitted where the draft changes none of them
+  unresolved-threads:
+    form: '<count> unresolved'
+    absent: the line is omitted where none is unresolved
+
+entry-list:
+  entry:
+    lines: 2
+    line-1:
+      form: '<title>'
+      truncated-to: the implementer's choice of width
+      no-title: the id, where the entry carries none
+    line-2:
+      form: '<id>'
+      emphasis: dim
+  staged-ruling:
+    form: shown beside the entry
+    absent: nothing is shown where the entry holds no ruling
+
+detail-pane:
+  order:
+    - heading
+    - blank line
+    - statement
+    - horizontal rule
+    - metadata
+  heading:
+    form: '<TITLE> [<id>]'
+    notes: no kind-and-increment line follows the heading
+  statement:
+    form: the entry's statement, verbatim
+  horizontal-rule:
+    form: a rule spanning the pane, present only where metadata follows
+  metadata:
+    pinned:
+      form: 'pinned(<reason>): <notes>'
+      no-notes: 'pinned(<reason>)'
+      absent: the line is omitted where the entry is not pinned
+    citations:
+      applies-to:
+        - because
+        - supersedes
+        - answers
+      form: |
+        <label>:
+          - <title> [<id>]
+      notes: one cited entry per line; an id resolving to nothing appears as "  - <id>"
+      absent: a label with no entries is omitted

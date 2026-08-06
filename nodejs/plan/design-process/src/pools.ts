@@ -19,7 +19,7 @@ export interface SchemaPoolEntry extends PoolEntry {
   schema: Record<string, unknown>
 }
 
-export interface ApiPoolEntry extends PoolEntry {
+export interface SurfacePoolEntry extends PoolEntry {
   content: string
 }
 
@@ -67,7 +67,7 @@ export const loadSchemaPool = (tree: FileTree): SchemaPool => {
     if (typeof id !== 'string' || identity === undefined) {
       findings.push({
         rule: 'schema-identity',
-        claims: ['r-2fytqadu', 'd-3wjypyx6'],
+        claims: ['r-2fytqadu', 'd-qwquvf78'],
         path,
         message:
           typeof id === 'string' ?
@@ -93,14 +93,37 @@ export const loadSchemaPool = (tree: FileTree): SchemaPool => {
   return { entries, findings }
 }
 
-const API_COMMENT_PATTERNS = [/^\s*\/\/\s*api:\s*(\S+)\s*$/m, /^\s*#\s*api:\s*(\S+)\s*$/m]
+/** `// surface: <identity>` in typescript (d-ds6mco0p), `# surface: <identity>` in yaml (d-tjitou0m). */
+const SURFACE_COMMENT_PATTERNS = [/^\s*\/\/\s*surface:\s*(\S+)\s*$/m, /^\s*#\s*surface:\s*(\S+)\s*$/m]
 
-/** Extract an api file's declared identity by its per-tech convention. */
-export const extractApiIdentity = (path: string, content: string): string | undefined => {
+/** The markdown frontmatter key a surface declares its identity under (d-4n77krzi). */
+const MARKDOWN_IDENTITY_KEY = 'io.twindigital.surface'
+
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/
+
+/**
+ * A surface file's declared identity, read by the extractor its extension and content select
+ * (d-rui9z0lc). Nothing outside the file names it, so a surface keeps its identity when it moves.
+ */
+export const extractSurfaceIdentity = (path: string, content: string): string | undefined => {
+  if (path.endsWith('.md')) {
+    const frontmatter = FRONTMATTER.exec(content)
+    if (frontmatter) {
+      const parsed: unknown = parse(frontmatter[1])
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        const id = (parsed as Record<string, unknown>)[MARKDOWN_IDENTITY_KEY]
+        if (typeof id === 'string') {
+          return id
+        }
+      }
+    }
+    return undefined
+  }
   if (isYamlPath(path) || path.endsWith('.json')) {
     try {
       const doc: unknown = parse(content)
       if (typeof doc === 'object' && doc !== null && !Array.isArray(doc)) {
+        // openapi keeps its own spelling of the key (d-6ier9trn)
         const info = (doc as Record<string, unknown>).info
         if (typeof info === 'object' && info !== null) {
           const id = (info as Record<string, unknown>)['x-api-id']
@@ -113,7 +136,7 @@ export const extractApiIdentity = (path: string, content: string): string | unde
       // fall through to comment-header extraction
     }
   }
-  for (const pattern of API_COMMENT_PATTERNS) {
+  for (const pattern of SURFACE_COMMENT_PATTERNS) {
     const match = pattern.exec(content)
     if (match) {
       return match[1]
@@ -122,43 +145,43 @@ export const extractApiIdentity = (path: string, content: string): string | unde
   return undefined
 }
 
-export interface ApiPool {
-  entries: Map<string, ApiPoolEntry>
+export interface SurfacePool {
+  entries: Map<string, SurfacePoolEntry>
   findings: Finding[]
 }
 
-/** Load `apis/**` as the api pool: authored surfaces identified in-file by a per-tech header. */
-export const loadApiPool = (tree: FileTree): ApiPool => {
-  const entries = new Map<string, ApiPoolEntry>()
+/** Load `surfaces/**` as the surface pool: authored contracts identified in-file (d-qwquvf78). */
+export const loadSurfacePool = (tree: FileTree): SurfacePool => {
+  const entries = new Map<string, SurfacePoolEntry>()
   const findings: Finding[] = []
 
-  for (const path of tree.paths().filter((p) => p.startsWith('apis/'))) {
+  for (const path of tree.paths().filter((p) => p.startsWith('surfaces/'))) {
     const content = tree.read(path)
-    const id = extractApiIdentity(path, content)
+    const id = extractSurfaceIdentity(path, content)
     if (id === undefined) {
       findings.push({
-        rule: 'api-identity',
-        claims: ['r-lll68661', 'd-u3u3sbmb'],
+        rule: 'surface-identity',
+        claims: ['r-j232vwp4', 'd-rui9z0lc'],
         path,
-        message: 'no api identity header found',
+        message: 'no surface identity found',
       })
       continue
     }
     const identity = parseIdentity(id)
     if (identity === undefined) {
       findings.push({
-        rule: 'api-identity',
-        claims: ['r-lll68661', 'd-u3u3sbmb'],
+        rule: 'surface-identity',
+        claims: ['r-j232vwp4', 'd-rui9z0lc'],
         path,
-        message: `api identity ${JSON.stringify(id)} is not a root-relative /<namespace>/<name>@<version> identity`,
+        message: `surface identity ${JSON.stringify(id)} is not a root-relative /<namespace>/<name>@<version> identity`,
       })
       continue
     }
     const existing = entries.get(id)
     if (existing) {
       findings.push({
-        rule: 'api-identity-unique',
-        claims: ['r-lll68661'],
+        rule: 'surface-identity-unique',
+        claims: ['r-j232vwp4'],
         path,
         message: `duplicate identity ${id}: also claimed by ${existing.path}`,
       })
@@ -167,7 +190,7 @@ export const loadApiPool = (tree: FileTree): ApiPool => {
     entries.set(id, { id, name: identity.name, version: identity.version, path, content })
   }
 
-  findings.push(...checkDenseVersions(entries, 'api-versions-dense', ['r-lll68661']))
+  findings.push(...checkDenseVersions(entries, 'surface-versions-dense', ['r-j232vwp4']))
   return { entries, findings }
 }
 

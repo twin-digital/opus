@@ -3,7 +3,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js'
 import { checkEvidenceBar } from './evidence-bar.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
-import { loadApiPool, loadFacts, loadSchemaPool } from './pools.js'
+import { loadFacts, loadSchemaPool, loadSurfacePool } from './pools.js'
 import { closureRequirementIds, resolvePresetClosure } from './presets.js'
 
 import type { ErrorObject, ValidateFunction } from 'ajv'
@@ -34,8 +34,8 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
 
   const schemaPool = loadSchemaPool(head)
   findings.push(...schemaPool.findings)
-  const apiPool = loadApiPool(head)
-  findings.push(...apiPool.findings)
+  const surfacePool = loadSurfacePool(head)
+  findings.push(...surfacePool.findings)
   const facts = loadFacts(head)
 
   findings.push(...checkSchemaRefsResolve(schemaPool))
@@ -53,8 +53,8 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
     findings.push(...checkIds(product))
     findings.push(...checkDecisionRules(product))
     findings.push(...checkQuestionRules(product))
-    findings.push(...checkCitations(product, facts))
-    findings.push(...checkModel(product, schemaPool.entries, apiPool.entries))
+    findings.push(...checkCitations(product, facts, productsTree))
+    findings.push(...checkModel(product, schemaPool.entries, surfacePool.entries))
     findings.push(...checkPresets(product, productsTree))
     findings.push(...checkRecords(product, productsTree))
   }
@@ -364,14 +364,20 @@ const checkQuestionRules = (product: Product): Finding[] => {
   return findings
 }
 
-const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
+const checkCitations = (product: Product, facts: FactsPool, productsTree: ProductsTree): Finding[] => {
   const findings: Finding[] = []
   const { requirements, decisions } = productEntries(product)
   const requirementIds = new Set(requirements.map((entry) => entry.id))
   const decisionIds = new Set(decisions.map((entry) => entry.id))
-  const known = new Set([...requirementIds, ...decisionIds])
   const fold = foldProduct(product, undefined, true)
+  // a requirement in force through an adopted preset is folded, projected, and covered, so it is
+  // citable: citations resolve against the folded requirement set, adopted ones included
+  const adopted = closureRequirementIds(resolvePresetClosure(product, productsTree, fold))
+  const known = new Set([...requirementIds, ...decisionIds, ...adopted])
   const inForce = coverableClaimIds(fold)
+  for (const id of adopted) {
+    inForce.add(id)
+  }
   for (const [id, { entry }] of fold.decisions) {
     if (entry.status === 'rejected' || entry.status === 'deferred') {
       inForce.add(id) // in force for citations though not coverable: rejected awaits replacement, deferred its answer
@@ -480,7 +486,7 @@ const checkCitations = (product: Product, facts: FactsPool): Finding[] => {
   return findings
 }
 
-const checkModel = (product: Product, schemas: Map<string, unknown>, apis: Map<string, unknown>): Finding[] => {
+const checkModel = (product: Product, schemas: Map<string, unknown>, surfaces: Map<string, unknown>): Finding[] => {
   const findings: Finding[] = []
   for (const increment of allIncrements(product)) {
     const source = increment.requirements
@@ -506,12 +512,14 @@ const checkModel = (product: Product, schemas: Map<string, unknown>, apis: Map<s
           message: `entity ${entry.name} binds ${entry.schema}, which the schema pool does not hold`,
         })
       }
-      if (entry.api !== undefined && !apis.has(entry.api)) {
+      // `requirements@1` spells the key `api:`; `@2` spells it `surface:` (d-pe4j25wq)
+      const surface = entry.surface ?? entry.api
+      if (surface !== undefined && !surfaces.has(surface)) {
         findings.push({
           rule: 'model-ref-resolves',
-          claims: ['r-lll68661', 'r-bua9wl1s'],
+          claims: ['r-j232vwp4', 'r-bua9wl1s'],
           path: source.path,
-          message: `entity ${entry.name} binds ${entry.api}, which the api pool does not hold`,
+          message: `entity ${entry.name} binds ${surface}, which the surface pool does not hold`,
         })
       }
     }
@@ -767,7 +775,7 @@ const checkChanges = (head: FileTree, base: FileTree): Finding[] => {
     }
   }
 
-  // pool versions bound by published increments are immutable (r-2fytqadu, r-lll68661)
+  // pool versions bound by published increments are immutable (r-2fytqadu, r-j232vwp4)
   const baseSchemas = loadSchemaPool(base)
   const headSchemas = loadSchemaPool(head)
   const boundSchemas = boundSchemaIdentities(baseProducts, baseSchemas)
@@ -794,25 +802,25 @@ const checkChanges = (head: FileTree, base: FileTree): Finding[] => {
     }
   }
 
-  const baseApis = loadApiPool(base)
-  const headApis = loadApiPool(head)
-  for (const identity of boundApiIdentities(baseProducts)) {
-    const baseEntry = baseApis.entries.get(identity)
+  const baseSurfaces = loadSurfacePool(base)
+  const headSurfaces = loadSurfacePool(head)
+  for (const identity of boundSurfaceIdentities(baseProducts)) {
+    const baseEntry = baseSurfaces.entries.get(identity)
     if (!baseEntry) {
       continue
     }
-    const headEntry = headApis.entries.get(identity)
+    const headEntry = headSurfaces.entries.get(identity)
     if (!headEntry) {
       findings.push({
         rule: 'pool-version-immutable',
-        claims: ['r-lll68661'],
+        claims: ['r-j232vwp4'],
         path: baseEntry.path,
         message: `${identity} is bound by a published increment and may not be removed`,
       })
     } else if (baseEntry.content !== headEntry.content) {
       findings.push({
         rule: 'pool-version-immutable',
-        claims: ['r-lll68661'],
+        claims: ['r-j232vwp4'],
         path: headEntry.path,
         message: `${identity} is bound by a published increment and may not be edited`,
       })
@@ -881,13 +889,14 @@ const boundSchemaIdentities = (products: ProductsTree, schemas: SchemaPool): Set
   return bound
 }
 
-const boundApiIdentities = (products: ProductsTree): Set<string> => {
+const boundSurfaceIdentities = (products: ProductsTree): Set<string> => {
   const bound = new Set<string>()
   for (const product of products.products.values()) {
     for (const increment of product.increments) {
       for (const entry of increment.requirements?.data.model ?? []) {
-        if (entry.api !== undefined) {
-          bound.add(entry.api)
+        const surface = entry.surface ?? entry.api
+        if (surface !== undefined) {
+          bound.add(surface)
         }
       }
     }

@@ -1,18 +1,31 @@
-import { emptyStaging, setRemaining, stageRuling } from './staging.js'
+import { emptyStaging, setRemaining, stageNote, stageRuling } from './staging.js'
 
 import type { OpenEntry, QuestionRoute } from './entries.js'
 import type { DecisionStatus, Staged } from './staging.js'
 
 /**
  * What the session is doing. `ratify` is the master list beside the detail pane, and is where a
- * draft carrying anything proposed or unanswered opens; the input modes are the ruling being
- * taken on the selected entry; `landing` runs the fixed sequence and is offered only when nothing
- * is proposed and no question is open (d-gf6x5jzy).
+ * draft carrying anything proposed or unanswered opens; the input modes are the ruling or the note
+ * being taken on the selected entry; `landing` runs the fixed sequence and is offered only when
+ * nothing is proposed and no question is open (d-7i1l1kfy).
  */
-export type SessionMode = 'ratify' | 'ruling' | 'reason' | 'answer' | 'route' | 'bulk' | 'landing'
+export type SessionMode = 'ratify' | 'reason' | 'answer' | 'route' | 'bulk' | 'note' | 'landing'
+
+/** What the header names: the draft, the branch, the pull request, and the inputs the list does not hold (d-kjwswmro). */
+export interface SessionHeader {
+  product: string
+  increment: string
+  branch: string
+  pullRequest: number
+  /** The draft's changed inputs the ratify list does not carry, counted from the merge-base. */
+  alsoChanged: { kind: 'schemas' | 'surfaces' | 'facts' | 'evidence' | 'drafts'; count: number }[]
+  /** How many review threads on the pull request nobody has applied. */
+  unresolved: number
+}
 
 export interface SessionState {
   entries: OpenEntry[]
+  header: SessionHeader
   /** Index into `entries` of the selected row; the detail pane carries this one. */
   selected: number
   staged: Staged
@@ -37,12 +50,13 @@ export interface Key {
   sequence?: string
 }
 
-/** The key each ruling is taken with, in ratify and in bulk alike. */
+/** The key each ruling is taken with, in ratify and in bulk alike; deferring sits beside the four (d-4xkyfjzu). */
 export const RULING_KEYS: Record<string, DecisionStatus | undefined> = {
   a: 'accepted',
   t: 'tolerated',
   g: 'delegated',
   r: 'rejected',
+  d: 'deferred',
 }
 
 /** The key each route is answered with. */
@@ -51,8 +65,9 @@ const ROUTE_KEYS: Record<string, QuestionRoute | undefined> = { f: 'fact', r: 'r
 /** How far a page key moves; the driver's viewport is not the model's business. */
 const PAGE = 8
 
-export const openSession = (entries: OpenEntry[]): SessionState => ({
+export const openSession = (entries: OpenEntry[], header: SessionHeader): SessionState => ({
   entries,
+  header,
   selected: 0,
   staged: emptyStaging(),
   mode: 'ratify',
@@ -60,9 +75,15 @@ export const openSession = (entries: OpenEntry[]): SessionState => ({
   scroll: 0,
 })
 
-/** Landing is available exactly when nothing is proposed and no question is open. */
+/** Landing is available exactly when nothing is proposed and no question is open (d-4xkyfjzu). */
 export const canLand = (state: SessionState): boolean =>
-  state.entries.every((entry) => state.staged.rulings.has(entry.id))
+  state.entries.every((entry) => {
+    if (entry.kind === 'question') {
+      return state.staged.rulings.has(entry.id)
+    }
+    const ruling = state.staged.rulings.get(entry.id)
+    return (ruling?.kind === 'decision' ? ruling.status : entry.status) !== 'proposed'
+  })
 
 const selected = (state: SessionState): OpenEntry | undefined => state.entries[state.selected]
 
@@ -96,6 +117,8 @@ export const reduce = (state: SessionState, key: Key): SessionState => {
       return answer(state, key)
     case 'route':
       return route(state, key, entry)
+    case 'note':
+      return note(state, key, entry)
     default:
       return state
   }
@@ -104,6 +127,7 @@ export const reduce = (state: SessionState, key: Key): SessionState => {
 const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): SessionState => {
   switch (key.name) {
     case 'down':
+      return move(state, 1)
     case 'j':
       return move(state, 1)
     case 'up':
@@ -119,6 +143,10 @@ const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): Se
       return { ...state, quit: true }
     case 'b':
       return { ...state, mode: 'bulk', message: undefined }
+    case 'n':
+      return entry === undefined ? state : (
+          { ...state, mode: 'note', input: state.staged.notes.get(entry.id) ?? '', message: undefined }
+        )
     case 'w':
       return { ...state, submit: 'write' }
     case 'l':
@@ -214,4 +242,17 @@ const route = (state: SessionState, key: Key, entry: OpenEntry | undefined): Ses
       // generates it against the tree before the write, so the model leaves it unset
     }),
   }
+}
+
+/** A note settles nothing and gates nothing; the submit posts it as a review comment (d-f1b5r2f8). */
+const note = (state: SessionState, key: Key, entry: OpenEntry | undefined): SessionState => {
+  if (key.name === 'escape') {
+    return { ...state, mode: 'ratify', input: '' }
+  }
+  if (key.name !== 'enter' && key.name !== 'return') {
+    return typed(state, key)
+  }
+  return entry === undefined ?
+      { ...state, mode: 'ratify', input: '' }
+    : { ...state, mode: 'ratify', input: '', staged: stageNote(state.staged, entry.id, state.input) }
 }

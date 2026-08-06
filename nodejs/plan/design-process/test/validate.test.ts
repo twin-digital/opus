@@ -364,6 +364,23 @@ describe('validateTree — presets (r-bwtud1e5)', () => {
     expect(check(withPreset({ name: 'nodejs-library', version: 1 }, presetProduct()))).toEqual([])
   })
 
+  it('resolves a citation of a requirement in force through an adopted preset (d-eaw3u72o)', () => {
+    const files = withPreset({ name: 'nodejs-library', version: 1 }, presetProduct())
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '2',
+      decisions: [
+        {
+          id: 'd-eeeeeeee',
+          title: 'a decision resting on an adopted requirement',
+          statement: 'the adopted requirement is what this rests on.\n',
+          status: 'accepted',
+          because: ['r-pppppppp'],
+        },
+      ],
+    })
+    expect(check(files)).toEqual([])
+  })
+
   it('fails adopting an undeclared preset', () => {
     expect(rules(check(withPreset({ name: 'nodejs-library', version: 1 })))).toContain('preset-resolves')
   })
