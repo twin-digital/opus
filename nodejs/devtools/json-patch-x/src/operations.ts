@@ -93,8 +93,5 @@ export interface SetMatchingExtendedOperation<T = unknown> extends BaseExtendedO
 }
 
 export type ExtendedOperation =
-  | AppendIfMissingExtendedOperation
-  | RemoveValueExtendedOperation
-  | ReorderMapKeys
-  | SetMatchingExtendedOperation
+  AppendIfMissingExtendedOperation | RemoveValueExtendedOperation | ReorderMapKeys | SetMatchingExtendedOperation
 export type AnyOperation = ExtendedOperation | Operation

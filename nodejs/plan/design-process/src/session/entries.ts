@@ -57,29 +57,25 @@ const drafts = (tree: FileTree, productId: string, increment?: string): DraftInc
 }
 
 const decisionEntries = (draft: DraftIncrement): OpenEntry[] =>
-  (draft.decisions?.data.decisions ?? []).map(
-    (entry): OpenEntry => ({
-      kind: 'decision',
-      id: entry.id,
-      title: entry.title,
-      text: entry.statement,
-      increment: draft.name,
-      path: draft.decisions?.path ?? `${draft.dir}/decisions.yaml`,
-      status: entry.status,
-      pinned: entry.pinned,
-      supersedes: entry.supersedes,
-      because: entry.because,
-    }),
-  )
+  (draft.decisions?.data.decisions ?? []).map((entry): OpenEntry => ({
+    kind: 'decision',
+    id: entry.id,
+    title: entry.title,
+    text: entry.statement,
+    increment: draft.name,
+    path: draft.decisions?.path ?? `${draft.dir}/decisions.yaml`,
+    status: entry.status,
+    pinned: entry.pinned,
+    supersedes: entry.supersedes,
+    because: entry.because,
+  }))
 
 const questionEntries = (draft: DraftIncrement): OpenEntry[] =>
-  (draft.questions?.data.questions ?? []).map(
-    (entry): OpenEntry => ({
-      kind: 'question',
-      id: entry.id,
-      text: entry.question,
-      increment: draft.name,
-      path: draft.questions?.path ?? `${draft.dir}/questions.yaml`,
-      route: entry.answer,
-    }),
-  )
+  (draft.questions?.data.questions ?? []).map((entry): OpenEntry => ({
+    kind: 'question',
+    id: entry.id,
+    text: entry.question,
+    increment: draft.name,
+    path: draft.questions?.path ?? `${draft.dir}/questions.yaml`,
+    route: entry.answer,
+  }))

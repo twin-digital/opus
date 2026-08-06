@@ -159,10 +159,7 @@ interface InitiativeRolledEncounter extends BaseEncounter {
  * This is an immutable snapshot of the encounter's current state.
  */
 export type EncounterSnapshot =
-  | NewEncounter
-  | AwarenessDeterminedEncounter
-  | SurpriseAndDistanceSetEncounter
-  | InitiativeRolledEncounter
+  NewEncounter | AwarenessDeterminedEncounter | SurpriseAndDistanceSetEncounter | InitiativeRolledEncounter
 
 export type EncounterJson = Omit<EncounterSnapshot, 'phase' | 'timestamp'> & {
   environment?: 'dungeon' | 'outdoors'

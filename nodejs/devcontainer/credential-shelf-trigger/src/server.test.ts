@@ -18,8 +18,8 @@ interface Harness {
 
 const start = async (over: Partial<ServerDeps> = {}): Promise<Harness> => {
   const audits: AuditEntry[] = []
-  const upstream = vi.fn(
-    (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
+  const upstream = vi.fn((): Promise<UpstreamResponse> =>
+    Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
   )
   const deps: ServerDeps = {
     token: TOKEN,

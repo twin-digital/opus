@@ -164,14 +164,12 @@ export const createWorld = (
       const accessCodes =
         spec.code === undefined || spec.type === 'past' ?
           []
-        : covered.map(
-            (lockName): AccessCode => ({
-              lockName,
-              code: spec.code ?? '',
-              syncToLockStatus: synced ? 'success' : 'scheduled',
-              syncToCloudStatus: 'success',
-            }),
-          )
+        : covered.map((lockName): AccessCode => ({
+            lockName,
+            code: spec.code ?? '',
+            syncToLockStatus: synced ? 'success' : 'scheduled',
+            syncToCloudStatus: 'success',
+          }))
 
       world.reservations.push({
         propertyId,
