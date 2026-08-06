@@ -8,7 +8,7 @@ import { loadProducts } from './load.js'
 import { collectOpenEntries } from './session/entries.js'
 import { applyStaged, stagingProblems } from './session/staging.js'
 import { DirTree, resolveGitRef } from './tree.js'
-import { formatIncrement, resolveFold } from './version.js'
+import { formatIncrement, resolveFold, resolveFoldIfDeclared } from './version.js'
 
 import type { OpenEntry } from './session/entries.js'
 import type { Staged } from './session/staging.js'
@@ -145,11 +145,13 @@ export const landIncrement = async (options: LandOptions): Promise<LandResult> =
 
   // the head the landing measures itself against: what origin/main published, else this tree's own
   const head = resolveGitRef(root, ['origin/main', 'main'])
-  const headFold = head === undefined ? undefined : resolveFold(root, product, { kind: 'ref', ref: head })
+  const headFold = head === undefined ? undefined : resolveFoldIfDeclared(root, product, { kind: 'ref', ref: head })
   if (
     !step('conflicts', () => {
       if (headFold === undefined) {
-        return 'no head ref resolvable; nothing to conflict with'
+        return head === undefined ?
+            'no head ref resolvable; nothing to conflict with'
+          : `${product} publishes nothing at ${head}; nothing to conflict with`
       }
       const findings = findLandingConflicts(new DirTree(root), headFold, product)
       if (findings.length > 0) {

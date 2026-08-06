@@ -12,7 +12,7 @@ import { runIncrementSession } from '../session/run.js'
 import { readSecret } from '../session/secret.js'
 import { DirTree, GitTree, resolveGitRef } from '../tree.js'
 import { validateTree } from '../validate.js'
-import { formatIncrement, parseFoldVersion, resolveFold } from '../version.js'
+import { formatIncrement, parseFoldVersion, resolveFold, resolveFoldIfDeclared } from '../version.js'
 
 import type { StoreOptions } from '../backlog-store.js'
 import type { BacklogItem } from '../backlog.js'
@@ -192,7 +192,15 @@ jsonOption(program.command('conflicts'))
       }
       version = { kind: 'ref', ref }
     }
-    const head = resolveFold(options.root, productId, version)
+    // a ref that declares no such product is the first increment's case: nothing there to conflict with
+    const head =
+      version.kind === 'ref' ?
+        resolveFoldIfDeclared(options.root, productId, version)
+      : resolveFold(options.root, productId, version)
+    if (head === undefined) {
+      reportFindings([], options.json, `landing check passed: ${productId} publishes nothing at the head`, '')
+      return
+    }
     reportFindings(
       findLandingConflicts(new DirTree(options.root), head, productId),
       options.json,
