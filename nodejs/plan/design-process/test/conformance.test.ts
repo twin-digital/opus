@@ -23,7 +23,8 @@ const SURFACE = parse(
   readFileSync(join(import.meta.dirname, 'fixtures/surfaces/design-process/ratify-screen.1.yaml'), 'utf8'),
 ) as { mock: Record<string, string> }
 
-const VIEWPORT = { rows: 40, columns: 86 }
+// wide enough to hold the ratify mock, whose rows run past the 86 its own rule declares
+const VIEWPORT = { rows: 40, columns: 100 }
 
 const squeeze = (line: string): string => line.trim().replace(/\s+/g, ' ')
 
@@ -111,7 +112,7 @@ const resolve: Citations = (citation) => TITLES[citation]
 const mock = (name: string): string[] => SURFACE.mock[name].split('\n').filter((line) => line.trim() !== '')
 
 describe('the ratify render conforms to /design-process/ratify-screen@1', () => {
-  const rendered = shape(renderSession(openSession(ENTRIES, HEADER), VIEWPORT, resolve))
+  const rendered = shape(renderSession(openSession(ENTRIES, HEADER), VIEWPORT, resolve).slice(0, -1))
   const authored = shape(mock('ratify'))
 
   it('carries the header the surface names: the draft, the other inputs, and the unresolved threads', () => {

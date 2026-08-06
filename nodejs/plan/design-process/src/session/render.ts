@@ -60,17 +60,33 @@ export const renderHeader = (header: SessionHeader): string[] => {
   return lines.filter((line) => line !== '')
 }
 
+/** Rows one entry takes in the list: the title, the id, and the blank that separates it. */
+const ENTRY_ROWS = 3
+
+/** The first list row to show, so the selected entry sits inside the pane. */
+const listTop = (selected: number, bodyRows: number): number =>
+  Math.max(Math.min(selected * ENTRY_ROWS, (selected + 1) * ENTRY_ROWS - bodyRows), 0)
+
 const renderRatify = (state: SessionState, viewport: Viewport, resolve: Citations): string[] => {
   const header = renderHeader(state.header)
-  const bodyRows = Math.max(viewport.rows - header.length - 1, 1)
+  const bodyRows = Math.max(viewport.rows - header.length - 2, 1)
   const detailWidth = Math.max(viewport.columns - LIST_WIDTH - GUTTER.length, 20)
-  const list = listRows(state).slice(0, bodyRows)
-  const detail = detailRows(state, detailWidth, resolve).slice(state.scroll, state.scroll + bodyRows)
+  const top = listTop(state.selected, bodyRows)
+  const list = listRows(state).slice(top, top + bodyRows)
+  const rows = detailRows(state, detailWidth, resolve)
+  const scroll = Math.min(state.scroll, Math.max(rows.length - bodyRows, 0))
+  const detail = rows.slice(scroll, scroll + bodyRows)
   const body = Array.from({ length: bodyRows }, (_, row) =>
     `${(list[row] ?? '').padEnd(LIST_WIDTH)}${GUTTER}${detail[row] ?? ''}`.trimEnd(),
   )
-  return [...header, RULE.repeat(viewport.columns), ...body]
+  return [...header, RULE.repeat(viewport.columns), ...body, footer(state)].map((row) =>
+    truncate(row, viewport.columns),
+  )
 }
+
+/** The last row: what the last refused action said, or the keys the mode takes. */
+const footer = (state: SessionState): string =>
+  state.message ?? '(a)ccept (t)olerate (g) delegate (r)eject (d)efer · (n)ote (b)ulk · (w)rite (l)and (q)uit'
 
 /** The one-field overlay a rejection reason, an answer, a note, and the token all use. */
 export const renderTextEntry = (label: string, text: string | undefined, viewport: Viewport): string[] => [
@@ -132,7 +148,7 @@ const detailRows = (state: SessionState, width: number, resolve: Citations): str
       .split('\n')
       .flatMap((line) => wrap(line, width)),
     ...(metadata.length === 0 ? [] : ['', RULE.repeat(width), ...metadata]),
-  ]
+  ].map((row) => truncate(row, width))
 }
 
 /** The pinning proposal, then the citations, each cited id shown as the title it resolves to (d-mhlya385). */
