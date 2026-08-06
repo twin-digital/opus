@@ -72,14 +72,31 @@ export interface ResolvedFold {
  * version folds the working tree at its newest.
  */
 export const resolveFold = (root: string, productId: string, version?: FoldVersion): ResolvedFold => {
-  const tree: FileTree = version?.kind === 'ref' ? new GitTree(root, version.ref) : new DirTree(root)
-  const product = loadProducts(tree).products.get(productId)
-  if (product === undefined) {
+  const resolved = resolveFoldIfDeclared(root, productId, version)
+  if (resolved === undefined) {
     throw new Error(
       version?.kind === 'ref' ?
         `no product ${JSON.stringify(productId)} at ref ${JSON.stringify(version.ref)}`
       : `no product ${JSON.stringify(productId)} in this tree`,
     )
+  }
+  return resolved
+}
+
+/**
+ * As {@link resolveFold}, but `undefined` where the tree the version names declares no such
+ * product. A product's first increment is the case: the head it measures itself against has
+ * nothing of the product to fold, which is an answer rather than a failure.
+ */
+export const resolveFoldIfDeclared = (
+  root: string,
+  productId: string,
+  version?: FoldVersion,
+): ResolvedFold | undefined => {
+  const tree: FileTree = version?.kind === 'ref' ? new GitTree(root, version.ref) : new DirTree(root)
+  const product = loadProducts(tree).products.get(productId)
+  if (product === undefined) {
+    return undefined
   }
   const at = version?.kind === 'increment' ? version.number : (product.increments.at(-1)?.number ?? 0)
   return { at, tree, fold: foldProduct(product, at) }

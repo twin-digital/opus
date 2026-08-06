@@ -8,7 +8,7 @@ import { readSecret } from '../src/session/secret.js'
 import { emptyStaging, stageRuling } from '../src/session/staging.js'
 import { DirTree } from '../src/tree.js'
 
-import { demoProduct, makeRepo, removeRepo, yaml } from './helpers.js'
+import { demoProduct, makeGitRepo, makeRepo, removeRepo, writeFiles, yaml } from './helpers.js'
 
 import type { CommandRunner } from '../src/land.js'
 import type { Files } from './helpers.js'
@@ -22,14 +22,15 @@ afterEach(() => {
 
 const DRAFT = 'products/demo/increments/wip-001-a-draft'
 
-const settled = (): Files => {
-  const files = demoProduct()
-  files[`${DRAFT}/decisions.yaml`] = yaml({
+/** The draft alone, for a tree whose published increments are already committed. */
+const draftFiles = (): Files => ({
+  [`${DRAFT}/decisions.yaml`]: yaml({
     version: '2',
     decisions: [{ id: 'd-11111111', title: 'a choice', statement: 'the way.\n', status: 'accepted' }],
-  })
-  return files
-}
+  }),
+})
+
+const settled = (): Files => ({ ...demoProduct(), ...draftFiles() })
 
 const unsettled = (): Files => {
   const files = settled()
@@ -181,6 +182,53 @@ describe('the landing sequence is fixed — d-h418ljtp', () => {
     })
     expect(result.landed).toBe(true)
     expect(order).toEqual(['push', 'open', 'approve'])
+  })
+})
+
+describe("a product's first increment claims 001 — d-h418ljtp", () => {
+  /** A product the head has never heard of: only the draft introduces it. */
+  const freshDraft = (): Files => ({
+    'products/fresh/product.yaml': yaml({ version: '1', kind: 'nodejs-library' }),
+    'products/fresh/increments/wip-001-first/requirements.yaml': yaml({
+      version: '1',
+      requirements: [{ id: 'r-ffffffff', title: 'the first', statement: 'the product exists.\n' }],
+    }),
+  })
+
+  it('lands where the head resolves but publishes nothing of the product', async () => {
+    const { root } = makeGitRepo(demoProduct())
+    roots.push(root)
+    writeFiles(root, freshDraft())
+    const { run } = recorder()
+    const result = await landIncrement({
+      root,
+      product: 'fresh',
+      run,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.number).toBe('001')
+    const conflicts = result.steps.find((step) => step.step === 'conflicts')
+    expect(conflicts?.status).toBe('ok')
+    expect(conflicts?.detail).toContain('nothing to conflict with')
+  })
+
+  it('still checks a product the head does publish', async () => {
+    const { root } = makeGitRepo(demoProduct())
+    roots.push(root)
+    writeFiles(root, draftFiles())
+    const { run } = recorder()
+    const result = await landIncrement({
+      root,
+      product: 'demo',
+      run,
+      approvingToken: () => Promise.resolve('t'),
+      approve: () => Promise.resolve(),
+    })
+    expect(result.landed).toBe(true)
+    expect(result.number).toBe('003')
+    expect(result.steps.find((step) => step.step === 'conflicts')?.detail).toMatch(/no conflicts against/)
   })
 })
 

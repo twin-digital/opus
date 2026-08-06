@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { demoProduct, makeRepo, removeRepo } from './helpers.js'
+import { demoProduct, makeGitRepo, makeRepo, removeRepo, writeFiles, yaml } from './helpers.js'
 
 const roots: string[] = []
 afterEach(() => {
@@ -66,6 +66,22 @@ describe('the main output is stdout and the diagnostics are stderr — r-d474vgg
     expect(out).not.toContain('landing check failed')
     expect(err).toContain('landing check failed')
     expect(code).toBe(1)
+  })
+
+  it('passes the landing check for a product the head has never published', () => {
+    const made = makeGitRepo(demoProduct())
+    roots.push(made.root)
+    writeFiles(made.root, {
+      'products/fresh/product.yaml': yaml({ version: '1', kind: 'nodejs-library' }),
+      'products/fresh/increments/wip-001-first/requirements.yaml': yaml({
+        version: '1',
+        requirements: [{ id: 'r-ffffffff', title: 'the first', statement: 'the product exists.\n' }],
+      }),
+    })
+    const { out, err, code } = run(made.root, 'conflicts', 'fresh', '--against-ref', 'main')
+    expect(code).toBe(0)
+    expect(out).toBe('')
+    expect(err).toContain('publishes nothing at the head')
   })
 
   it('leaves the interactive commands without the flag', () => {
