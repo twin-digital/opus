@@ -20,9 +20,20 @@
         "types": "./dist/*.d.ts",
         "import": "./dist/*.js"
       }
+    },
+    "./build": {
+      "import": {
+        "source": "./src/build.ts",
+        "types": "./dist/build.d.ts",
+        "import": "./dist/build.js"
+      }
     }
   },
+  "bin": {
+    "mc-pack-archive": "./bin/mc-pack-archive.js"
+  },
   "files": [
+    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],
@@ -39,14 +50,18 @@
     "@npmcli/map-workspaces": "^6.0.0",
     "@pnpm/workspace.find-packages": "^1000.0.65",
     "@pnpm/workspace.read-manifest": "^1000.1.7",
-    "semver": "^7.7.3"
+    "adm-zip": "^0.6.0",
+    "semver": "^7.7.3",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
+    "@types/adm-zip": "^0.5.7",
     "@types/node": "catalog:",
     "@types/semver": "^7.7.1",
     "@vitest/coverage-istanbul": "catalog:",
@@ -55,6 +70,7 @@
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"

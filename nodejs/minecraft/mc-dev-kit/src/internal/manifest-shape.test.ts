@@ -47,6 +47,7 @@ describe('checkManifestShape', () => {
       ['modules[0].type', { modules: [{ type: 7 }] }],
       ['modules[0].uuid', { modules: [{ type: 'data', uuid: 7 }] }],
       ['modules[0].version', { modules: [{ type: 'data', version: 7 }] }],
+      ['modules[0].entry', { modules: [{ type: 'script', entry: 7 }] }],
     ])('faults %s', (field, overrides) => {
       const result = checkManifestShape(packManifest('behavior', overrides))
 

@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { packManifest, writeWorkspace } from '../test/fixture.js'
@@ -53,6 +54,7 @@ describe('discoverPacks', () => {
       packageDir: 'packages/mc-pack-1',
       sourceDir: 'packages/mc-pack-1/behavior_pack',
       outputDir: 'packages/mc-pack-1/dist/behavior_pack',
+      scriptOutput: 'packages/mc-pack-1/dist/behavior_pack/scripts/main.js',
       uuid: 'pack-1-behavior',
       version: '1.2.3',
       manifest: expect.objectContaining({
@@ -421,14 +423,14 @@ describe('discoverPacks', () => {
     expect(entry.version).toBe('3.4.5')
   })
 
-  it('reports every problem code the kit can raise across these fixtures', async () => {
+  it('raises every code the closed union holds, and nothing outside it, from one workspace', async () => {
     const workspace = await writeWorkspace({
       'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
       'package.json': {},
       'behavior_pack/manifest.json': packManifest('behavior', {
         format_version: 3,
         header: { uuid: 'root-uuid', name: 'Specified', version: [1, 0, 0] },
-        modules: [{ type: 'data' }, { uuid: 'no-type' }, { type: 'resources' }],
+        modules: [{ type: 'data', entry: 'scripts/specified.js' }, { uuid: 'no-type' }, { type: 'resources' }],
         dependencies: [
           { uuid: 'nowhere' },
           { module_name: '@minecraft/server' },
@@ -473,6 +475,7 @@ describe('discoverPacks', () => {
         'external-dependency-version-missing',
         'dependency-unsatisfied',
         'manifest-missing-uuid',
+        'module-entry-specified',
         'module-missing-type',
         'kind-not-corroborated',
         'foreign-kind-module',
@@ -488,5 +491,65 @@ describe('the published surface', () => {
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as { name: string }
 
     expect(manifest.name).toBe('@twin-digital/mc-dev-kit')
+  })
+})
+
+describe('discovery produces no built output', () => {
+  /** Every file under `dir`, as workspace-relative path → size, mtime, and bytes. */
+  async function snapshot(dir: string, base = dir): Promise<Map<string, string>> {
+    const taken = new Map<string, string>()
+    for (const child of await readdir(dir, { withFileTypes: true })) {
+      const target = path.join(dir, child.name)
+      if (child.isDirectory()) {
+        for (const [at, state] of await snapshot(target, base)) {
+          taken.set(at, state)
+        }
+        continue
+      }
+      const [stats, bytes] = await Promise.all([stat(target), readFile(target)])
+      taken.set(
+        path.relative(base, target),
+        `${String(stats.size)}:${String(stats.mtimeMs)}:${bytes.toString('base64')}`,
+      )
+    }
+    return taken
+  }
+
+  it('leaves the tree byte-identical, with nothing standing at any reported output path', async () => {
+    const workspace = await writeWorkspace(workspaceFiles)
+    const before = await snapshot(workspace)
+
+    const entries = await discoverPacks({ workspace })
+
+    expect(await snapshot(workspace)).toEqual(before)
+    expect(entries.length).toBeGreaterThan(0)
+    for (const entry of entries) {
+      expect(entry.outputDir).toBeTruthy()
+      expect(existsSync(path.join(workspace, entry.outputDir))).toBe(false)
+      if (entry.scriptOutput !== null) {
+        expect(existsSync(path.join(workspace, entry.scriptOutput))).toBe(false)
+      }
+    }
+    // no snapshot key sits under any pack's output tree, so the build tree was never written
+    expect([...before.keys()].filter((at) => at.includes('dist/'))).toEqual([])
+  })
+
+  it('reads nothing of the output tree into the result, even where one is present', async () => {
+    const workspace = await writeWorkspace({
+      ...workspaceFiles,
+      'packages/mc-pack-1/dist/behavior_pack/manifest.json': packManifest('behavior', {
+        header: { uuid: 'BUILT-UUID', name: 'Built', version: '9.9.9' },
+      }),
+      'packages/mc-pack-1/dist/behavior_pack/scripts/main.js': 'export {}\n',
+    })
+    const before = await snapshot(workspace)
+
+    const [, entry] = await discoverPacks({ workspace })
+
+    expect(await snapshot(workspace)).toEqual(before)
+    expect(entry.status).toBe('valid')
+    expect(entry.uuid).toBe('pack-1-behavior')
+    expect((entry as ValidPackEntry).manifest.header.name).toBe('mc-pack-1')
+    expect(codes([entry])).toEqual([])
   })
 })

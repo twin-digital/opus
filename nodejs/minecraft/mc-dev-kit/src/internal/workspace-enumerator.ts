@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import mapWorkspaces from '@npmcli/map-workspaces'
 import { findWorkspacePackages } from '@pnpm/workspace.find-packages'
 import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 import type { CandidatePackage } from './candidate.js'
 import { parseJson } from './json.js'
+import { mapWorkspaces } from './map-workspaces.js'
 import { toWorkspaceRelative } from './paths.js'
 
 /**

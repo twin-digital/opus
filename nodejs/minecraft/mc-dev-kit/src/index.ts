@@ -1,4 +1,5 @@
 export { discoverPacks } from './discover-packs.js'
+export { resolveWorkspaceRoot } from './workspace-root.js'
 export type {
   DiscoverOptions,
   InvalidPackEntry,
@@ -15,4 +16,6 @@ export type {
   PackManifest,
   Problem,
   ValidPackEntry,
+  WorkspaceRoot,
+  WorkspaceRootOptions,
 } from './types.js'

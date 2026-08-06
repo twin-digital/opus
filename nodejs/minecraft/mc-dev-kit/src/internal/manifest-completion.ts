@@ -3,6 +3,7 @@ import type { Problem } from '../types.js'
 import type { CandidatePackage, WorkingEntry } from './candidate.js'
 import { isRecord } from './json.js'
 import { classifyDependency } from './manifest-shape.js'
+import { BUILT_SCRIPT } from './pack-locator.js'
 
 /** The values that leave a field unspecified without omitting it. */
 function isPlaceholder(value: unknown): boolean {
@@ -25,7 +26,9 @@ const isUnspecified = (value: unknown): boolean => value === undefined || isPlac
  *
  * A source manifest is partial by design, so a field completion writes that the source already
  * specified is a problem: `header-name-specified`, `header-version-specified`, and
- * `dependency-version-specified`. A field is unspecified when it is absent or holds a placeholder
+ * `dependency-version-specified`. A module's `entry` is the same story under
+ * `module-entry-specified`: the kit computes the built script's location, so a source specifying
+ * one is reported and the computed value is written over it. A field is unspecified when it is absent or holds a placeholder
  * — the empty string, `'0.0.0'`, or `[0, 0, 0]` — and an array version at `format_version` 3 is
  * `array-version-at-format-version-3` whether or not it is a placeholder.
  *
@@ -82,7 +85,46 @@ function completeEntry(entry: WorkingEntry, byUuid: Map<string, WorkingEntry>): 
   // a format version the kit cannot read restricts nothing, as a missing one does
   const formatVersion = entry.formFaults.has('format_version') ? undefined : manifest.format_version
   completeHeader(entry, manifest, formatVersion)
+  completeModules(entry, manifest)
   completeDependencies(entry, manifest, formatVersion, byUuid)
+}
+
+/**
+ * Writes each script module's `entry`, and reports a source that specified one.
+ *
+ * The built script's location is the kit's to compute, so a source `entry` is
+ * `module-entry-specified` whatever it holds, and the completed manifest carries the computed
+ * value in its place — or no `entry` at all, on a module that gets none. Nothing reads a source
+ * `entry`, so a form fault there costs only its own report.
+ */
+function completeModules(entry: WorkingEntry, manifest: Record<string, unknown>): void {
+  const modules = manifest.modules
+  if (!Array.isArray(modules)) {
+    return
+  }
+
+  modules.forEach((module, index) => {
+    if (!isRecord(module)) {
+      return
+    }
+    const field = `modules[${String(index)}].entry`
+
+    if (module.entry !== undefined && !entry.formFaults.has(field)) {
+      entry.problems.push({
+        code: 'module-entry-specified',
+        message: `${field} is computed from the pack's kind and must not be specified`,
+        field,
+      })
+    }
+
+    const isScript = !entry.formFaults.has(`modules[${String(index)}].type`) && module.type === 'script'
+    if (isScript && entry.scriptOutput !== null) {
+      module.entry = BUILT_SCRIPT
+    } else {
+      // never leave a source entry standing where completion writes none
+      delete module.entry
+    }
+  })
 }
 
 /** Writes the header's name and version, whatever the source held. */

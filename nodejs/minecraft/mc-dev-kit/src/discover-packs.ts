@@ -60,6 +60,7 @@ function toPackEntry(entry: WorkingEntry): PackEntry {
     packageDir: entry.packageDir,
     sourceDir: entry.sourceDir,
     outputDir: entry.outputDir,
+    scriptOutput: entry.scriptOutput,
   }
   const uuid = sourceUuid(entry)
   const version = completedVersion(entry)

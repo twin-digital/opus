@@ -214,6 +214,57 @@ describe('locatePacks', () => {
     })
   })
 
+  describe('built script location', () => {
+    it("reports a behavior pack's script at scripts/main.js within its output location", async () => {
+      const entries = await locate(solo({ 'behavior_pack/manifest.json': packManifest('behavior') }))
+
+      expect(entries[0]?.scriptOutput).toBe('dist/behavior_pack/scripts/main.js')
+    })
+
+    it('reports it for a pack holding no script sources at all, and never probes for them', async () => {
+      const entries = await locate(
+        solo({
+          'behavior_pack/manifest.json': packManifest('behavior'),
+          'behavior_pack/functions/hello.mcfunction': 'say hi',
+        }),
+      )
+
+      expect(entries[0]?.scriptOutput).toBe('dist/behavior_pack/scripts/main.js')
+    })
+
+    it("computes it from the kind, not from a source module's entry", async () => {
+      const entries = await locate(
+        solo({
+          'behavior_pack/manifest.json': packManifest('behavior', {
+            modules: [{ type: 'script', uuid: 'm', version: [1, 0, 0], entry: 'scripts/elsewhere.js' }],
+          }),
+        }),
+      )
+
+      expect(entries[0]?.scriptOutput).toBe('dist/behavior_pack/scripts/main.js')
+    })
+
+    it('carries null on a resource pack, as a present field rather than an absent one', async () => {
+      const entries = await locate(solo({ 'resource_pack/manifest.json': packManifest('resource') }))
+
+      expect(entries[0]).toHaveProperty('scriptOutput')
+      expect(entries[0]?.scriptOutput).toBeNull()
+    })
+
+    it('sits under the owning package for a workspace member', async () => {
+      const root = await writeWorkspace({
+        'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+        'package.json': { name: 'ws-root', version: '1.0.0' },
+        'packages/alpha/package.json': { name: 'alpha', version: '1.0.0' },
+        'packages/alpha/behavior_pack/manifest.json': packManifest('behavior'),
+      })
+
+      const entries = await locatePacks(root, await enumerateCandidates(root))
+
+      expect(entries[0]?.scriptOutput).toBe('packages/alpha/dist/behavior_pack/scripts/main.js')
+    })
+  })
+
   it('locates packs across every candidate handed to it', async () => {
     const root = await writeWorkspace({
       'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',

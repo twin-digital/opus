@@ -1,7 +1,9 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { build } from 'tsdown'
 import { onTestFinished } from 'vitest'
+import { packBuild } from '../src/build.js'
 import type { CandidatePackage, WorkingEntry } from '../src/internal/candidate.js'
 import type { PackKind } from '../src/types.js'
 
@@ -27,6 +29,30 @@ export async function writeWorkspace(files: Record<string, FixtureFile>): Promis
   }
 
   return root
+}
+
+/**
+ * Runs the kit's own build over a fixture package, exactly as a consuming package's bundler
+ * configuration would. No config file is loaded and the bundler is silent, so the case sees only
+ * what the build wrote.
+ */
+export async function buildPackage(packageDir: string): Promise<void> {
+  await build({ ...packBuild({ packageDir }), config: false, logLevel: 'silent' })
+}
+
+/** Every file under `dir` as a sorted POSIX path relative to it; empty where the directory is absent. */
+export async function listTree(dir: string): Promise<string[]> {
+  let entries
+  try {
+    entries = await readdir(dir, { recursive: true, withFileTypes: true })
+  } catch {
+    return []
+  }
+
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
+    .sort()
 }
 
 /** The fields a manifest fixture overrides, on top of a plausible pack of the given kind. */
@@ -119,6 +145,7 @@ export function workingEntry({
     packageDir,
     sourceDir: `${prefix}${directory}`,
     outputDir: `${prefix}dist/${directory}`,
+    scriptOutput: kind === 'behavior' ? `${prefix}dist/${directory}/scripts/main.js` : null,
     package: candidate,
     manifest,
     formFaults: new Set(formFaults),

@@ -2024,9 +2024,94 @@ importers:
       '@pnpm/workspace.read-manifest':
         specifier: ^1000.1.7
         version: 1000.3.1
+      adm-zip:
+        specifier: ^0.6.0
+        version: 0.6.0
       semver:
         specifier: ^7.7.3
         version: 7.8.5
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.0
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.5.0)
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/tsdown-config':
+        specifier: workspace:*
+        version: link:../../devtools/tsdown-config
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
+      '@types/adm-zip':
+        specifier: ^0.5.7
+        version: 0.5.8
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.7.1
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.9(vitest@4.1.9)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.5.0
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.5.0)
+      globals:
+        specifier: 'catalog:'
+        version: 17.6.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.8.4
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.18.3(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.61.1(eslint@10.5.0)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.9(@types/node@24.13.2)(@vitest/coverage-istanbul@4.1.9)(jsdom@27.2.0)(vite@7.3.5(@types/node@24.13.2)(terser@5.44.1)(tsx@4.22.4)(yaml@2.9.0))
+
+  nodejs/minecraft/mc-dev-server:
+    dependencies:
+      '@twin-digital/mc-dev-kit':
+        specifier: workspace:*
+        version: link:../mc-dev-kit
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+      commander:
+        specifier: ^15.0.0
+        version: 15.0.0
+      execa:
+        specifier: 'catalog:'
+        version: 9.6.1
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.0
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -2046,9 +2131,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
-      '@types/semver':
-        specifier: ^7.7.1
-        version: 7.7.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 4.1.9(vitest@4.1.9)
@@ -5927,9 +6009,6 @@ packages:
 
   brace-expansion@1.1.11:
     resolution: {integrity: sha512-iCuPHDFgrHX7H2vEI/5xpz07zSHB00TpugqhmYtVmMO6518mCuRMoOYFldEBl0g187ufozdaHgWKcYFb61qGiA==}
-
-  brace-expansion@2.1.1:
-    resolution: {integrity: sha512-WR1cURNjuvBLMZBMbqM0UoE+WAfdUcEV1ccD8PVBVOI+Z3ND4+SZbN8RsfT2bMuG1qwz5RFvPukSZm5fF2D5eA==}
 
   brace-expansion@2.1.2:
     resolution: {integrity: sha512-w5JZcKgdhDOgOwm8H+KgbosopHMuGcl6qbulwjtz3SM7I7P3yW1eAjzMPLrIE+NQ9vjgANKHWeMHnrT0OXW1oA==}
@@ -14029,10 +14108,6 @@ snapshots:
       balanced-match: 1.0.2
       concat-map: 0.0.1
 
-  brace-expansion@2.1.1:
-    dependencies:
-      balanced-match: 1.0.2
-
   brace-expansion@2.1.2:
     dependencies:
       balanced-match: 1.0.2
@@ -16215,7 +16290,7 @@ snapshots:
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 2.1.1
+      brace-expansion: 2.1.2
 
   minimist@1.2.8: {}
 

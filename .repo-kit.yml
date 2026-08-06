@@ -19,6 +19,11 @@ packages:
     # exports would contradict the published surface.
     rules:
       package-manifest: false
+  '@twin-digital/mc-dev-server':
+    # No importable surface by design: the command line is the whole of what this package publishes,
+    # so the generated `./*` subpath exports would offer every internal module as one.
+    rules:
+      package-manifest: false
   '@twin-digital/minecraft-test-lib':
     # One public entry point by design: every fake type and free function is reached from the
     # package root, so the generated `./*` subpath exports would contradict the published surface.
