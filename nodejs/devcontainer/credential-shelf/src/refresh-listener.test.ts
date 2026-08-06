@@ -67,12 +67,10 @@ describe('parseDevicePrompt', () => {
 describe('createRefreshHandler', () => {
   it('vends once every session login is approved', async () => {
     const approval = deferred()
-    const runner: LoginRunner = vi.fn(
-      (session): LoginRun => ({
-        prompt: Promise.resolve({ session, userCode: 'WXYZ-1234', verificationUri: 'https://device.sso/' }),
-        completed: approval.promise,
-      }),
-    )
+    const runner: LoginRunner = vi.fn((session): LoginRun => ({
+      prompt: Promise.resolve({ session, userCode: 'WXYZ-1234', verificationUri: 'https://device.sso/' }),
+      completed: approval.promise,
+    }))
     const vend = vi.fn().mockResolvedValue(undefined)
     const handler = createRefreshHandler(awsSsoCfg(), { loginRunner: runner, vend, vendProfiles: ['dev'] })
 
@@ -92,12 +90,10 @@ describe('createRefreshHandler', () => {
 
   it('is single-flight: a second trigger reuses the pending login', async () => {
     const approval = deferred()
-    const runner: LoginRunner = vi.fn(
-      (session): LoginRun => ({
-        prompt: Promise.resolve({ session, userCode: 'WXYZ-1234', verificationUri: 'https://device.sso/' }),
-        completed: approval.promise,
-      }),
-    )
+    const runner: LoginRunner = vi.fn((session): LoginRun => ({
+      prompt: Promise.resolve({ session, userCode: 'WXYZ-1234', verificationUri: 'https://device.sso/' }),
+      completed: approval.promise,
+    }))
     const handler = createRefreshHandler(awsSsoCfg(), { loginRunner: runner, vend: vi.fn(), vendProfiles: [] })
 
     const first = await handler.triggerRefresh()
