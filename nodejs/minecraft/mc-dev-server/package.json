@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/mc-dev-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Runs a Minecraft Bedrock dev server under Docker and keeps a workspace's built packs deployed to it.",
   "license": "ISC",
   "type": "module",
