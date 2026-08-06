@@ -1,14 +1,10 @@
-// the ambient declaration below has no module to import, and the reference is what carries it into
-// the program of a consumer compiling this file through the `source` condition
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
-/// <reference path="./npmcli-map-workspaces.d.ts" />
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import mapWorkspaces from '@npmcli/map-workspaces'
 import { findWorkspacePackages } from '@pnpm/workspace.find-packages'
 import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 import type { CandidatePackage } from './candidate.js'
 import { parseJson } from './json.js'
+import { mapWorkspaces } from './map-workspaces.js'
 import { toWorkspaceRelative } from './paths.js'
 
 /**
