@@ -34,7 +34,7 @@ export interface PackBuildOptions {
  * ```ts
  * import { packBuild } from '@twin-digital/mc-dev-kit/build'
  *
- * export default packBuild({ packageDir: new URL('../..', import.meta.url).pathname })
+ * export default packBuild({ packageDir: new URL('..', import.meta.url).pathname })
  * ```
  *
  * The package's `dist/` becomes the build's to own and prune, so a package taking up the fragment
