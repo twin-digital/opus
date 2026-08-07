@@ -61,10 +61,20 @@ The pack never makes a mob invulnerable and adds no effect to a mob.
 
 ## Working on it
 
+From the root of the monorepo, on a clean checkout:
+
+```sh
+pnpm exec turbo run dev --filter=@twin-digital/village-guard -- --accept-eula
+```
+
+That is the whole of bringing the pack up on a live Bedrock server: turbo builds every workspace
+package this one depends on, then runs the pack's own `dev` script. Running `pnpm --filter
+@twin-digital/village-guard dev` directly skips those builds, and the pack cannot build without
+them.
+
 ```sh
 pnpm --filter @twin-digital/village-guard build           # the built pack, under dist/
 pnpm --filter @twin-digital/village-guard test            # the unit suite
-pnpm --filter @twin-digital/village-guard dev             # a live Bedrock server with the pack on it
 pnpm --filter @twin-digital/village-guard release-assets  # the .mcaddon, under .release-assets/
 ```
 

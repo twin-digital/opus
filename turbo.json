@@ -50,6 +50,11 @@
       "cache": false,
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"]
     },
+    "dev": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true
+    },
     "lint": {
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
