@@ -85,21 +85,25 @@ describe('the protected set', () => {
 })
 
 describe('a hit no player dealt', () => {
-  it('still lands, written down to a survivable amount', () => {
+  it('still lands, written down to nothing', () => {
     const villager = spawn('minecraft:villager_v2')
 
     villager.applyDamage(LETHAL, { cause: cause('entityAttack') })
 
-    expect(hurtEvents.map((event) => event.damage)).toEqual([0.5])
+    expect(hurtEvents.map((event) => event.damage)).toEqual([0])
     expect(hurtEvents[0]?.damageSource.cause).toBe('entityAttack')
   })
 
-  it('is not written up when it was already smaller than the clamp', () => {
+  // Any survivable amount is fatal to a mob already at or below it, and a villager that dies that
+  // way is converted rather than merely marked dead.
+  it.each([0.5, 0.25])('leaves a mob at %s health alive, taking nothing', (start) => {
     const villager = spawn('minecraft:villager_v2')
+    villager.getComponent('minecraft:health')?.setCurrentValue(start)
 
-    villager.applyDamage(0.25, { cause: cause('fireTick') })
+    villager.applyDamage(LETHAL, { cause: cause('entityAttack'), damagingEntity: spawn('minecraft:zombie') })
 
-    expect(hurtEvents.map((event) => event.damage)).toEqual([0.25])
+    expect(villager.isValid).toBe(true)
+    expect(hurtEvents.map((event) => event.damage)).toEqual([0])
     expect(healthOf(villager)).toBe(MAX_HEALTH)
   })
 

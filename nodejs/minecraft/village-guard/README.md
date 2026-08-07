@@ -41,16 +41,21 @@ periodic sweep — a mob is protected because the subscription sees its hit.
 
 `world.beforeEvents.entityHurt` splits each hit three ways on its `damageSource`:
 
-| the hit                            | what happens                                                      |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| cause `selfDestruct` or `override` | left alone, so an operator's removal lands                        |
-| `damagingEntity` is a player       | cancelled, so nothing lands and the mob does not react            |
-| everything else                    | `damage` written down to 0.5, and the mob restored to full health |
+| the hit                            | what happens                                                    |
+| ---------------------------------- | --------------------------------------------------------------- |
+| cause `selfDestruct` or `override` | left alone, so an operator's removal lands                      |
+| `damagingEntity` is a player       | cancelled, so nothing lands and the mob does not react          |
+| everything else                    | `damage` written down to 0, and the mob restored to full health |
 
-The restore is what makes the clamp a protection: a clamp on its own lets the losses accumulate
-until the mob dies anyway. It happens in the matching `afterEvents.entityHurt` handler, which the
-engine delivers in the same tick. A cancelled hit raises no after-event, so the two halves agree
-without coordinating.
+The write is zero and not a small survivable amount. A written-down hit reaches the mob at the
+amount the handler wrote, so any non-zero constant kills a mob whose health is already at or below
+it — and a zombie converts a villager that dies that way. Zero is the only constant no mob's health
+can sit below, and it costs nothing: the engine's knockback is unchanged by the write, so the hit
+still lands and the mob still reacts.
+
+The restore carries a mob that was harmed before the pack first saw a hit on it back to full. It
+happens in the matching `afterEvents.entityHurt` handler, which the engine delivers in the same
+tick. A cancelled hit raises no after-event, so the two halves agree without coordinating.
 
 The pack never makes a mob invulnerable and adds no effect to a mob.
 

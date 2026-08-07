@@ -4,8 +4,8 @@
  *
  * A hit reaching a protected mob is split three ways on its damage source. An operator's
  * deliberate removal lands untouched, a player's hit is cancelled so it does nothing at all, and
- * everything else is written down to a token amount and the mob restored to full health in the
- * same tick.
+ * everything else is written down to nothing and the mob restored to full health in the same tick.
+ * A written-down hit still knocks back, so a siege still looks like a siege.
  */
 
 import type { EntityDamageSource, World } from '@minecraft/server'
@@ -28,10 +28,12 @@ const OPERATOR_CAUSES = new Set<string>(['selfDestruct', 'override'])
 const PLAYER_TYPE_ID = 'minecraft:player'
 
 /**
- * What a clamped hit takes. A constant rather than a figure read off the mob, so the handler reads
- * nothing about the subject while it runs.
+ * What a clamped hit takes. Zero, and not a small survivable amount: a written-down hit reaches the
+ * mob at the amount the handler wrote, so any non-zero constant kills a mob whose health is at or
+ * below it — and a zombie converts a villager that dies that way. A constant rather than a figure
+ * read off the mob, so the handler reads nothing about the subject while it runs.
  */
-const CLAMPED_DAMAGE = 0.5
+const CLAMPED_DAMAGE = 0
 
 /** What the pack does with one hit. */
 type Treatment =
@@ -39,7 +41,7 @@ type Treatment =
   | 'pass'
   /** cancel it, so nothing lands and the mob does not react */
   | 'cancel'
-  /** write the damage down and restore the mob to full health */
+  /** write the damage down to nothing and restore the mob to full health */
   | 'clamp'
 
 const treat = (hurtTypeId: string, damageSource: EntityDamageSource): Treatment => {
@@ -70,9 +72,7 @@ export const installProtection = ({ world }: ProtectionHandles): void => {
         event.cancel = true
         break
       case 'clamp':
-        if (event.damage > CLAMPED_DAMAGE) {
-          event.damage = CLAMPED_DAMAGE
-        }
+        event.damage = CLAMPED_DAMAGE
         break
       case 'pass':
         break
