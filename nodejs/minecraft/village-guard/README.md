@@ -25,6 +25,11 @@ reaction, and the player's standing with it is unchanged, so an accidental swing
 **An operator can still remove a protected mob.** `/kill` and anything else the engine reports as a
 deliberate removal is left alone.
 
+## Known issues
+
+An iron golem still turns hostile to a player who hits it, even though the hit itself does nothing.
+[`ISSUES.md`](./ISSUES.md) carries that and every other limit the pack ships with.
+
 ## Installing
 
 The release asset is the pack itself — `village-guard-<version>.mcaddon`. Import it into Minecraft
