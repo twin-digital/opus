@@ -53,7 +53,16 @@
     "dev": {
       "cache": false,
       "dependsOn": ["^build"],
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "DOCKER_CERT_PATH",
+        "DOCKER_CONFIG",
+        "DOCKER_CONTEXT",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AGENT_PID",
+        "SSH_AUTH_SOCK"
+      ]
     },
     "lint": {
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
