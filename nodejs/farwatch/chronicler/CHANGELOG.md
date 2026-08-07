@@ -1,5 +1,11 @@
 # @thrashplay/fw-chronicler
 
+## 0.1.4
+
+### Patch Changes
+
+- c5917da: chore(deps): update all non-major dependencies
+
 ## 0.1.3
 
 ### Patch Changes
