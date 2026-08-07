@@ -1,8 +1,9 @@
 # @twin-digital/village-guard
 
-A Minecraft Bedrock behavior pack that keeps every villager, wandering trader and iron golem alive.
+A Minecraft Bedrock behavior pack that keeps every villager, wandering trader, trader llama and
+iron golem alive.
 
-Install it into a world and the protection is in force: every mob of those three types, in every
+Install it into a world and the protection is in force: every mob of those four types, in every
 dimension, the ones already there and the ones that arrive later. There is nothing to opt into, no
 way to exclude a mob, and no in-game configuration.
 

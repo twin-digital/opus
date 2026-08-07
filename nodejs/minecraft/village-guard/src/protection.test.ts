@@ -49,6 +49,16 @@ beforeEach(() => {
 })
 
 describe('the protected set', () => {
+  // A trader llama arrives with a wandering trader and is lost the same way, so the set keeps both.
+  it('is the four vanilla type ids, and nothing else', () => {
+    expect([...PROTECTED_TYPE_IDS]).toEqual([
+      'minecraft:villager_v2',
+      'minecraft:wandering_trader',
+      'minecraft:trader_llama',
+      'minecraft:iron_golem',
+    ])
+  })
+
   it.each([...PROTECTED_TYPE_IDS])('keeps %s alive at full health through a lethal hit', (typeId) => {
     const subject = spawn(typeId)
     const zombie = spawn('minecraft:zombie')

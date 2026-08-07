@@ -14,6 +14,7 @@ import type { EntityDamageSource, World } from '@minecraft/server'
 export const PROTECTED_TYPE_IDS: readonly string[] = [
   'minecraft:villager_v2',
   'minecraft:wandering_trader',
+  'minecraft:trader_llama',
   'minecraft:iron_golem',
 ]
 
