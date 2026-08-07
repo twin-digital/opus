@@ -1,5 +1,11 @@
 # @thrashplay/music
 
+## 0.4.2
+
+### Patch Changes
+
+- 4a44349: fix(deps): update dependency pino to v10
+
 ## 0.4.1
 
 ### Patch Changes
