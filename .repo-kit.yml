@@ -478,9 +478,13 @@ features:
         options:
           file: vitest.config.ts
           content: |
-            import { sharedConfig } from '@twin-digital/vitest-config'
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/vitest-config; per-package overrides go in a sibling
+            // vitest.config.d/*.ts (default-exported partial configs, deep-merged
+            // in filename order) — never in this file.
+            import { defineTestConfig } from '@twin-digital/vitest-config'
 
-            export default sharedConfig
+            export default await defineTestConfig(import.meta.url)
       - name: Create vitest config (React support)
         action: write-file
         conditions:
@@ -489,11 +493,15 @@ features:
         options:
           file: vitest.config.ts
           content: |
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/vitest-config; per-package overrides go in a sibling
+            // vitest.config.d/*.ts (default-exported partial configs, deep-merged
+            // in filename order) — never in this file.
             import { defineConfig, mergeConfig } from 'vitest/config'
-            import { sharedConfig } from '@twin-digital/vitest-config'
+            import { defineTestConfig } from '@twin-digital/vitest-config'
 
             export default mergeConfig(
-              sharedConfig,
+              await defineTestConfig(import.meta.url),
               defineConfig({
                 test: {
                   environment: 'jsdom',
