@@ -1,0 +1,49 @@
+{
+  "private": true,
+  "name": "@twin-digital/village-guard",
+  "version": "0.1.0",
+  "description": "Minecraft Bedrock behavior pack that keeps every villager, wandering trader and iron golem alive.",
+  "license": "UNLICENSED",
+  "author": "Sean Kleinjung <sean@twindigital.io>",
+  "type": "module",
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "minecraft-server start",
+    "dev:stop": "minecraft-server stop",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "release-assets": "mc-pack-archive",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@minecraft/server": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/mc-dev-kit": "workspace:*",
+    "@twin-digital/mc-dev-server": "workspace:*",
+    "@twin-digital/minecraft-test-lib": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

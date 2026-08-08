@@ -24,6 +24,13 @@ packages:
     # so the generated `./*` subpath exports would offer every internal module as one.
     rules:
       package-manifest: false
+  '@twin-digital/village-guard':
+    # No importable surface by design: this is a behavior pack, and what it ships is the `.mcaddon`
+    # the dev kit archives. Its `src/` exists only because the shared test rule keys on
+    # `src/**/*.test.ts`, and the generated `files` and `./*` exports would offer the pack's
+    # internals as a library.
+    rules:
+      package-manifest: false
   '@twin-digital/minecraft-test-lib':
     # One public entry point by design: every fake type and free function is reached from the
     # package root, so the generated `./*` subpath exports would contradict the published surface.
@@ -471,9 +478,13 @@ features:
         options:
           file: vitest.config.ts
           content: |
-            import { sharedConfig } from '@twin-digital/vitest-config'
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/vitest-config; per-package overrides go in a sibling
+            // vitest.config.d/*.ts (default-exported partial configs, deep-merged
+            // in filename order) — never in this file.
+            import { defineTestConfig } from '@twin-digital/vitest-config'
 
-            export default sharedConfig
+            export default await defineTestConfig(import.meta.url)
       - name: Create vitest config (React support)
         action: write-file
         conditions:
@@ -482,11 +493,15 @@ features:
         options:
           file: vitest.config.ts
           content: |
+            // Managed by repo-kit. The shared base config lives in
+            // @twin-digital/vitest-config; per-package overrides go in a sibling
+            // vitest.config.d/*.ts (default-exported partial configs, deep-merged
+            // in filename order) — never in this file.
             import { defineConfig, mergeConfig } from 'vitest/config'
-            import { sharedConfig } from '@twin-digital/vitest-config'
+            import { defineTestConfig } from '@twin-digital/vitest-config'
 
             export default mergeConfig(
-              sharedConfig,
+              await defineTestConfig(import.meta.url),
               defineConfig({
                 test: {
                   environment: 'jsdom',
