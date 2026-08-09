@@ -34,6 +34,12 @@ const git = (root: string, ...args: string[]): string =>
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
+/** The submit commits as the session's own git does, so the identity has to be the repo's. */
+const identify = (root: string): void => {
+  git(root, 'config', 'user.email', 'test@example.com')
+  git(root, 'config', 'user.name', 'test')
+}
+
 const run: CommandRunner = (command, args) => {
   try {
     return execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
@@ -63,6 +69,7 @@ const clonedRepo = (): { root: string; remote: string } => {
   const root = mkdtempSync(join(tmpdir(), 'design-process-clone-'))
   roots.push(root)
   git(root, 'init', '-q', '-b', 'main')
+  identify(root)
   writeFiles(root, demoProduct())
   git(root, 'add', '-A')
   git(root, 'commit', '-qm', 'base')
