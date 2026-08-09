@@ -26,10 +26,18 @@ export interface SessionHeader {
   unresolved: number
 }
 
+/** What the last frame measured of the detail pane, so a page stops at the content's end (r-tb9nctcr). */
+export interface PaneExtent {
+  /** Rows the pane draws. */
+  rows: number
+  /** Rows the selected entry's detail comes to. */
+  content: number
+}
+
 export interface SessionState {
-  /** The decisions list: the draft's decisions in any status, and its open questions. */
+  /** The decisions list: the draft's decisions in any status, its open questions, and its retirements. */
   entries: OpenEntry[]
-  /** The requirements list: the requirements the draft declares, then its model bindings. */
+  /** The requirements list: the requirements the draft declares, its model bindings, and its retirements. */
   requirements: OpenEntry[]
   header: SessionHeader
   /** Which list the body holds. */
@@ -44,6 +52,8 @@ export interface SessionState {
   input: string
   /** First visible line of the detail pane, for an entry taller than the pane. */
   scroll: number
+  /** The pane the last frame drew; the driver measures it so paging can stop at the end (r-tb9nctcr). */
+  pane?: PaneExtent
   /** Set when the session has asked to submit or to land; the driver acts on it. */
   submit?: 'write' | 'land'
   /** Set when the owner has asked to leave; an abandoned session leaves the tree untouched. */
@@ -72,8 +82,22 @@ export const RULING_KEYS: Record<string, DecisionStatus | undefined> = {
 /** The key each route is answered with. */
 const ROUTE_KEYS: Record<string, QuestionRoute | undefined> = { f: 'fact', r: 'requirement', d: 'decision' }
 
-/** How far a page key moves; the driver's viewport is not the model's business. */
+/** How far a page key moves before the driver has measured a pane. */
 const PAGE = 8
+
+/** The last row a page may leave at the pane's top, so the content's last row stays in view (r-tb9nctcr). */
+const lastTop = (pane: PaneExtent): number => Math.max(pane.content - pane.rows, 0)
+
+/**
+ * Page the detail pane by the pane's own height, stopping at the content's first and last row. An
+ * unmeasured pane pages by the default and knows only its top, so the driver measures every frame
+ * (r-tb9nctcr).
+ */
+const paged = (state: SessionState, pages: number): SessionState => {
+  const { pane } = state
+  const wanted = Math.max(state.scroll + pages * (pane?.rows ?? PAGE), 0)
+  return { ...state, scroll: pane === undefined ? wanted : Math.min(wanted, lastTop(pane)), message: undefined }
+}
 
 export const openSession = (
   entries: OpenEntry[],
@@ -164,9 +188,9 @@ const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): Se
       return move(state, -1)
     case 'pagedown':
     case 'space':
-      return { ...state, scroll: state.scroll + PAGE, message: undefined }
+      return paged(state, 1)
     case 'pageup':
-      return { ...state, scroll: Math.max(state.scroll - PAGE, 0), message: undefined }
+      return paged(state, -1)
     case 'q':
     case 'escape':
       return { ...state, quit: true }
@@ -190,8 +214,8 @@ const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): Se
   if (entry === undefined) {
     return state
   }
-  // a requirement and a model binding take a note and no ruling (d-26vs308h)
-  if (entry.kind === 'requirement' || entry.kind === 'binding') {
+  // a requirement, a model binding, and a retirement take a note and no ruling (d-26vs308h, d-ko3lggbr)
+  if (entry.kind === 'requirement' || entry.kind === 'binding' || entry.kind === 'retirement') {
     return state
   }
   if (entry.kind === 'question') {

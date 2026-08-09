@@ -12,7 +12,7 @@ import type { OpenEntry } from '../src/session/entries.js'
 import type { SessionHeader, SessionState } from '../src/session/model.js'
 
 /**
- * The render is diffed against `/design-process/ratify-screen@3`, the version the product's model
+ * The render is diffed against `/design-process/ratify-screen@4`, the version the product's model
  * binds; every version of that surface is read the same way (d-smnssz39, d-q50z7iq1).
  * `test/fixtures` carries a copy of the pool's file, its `mock:` frames verbatim. What the surface
  * commits to is arrangement, the order of things within a region, and the form of each field; what
@@ -21,7 +21,7 @@ import type { SessionHeader, SessionState } from '../src/session/model.js'
  * away.
  */
 const SURFACE = parse(
-  readFileSync(join(import.meta.dirname, 'fixtures/surfaces/design-process/ratify-screen.3.yaml'), 'utf8'),
+  readFileSync(join(import.meta.dirname, 'fixtures/surfaces/design-process/ratify-screen.4.yaml'), 'utf8'),
 ) as { mock: Record<string, string> }
 
 // wide enough to hold the mocks, whose rows run past the 95 their own rules declare
@@ -37,9 +37,15 @@ const isPaneRule = (line: string): boolean => /^─+$/.test(line.trim()) && line
 /** The ids a closure names are the draft's; the field's form is what the surface fixes. */
 const closure = (row: string): string => row.replace(/ {2}(closes|closed by) \S+/, '  $1 <id>')
 
+/**
+ * A pane row with its edge marker taken off. The surface's `more-follows` notes make a render at a
+ * viewport other than a mock's differ from that mock in this field alone and stay conformant.
+ */
+const unmarked = (row: string): string => row.replace(/\s[⌃⌄]\s*$/, '')
+
 /** The labels that begin a logical line of the pane; anything else continues the one above. */
 const STARTS =
-  /^(?:- |why it matters:|verification:|because:|supersedes:|amends:|answers:|note:|contract:|status:|pinned\()/
+  /^(?:- |why it matters:|verification:|because:|supersedes:|amends:|answers:|note:|contract:|status:|retired:|pinned\()/
 
 /** Fold a block back to its logical lines, since where the pane wraps follows its width. */
 const unwrap = (rows: string[]): string[] =>
@@ -65,7 +71,7 @@ const shape = (lines: string[]) => {
       left.push(squeeze(closure(inList)))
     }
     if (inPane.trim() !== '') {
-      right.push(squeeze(inPane))
+      right.push(squeeze(unmarked(inPane)))
     }
   }
   // the heading runs on where the pane cannot hold the id beside the title
@@ -119,9 +125,20 @@ const requirement = (id: string, title: string, over: Partial<OpenEntry> = {}): 
   ...over,
 })
 
+const retirement = (id: string, title: string, reason: string, path: string): OpenEntry => ({
+  kind: 'retirement',
+  id,
+  title,
+  text: 'the statement the fold at head holds for it.',
+  increment: DRAFT,
+  path,
+  reason,
+})
+
 /**
- * The six decisions the mock's rule counts; the frame draws the window, and the last two sit below
- * it. `d-ufuosc77` is what closes `d-3n1kq8lp`, which is the mark the second entry carries.
+ * The five entries the mock's rule counts: four decisions and the decision the draft retires, which
+ * follows them. `d-ufuosc77` is another entry of the same draft, and is what closes `d-3n1kq8lp` —
+ * the mark the second entry carries.
  */
 const ENTRIES: OpenEntry[] = [
   decision('d-x1jlr7jc', 'a refused push pulls, reapplies by id, and tries again', {
@@ -137,8 +154,7 @@ const ENTRIES: OpenEntry[] = [
   decision('d-3n1kq8lp', 'the submit reports and stops', { closedBy: 'd-ufuosc77' }),
   decision('d-nb5yg1w1', 'a submit does not end the sitting', { status: 'deferred' }),
   decision('d-26vs308h', "the draft's requirements are a second list", { status: 'accepted' }),
-  decision('d-ufuosc77', 'a companion increment is gated as a whole', { supersedes: 'd-3n1kq8lp' }),
-  decision('d-g00ah4em', 'the lists mark what an entry closes'),
+  retirement('d-4xkyfjzu', 'deferring is offered beside the four rulings', 'the sitting no longer defers', DECISIONS),
 ]
 
 const REQUIREMENT_ENTRIES: OpenEntry[] = [
@@ -163,13 +179,19 @@ const REQUIREMENT_ENTRIES: OpenEntry[] = [
   requirement('r-8s0dd2wq', "the pull request carries the owner's rulings", { amends: 'r-y9eux47d' }),
   {
     kind: 'binding',
-    id: '/design-process/ratify-screen@3',
+    id: '/design-process/ratify-screen@4',
     title: 'ratify-screen',
     text: 'what the session renders',
     increment: DRAFT,
     path: REQUIREMENTS,
-    reference: '/design-process/ratify-screen@3',
+    reference: '/design-process/ratify-screen@4',
   },
+  retirement(
+    'r-pe4j25wq',
+    'the model is a block of the requirements source',
+    'the model moved to its own source',
+    REQUIREMENTS,
+  ),
 ]
 
 const TITLES: Record<string, string> = {
@@ -186,7 +208,7 @@ const mock = (name: string): string[] => SURFACE.mock[name].split('\n').filter((
 
 const rendered = (state: SessionState) => shape(renderSession(state, VIEWPORT, resolve).slice(0, -1))
 
-describe('the decisions frame conforms to /design-process/ratify-screen@3', () => {
+describe('the decisions frame conforms to /design-process/ratify-screen@4', () => {
   const shown = rendered(session())
   const authored = shape(mock('ratify'))
 
@@ -199,7 +221,7 @@ describe('the decisions frame conforms to /design-process/ratify-screen@3', () =
   })
 
   it('lists each entry as its title over its id, with its closure field and its ruling beside it', () => {
-    expect(shown.list.slice(0, authored.list.length)).toEqual(authored.list)
+    expect(shown.list).toEqual(authored.list)
   })
 
   it('heads the detail pane with the title and the id, and follows it with the statement', () => {
@@ -212,7 +234,7 @@ describe('the decisions frame conforms to /design-process/ratify-screen@3', () =
   })
 })
 
-describe('the requirements frame conforms to /design-process/ratify-screen@3', () => {
+describe('the requirements frame conforms to /design-process/ratify-screen@4', () => {
   const shown = rendered(reduce(session(), { name: 'tab' }))
   const authored = shape(mock('requirements'))
 

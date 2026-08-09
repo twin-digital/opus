@@ -5,7 +5,7 @@ import { effectiveStatus } from './staging.js'
 
 import type { Citations } from './citations.js'
 import type { OpenEntry } from './entries.js'
-import type { SessionHeader, SessionState } from './model.js'
+import type { PaneExtent, SessionHeader, SessionState } from './model.js'
 import type { DraftChoice } from './target.js'
 
 export interface Viewport {
@@ -19,6 +19,9 @@ const GUTTER = '  │ '
 const RULE = '─'
 /** The block the text-entry field puts at the insertion point. */
 const CURSOR = '█'
+/** The pane's edge markers, standing for the content above and below what it shows. The glyphs are the implementer's. */
+const MORE_ABOVE = '⌃'
+const MORE_BELOW = '⌄'
 
 /** The prompt each input mode puts above its field. */
 const PROMPTS: Partial<Record<SessionState['mode'], string>> = {
@@ -36,7 +39,7 @@ const ruled = (label: string, columns: number): string =>
 /**
  * The frame the session draws, by mode: the ratify screen, the select-draft screen, and the
  * one-field overlay the input modes share. Returns one string per row, unpadded
- * (`/design-process/ratify-screen@3`).
+ * (`/design-process/ratify-screen@4`).
  */
 export const renderSession = (state: SessionState, viewport: Viewport, resolve: Citations): string[] => {
   const prompt = PROMPTS[state.mode]
@@ -76,15 +79,46 @@ const bodyRule = (state: SessionState, columns: number): string => {
   return `${label}${RULE.repeat(Math.max(columns - label.length, 1))}`
 }
 
+/** How tall the body runs and how wide the pane beside the list is, for one viewport. */
+const geometry = (state: SessionState, viewport: Viewport) => ({
+  bodyRows: Math.max(viewport.rows - renderHeader(state.header).length - 2, 1),
+  detailWidth: Math.max(viewport.columns - LIST_WIDTH - GUTTER.length, 20),
+})
+
+/** What the pane and its content come to, so paging can stop at the content's last row (r-tb9nctcr). */
+export const measurePane = (state: SessionState, viewport: Viewport, resolve: Citations): PaneExtent => {
+  const { bodyRows, detailWidth } = geometry(state, viewport)
+  return { rows: bodyRows, content: detailRows(state, detailWidth, resolve).length }
+}
+
+/** The pane's edge markers: content above sits on its first row, content below on its last (r-tb9nctcr). */
+const withMarkers = (rows: string[], width: number, above: boolean, below: boolean): string[] => {
+  const marked = [...rows]
+  const put = (at: number, glyph: string) => {
+    marked[at] = `${truncate(marked[at] ?? '', width - 1).padEnd(width - 1)}${glyph}`
+  }
+  if (above) {
+    put(0, MORE_ABOVE)
+  }
+  if (below) {
+    put(rows.length - 1, MORE_BELOW)
+  }
+  return marked
+}
+
 const renderRatify = (state: SessionState, viewport: Viewport, resolve: Citations): string[] => {
   const header = renderHeader(state.header)
-  const bodyRows = Math.max(viewport.rows - header.length - 2, 1)
-  const detailWidth = Math.max(viewport.columns - LIST_WIDTH - GUTTER.length, 20)
+  const { bodyRows, detailWidth } = geometry(state, viewport)
   const top = listTop(state.selected, bodyRows)
   const list = listRows(state).slice(top, top + bodyRows)
   const rows = detailRows(state, detailWidth, resolve)
   const scroll = Math.min(state.scroll, Math.max(rows.length - bodyRows, 0))
-  const detail = rows.slice(scroll, scroll + bodyRows)
+  const detail = withMarkers(
+    rows.slice(scroll, scroll + bodyRows),
+    detailWidth,
+    scroll > 0,
+    scroll + bodyRows < rows.length,
+  )
   const body = Array.from({ length: bodyRows }, (_, row) =>
     `${(list[row] ?? '').padEnd(LIST_WIDTH)}${GUTTER}${detail[row] ?? ''}`.trimEnd(),
   )
@@ -138,6 +172,10 @@ const listRows = (state: SessionState): string[] =>
 
 /** What the entry closes, or what closed it; an entry that is both carries the closing mark (d-g00ah4em). */
 const closureField = (entry: OpenEntry): string => {
+  // a retirement names no successor; "retired" is what marks it (d-ko3lggbr)
+  if (entry.kind === 'retirement') {
+    return ''
+  }
   const closed = closes(entry)
   if (closed !== undefined) {
     return `  closes ${closed}`
@@ -146,6 +184,10 @@ const closureField = (entry: OpenEntry): string => {
 }
 
 const stagedLabel = (state: SessionState, entry: OpenEntry): string => {
+  // "retired" stands where a staged ruling stands (d-ko3lggbr)
+  if (entry.kind === 'retirement') {
+    return 'retired'
+  }
   if (entry.kind === 'question') {
     const ruling = state.staged.rulings.get(entry.id)
     return ruling?.kind === 'question' ? `answered → ${ruling.route}` : ''
@@ -214,6 +256,10 @@ const metadataBlocks = (state: SessionState, entry: OpenEntry, resolve: Citation
   if (entry.pinned !== undefined && entry.pinned !== false) {
     const notes = entry.pinned.notes === undefined ? '' : `: ${entry.pinned.notes.trim()}`
     blocks.push({ text: `pinned(${entry.pinned.reason})${notes}`, hang: 2 })
+  }
+  // the retirement's own reason, beside the statement it recovered from the fold (d-ko3lggbr)
+  if (entry.kind === 'retirement' && entry.reason !== undefined) {
+    blocks.push({ text: `retired: ${entry.reason.trim()}`, hang: 2 })
   }
   if (entry.kind === 'binding') {
     blocks.push({ text: `contract: ${entry.reference}`, hang: 2 })

@@ -1,4 +1,4 @@
-# surface: /design-process/ratify-screen@3
+# surface: /design-process/ratify-screen@4
 #
 # What the session renders. The pane layouts and the form of each field are this surface.
 # Which entries a list holds, and how a cited id is resolved, are decisions.
@@ -6,8 +6,8 @@
 screen:
   layout: the header across the top; below it, the open entry list on the left and the detail pane on the right
   lists:
-    - decisions, holding the draft's decisions and its open questions
-    - requirements, holding the requirements the draft declares
+    - decisions, holding the draft's decisions, its open questions, and its retired decisions
+    - requirements, holding the requirements the draft declares and its retired requirements
   open-list: one at a time, the body swapping between them; the rule between the header and the body names which
   selection: moving through the list moves the pane
   fit:
@@ -23,7 +23,7 @@ mock:
   ratify: |
     increment-process · wip-001-the-review-session · plan/increment-process/the-review-session · #214
     also changed: surfaces (1)                                                        1 unresolved
-    ── decisions (6) ──────────────────────────────────────────────────────────────────────────────
+    ── decisions (5) ──────────────────────────────────────────────────────────────────────────────
     ›a refused push pulls, reapplies b…  │ A REFUSED PUSH PULLS, REAPPLIES BY ID, AND TRIES AGAIN
      d-x1jlr7jc  closes d-lqmwczg3       │ [d-x1jlr7jc]
                                          │
@@ -36,17 +36,17 @@ mock:
      the draft's requirements are a se…  │   of the branch sees
      d-26vs308h                accepted  │
                                          │ because:
-                                         │   - a submitted set of rulings leaves the remote
-                                         │     current and says what it did [r-clty5lqd]
+     deferring is offered beside the f…  │   - a submitted set of rulings leaves the remote
+     d-4xkyfjzu                 retired  │     current and says what it did [r-clty5lqd]
                                          │
                                          │ supersedes:
                                          │   - the submit tallies what it ruled and pushes
-                                         │     [d-lqmwczg3]
+                                         │     [d-lqmwczg3]                                  ⌄
 
   requirements: |
     increment-process · wip-001-the-review-session · plan/increment-process/the-review-session · #214
     also changed: surfaces (1)                                                        1 unresolved
-    ── requirements (4) ───────────────────────────────────────────────────────────────────────────
+    ── requirements (5) ───────────────────────────────────────────────────────────────────────────
     ›a settled draft is reviewed, not …  │ A SETTLED DRAFT IS REVIEWED, NOT ONLY A PROPOSED ONE
      r-0h5q1lfl                          │ [r-0h5q1lfl]
                                          │
@@ -57,17 +57,17 @@ mock:
      r-8s0dd2wq  closes r-y9eux47d       │ why it matters:
                                          │   an implementation's companion carries its whole
      ratify-screen                       │   design set as delegated, so a session that opens
-     /design-process/ratify-screen@3     │   only on proposed entries has nothing to show.
+     /design-process/ratify-screen@4     │   only on proposed entries has nothing to show.
                                          │
-                                         │ verification:
-                                         │   - do: open a session on a draft whose every
+     the model is a block of the requi…  │ verification:
+     r-pe4j25wq                 retired  │   - do: open a session on a draft whose every
                                          │     decision carries a ruling
                                          │   - verify: the draft's decisions are listed
                                          │
                                          │ ─────────────────────────────────────────────────────
                                          │ because:
                                          │   - ruling a draft is one sitting in one place
-                                         │     [r-ax84j1s2]
+                                         │     [r-ax84j1s2]                                  ⌄
 
   select-draft: |
     plan/increment-process/the-review-session · #214
@@ -157,10 +157,17 @@ entry-list:
   staged-ruling:
     form: shown beside the entry
     absent: nothing is shown where the entry holds no ruling, and never on a requirement
+  retirement:
+    applies-to: a `retires:` entry of the source the open list reads
+    line-1: the retired foundation's title, recovered from the fold at head
+    line-2: the retired id, then "retired" where a staged ruling stands
+    emphasis: recessive, as an entry closed by another of the same draft carries — a retirement is a closing, and the row is the entry it closes
+    closure: no `closes` or `closed by` field; a retirement names no successor, and "retired" is what marks it
+    ruling: none is offered; a retirement has no status to leave, and takes a note as a requirement does
   window: the list scrolls to keep the selected entry within it
 
 requirement-list:
-  holds: the requirements the draft declares, then its model bindings
+  holds: the requirements the draft declares, then its model bindings, then its retired requirements
   entry: as the entry list's, with no staged ruling
   model-binding:
     line-1: the binding's name
@@ -194,6 +201,20 @@ detail-pane:
   model-binding:
     statement: the binding's description, where it carries one
     metadata: the contract reference, and the binding's status where it is not the default
+  retirement:
+    heading: the retired foundation's title and its id, as any entry's heading
+    statement: the retired foundation's own statement, recovered from the fold at head
+    metadata: the retirement's one-line reason, labelled, in the metadata block
+  scrolling:
+    reach: every row of the pane's content is brought into view from within the session
+    more-follows:
+      form: a marker at the pane's edge, on the row nearest the content it stands for
+      shown-when: content precedes what the pane shows, follows it, or both
+      glyph: the implementer's
+      notes: >-
+        whether it is shown follows the frame's height against the entry's, so a render at a
+        viewport other than a mock's differs from that mock in this field alone and is conformant
+    paging: a page moves by the pane's own height at most, and stops at the content's first and last row
   heading:
     form: '<TITLE> [<id>]'
     notes: no kind-and-increment line follows the heading

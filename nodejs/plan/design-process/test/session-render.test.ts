@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { openSession, reduce } from '../src/session/model.js'
-import { renderSession } from '../src/session/render.js'
+import { measurePane, renderSession } from '../src/session/render.js'
 
 import type { Citations } from '../src/session/citations.js'
 import type { OpenEntry } from '../src/session/entries.js'
@@ -50,7 +50,7 @@ const detail = (rows: string[]): string[] =>
 
 const widest = (rows: string[]): number => Math.max(...rows.map((row) => row.length))
 
-describe('every row fits the viewport — /design-process/ratify-screen@3', () => {
+describe('every row fits the viewport — /design-process/ratify-screen@4', () => {
   it('clips a citation the detail pane cannot hold', () => {
     const resolve: Citations = () => 'opus workspace members sit two levels under nodejs'
     const state = open([decision('d-11111111', { because: ['f:opus-workspace-members-sit-two-levels-under-nodejs'] })])
@@ -68,7 +68,7 @@ describe('every row fits the viewport — /design-process/ratify-screen@3', () =
   })
 })
 
-describe('the frame fills the viewport exactly — /design-process/ratify-screen@3', () => {
+describe('the frame fills the viewport exactly — /design-process/ratify-screen@4', () => {
   it('emits one row per viewport row whatever the header holds', () => {
     expect(frame(open([decision('d-11111111')])).length).toBe(VIEW.rows)
   })
@@ -81,7 +81,7 @@ describe('the frame fills the viewport exactly — /design-process/ratify-screen
   })
 })
 
-describe('the footer — /design-process/ratify-screen@3', () => {
+describe('the footer — /design-process/ratify-screen@4', () => {
   it('shows what the last refused action said', () => {
     const state = press(open([decision('d-11111111')]), 'l')
     expect(state.message).toBe('landing waits on every entry being ruled')
@@ -89,7 +89,7 @@ describe('the footer — /design-process/ratify-screen@3', () => {
   })
 })
 
-describe('the list window follows the selection — /design-process/ratify-screen@3', () => {
+describe('the list window follows the selection — /design-process/ratify-screen@4', () => {
   const many = Array.from({ length: 10 }, (_, index) => decision(`d-${index}0000000`, { title: `choice ${index}` }))
 
   it('holds the selected entry once the list runs past the pane', () => {
@@ -99,7 +99,7 @@ describe('the list window follows the selection — /design-process/ratify-scree
   })
 })
 
-describe('the detail pane’s scroll — /design-process/ratify-screen@3', () => {
+describe('the detail pane’s scroll — /design-process/ratify-screen@4', () => {
   it('stops at the end of the entry rather than paging past it', () => {
     const state = press(open([decision('d-11111111')]), 'pagedown', 'pagedown')
     expect(detail(frame(state)).join('').trim()).not.toBe('')
@@ -122,5 +122,42 @@ describe('text wraps to the pane — r-gzyfme0f, r-4xa4kazt', () => {
     // wide enough that the pane holds the whole sentence, which is where the join shows
     const rows = detail(frame(state, { rows: 20, columns: 140 }, NO_TITLES))
     expect(rows.join('\n')).toContain('owning the HTTP server')
+  })
+})
+
+describe('the whole of an entry’s detail is reachable — r-tb9nctcr', () => {
+  /** Taller than the pane once the reflow wraps it to the pane's width. */
+  const TALL = Array.from({ length: 40 }, (_, line) => `statement line ${line}`).join('\n')
+  const tall = (): OpenEntry[] => [decision('d-11111111', { text: TALL })]
+
+  /** The driver measures each frame it drew, which is what the next page reads (r-tb9nctcr). */
+  const paging = (state: SessionState, ...keys: string[]): SessionState =>
+    keys.reduce((current, name) => reduce({ ...current, pane: measurePane(current, VIEW, NO_TITLES) }, { name }), state)
+
+  /** The pane's height at the test's viewport. */
+  const PANE_ROWS = VIEW.rows - 2 - 2
+
+  it('marks the pane while it holds content back', () => {
+    expect(detail(frame(open(tall()))).at(-1)).toContain('⌄')
+  })
+
+  it('marks the content a page has left above the pane', () => {
+    expect(detail(frame(paging(open(tall()), 'pagedown')))[0]).toContain('⌃')
+  })
+
+  it('moves by no more than the pane’s height', () => {
+    expect(paging(open(tall()), 'pagedown').scroll).toBeLessThanOrEqual(PANE_ROWS)
+  })
+
+  it('brings the content’s last row into view and stops there', () => {
+    const state = paging(open(tall()), ...Array.from({ length: 20 }, () => 'pagedown'))
+    const rows = detail(frame(state))
+    expect(rows.join('\n')).toContain('statement line 39')
+    expect(rows.at(-1)).not.toContain('⌄')
+  })
+
+  it('moves the pane on the first press back', () => {
+    const end = paging(open(tall()), ...Array.from({ length: 20 }, () => 'pagedown'))
+    expect(detail(frame(paging(end, 'pageup')))).not.toEqual(detail(frame(end)))
   })
 })

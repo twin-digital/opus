@@ -1,15 +1,16 @@
+import { foldProduct } from '../fold.js'
 import { loadProducts } from '../load.js'
 
-import type { DraftIncrement } from '../load.js'
+import type { DraftIncrement, Product } from '../load.js'
 import type { FileTree } from '../tree.js'
-import type { DecisionEntry, ModelEntry, RequirementEntry } from '../types.js'
+import type { DecisionEntry, ModelEntry, RequirementEntry, RetireEntry } from '../types.js'
 
 /** What a question routes to — the kind of foundation that would answer it. */
 export type QuestionRoute = 'fact' | 'requirement' | 'decision'
 
-/** An entry of a draft one of the session's two lists holds (d-26vs308h). */
+/** An entry of a draft one of the session's two lists holds (d-26vs308h, d-ko3lggbr). */
 export interface OpenEntry {
-  kind: 'decision' | 'question' | 'requirement' | 'binding'
+  kind: 'decision' | 'question' | 'requirement' | 'binding' | 'retirement'
   id: string
   title?: string
   /** The statement, the question's text, or a binding's description. */
@@ -38,6 +39,8 @@ export interface OpenEntry {
   reference?: string
   /** A binding's status, where the source carries one. */
   bindingStatus?: ModelEntry['status']
+  /** A retirement's one-line reason, as the `retires:` entry states it (d-ko3lggbr). */
+  reason?: string
   /** Another entry of the same draft that supersedes or amends this one (d-g00ah4em). */
   closedBy?: string
 }
@@ -50,18 +53,21 @@ export const closes = (entry: OpenEntry): string | undefined => entry.supersedes
  * still open. This is what refuses a landing.
  */
 export const collectOpenEntries = (tree: FileTree, productId: string): OpenEntry[] =>
-  drafts(tree, productId).flatMap((draft) => [
+  drafts(productOf(tree, productId)).flatMap((draft) => [
     ...decisionEntries(draft).filter((entry) => entry.status === 'proposed'),
     ...questionEntries(draft),
   ])
 
-const drafts = (tree: FileTree, productId: string, increment?: string): DraftIncrement[] => {
+const productOf = (tree: FileTree, productId: string): Product => {
   const product = loadProducts(tree).products.get(productId)
   if (product === undefined) {
     throw new Error(`no product ${JSON.stringify(productId)} in this tree`)
   }
-  return increment === undefined ? product.drafts : product.drafts.filter((draft) => draft.name === increment)
+  return product
 }
+
+const drafts = (product: Product, increment?: string): DraftIncrement[] =>
+  increment === undefined ? product.drafts : product.drafts.filter((draft) => draft.name === increment)
 
 const decisionEntries = (draft: DraftIncrement): OpenEntry[] =>
   (draft.decisions?.data.decisions ?? []).map((entry): OpenEntry => ({
@@ -78,19 +84,36 @@ const decisionEntries = (draft: DraftIncrement): OpenEntry[] =>
   }))
 
 /**
- * The two lists the session holds: every decision the draft carries in whatever status followed by
- * every question still open, and the requirements it declares followed by its model bindings, each
- * entry marked with what closes it (d-8abusqwe, d-26vs308h). A draft is worked over several
- * sittings, so a list holding only what is still open would hide the rulings already made.
+ * The two lists the session holds: every decision the draft carries in whatever status, then every
+ * question still open, then the decisions it retires; and the requirements it declares, then its
+ * model bindings, then the requirements it retires — each entry marked with what closes it
+ * (d-8abusqwe, d-26vs308h, d-ko3lggbr). A draft is worked over several sittings, so a list holding
+ * only what is still open would hide the rulings already made.
  */
 export const collectSessionEntries = (
   tree: FileTree,
   productId: string,
   increment?: string,
 ): { decisions: OpenEntry[]; requirements: OpenEntry[] } => {
-  const found = drafts(tree, productId, increment)
-  const decisions = found.flatMap((draft) => [...decisionEntries(draft), ...questionEntries(draft)])
-  const requirements = found.flatMap((draft) => [...requirementEntries(draft), ...bindingEntries(draft)])
+  const product = productOf(tree, productId)
+  const found = drafts(product, increment)
+  // a retirement names a foundation in force, so its title and statement come from the fold at head
+  const head = foldProduct(product)
+  const decisions = found.flatMap((draft) => [
+    ...decisionEntries(draft),
+    ...questionEntries(draft),
+    ...retirementEntries(draft, draft.decisions?.data.retires, 'decisions', (id) => head.decisions.get(id)?.entry),
+  ])
+  const requirements = found.flatMap((draft) => [
+    ...requirementEntries(draft),
+    ...bindingEntries(draft),
+    ...retirementEntries(
+      draft,
+      draft.requirements?.data.retires,
+      'requirements',
+      (id) => head.requirements.get(id)?.entry,
+    ),
+  ])
   const closers = new Map<string, string>()
   for (const entry of [...decisions, ...requirements]) {
     const closed = closes(entry)
@@ -128,6 +151,30 @@ const bindingEntries = (draft: DraftIncrement): OpenEntry[] =>
       path: draft.requirements?.path ?? `${draft.dir}/requirements.yaml`,
       reference,
       bindingStatus: entry.status,
+    }
+  })
+
+/**
+ * The retirements a draft's source declares. A `retires:` entry carries an id and a reason and
+ * nothing else, so the title and the statement the row and the pane show are the retired
+ * foundation's own, as the fold at head holds them (d-ko3lggbr).
+ */
+const retirementEntries = (
+  draft: DraftIncrement,
+  retires: RetireEntry[] | undefined,
+  source: 'decisions' | 'requirements',
+  inForce: (id: string) => { title?: string; statement: string } | undefined,
+): OpenEntry[] =>
+  (retires ?? []).map((retirement): OpenEntry => {
+    const found = inForce(retirement.id)
+    return {
+      kind: 'retirement',
+      id: retirement.id,
+      title: found?.title,
+      text: found?.statement ?? '',
+      increment: draft.name,
+      path: draft[source]?.path ?? `${draft.dir}/${source}.yaml`,
+      reason: retirement.reason,
     }
   })
 

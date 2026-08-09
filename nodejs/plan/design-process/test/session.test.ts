@@ -521,3 +521,69 @@ describe('what a draft closes is legible from the list — r-n86ssoew, d-g00ah4e
     expect(shown).toMatch(/r-22222222 {2}closes r-bbbbbbbb/)
   })
 })
+
+describe('the session’s lists show a draft’s retirements — d-ko3lggbr', () => {
+  const retiringFiles = (): Files => {
+    const files = draftFiles()
+    files[`${DRAFT}/decisions.yaml`] = yaml({
+      version: '2',
+      decisions: [{ id: 'd-22222222', title: 'second choice', statement: 'the second way.\n', status: 'proposed' }],
+      retires: [{ id: 'd-bbbbbbbb', reason: 'the second thing is gone' }],
+    })
+    files[`${DRAFT}/requirements.yaml`] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-11111111', title: 'the first rule', statement: 'the product does the new thing.\n' }],
+      model: [{ name: 'a-screen', surface: '/demo/a-screen@1', description: 'what the screen renders' }],
+      retires: [{ id: 'r-bbbbbbbb', reason: 'the second thing is dropped' }],
+    })
+    return files
+  }
+
+  const retiring = (): { decisions: OpenEntry[]; requirements: OpenEntry[] } => {
+    const made = makeRepo(retiringFiles())
+    roots.push(made.root)
+    return collectSessionEntries(made.tree, 'demo', 'wip-001-a-draft')
+  }
+
+  const retiringSession = (): SessionState => {
+    const lists = retiring()
+    return openSession(lists.decisions, HEADER, lists.requirements)
+  }
+
+  it('holds a retired decision after the entries the draft declares', () => {
+    expect(retiring().decisions.map((entry) => entry.id)).toEqual(['d-22222222', 'q-11111111', 'd-bbbbbbbb'])
+  })
+
+  it('holds a retired requirement after the declared requirements and the model bindings', () => {
+    expect(retiring().requirements.map((entry) => entry.id)).toEqual(['r-11111111', '/demo/a-screen@1', 'r-bbbbbbbb'])
+  })
+
+  it('recovers the retired foundation’s title and statement from the fold at head', () => {
+    expect(retiring().decisions.at(-1)).toMatchObject({
+      kind: 'retirement',
+      title: 'dependent choice',
+      reason: 'the second thing is gone',
+    })
+    expect(retiring().decisions.at(-1)?.text).toContain('the second thing builds on the first')
+  })
+
+  it('shows the retired title over the id, with “retired” where a ruling stands and no closure field', () => {
+    const shown = frame(press(retiringSession(), 'down', 'down'))
+    expect(shown).toContain('dependent choice')
+    expect(shown).toMatch(/d-bbbbbbbb\s+retired/)
+    expect(shown).not.toContain('closed by')
+  })
+
+  it('heads the pane with the retired entry and carries its reason in the metadata', () => {
+    const shown = frame(press(retiringSession(), 'down', 'down'))
+    expect(shown).toContain('DEPENDENT CHOICE [d-bbbbbbbb]')
+    expect(shown).toContain('the second thing builds on the first')
+    expect(shown).toContain('retired: the second thing is gone')
+  })
+
+  it('offers no ruling on a retirement, and takes a note as a requirement does', () => {
+    const state = press(retiringSession(), 'down', 'down')
+    expect(press(state, 'a').staged.rulings.size).toBe(0)
+    expect(press(state, 'n').mode).toBe('note')
+  })
+})

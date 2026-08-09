@@ -9,7 +9,7 @@ import { resolveCitations } from './citations.js'
 import { collectSessionEntries } from './entries.js'
 import { readHeader } from './header.js'
 import { openSession, reduce } from './model.js'
-import { renderSecret, renderSelectDraft, renderSession } from './render.js'
+import { measurePane, renderSecret, renderSelectDraft, renderSession } from './render.js'
 import { draftReview, postReview, readDiff, diffRanges } from './review.js'
 import { readSecret } from './secret.js'
 import { stageRuling, stagingProblems } from './staging.js'
@@ -102,8 +102,11 @@ export const runIncrementSession = async (options: SessionOptions): Promise<numb
   })
   const resolve = resolveCitations(tree, target.product)
   const session = { state: openSession(lists.decisions, header, lists.requirements) }
+  // each frame leaves its pane's extent behind, so the next page stops at the content's end (r-tb9nctcr)
   const draw = (): void => {
-    output.write(CLEAR + renderSession(session.state, viewport(), resolve).join('\n'))
+    const view = viewport()
+    session.state = { ...session.state, pane: measurePane(session.state, view, resolve) }
+    output.write(CLEAR + renderSession(session.state, view, resolve).join('\n'))
   }
 
   emitKeypressEvents(input)

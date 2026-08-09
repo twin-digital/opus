@@ -196,7 +196,7 @@ Findings print in `check`'s shape and exit non-zero.
 
 A full-screen session over a draft's **pull request**: the owner rules every entry it carries and
 publishes without leaving it. What it renders is the authored surface
-`/design-process/ratify-screen@3` in the planning repository's `surfaces/` pool.
+`/design-process/ratify-screen@4` in the planning repository's `surfaces/` pool.
 
 `--pr <url>` names the pull request to work. Given one, the session resolves it to its head
 branch: where the current tree is already on that branch it works in place, and otherwise it
@@ -225,6 +225,12 @@ bindings; an entry there takes a note and no ruling, since the process gives a r
 model binding no status to leave. A requirement's pane carries its rationale and its verification
 steps below its statement, so the whole of what the owner ratifies is in one place.
 
+Each list ends with the foundations the draft **retires** in the source that list reads. A
+retirement names a published foundation and nothing else, so the row shows that foundation's title
+over its id with `retired` where a ruling stands, and its pane carries that foundation's own
+statement, recovered from the fold at head, with the retirement's reason in the metadata. It takes
+a note and no ruling, as a requirement does.
+
 In either list an entry is marked where it closes another foundation — what it supersedes or
 amends — and marked differently where a later entry of the same draft closes it, so what a draft
 closes is legible without opening any of them.
@@ -235,10 +241,14 @@ evidence, and drafts, counted from the branch's merge-base with the head — and
 threads are unresolved. It holds two rows whatever it carries, so the body below it sits at the
 same offset in every draft and on every entry.
 
+The detail pane marks its edge — `⌄` at the bottom, `⌃` at the top — while it is holding content
+back, and a page moves by the pane's own height and stops at the content's first and last row, so
+every row of an entry's detail is reachable from within the session.
+
 | key                 | what it does                                                                     |
 | ------------------- | -------------------------------------------------------------------------------- |
 | `j` / `k`, arrows   | move through the list; the pane follows                                          |
-| page up / down      | scroll an entry taller than the pane                                             |
+| page up / down      | page the detail pane, stopping at the content's first and last row               |
 | `a` `t` `g` `r` `d` | rule the selected decision accepted, tolerated, delegated, rejected, or deferred |
 | enter               | answer the selected question, then `f`/`r`/`d` for the route it takes            |
 | `n`                 | leave a note on the selected entry; it settles nothing and gates nothing         |
