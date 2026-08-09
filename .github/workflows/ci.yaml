@@ -57,7 +57,7 @@ jobs:
       # base commit `--affected` diffs against — so turbo would fall back to "everything changed".
       # fetch-depth: 2 covers the common case (merge commit's parents), but 0 is robust across
       # multi-commit pushes and stale merge refs; the extra fetch is small next to the tasks it skips.
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
