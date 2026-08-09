@@ -50,6 +50,20 @@
       "cache": false,
       "passThroughEnv": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"]
     },
+    "dev": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "passThroughEnv": [
+        "DOCKER_CERT_PATH",
+        "DOCKER_CONFIG",
+        "DOCKER_CONTEXT",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AGENT_PID",
+        "SSH_AUTH_SOCK"
+      ]
+    },
     "lint": {
       "dependsOn": ["upstream-sources", "@twin-digital/eslint-config#build", "//#lint:deps"],
       "inputs": ["eslint.config.js", "package.json", "src/**"]
@@ -71,7 +85,15 @@
     },
     "test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
-      "inputs": ["src/**", "package.json", "vitest.config.ts", "tsconfig.json", "tsconfig.*.json"],
+      "inputs": [
+        "src/**",
+        "behavior_pack/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
       "outputs": ["coverage.json"]
     },
     "test:watch": {

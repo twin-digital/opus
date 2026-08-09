@@ -41,6 +41,7 @@ Repository of all public works developed by Twin Digital.
 - [@twin-digital/mc-dev-kit](./nodejs/minecraft/mc-dev-kit): Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.
 - [@twin-digital/mc-dev-server](./nodejs/minecraft/mc-dev-server): Runs a Minecraft Bedrock dev server under Docker and keeps a workspace's built packs deployed to it.
 - [@twin-digital/minecraft-test-lib](./nodejs/minecraft/test-lib): In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.
+- [@twin-digital/village-guard](./nodejs/minecraft/village-guard): Minecraft Bedrock behavior pack that keeps every villager, wandering trader and iron golem alive.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
 - [@twin-digital/design-process](./nodejs/plan/design-process): Validator, projection, backlog, and fold tools for the twin-digital incremental design process.

@@ -1,0 +1,9 @@
+version: '1'
+
+# The world this pack is developed against: a village within walking distance of spawn, so a run
+# starts next to the mobs the pack protects.
+level: village-guard-dev
+seed: 1270365428910969543
+spawn: [671, 70, -310]
+
+eula: true

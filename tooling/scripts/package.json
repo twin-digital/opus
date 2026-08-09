@@ -11,8 +11,9 @@
     "docker-packages": "./bin/docker-packages.js",
     "lint": "./bin/lint.js",
     "lint_fix": "./bin/lint_fix.js",
+    "opus-test": "./bin/opus-test.js",
+    "opus-test-watch": "./bin/opus-test-watch.js",
     "squash": "./bin/squash.js",
-    "test": "./bin/test.js",
     "watch": "./bin/watch.js"
   },
   "scripts": {
@@ -22,7 +23,8 @@
     "chalk": "catalog:",
     "chokidar": "^5.0.0",
     "execa": "catalog:",
-    "globby": "^16.0.0"
+    "globby": "^16.0.0",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

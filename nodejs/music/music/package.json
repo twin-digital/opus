@@ -38,8 +38,8 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "start": "node dist/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

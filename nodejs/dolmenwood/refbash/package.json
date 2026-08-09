@@ -14,8 +14,8 @@
     "dev": "node ./bin/dev.js",
     "lint": "lint",
     "lint:fix": "lint_fix",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
