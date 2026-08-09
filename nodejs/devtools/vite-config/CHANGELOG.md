@@ -1,5 +1,11 @@
 # @twin-digital/vite-config
 
+## 0.2.1
+
+### Patch Changes
+
+- 3b7b784: chore(deps): update dependency vite to v8
+
 ## 0.2.0
 
 ### Minor Changes
