@@ -196,7 +196,7 @@ Findings print in `check`'s shape and exit non-zero.
 
 A full-screen session over a draft's **pull request**: the owner rules every entry it carries and
 publishes without leaving it. What it renders is the authored surface
-`/design-process/ratify-screen@1` in the planning repository's `surfaces/` pool.
+`/design-process/ratify-screen@3` in the planning repository's `surfaces/` pool.
 
 `--pr <url>` names the pull request to work. Given one, the session resolves it to its head
 branch: where the current tree is already on that branch it works in place, and otherwise it
@@ -212,13 +212,28 @@ Four things it refuses instead, saying which: the branch is the repository's def
 tree holds no draft increment; the tree has uncommitted changes; and the head branch lives on a
 fork the local clone cannot push to.
 
-The ratify list holds **every decision the draft carries**, in whatever status, and every question
-still open — a draft is worked over several sittings, and a list holding only what is still open
-would hide the rulings the owner is deciding against. Any of them is re-ruled from the list. A
-header spans the top naming the product, the increment directory, the branch, and the pull
+The session opens on **every draft the pull request carries**, whatever statuses that draft's
+entries hold: a companion increment whose every decision is already delegated is paged through
+the same way as one nothing has ruled.
+
+It holds two entry lists, one open at a time, and the rule between the header and the body names
+the open one and how many entries it holds. The **decisions** list carries every decision the
+draft holds, in whatever status, and every question still open — a draft is worked over several
+sittings, and a list holding only what is still open would hide the rulings the owner is deciding
+against. The **requirements** list carries the requirements the draft declares and its model
+bindings; an entry there takes a note and no ruling, since the process gives a requirement and a
+model binding no status to leave. A requirement's pane carries its rationale and its verification
+steps below its statement, so the whole of what the owner ratifies is in one place.
+
+In either list an entry is marked where it closes another foundation — what it supersedes or
+amends — and marked differently where a later entry of the same draft closes it, so what a draft
+closes is legible without opening any of them.
+
+A header spans the top naming the product, the increment directory, the branch, and the pull
 request, then the draft's changed inputs the list does not hold — schemas, surfaces, facts,
 evidence, and drafts, counted from the branch's merge-base with the head — and how many review
-threads are unresolved.
+threads are unresolved. It holds two rows whatever it carries, so the body below it sits at the
+same offset in every draft and on every entry.
 
 | key                 | what it does                                                                     |
 | ------------------- | -------------------------------------------------------------------------------- |
@@ -228,9 +243,14 @@ threads are unresolved.
 | enter               | answer the selected question, then `f`/`r`/`d` for the route it takes            |
 | `n`                 | leave a note on the selected entry; it settles nothing and gates nothing         |
 | `b`                 | the bulk action: set every still-unruled decision to one status                  |
+| tab                 | swap between the decisions list and the requirements list                        |
 | `w`                 | write the staged rulings, commit, and push                                       |
 | `l`                 | land, offered once nothing is proposed and no question is open                   |
 | `q`, ctrl-c         | leave; a session abandoned before a write leaves the tree untouched              |
+
+A submit does not end the sitting: it returns the owner to the list it was made from with the
+staged set cleared of what it wrote, and the session ends when the owner ends it or a landing
+completes. The exit code is what the sitting was, not what a submit within it did.
 
 A rejection is refused without the owner's reason. An answer routed to a requirement or a
 decision writes a placeholder entry into the draft carrying its generated id and the answer as
@@ -254,8 +274,16 @@ did.
 
 The commit body names each status the set took and how many entries took it —
 `3 accepted, 1 rejected` — counting answered questions as their own clause, and a sitting that
-changed nothing writes no commit. After committing, the submit pushes the branch; a push the
-remote refuses is reported and the commit left standing.
+changed nothing writes no commit. After committing, the submit pushes the branch.
+
+A push the remote refuses is not the end of it: the session fetches the branch's tip, unwinds its
+own unpushed commit, reapplies the sitting's rulings to the tip by entry id, and pushes again. An
+entry whose status differs at the tip is left as the tip has it and reported, its ruling leaving
+the stage; a commit the remote has accepted is never rewritten. A second refusal is reported and
+the sitting continues.
+
+A submit carrying only notes writes no commit and posts its review against the branch as the
+remote already has it.
 
 A submit carrying notes posts exactly one `COMMENT` review to the pull request, after the commit
 and the push. Each note is a comment against the lines of the entry it concerns; a note the

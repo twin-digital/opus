@@ -1,0 +1,229 @@
+# surface: /design-process/ratify-screen@3
+#
+# What the session renders. The pane layouts and the form of each field are this surface.
+# Which entries a list holds, and how a cited id is resolved, are decisions.
+
+screen:
+  layout: the header across the top; below it, the open entry list on the left and the detail pane on the right
+  lists:
+    - decisions, holding the draft's decisions and its open questions
+    - requirements, holding the requirements the draft declares
+  open-list: one at a time, the body swapping between them; the rule between the header and the body names which
+  selection: moving through the list moves the pane
+  fit:
+    rows: the frame occupies the viewport's rows exactly
+    columns: no row runs past the viewport's width; text that would is wrapped or clipped
+
+# The frames a render is diffed against. What they fix is the arrangement, the order of
+# things, and the form of each field — everything the sections below state in words.
+# Column widths, the separator and rule glyphs, the selection marker, the truncation
+# width, and which colours carry an emphasis are the implementer's; a snapshot differing
+# from these mocks only in those is conformant.
+mock:
+  ratify: |
+    increment-process · wip-001-the-review-session · plan/increment-process/the-review-session · #214
+    also changed: surfaces (1)                                                        1 unresolved
+    ── decisions (6) ──────────────────────────────────────────────────────────────────────────────
+    ›a refused push pulls, reapplies b…  │ A REFUSED PUSH PULLS, REAPPLIES BY ID, AND TRIES AGAIN
+     d-x1jlr7jc  closes d-lqmwczg3       │ [d-x1jlr7jc]
+                                         │
+     the submit reports and stops        │ the commit a submit writes carries a body naming each
+     d-3n1kq8lp  closed by d-x1jlr7jc    │ status the set took and how many entries took it — `3
+                                         │ accepted, 1 rejected` — in a fixed status order.
+     a submit does not end the sitting   │
+     d-nb5yg1w1                deferred  │ ─────────────────────────────────────────────────────
+                                         │ pinned(public-api): the commit body every later reader
+     the draft's requirements are a se…  │   of the branch sees
+     d-26vs308h                accepted  │
+                                         │ because:
+                                         │   - a submitted set of rulings leaves the remote
+                                         │     current and says what it did [r-clty5lqd]
+                                         │
+                                         │ supersedes:
+                                         │   - the submit tallies what it ruled and pushes
+                                         │     [d-lqmwczg3]
+
+  requirements: |
+    increment-process · wip-001-the-review-session · plan/increment-process/the-review-session · #214
+    also changed: surfaces (1)                                                        1 unresolved
+    ── requirements (4) ───────────────────────────────────────────────────────────────────────────
+    ›a settled draft is reviewed, not …  │ A SETTLED DRAFT IS REVIEWED, NOT ONLY A PROPOSED ONE
+     r-0h5q1lfl                          │ [r-0h5q1lfl]
+                                         │
+     what a draft closes is legible fr…  │ the ratify session opens on any draft its pull request
+     r-n86ssoew                          │ carries, whatever statuses that draft's entries hold,
+                                         │ and the owner reads and re-rules each of them there.
+     the pull request carries the owne…  │
+     r-8s0dd2wq  closes r-y9eux47d       │ why it matters:
+                                         │   an implementation's companion carries its whole
+     ratify-screen                       │   design set as delegated, so a session that opens
+     /design-process/ratify-screen@3     │   only on proposed entries has nothing to show.
+                                         │
+                                         │ verification:
+                                         │   - do: open a session on a draft whose every
+                                         │     decision carries a ruling
+                                         │   - verify: the draft's decisions are listed
+                                         │
+                                         │ ─────────────────────────────────────────────────────
+                                         │ because:
+                                         │   - ruling a draft is one sitting in one place
+                                         │     [r-ax84j1s2]
+
+  select-draft: |
+    plan/increment-process/the-review-session · #214
+    ──────────────────────────────────────────────────────────────────────────────────────
+    two drafts on this pull request:
+
+     ›increment-process · wip-001-the-review-session
+      minecraft-addon · wip-002-dev-loop
+
+  text-entry: |
+    note ─────────────────────────────────────────────────────────────────────────────────
+    this reads wider than what it supersedes; say what changed rather than restating it█
+
+  secret: |
+    github token ─────────────────────────────────────────────────────────────────────────
+    █
+
+text-entry:
+  applies-to:
+    - a rejection's reason
+    - a note on an entry of either list
+    - the owner's token
+  cursor:
+    present: whenever the field has focus
+    form: a block at the insertion point, distinguishable from the surrounding text
+    notes: the field shows where the next character lands, empty or not
+  secret:
+    cursor: present
+    text: not echoed
+
+select-draft:
+  shown-when: the pull request's diff carries more than one draft
+  entry:
+    lines: 1
+    form: '<product> · <increment-directory>'
+  on-choice: the ordinary view, on the chosen draft
+
+header:
+  present-in: the decisions and requirements modes
+  lines: 2
+  notes: >-
+    the header's height does not vary with what it carries, so the body below it does not shift.
+    the draft-selection screen precedes a draft being chosen and carries its own identity line
+    instead, since the fields below name a draft it has not got yet
+  identity:
+    form: '<product> · <increment-directory> · <branch> · #<pr-number>'
+  other-inputs:
+    form: 'also changed: <kind> (<count>), <kind> (<count>)'
+    kinds:
+      - schemas
+      - surfaces
+      - facts
+      - evidence
+      - drafts
+    absent: the second line keeps its row, blank, where the draft changes none of them
+  unresolved-threads:
+    form: '<count> unresolved'
+    absent: the field is omitted where none is unresolved, and the line keeps its row
+
+body-rule:
+  position: between the header and the body, spanning the frame
+  lines: 1
+  form: a rule carrying the open list's name and how many entries it holds — "decisions (5)"
+  notes: the rule is where the open list is named, so naming it costs the body no row
+
+entry-list:
+  entry:
+    lines: 2
+    line-1:
+      form: '<title>'
+      truncated-to: the implementer's choice of width
+      no-title: the id, where the entry carries none
+    line-2:
+      form: the id, then the closure field where the entry has one
+      emphasis: dim
+  closure:
+    applies-to: an entry of either list
+    closes:
+      form: 'closes <id>'
+      shown-when: the entry supersedes or amends another foundation
+      emphasis: prominent
+    closed:
+      form: 'closed by <id>'
+      shown-when: another entry of the same draft supersedes or amends this one
+      emphasis: recessive
+    absent: neither field is shown, and the entry carries no emphasis of its own
+  staged-ruling:
+    form: shown beside the entry
+    absent: nothing is shown where the entry holds no ruling, and never on a requirement
+  window: the list scrolls to keep the selected entry within it
+
+requirement-list:
+  holds: the requirements the draft declares, then its model bindings
+  entry: as the entry list's, with no staged ruling
+  model-binding:
+    line-1: the binding's name
+    line-2: the contract reference it names, in place of an id
+
+detail-pane:
+  order:
+    - heading
+    - blank line
+    - statement
+    - rationale, on a requirement carrying one
+    - verification, on a requirement carrying one
+    - horizontal rule
+    - metadata
+  requirement-blocks:
+    notes: >-
+      the two blocks a requirement carries that a decision does not, so that the whole of what the
+      owner ratifies is in the pane
+    rationale:
+      form: |
+        why it matters:
+          <text, reflowed and indented>
+      absent: the block is omitted where the requirement carries no rationale
+    verification:
+      form: |
+        verification:
+          - do: <text>
+          - verify: <text>
+      notes: one step per item, in the order the source carries them, each keyed as the source keys it
+      absent: the block is omitted where the requirement carries no verification
+  model-binding:
+    statement: the binding's description, where it carries one
+    metadata: the contract reference, and the binding's status where it is not the default
+  heading:
+    form: '<TITLE> [<id>]'
+    notes: no kind-and-increment line follows the heading
+  statement:
+    form: the entry's statement, reflowed to the pane
+    reflow:
+      joins: the source's line breaks within a block, so the pane's width sets the line length
+      holds:
+        - a blank line, which separates one block from the next
+        - a list item, which begins its own block and keeps its marker
+        - an indented block, which is reproduced as written
+  horizontal-rule:
+    form: a rule spanning the pane, present only where metadata follows
+  metadata:
+    pinned:
+      form: 'pinned(<reason>): <notes>'
+      no-notes: 'pinned(<reason>)'
+      absent: the line is omitted where the entry is not pinned
+    citations:
+      applies-to:
+        - because
+        - supersedes
+        - amends
+        - answers
+      form: |
+        <label>:
+          - <title> [<id>]
+      notes: one cited entry per item; an id resolving to nothing appears as "  - <id>"
+      absent: a label with no entries is omitted
+  wrapping:
+    applies-to: every block the pane renders — statement, pinning notes, and citations
+    form: text too wide for the pane continues on the next row
+    list-items: a continuation is indented to sit under its item's text, not under its marker

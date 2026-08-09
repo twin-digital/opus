@@ -50,7 +50,7 @@ const detail = (rows: string[]): string[] =>
 
 const widest = (rows: string[]): number => Math.max(...rows.map((row) => row.length))
 
-describe('every row fits the viewport — /design-process/ratify-screen@1', () => {
+describe('every row fits the viewport — /design-process/ratify-screen@3', () => {
   it('clips a citation the detail pane cannot hold', () => {
     const resolve: Citations = () => 'opus workspace members sit two levels under nodejs'
     const state = open([decision('d-11111111', { because: ['f:opus-workspace-members-sit-two-levels-under-nodejs'] })])
@@ -68,13 +68,12 @@ describe('every row fits the viewport — /design-process/ratify-screen@1', () =
   })
 })
 
-describe('the frame fills the viewport exactly — /design-process/ratify-screen@1', () => {
+describe('the frame fills the viewport exactly — /design-process/ratify-screen@3', () => {
   it('emits one row per viewport row whatever the header holds', () => {
     expect(frame(open([decision('d-11111111')])).length).toBe(VIEW.rows)
   })
 
-  // lights up when d-ozagogc7 lands
-  it.skip('keeps the body in place whether or not the header carries its second line — d-ozagogc7', () => {
+  it('keeps the body in place whether or not the header carries its second line — d-ozagogc7', () => {
     const withSecond = { ...HEADER, unresolved: 3 }
     const bare = frame(open([decision('d-11111111')]))
     const full = frame(open([decision('d-11111111')], withSecond))
@@ -82,7 +81,7 @@ describe('the frame fills the viewport exactly — /design-process/ratify-screen
   })
 })
 
-describe('the footer — /design-process/ratify-screen@1', () => {
+describe('the footer — /design-process/ratify-screen@3', () => {
   it('shows what the last refused action said', () => {
     const state = press(open([decision('d-11111111')]), 'l')
     expect(state.message).toBe('landing waits on every entry being ruled')
@@ -90,7 +89,7 @@ describe('the footer — /design-process/ratify-screen@1', () => {
   })
 })
 
-describe('the list window follows the selection — /design-process/ratify-screen@1', () => {
+describe('the list window follows the selection — /design-process/ratify-screen@3', () => {
   const many = Array.from({ length: 10 }, (_, index) => decision(`d-${index}0000000`, { title: `choice ${index}` }))
 
   it('holds the selected entry once the list runs past the pane', () => {
@@ -100,7 +99,7 @@ describe('the list window follows the selection — /design-process/ratify-scree
   })
 })
 
-describe('the detail pane’s scroll — /design-process/ratify-screen@1', () => {
+describe('the detail pane’s scroll — /design-process/ratify-screen@3', () => {
   it('stops at the end of the entry rather than paging past it', () => {
     const state = press(open([decision('d-11111111')]), 'pagedown', 'pagedown')
     expect(detail(frame(state)).join('').trim()).not.toBe('')
@@ -108,8 +107,7 @@ describe('the detail pane’s scroll — /design-process/ratify-screen@1', () =>
 })
 
 describe('text wraps to the pane — r-gzyfme0f, r-4xa4kazt', () => {
-  // lights up when r-gzyfme0f lands
-  it.skip('wraps a citation with its list item’s hanging indent — r-gzyfme0f', () => {
+  it('wraps a citation with its list item’s hanging indent — r-gzyfme0f', () => {
     const resolve: Citations = () => 'opus workspace members sit two levels under nodejs'
     const state = open([decision('d-11111111', { because: ['f:opus-workspace-members'] })])
     const rows = detail(frame(state, VIEW, resolve)).filter((row) => row.trim() !== '')
@@ -118,11 +116,11 @@ describe('text wraps to the pane — r-gzyfme0f, r-4xa4kazt', () => {
     expect(rows[first + 1]).toMatch(/^ {4}\S/)
   })
 
-  // lights up when r-4xa4kazt lands
-  it.skip('reflows a statement across the line breaks its yaml carried — r-4xa4kazt', () => {
+  it('reflows a statement across the line breaks its yaml carried — r-4xa4kazt', () => {
     const text = 'grinbox runs as a single long-running Node process owning\nthe HTTP server and the state store.\n'
     const state = open([decision('d-11111111', { text })])
-    const rows = detail(frame(state, { rows: 20, columns: 100 }, NO_TITLES))
+    // wide enough that the pane holds the whole sentence, which is where the join shows
+    const rows = detail(frame(state, { rows: 20, columns: 140 }, NO_TITLES))
     expect(rows.join('\n')).toContain('owning the HTTP server')
   })
 })
