@@ -220,19 +220,58 @@ jobs:
           docker push ${{ matrix.package.imageName }}:$MINOR
           docker push ${{ matrix.package.imageName }}:$MAJOR
 
-  # Attach downloadable assets to the GitHub releases changesets just created.
-  # Any released package exposing a `release-assets` script (the well-known hook)
-  # has it run, and everything it writes to the package's `.release-assets/` is
-  # uploaded to that package's release. The hook is optional: packages without it
-  # simply get no GitHub-hosted assets.
-  release-assets:
+  # Prepare matrix of released packages that produce GitHub release assets — those
+  # exposing a `release-assets` script (the well-known hook). The hook is optional:
+  # packages without it simply get no GitHub-hosted assets.
+  release-assets-matrix:
     needs: publish
     # Only after an actual npm/tag release — skips the "Version Packages" PR runs.
     if: needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
+      contents: read # detection only reads the publish job's output
+    outputs:
+      packages: ${{ steps.detect.outputs.packages }}
+      has-packages: ${{ steps.detect.outputs.has-packages }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup dependencies
+        uses: ./.github/actions/setup
+
+      - name: Detect released packages with release assets
+        id: detect
+        env:
+          PUBLISHED_PACKAGES: ${{ needs.publish.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          if [ "$packages" = "[]" ]; then
+            echo "has-packages=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-packages=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Attach downloadable assets to the GitHub releases changesets just created. Everything a
+  # package's hook writes to its `.release-assets/` is uploaded to that package's release.
+  # One job per package, so a package whose assets fail to build or upload leaves the rest
+  # of the release intact.
+  release-assets:
+    needs: release-assets-matrix
+    if: needs.release-assets-matrix.outputs.has-packages == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
       contents: write # upload assets to the releases
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        package: ${{ fromJson(needs.release-assets-matrix.outputs.packages) }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -252,48 +291,22 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      - name: Detect released packages with release assets
-        id: detect
-        env:
-          PUBLISHED_PACKAGES: ${{ needs.publish.outputs.publishedPackages }}
-        run: |
-          set -euo pipefail
-          packages=$(node ./tooling/scripts/bin/release-asset-packages.js)
-          echo "packages=$packages" >> "$GITHUB_OUTPUT"
-
       # Two steps so GH_TOKEN (contents: write) is only in the environment of the upload —
       # not of the package-authored build and release-assets scripts.
+      # turbo runs the package's `build` first — the task depends on it.
       - name: Build release assets
         env:
-          PACKAGES: ${{ steps.detect.outputs.packages }}
-        run: |
-          set -euo pipefail
-          lines=$(jq -r '.[] | "--filter=" + .name' <<< "$PACKAGES")
-          if [ -z "$lines" ]; then
-            echo "No released package defines a release-assets hook"
-            exit 0
-          fi
-          mapfile -t filters <<< "$lines"
-          # turbo runs each package's `build` first — the task depends on it.
-          pnpm release-assets "${filters[@]}"
+          PACKAGE_NAME: ${{ matrix.package.name }}
+        run: pnpm release-assets --filter="$PACKAGE_NAME"
 
       - name: Attach release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PACKAGES: ${{ steps.detect.outputs.packages }}
-        run: |
-          set -euo pipefail
-          # jq runs before the loop so its exit status is checked; a failure inside a
-          # process substitution would leave the loop silently empty.
-          rows=$(jq -r '.[] | [.tag, .path] | @tsv' <<< "$PACKAGES")
-          if [ -z "$rows" ]; then
-            exit 0
-          fi
-          # tag and path are workspace values taken verbatim — passed as arguments,
-          # never spliced into the script
-          while IFS=$'\t' read -r tag dir; do
-            node ./tooling/scripts/bin/upload-release-assets.js "$tag" "$dir"
-          done <<< "$rows"
+          # workspace values reach the script through the environment, never spliced
+          # into the run block
+          TAG: ${{ matrix.package.tag }}
+          PACKAGE_DIR: ${{ matrix.package.path }}
+        run: node ./tooling/scripts/bin/upload-release-assets.js "$TAG" "$PACKAGE_DIR"
 
   # Check Docker build status and fail workflow if any builds failed
   docker-status-check:
