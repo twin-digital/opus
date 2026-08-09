@@ -87,18 +87,6 @@
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build"],
       "inputs": [
         "src/**",
-        "package.json",
-        "vitest.config.ts",
-        "vitest.config.d/**",
-        "tsconfig.json",
-        "tsconfig.*.json"
-      ],
-      "outputs": ["coverage.json"]
-    },
-    "@twin-digital/village-guard#test": {
-      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "@twin-digital/minecraft-test-lib#build"],
-      "inputs": [
-        "src/**",
         "behavior_pack/**",
         "package.json",
         "vitest.config.ts",

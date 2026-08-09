@@ -14,8 +14,8 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "release-assets": "mc-pack-archive",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },

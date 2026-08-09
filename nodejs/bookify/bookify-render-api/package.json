@@ -18,8 +18,8 @@
     "lint:fix": "lint_fix",
     "logs": "serverless logs -f render-html --tail",
     "remove": "serverless remove",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },
