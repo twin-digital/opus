@@ -52,6 +52,11 @@
       "description": "tsdown's version is owned by repo-kit (.repo-kit.yml), not Renovate",
       "matchPackageNames": ["tsdown"],
       "enabled": false
+    },
+    {
+      "description": "TypeScript is held at v6 because typescript-eslint cannot run against v7. TS 7 is the native port: the `typescript` package's main entry exports only `version` and `versionMajorMinor`, and the classic compiler API moved to `typescript/unstable/*`. `@typescript-eslint/typescript-estree` reads `ts.ModuleKind.Cjs` at module load, so ESLint dies with `Cannot read properties of undefined (reading 'Cjs')` before linting a file — that is every package's `lint` task and every lint-staged hook. The peer range is `>=4.8.4 <6.1.0` on every published version including canary (checked at 8.66.x, 2026-08-09), so there is no version to move to yet. Raise the ceiling once typescript-eslint supports v7; `nodejs/minecraft/test-lib/tools/generate.ts` must be ported off the classic compiler API in the same change.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     }
   ]
 }
