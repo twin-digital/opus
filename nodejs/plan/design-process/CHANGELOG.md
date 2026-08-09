@@ -1,5 +1,22 @@
 # @twin-digital/design-process
 
+## 0.8.1
+
+### Patch Changes
+
+- b161513: Land a product's first increment. The landing measures itself against the fold at the head ref, and
+  resolving that fold threw where the head declares no such product — which is the state of every
+  product's first increment, so no new product could be landed at all. The head having nothing of the
+  product is now an answer rather than a failure: there is nothing to conflict with, and the landing
+  claims 001. `design-process conflicts` reports the same case as passing rather than erroring.
+- 6d13a5b: The ratify session's frame now fits its viewport. No row runs past the terminal's width — the
+  header, the detail pane's own rows, and the composed rows are all clipped — so the frame no longer
+  soft-wraps, outgrow the rows it was drawn for, and scroll the screen out from under the repaint.
+
+  The footer is rendered, carrying what the last refused action said. The entry list scrolls to keep
+  the selected entry inside the pane, and the detail pane's scroll stops at the end of the entry
+  rather than paging past it into a blank pane.
+
 ## 0.8.0
 
 ### Minor Changes

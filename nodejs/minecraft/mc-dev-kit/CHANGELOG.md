@@ -1,5 +1,12 @@
 # @twin-digital/mc-dev-kit
 
+## 0.3.1
+
+### Patch Changes
+
+- 289331b: Correct the `packBuild` doc example's package directory: from a file in `tsdown.config.d/`,
+  `new URL('../..', import.meta.url)` resolves to the filesystem root, not the package. It is `'..'`.
+
 ## 0.3.0
 
 ### Minor Changes
