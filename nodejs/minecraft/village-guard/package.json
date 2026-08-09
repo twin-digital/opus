@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/village-guard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Minecraft Bedrock behavior pack that keeps every villager, wandering trader and iron golem alive.",
   "license": "UNLICENSED",
   "author": "Sean Kleinjung <sean@twindigital.io>",
