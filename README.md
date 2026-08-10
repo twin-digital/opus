@@ -38,6 +38,9 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
+- [@grinbox/server](./nodejs/grinbox/server): The grinbox daemon: HTTP surface, poll schedule, triage execution, and the SQLite state store.
+- [@grinbox/shared](./nodejs/grinbox/shared): The contracts grinbox's daemon and browser application both speak
+- [@grinbox/web](./nodejs/grinbox/web): The grinbox browser application: a client of the daemon's API with no privileged path.
 - [@twin-digital/mc-dev-kit](./nodejs/minecraft/mc-dev-kit): Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.
 - [@twin-digital/mc-dev-server](./nodejs/minecraft/mc-dev-server): Runs a Minecraft Bedrock dev server under Docker and keeps a workspace's built packs deployed to it.
 - [@twin-digital/minecraft-test-lib](./nodejs/minecraft/test-lib): In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.

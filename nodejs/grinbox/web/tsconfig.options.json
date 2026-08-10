@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    // Nothing imports a browser application — what it publishes is a built asset tree — so
+    // there are no declarations to emit, and the portability of an inferred exported type
+    // (an eslint config fragment's, say) is not a constraint on this package.
+    "declaration": false,
+    "declarationMap": false
+  }
+}

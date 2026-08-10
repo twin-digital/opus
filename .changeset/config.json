@@ -4,7 +4,7 @@
   "baseBranch": "main",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [["@grinbox/server", "@grinbox/web", "@grinbox/shared"]],
   "ignore": [],
   "linked": [],
   "privatePackages": {
