@@ -1,5 +1,11 @@
 # @twin-digital/credential-shelf-trigger
 
+## 0.2.3
+
+### Patch Changes
+
+- c9726b3: chore: mark bin entrypoints executable
+
 ## 0.2.2
 
 ### Patch Changes

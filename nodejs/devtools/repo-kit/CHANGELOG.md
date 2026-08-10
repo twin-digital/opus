@@ -1,5 +1,12 @@
 # @twin-digital/repo-kit
 
+## 0.4.1
+
+### Patch Changes
+
+- d3fc1f7: chore(deps): update dependency execa to v10
+  - @twin-digital/json-patch-x@0.3.1
+
 ## 0.4.0
 
 ### Minor Changes

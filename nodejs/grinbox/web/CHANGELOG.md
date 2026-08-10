@@ -1,5 +1,14 @@
 # @grinbox/web
 
+## 0.2.1
+
+### Patch Changes
+
+- 876be5d: fix(deps): update dependency sonner to v2
+- Updated dependencies [633a769]
+  - @grinbox/server@0.2.1
+  - @grinbox/shared@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

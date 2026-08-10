@@ -1,5 +1,12 @@
 # @twin-digital/bookify
 
+## 0.4.5
+
+### Patch Changes
+
+- d3fc1f7: chore(deps): update dependency execa to v10
+  - @twin-digital/logger-lib@0.0.2
+
 ## 0.4.4
 
 ### Patch Changes

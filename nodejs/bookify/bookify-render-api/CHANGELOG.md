@@ -1,5 +1,13 @@
 # @twin-digital/bookify-render-api
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [d3fc1f7]
+  - @twin-digital/bookify@0.4.5
+  - @twin-digital/observability-lib@0.0.6
+
 ## 0.1.10
 
 ### Patch Changes

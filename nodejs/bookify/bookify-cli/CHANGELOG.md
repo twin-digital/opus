@@ -1,5 +1,13 @@
 # @twin-digital/bookify-cli
 
+## 0.4.5
+
+### Patch Changes
+
+- Updated dependencies [d3fc1f7]
+  - @twin-digital/bookify@0.4.5
+  - @twin-digital/cli-lib@0.0.2
+
 ## 0.4.4
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @grinbox/server
 
+## 0.2.1
+
+### Patch Changes
+
+- 633a769: fix(deps): update dependency croner to v10
+  - @grinbox/shared@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

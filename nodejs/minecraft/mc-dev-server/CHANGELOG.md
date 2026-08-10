@@ -1,5 +1,12 @@
 # @twin-digital/mc-dev-server
 
+## 0.2.2
+
+### Patch Changes
+
+- d3fc1f7: chore(deps): update dependency execa to v10
+  - @twin-digital/mc-dev-kit@0.3.1
+
 ## 0.2.1
 
 ### Patch Changes

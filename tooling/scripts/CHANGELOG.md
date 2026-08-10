@@ -1,5 +1,11 @@
 # @twin-digital/opus-scripts
 
+## 0.5.1
+
+### Patch Changes
+
+- d3fc1f7: chore(deps): update dependency execa to v10
+
 ## 0.5.0
 
 ### Minor Changes
