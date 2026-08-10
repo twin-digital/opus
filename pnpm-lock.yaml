@@ -1473,7 +1473,7 @@ importers:
         version: 3.1090.0
       '@langchain/community':
         specifier: ^1.0.0
-        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@165.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2)
+        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2)
       '@langchain/core':
         specifier: ^1.0.3
         version: 1.2.3(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2)
@@ -1971,7 +1971,7 @@ importers:
     dependencies:
       '@langchain/community':
         specifier: ^1.0.0
-        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@16.6.1)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@165.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)
+        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@16.6.1)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)
       '@langchain/core':
         specifier: ^1.0.3
         version: 1.2.3(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)
@@ -2034,8 +2034,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.1
       googleapis:
-        specifier: ^165.0.0
-        version: 165.0.0(supports-color@8.1.1)
+        specifier: ^173.0.0
+        version: 173.0.0(supports-color@8.1.1)
       hono:
         specifier: ^4.10.6
         version: 4.13.1
@@ -7694,8 +7694,8 @@ packages:
     resolution: {integrity: sha512-7g1yzQKx0mmNTjiK0H9dJ8eqKqDBveES9vLHeg5neb3BMQy/d1oQefIMhIpOVT8a+f+LOcixMEdRbFIW/cQUJw==}
     engines: {node: '>=18'}
 
-  googleapis@165.0.0:
-    resolution: {integrity: sha512-uXA/Z779zTkW7NUNZqjJz6878inQyU1PIpxisZDezJaR7wfKPP3d/BNeGLDNbO2wnkMpZ6bmpeshWNRR/fjqmw==}
+  googleapis@173.0.0:
+    resolution: {integrity: sha512-xEJJYLZ4qeenVyfzispNfRjCe9bsv7CzBv5zYFLvScOze9snJ8S9W6hjQ729CWPQt5mvn/JrcRaCHzQiukt0ng==}
     engines: {node: '>=18'}
 
   gopd@1.2.0:
@@ -12185,7 +12185,7 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@16.6.1)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@165.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)':
+  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@16.6.1)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(zod@3.25.76))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(ws@8.21.2)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@16.6.1)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@3.25.76))(zod@3.25.76)
       '@ibm-cloud/watsonx-ai': 1.7.3(supports-color@8.1.1)
@@ -12214,7 +12214,7 @@ snapshots:
       discord.js: 14.27.0
       fast-xml-parser: 5.7.3
       google-auth-library: 10.9.1(supports-color@8.1.1)
-      googleapis: 165.0.0(supports-color@8.1.1)
+      googleapis: 173.0.0(supports-color@8.1.1)
       hnswlib-node: 3.0.0
       ignore: 7.0.6
       jsdom: 29.1.1
@@ -12227,7 +12227,7 @@ snapshots:
       - '@opentelemetry/sdk-trace-base'
       - peggy
 
-  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@165.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2)':
+  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1090.0)(@aws-sdk/client-s3@3.1090.0)(@aws-sdk/credential-provider-node@3.972.78)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.3(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.6.12)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@29.1.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(ws@8.21.2)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.4.3))(zod@4.4.3)
       '@ibm-cloud/watsonx-ai': 1.7.3(supports-color@8.1.1)
@@ -12256,7 +12256,7 @@ snapshots:
       discord.js: 14.27.0
       fast-xml-parser: 5.7.3
       google-auth-library: 10.9.1(supports-color@8.1.1)
-      googleapis: 165.0.0(supports-color@8.1.1)
+      googleapis: 173.0.0(supports-color@8.1.1)
       hnswlib-node: 3.0.0
       ignore: 7.0.6
       jsdom: 29.1.1
@@ -16593,7 +16593,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  googleapis@165.0.0(supports-color@8.1.1):
+  googleapis@173.0.0(supports-color@8.1.1):
     dependencies:
       google-auth-library: 10.9.1(supports-color@8.1.1)
       googleapis-common: 8.0.3(supports-color@8.1.1)
