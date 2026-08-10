@@ -35,7 +35,7 @@ catalog:
   lodash-es: ^4.17.22
   prettier: ^3.5.3
   prettier-package-json: ^2.8.0
-  serverless: 4.38.1
+  serverless: 4.39.0
   ts-node: ^10.9.2
   tsdown: ^0.18.3
   typescript: ^6.0.0
