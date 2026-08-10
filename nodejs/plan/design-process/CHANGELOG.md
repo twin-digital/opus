@@ -1,5 +1,11 @@
 # @twin-digital/design-process
 
+## 0.10.1
+
+### Patch Changes
+
+- c9726b3: chore: mark bin entrypoints executable
+
 ## 0.10.0
 
 ### Minor Changes
