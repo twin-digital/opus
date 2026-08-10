@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@grinbox/web",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The grinbox browser application: a client of the daemon's API with no privileged path.",
   "type": "module",
   "scripts": {
