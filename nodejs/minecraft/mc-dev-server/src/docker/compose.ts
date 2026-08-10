@@ -80,7 +80,7 @@ export const createComposeFollower = (file: string): ComposeFollower => {
       stop: () => {
         subprocess.kill('SIGTERM')
         subprocess.all.destroy()
-        subprocess.unref()
+        subprocess.nodeChildProcess.unref()
       },
     }
   }
