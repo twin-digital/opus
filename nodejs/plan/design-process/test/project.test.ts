@@ -173,20 +173,6 @@ describe('projectProduct (r-2gcehlp8)', () => {
     expect(projection).toContain('superseded: r-aaaaaaaa by r-cccccccc')
   })
 
-  it('filters by facet', () => {
-    const files = demoProduct()
-    files['products/demo/increments/002/decisions.yaml'] = yaml({
-      version: '1',
-      decisions: [
-        { id: 'd-cccccccc', statement: 'cli-facing.\n', status: 'accepted', facets: 'cli', supersedes: 'd-aaaaaaaa' },
-      ],
-    })
-    const { tree } = makeRepo(files)
-    const projection = projectProduct(tree, 'demo', { facet: 'cli' })
-    expect(projection).toContain('### d-cccccccc')
-    expect(projection).not.toContain('### d-bbbbbbbb')
-  })
-
   it('lists open questions blocking settle', () => {
     const files = demoProduct()
     files['products/demo/increments/002/questions.yaml'] = yaml({
@@ -203,8 +189,7 @@ describe('projectProduct (r-2gcehlp8)', () => {
   })
 })
 
-// Code wave: the projection over the 032–034 dialects.
-describe.skip('the projection over the new dialects (Code wave)', () => {
+describe('the projection over the new dialects (d-u5q2wh44, d-qv81x173, d-hfbf4eb7)', () => {
   it('omits commentary unless asked (d-u5q2wh44, r-q0969r5a)', () => {
     const { tree } = makeRepo(demoV3())
     const projection = projectProduct(tree, 'demo3')

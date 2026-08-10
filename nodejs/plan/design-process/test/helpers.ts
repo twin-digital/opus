@@ -164,7 +164,7 @@ export const demoV3 = (): Files => ({
         scope: 'engine',
         commentary: 'the owner reverses designs over this.\n',
       },
-      { id: 'r-bbbbbbbb', title: 'second', statement: 'the product does the second thing.\n' },
+      { id: 'r-bbbbbbbb', title: 'second', statement: 'the product recomputes the fold after every landing.\n' },
     ],
     model: [{ name: 'demo-config', schema: '/design-process/product@1', description: 'a bound shape' }],
   }),

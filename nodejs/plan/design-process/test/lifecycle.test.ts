@@ -58,8 +58,7 @@ describe('the state regime: presets, model entries, components, and terms redecl
   })
 })
 
-// Code-wave rules over the lifecycle vocabulary.
-describe.skip('lifecycle gates (Code wave)', () => {
+describe('lifecycle gates (d-3kow7q0r, d-i849afta, d-492sxcc9)', () => {
   it('fails applying and retiring one preset in a single increment (d-3kow7q0r)', () => {
     const files = demoV3()
     files['products/demo3/increments/002/requirements.yaml'] = yaml({
@@ -72,7 +71,7 @@ describe.skip('lifecycle gates (Code wave)', () => {
     expect(rules(check(files))).toContain('state-entry-declared-once')
   })
 
-  it('fails one increment declaring one preset or model entity twice (d-3kow7q0r)', () => {
+  it('fails one increment declaring one model entity twice (d-3kow7q0r)', () => {
     const files = demoV3()
     files['products/demo3/increments/002/requirements.yaml'] = yaml({
       version: '3',
@@ -81,7 +80,7 @@ describe.skip('lifecycle gates (Code wave)', () => {
         { name: 'demo-config', schema: '/design-process/product@2' },
       ],
     })
-    expect(rules(check(files))).toContain('state-entry-declared-once')
+    expect(rules(check(files))).toContain('model-name-unique')
   })
 
   it("keeps a retired product's fold readable and its published increments standing (d-i849afta)", () => {

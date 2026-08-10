@@ -115,7 +115,7 @@ export const runIncrementSession = async (options: SessionOptions): Promise<numb
     target,
     run,
     review: options.review ?? postReview,
-    token: heldToken(raw ? input : undefined, output),
+    token: heldToken(input, output),
   }
 
   let code = 0
@@ -281,15 +281,19 @@ const submit = async (
     for (const problem of problems) {
       process.stderr.write(`design-process: ${problem}\n`)
     }
-    session.state = resume(state, [], problems[0])
+    session.state = resume(state, [], state.staged.notes, problems[0])
     return undefined
   }
 
   if (state.submit === 'write') {
     const outcome = writeAndPush(target, state.entries, staged, run)
     output.write(`design-process: ${outcome.message}\n`)
-    await postNotes(working, state, staged, output)
-    session.state = resume(reread(session.state, target), [...outcome.written, ...outcome.conflicted])
+    const posted = await postNotes(working, state, staged, output)
+    session.state = resume(
+      reread(session.state, target),
+      [...outcome.written, ...outcome.conflicted],
+      posted === 'posted' ? undefined : state.staged.notes,
+    )
     return undefined
   }
 
@@ -307,10 +311,16 @@ const submit = async (
     process.stderr.write(`design-process: ${blocker}\n`)
   }
   if (!result.landed) {
-    session.state = resume(state, [], 'the landing did not complete; the blockers are above')
+    session.state = resume(state, [], undefined, 'the landing did not complete; the blockers are above')
     return undefined
   }
-  await postNotes(working, state, staged, output)
+  const posted = await postNotes(working, state, staged, output)
+  if (posted === 'kept') {
+    // the sitting ends with the landing (d-nb5yg1w1); what could not be posted is shown to save (r-xrhll9x6)
+    for (const [id, note] of state.staged.notes) {
+      output.write(`design-process: unposted note on ${id}: ${note}\n`)
+    }
+  }
   output.write(
     result.awaitingApproval === true ?
       `design-process: landed as ${result.number}; the pull request awaits the owner's approval\n`
@@ -319,15 +329,23 @@ const submit = async (
   return 0
 }
 
-/** Back to the list the submit was made from, with the staged set cleared of what it wrote. */
-const resume = (state: SessionState, cleared: string[], message?: string): SessionState => {
+/**
+ * Back to the list the submit was made from, with the staged set cleared of what it wrote. Notes a
+ * refused review could not post are kept staged, ready to retry or to save (r-xrhll9x6).
+ */
+const resume = (
+  state: SessionState,
+  cleared: string[],
+  keptNotes?: Map<string, string>,
+  message?: string,
+): SessionState => {
   const rulings = new Map(state.staged.rulings)
   for (const id of cleared) {
     rulings.delete(id)
   }
   return {
     ...state,
-    staged: { rulings, notes: new Map() },
+    staged: { rulings, notes: keptNotes ?? new Map<string, string>() },
     mode: 'ratify',
     input: '',
     submit: undefined,
@@ -350,11 +368,17 @@ const reread = (state: SessionState, target: SessionTarget): SessionState => {
 
 /**
  * One `COMMENT` review carrying every note the sitting left, posted after the commit and the push
- * so it anchors to the state it describes. A submit carrying no note posts nothing; a session that
- * cannot obtain a token keeps the notes it could not post (d-f1b5r2f8, d-2b23mjrl). A note on a
- * requirement is posted the same way, and its source is not touched (d-26vs308h).
+ * so it anchors to the state it describes. A submit carrying no note posts nothing. A refused
+ * review — a missing token included — loses nothing: the refusal is shown in the session and the
+ * notes stay staged, ready to retry on the next submit (r-xrhll9x6, d-f1b5r2f8, d-2b23mjrl). A
+ * note on a requirement is posted the same way, and its source is not touched (d-26vs308h).
  */
-const postNotes = async (working: Working, state: SessionState, staged: Staged, output: Writable): Promise<void> => {
+const postNotes = async (
+  working: Working,
+  state: SessionState,
+  staged: Staged,
+  output: Writable,
+): Promise<'posted' | 'kept' | 'none'> => {
   const notes: Note[] = [...state.entries, ...state.requirements]
     .filter((entry) => staged.notes.has(entry.id))
     .map((entry) => ({ entry, note: staged.notes.get(entry.id) ?? '' }))
@@ -364,20 +388,24 @@ const postNotes = async (working: Working, state: SessionState, staged: Staged, 
     diffRanges(readDiff(working.run, working.target.root, working.target.pullRequest)),
   )
   if (review === undefined) {
-    return
+    return staged.notes.size === 0 ? 'none' : 'kept'
   }
   const given = await working.token()
   if (given === undefined) {
-    process.stderr.write(
-      `design-process: ${notes.length} note(s) were not posted; supply a token later in this session or they are lost\n`,
+    output.write(
+      `design-process: no token was given; ${notes.length} note(s) kept for retry — submit again to post them\n`,
     )
-    return
+    return 'kept'
   }
   try {
     await working.review(given, working.target.pullRequest, review)
     output.write(`design-process: ${notes.length} note(s) posted as one review\n`)
+    return 'posted'
   } catch (error) {
-    process.stderr.write(`design-process: ${error instanceof Error ? error.message : String(error)}\n`)
+    output.write(
+      `design-process: the review was refused (${error instanceof Error ? error.message : String(error)}); ${notes.length} note(s) kept for retry — submit again to post them\n`,
+    )
+    return 'kept'
   }
 }
 

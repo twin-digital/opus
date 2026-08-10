@@ -11,8 +11,8 @@ Every command takes `--root <dir>` (default `.`) naming the repository root.
 
 ```sh
 design-process check [--base <ref>] [--static-only] [--json]
-design-process show <product> [--at <increment> | --at-ref <gitref>] [--facet <facet>] [--json]
-design-process id <r|d|q> [--count <n>] [--json]
+design-process show <product> [--at <increment> | --at-ref <gitref>] [--scope <component>] [--commentary] [--json]
+design-process id <r|d|q|f|run> [--count <n>] [--json]
 
 design-process where <product> [--at <increment> | --at-ref <gitref>] [--next] [--json]
 design-process diff <product> (--from <increment> | --from-ref <gitref>)
@@ -88,27 +88,45 @@ drafts sharing an ordinal, which carry no relative order.
 
 ### check
 
-Applies every design rule in force to the repository tree; any finding blocks the merge. Exits
-non-zero when findings exist. Two rule groups run:
+Applies every design rule in force to the repository tree. The output has two severities: a
+**finding** (`✖`) gates any merge and sets the non-zero exit; a **report** (`▲`) informs and
+gates nothing repo-wide. Each names the product it concerns where one does. The one report the
+check emits today is the staleness model's — a published in-force foundation resting on a
+retired fact — and it is enforced by that product's own landing sequence rather than by the
+check's exit. The rule groups:
 
 - **Tree-state rules** — pool identity and `$ref` resolution, schema validation of every
   structured file against the pool schema its `version` names, id format and uniqueness, no
-  `proposed` decisions, no open questions, citations resolve (never to a question, and no in-force `because:` or `informed_by:` rests on a retired fact), model
+  `proposed` decisions, no open questions, citations resolve (never to a question; a draft entry
+  citing an already-retired fact is a finding, a published one the staleness report), model
   bindings resolve, preset adoption rules (each hop resolves, is a `requirement-preset`, and pins
   a published version; the closure is acyclic, pins one version per preset, and holds no
-  requirement id declared twice), dense increment numbering, implementation-record
-  naming and claim scope, and record coverage completeness — every requirement and ruled
-  decision in force at the record's target, the preset closure's requirements included; deferred
-  decisions are excluded, and no coverage entry may name one.
+  requirement id declared twice in force; a draft applies no retired preset at a new version),
+  dense increment numbering, implementation-record naming and claim scope, and record coverage
+  completeness — every requirement and ruled decision in force at the record's target, the preset
+  closure's requirements included; deferred decisions are excluded, and no coverage entry may
+  name one.
+- **Component and term rules** (the `requirements@3` dialect) — component parents resolve and the
+  graph is acyclic; a component or term retires only when nothing in force still references it,
+  unless `superseded_by` resolves the references; every `scope:` resolves to a live component,
+  `superseded_by` chains included; a requirement-preset declares no components and scopes none of
+  its own requirements; one increment declares a preset, component, or term once; term slugs are
+  unique across the product's closure, adopted terms included. Statement budgets bind the new
+  dialects only: a statement over 60 words, or a `when`/`then`/`otherwise` clause over 25, is a
+  finding — commentary is unbudgeted. Heuristic usage detection reports rather than gates:
+  re-parenting a component names the claims whose reach moved, redefining a term names the
+  foundations using it, an orphan term is noted.
 - **Evidence-bar rules** — the repo-wide `facts/` and `evidence/` pools. A pool file is a
   `version:` mapping carrying a `facts:` or `runs:` sequence; anything else under those
   directories — a probe's fixtures and inputs — is artifact material and contributes no entries.
-  Checked: file shape against `/design-process/facts@1` and `/design-process/runs@1` (which carry
-  the entry schemas), the backing's source floor, verbatim quotes at in-repo sources (an
-  off-repo url — one carrying a scheme — is not read), `run:` sources resolving to a live run on a
-  tested fact, `superseded_by` resolution, and id uniqueness across the shared fact/run namespace.
-  A pool file that does not parse as YAML is itself a finding, never a silent drop. A run's
-  recorded `output` must exist in the tree whether or not a fact cites the run yet.
+  Checked: file shape against the `/design-process/facts@N` / `runs@N` schema the wrapper's own
+  version names (`@1` entries keep kebab ids and enum retirement reasons; `@2` entries carry
+  generated `f-`/`run-` ids and free-text reasons), the backing's source floor, verbatim quotes
+  at in-repo sources (an off-repo url — one carrying a scheme — is not read), `run:` sources
+  resolving to a live run on a tested fact, `superseded_by` resolution across both dialects, and
+  id uniqueness across the shared fact/run namespace. A pool file that does not parse as YAML is
+  itself a finding, never a silent drop. A run's recorded `output` must exist in the tree whether
+  or not a fact cites the run yet.
 - **Draft-increment rules** — a `wip-<NNN>-<slug>` directory always draws the
   `increment-dir-name` finding, so `check` never exits 0 while a draft increment is in flight;
   the landing rename clears it and nothing else does. Two drafts sharing an ordinal draw
@@ -119,7 +137,11 @@ non-zero when findings exist. Two rule groups run:
 - **Change rules** — compared against `--base` (default `origin/main`, then `main`): published
   increments are immutable, shipped implementation records are immutable, pool versions bound by
   a published increment are immutable (directly or through a bound schema's `$ref`), and a new
-  implementation record targets the newest published increment.
+  implementation record targets the newest published increment. A merged fact or run is frozen:
+  the one edit is marking it retired, with its reason and its replacement — to say something
+  different, write a new entry. Retiring a cited fact is never refused, but the change must carry
+  a backlog item per citing product, naming the retired fact; the gate reads the backlog branch
+  for those items.
 
 Findings cite the requirement or decision id each rule enforces, e.g.:
 
@@ -131,10 +153,17 @@ Findings cite the requirement or decision id each rule enforces, e.g.:
 
 Renders the folded, effective state of a product at an increment as markdown: requirements
 (local, and adopted through the preset closure — each preset listed once, with the presets an
-indirectly reached one came through), decisions ordered by `because:` topology with statuses and pins (deferred
-entries counted beside the rulings), model bindings, coverage joined from the
-`implementations/` pool with uncovered and attestation-only counts (deferred decisions
-excluded, the summary naming how many), and what the increment changed.
+indirectly reached one came through), decisions ordered by `because:` topology with statuses,
+pins, and their ordered `cases:` (deferred entries counted beside the rulings), the components
+and terms the fold declares, model bindings, coverage joined from the `implementations/` pool
+with uncovered and attestation-only counts (deferred decisions excluded, the summary naming how
+many), and what the increment changed.
+
+`--scope <component>` shows only claims whose reach touches that component's subtree; an
+unscoped claim applies to the whole product and always shows. `--commentary` includes the
+non-normative commentary beside each statement — and is refused with `--at` or `--at-ref`, since
+a published projection is what implementers build from and never carries it. The `--json` data
+omits commentary under the same rule.
 
 With no fold version asked for it renders the tree as it stands, draft increments folded after
 the published ones in ordinal order: their foundations appear, their supersessions close what
@@ -144,8 +173,10 @@ or `--at-ref` projects published state and leaves drafts out.
 
 ### id
 
-Generates opaque ids — `{r|d|q}-` plus 8 random lowercase base36 characters — unique against
-every id mentioned under `products/`. Backlog ids (`b-`) are minted by `backlog add`, not here.
+Generates opaque ids — the ratified prefix plus 8 random lowercase base36 characters — unique
+against every id mentioned under `products/`, `facts/`, and `evidence/`. The kinds are `r`
+(requirement), `d` (decision), `q` (question), `f` (fact), and `run`. Backlog ids (`b-`) are
+minted by `backlog add`, not here.
 
 ### where
 
@@ -290,7 +321,9 @@ A push the remote refuses is not the end of it: the session fetches the branch's
 own unpushed commit, reapplies the sitting's rulings to the tip by entry id, and pushes again. An
 entry whose status differs at the tip is left as the tip has it and reported, its ruling leaving
 the stage; a commit the remote has accepted is never rewritten. A second refusal is reported and
-the sitting continues.
+the sitting continues — the work sits committed on the local branch, and the next submit pushes
+the pending commit even when it stages nothing new, so nothing the owner entered is lost to a
+rejected push.
 
 A submit carrying only notes writes no commit and posts its review against the branch as the
 remote already has it.
@@ -303,8 +336,10 @@ stays the landing's own step, because an approval posted earlier is dismissed by
 The review is the owner's, so it is what the owner's token is spent on: a GitHub personal access
 token typed at the terminal the first time a session posts something, with the input not echoed,
 held in memory for the rest of that session and nowhere else. Opening the pull request, pushing,
-and the merge use the credentials the environment already holds. A session that cannot obtain a
-token still stages, commits, and pushes, and reports the notes it could not post.
+and the merge use the credentials the environment already holds. A refused review — a missing
+token included — loses nothing: the refusal is shown in the session and the notes stay staged,
+posted by the next submit; a landing that completes with notes still unposted prints them, so
+they can be saved.
 
 ### land
 

@@ -49,8 +49,7 @@ describe('terms fold by id (d-amueiyj2, d-2t3fbn09)', () => {
   })
 })
 
-// Code-wave rules: the declaration gates and the heuristic usage reports.
-describe.skip('term declaration gates and usage reports (Code wave)', () => {
+describe('term declaration gates and usage reports (d-bgoclt56, d-2t3fbn09, d-lb99q03v)', () => {
   it('finds a slug collision across the product closure, adopted terms included (d-bgoclt56)', () => {
     const files = demoV3()
     files['products/some-preset/product.yaml'] = yaml({ version: '2', kind: 'requirement-preset' })
@@ -119,8 +118,16 @@ describe.skip('term declaration gates and usage reports (Code wave)', () => {
   })
 
   it('reports orphan terms no in-force foundation uses (d-lb99q03v)', () => {
-    const findings = check(demoV3()) // demoV3 declares `fold`, which no statement uses
+    const files = demoV3()
+    files['products/demo3/increments/002/requirements.yaml'] = yaml({
+      version: '3',
+      terms: [{ id: 'lantern', definition: 'a term nothing uses yet' }],
+    })
+    const findings = check(files)
     const report = findings.find((finding) => finding.rule === 'term-orphan')
     expect(report?.severity).toBe('report')
+    expect(report?.message).toContain('lantern')
+    // demoV3's own `fold` is used by r-bbbbbbbb, so it draws no orphan report
+    expect(findings.filter((finding) => finding.rule === 'term-orphan')).toHaveLength(1)
   })
 })

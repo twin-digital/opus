@@ -31,9 +31,7 @@ const withPool = (facts: Record<string, unknown>[]): Record<string, string> => {
   return files
 }
 
-// Code wave: the evidence bar reads each pool file against the version its wrapper declares,
-// and the @1 and @2 dialects coexist (d-vkudjo4x, d-a3agzjct).
-describe.skip('the two pool dialects coexist (Code wave)', () => {
+describe('the two pool dialects coexist (d-vkudjo4x, d-a3agzjct)', () => {
   it('validates a facts@2 file against its own version, not @1', () => {
     expect(validateTree(makeRepo(withPool([fact2()])).tree)).toEqual([])
   })
@@ -64,9 +62,7 @@ describe.skip('the two pool dialects coexist (Code wave)', () => {
   })
 })
 
-// Code wave: r-wgtyrh2r, d-vkudjo4x — the gate refuses any edit to a merged fact or run beyond
-// marking it retired.
-describe.skip('a merged fact or run is frozen (Code wave)', () => {
+describe('a merged fact or run is frozen — r-wgtyrh2r, d-vkudjo4x', () => {
   it('fails an edit to a merged fact beyond marking it retired', () => {
     const { root, tree } = makeGitRepo(withPool([fact2()]))
     write(root, 'facts/vendor.yaml', yaml({ version: '2', facts: [fact2({ claim: 'the claim, reworded' })] }))
@@ -97,9 +93,7 @@ describe.skip('a merged fact or run is frozen (Code wave)', () => {
   })
 })
 
-// Code wave: d-hxxlgaw9 — retiring a cited fact is never refused, and the change carries a
-// backlog item per citing product naming the fact, its replacement, and the citing entries.
-describe.skip('retiring a cited fact captures the debt (Code wave)', () => {
+describe('retiring a cited fact captures the debt — d-hxxlgaw9', () => {
   const cited = (): Record<string, string> => {
     const files = withPool([fact2()])
     files['products/demo3/increments/002/decisions.yaml'] = yaml({
@@ -146,7 +140,7 @@ describe.skip('retiring a cited fact captures the debt (Code wave)', () => {
 })
 
 // Code wave: d-hxxlgaw9, d-8y5vmff8, r-ajpjx5w0 — staleness is a report; late citation a finding.
-describe.skip('staleness reports and late-citation findings (Code wave)', () => {
+describe('staleness reports and late-citation findings — d-hxxlgaw9, d-8y5vmff8', () => {
   const retired = (): Record<string, string> =>
     withPool([fact2({ status: 'retired', reason: 'the vendor changed the page size' })])
 

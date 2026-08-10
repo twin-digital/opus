@@ -150,13 +150,11 @@ const gh = (args: string[]): string => {
   return ''
 }
 
-// Code wave: r-xrhll9x6 — the session loses no work to a failed GitHub write.
-describe.skip('the session loses no work to a failed GitHub write — r-xrhll9x6 (Code wave)', () => {
+describe('the session loses no work to a failed GitHub write — r-xrhll9x6', () => {
   it('keeps the notes a refused review could not post, shown and ready to retry', async () => {
     const { root } = clonedRepo()
     const input = new PassThrough()
     const said: string[] = []
-    let submits = 0
     let posts = 0
     const output = new Writable({
       write(chunk: Buffer, _encoding, callback) {
@@ -165,17 +163,18 @@ describe.skip('the session loses no work to a failed GitHub write — r-xrhll9x6
         if (text.includes('github token')) {
           input.write('a-token\r')
         }
-        if (text.includes('committed and pushed')) {
-          submits += 1
-          // first submit: the review was refused and the notes are kept; submit again, then leave
-          input.write(submits === 1 ? 'w' : 'q')
+        if (text.includes('kept for retry')) {
+          input.write('w') // the note survived the refusal; submit again to retry it
+        }
+        if (text.includes('posted as one review')) {
+          input.write('q')
         }
         callback()
       },
     })
 
     // note the first entry, rule it, and submit; the poster refuses once and accepts the retry
-    input.write('nkept for retry\rtw')
+    input.write('nneeds a carve-out\rtw')
     const code = await runIncrementSession({
       root,
       input,
@@ -192,7 +191,7 @@ describe.skip('the session loses no work to a failed GitHub write — r-xrhll9x6
 
     expect(code).toBe(0)
     const transcript = said.join('')
-    expect(transcript).toContain('secondary rate limit') // the refusal is shown
+    expect(transcript).toContain('secondary rate limit') // the refusal is shown in the session
     expect(transcript).toContain('note(s) posted as one review') // the retry carried the kept note
     expect(posts).toBe(2)
   })
@@ -213,7 +212,7 @@ describe.skip('the session loses no work to a failed GitHub write — r-xrhll9x6
     // the hook lifts; a submit with nothing newly staged still pushes the pending commit
     execFileSync('rm', [hook])
     const retried = writeAndPush(target(root), entriesOf(root), emptyStaging(), run)
-    expect(retried.message).not.toContain('ruled nothing')
+    expect(retried.message).toContain('the pending commit was pushed')
     expect(statusesAt(remote, BRANCH)['d-11111111']).toBe('tolerated')
   })
 })

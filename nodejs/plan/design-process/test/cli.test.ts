@@ -91,8 +91,7 @@ describe('the main output is stdout and the diagnostics are stderr — r-d474vgg
   })
 })
 
-// Code wave: d-8y5vmff8 — the check's two severities, and the ratified id kinds (d-kqofgshc).
-describe.skip('findings gate, reports inform — d-8y5vmff8 (Code wave)', () => {
+describe('findings gate, reports inform — d-8y5vmff8', () => {
   it('exits zero when the check carries only reports, and prints them', () => {
     // a published in-force foundation citing a retired fact is a report, not a finding
     const files = demoProduct()

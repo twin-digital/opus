@@ -23,8 +23,7 @@ describe('the budget counts words (d-kjeqksd8)', () => {
   })
 })
 
-// Code wave: the budget binds the dialects that carry commentary, and no earlier one.
-describe.skip('the statement budget gates the new dialects only (Code wave)', () => {
+describe('the statement budget gates the new dialects only — d-kjeqksd8', () => {
   it('finds a requirement@2 statement over sixty words', () => {
     const files = demoV3()
     files['products/demo3/increments/002/requirements.yaml'] = yaml({

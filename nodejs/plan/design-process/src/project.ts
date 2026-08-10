@@ -1,20 +1,56 @@
+import { componentTree, resolveScopeId, scopeIds, subtree } from './components.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { resolvePresetClosure } from './presets.js'
 
+import type { ComponentTree } from './components.js'
 import type { Fold, FoldedClaim, IncrementRef } from './fold.js'
 import type { Product, ProductsTree } from './load.js'
 import type { AdoptedPreset } from './presets.js'
 import type { FileTree } from './tree.js'
-import type { CoverageEntry, DecisionEntry, RequirementEntry } from './types.js'
+import type { CoverageEntry, DecisionEntry, RequirementEntry, Scope } from './types.js'
 
 export interface ProjectOptions {
   at?: number
-  /** Show only claims whose reach includes this component's subtree (d-hfbf4eb7, d-rplsevuk). */
+  /** Show only claims whose reach touches this component's subtree (d-hfbf4eb7, d-rplsevuk). */
   scope?: string
   /** Include commentary. Refused with `at`: a published projection never carries it (d-u5q2wh44). */
   commentary?: boolean
-  facet?: string
+}
+
+/** The commentary refusal (d-u5q2wh44): what implementers build from never carries commentary. */
+const refuseCommentaryAtPublished = (options: ProjectOptions): void => {
+  if (options.commentary === true && options.at !== undefined) {
+    throw new Error(
+      'commentary is excluded from a published projection (d-u5q2wh44); ask without a version, over the working tree',
+    )
+  }
+}
+
+/** Whether a claim's scope reaches the filtered subtree; an unscoped claim reaches everything. */
+const inScope = (tree: ComponentTree, filter: Set<string> | undefined, scope: Scope | undefined): boolean => {
+  if (filter === undefined) {
+    return true
+  }
+  const ids = scopeIds(scope)
+  if (ids.length === 0) {
+    return true
+  }
+  return ids.some((id) => {
+    const resolved = resolveScopeId(tree, id)
+    return resolved !== undefined && [...subtree(tree, resolved)].some((member) => filter.has(member))
+  })
+}
+
+const scopeFilter = (tree: ComponentTree, scope: string | undefined): Set<string> | undefined => {
+  if (scope === undefined) {
+    return undefined
+  }
+  const resolved = resolveScopeId(tree, scope)
+  if (resolved === undefined) {
+    throw new Error(`no live component ${JSON.stringify(scope)} to scope the projection to`)
+  }
+  return subtree(tree, resolved)
 }
 
 /** Render the projection of a product at an increment: the fold, joined and ordered for a reader. */
@@ -26,22 +62,23 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
       `no product ${JSON.stringify(productId)}; declared products: ${[...productsTree.products.keys()].join(', ') || '(none)'}`,
     )
   }
+  refuseCommentaryAtPublished(options)
   // an asked-for increment names published state; the default projection is the tree as it stands,
   // drafts included (d-x1mhu3a3)
   const fold = foldProduct(product, options.at, options.at === undefined)
   const lines: string[] = []
-  const facetFilter = options.facet
-
-  const hasFacet = (facets: string | string[] | undefined): boolean => {
-    if (facetFilter === undefined) {
-      return true
-    }
-    return facets !== undefined && (Array.isArray(facets) ? facets : [facets]).includes(facetFilter)
-  }
+  const components = componentTree(fold)
+  const filter = scopeFilter(components, options.scope)
+  const shown = (scope: Scope | undefined): boolean => inScope(components, filter, scope)
+  const commentary = options.commentary === true
 
   lines.push(`# ${product.id} @ ${fold.label}`, '')
   if (product.declaration?.data.kind !== undefined) {
-    lines.push(`kind: ${product.declaration.data.kind}`, '')
+    const retired =
+      product.declaration.data.status === 'retired' ?
+        ` (retired: ${product.declaration.data.reason ?? 'no reason recorded'})`
+      : ''
+    lines.push(`kind: ${product.declaration.data.kind}${retired}`, '')
   }
 
   // the preset closure the product's declarations reach, and the requirements it contributes
@@ -56,20 +93,23 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     lines.push('')
   }
 
-  const requirements = [...fold.requirements.values()].filter(({ entry }) => hasFacet(entry.facets))
+  const requirements = [...fold.requirements.values()].filter(({ entry }) => shown(entry.scope))
   lines.push(`## requirements (${requirements.length} in force${adopted.length > 0 ? ', plus adopted below' : ''})`, '')
   for (const { entry, increment } of requirements) {
-    lines.push(...renderRequirement(entry, increment))
+    lines.push(...renderRequirement(entry, increment, undefined, commentary))
   }
   for (const preset of adopted) {
+    // an adopted requirement applies at the preset entry's scope (d-ekoz1t47)
+    const presetScope = fold.presets.get(preset.via[1] ?? preset.name)?.entry.scope
+    if (!shown(presetScope)) {
+      continue
+    }
     for (const { entry, increment } of preset.requirements.values()) {
-      if (hasFacet(entry.facets)) {
-        lines.push(...renderRequirement(entry, increment, `${preset.name}@${preset.version}`))
-      }
+      lines.push(...renderRequirement(entry, increment, `${preset.name}@${preset.version}`, commentary))
     }
   }
 
-  const decisions = orderByBecause([...fold.decisions.values()]).filter(({ entry }) => hasFacet(entry.facets))
+  const decisions = orderByBecause([...fold.decisions.values()]).filter(({ entry }) => shown(entry.scope))
   const counts = { accepted: 0, tolerated: 0, delegated: 0, rejected: 0, proposed: 0, deferred: 0 }
   for (const { entry } of decisions) {
     counts[entry.status] += 1
@@ -79,7 +119,27 @@ export const projectProduct = (tree: FileTree, productId: string, options: Proje
     '',
   )
   for (const { entry, increment } of decisions) {
-    lines.push(...renderDecision(entry, increment))
+    lines.push(...renderDecision(entry, increment, commentary))
+  }
+
+  if (fold.components.size > 0) {
+    lines.push('## components', '')
+    for (const { entry } of fold.components.values()) {
+      const parent = entry.parent === undefined ? '' : ` (parent: ${entry.parent})`
+      const retired = (entry.status ?? 'active') === 'retired' ? ` (retired: ${entry.reason ?? ''})`.trimEnd() : ''
+      lines.push(`- **${entry.id}**${parent}${retired} — ${entry.description.trim()}`)
+    }
+    lines.push('')
+  }
+
+  if (fold.terms.size > 0) {
+    lines.push('## terms', '')
+    for (const { entry } of fold.terms.values()) {
+      const display = entry.display === undefined ? '' : ` (written ${entry.display})`
+      const retired = (entry.status ?? 'active') === 'retired' ? ` (retired: ${entry.reason ?? ''})`.trimEnd() : ''
+      lines.push(`- **${entry.id}**${display}${retired} — ${entry.definition.trim()}`)
+    }
+    lines.push('')
   }
 
   if (fold.model.size > 0) {
@@ -125,7 +185,17 @@ export const projectProductData = (tree: FileTree, productId: string, options: P
   if (!product) {
     throw new Error(`no product ${JSON.stringify(productId)}`)
   }
+  refuseCommentaryAtPublished(options)
   const fold = foldProduct(product, options.at, options.at === undefined)
+  // what the fold hands an implementer never carries commentary unless asked (d-u5q2wh44)
+  const strip = <T extends { commentary?: string }>(entry: T): T => {
+    if (options.commentary === true || entry.commentary === undefined) {
+      return entry
+    }
+    const { commentary, ...rest } = entry
+    void commentary
+    return rest as T
+  }
   const adopted = resolvePresetClosure(product, productsTree, fold).presets
   const coverageByClaim = new Map<string, CoverageEntry>()
   for (const record of product.records) {
@@ -154,16 +224,20 @@ export const projectProductData = (tree: FileTree, productId: string, options: P
       requirements: [...preset.requirements.keys()],
     })),
     requirements: [
-      ...[...fold.requirements.values()].map(({ entry, increment }) => ({ ...entry, increment })),
+      ...[...fold.requirements.values()].map(({ entry, increment }) => strip({ ...entry, increment })),
       ...adopted.flatMap((preset) =>
-        [...preset.requirements.values()].map(({ entry, increment }) => ({
-          ...entry,
-          increment,
-          adopted_from: `${preset.name}@${preset.version}`,
-        })),
+        [...preset.requirements.values()].map(({ entry, increment }) =>
+          strip({
+            ...entry,
+            increment,
+            adopted_from: `${preset.name}@${preset.version}`,
+          }),
+        ),
       ),
     ],
-    decisions: orderByBecause([...fold.decisions.values()]).map(({ entry, increment }) => ({ ...entry, increment })),
+    decisions: orderByBecause([...fold.decisions.values()]).map(({ entry, increment }) =>
+      strip({ ...entry, increment }),
+    ),
     model: [...fold.model.values()].map(({ entry }) => ({
       name: entry.name,
       schema: entry.schema,
@@ -188,12 +262,17 @@ export const projectProductData = (tree: FileTree, productId: string, options: P
   }
 }
 
-const formatFacets = (facets: string | string[] | undefined): string =>
-  facets === undefined ? '' : ` [${(Array.isArray(facets) ? facets : [facets]).join(', ')}]`
+const formatScope = (scope: Scope | undefined): string =>
+  scope === undefined ? '' : ` [scope: ${scopeIds(scope).join(', ')}]`
 
-const renderRequirement = (entry: RequirementEntry, increment: IncrementRef, adoptedFrom?: string): string[] => {
+const renderRequirement = (
+  entry: RequirementEntry,
+  increment: IncrementRef,
+  adoptedFrom?: string,
+  commentary = false,
+): string[] => {
   const lines = [
-    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatFacets(entry.facets)}`,
+    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatScope(entry.scope)}`,
     '',
     `_declared by increment ${increment}${adoptedFrom !== undefined ? `, adopted from ${adoptedFrom}` : ''}_`,
     '',
@@ -207,30 +286,49 @@ const renderRequirement = (entry: RequirementEntry, increment: IncrementRef, ado
     }
     lines.push('')
   }
+  if (commentary && entry.commentary !== undefined) {
+    lines.push(`commentary: ${entry.commentary.trim()}`, '')
+  }
   return lines
 }
 
-const renderDecision = (entry: DecisionEntry, increment: IncrementRef): string[] => {
+const renderDecision = (entry: DecisionEntry, increment: IncrementRef, commentary = false): string[] => {
   const pinned =
     entry.pinned !== undefined && entry.pinned !== false ?
       `, pinned: ${entry.pinned.reason}${entry.pinned.notes !== undefined ? ` (${entry.pinned.notes})` : ''}`
     : ''
   const lines = [
-    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatFacets(entry.facets)}`,
+    `### ${entry.id} — ${entry.title ?? '(untitled)'}${formatScope(entry.scope)}`,
     '',
     `_${entry.status}${pinned}; declared by increment ${increment}_`,
     '',
     entry.statement.trim(),
     '',
   ]
-  if (entry.status === 'rejected' && entry.rejection_reason !== undefined) {
-    lines.push(`rejected because: ${entry.rejection_reason.trim()}`, '')
+  // the cases are normative like the statement, in order, the first matching case governing (d-qv81x173)
+  for (const branch of entry.cases ?? []) {
+    lines.push(
+      'otherwise' in branch ?
+        `- otherwise: ${branch.otherwise.trim()}`
+      : `- when ${branch.when.trim()}: ${branch.then.trim()}`,
+    )
+  }
+  if (entry.cases !== undefined && entry.cases.length > 0) {
+    lines.push('')
+  }
+  // `decision@3` spells the rejection's reason `reason:` (d-4i5k9nsi)
+  const rejection = entry.reason ?? entry.rejection_reason
+  if (entry.status === 'rejected' && rejection !== undefined) {
+    lines.push(`rejected because: ${rejection.trim()}`, '')
   }
   if (entry.because && entry.because.length > 0) {
     lines.push(`because: ${entry.because.join(', ')}`, '')
   }
   if (entry.revisit_when && entry.revisit_when.length > 0) {
     lines.push(`revisit when: ${entry.revisit_when.map((condition) => condition.trim()).join('; ')}`, '')
+  }
+  if (commentary && entry.commentary !== undefined) {
+    lines.push(`commentary: ${entry.commentary.trim()}`, '')
   }
   return lines
 }

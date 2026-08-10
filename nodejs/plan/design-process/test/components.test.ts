@@ -65,8 +65,7 @@ describe('the component fold and tree (d-rk99dwty, d-cgr6q2j1)', () => {
   })
 })
 
-// Code-wave rules: written against the planned checkComponents/reparentingReports wiring.
-describe.skip('component declaration gates (Code wave)', () => {
+describe('component declaration gates (d-cgr6q2j1, d-cc3nilxq, d-hl3l8df0, d-3kow7q0r)', () => {
   it('finds a parent that does not resolve (d-cgr6q2j1)', () => {
     const files = demoV3()
     files['products/demo3/increments/002/requirements.yaml'] = yaml({

@@ -6,9 +6,9 @@ import type { Finding } from './types.js'
 import type { Ajv2020 } from 'ajv/dist/2020.js'
 import type { ErrorObject, ValidateFunction } from 'ajv'
 
-// The facts/evidence pool joins the version regime: every entry meets the evidence bar (d-0e325noj),
+// The facts/evidence pool joins the version regime: every entry meets the evidence bar (d-a3agzjct),
 // enforced here once repo-wide against the pool schemas rather than per product.
-const CLAIMS = ['r-xxa1st52', 'd-0e325noj']
+const CLAIMS = ['r-xxa1st52', 'd-a3agzjct']
 
 /** off-repo iff the url carries a scheme; anything else is a path into this tree. */
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:\/\//
@@ -62,11 +62,14 @@ export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Aj
   return findings
 }
 
-// rule 1: file shape via the pool schemas, when the tree ships them; facts@1/runs@1 $ref the
-// entry schemas, so one validation covers the version, the sequence, and every entry in it.
+// rule 1: file shape via the pool schemas, when the tree ships them. A file validates against the
+// version its own wrapper declares, so the @1 and @2 dialects coexist (d-vkudjo4x, d-i47qv6oa);
+// each wrapper $refs its entry schema, so one validation covers the version and every entry.
 const checkSchemas = (pool: Pool, schemaPool: SchemaPool, ajv: Ajv2020, findings: Finding[]): void => {
   for (const file of pool.files) {
-    const wrapperId = `/design-process/${file.kind === 'fact' ? 'facts' : 'runs'}@1`
+    const version = file.wrapper.version
+    const declared = typeof version === 'string' || typeof version === 'number' ? String(version) : '1'
+    const wrapperId = `/design-process/${file.kind === 'fact' ? 'facts' : 'runs'}@${declared}`
     validateAgainst(ajv, schemaPool, wrapperId, file.wrapper, file.path, findings)
   }
 }

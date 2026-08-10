@@ -175,12 +175,14 @@ export const applyStaged = (read: (path: string) => string, entries: OpenEntry[]
       if (source === undefined) {
         continue
       }
+      // `decisions@3` spells the rejection's reason `reason:` (d-4i5k9nsi)
+      const field = /^version:\s*["']?3["']?\s*$/m.test(source) ? 'reason' : 'rejection_reason'
       const ruled = setPlainField(source, 'decisions', ruling.id, 'status', ruling.status)
       edits.set(
         entry.path,
         ruling.status === 'rejected' ?
-          setField(ruled, 'decisions', ruling.id, 'rejection_reason', ruling.rejectionReason)
-        : setField(ruled, 'decisions', ruling.id, 'rejection_reason', undefined),
+          setField(ruled, 'decisions', ruling.id, field, ruling.rejectionReason)
+        : setField(ruled, 'decisions', ruling.id, field, undefined),
       )
       continue
     }

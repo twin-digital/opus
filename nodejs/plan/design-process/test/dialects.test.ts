@@ -10,9 +10,17 @@ import type { Finding } from '../src/types.js'
 const check = (files: Record<string, string>): Finding[] => validateTree(makeRepo(files).tree)
 const rules = (findings: Finding[]): string[] => findings.map((finding) => finding.rule)
 
+/** Replace demoV3's requirements source, keeping the components its decision scope resolves against. */
 const requirements = (over: Record<string, unknown>): Record<string, string> => {
   const files = demoV3()
-  files['products/demo3/increments/001/requirements.yaml'] = yaml({ version: '3', ...over })
+  files['products/demo3/increments/001/requirements.yaml'] = yaml({
+    version: '3',
+    components: [
+      { id: 'engine', description: 'the core engine' },
+      { id: 'parser', description: 'the input parser', parent: 'engine' },
+    ],
+    ...over,
+  })
   return files
 }
 
