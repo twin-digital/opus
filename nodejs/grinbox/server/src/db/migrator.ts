@@ -1,4 +1,5 @@
-import { type Kysely, type MigrationProvider, Migrator } from 'kysely'
+import type { Kysely } from 'kysely'
+import { type MigrationProvider, Migrator } from 'kysely/migration'
 import { migrations } from '../migrations/index.js'
 import type { Database } from './schema.js'
 
