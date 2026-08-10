@@ -1,4 +1,4 @@
-import type { Migration } from 'kysely'
+import type { Migration } from 'kysely/migration'
 import * as initialSchema from './20260601000000_initial_schema.js'
 import * as messageSourceState from './20260602120000_message_source_state.js'
 import * as accountLastReconciled from './20260602130000_account_last_reconciled.js'

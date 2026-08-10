@@ -80,7 +80,7 @@ jobs:
           echo "token=$token" >> "$GITHUB_OUTPUT"
 
       # checkout project (app token persisted as git creds → changesets' tag pushes trigger workflows)
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           fetch-tags: true
@@ -135,7 +135,7 @@ jobs:
       packages: ${{ steps.detect.outputs.packages }}
       has-packages: ${{ steps.detect.outputs.has-packages }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # read the tags the publish job just pushed
           fetch-tags: true
@@ -169,7 +169,7 @@ jobs:
       matrix:
         package: ${{ fromJson(needs.docker-matrix.outputs.packages) }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
@@ -235,7 +235,7 @@ jobs:
       packages: ${{ steps.detect.outputs.packages }}
       has-packages: ${{ steps.detect.outputs.has-packages }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -273,7 +273,7 @@ jobs:
       matrix:
         package: ${{ fromJson(needs.release-assets-matrix.outputs.packages) }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # the write-capable GITHUB_TOKEN must not be reachable by the package
           # build and release-assets scripts run below
