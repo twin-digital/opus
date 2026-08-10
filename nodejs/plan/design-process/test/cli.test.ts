@@ -91,6 +91,61 @@ describe('the main output is stdout and the diagnostics are stderr — r-d474vgg
   })
 })
 
+// Code wave: d-8y5vmff8 — the check's two severities, and the ratified id kinds (d-kqofgshc).
+describe.skip('findings gate, reports inform — d-8y5vmff8 (Code wave)', () => {
+  it('exits zero when the check carries only reports, and prints them', () => {
+    // a published in-force foundation citing a retired fact is a report, not a finding
+    const files = demoProduct()
+    files['facts/vendor.yaml'] = yaml({
+      version: '2',
+      facts: [
+        {
+          id: 'f-a1b2c3d4',
+          claim: 'the vendor API paginates at 100',
+          backing: 'documented',
+          status: 'retired',
+          reason: 'the vendor changed the page size',
+          sources: [{ url: 'https://example.com/docs', where: 'pagination', quote: 'pages hold 100 items' }],
+        },
+      ],
+    })
+    files['products/demo/increments/002/decisions.yaml'] = yaml({
+      version: '2',
+      decisions: [
+        {
+          id: 'd-cccccccc',
+          statement: 'built on the fact.\n',
+          status: 'accepted',
+          supersedes: 'd-aaaaaaaa',
+          because: ['f:f-a1b2c3d4'],
+        },
+      ],
+    })
+    const made = makeRepo(files)
+    roots.push(made.root)
+    const { out, code } = run(made.root, 'check', '--static-only')
+    expect(code).toBe(0)
+    expect(out).toContain('citation-fact-retired')
+    expect(out).toContain('demo') // a report names its product
+  })
+
+  it('sets the nonzero exit on any finding, reports beside it or not', () => {
+    const files = demoProduct()
+    files['products/demo/increments/002/questions.yaml'] = yaml({
+      version: '1',
+      questions: [{ id: 'q-aaaaaaaa', question: 'open?\n', answer: 'requirement' }],
+    })
+    const made = makeRepo(files)
+    roots.push(made.root)
+    expect(run(made.root, 'check', '--static-only').code).toBe(1)
+  })
+
+  it('generates f- and run- ids from the ratified prefixes (d-kqofgshc)', () => {
+    expect(run(repo(), 'id', 'f').out.trim()).toMatch(/^f-[0-9a-z]{8}$/)
+    expect(run(repo(), 'id', 'run').out.trim()).toMatch(/^run-[0-9a-z]{8}$/)
+  })
+})
+
 describe('the JSON projections carry the fold', () => {
   it('names the product, its requirements, its decisions, and its coverage', () => {
     const projection = JSON.parse(run(repo(), 'show', 'demo', '--json').out) as {

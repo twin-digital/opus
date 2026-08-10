@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { projectProduct } from '../src/project.js'
 import { validateTree } from '../src/validate.js'
-import { demoProduct, demoWithDeferred, makeRepo, yaml } from './helpers.js'
+import { demoProduct, demoV3, demoWithDeferred, makeRepo, yaml } from './helpers.js'
 
 describe('projectProduct (r-2gcehlp8)', () => {
   it('renders the effective sets at the newest increment', () => {
@@ -200,5 +200,46 @@ describe('projectProduct (r-2gcehlp8)', () => {
   it('throws on an unknown product', () => {
     const { tree } = makeRepo(demoProduct())
     expect(() => projectProduct(tree, 'ghost')).toThrow(/no product "ghost"/)
+  })
+})
+
+// Code wave: the projection over the 032–034 dialects.
+describe.skip('the projection over the new dialects (Code wave)', () => {
+  it('omits commentary unless asked (d-u5q2wh44, r-q0969r5a)', () => {
+    const { tree } = makeRepo(demoV3())
+    const projection = projectProduct(tree, 'demo3')
+    expect(projection).not.toContain('the owner reverses designs over this')
+    const withCommentary = projectProduct(tree, 'demo3', { commentary: true })
+    expect(withCommentary).toContain('the owner reverses designs over this')
+  })
+
+  it('refuses the commentary ask at a published increment (d-u5q2wh44)', () => {
+    const { tree } = makeRepo(demoV3())
+    expect(() => projectProduct(tree, 'demo3', { at: 1, commentary: true })).toThrow(/commentary/)
+  })
+
+  it('renders cases in order, the otherwise last (d-qv81x173)', () => {
+    const { tree } = makeRepo(demoV3())
+    const projection = projectProduct(tree, 'demo3')
+    expect(projection.indexOf('the input is well-formed')).toBeLessThan(projection.indexOf('the line is reported'))
+  })
+
+  it('filters by scope with subtree semantics: an ancestor scope reaches its descendants (d-hfbf4eb7, d-rplsevuk)', () => {
+    const { tree } = makeRepo(demoV3())
+    // r-aaaaaaaa is scoped to engine; d-aaaaaaaa to parser, beneath it; r-bbbbbbbb is product-wide
+    const engine = projectProduct(tree, 'demo3', { scope: 'engine' })
+    expect(engine).toContain('### r-aaaaaaaa')
+    expect(engine).toContain('### d-aaaaaaaa')
+    expect(engine).toContain('### r-bbbbbbbb') // unscoped applies to the whole product
+    const parser = projectProduct(tree, 'demo3', { scope: 'parser' })
+    expect(parser).toContain('### d-aaaaaaaa')
+    expect(parser).toContain('### r-aaaaaaaa') // scoped to the subtree parser sits in
+  })
+
+  it('shows the components and terms the fold declares', () => {
+    const { tree } = makeRepo(demoV3())
+    const projection = projectProduct(tree, 'demo3')
+    expect(projection).toContain('engine')
+    expect(projection).toContain('the effective state of a product at an increment')
   })
 })

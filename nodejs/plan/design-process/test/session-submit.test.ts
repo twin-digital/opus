@@ -150,6 +150,74 @@ const gh = (args: string[]): string => {
   return ''
 }
 
+// Code wave: r-xrhll9x6 — the session loses no work to a failed GitHub write.
+describe.skip('the session loses no work to a failed GitHub write — r-xrhll9x6 (Code wave)', () => {
+  it('keeps the notes a refused review could not post, shown and ready to retry', async () => {
+    const { root } = clonedRepo()
+    const input = new PassThrough()
+    const said: string[] = []
+    let submits = 0
+    let posts = 0
+    const output = new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        const text = String(chunk)
+        said.push(text)
+        if (text.includes('github token')) {
+          input.write('a-token\r')
+        }
+        if (text.includes('committed and pushed')) {
+          submits += 1
+          // first submit: the review was refused and the notes are kept; submit again, then leave
+          input.write(submits === 1 ? 'w' : 'q')
+        }
+        callback()
+      },
+    })
+
+    // note the first entry, rule it, and submit; the poster refuses once and accepts the retry
+    input.write('nkept for retry\rtw')
+    const code = await runIncrementSession({
+      root,
+      input,
+      output,
+      run: (command, args) => (command === 'gh' ? gh(args) : run(command, args)),
+      review: () => {
+        posts += 1
+        if (posts === 1) {
+          return Promise.reject(new Error('secondary rate limit; try again later'))
+        }
+        return Promise.resolve()
+      },
+    })
+
+    expect(code).toBe(0)
+    const transcript = said.join('')
+    expect(transcript).toContain('secondary rate limit') // the refusal is shown
+    expect(transcript).toContain('note(s) posted as one review') // the retry carried the kept note
+    expect(posts).toBe(2)
+  })
+
+  it('retries the pending local commit on the next submit after a push refused twice (d-x1jlr7jc)', () => {
+    const { root, remote } = clonedRepo()
+    // the remote refuses every push while a pre-receive hook is in place
+    const hook = join(remote, 'hooks', 'pre-receive')
+    writeFiles(remote, { 'hooks/pre-receive': '#!/bin/sh\necho refused >&2\nexit 1\n' })
+    execFileSync('chmod', ['+x', hook])
+
+    const entries = entriesOf(root)
+    const staged = stageRuling(emptyStaging(), { kind: 'decision', id: 'd-11111111', status: 'tolerated' })
+    const refused = writeAndPush(target(root), entries, staged, run)
+    expect(refused.message).toContain('refused again')
+    expect(refused.written).toEqual(['d-11111111']) // committed locally; the work is kept
+
+    // the hook lifts; a submit with nothing newly staged still pushes the pending commit
+    execFileSync('rm', [hook])
+    const retried = writeAndPush(target(root), entriesOf(root), emptyStaging(), run)
+    expect(retried.message).not.toContain('ruled nothing')
+    expect(statusesAt(remote, BRANCH)['d-11111111']).toBe('tolerated')
+  })
+})
+
 describe('a submit does not end the sitting — d-nb5yg1w1', () => {
   it('writes, returns to the list, and ends when the owner ends it', async () => {
     const { root, remote } = clonedRepo()
