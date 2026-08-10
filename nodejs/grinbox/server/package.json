@@ -30,7 +30,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "catalog:",
     "@grinbox/shared": "workspace:*",
-    "@hono/node-server": "^1.19.9",
+    "@hono/node-server": "^2.0.0",
     "@hono/zod-validator": "^0.7.6",
     "better-sqlite3": "^12.4.1",
     "croner": "^9.1.0",
