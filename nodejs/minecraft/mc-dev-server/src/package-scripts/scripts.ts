@@ -111,7 +111,7 @@ export const startWatch = (
       }
       // an orphan holding the pipes open would keep this process alive after it had detached
       subprocess.all.destroy()
-      subprocess.unref()
+      subprocess.nodeChildProcess.unref()
     },
   }
 }
