@@ -11,6 +11,7 @@ import type { Fold } from './fold.js'
 import type { IncrementSources, Product, ProductsTree } from './load.js'
 import type { FactsPool, SchemaPool } from './pools.js'
 import type { PresetClosure } from './presets.js'
+import type { BacklogView } from './staleness.js'
 import type { FileTree } from './tree.js'
 import type { Finding, QuestionEntry } from './types.js'
 
@@ -26,6 +27,8 @@ const allIncrements = (product: Product): IncrementSources[] => [...product.incr
 export interface ValidateOptions {
   /** Base tree (ordinarily main) enabling the change rules; omitted, only tree-state rules run. */
   base?: FileTree
+  /** The backlog items the fact-retirement gate reads (d-hxxlgaw9); omitted, that gate is skipped. */
+  backlog?: () => BacklogView[]
 }
 
 /** Apply every rule in force to the head tree; any finding blocks the merge. */

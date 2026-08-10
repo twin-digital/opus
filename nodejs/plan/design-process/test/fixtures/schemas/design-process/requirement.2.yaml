@@ -1,0 +1,36 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/requirement@2
+title: requirement
+description: one requirement entry, wherever a requirements source carries it
+type: object
+additionalProperties: false
+required: [id, statement]
+properties:
+  id:
+    type: string
+    pattern: '^r-[0-9a-z]{8}$'
+  title:
+    type: string
+  statement:
+    type: string
+  commentary:
+    type: string
+    description: non-normative prose beside the statement; binds nothing and is never citable
+  scope:
+    description: the component subtree the requirement applies to; the whole product when absent
+    oneOf:
+      - type: string
+        pattern: '^[a-z0-9][a-z0-9-]*$'
+      - type: array
+        minItems: 1
+        items:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+  informed_by:
+    type: array
+    minItems: 1
+    items:
+      type: string
+  supersedes:
+    type: string
+    pattern: '^r-[0-9a-z]{8}$'

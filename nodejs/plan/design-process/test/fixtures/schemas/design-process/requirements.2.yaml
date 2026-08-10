@@ -1,0 +1,96 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/requirements@2
+title: requirements
+description: a per-increment requirements source
+type: object
+additionalProperties: false
+required: [version]
+anyOf:
+  - required: [requirements]
+  - required: [model]
+  - required: [presets]
+  - required: [retires]
+properties:
+  version:
+    const: '2'
+  requirements:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/requirement@1'
+  model:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        schema:
+          type: string
+          pattern: '^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+@[0-9]+$'
+        surface:
+          type: string
+          pattern: '^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+@[0-9]+$'
+        description:
+          type: string
+        status:
+          enum: [bound, unbound]
+          description: bound when absent
+      if:
+        properties:
+          status:
+            const: unbound
+        required: [status]
+      then:
+        not:
+          anyOf:
+            - required: [schema]
+            - required: [surface]
+      else:
+        oneOf:
+          - required: [schema]
+          - required: [surface]
+  presets:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        version:
+          type: integer
+          minimum: 1
+        status:
+          enum: [adopted, dropped]
+          description: adopted when absent
+      if:
+        properties:
+          status:
+            const: dropped
+        required: [status]
+      then:
+        not:
+          required: [version]
+      else:
+        required: [version]
+  retires:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, reason]
+      properties:
+        id:
+          type: string
+          pattern: '^r-[0-9a-z]{8}$'
+        reason:
+          type: string

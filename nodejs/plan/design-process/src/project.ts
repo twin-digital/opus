@@ -10,6 +10,10 @@ import type { CoverageEntry, DecisionEntry, RequirementEntry } from './types.js'
 
 export interface ProjectOptions {
   at?: number
+  /** Show only claims whose reach includes this component's subtree (d-hfbf4eb7, d-rplsevuk). */
+  scope?: string
+  /** Include commentary. Refused with `at`: a published projection never carries it (d-u5q2wh44). */
+  commentary?: boolean
   facet?: string
 }
 

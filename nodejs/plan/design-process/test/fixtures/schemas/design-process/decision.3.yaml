@@ -1,0 +1,90 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/decision@3
+title: decision
+description: one decision entry, wherever a decisions source carries it
+type: object
+additionalProperties: false
+required: [id, statement, status]
+properties:
+  id:
+    type: string
+    pattern: '^d-[0-9a-z]{8}$'
+  title:
+    type: string
+  statement:
+    type: string
+  status:
+    enum: [proposed, accepted, tolerated, delegated, rejected, deferred]
+  reason:
+    type: string
+    description: the owner's reason, required when status is rejected
+  pinned:
+    oneOf:
+      - const: false
+      - type: object
+        additionalProperties: false
+        required: [reason]
+        properties:
+          reason:
+            enum: [data-format, public-api, other]
+          notes:
+            type: string
+        if:
+          properties:
+            reason:
+              const: other
+        then:
+          required: [notes]
+  because:
+    type: array
+    minItems: 1
+    items:
+      type: string
+  supersedes:
+    type: string
+    pattern: '^d-[0-9a-z]{8}$'
+  commentary:
+    type: string
+    description: non-normative prose beside the statement; binds nothing and is never citable
+  cases:
+    type: array
+    minItems: 2
+    description: ordered when/then pairs, normative like the statement; the first matching case governs
+    items:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [when, then]
+          properties:
+            when:
+              type: string
+            then:
+              type: string
+        - type: object
+          additionalProperties: false
+          required: [otherwise]
+          properties:
+            otherwise:
+              type: string
+    contains:
+      required: [when]
+  scope:
+    description: the component subtree the decision applies to; the whole product when absent
+    oneOf:
+      - type: string
+        pattern: '^[a-z0-9][a-z0-9-]*$'
+      - type: array
+        minItems: 1
+        items:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+if:
+  properties:
+    status:
+      const: rejected
+  required: [status]
+then:
+  required: [reason]
+else:
+  not:
+    required: [reason]

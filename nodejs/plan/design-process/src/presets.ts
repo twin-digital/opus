@@ -30,8 +30,11 @@ export const resolvePresetClosure = (product: Product, productsTree: ProductsTre
   const byName = new Map<string, AdoptedPreset>()
   const findings: Finding[] = []
 
+  // `requirements@3` spells the in-force status `applied` (d-cizeaklk); absent means the same
   const adoptedIn = (entries: Iterable<FoldedClaim<PresetEntry>>): PresetEntry[] =>
-    [...entries].map((claim) => claim.entry).filter((entry) => (entry.status ?? 'adopted') === 'adopted')
+    [...entries]
+      .map((claim) => claim.entry)
+      .filter((entry) => entry.status === undefined || entry.status === 'adopted' || entry.status === 'applied')
 
   const visit = (entries: PresetEntry[], trail: string[]) => {
     for (const entry of entries) {

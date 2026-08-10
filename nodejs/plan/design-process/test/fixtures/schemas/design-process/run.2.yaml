@@ -1,0 +1,42 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/run@2
+title: run
+description: one execution under evidence/ that a tested fact rests on; substance frozen once merged
+type: object
+additionalProperties: false
+required: [id, command, output, ran_at]
+properties:
+  id:
+    type: string
+    pattern: '^run-[0-9a-z]{8}$'
+  command:
+    type: string
+  output:
+    type: string
+  ran_at:
+    type: string
+    pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  environment:
+    type: string
+  status:
+    enum: [active, retired]
+    description: active when absent
+  reason:
+    type: string
+    description: the retirement's reason, required when retired
+  superseded_by:
+    type: string
+    pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+    description: the replacement run; resolves in either dialect
+if:
+  properties:
+    status:
+      const: retired
+  required: [status]
+then:
+  required: [reason]
+else:
+  not:
+    anyOf:
+      - required: [reason]
+      - required: [superseded_by]
