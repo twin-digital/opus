@@ -35,10 +35,12 @@ const NOTHING: SubmitOutcome = {
 
 /**
  * The staged rulings written to the draft's own sources, committed with a body tallying what the
- * sitting ruled, and pushed. A sitting that changed nothing writes no commit. A push the remote
- * refuses is not the end of it: the branch's tip is fetched, the sitting's rulings are reapplied to
- * it by entry id, and the push is tried again; an entry whose status differs at the tip is left as
- * the tip has it and reported. A second refusal is reported and the sitting continues (d-x1jlr7jc).
+ * sitting ruled, and pushed. A sitting that changed nothing writes no commit — though a commit an
+ * earlier submit left unpushed is pushed now, so a refused push is retried by submitting again and
+ * no work is lost (r-xrhll9x6). A push the remote refuses is not the end of it: the branch's tip is
+ * fetched, the sitting's rulings are reapplied to it by entry id, and the push is tried again; an
+ * entry whose status differs at the tip is left as the tip has it and reported. A second refusal is
+ * reported and the sitting continues (d-x1jlr7jc).
  */
 export const writeAndPush = (
   target: SubmitTarget,
@@ -48,12 +50,28 @@ export const writeAndPush = (
 ): SubmitOutcome => {
   const first = commit(target, entries, staged, run)
   if (first === undefined) {
-    return NOTHING
+    if (!pendingCommit(target, run)) {
+      return NOTHING
+    }
+    const refused = push(target, run)
+    return refused === undefined ?
+        { message: 'the pending commit was pushed; this sitting ruled nothing new', written: [], conflicted: [] }
+      : { message: `the pending commit is still unpushed: ${refused}`, written: [], conflicted: [] }
   }
   if (push(target, run) === undefined) {
     return { message: `${first.body}; committed and pushed`, written: first.written, conflicted: [] }
   }
   return reapply(target, entries, staged, run)
+}
+
+/** Whether the local branch carries a commit the remote does not — a refused push's leftover. */
+const pendingCommit = (target: SubmitTarget, run: CommandRunner): boolean => {
+  try {
+    const ahead = run('git', ['-C', target.root, 'rev-list', '--count', `origin/${target.branch}..HEAD`])
+    return Number(ahead.trim()) > 0
+  } catch {
+    return false
+  }
 }
 
 interface Written {

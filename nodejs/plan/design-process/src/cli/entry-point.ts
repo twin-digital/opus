@@ -37,6 +37,7 @@ const writeJson = (value: unknown): void => {
 /**
  * The findings a command produces are its main output and go to stdout; the progress and warning
  * lines around them are diagnostics and go to stderr (d-m7i568id, r-d474vggq, r-tbmrw430).
+ * A finding gates and sets the nonzero exit; a report informs and gates nothing (d-8y5vmff8).
  */
 const reportFindings = (findings: Finding[], json: boolean, passed: string, failed: string): void => {
   if (json) {
@@ -46,11 +47,14 @@ const reportFindings = (findings: Finding[], json: boolean, passed: string, fail
       process.stdout.write(formatFinding(finding))
     }
   }
-  if (findings.length === 0) {
-    process.stderr.write(`${passed}\n`)
+  const gating = findings.filter((finding) => (finding.severity ?? 'finding') === 'finding')
+  const reports = findings.length - gating.length
+  const reported = reports === 0 ? '' : `; ${reports} report(s) beside it gate nothing`
+  if (gating.length === 0) {
+    process.stderr.write(`${passed}${reports === 0 ? '' : ` (${reports} report(s))`}\n`)
     return
   }
-  process.stderr.write(`${failed}: ${findings.length}\n`)
+  process.stderr.write(`${failed}: ${gating.length}${reported}\n`)
   process.exitCode = 1
 }
 
@@ -70,7 +74,10 @@ jsonOption(program.command('check'))
         base = new GitTree(options.root, ref)
       }
     }
-    reportFindings(validateTree(head, { base }), options.json, 'design check passed', 'design check failed')
+    // the fact-retirement gate reads the backlog through this reader (d-hxxlgaw9, d-dqwoto9x)
+    const backlog = () =>
+      listItems({ root: options.root }).map(({ id, product, content }) => ({ id, product, content }))
+    reportFindings(validateTree(head, { base, backlog }), options.json, 'design check passed', 'design check failed')
   })
 
 jsonOption(program.command('show'))
@@ -79,29 +86,38 @@ jsonOption(program.command('show'))
   .option('--root <dir>', 'repository root', '.')
   .option('--at <increment>', "fold at this increment number, padded or not (default: the working tree's newest)")
   .option('--at-ref <gitref>', "fold at this git ref's newest increment")
-  .option('--facet <facet>', 'show only claims carrying this facet')
+  .option('--scope <component>', "show only claims whose reach touches this component's subtree")
+  .option(
+    '--commentary',
+    'include commentary; refused with --at or --at-ref (a published projection carries none)',
+    false,
+  )
   .action(
-    (productId: string, options: { root: string; at?: string; atRef?: string; facet?: string; json: boolean }) => {
+    (
+      productId: string,
+      options: { root: string; at?: string; atRef?: string; scope?: string; commentary: boolean; json: boolean },
+    ) => {
       const version = parseFoldVersion({ increment: options.at, ref: options.atRef, names: ['--at', '--at-ref'] })
       const resolved = resolveFold(options.root, productId, version)
       // with no version asked for, the projection reads the tree as it stands — drafts included
       const at = version === undefined ? undefined : resolved.at
+      const project = { at, scope: options.scope, commentary: options.commentary }
       if (options.json) {
-        writeJson(projectProductData(resolved.tree, productId, { at, facet: options.facet }))
+        writeJson(projectProductData(resolved.tree, productId, project))
         return
       }
-      process.stdout.write(projectProduct(resolved.tree, productId, { at, facet: options.facet }))
+      process.stdout.write(projectProduct(resolved.tree, productId, project))
     },
   )
 
 jsonOption(program.command('id'))
-  .description('generate opaque ids, unique against everything under products/')
-  .argument('<kind>', 'r (requirement), d (decision), or q (question)')
+  .description('generate opaque ids, unique against everything under products/, facts/, and evidence/')
+  .argument('<kind>', 'r (requirement), d (decision), q (question), f (fact), or run')
   .option('--root <dir>', 'repository root', '.')
   .option('--count <n>', 'how many ids to generate', '1')
   .action((kind: string, options: { root: string; count: string; json: boolean }) => {
-    if (kind !== 'r' && kind !== 'd' && kind !== 'q') {
-      program.error(`kind must be r, d, or q; got ${JSON.stringify(kind)}`)
+    if (kind !== 'r' && kind !== 'd' && kind !== 'q' && kind !== 'f' && kind !== 'run') {
+      program.error(`kind must be r, d, q, f, or run; got ${JSON.stringify(kind)}`)
     }
     const taken = collectIds(new DirTree(options.root))
     const ids = generateIds(kind as IdKind, Number(options.count), taken)
@@ -440,8 +456,10 @@ const emit = (items: BacklogItem[], json: boolean): void => {
 }
 
 const formatFinding = (finding: Finding): string => {
+  const mark = finding.severity === 'report' ? '▲' : '✖'
   const location = finding.path === undefined ? '' : `${finding.path}: `
-  return `✖ [${finding.rule}] ${location}${finding.message} (${finding.claims.join(', ')})\n`
+  const product = finding.product === undefined ? '' : ` [${finding.product}]`
+  return `${mark} [${finding.rule}]${product} ${location}${finding.message} (${finding.claims.join(', ')})\n`
 }
 
 try {

@@ -1,5 +1,5 @@
 import type { IncrementSources, Product } from './load.js'
-import type { DecisionEntry, ModelEntry, PresetEntry, RequirementEntry } from './types.js'
+import type { ComponentEntry, DecisionEntry, ModelEntry, PresetEntry, RequirementEntry, TermEntry } from './types.js'
 
 /** How an increment names itself: a published number, or a draft increment's directory name. */
 export type IncrementRef = number | string
@@ -30,6 +30,9 @@ export interface Fold {
   decisions: Map<string, FoldedClaim<DecisionEntry>>
   model: Map<string, FoldedClaim<ModelEntry>>
   presets: Map<string, FoldedClaim<PresetEntry>>
+  /** State entries folding by id; the latest declaration — retired included — is current state. */
+  components: Map<string, FoldedClaim<ComponentEntry>>
+  terms: Map<string, FoldedClaim<TermEntry>>
   outOfForce: OutOfForce[]
 }
 
@@ -49,6 +52,8 @@ export const foldProduct = (product: Product, at?: number, includeDrafts = false
     decisions: new Map(),
     model: new Map(),
     presets: new Map(),
+    components: new Map(),
+    terms: new Map(),
     outOfForce: [],
   }
 
@@ -68,8 +73,10 @@ export const foldProduct = (product: Product, at?: number, includeDrafts = false
   const apply = (increment: IncrementSources, ref: IncrementRef) => {
     const requirementsSource = increment.requirements?.data
     for (const entry of requirementsSource?.requirements ?? []) {
-      if (entry.amends !== undefined) {
-        remove('requirement', entry.amends, 'superseded', entry.id, ref)
+      // `requirement@1` spells the succession `amends:`; `@2` spells it `supersedes:` (d-4i5k9nsi)
+      const succeeds = entry.supersedes ?? entry.amends
+      if (succeeds !== undefined) {
+        remove('requirement', succeeds, 'superseded', entry.id, ref)
       }
       fold.requirements.set(entry.id, { entry, increment: ref })
     }
@@ -77,7 +84,7 @@ export const foldProduct = (product: Product, at?: number, includeDrafts = false
       remove('requirement', retirement.id, 'retired', retirement.reason, ref)
     }
     for (const entry of requirementsSource?.model ?? []) {
-      if (entry.status === 'unbound') {
+      if (entry.status === 'unbound' || entry.status === 'retired') {
         fold.model.delete(entry.name)
       } else {
         fold.model.set(entry.name, { entry, increment: ref })
@@ -87,8 +94,15 @@ export const foldProduct = (product: Product, at?: number, includeDrafts = false
       if (entry.status === 'dropped') {
         fold.presets.delete(entry.name)
       } else {
+        // a `requirements@3` retirement is current state, kept for its reason (d-cizeaklk)
         fold.presets.set(entry.name, { entry, increment: ref })
       }
+    }
+    for (const entry of requirementsSource?.components ?? []) {
+      fold.components.set(entry.id, { entry, increment: ref })
+    }
+    for (const entry of requirementsSource?.terms ?? []) {
+      fold.terms.set(entry.id, { entry, increment: ref })
     }
 
     const decisionsSource = increment.decisions?.data

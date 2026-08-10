@@ -50,4 +50,12 @@ export type { FileTree } from './tree.js'
 
 // the shapes those operations return or fold over
 export type { Fold, FoldedClaim, IncrementRef, OutOfForce } from './fold.js'
-export type { DecisionEntry, Finding, ModelEntry, PresetEntry, RequirementEntry } from './types.js'
+export type {
+  ComponentEntry,
+  DecisionEntry,
+  Finding,
+  ModelEntry,
+  PresetEntry,
+  RequirementEntry,
+  TermEntry,
+} from './types.js'

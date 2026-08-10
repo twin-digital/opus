@@ -1,0 +1,218 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/requirements@3
+title: requirements
+description: a per-increment requirements source
+type: object
+additionalProperties: false
+required: [version]
+anyOf:
+  - required: [requirements]
+  - required: [model]
+  - required: [presets]
+  - required: [components]
+  - required: [terms]
+  - required: [retires]
+properties:
+  version:
+    const: '3'
+  requirements:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/requirement@2'
+  model:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        schema:
+          type: string
+          pattern: '^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+@[0-9]+$'
+        surface:
+          type: string
+          pattern: '^/[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)+@[0-9]+$'
+        description:
+          type: string
+        status:
+          enum: [retired]
+          description: absent when the entry names its contract
+        reason:
+          type: string
+          description: the retirement's reason, required when retired
+      allOf:
+        - if:
+            required: [status]
+          then:
+            not:
+              anyOf:
+                - required: [schema]
+                - required: [surface]
+          else:
+            oneOf:
+              - required: [schema]
+              - required: [surface]
+        - if:
+            properties:
+              status:
+                const: retired
+            required: [status]
+          then:
+            required: [reason]
+          else:
+            not:
+              required: [reason]
+  presets:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        version:
+          type: integer
+          minimum: 1
+        scope:
+          description: the component subtree the preset applies to; the whole product when absent
+          oneOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9-]*$'
+            - type: array
+              minItems: 1
+              items:
+                type: string
+                pattern: '^[a-z0-9][a-z0-9-]*$'
+        status:
+          enum: [applied, retired]
+          description: applied when absent
+        reason:
+          type: string
+          description: the retirement's reason, required when retired
+      if:
+        properties:
+          status:
+            const: retired
+        required: [status]
+      then:
+        allOf:
+          - not:
+              required: [version]
+          - not:
+              required: [scope]
+          - required: [reason]
+      else:
+        allOf:
+          - required: [version]
+          - not:
+              required: [reason]
+  components:
+    type: array
+    minItems: 1
+    description: state-shaped entries folding by id; the effective tree is the fold
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, description]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        description:
+          type: string
+        parent:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+          description: the containing component; a child of the product root when absent
+        status:
+          enum: [active, retired]
+          description: active when absent
+        reason:
+          type: string
+          description: the retirement's reason, required when retired
+        superseded_by:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+          description: the component existing scope references resolve through
+      if:
+        properties:
+          status:
+            const: retired
+        required: [status]
+      then:
+        required: [reason]
+      else:
+        not:
+          anyOf:
+            - required: [reason]
+            - required: [superseded_by]
+  terms:
+    type: array
+    minItems: 1
+    description: state-shaped entries folding by id; a definition is binding
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, definition]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+        definition:
+          type: string
+        display:
+          type: string
+          description: the natural written form, where the slug cannot carry it
+        scope:
+          description: the component subtree the term belongs to; the whole product when absent
+          oneOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9-]*$'
+            - type: array
+              minItems: 1
+              items:
+                type: string
+                pattern: '^[a-z0-9][a-z0-9-]*$'
+        status:
+          enum: [active, retired]
+          description: active when absent
+        reason:
+          type: string
+          description: the retirement's reason, required when retired
+        superseded_by:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+          description: the term existing uses resolve through
+      if:
+        properties:
+          status:
+            const: retired
+        required: [status]
+      then:
+        required: [reason]
+      else:
+        not:
+          anyOf:
+            - required: [reason]
+            - required: [superseded_by]
+  retires:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, reason]
+      properties:
+        id:
+          type: string
+          pattern: '^r-[0-9a-z]{8}$'
+        reason:
+          type: string

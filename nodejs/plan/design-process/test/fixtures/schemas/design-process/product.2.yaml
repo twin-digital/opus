@@ -1,0 +1,55 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/product@2
+title: product
+description: a product declaration; the file's presence declares the product, its directory name is the id
+type: object
+additionalProperties: false
+required: [version, kind]
+properties:
+  version:
+    const: '2'
+  kind:
+    type: string
+    examples: [process, requirement-preset, nodejs-library, minecraft-addon]
+  status:
+    enum: [active, retired]
+    description: active when absent
+  reason:
+    type: string
+    description: the retirement's reason, required when retired
+  packages:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [path, kind]
+      properties:
+        path:
+          type: string
+        kind:
+          type: string
+          examples: [npm-library, npm-cli, agent-skill, document, minecraft-addon]
+        repo:
+          type: string
+          pattern: '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
+          description: GitHub owner/repo; twin-digital/opus when absent
+        component:
+          description: the component(s) the package realizes; the product root when absent
+          oneOf:
+            - type: string
+              pattern: '^[a-z0-9][a-z0-9-]*$'
+            - type: array
+              minItems: 1
+              items:
+                type: string
+                pattern: '^[a-z0-9][a-z0-9-]*$'
+if:
+  properties:
+    status:
+      const: retired
+  required: [status]
+then:
+  required: [reason]
+else:
+  not:
+    required: [reason]

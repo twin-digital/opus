@@ -8,6 +8,7 @@ import { loadProducts } from './load.js'
 import { collectOpenEntries } from './session/entries.js'
 import { applyStaged, stagingProblems } from './session/staging.js'
 import { DirTree, resolveGitRef } from './tree.js'
+import { validateTree } from './validate.js'
 import { formatIncrement, resolveFold, resolveFoldIfDeclared } from './version.js'
 
 import type { OpenEntry } from './session/entries.js'
@@ -186,6 +187,14 @@ export const landIncrement = async (options: LandOptions): Promise<LandResult> =
   if (
     !step('check', () => {
       run(process.execPath, [SELF, 'check', '--root', root])
+      // a staleness report gates no merge repo-wide, but this product's own landing answers it (d-8y5vmff8)
+      const stale = validateTree(new DirTree(root)).filter(
+        (finding) =>
+          finding.severity === 'report' && finding.rule === 'citation-fact-retired' && finding.product === product,
+      )
+      if (stale.length > 0) {
+        throw new Error(stale.map((finding) => finding.message).join('; '))
+      }
       return 'design check passed'
     })
   ) {

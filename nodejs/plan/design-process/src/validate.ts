@@ -1,16 +1,21 @@
 import { Ajv2020 } from 'ajv/dist/2020.js'
 
+import { checkComponents, reparentingReports } from './components.js'
 import { checkEvidenceBar } from './evidence-bar.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { loadFacts, loadSchemaPool, loadSurfacePool } from './pools.js'
 import { closureRequirementIds, resolvePresetClosure } from './presets.js'
+import { checkFactRetirementDebt, checkPoolFrozen } from './staleness.js'
+import { checkStatementBudget } from './statements.js'
+import { checkTerms, termReports } from './terms.js'
 
 import type { ErrorObject, ValidateFunction } from 'ajv'
 import type { Fold } from './fold.js'
 import type { IncrementSources, Product, ProductsTree } from './load.js'
 import type { FactsPool, SchemaPool } from './pools.js'
 import type { PresetClosure } from './presets.js'
+import type { BacklogView } from './staleness.js'
 import type { FileTree } from './tree.js'
 import type { Finding, QuestionEntry } from './types.js'
 
@@ -26,6 +31,8 @@ const allIncrements = (product: Product): IncrementSources[] => [...product.incr
 export interface ValidateOptions {
   /** Base tree (ordinarily main) enabling the change rules; omitted, only tree-state rules run. */
   base?: FileTree
+  /** The backlog items the fact-retirement gate reads (d-hxxlgaw9); omitted, that gate is skipped. */
+  backlog?: () => BacklogView[]
 }
 
 /** Apply every rule in force to the head tree; any finding blocks the merge. */
@@ -48,19 +55,30 @@ export const validateTree = (head: FileTree, options: ValidateOptions = {}): Fin
   findings.push(...productsTree.findings)
 
   for (const product of productsTree.products.values()) {
+    const fold = foldProduct(product, undefined, true)
     findings.push(...checkStructuredFiles(product, schemaPool, ajv))
     findings.push(...checkIncrementNumbering(product))
     findings.push(...checkIds(product))
     findings.push(...checkDecisionRules(product))
     findings.push(...checkQuestionRules(product))
-    findings.push(...checkCitations(product, facts, productsTree))
+    findings.push(...checkCitations(product, facts, productsTree, fold))
     findings.push(...checkModel(product, schemaPool.entries, surfacePool.entries))
-    findings.push(...checkPresets(product, productsTree))
+    findings.push(...checkPresets(product, productsTree, fold))
+    findings.push(...checkStateDeclaredOnce(product))
+    findings.push(...checkStatementBudget(product))
+    findings.push(...checkComponents(product, fold))
+    findings.push(...reparentingReports(product, fold))
+    findings.push(...checkTerms(product, productsTree, fold))
+    findings.push(...termReports(product, fold))
     findings.push(...checkRecords(product, productsTree))
   }
 
   if (options.base) {
     findings.push(...checkChanges(head, options.base))
+    findings.push(...checkPoolFrozen(head, options.base))
+    if (options.backlog) {
+      findings.push(...checkFactRetirementDebt(head, options.base, options.backlog))
+    }
   }
 
   return findings
@@ -364,12 +382,11 @@ const checkQuestionRules = (product: Product): Finding[] => {
   return findings
 }
 
-const checkCitations = (product: Product, facts: FactsPool, productsTree: ProductsTree): Finding[] => {
+const checkCitations = (product: Product, facts: FactsPool, productsTree: ProductsTree, fold: Fold): Finding[] => {
   const findings: Finding[] = []
   const { requirements, decisions } = productEntries(product)
   const requirementIds = new Set(requirements.map((entry) => entry.id))
   const decisionIds = new Set(decisions.map((entry) => entry.id))
-  const fold = foldProduct(product, undefined, true)
   // a requirement in force through an adopted preset is folded, projected, and covered, so it is
   // citable: citations resolve against the folded requirement set, adopted ones included
   const adopted = closureRequirementIds(resolvePresetClosure(product, productsTree, fold))
@@ -384,7 +401,12 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
     }
   }
 
-  const checkCitation = (citation: string, path: string, context: string, entryInForce: boolean) => {
+  /**
+   * A retired-fact citation splits by when the citer was declared (d-hxxlgaw9, d-ghg1khvy): a
+   * published in-force citer predates the retirement and is the staleness model's `report`,
+   * enforced by its own product's next landing; a draft citer is declared after it and gates.
+   */
+  const checkCitation = (citation: string, path: string, context: string, entryInForce: boolean, draft: boolean) => {
     if (QUESTION_ID.test(citation)) {
       findings.push({
         rule: 'citation-not-question',
@@ -412,9 +434,14 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
       } else if (entryInForce && facts.retired.has(citation.slice(2))) {
         findings.push({
           rule: 'citation-fact-retired',
-          claims: ['d-eaw3u72o', 'd-o99k4ld8'],
+          claims: ['d-hxxlgaw9', 'r-ajpjx5w0'],
           path,
-          message: `${context} is in force and cites retired fact ${citation}; move the citation to its replacement, or take the entry out of force before the fact retires`,
+          message:
+            draft ?
+              `${context} cites ${citation}, which is already retired; cite its replacement instead`
+            : `${context} is in force and rests on retired fact ${citation}; a superseding entry re-bases or revises it at ${product.id}'s next landing`,
+          ...(draft ? {} : { severity: 'report' as const }),
+          product: product.id,
         })
       }
     } else {
@@ -428,11 +455,12 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
   }
 
   for (const increment of allIncrements(product)) {
+    const draft = product.drafts.includes(increment as never)
     const decisionsSource = increment.decisions
     if (decisionsSource) {
       for (const entry of decisionsSource.data.decisions ?? []) {
         for (const citation of entry.because ?? []) {
-          checkCitation(citation, decisionsSource.path, entry.id, inForce.has(entry.id))
+          checkCitation(citation, decisionsSource.path, entry.id, inForce.has(entry.id), draft)
         }
         if (entry.supersedes !== undefined && !decisionIds.has(entry.supersedes)) {
           findings.push({
@@ -459,15 +487,17 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
       for (const entry of requirementsSource.data.requirements ?? []) {
         for (const citation of entry.informed_by ?? []) {
           if (QUESTION_ID.test(citation) || CLAIM_ID.test(citation) || citation.startsWith('f:')) {
-            checkCitation(citation, requirementsSource.path, entry.id, inForce.has(entry.id))
+            checkCitation(citation, requirementsSource.path, entry.id, inForce.has(entry.id), draft)
           }
         }
-        if (entry.amends !== undefined && !requirementIds.has(entry.amends)) {
+        // `requirement@1` spells the succession `amends:`; `@2` spells it `supersedes:` (d-4i5k9nsi)
+        const succeeds = entry.supersedes ?? entry.amends
+        if (succeeds !== undefined && !requirementIds.has(succeeds)) {
           findings.push({
             rule: 'citation-resolves',
-            claims: ['d-eaw3u72o'],
+            claims: ['d-eaw3u72o', 'd-4i5k9nsi'],
             path: requirementsSource.path,
-            message: `${entry.id} amends ${entry.amends}, which no increment of this product declares`,
+            message: `${entry.id} supersedes ${succeeds}, which no increment of this product declares`,
           })
         }
       }
@@ -527,9 +557,14 @@ const checkModel = (product: Product, schemas: Map<string, unknown>, surfaces: M
   return findings
 }
 
-const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] => {
+/** The statuses under which a preset entry applies its requirements; `applied` is the @3 spelling (d-cizeaklk). */
+const presetInForce = (status: string | undefined): boolean =>
+  status === undefined || status === 'adopted' || status === 'applied'
+
+const checkPresets = (product: Product, productsTree: ProductsTree, fold: Fold): Finding[] => {
   const findings: Finding[] = []
   for (const increment of allIncrements(product)) {
+    const draft = product.drafts.includes(increment as never)
     const presets = increment.requirements?.data.presets ?? []
     const path = increment.requirements?.path
     const byName = new Map<string, Set<string>>()
@@ -542,14 +577,14 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
       if (statuses.size > 1) {
         findings.push({
           rule: 'preset-adopt-and-drop',
-          claims: ['d-a8hiceqo'],
+          claims: ['d-3kow7q0r'],
           path,
-          message: `${name} is both adopted and dropped in one increment`,
+          message: `${name} is both applied and retired in one increment`,
         })
       }
     }
     for (const entry of presets) {
-      if ((entry.status ?? 'adopted') !== 'adopted') {
+      if (!presetInForce(entry.status)) {
         continue
       }
       const preset = productsTree.products.get(entry.name)
@@ -565,7 +600,7 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
       if (preset.declaration?.data.kind !== 'requirement-preset') {
         findings.push({
           rule: 'preset-kind',
-          claims: ['d-wis1whfn'],
+          claims: ['d-cizeaklk'],
           path,
           message: `adopts ${entry.name}, whose kind is ${JSON.stringify(preset.declaration?.data.kind)} rather than requirement-preset`,
         })
@@ -580,10 +615,27 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
           message: `adopts ${entry.name}@${entry.version}, but its newest published increment is ${maxIncrement}`,
         })
       }
+      // a retired preset takes no new application; versions already applied are untouched (d-i849afta)
+      if (draft && preset.declaration.data.status === 'retired') {
+        const appliedPublished = product.increments.some((published) =>
+          (published.requirements?.data.presets ?? []).some(
+            (existing) =>
+              existing.name === entry.name && existing.version === entry.version && presetInForce(existing.status),
+          ),
+        )
+        if (!appliedPublished) {
+          findings.push({
+            rule: 'preset-product-retired',
+            claims: ['d-i849afta'],
+            path,
+            message: `applies ${entry.name}@${entry.version}, but ${entry.name} is retired (${preset.declaration.data.reason ?? 'no reason recorded'})`,
+            product: product.id,
+          })
+        }
+      }
     }
   }
 
-  const fold = foldProduct(product, undefined, true)
   const closure = resolvePresetClosure(product, productsTree, fold)
   findings.push(...closure.findings)
   findings.push(...checkPresetConflicts(product, fold, closure))
@@ -591,8 +643,44 @@ const checkPresets = (product: Product, productsTree: ProductsTree): Finding[] =
 }
 
 /**
+ * One increment declares a name once (d-3kow7q0r): the folded state would otherwise depend on
+ * entry order. Presets, components, and terms are checked here; model entities are the standing
+ * model-name-unique rule.
+ */
+const checkStateDeclaredOnce = (product: Product): Finding[] => {
+  const findings: Finding[] = []
+  for (const increment of allIncrements(product)) {
+    const source = increment.requirements
+    if (!source) {
+      continue
+    }
+    const kinds: [string, string[]][] = [
+      ['preset', (source.data.presets ?? []).map((entry) => entry.name)],
+      ['component', (source.data.components ?? []).map((entry) => entry.id)],
+      ['term', (source.data.terms ?? []).map((entry) => entry.id)],
+    ]
+    for (const [kind, names] of kinds) {
+      const seen = new Set<string>()
+      for (const name of names) {
+        if (seen.has(name)) {
+          findings.push({
+            rule: 'state-entry-declared-once',
+            claims: ['d-3kow7q0r'],
+            path: source.path,
+            message: `${kind} ${JSON.stringify(name)} is declared twice in one increment; the folded state would depend on entry order`,
+            product: product.id,
+          })
+        }
+        seen.add(name)
+      }
+    }
+  }
+  return findings
+}
+
+/**
  * The collision the gate blocks on: two declarations in force of one requirement id, by the product
- * and a preset in its closure or by two of those presets (d-wlkql151). A retired declaration is
+ * and a preset in its closure or by two of those presets (d-492sxcc9). A retired declaration is
  * absent from its fold, so it collides with nothing; an id reached twice is one declaration.
  */
 const checkPresetConflicts = (product: Product, fold: Fold, closure: PresetClosure): Finding[] => {
@@ -611,7 +699,7 @@ const checkPresetConflicts = (product: Product, fold: Fold, closure: PresetClosu
       }
       findings.push({
         rule: 'preset-conflict',
-        claims: ['r-bwtud1e5', 'd-wlkql151'],
+        claims: ['r-bwtud1e5', 'd-492sxcc9'],
         path: product.dir,
         message: `${other} and adopted ${source} both declare ${id}`,
       })

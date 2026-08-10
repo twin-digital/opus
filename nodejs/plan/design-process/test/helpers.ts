@@ -137,6 +137,54 @@ export const demoWithDeferred = (): Files => {
   return files
 }
 
+/**
+ * A minimal, valid product on the 032–034 dialects: a `requirements@3` source carrying
+ * components, terms, and `requirement@2` entries, and a `decisions@3` source with `decision@3`
+ * entries — scope, commentary, and cases included.
+ */
+export const demoV3 = (): Files => ({
+  ...poolFiles(),
+  'products/demo3/product.yaml': yaml({
+    version: '2',
+    kind: 'nodejs-library',
+    packages: [{ path: 'nodejs/demo3', kind: 'npm-library', component: 'engine' }],
+  }),
+  'products/demo3/increments/001/requirements.yaml': yaml({
+    version: '3',
+    components: [
+      { id: 'engine', description: 'the core engine' },
+      { id: 'parser', description: 'the input parser', parent: 'engine' },
+    ],
+    terms: [{ id: 'fold', definition: 'the effective state of a product at an increment' }],
+    requirements: [
+      {
+        id: 'r-aaaaaaaa',
+        title: 'first',
+        statement: 'the product does the first thing.\n',
+        scope: 'engine',
+        commentary: 'the owner reverses designs over this.\n',
+      },
+      { id: 'r-bbbbbbbb', title: 'second', statement: 'the product recomputes the fold after every landing.\n' },
+    ],
+    model: [{ name: 'demo-config', schema: '/design-process/product@1', description: 'a bound shape' }],
+  }),
+  'products/demo3/increments/001/decisions.yaml': yaml({
+    version: '3',
+    decisions: [
+      {
+        id: 'd-aaaaaaaa',
+        title: 'base choice',
+        statement: 'the first thing is done the simple way.\n',
+        status: 'accepted',
+        because: ['r-aaaaaaaa'],
+        scope: 'parser',
+        commentary: 'reads better as branches.\n',
+        cases: [{ when: 'the input is well-formed', then: 'it is parsed' }, { otherwise: 'the line is reported' }],
+      },
+    ],
+  }),
+})
+
 /** Coverage for every claim in force at demo increment 2 — records must be complete. */
 export const demoCoverage = (): { claim: string; covered_by: { kind: string }[] }[] =>
   ['r-bbbbbbbb', 'r-cccccccc', 'd-bbbbbbbb', 'd-cccccccc'].map((claim) => ({

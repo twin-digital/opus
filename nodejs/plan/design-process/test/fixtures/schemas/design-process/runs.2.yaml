@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/runs@2
+title: runs
+description: an evidence pool file
+type: object
+additionalProperties: false
+required: [version, runs]
+properties:
+  version:
+    const: '2'
+  runs:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/run@2'
