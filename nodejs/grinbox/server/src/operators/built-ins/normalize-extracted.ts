@@ -1,6 +1,6 @@
 /**
- * Normalization of extracted LLM Tagger output values (docs/digest-design.md
- * "Field extraction"). The model produces values freely; this module reduces
+ * Normalization of extracted LLM Tagger output values (d-dmwaark1). The model
+ * produces values freely; this module reduces
  * them to canonical stored forms in code, after the call. A value that fails
  * normalization returns `null` — the caller drops the Tag (absent, not an
  * error), which is the designed degradation for extraction.

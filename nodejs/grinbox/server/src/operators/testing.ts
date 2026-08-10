@@ -1,7 +1,7 @@
 /**
- * Test-double metered-client factory. Lets O1/O2 and `runOperator` be
- * unit-tested without real Bedrock/Gmail/Pushover. This is test infrastructure,
- * NOT production code — the real metered clients land in S4.
+ * Test-double metered-client factory. Lets the built-in types and `runOperator`
+ * be unit-tested without real Bedrock/Gmail/Pushover. This is test
+ * infrastructure, NOT production code.
  *
  * The fake honors the same seam the worker's `buildContext` defines: it records
  * every call, returns canned {@link ResourceOpResult}s, and exposes `onEvent` /

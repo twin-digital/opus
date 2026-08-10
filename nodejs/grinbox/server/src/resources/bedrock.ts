@@ -59,7 +59,7 @@ const MODEL_PRICING_USD_PER_1M: Readonly<Record<string, { input: number; output:
 
 /**
  * Resolve the inference-profile id for a configured model id, or throw
- * {@link UnmappedModelError} (citing the M1 note) when unmapped.
+ * {@link UnmappedModelError} when unmapped.
  */
 export function resolveInferenceProfile(modelId: string): string {
   const profile = MODEL_INFERENCE_PROFILES[modelId as ModelId] as string | undefined

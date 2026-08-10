@@ -10,7 +10,7 @@ import { type DigestScheduler, createDigestScheduler } from './digest-scheduler.
 import { recoverInterruptedDigestRuns } from './recovery.js'
 
 /**
- * Spec: pipeline-runtime.md "Digest scheduler". Tests drive `runDueDigests(now)`
+ * Spec: d-wf49d4jb, d-svanshcm. Tests drive `runDueDigests(now)`
  * directly (never `start()`), with injected `now` values pinned to known UTC
  * instants — no real cron, no waiting.
  *

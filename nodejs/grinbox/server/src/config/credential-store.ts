@@ -1,15 +1,14 @@
 /**
  * Pushover (notification) credential storage. The user-scoped sibling of the
  * Gmail OAuth `token-store.ts`: a `pushover` Credential's decrypted payload is
- * `{ app_token, user_key }` (oauth-flow.md credential storage; data-model.md
- * `credentials`), encrypted into `credentials.data_enc` via the {@link Encryptor}
- * seam. `account_id` is NULL (user-scoped); `idx_credentials_active_user`
+ * `{ app_token, user_key }` (d-xe41okh9), encrypted into `credentials.data_enc`
+ * via the {@link Encryptor} seam. `account_id` is NULL (user-scoped); `idx_credentials_active_user`
  * permits at most one live `pushover` per User, so a re-store soft-deletes the
  * prior live row before inserting the fresh one.
  *
  * Every `change_log` row written here carries **non-secret metadata only** —
  * `kind`, `account_id`, `created_at`, `updated_at`, action — never `data_enc`
- * (data-model.md `credentials`). The blob is never logged or audited.
+ * (d-8yht1ei9). The blob is never logged or audited.
  */
 
 import type { Kysely } from 'kysely'
@@ -20,7 +19,7 @@ import type { Database } from '../db/schema.js'
 /** The `kind` discriminator for Pushover notification credentials. */
 export const PUSHOVER_KIND = 'pushover'
 
-/** The decrypted `pushover` credential payload (data-model.md `credentials`). */
+/** The decrypted `pushover` credential payload. */
 export const pushoverPayloadSchema = z.object({
   app_token: z.string().min(1),
   user_key: z.string().min(1),

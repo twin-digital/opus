@@ -183,7 +183,7 @@ export async function editLimit(db: Kysely<Database>, input: EditLimitInput): Pr
 }
 
 /**
- * Hard-deletes a Limit (data-model "Limit hard-delete"). The counter rows
+ * Hard-deletes a Limit. The counter rows
  * (`limit_counters_window`, `limit_counters_message`) CASCADE away via their FK.
  * The `change_log` `deleted` row captures the full definition in `before_json`.
  */

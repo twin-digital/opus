@@ -20,8 +20,14 @@ import { type Kysely, sql } from 'kysely'
  * afterwards inserts any seeded cap the backfill did not find.
  *
  * SQLite cannot drop a table-level UNIQUE, so the table is rebuilt. The counter
- * tables reference `limits(id)` and the ids are carried across unchanged, so
- * in-flight window counts and per-message counters keep counting.
+ * tables reference `limits(id)` with `ON DELETE CASCADE`, and a `DROP TABLE`
+ * under `foreign_keys = ON` performs an implicit DELETE that fires it — which
+ * would take every in-flight window count and per-message counter with it. The
+ * rebuild therefore runs with foreign keys off, the way SQLite's own table-alter
+ * procedure prescribes, and carries the ids across unchanged so the counters
+ * stay keyed to the caps they were counting. SQLite ignores that pragma inside a
+ * transaction; the migrator runs each migration outside one, because the SQLite
+ * dialect reports no transactional DDL.
  */
 
 /** The seeded `(resource, operation, scope)` tuples as of this migration. */
@@ -37,6 +43,15 @@ const SEEDED_AT_THIS_MIGRATION: readonly (readonly [string, string, string])[] =
 ]
 
 export async function up(db: Kysely<unknown>): Promise<void> {
+  await sql`PRAGMA foreign_keys = OFF`.execute(db)
+  try {
+    await rebuild(db)
+  } finally {
+    await sql`PRAGMA foreign_keys = ON`.execute(db)
+  }
+}
+
+async function rebuild(db: Kysely<unknown>): Promise<void> {
   await sql`
     CREATE TABLE limits_new (
       id              INTEGER PRIMARY KEY,

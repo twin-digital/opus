@@ -117,8 +117,8 @@ describe('ensureMessageBody', () => {
   })
 
   it('does not refetch once body_fetched_at is set, even for an empty body', async () => {
-    // Simulate a prior attempt that found no body (data-model.md: non-NULL
-    // body_fetched_at with empty body fields means "attempted; genuinely none").
+    // Simulate a prior attempt that found no body: non-NULL body_fetched_at
+    // with empty body fields means "attempted; genuinely none".
     await db.updateTable('messages').set({ body_fetched_at: 999 }).where('id', '=', seed.messageId).execute()
     const { factory, fetchBody } = factoryReturning({
       outcome: 'succeeded',

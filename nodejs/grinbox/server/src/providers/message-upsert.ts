@@ -1,6 +1,6 @@
 /**
  * UPSERT a {@link FetchedMessage} into the `messages` table on
- * `(account_id, backend_message_id)` (data-model.md "messages").
+ * `(account_id, backend_message_id)`.
  *
  * The poll loop calls this once per discovered candidate before enqueuing a
  * Triage. The returned `isNew` tells the loop whether this was a first

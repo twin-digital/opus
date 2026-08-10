@@ -16,8 +16,7 @@ import {
 } from './digest-runner.js'
 
 /**
- * Spec: docs/digest-design.md "Digest-time: deterministic collation" + the
- * digest-runner module header. Composition is deterministic — given a window
+ * Spec: d-r8iz7u3q + the digest-runner module header. Composition is deterministic — given a window
  * of Messages and Tags, the digest body is exactly reproducible — so these
  * tests assert **full expected output**. Transports are fakes behind the real
  * metered-client factory, so Limit enforcement, metering, and event

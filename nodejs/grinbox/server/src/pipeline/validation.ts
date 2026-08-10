@@ -1,8 +1,8 @@
 /**
- * Save-time Pipeline validation (S3). Pure function over the post-change set of
- * a Pipeline's *enabled* Operators — no DB access — so it is trivially testable
- * and reusable by both the Operator-save write pattern and the lightweight
- * Triage-creation recheck (pipeline-runtime.md "Contract validation lifecycle").
+ * Save-time Pipeline validation (d-8y8i45y2, r-qu9y7wgg). Pure function over
+ * the post-change set of a Pipeline's *enabled* Operators — no DB access — so it
+ * is trivially testable and reusable by both the Operator-save write pattern and
+ * the lightweight Triage-creation recheck.
  *
  * ## Why shared's declarative registry, not the server's behavioral one
  *
@@ -307,8 +307,8 @@ function templatesOf(typeKey: OperatorTypeKey, config: Record<string, unknown>):
  *    empty string (a misspelling like `{{Body}}` is almost certainly a
  *    mistake, not an intentional empty string).
  *  - `reserved_placeholder` — the `name(...)` call form, reserved in the
- *    grammar for future set-level aggregation (digest-design.md "Future
- *    extensions"); rejected with a dedicated message so the author learns why
+ *    grammar for future set-level aggregation; rejected with a dedicated
+ *    message so the author learns why
  *    `{{sum(tag.amount)}}` doesn't work yet rather than seeing a generic
  *    unknown-name error.
  */
@@ -356,8 +356,8 @@ function findProducerOutput(postState: readonly ParsedOperator[], key: string): 
 /**
  * `when`-gate errors for an Operator: the gate's `tag_key` must be produced as
  * a closed **enum** output (an equality gate over an extracted output's
- * unbounded values is almost certainly a mistake — digest-design.md "Field
- * extraction"), and every `equals` member must be in that enum (a value the
+ * unbounded values is almost certainly a mistake — d-2asvd71w), and every
+ * `equals` member must be in that enum (a value the
  * producer can never emit would gate the Operator off silently). A missing
  * producer is not reported here — the gate's `tag_key` is a Contract input, so
  * {@link validatePipeline}'s dangling-input check owns that case.
@@ -399,7 +399,7 @@ function whenGateErrors(
 }
 
 /**
- * Digest-edition errors (digest-design.md "Validation"):
+ * Digest-edition errors (d-fg96l5uu, d-nfsr4h6f):
  *  - every section `category` must be a member of the `digest_category`
  *    producer's declared enum (and that producer must be enum-contracted);
  *  - the edition's categories must be disjoint from every other enabled

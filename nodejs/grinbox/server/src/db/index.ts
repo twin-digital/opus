@@ -1,8 +1,7 @@
 /**
- * State DB module surface. Downstream tasks (T0.4 daemon, S2/S3 write patterns)
- * import from here — `@grinbox/server` re-exports this barrel from its package
- * root, so consumers use `import { openDatabase, runMigrations } from
- * '@grinbox/server'`.
+ * State DB module surface. The daemon and the write patterns import from here
+ * — `@grinbox/server` re-exports this barrel from its package root, so
+ * consumers use `import { openDatabase, runMigrations } from '@grinbox/server'`.
  */
 export { ensureBootstrapUser } from './bootstrap.js'
 export { closeDatabase, openDatabase } from './connection.js'

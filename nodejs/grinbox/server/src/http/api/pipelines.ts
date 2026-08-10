@@ -1,6 +1,5 @@
 /**
- * `/api/pipelines` — the Pipeline list + detail the Pipelines page reads
- * (ui-design.md "Pipeline detail + Operator editor").
+ * `/api/pipelines` — the Pipeline list + detail the Pipelines page reads.
  *
  *  - `GET /api/pipelines` — one row per live Pipeline: name, description, and
  *    "active on N Accounts" (the count of live Accounts whose

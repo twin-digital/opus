@@ -8,8 +8,8 @@
  *  - `provider.fetchMetadata(account, id)` → a `FetchedMessage`
  *  - `upsertMessage(db, accountId, fetched)` → `{ messageId, isNew }`
  * then persists `last_history_cursor = newCursor` + `last_polled_at` and
- * enqueues a Triage per `isNew` Message, all in one transaction
- * (pipeline-runtime.md "Provider polling").
+ * enqueues a Triage per `isNew` Message, with the cursor written last
+ * (d-sj4u6eyj).
  */
 
 export type {

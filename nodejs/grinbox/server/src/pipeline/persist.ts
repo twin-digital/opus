@@ -1,7 +1,5 @@
 /**
- * Operator run completion + settlement (S2). Per data-model "Operator run
- * completion" / pipeline-runtime.md "Execution loop → persistOperatorResult":
- * each completion runs as one `BEGIN IMMEDIATE` transaction that UPDATEs the run
+ * Operator run completion + settlement. Each completion runs as one `BEGIN IMMEDIATE` transaction that UPDATEs the run
  * row, INSERTs output Tags, INSERTs `triage_events` (each computing its
  * `sequence_num` in a single `INSERT ... SELECT COALESCE(MAX(...),0)+1`
  * statement), then performs the in-transaction settlement check.
@@ -94,7 +92,7 @@ export async function persistOperatorResult(
 
 /**
  * Marks an Operator run `skipped` (the execution loop's cascade-skip path,
- * pipeline-runtime.md `markSkipped`), then runs the same in-transaction
+ * d-16geyxco), then runs the same in-transaction
  * settlement check as {@link persistOperatorResult}. A skipped run produces no
  * Tags or events.
  */
@@ -122,8 +120,8 @@ export async function markSkipped(
  * Settlement check, inside the caller's transaction. If no run for `triageId`
  * remains `pending`/`running`, derives the final Triage status, sets
  * `ended_at`, and UPSERTs `current_triages` via the conditional
- * latest-started-wins single statement (data-model `current_triages`).
- * Returns whether it settled.
+ * latest-started-wins single statement, so what the user sees as a Message's
+ * Tags is one Triage's output in full (d-urdglhb6). Returns whether it settled.
  *
  * The single settlement implementation: run completion and cascade-skip call it
  * in their completion transaction, and the startup recovery sweep
@@ -152,8 +150,8 @@ export async function settleTriageIfTerminal(tx: Kysely<Database>, triageId: num
     .executeTakeFirstOrThrow()
 
   // Conditional latest-started-wins UPSERT. Kysely's `onConflict` can't express
-  // the `WHERE excluded.* > current.*` guard, so this is raw SQL (data-model
-  // current_triages). The denormalized `triage_started_at` is what lets the
+  // the `WHERE excluded.* > current.*` guard, so this is raw SQL. The
+  // denormalized `triage_started_at` is what lets the
   // condition reference `excluded` without a join back to `triages`.
   await sql`
     INSERT INTO current_triages (message_id, pipeline_id, triage_id,
@@ -171,8 +169,7 @@ export async function settleTriageIfTerminal(tx: Kysely<Database>, triageId: num
 }
 
 /**
- * Derives a settled Triage's status from its run statuses (data-model /
- * pipeline-runtime.md settlement table):
+ * Derives a settled Triage's status from its run statuses (d-16geyxco):
  *  - all `completed` → `completed`
  *  - any `failed` or `skipped` (with at least one terminal run) → `partial`
  *  - `failed` is reserved for loop-level errors and is NOT derived here; callers

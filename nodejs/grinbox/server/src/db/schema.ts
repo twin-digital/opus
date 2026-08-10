@@ -2,8 +2,8 @@ import type { SourceState } from '@grinbox/shared'
 import type { ColumnType, Generated, Kysely } from 'kysely'
 
 /**
- * The Kysely `Database` interface for Grinbox's State DB. One TS interface per
- * table; column types transcribe data-model.md exactly.
+ * The Kysely `Database` interface for Grinbox's State DB — the one SQLite file
+ * all persistent state lives in (d-dbjiycvl). One TS interface per table.
  *
  * Type-shape conventions used here:
  * - `Generated<number>` for surrogate integer PKs (rowid / AUTOINCREMENT):
@@ -260,8 +260,8 @@ export interface ChangeLogTable {
 /**
  * Migration bookkeeping. Kysely's `Migrator` owns this table and requires a
  * fixed `(name TEXT PK, timestamp TEXT NOT NULL)` shape, so the column is
- * `timestamp` rather than data-model.md's `applied_at`. See migrator.ts for the
- * reconciliation note. Declared here only for completeness / typed reads.
+ * `timestamp`. See migrator.ts for the bookkeeping note. Declared here only for
+ * completeness / typed reads.
  */
 export interface SchemaMigrationsTable {
   name: string

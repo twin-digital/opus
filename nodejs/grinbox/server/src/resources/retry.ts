@@ -1,7 +1,6 @@
 /**
- * Per-Resource-operation retry policy (pipeline-runtime.md "Retry policy per
- * Resource operation"). The retry happens *inside* the client wrapper,
- * transparent to the Operator, and is entirely separate from the Limit check:
+ * Per-Resource-operation retry policy (d-eqwrgoyv). The retry happens *inside*
+ * the client wrapper, transparent to the Operator, and is entirely separate from the Limit check:
  * the Limit is consumed once before the retry loop, so all attempts of one
  * operation count once against the Limit.
  *
@@ -43,10 +42,9 @@ const NO_RETRY: RetryPolicy = {
 }
 
 /**
- * Retry policy keyed by `"<resource>.<operation>"`. The single source of truth
- * transcribing the pipeline-runtime.md table; an operation absent from this map
- * gets {@link NO_RETRY} (fail-closed: an unrecognized op is never silently
- * retried).
+ * Retry policy keyed by `"<resource>.<operation>"`. The single source of truth;
+ * an operation absent from this map gets {@link NO_RETRY} (fail-closed: an
+ * unrecognized op is never silently retried).
  */
 export const RETRY_POLICIES: Readonly<Record<string, RetryPolicy>> = {
   'pushover_api.send_notification': NO_RETRY,
@@ -159,7 +157,12 @@ function describeThrown(value: unknown): string {
   if (typeof value === 'string') {
     return value
   }
-  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'boolean' || typeof value === 'symbol') {
+  if (
+    typeof value === 'number' ||
+    typeof value === 'bigint' ||
+    typeof value === 'boolean' ||
+    typeof value === 'symbol'
+  ) {
     return String(value)
   }
   return Object.prototype.toString.call(value)

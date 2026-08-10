@@ -1,6 +1,6 @@
 /**
- * The `/api` read router (architecture.md "Web UI": Hono + Hono RPC, typed
- * end-to-end, unauthenticated lab-internal). Mounts one sub-router per UI
+ * The `/api` read router (d-ti7vexo3, d-5l0wqcj0): Hono + Hono RPC, typed
+ * end-to-end, unauthenticated. Mounts one sub-router per UI
  * surface and chains them so the resulting app *type* carries every route — the
  * web tier builds a typed `hc<ApiRoutes>` client from it (see
  * `packages/server/src/index.ts`, which re-exports `type ApiRoutes`).

@@ -1,15 +1,14 @@
 /**
  * `extractCredentialRefsFromOperatorConfig` for every declared `type_key`.
  * This hook is needed at Operator save (create/edit/enable/disable) to
- * reconcile `operator_credential_references` (data-model
- * "operator_credential_references"). The extractor registry is keyed over the
+ * reconcile `operator_credential_references`. The extractor registry is keyed
+ * over the
  * *full* `OperatorTypeKey` union, standalone from the behavioral registry, so
  * the save-time reconciler depends only on the declarative type surface.
  *
- * The data-model lists "`operator_credential_references` matches
- * `operators.config_json`" as an app-enforced invariant whose test is "each
- * type's extractor against representative config samples" — these are those
- * extractors.
+ * That `operator_credential_references` matches `operators.config_json` is an
+ * app-enforced invariant, tested by running each type's extractor against
+ * representative config samples.
  */
 
 import { type OperatorConfigFor, type OperatorTypeKey, operatorConfigSchemas } from '@grinbox/shared'

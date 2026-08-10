@@ -5,8 +5,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
  *
  * The application "treats encryption as an opaque `encrypt(bytes) /
  * decrypt(bytes)` seam over a token-encryption key it receives at startup"
- * (oauth-flow.md "Encryption at rest"). S6 (Gmail OAuth token storage) consumes
- * this to protect `credentials.data_enc`. The seam neither generates nor
+ * (d-9hyzpk7j). Gmail OAuth token storage consumes this to protect
+ * `credentials.data_enc`. The seam neither generates nor
  * persists keys — the host supplies the key, and the daemon builds an
  * `Encryptor` from it via {@link makeEncryptor}.
  */

@@ -2,7 +2,7 @@
  * Digest delivery. The schedule-triggered Action — an **edition**: on its cron
  * `schedule`, it collates the Messages ingested since the previous successful
  * digest into its configured sections by their `digest_category` Tag
- * (deterministic rendering; docs/digest-design.md) and emails the result via
+ * (deterministic rendering; d-r8iz7u3q) and emails the result via
  * `mail_sender.send_message` to the Account owner's own address.
  * `llm_bedrock.invoke_model` is declared for the optional per-section `llm`
  * prose blocks — item composition itself makes no model calls.

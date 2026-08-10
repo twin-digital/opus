@@ -1,5 +1,5 @@
 /**
- * Gmail OAuth surface (oauth-flow.md): the Google-client seam, the in-memory
+ * Gmail OAuth surface (d-a1pf497w): the Google-client seam, the in-memory
  * pending-auth store, the start/callback flow, the encrypted token storage +
  * refresh lifecycle, and the Hono `/oauth/*` routes.
  *

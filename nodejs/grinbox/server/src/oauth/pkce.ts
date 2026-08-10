@@ -1,7 +1,7 @@
 /**
- * PKCE + `state` primitives for the OAuth flow (oauth-flow.md "The flow"). PKCE
- * is used even though this is a confidential client — cheap defense-in-depth
- * against interception of the authorization code during the popup redirect.
+ * PKCE + `state` primitives for the OAuth flow. PKCE is used even though this
+ * is a confidential client — cheap defense-in-depth against interception of the
+ * authorization code during the popup redirect.
  */
 
 import { createHash, randomBytes } from 'node:crypto'

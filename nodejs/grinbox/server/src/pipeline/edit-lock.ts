@@ -8,8 +8,8 @@ import type { Database } from '../db/schema.js'
  * ## Why `BEGIN IMMEDIATE` (load-bearing)
  *
  * Several State-DB invariants are app-enforced, not DB-enforced — chief among
- * them **single-producer-per-Tag-key** (data-model.md "What this schema does not
- * enforce"). The enforcement is a read-validate-write: read the Pipeline's
+ * them **single-producer-per-Tag-key** (d-2dqylf0q). The enforcement is a
+ * read-validate-write: read the Pipeline's
  * enabled Operators, validate the proposed post-change set, then write. For that
  * sequence to actually hold the invariant it must be atomic against any other
  * writer; otherwise two concurrent edits could each validate against a pre-state

@@ -1,13 +1,12 @@
 /**
- * Account update + soft-delete write patterns (data-model "User changes an
- * Account's active Pipeline" and "Account soft-delete").
+ * Account update + soft-delete write patterns.
  *
  *  - {@link updateAccount} — the deferred helper that sets `active_pipeline_id`
  *    and/or `poll_interval_seconds`. The `poll_interval_seconds` value is bounded
  *    [60, 86400] to match the table CHECK; an out-of-range value is rejected in
  *    app code (with a structured error) before the write so the route can return
  *    a clean 4xx rather than surfacing a CHECK violation.
- *  - {@link softDeleteAccount} — sets `deleted_at` and cascades per data-model:
+ *  - {@link softDeleteAccount} — sets `deleted_at` and cascades:
  *    its `gmail_oauth`/notification credentials are soft-deleted in the same
  *    transaction; Messages + Triage history remain (forensic); polling stops via
  *    the `idx_accounts_polling` deleted-filter.
@@ -147,8 +146,8 @@ export async function updateAccount(db: Kysely<Database>, input: UpdateAccountIn
 }
 
 /**
- * Soft-deletes an Account and cascades per data-model "Account soft-delete":
- * soft-delete its live `credentials` in the same transaction. Messages + Triage
+ * Soft-deletes an Account and cascades: soft-delete its live `credentials` in
+ * the same transaction. Messages + Triage
  * history are intentionally kept (forensic); polling stops via the
  * `idx_accounts_polling` deleted-filter.
  */

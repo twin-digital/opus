@@ -1,8 +1,7 @@
 /**
  * O1 — Rule-based Tagger. A deterministic Tagger that produces exactly one
  * output Tag by evaluating an ordered Rule list first-match-wins, falling back
- * to the fallback when no Rule matches (glossary "Rule-based Tagger", "Rule
- * list", "Fallback").
+ * to the fallback when no Rule matches (d-imlec3nt, d-f5hy6ptl).
  *
  * Declares no Resources and touches no DB. The `match` of each Rule is a safe
  * expression over Message fields and input Tags — see `match-expression.ts` for
@@ -24,7 +23,7 @@ import { type CompiledMatch, buildFieldLookup, compileMatch } from './match-expr
  * Every Rule's `match` is compiled up front, so a malformed expression throws a
  * {@link MatchExpressionError} deterministically rather than silently never
  * matching. This helper is the single source of the match-expression /
- * first-match logic — both the Operator's `run` and the M4 draft-config preview
+ * first-match logic — both the Operator's `run` and the draft-config preview
  * (`POST /api/operators/preview`) call it, so the preview and the live Operator
  * can never diverge.
  */

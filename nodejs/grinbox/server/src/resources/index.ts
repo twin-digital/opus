@@ -1,7 +1,7 @@
 /**
- * S4 — metered Resource clients + Limit enforcement. The public surface the
- * worker (S7) wires into `runOperator`, and the underlying-client builders S6/M2
- * fills with real transports + resolved credentials.
+ * Metered Resource clients + Limit enforcement. The public surface the worker
+ * wires into `runOperator`, and the underlying-client builders the daemon fills
+ * with real transports + resolved credentials.
  *
  * Layering (top → bottom):
  *  - `createResourceClientFactory` — the metering layer producing the

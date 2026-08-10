@@ -1,8 +1,8 @@
 /**
  * The Google-client seam: the three external interactions the OAuth flow makes
  * against Google, abstracted behind one injectable interface so the routes and
- * the token lifecycle are fully unit-testable without a network (oauth-flow.md
- * "The flow"). Tests pass a fake; the live path is {@link makeGoogleOAuthClient}.
+ * the token lifecycle are fully unit-testable without a network. Tests pass a
+ * fake; the live path is {@link makeGoogleOAuthClient}.
  *
  * The seam is deliberately thin — it exposes exactly the four operations the
  * flow needs and nothing of `googleapis`' surface:
@@ -13,8 +13,7 @@
  *    token (or {@link InvalidGrantError} when the grant is gone).
  *
  * The `client_secret` lives only inside the live implementation (deployment
- * config, never the DB, never the browser, never logs — oauth-flow.md "Client
- * credentials are deployment config, not DB state").
+ * config, never the DB, never the browser, never logs — d-xe41okh9).
  */
 
 import { google } from 'googleapis'
@@ -32,7 +31,7 @@ type CodeChallengeMethod = NonNullable<
   NonNullable<Parameters<OAuth2Client['generateAuthUrl']>[0]>['code_challenge_method']
 >
 
-/** The Gmail scopes Grinbox requests at first consent (oauth-flow.md "Scopes"). */
+/** The Gmail scopes Grinbox requests at first consent (d-ty6fhiss). */
 export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.send',
@@ -53,8 +52,7 @@ export interface ConsentUrlParams {
 export interface TokenExchangeResult {
   /**
    * The durable refresh token. Optional because Google only returns one when
-   * `prompt=consent` forced a fresh grant; the callback asserts its presence
-   * (oauth-flow.md "The flow" notes).
+   * `prompt=consent` forced a fresh grant; the callback asserts its presence.
    */
   readonly refreshToken?: string
   readonly accessToken: string
@@ -79,8 +77,8 @@ export interface RefreshResult {
 /**
  * Raised by {@link GoogleOAuthClient.refreshAccessToken} when Google returns
  * `invalid_grant` — the refresh token is no longer valid (revoked, password
- * changed, or lapsed past ~6 months of disuse; oauth-flow.md "Revocation /
- * expiry"). The token lifecycle catches this to mark the Account needs-reauth.
+ * changed, or lapsed past ~6 months of disuse). The token lifecycle catches
+ * this to mark the Account needs-reauth (d-v5fyd7xd).
  */
 export class InvalidGrantError extends Error {
   override readonly name = 'InvalidGrantError'
@@ -92,8 +90,7 @@ export class InvalidGrantError extends Error {
 /**
  * Raised by the callback path when the token exchange succeeded but Google did
  * not return a refresh token. This is the `prompt=consent` failure mode: surfaced
- * to the operator as a retry instruction, with no credential stored
- * (oauth-flow.md "The flow" notes).
+ * to the operator as a retry instruction, with no credential stored.
  */
 export class MissingRefreshTokenError extends Error {
   override readonly name = 'MissingRefreshTokenError'
@@ -114,7 +111,7 @@ export interface GoogleOAuthClient {
    * Build the Google consent URL (pure; no network). Includes
    * `access_type=offline`, `prompt=consent`, the Gmail scopes, the client id,
    * the registered redirect URI, the `state`, and the PKCE `code_challenge`
-   * (S256) — the mandatory set from oauth-flow.md.
+   * (S256). The scopes are the whole set Grinbox will ever need (d-ty6fhiss).
    */
   buildConsentUrl(params: ConsentUrlParams): string
 

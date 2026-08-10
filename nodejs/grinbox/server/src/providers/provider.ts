@@ -1,8 +1,7 @@
 /**
  * The backend-agnostic Provider abstraction — the seam between Grinbox and any
- * specific mail backend (architecture.md "Backends and Providers"). The MVP
- * ships a {@link GmailProvider}; an IMAP Provider slots into the same interface
- * later without touching the poll loop or the upsert path.
+ * specific mail backend (d-7a8aoi4z). The MVP ships a {@link GmailProvider}; an
+ * IMAP Provider slots into the same interface later without touching the poll loop or the upsert path.
  *
  * A Provider is responsible for three things and nothing else:
  *  - **discovery** (`listCandidates`) — return the set of backend Message ids
@@ -14,7 +13,7 @@
  *
  * Persisting the cursor / `last_polled_at` and enqueuing Triages are explicitly
  * NOT the Provider's job — those belong to the poll loop, which does them in one
- * transaction (pipeline-runtime.md "Provider polling"). The Provider is pure
+ * transaction (d-sj4u6eyj). The Provider is pure
  * with respect to the State DB except for the read it needs to dedup the
  * historyId-expired fallback; see {@link GmailProvider}.
  *
@@ -84,8 +83,8 @@ export interface ReconcileSnapshot {
  *
  * `headers` is the lowercased-header-name → value map the backend returned;
  * `bodyFetched` records whether a body fetch was *attempted* for this DTO, which
- * drives `messages.body_fetched_at` (data-model.md "messages" body semantics):
- * the read path fetches metadata only, so `bodyFetched` is false and the body
+ * drives `messages.body_fetched_at` (d-nol93aud): the read path fetches
+ * metadata only, so `bodyFetched` is false and the body
  * fields stay null/undefined until a body-consuming Operator triggers a fetch.
  */
 export interface FetchedMessage {
@@ -105,7 +104,7 @@ export interface FetchedMessage {
 }
 
 /**
- * Thread context for a Message (architecture.md "Provider" `thread_membership`).
+ * Thread context for a Message (d-7a8aoi4z).
  * `backendThreadId` is null when the Message is not part of a Thread; `isReply`
  * is whether the Message is a reply within its Thread; `messageCount` is the
  * Thread's size.

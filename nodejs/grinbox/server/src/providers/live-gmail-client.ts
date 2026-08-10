@@ -20,7 +20,7 @@
  * out of these methods unchanged: the poll cycle's `listCandidates` is the first
  * call, so a needs-reauth Account fails its cycle before any State-DB write and
  * is logged + skipped by the scheduler — its credential already soft-deleted, so
- * it stays in the needs-auth state until re-authorized (oauth-flow.md "Re-auth").
+ * it stays in the needs-auth state until re-authorized (d-v5fyd7xd).
  *
  * ## Resources-layer reuse
  *

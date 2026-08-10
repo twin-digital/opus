@@ -1,6 +1,6 @@
 /**
- * OAuth flow orchestration (oauth-flow.md "The flow"), kept separate from the
- * HTTP layer so the start/callback logic is directly unit-testable.
+ * OAuth flow orchestration (d-a1pf497w), kept separate from the HTTP layer so
+ * the start/callback logic is directly unit-testable.
  *
  *  - {@link startAuthorization} generates `state` + PKCE, persists the
  *    pending-auth entry, and returns the consent URL.
@@ -38,8 +38,8 @@ export const DEFAULT_USER_ID = 1
 
 export interface StartAuthorizationInput {
   /**
-   * An existing Account to re-authorize (oauth-flow.md "Re-auth"); omit for a
-   * new Account. Bound into the pending-auth entry and replayed at callback.
+   * An existing Account to re-authorize (d-v5fyd7xd); omit for a new Account.
+   * Bound into the pending-auth entry and replayed at callback.
    */
   readonly accountId?: number
 }
@@ -115,7 +115,7 @@ export async function completeAuthorization(
   })
 
   // 3. A Daemon needs the refresh token; without it the grant is useless.
-  //    Surface a retry instruction and store nothing (oauth-flow.md).
+  //    Surface a retry instruction and store nothing.
   if (!tokens.refreshToken) {
     throw new MissingRefreshTokenError()
   }

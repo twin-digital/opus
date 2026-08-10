@@ -1,6 +1,5 @@
 /**
- * `/api/accounts` — the Account list + detail the Accounts page reads
- * (ui-design.md "Accounts + OAuth onboarding").
+ * `/api/accounts` — the Account list + detail the Accounts page reads.
  *
  *  - `GET /api/accounts` — one row per live Account: name, provider, active
  *    Pipeline (name + id), last poll, poll cadence, and a derived **status**.

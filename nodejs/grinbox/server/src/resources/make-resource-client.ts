@@ -18,12 +18,12 @@
  * Resource (matching the `operators/types.ts` interfaces) — an Operator cannot
  * call an operation it didn't declare because the method isn't present.
  *
- * Event `details_json` and usage shapes match data-model.md exactly
- * (`triage_events` event types + `triage_operator_runs.resource_usage_json`).
+ * Every attempt is recorded against the run that made it (d-coeyvi2n), as a
+ * `triage_events` row plus `triage_operator_runs.resource_usage_json`.
  *
  * **Decoupling.** This layer reads the `limits`/counter tables (policy) but
  * never the `credentials` table — the underlying clients receive their
- * auth/config by injection (S6/M2 fills those). See {@link UnderlyingClients}.
+ * auth/config by injection. See {@link UnderlyingClients}.
  */
 
 import type { Resource } from '@grinbox/shared'
@@ -48,8 +48,7 @@ import { checkAndConsumeLimits } from './limits.js'
 import { policyFor, withRetry } from './retry.js'
 
 /**
- * A `triage_events` payload the metered client accumulates per outcome. Shapes
- * match data-model.md "triage_events":
+ * A `triage_events` payload the metered client accumulates per outcome:
  *  - `resource_op_succeeded`: `{ resource, operation, ...op-specific }`
  *  - `resource_op_limited`:  `{ resource, operation, limit_id, scope }`
  *  - `resource_op_failed`:   `{ resource, operation, error }`
@@ -61,7 +60,7 @@ export interface ResourceEvent {
 
 /**
  * A delta merged into `triage_operator_runs.resource_usage_json`, keyed by
- * `"<resource>.<operation>"`. The worker (S7) sums these per key. Counters are
+ * `"<resource>.<operation>"`. The worker sums these per key. Counters are
  * additive (`calls`, `succeeded`, `skipped_by_limit`, `tokens_in`,
  * `tokens_out`, `cost_usd_micros`).
  */
@@ -80,7 +79,7 @@ export interface UsageDelta {
  * args/return shapes mirror the metered-client interfaces' payloads minus the
  * `ResourceOpResult` wrapper.
  *
- * S6/M2 builds these over real transports + resolved credentials; tests pass
+ * The daemon builds these over real transports + resolved credentials; tests pass
  * fakes. Constructing them is intentionally outside this module so the
  * metering/Limit layer stays decoupled from credential resolution.
  */
@@ -113,8 +112,8 @@ export interface UnderlyingClients {
 /**
  * Dependencies for the factory. `db`, `userId`, `messageId` drive the Limit
  * check; `signal` flows into the underlying ops + retry waits; `onEvent` /
- * `onUsage` are the accumulators the worker closes over (pipeline-runtime.md
- * `buildContext`); `clients` are the injected underlying clients.
+ * `onUsage` are the accumulators the worker closes over; `clients` are the
+ * injected underlying clients.
  */
 export interface ResourceClientFactoryDeps {
   readonly db: DB
@@ -344,7 +343,7 @@ function exposeOnly<C extends object>(client: C, operations: readonly string[]):
 
 /**
  * Build the {@link MakeResourceClient} `runOperator` calls once per declared
- * Resource. The worker (S7) constructs this factory closing over the timeout
+ * Resource. The worker constructs this factory closing over the timeout
  * signal + event/usage accumulators, then passes the returned function as
  * `runOperatorArgs.makeResourceClient`.
  */

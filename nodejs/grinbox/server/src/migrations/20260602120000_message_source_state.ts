@@ -5,7 +5,7 @@ import { type Kysely, sql } from 'kysely'
  * history independently of whether the Message still lives in the backend inbox,
  * so the row is kept (never deleted) and instead carries the backend's current
  * disposition. The Inbox view defaults to `source_state = 'present'` (still in
- * the inbox) and can reveal the rest; see data-model.md "messages".
+ * the inbox) and can reveal the rest (d-jr86qq8b).
  *
  * Forward-only, matching the initial migration (no `down`).
  *

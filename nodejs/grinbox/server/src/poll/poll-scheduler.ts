@@ -1,7 +1,6 @@
 /**
- * The poll scheduler (pipeline-runtime.md "Process model → Poll loop"). One of
- * the Daemon's two conceptual loops: on a cadence it finds Accounts that are due
- * for a poll, resolves each to a {@link Provider} via the injected
+ * The poll scheduler (d-8fvu0g4z). One of the Daemon's two conceptual loops: on
+ * a cadence it finds Accounts that are due for a poll, resolves each to a {@link Provider} via the injected
  * {@link ProviderFactory}, and runs one {@link pollAccount} cycle per Account.
  *
  * ## Cadence vs. per-Account interval
@@ -187,8 +186,8 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
   /**
    * Select eligible Accounts (non-deleted, with an active Pipeline). When
    * `dueOnly` (the scheduled tick), additionally require the per-Account interval
-   * to have elapsed (data-model.md idx_accounts_polling); a manual sync/resync
-   * drops that clause to act on every eligible Account immediately.
+   * to have elapsed (d-nq4fk2xr); a manual sync/resync drops that clause to act
+   * on every eligible Account immediately (d-3rav7te6).
    */
   async function selectAccounts(now: number, dueOnly: boolean): Promise<PollableAccount[]> {
     const rows = (await db

@@ -1,6 +1,5 @@
 /**
- * One poll cycle for a single Account (pipeline-runtime.md "Provider polling
- * (Gmail)" + "Process model → Poll loop").
+ * One poll cycle for a single Account (d-8fvu0g4z, d-sj4u6eyj).
  *
  * {@link pollAccount} drives the read path the Provider exposes and turns its
  * output into State-DB writes:

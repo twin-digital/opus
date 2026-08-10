@@ -21,6 +21,7 @@
     "dev": "tsx watch src/main.ts",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "release-assets": "node scripts/build-release-bundle.js",
     "start": "node dist/main.js",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
@@ -55,7 +56,8 @@
     "tsx": "^4.19.2",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "yaml": "catalog:"
   },
   "engines": {
     "node": "24.x",

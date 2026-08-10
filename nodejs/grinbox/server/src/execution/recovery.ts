@@ -1,6 +1,6 @@
 /**
- * Startup recovery sweep (pipeline-runtime.md "Daemon lifecycle → Startup
- * sequence"). A previous Daemon process may have crashed (or been killed at the
+ * Startup recovery sweep (d-6fdulczu). A previous Daemon process may have
+ * crashed (or been killed at the
  * shutdown hard-timeout) with `triage_operator_runs` rows still `running` — work
  * that is no longer in flight. This sweep marks every such row `failed` with
  * `error_summary='daemon interrupted'`, then settles any Triage those rows

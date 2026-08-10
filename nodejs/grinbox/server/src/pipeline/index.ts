@@ -1,6 +1,6 @@
 /**
- * Pipeline write-pattern + validation surface (S2/S3). The execution loop (S7),
- * poll loop (S8), and HTTP routes consume this barrel: validation + the
+ * Pipeline write-pattern + validation surface. The execution loop, poll loop,
+ * and HTTP routes consume this barrel: validation + the
  * `withPipelineEditLock`-wrapped mutations, Triage enqueue, the optimistic
  * claim, and run-completion/settlement.
  */

@@ -1,6 +1,5 @@
 /**
- * `/api/messages` — the Inbox browser + Message detail (ui-design.md "Inbox /
- * Message browser" and "Message detail").
+ * `/api/messages` — the Inbox browser + Message detail (d-mu0k7nbu).
  *
  *  - `GET /api/messages` — paginated Inbox. Filters: `accountId`, `pipelineId`,
  *    `status` (latest Triage status), `tagKey` (+ optional `tagValue`)

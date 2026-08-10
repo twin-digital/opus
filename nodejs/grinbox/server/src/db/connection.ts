@@ -6,7 +6,7 @@ import type { Database } from './schema.js'
  * Open the State DB at `path` and wrap it in a typed Kysely instance.
  *
  * The connection is opened once at Daemon startup and kept open for the process
- * lifetime (see architecture.md "State"). `better-sqlite3` is synchronous,
+ * lifetime (d-dbjiycvl). `better-sqlite3` is synchronous,
  * which matches the single-process workload.
  *
  * PRAGMAs:

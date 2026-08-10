@@ -1,7 +1,6 @@
 /**
- * Execution-loop worker (pipeline-runtime.md "Worker pool" → `workerRun` /
- * `buildContext`). Given a *claimed* `triage_operator_runs` row (already flipped
- * to `running`), it:
+ * Execution-loop worker. Given a *claimed* `triage_operator_runs` row (already
+ * flipped to `running`), it:
  *
  *  1. Loads the Message row from the run's denormalized `message_id`; when the
  *     Operator consumes the Message body it lazily fetches + caches it first
@@ -245,8 +244,8 @@ function ref(run: WorkerRunRow, pipelineId: number): RunRef {
 
 /**
  * Merge a {@link UsageDelta} into the accumulating usage map, keyed by
- * `"<resource>.<operation>"`, summing each numeric counter (data-model
- * `resource_usage_json`).
+ * `"<resource>.<operation>"`, summing each numeric counter into
+ * `resource_usage_json`.
  */
 function mergeUsage(usage: Record<string, Record<string, number>>, resourceOp: string, delta: UsageDelta): void {
   const bucket = usage[resourceOp] ?? {}

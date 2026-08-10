@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  * `@aws-sdk/client-bedrock-runtime` is mocked so `makeBedrockSend` builds a
  * client whose `.send` returns a canned Anthropic Messages response — no network,
  * no real AWS client. `mailbox` / `mail_sender` / `pushover_api` stay "not
- * configured" stubs (M2), so we assert those still throw.
+ * configured" stubs, so we assert those still throw.
  */
 
 // --- bedrock SDK mock -------------------------------------------------------

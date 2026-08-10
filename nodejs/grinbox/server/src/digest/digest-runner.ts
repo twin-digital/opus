@@ -1,8 +1,7 @@
 /**
  * Executes one claimed digest run: deterministic collation of the coverage
  * window's Messages into the edition's sections, then one metered send
- * (docs/digest-design.md "Digest-time: deterministic collation"). All
- * per-Message judgment happened at Triage time (the `digest_category` Tag and
+ * (d-r8iz7u3q). All per-Message judgment happened at Triage time (the `digest_category` Tag and
  * any extracted field Tags); this runner selects, groups, renders, reconciles,
  * and sends — it makes zero model calls unless sections opt into `llm` prose
  * blocks.

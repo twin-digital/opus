@@ -1,6 +1,5 @@
 /**
- * Gmail OAuth token storage + lifecycle (oauth-flow.md "Token storage and
- * lifecycle"; data-model.md `credentials`).
+ * Gmail OAuth token storage + lifecycle (d-v5fyd7xd, d-xe41okh9).
  *
  * A `gmail_oauth` Credential's decrypted payload is
  * `{ refresh_token, access_token, access_token_expires_at, scopes }`, encrypted
@@ -13,7 +12,7 @@
  *
  * Every `change_log` row written here carries **non-secret metadata only** —
  * `kind`, `account_id`, `created_at`, `updated_at`, action — never `data_enc`
- * (data-model.md `credentials`). Tokens are never logged.
+ * (d-8yht1ei9). Tokens are never logged.
  */
 
 import type { Kysely } from 'kysely'
@@ -25,7 +24,7 @@ import { type GoogleOAuthClient, InvalidGrantError, type RefreshResult } from '.
 /** The `kind` discriminator for Gmail OAuth credentials. */
 export const GMAIL_OAUTH_KIND = 'gmail_oauth'
 
-/** The decrypted `gmail_oauth` credential payload (data-model.md `credentials`). */
+/** The decrypted `gmail_oauth` credential payload. */
 export const gmailTokenPayloadSchema = z.object({
   refresh_token: z.string().min(1),
   access_token: z.string(),
@@ -50,7 +49,7 @@ export function decryptTokenPayload(encryptor: Encryptor, dataEnc: Buffer): Gmai
 
 /**
  * The non-secret credential metadata recorded in `change_log` before/after.
- * Deliberately excludes `data_enc` (data-model.md `credentials`).
+ * Deliberately excludes `data_enc` (d-8yht1ei9).
  */
 function credentialMetadata(meta: {
   kind: string
@@ -68,7 +67,7 @@ function credentialMetadata(meta: {
  *
  *  1. Soft-delete any existing live `gmail_oauth` Credential for the Account
  *     (the re-auth path; a no-op on first authorization). This keeps each grant
- *     boundary auditable rather than mutating in place (oauth-flow.md "Re-auth").
+ *     boundary auditable rather than mutating in place (d-v5fyd7xd).
  *  2. INSERT the new Credential with the encrypted payload.
  *  3. Write a `change_log` row (`action='created'`, non-secret metadata).
  *
@@ -167,7 +166,7 @@ export async function storeGmailCredential(
 
 /**
  * Refresh-before-expiry skew: refresh when the access token expires within this
- * many seconds (oauth-flow.md "Refresh" — "a small skew (e.g. 5 minutes)").
+ * many seconds (d-v5fyd7xd).
  */
 export const ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 5 * 60
 
@@ -201,7 +200,7 @@ export class NeedsReauthError extends Error {
  *  2. If `access_token_expires_at` is within the refresh skew, refresh via the
  *     refresh token, persist the new `access_token` + `access_token_expires_at`,
  *     bump `updated_at`, and write a `change_log` row (`actor_user_id=NULL`,
- *     `action='updated'`, reflecting only `updated_at` moving — data-model.md).
+ *     `action='updated'`, reflecting only `updated_at` moving).
  *  3. On `invalid_grant`: soft-delete the Credential, write a `change_log`
  *     `deleted` row, and throw {@link NeedsReauthError}. With no live credential
  *     remaining, the production ProviderFactory resolves `null` and the poll loop
@@ -267,7 +266,7 @@ export async function resolveGmailAccessToken(
   await db.transaction().execute(async (tx) => {
     await tx.updateTable('credentials').set({ data_enc: dataEnc, updated_at: now }).where('id', '=', row.id).execute()
     // Audit the refresh with non-secret metadata only: before/after reflect
-    // `updated_at` moving and nothing else (data-model.md `credentials`).
+    // `updated_at` moving and nothing else (d-8yht1ei9).
     await tx
       .insertInto('change_log')
       .values({

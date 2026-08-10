@@ -1,7 +1,7 @@
 /**
  * The `/api` write router: the mutating routes the web UI calls to edit
  * Pipelines/Operators, assign Pipelines to Accounts, replay Messages, and manage
- * Limits + the notification Credential (ui-design.md "mutating actions").
+ * Limits + the notification Credential.
  *
  * Every route delegates to a documented write-pattern helper
  * (`pipeline/operator-save.ts`, `pipeline/pipeline-config.ts`,

@@ -1,6 +1,6 @@
 /**
- * Cron occurrence math for the digest scheduler, over `croner` patterns
- * (architecture.md tech stack). A `Cron` constructed without a callback is a
+ * Cron occurrence math for the digest scheduler, over `croner` patterns. A
+ * `Cron` constructed without a callback is a
  * pure pattern object — nothing is scheduled; only `nextRun(from)` is used.
  *
  * The scheduler needs one question answered per tick: *what is the most recent

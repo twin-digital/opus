@@ -1,16 +1,14 @@
 /**
- * Triage enqueue (S2). Per data-model "Triage enqueue" / pipeline-runtime.md
- * "Triage lifecycle → Creation": a single transaction INSERTs the `triages` row
- * (`running`, `started_at`), then one `triage_operator_runs` row per enabled
+ * Triage enqueue: a single transaction INSERTs the `triages` row (`running`,
+ * `started_at`), then one `triage_operator_runs` row per enabled
  * *message-triggered* Operator, snapshotting
- * `(type_key, type_code_version, op_config_json)`.
+ * `(type_key, type_code_version, op_config_json)` (d-nr71oscu).
  *
  * ## Triage-creation recheck semantics
  *
  * Before snapshotting runs, a lightweight recheck confirms the Pipeline is still
- * structurally valid (pipeline-runtime.md "Contract validation lifecycle → At
- * Triage creation"). If invalid, the Triage is marked `failed` immediately with
- * NO runs inserted.
+ * structurally valid (d-8y8i45y2). If invalid, the Triage is marked `failed`
+ * immediately with NO runs inserted.
  *
  * The recheck uses {@link validatePipeline} (shared's declarative registry over
  * every declared type) — NOT the behavioral registry. Hard-invalid (unknown
@@ -26,7 +24,7 @@
  * not per-Message — so enqueue inserts no `triage_operator_runs` row for it.
  *
  * Enqueue does not consult the behavioral registry at all; runtime
- * dispatchability is the execution loop's concern (S7).
+ * dispatchability is the execution loop's concern.
  */
 
 import { isScheduledOperatorType, operatorTypeKeySchema } from '@grinbox/shared'

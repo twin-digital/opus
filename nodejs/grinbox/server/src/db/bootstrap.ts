@@ -6,7 +6,7 @@
  * seeding demo data.
  *
  * This is install-time seeding: it bypasses `change_log` (the seeded rows are
- * part of the install, not an action by anyone — data-model.md "Audit").
+ * part of the install, not an action by anyone).
  */
 
 import type { DB } from './schema.js'

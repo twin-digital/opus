@@ -1,12 +1,11 @@
 /**
- * `/api/operators` — Operator-editor support endpoints (ui-design.md §4
- * "Operator editor").
+ * `/api/operators` — Operator-editor support endpoints.
  *
- *  - `POST /api/operators/preview` — the Rule-based Tagger **live preview**.
- *    Evaluates a *draft* config against the most-recent Messages currently
- *    triaged under a Pipeline and returns the impact diff: which Messages'
- *    output Tag value would change. Read-only — no writes, no external calls.
- *    Powers the editor's live-preview pane (M4).
+ *  - `POST /api/operators/preview` — the Rule-based Tagger **live preview**
+ *    (d-npq16z9p). Evaluates a *draft* config against the most-recent Messages
+ *    currently triaged under a Pipeline and returns the impact diff: which
+ *    Messages' output Tag value would change. Read-only — no writes, no
+ *    external calls. Powers the editor's live-preview pane.
  *
  * The preview reuses {@link evaluateRuleBasedTagger} — the same pure
  * first-match-wins decision the live Operator's `run` uses — so the preview can

@@ -198,7 +198,11 @@ describe('Operator write routes', () => {
     )
     expect(res.status).toBe(200)
     const row = await db.selectFrom('operators').select('config_json').where('id', '=', opId).executeTakeFirstOrThrow()
-    expect((JSON.parse(row.config_json) as { output_value_enum: string[] }).output_value_enum).toEqual(['high', 'mid', 'low'])
+    expect((JSON.parse(row.config_json) as { output_value_enum: string[] }).output_value_enum).toEqual([
+      'high',
+      'mid',
+      'low',
+    ])
     const log = await changeLog(db, 'operator', opId)
     expect(log.at(-1)?.action).toBe('updated')
   })

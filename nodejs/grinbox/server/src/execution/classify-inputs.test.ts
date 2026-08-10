@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { type ClassifyRun, classifyInputs } from './classify-inputs.js'
 
 /**
- * Pure-function tests for input classification (pipeline-runtime.md "Input
- * classification"). No DB, no registry — the loop resolves Contracts and Tags
+ * Pure-function tests for input classification (d-2gyfmt8m, d-16geyxco). No DB,
+ * no registry — the loop resolves Contracts and Tags
  * then hands the facts to this function.
  */
 

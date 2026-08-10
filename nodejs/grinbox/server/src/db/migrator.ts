@@ -12,17 +12,14 @@ const provider: MigrationProvider = {
 
 /**
  * Run all pending migrations. Called by the Daemon at startup, before the State
- * DB is opened for normal operation (see data-model.md "Migrations"). Throws on
- * the first failure; the Daemon turns that into a non-zero exit (T0.4's
- * concern), and systemd restarts on its own schedule.
+ * DB is opened for normal operation. Throws on the first failure; the Daemon
+ * turns that into a non-zero exit, and systemd restarts on its own schedule.
  *
- * Migration bookkeeping note: data-model.md specifies a `schema_migrations`
- * table with `(name, applied_at)`. Kysely's `Migrator` owns its bookkeeping
- * table and creates it with a fixed shape — `(name TEXT PK, timestamp TEXT NOT
- * NULL)` — so the column is `timestamp`, not `applied_at`. We honor the table
- * *name* (`migrationTableName: 'schema_migrations'`) but follow Kysely's
- * required column shape, since the Migrator both creates and reads that table.
- * Nothing else queries `applied_at`; the divergence is contained to this table.
+ * Migration bookkeeping note: Kysely's `Migrator` owns its bookkeeping table and
+ * creates it with a fixed shape — `(name TEXT PK, timestamp TEXT NOT NULL)`. The
+ * table is named `schema_migrations` (`migrationTableName`); its column shape is
+ * Kysely's, since the Migrator both creates and reads that table. Nothing else
+ * queries it.
  */
 export async function runMigrations(db: Kysely<Database>): Promise<void> {
   const migrator = new Migrator({

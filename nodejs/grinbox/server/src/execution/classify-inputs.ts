@@ -1,6 +1,5 @@
 /**
- * Execution-loop input classification (pipeline-runtime.md "Input
- * classification"). A pure function over already-resolved data: it decides
+ * Execution-loop input classification (d-2gyfmt8m). A pure function over already-resolved data: it decides
  * whether a `pending` Operator run's declared input Tag keys are all available
  * in the Triage (`satisfied`), are blocked because the Operator that owns a key
  * has failed/skipped/produced-nothing (`definitively_missing` → cascade skip),
@@ -56,8 +55,7 @@ export type ClassifyResult =
     }
 
 /**
- * Classify a run's inputs (pipeline-runtime.md). For each declared input Tag
- * key:
+ * Classify a run's inputs. For each declared input Tag key:
  *  - present in `tagsInTriage` → satisfied
  *  - else find the sibling run that owns the key (declares it as an output):
  *    - owner `failed`/`skipped` → definitively_missing (cascade skip)

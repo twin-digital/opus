@@ -3,7 +3,7 @@
  * Category). Actions declare no input Tags in their Contract, so the Pipeline
  * always treats them as *eligible*; the optional `when` clause in their config
  * is the runtime condition that decides whether the Action actually fires
- * (architecture.md "Operator model" → Actions). When `when` is absent the
+ * (d-cgosh169). When `when` is absent the
  * Action always fires (backward-compatible); when present it fires only if the
  * current Triage's Tag for `when.tag_key` is one of `when.equals`.
  */

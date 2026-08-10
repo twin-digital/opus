@@ -1,7 +1,6 @@
 /**
  * The Limit engine: the per-attempt enforcement of the per-User `limits` rows
- * (data-model.md "Limits", pipeline-runtime.md "Limit check, per attempted
- * operation"). Given an attempted Resource operation, it checks every matching
+ * (d-isyan49o). Given an attempted Resource operation, it checks every matching
  * `limits` row and, if all allow, increments the relevant counters; if any
  * denies it reports the first denying Limit and does NOT increment anything.
  *
@@ -22,8 +21,7 @@
  * **Increment-once semantics.** The check-and-increment runs exactly once per
  * *operation attempt*. The retry wrapper (retry.ts) must call this once, before
  * its retry loop — retries of the underlying API do not re-check or re-increment
- * (pipeline-runtime.md: "All retries within a single operation count once
- * against the Limit").
+ * (d-eqwrgoyv).
  *
  * **Atomicity.** The whole "read every matching Limit, decide, increment the
  * allowed ones" sequence runs inside a single `BEGIN IMMEDIATE` transaction on a

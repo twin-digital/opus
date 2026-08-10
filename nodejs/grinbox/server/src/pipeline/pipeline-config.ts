@@ -8,8 +8,7 @@
  * inside {@link withPipelineEditLock} (`BEGIN IMMEDIATE`) so the name-uniqueness
  * read-check (against `idx_pipelines_name_active`) and the write are atomic
  * against a concurrent create of the same name, and so every config mutation
- * goes through one locking helper. Each writes a `change_log` row per
- * data-model "Audit".
+ * goes through one locking helper. Each writes a `change_log` row.
  */
 
 import type { Kysely } from 'kysely'

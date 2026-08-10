@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EXTRACTED_STRING_MAX_CHARS, comparesOver, normalizeExtractedValue } from './normalize-extracted.js'
 
 /**
- * Spec: docs/digest-design.md "Field extraction" (the stored-forms table) +
- * the normalize-extracted module header. Normalization is code, not model
+ * Spec: d-dmwaark1 + the normalize-extracted module header. Normalization is code, not model
  * behavior: canonical forms in, canonical forms out, and anything that
  * doesn't normalize returns null (the caller drops the Tag).
  */

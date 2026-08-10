@@ -6,10 +6,10 @@
  * backend-neutral operation names live at the Resource seam, not here.
  *
  * Auth is an injected seam: the caller supplies a {@link GmailAuthProvider} that
- * yields a usable OAuth2 client (or, for tests, a mock). S6/M2 wire the real
- * token source (decrypting the `gmail_oauth` Credential and refreshing as
- * needed); S4 never reads the `credentials` table. This keeps the metering layer
- * decoupled from credential resolution.
+ * yields a usable OAuth2 client (or, for tests, a mock). The token source
+ * (decrypting the `gmail_oauth` Credential and refreshing as needed) is wired in
+ * by the daemon; this layer never reads the `credentials` table, which keeps the
+ * metering layer decoupled from credential resolution.
  *
  * `googleapis` (`google.gmail`) is the transport. `google` is a value import
  * (used to construct the gmail service); the request/response shapes are typed
@@ -32,9 +32,8 @@ export type GmailOAuth2Client = OAuth2Client
 
 /**
  * Supplies the authenticated OAuth2 client for a given Gmail call. Async because
- * the real implementation (S6/M2) may refresh an expired access token before
- * returning. Injected so tests pass a stub and S4 stays free of credential
- * logic.
+ * the real implementation may refresh an expired access token before returning.
+ * Injected so tests pass a stub and this layer stays free of credential logic.
  */
 export type GmailAuthProvider = () => Promise<GmailOAuth2Client>
 

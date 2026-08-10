@@ -9,12 +9,7 @@
 //
 // Scoped to test files and the shared fixtures they build on. Production code is
 // held to the base config.
-const testFiles = [
-  'src/**/*.test.ts',
-  'src/**/test-support.ts',
-  'src/**/test-helpers.ts',
-  'src/operators/testing.ts',
-]
+const testFiles = ['src/**/*.test.ts', 'src/**/test-support.ts', 'src/**/test-helpers.ts', 'src/operators/testing.ts']
 
 export default [
   {

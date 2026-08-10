@@ -1,12 +1,10 @@
 /**
- * `/api/activity` — the Activity Log feed (ui-design.md "Activity Log"):
- * operational events about Grinbox itself, most-recent-first, filterable by
- * severity and Resource.
+ * `/api/activity` — the Activity Log feed (r-56o7qts0): operational events
+ * about Grinbox itself, most-recent-first, filterable by severity and Resource.
  *
  * MVP sourcing note: daemon-level events (startup / shutdown / fetch errors)
- * are written to the systemd journal, NOT the State DB (data-model.md "Metrics
- * dashboard": "Daemon-level events go to logs"). So the DB-backed feed unions
- * the run-derived sources:
+ * are written to the systemd journal, NOT the State DB. So the DB-backed feed
+ * unions the run-derived sources (d-4t7lf4wd):
  *   - `triage_events` rows with `event_type IN ('resource_op_limited',
  *     'resource_op_failed')` — Limit hits and Resource-op failures,
  *   - failed `triage_operator_runs` (`status = 'failed'`) — Operator runtime

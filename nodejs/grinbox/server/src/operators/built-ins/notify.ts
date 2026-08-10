@@ -1,16 +1,16 @@
 /**
  * O4 — Notify. An Action that sends an out-of-band push to the user (Pushover
- * today) when the current Triage warrants it (glossary "Notify",
- * architecture.md "Operator model" → Actions). It declares no output Tags;
+ * today) when the current Triage warrants it (d-oectpw7n). It declares no
+ * output Tags;
  * its effect is the side effect on `pushover_api.send_notification`.
  *
  * Two gates decide whether the push fires:
  *  1. The operator-level `when` clause (see `action-gate.ts`) — a clean no-op
  *     when the Triage's gated Tag doesn't match, so an always-eligible Action
  *     can still pick the Triages it cares about (e.g. urgency ∈ [high]).
- *  2. The per-Message Limit on the operation (glossary "Notify": default 1),
- *     enforced inside the metered client. A replay of the same Message returns
- *     `skipped_by_limit`, which is the documented dedupe path — NOT a failure.
+ *  2. The per-Message Limit on the operation (default 1), enforced inside the
+ *     metered client. A replay of the same Message returns `skipped_by_limit`,
+ *     which is the dedupe path (d-isyan49o) — NOT a failure.
  *
  * Declares `pushover_api.send_notification` (the static Contract for `notify`).
  * The **real** Pushover client (a later task) owns auth via the referenced
@@ -35,7 +35,7 @@ export class NotifyError extends Error {
  *  - `succeeded`: done.
  *  - `skipped_by_limit`: clean no-op. An Action's external effect is optional —
  *    the per-Message Limit is exactly how a replayed Triage avoids re-notifying
- *    (glossary "Notify"), so a Limit skip is the expected dedupe outcome, not a
+ *    (r-zagpfz75), so a Limit skip is the expected dedupe outcome, not a
  *    failed run. (Contrast the LLM Tagger, whose Tags are required.)
  *  - `failed`: throw (the worker marks the run failed).
  *

@@ -1,5 +1,5 @@
 /**
- * The Hono `/oauth/*` routes (oauth-flow.md "The flow"). Two endpoints:
+ * The Hono `/oauth/*` routes (d-a1pf497w). Two endpoints:
  *
  *  - `POST /oauth/start` — **internal**. The SPA calls it to begin a flow;
  *    returns the consent URL for `window.open`. Optionally binds an existing
@@ -36,7 +36,7 @@ export interface OAuthRouteDeps {
   /**
    * Explicit `postMessage` target origin (the SPA's internal origin). When
    * `undefined`, the page posts with `'*'` and relies on the SPA-side
-   * `event.origin` check (oauth-flow.md "Cross-origin postMessage").
+   * `event.origin` check.
    */
   readonly openerOrigin?: string
 }

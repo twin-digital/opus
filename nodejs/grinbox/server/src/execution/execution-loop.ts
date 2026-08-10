@@ -1,6 +1,6 @@
 /**
- * The execution loop (pipeline-runtime.md "Execution loop" + "Worker pool").
- * Pulls ready `triage_operator_runs` rows FIFO, classifies their inputs, claims
+ * The execution loop (d-2gyfmt8m). Pulls ready `triage_operator_runs` rows
+ * FIFO, classifies their inputs, claims
  * the satisfied ones, dispatches each to a worker (bounded by the pool size),
  * and cascade-skips the definitively-missing ones. Coordination is entirely
  * through the State DB — no per-Triage state outlives a worker.

@@ -1,6 +1,5 @@
 /**
- * Poll-loop surface (pipeline-runtime.md "Process model → Poll loop"). The
- * daemon constructs the scheduler here with the production {@link
+ * Poll-loop surface. The daemon constructs the scheduler here with the production {@link
  * ProviderFactory}, `start()`s it after the execution loop, and `stop()`s it in
  * the shutdown sequence. Tests drive `pollDueAccounts`/`pollAccount` directly.
  *

@@ -1,8 +1,8 @@
 /**
- * The server-side Operator framework surface (S1). Composes the behavioral
- * layer (`run`, `code_version`, credential-ref extraction, `runOperator`) onto
- * `@grinbox/shared`'s declarative registry. The worker (S7), save-time
- * validation (S2/S3), and later Operator waves (O2+) consume this barrel.
+ * The server-side Operator framework surface. Composes the behavioral layer
+ * (`run`, `code_version`, credential-ref extraction, `runOperator`) onto
+ * `@grinbox/shared`'s declarative registry. The worker, save-time validation,
+ * and the built-in Operator types consume this barrel.
  */
 
 export type {

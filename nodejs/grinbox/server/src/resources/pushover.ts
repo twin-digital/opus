@@ -3,15 +3,15 @@
  * metering/Limit layer. Posts to the Pushover messages API.
  *
  * Both the transport (a `fetch`-like function) and the credentials are injected:
- * S6/M2 supplies the real `globalThis.fetch` and decrypts the `pushover`
- * Credential (`{ app_token, user_key }`) to fill {@link PushoverCredentials}; S4
- * never reads the `credentials` table. Tests pass a fake fetch + dummy creds.
+ * the daemon supplies the real `globalThis.fetch` and decrypts the `pushover`
+ * Credential (`{ app_token, user_key }`) to fill {@link PushoverCredentials};
+ * this layer never reads the `credentials` table. Tests pass a fake fetch + dummy creds.
  */
 
 /** The Pushover API endpoint; overridable for tests. */
 export const PUSHOVER_MESSAGES_URL = 'https://api.pushover.net/1/messages.json'
 
-/** Decrypted Pushover credential payload (data-model.md `credentials` kind). */
+/** Decrypted Pushover credential payload. */
 export interface PushoverCredentials {
   readonly appToken: string
   readonly userKey: string

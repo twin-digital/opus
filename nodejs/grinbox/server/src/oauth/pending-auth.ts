@@ -1,7 +1,7 @@
 /**
  * The pending-auth store: a short-TTL, single-use map of `state → { pkceVerifier,
  * accountId?, createdAt }` correlating an internal `/oauth/start` with the public
- * `/oauth/callback` (oauth-flow.md "The flow").
+ * `/oauth/callback` (d-a1pf497w).
  *
  * In-memory is the right shape for the single-process Daemon: the entire flow
  * begins and ends within one process lifetime, and a flow that outlives its
@@ -9,7 +9,7 @@
  * is that **a Daemon restart mid-consent fails the in-flight flow** — the
  * operator simply clicks Add Account again. Persisting these to the DB would buy
  * nothing for that window and would add a table whose only content is ephemeral
- * single-use secrets; the data-model deliberately has no such table.
+ * single-use secrets.
  *
  * Two invariants the store enforces:
  *  - **Single-use.** {@link PendingAuthStore.consume} atomically deletes the
@@ -24,7 +24,7 @@ export interface PendingAuth {
   readonly pkceVerifier: string
   /**
    * The existing Account this flow re-authorizes, or `undefined` for a new
-   * Account (oauth-flow.md "Re-auth"). The callback binds to it instead of
+   * Account (d-v5fyd7xd). The callback binds to it instead of
    * creating a fresh Account.
    */
   readonly accountId?: number
@@ -47,7 +47,7 @@ export interface PendingAuthStore {
   size(): number
 }
 
-/** Default pending-auth TTL: 5 minutes (oauth-flow.md "short TTL"). */
+/** Default pending-auth TTL: 5 minutes (d-a1pf497w). */
 export const DEFAULT_PENDING_AUTH_TTL_MS = 5 * 60 * 1000
 
 export interface PendingAuthStoreOptions {

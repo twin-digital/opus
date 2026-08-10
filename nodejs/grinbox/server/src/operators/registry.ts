@@ -2,8 +2,8 @@
  * The server-side behavioral Operator-type registry. Each entry is the full
  * per-type tuple: `@grinbox/shared`'s declarative members (`configSchema`,
  * `contractFromConfig`) composed with the behavioral members (`code_version`,
- * `run`, `extractCredentialRefsFromOperatorConfig`). This is the single
- * registration site the data-model's "implementation notes" reference.
+ * `run`, `extractCredentialRefsFromOperatorConfig`). It is the one registration
+ * site for the closed set of Operator types (d-5n8oyi8c).
  *
  * ## What registration means
  *
@@ -22,7 +22,7 @@
  * Every built-in starts at the monotonic string `'1'`. When a type's runtime
  * behavior changes in a way old snapshots must NOT dispatch into, bump to `'2'`
  * (and keep the `'1'` code path while any in-flight snapshot may still carry
- * it — pipeline-runtime.md "Operator-type code version changes"). The string is
+ * it — d-nr71oscu). The string is
  * compared by equality, not parsed; `'1'` < `'2'` is a human convention, not a
  * code one.
  */
@@ -84,8 +84,8 @@ export class UnknownOperatorTypeError extends Error {
 
 /**
  * Resolves a snapshotted `(type_key, type_code_version)` to its behavioral
- * registration, used at the Triage-creation recheck (pipeline-runtime.md
- * "Contract validation lifecycle" → "At Triage creation"). Throws a clear
+ * registration, used at the Triage-creation recheck (d-8y8i45y2). Throws a
+ * clear
  * {@link UnknownOperatorTypeError} if the type isn't implemented or the
  * snapshotted code version doesn't match the deployed one — the caller turns
  * that into a failed Triage / failed run.

@@ -25,8 +25,7 @@ import { version } from './version.js'
 
 /**
  * A running Daemon: the live HTTP server and State DB connection, plus a
- * `shutdown` that performs the documented graceful-shutdown sequence
- * (pipeline-runtime.md "Shutdown"). Returned by {@link startDaemon} so a caller
+ * `shutdown` that performs the graceful-shutdown sequence. Returned by {@link startDaemon} so a caller
  * (the entrypoint, or a test) can stop it deterministically.
  */
 export interface Daemon {
@@ -45,8 +44,7 @@ export interface Daemon {
 }
 
 /**
- * Bring up the Daemon. Startup sequence (pipeline-runtime.md "Startup
- * sequence"), minus the loops that are later tasks:
+ * Bring up the Daemon. Startup sequence:
  *
  *   1. load + validate config
  *   2. open the State DB
@@ -112,7 +110,7 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
   // OAuth wiring: one in-memory pending-auth store for the process, and the live
   // Google client only when the OAuth client id+secret are configured. Without
   // them the `/oauth/*` routes report "not configured" rather than crashing boot
-  // (oauth-flow.md "Client credentials are deployment config"). The same Google
+  // (d-xe41okh9). The same Google
   // client backs both the live poll ProviderFactory and the per-run Gmail Action
   // client below, so it is built before either.
   const pendingAuthStore = createPendingAuthStore()

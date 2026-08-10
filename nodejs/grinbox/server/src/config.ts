@@ -11,15 +11,13 @@ import { z } from 'zod'
  * un-runnable.
  *
  * Validation is fail-fast: a missing/invalid required var throws, the daemon
- * logs and exits non-zero, and systemd restarts it (the documented contract in
- * pipeline-runtime.md "Crash-loop prevention").
+ * logs and exits non-zero, and systemd restarts it.
  */
 
 /** Decode a base64- or hex-encoded key string into raw bytes.
  *
- * Accepts either encoding so the host's secret-delivery mechanism
- * (docs/decisions/grinbox-secret-delivery.md) can hand us whichever is
- * convenient. Hex is detected first (strict `[0-9a-f]` of even length);
+ * Accepts either encoding so the host's secret-delivery mechanism can hand us
+ * whichever is convenient. Hex is detected first (strict `[0-9a-f]` of even length);
  * anything else is treated as base64. Returns `null` if neither decodes to a
  * non-empty buffer.
  */
@@ -48,11 +46,9 @@ function decodeKey(raw: string): Buffer | null {
 /**
  * The token-encryption key environment variable.
  *
- * Chosen as part of T0.4 so the daemon skeleton and the OAuth flow (S6) agree
- * on a single name. It carries the 32-byte (AES-256-GCM) key the host supplies
- * at startup; the application neither generates nor persists it (oauth-flow.md
- * "Encryption at rest", docs/decisions/grinbox-secret-delivery.md). Provided
- * base64- or hex-encoded.
+ * It carries the 32-byte (AES-256-GCM) key the host supplies at startup; the
+ * application neither generates nor persists it (d-9hyzpk7j, d-xe41okh9).
+ * Provided base64- or hex-encoded.
  */
 export const TOKEN_ENC_KEY_ENV = 'GRINBOX_TOKEN_ENC_KEY'
 
@@ -91,7 +87,7 @@ const configSchema = z.object({
 
   /**
    * HTTP listen host. Defaults to `0.0.0.0`: the Daemon "listens on its own IP
-   * and trusts every request from the deployment network" (architecture.md).
+   * and trusts every request from the deployment network" (d-qizjjf3n).
    */
   httpHost: z.string().min(1).default('0.0.0.0'),
 
@@ -101,8 +97,8 @@ const configSchema = z.object({
   /**
    * Absolute path to the built web SPA (the `index.html` + `assets/` tree Vite
    * emits to `packages/web/dist`). The daemon serves it as static assets with a
-   * client-side-routing fallback (architecture.md "Web UI": "served as static
-   * assets from the same Daemon").
+   * client-side-routing fallback: the assets are served from the same process as
+   * the API (d-ti7vexo3).
    *
    * Optional with an empty-string default. When unset, the static-serving layer
    * resolves the path relative to the compiled server: from `packages/server/dist`
@@ -117,17 +113,17 @@ const configSchema = z.object({
 
   // --- Optional now; consumed by later tasks ---
 
-  /** Gmail OAuth client id — consumed by the OAuth flow (S6). */
+  /** Gmail OAuth client id — consumed by the OAuth flow. */
   oauthClientId: z.string().min(1).optional(),
 
-  /** Gmail OAuth client secret — consumed by the OAuth flow (S6). */
+  /** Gmail OAuth client secret — consumed by the OAuth flow. */
   oauthClientSecret: z.string().min(1).optional(),
 
   /**
    * The registered Google OAuth redirect URI — the one-path public surface
-   * `https://grinbox.pegasuspad.com/oauth/callback` (oauth-flow.md "Network
-   * model"). Sent on the consent URL and used in the code exchange; must match
-   * the value registered on the OAuth client. Defaults to the documented URL so
+   * `https://grinbox.pegasuspad.com/oauth/callback` (d-a1pf497w). Sent on the
+   * consent URL and used in the code exchange; must match the value registered
+   * on the OAuth client. Defaults to the documented URL so
    * a standard deployment needs only the client id/secret.
    */
   oauthRedirectUri: z.string().min(1).default('https://grinbox.pegasuspad.com/oauth/callback'),
@@ -135,36 +131,36 @@ const configSchema = z.object({
   /**
    * The internal origin of the SPA that opens the consent popup
    * (`http://<daemon-ip>:PORT`). The callback's `postMessage` targets exactly
-   * this origin (oauth-flow.md "Cross-origin postMessage"); the SPA in turn
+   * this origin; the SPA in turn
    * verifies `event.origin` is the public callback origin. Optional: when unset,
    * the callback posts with `'*'` and relies on the SPA-side origin check — a
    * looser default acceptable for the lab-internal MVP, tightened by setting it.
    */
   oauthOpenerOrigin: z.string().min(1).optional(),
 
-  /** AWS region for the Bedrock LLM client (S4). */
+  /** AWS region for the Bedrock LLM client. */
   bedrockRegion: z.string().min(1).optional(),
 
   /**
    * Per-Operator execution timeout in milliseconds. The execution-loop worker
    * wraps each Operator run in an AbortController + timer of this duration
-   * (pipeline-runtime.md "Timeout enforcement"). A run that exceeds it (or whose
+   * (d-5xp2tv2d). A run that exceeds it (or whose
    * Operator ignores the abort signal) is marked `failed`.
    */
   operatorTimeoutMs: z.coerce.number().int().positive().default(30_000),
 
   /**
    * Execution-loop worker-pool size: the maximum number of Operator runs
-   * dispatched concurrently (pipeline-runtime.md "Worker pool"). Workers are
+   * dispatched concurrently. Workers are
    * async functions on the same event loop; the bottleneck is network I/O.
    */
   workerPoolSize: z.coerce.number().int().positive().default(3),
 
   /**
    * Poll-scheduler tick cadence in seconds: how often the in-process croner job
-   * wakes to look for *due* Accounts (pipeline-runtime.md "Process model → Poll
-   * loop"). This is the scheduler's heartbeat, NOT the per-Account poll
-   * interval: each Account is only polled once its own `poll_interval_seconds`
+   * wakes to look for *due* Accounts. This is the scheduler's heartbeat, NOT the
+   * per-Account poll interval (d-nq4fk2xr): each Account is only polled once its
+   * own `poll_interval_seconds`
    * has elapsed since its `last_polled_at`. A short tick (default 60s) keeps the
    * effective poll latency close to each Account's interval (default 600s)
    * without scheduling per-Account timers.
@@ -173,10 +169,10 @@ const configSchema = z.object({
 
   /**
    * Digest-scheduler tick cadence in seconds: how often the in-process croner
-   * job wakes to look for *due* digest occurrences (pipeline-runtime.md
-   * "Digest scheduler"). Like the poll tick, this is a heartbeat, not the
-   * digest cadence — each Digest delivery Operator fires on its own configured
-   * cron `schedule`; the tick only bounds how soon after a scheduled time the
+   * job wakes to look for *due* digest occurrences. Like the poll tick, this is
+   * a heartbeat, not the digest cadence — each Digest delivery Operator fires on
+   * its own configured cron `schedule` (d-6vnf59rv); the tick only bounds how
+   * soon after a scheduled time the
    * occurrence is noticed.
    */
   digestSchedulerTickSeconds: z.coerce.number().int().positive().default(60),

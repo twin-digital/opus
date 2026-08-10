@@ -1,8 +1,8 @@
 import { type Kysely, sql } from 'kysely'
 
 /**
- * Initial schema — the full Grinbox State DB, transcribed column-for-column
- * from data-model.md. Forward-only; no `down` (see data-model.md "Migrations").
+ * Initial schema — the full Grinbox State DB, the one SQLite file that holds
+ * every persistent record (d-dbjiycvl). Forward-only; no `down`.
  *
  * The DDL is issued as raw `sql` statements rather than via Kysely's schema
  * builder. Almost every table here carries a constraint the builder can't
@@ -195,7 +195,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db)
 
   // --- tags ---
-  // Composite FK is load-bearing: it must stay composite (see data-model.md).
+  // The FK must stay composite: a Tag is scoped to its Triage (d-urdglhb6).
   await sql`
     CREATE TABLE tags (
       triage_id    INTEGER NOT NULL,
@@ -223,7 +223,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db)
 
   // --- triage_events ---
-  // Composite FK is load-bearing: it must stay composite (see data-model.md).
+  // The FK must stay composite: an event belongs to one Triage's run.
   await sql`
     CREATE TABLE triage_events (
       triage_id     INTEGER NOT NULL,
@@ -287,7 +287,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       WHERE deleted_at IS NULL
   `.execute(db)
 
-  // --- query indexes (data-model.md "Indexes") ---
+  // --- query indexes ---
   await sql`
     CREATE INDEX idx_op_runs_pending ON triage_operator_runs
       (status, created_at)

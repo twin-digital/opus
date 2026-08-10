@@ -1,8 +1,7 @@
 /**
- * Operator-save write patterns (S2): create / edit / enable / disable /
+ * Operator-save write patterns: create / edit / enable / disable /
  * soft-delete, plus Credential soft-delete and Pipeline soft-delete. Each runs
- * inside {@link withPipelineEditLock} (`BEGIN IMMEDIATE`) per the data-model
- * "Write patterns".
+ * inside {@link withPipelineEditLock} (`BEGIN IMMEDIATE`).
  *
  * The Operator mutations share one read-validate-write skeleton:
  *  1. Read the Pipeline's enabled Operators' `(operator_id, type_key,
@@ -17,8 +16,7 @@
  *     reconcile `operator_credential_references`, write a `change_log` row.
  *
  * `type_code_version` is captured from the currently-deployed code at create and
- * refreshed on edit (pipeline-runtime.md "Operator-type code version changes"),
- * read from the server's behavioral registry (`currentCodeVersion`). Every
+ * refreshed on edit (d-nr71oscu), read from the server's behavioral registry (`currentCodeVersion`). Every
  * declared type is registered there; a type the registry didn't know would
  * capture the built-in starting `code_version` `'1'` and fail the runtime
  * runnability recheck at execution.
@@ -108,8 +106,8 @@ function assertSaveTimeChecks(op: OperatorForValidation, postState: readonly Ope
  * Reconciles `operator_credential_references` against the credential IDs an
  * Operator's `config_json` references: DELETE all current rows for the Operator,
  * then INSERT the current set. (A full replace is simplest and correct; the
- * sets are tiny.) Soft-deleted/disabled Operators still count as references per
- * the data-model, so this runs for enable/disable/edit alike — only
+ * sets are tiny.) Soft-deleted/disabled Operators still count as references,
+ * so this runs for enable/disable/edit alike — only
  * Operator-soft-delete clears the rows entirely.
  */
 async function reconcileCredentialRefs(
@@ -404,9 +402,8 @@ export async function softDeleteOperator(
 
     await tx.updateTable('operators').set({ deleted_at: ts, updated_at: ts }).where('id', '=', operatorId).execute()
 
-    // A soft-deleted Operator no longer uses its Credentials (data-model
-    // "Operator soft-delete"): drop its junction rows so they stop pinning the
-    // Credential against soft-delete.
+    // A soft-deleted Operator no longer uses its Credentials: drop its junction
+    // rows so they stop pinning the Credential against soft-delete.
     await tx.deleteFrom('operator_credential_references').where('operator_id', '=', operatorId).execute()
 
     await tx
@@ -429,9 +426,9 @@ export async function softDeleteOperator(
 
 /**
  * Soft-deletes a Credential, blocked if any live `operator_credential_references`
- * point at it (data-model "Credential soft-delete" — the FK doesn't fire on
- * soft-delete, so the gate is an explicit pre-UPDATE query). `change_log`
- * captures non-secret metadata only (kind, account_id), never `data_enc`.
+ * point at it (the FK doesn't fire on soft-delete, so the gate is an explicit
+ * pre-UPDATE query). `change_log` captures non-secret metadata only (kind,
+ * account_id), never `data_enc` (d-8yht1ei9).
  */
 export async function softDeleteCredential(
   db: Kysely<Database>,
@@ -486,8 +483,7 @@ export async function softDeleteCredential(
 // --- Pipeline soft-delete ---
 
 /**
- * Soft-deletes a Pipeline and cascades per data-model "Pipeline soft-delete":
- * cascade Operator soft-delete, free their credential references, NULL out
+ * Soft-deletes a Pipeline and cascades: cascade Operator soft-delete, free their credential references, NULL out
  * referencing Accounts' `active_pipeline_id`, DELETE `current_triages` for the
  * Pipeline. Historical `triages`/runs/tags/events are intentionally kept.
  */

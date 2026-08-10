@@ -1,9 +1,8 @@
 /**
  * O2 — LLM Tagger. A Tagger that produces its declared output Tags from a
- * single constrained LLM call (glossary "LLM Tagger", architecture.md "Tagger
- * types" → LLM Tagger). This single-call-many-Tags behavior is the main reason
- * to use an LLM Tagger over multiple Rule-based Taggers. Outputs come in two
- * forms (docs/digest-design.md "Field extraction"):
+ * single constrained LLM call (d-whkazlor, d-95wp1n7r). This
+ * single-call-many-Tags behavior is the main reason to use an LLM Tagger over
+ * multiple Rule-based Taggers. Outputs come in two forms (d-04s2n18o):
  *
  *  - **Enum outputs** (`value_enum`) — the model must answer with exactly one
  *    of the enum's values; every enum output is contractually required, so a
@@ -20,7 +19,7 @@
  * categories that need their fields.
  *
  * Declares `llm_bedrock.invoke_model` (the static Contract for `llm_tagger`).
- * The **real** Bedrock client (S4) owns HTTP retries, the inference-profile
+ * The **real** Bedrock client owns HTTP retries, the inference-profile
  * ARN, token metering, and event accumulation — this operator only calls
  * `invoke_model`, consumes the {@link ResourceOpResult}, and parses the text.
  */
@@ -249,7 +248,7 @@ async function run(input: OperatorRunInput<'llm_tagger'>): Promise<OperatorRunRe
   }
 }
 
-/** LLM Tagger uses no Credentials (Bedrock auth is client-side, in S4). */
+/** LLM Tagger uses no Credentials (Bedrock auth is client-side). */
 function extractCredentialRefsFromOperatorConfig(): number[] {
   return []
 }

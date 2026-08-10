@@ -13,7 +13,7 @@
  * an authenticated OAuth2 client. Because the seam is injected, the read path is
  * fully unit-testable now and drops onto real credentials without code change.
  *
- * **History API model** (pipeline-runtime.md "Provider polling (Gmail)"):
+ * **History API model** (d-8fvu0g4z):
  *  - First sync (no cursor): `users.messages.list` with the configured initial
  *    query (`in:inbox newer_than:30d`), returning the ids plus the latest
  *    `historyId` as the new cursor. The scope is the inbox (read-state
@@ -175,7 +175,7 @@ export function isHistoryIdExpired(err: unknown): boolean {
 export interface GmailProviderConfig {
   /**
    * Initial-sync window in days. The first-sync query is
-   * `in:inbox newer_than:<days>d` (pipeline-runtime.md). Default 30.
+   * `in:inbox newer_than:<days>d` (d-8fvu0g4z). Default 30.
    */
   readonly initialWindowDays: number
 }

@@ -1,6 +1,6 @@
 /**
- * `/api/dashboard` — the single aggregate the Dashboard cards read
- * (ui-design.md "Dashboard"; data-model.md "Metrics dashboard"). One endpoint,
+ * `/api/dashboard` — the single aggregate the Dashboard cards read (d-1uo9p5wq).
+ * Every figure is derived from the per-Triage records (d-4t7lf4wd). One endpoint,
  * one round of aggregates:
  *
  *  - `first_run` checklist flags: whether any Account / Pipeline exists, and
@@ -9,8 +9,7 @@
  *  - `notifications_sent_today` — count of `resource_op_succeeded` events whose
  *    `details_json.operation = 'send_notification'`, since local-agnostic
  *    midnight (computed as the start of the trailing 24h is *not* "today"; we
- *    use start-of-UTC-day relative to `now`). Matches data-model.md's
- *    notification-volume query, scoped to today.
+ *    use start-of-UTC-day relative to `now`), scoped to today.
  *  - `top_tags` — the most common current Tags across recent Messages (the
  *    `current_triages → tags` join), as `{key, value, count}` rows.
  *  - `errors_last_24h` / `limit_hits_last_24h` — counts of `resource_op_failed`

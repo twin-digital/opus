@@ -1,8 +1,8 @@
 /**
  * Apply Category. An Action that adds a Grinbox-owned Category to the Message on
  * its backend (Gmail: a label of the same name) when the current Triage
- * warrants it (glossary "Apply Category", architecture.md "Operator model" →
- * Actions). It declares no output Tags; its effect is the side effect on
+ * warrants it (d-bnw0na3n, d-hv2uue12). It declares no output Tags; its effect
+ * is the side effect on
  * `mailbox.apply_category`.
  *
  * Two gates decide whether the Category is applied:

@@ -8,7 +8,7 @@
 export { version } from './version.js'
 
 /**
- * State DB surface. S2/S3 write patterns and the daemon import the connection,
+ * State DB surface. The write patterns and the daemon import the connection,
  * migrator, schema types, and seed helper from the package root, e.g.
  * `import { openDatabase, runMigrations } from '@grinbox/server'`.
  */
@@ -17,7 +17,7 @@ export * from './db/index.js'
 // Config / env loader.
 export { type Config, loadConfig, TOKEN_ENC_KEY_ENV, TOKEN_ENC_KEY_BYTES } from './config.js'
 
-// Encryption seam (consumed by S6 OAuth token storage).
+// Encryption seam (consumed by OAuth token storage).
 export { type Encryptor, makeEncryptor } from './crypto/encryption.js'
 
 // HTTP app factory (the `/healthz`, `/oauth`, and `/api` route groups compose
@@ -57,15 +57,15 @@ export type { DashboardResponse, TopTag, RecentOperatorEdit } from './http/api/d
 // Daemon bootstrap (the entrypoint in main.ts drives this).
 export { type Daemon, startDaemon } from './daemon.js'
 
-// Operator framework (S1): behavioral registry, runOperator, built-in O1.
+// Operator framework: behavioral registry, runOperator, the built-in types.
 export * from './operators/index.js'
 
-// Pipeline write patterns + validation (S2/S3): edit-lock, Pipeline validation,
+// Pipeline write patterns + validation: edit-lock, Pipeline validation,
 // Operator save/enable/disable/soft-delete, Credential/Pipeline soft-delete,
 // Triage enqueue, optimistic claim, run completion + settlement.
 export * from './pipeline/index.js'
 
-// Metered Resource clients + Limit enforcement (S4): the Limit engine, the
+// Metered Resource clients + Limit enforcement: the Limit engine, the
 // per-operation retry policy, the injectable bedrock/gmail/pushover transports,
 // and the metering factory that produces the `MakeResourceClient` the worker
 // wires into `runOperator`.
@@ -76,7 +76,7 @@ export * from './resources/index.js'
 // startup recovery sweep for interrupted `running` runs.
 export * from './execution/index.js'
 
-// Provider read path (M1): the backend-agnostic Provider seam, the Gmail
+// Provider read path: the backend-agnostic Provider seam, the Gmail
 // Provider (History-API discovery + normalization), the injected Gmail-client
 // interface OAuth fills, and the `messages` UPSERT the poll loop calls.
 export * from './providers/index.js'

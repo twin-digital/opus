@@ -17,7 +17,7 @@ import type { FetchedMessage } from './provider.js'
  * - `receivedAt` prefers Gmail's `internalDate` (epoch **ms** string →
  *   seconds), the most reliable received-time signal. Falls back to parsing the
  *   `Date` header. Null when neither is usable — the upsert backfills from
- *   `created_at` (data-model.md "messages" `received_at` rule).
+ *   `created_at`.
  * - `bodyFetched` is false: the read path fetches metadata only; the body is
  *   lazy-fetched later by a body-consuming Operator.
  */

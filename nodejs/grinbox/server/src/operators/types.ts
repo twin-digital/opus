@@ -4,9 +4,8 @@
  * `run`/registration shapes that compose onto `@grinbox/shared`'s declarative
  * registry.
  *
- * This file is the contract S4 (real metered clients) and S7 (the worker) build
- * against. It deliberately defines *all* metered client interfaces now — they
- * are the seam — even though only some are exercised this wave.
+ * This file is the contract the real metered clients and the worker build
+ * against, and it defines every metered client interface — they are the seam.
  */
 
 import type { Contract, OperatorConfigFor, OperatorTypeKey, Resource, ResourceOpResult } from '@grinbox/shared'
@@ -19,15 +18,14 @@ import type { MessagesTable } from '../db/schema.js'
  * normalized for Operator use:
  *  - `headers` is the parsed `headers_json` (lowercased header name → value),
  *    or an empty map when the Message has no stored headers.
- *  - `thread` carries the Provider's `thread_membership` output (architecture.md
- *    "Provider") when the Message is part of a Thread: the backend thread id,
+ *  - `thread` carries the Provider's `thread_membership` output (d-7a8aoi4z)
+ *    when the Message is part of a Thread: the backend thread id,
  *    whether the Message is a reply within its Thread (`isReply`), and the
  *    Thread's Message count (`messageCount`). It is `null` when the Message is
- *    not in a Thread, and may be absent entirely until S5's Gmail Provider
- *    populates it — Operators must tolerate `null`.
+ *    not in a Thread — Operators must tolerate `null`.
  *
  * The full Message is always available to every Operator — there is no
- * per-field input declaration (architecture.md "Operator model").
+ * per-field input declaration (r-sfvm6ib3).
  */
 export interface MessageView {
   readonly id: number
@@ -128,8 +126,8 @@ export function messageViewFromRow(row: MessagesTable): MessageView {
     thread:
       row.backend_thread_id ?
         // `isReply` / `messageCount` come from the Provider's
-        // `thread_membership` output (populated once S5's Gmail Provider lands);
-        // the stored row carries only the backend thread id for now.
+        // `thread_membership` output; the stored row carries only the backend
+        // thread id.
         {
           backendThreadId: row.backend_thread_id,
           isReply: false,
@@ -139,13 +137,12 @@ export function messageViewFromRow(row: MessagesTable): MessageView {
   }
 }
 
-// --- Metered Resource clients (the seam; S4 implements the real ones) ---
+// --- Metered Resource clients (the seam) ---
 //
 // One typed method per Resource operation in `RESOURCE_OPERATIONS`, each
 // returning `Promise<ResourceOpResult<T>>`. The client encapsulates Limit
-// checks, retry policy, metering, and event accumulation (pipeline-runtime.md
-// "Resource clients and operation outcomes"); the Operator only ever sees the
-// discriminated result.
+// checks, retry policy, metering, and event accumulation (d-v5zamgjn,
+// d-coeyvi2n); the Operator only ever sees the discriminated result.
 
 /** Token / cost accounting returned alongside a successful LLM invocation. */
 export interface LlmUsage {
@@ -249,15 +246,14 @@ export interface ResourceClients {
 
 /**
  * Factory the dispatcher calls once per declared Resource to obtain its metered
- * client. Dependency-injected so S4's real clients OR a test fake plug in
+ * client. Dependency-injected so the real clients OR a test fake plug in
  * without `runOperator` knowing which. The `operations` argument is the
  * declared operation set for that Resource (from the Contract) — the real
- * client exposes only those; the fake may honor or ignore it.
+ * client exposes only those (d-v5zamgjn); the fake may honor or ignore it.
  *
- * The factory is also where the `signal` / `onEvent` / `onUsage` wiring from
- * pipeline-runtime.md's `buildContext` lands: the worker closes over those when
- * it builds the factory, so `runOperator` itself stays free of accumulator
- * plumbing.
+ * The factory is also where the `signal` / `onEvent` / `onUsage` wiring lands:
+ * the worker closes over those when it builds the factory, so `runOperator`
+ * itself stays free of accumulator plumbing.
  */
 export type MakeResourceClient = <R extends Resource>(resource: R, operations: readonly string[]) => ResourceClients[R]
 
@@ -303,8 +299,8 @@ export interface OperatorType<K extends OperatorTypeKey = OperatorTypeKey> {
   readonly run: (input: OperatorRunInput<K>) => Promise<OperatorRunResult>
   /**
    * The set of `credential_id` values this Operator's `config` references, used
-   * to reconcile `operator_credential_references` at Operator save (data-model
-   * "operator_credential_references"). Pure over the parsed config.
+   * to reconcile `operator_credential_references` at Operator save. Pure over
+   * the parsed config.
    */
   readonly extractCredentialRefsFromOperatorConfig: (config: OperatorConfigFor<K>) => number[]
 }

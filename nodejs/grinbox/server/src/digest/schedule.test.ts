@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { latestDueOccurrence, tryParseCron, validateDigestSchedule } from './schedule.js'
 
 /**
- * Spec: pipeline-runtime.md "Digest scheduler" (occurrence resolution) —
+ * Spec: d-prxzi4zt (missed occurrences collapse into one) —
  * `latestDueOccurrence` answers "the most recent occurrence at or before now,
  * strictly after the last attempted one", which is the single occurrence a
  * tick may fire (missed occurrences collapse into it; none ⇒ nothing due).

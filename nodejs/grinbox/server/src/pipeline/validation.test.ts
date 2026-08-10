@@ -8,7 +8,8 @@ import {
 } from './validation.js'
 
 /**
- * S3 spec. {@link validatePipeline} is a pure function over the post-change
+ * Spec: r-qu9y7wgg, d-8y8i45y2. {@link validatePipeline} is a pure function
+ * over the post-change
  * enabled set: it derives Contracts for every declared type via shared's
  * declarative registry, then runs the graph checks.
  *

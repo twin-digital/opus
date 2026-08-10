@@ -18,16 +18,16 @@ GRINBOX_TOKEN_ENC_KEY=<32 bytes, base64 or hex> \
 node dist/main.js
 ```
 
-| variable | required | what it is |
-|---|---|---|
-| `GRINBOX_DB_PATH` | yes | the SQLite file holding all state |
-| `GRINBOX_TOKEN_ENC_KEY` | yes | 32-byte key the stored credentials are encrypted under |
-| `GRINBOX_HTTP_PORT` / `GRINBOX_HTTP_HOST` | no | the listener |
-| `GRINBOX_WEB_DIST` | no | the browser application's built assets; defaults to `web/` beside the entry point's directory |
-| `GRINBOX_OAUTH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` | for mailboxes | the mail provider's OAuth client; without them the authorization routes report "not configured" rather than failing to boot |
-| `GRINBOX_OAUTH_OPENER_ORIGIN` | no | the origin the callback page posts back to |
-| `GRINBOX_BEDROCK_REGION` | for model calls | where model calls go |
-| `GRINBOX_OPERATOR_TIMEOUT_MS`, `GRINBOX_WORKER_POOL_SIZE`, `GRINBOX_POLL_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_TIMEOUT_MS`, `GRINBOX_RECONCILE_INTERVAL_SECONDS` | no | timing knobs |
+| variable                                                                                                                                                                                                     | required        | what it is                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GRINBOX_DB_PATH`                                                                                                                                                                                            | yes             | the SQLite file holding all state                                                                                           |
+| `GRINBOX_TOKEN_ENC_KEY`                                                                                                                                                                                      | yes             | 32-byte key the stored credentials are encrypted under                                                                      |
+| `GRINBOX_HTTP_PORT` / `GRINBOX_HTTP_HOST`                                                                                                                                                                    | no              | the listener                                                                                                                |
+| `GRINBOX_WEB_DIST`                                                                                                                                                                                           | no              | the browser application's built assets; defaults to `web/` beside the entry point's directory                               |
+| `GRINBOX_OAUTH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI`                                                                                                                                                      | for mailboxes   | the mail provider's OAuth client; without them the authorization routes report "not configured" rather than failing to boot |
+| `GRINBOX_OAUTH_OPENER_ORIGIN`                                                                                                                                                                                | no              | the origin the callback page posts back to                                                                                  |
+| `GRINBOX_BEDROCK_REGION`                                                                                                                                                                                     | for model calls | where model calls go                                                                                                        |
+| `GRINBOX_OPERATOR_TIMEOUT_MS`, `GRINBOX_WORKER_POOL_SIZE`, `GRINBOX_POLL_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_TIMEOUT_MS`, `GRINBOX_RECONCILE_INTERVAL_SECONDS` | no              | timing knobs                                                                                                                |
 
 `main.ts` is the process entry point and the only module with a side effect on
 import. The package barrel starts nothing.
@@ -228,3 +228,43 @@ their timestamp prefix.
 `better-sqlite3` is a native module. The workspace allows its install script so
 local development and CI can build it; a release bundle ships no compiled binary
 and the deployment installs it on the target for the target's Node ABI.
+
+## Installing a release
+
+Each release publishes two artifacts, and a deployment needs both. They always
+carry the same version — the three grinbox packages version in lockstep — so
+name one version and fetch the pair:
+
+| artifact                          | release tag                 | holds                                                      |
+| --------------------------------- | --------------------------- | ---------------------------------------------------------- |
+| `grinbox-server-<version>.tar.gz` | `@grinbox/server@<version>` | `server/`, `bin/`, `systemd/`, and the production manifest |
+| `grinbox-web-<version>.tar.gz`    | `@grinbox/web@<version>`    | `web/` — the interface's built assets                      |
+
+Both are attached to their package's GitHub release beside a `SHA256SUMS`, so a
+plain-URL fetch can verify without an API call.
+
+Unpack both into one directory, stripping the archive's top-level component:
+
+```
+/opt/grinbox
+  package.json          production manifest, pruned to the daemon's dependencies
+  pnpm-lock.yaml        install with --prod --frozen-lockfile
+  pnpm-workspace.yaml   allows the state store's build script
+  server/main.js        the entry point the unit runs
+  vendor/               workspace siblings, depended on by path
+  bin/run-grinbox.sh    the launch wrapper
+  systemd/grinbox.service
+  web/                  from the second artifact
+```
+
+The daemon resolves the interface as `web/` beside the directory holding its own
+entry point. Put it elsewhere and set `GRINBOX_WEB_DIST`.
+
+`node_modules` is deliberately absent from both artifacts: `better-sqlite3` is
+native and its binary must match the Node ABI it runs on, so run
+`pnpm install --prod --frozen-lockfile` on the target after unpacking.
+
+**Do not mix versions.** The interface is compiled against the daemon's own route
+definitions, so a mismatched pair type-checks nowhere and fails in the browser at
+runtime. Lockstep versioning exists so this cannot happen by accident; overriding
+it by hand removes the only thing preventing it.

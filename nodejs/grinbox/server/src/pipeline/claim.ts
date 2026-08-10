@@ -1,7 +1,6 @@
 /**
- * Execution-loop optimistic claim (S2). Per data-model "Execution loop claim" /
- * pipeline-runtime.md "Optimistic claim": flip a `pending` run to `running` with
- * a `WHERE ... AND status='pending'` guard, and confirm exactly one row changed.
+ * Execution-loop optimistic claim: flip a `pending` run to `running` with a
+ * `WHERE ... AND status='pending'` guard, and confirm exactly one row changed.
  *
  * In a single-process Daemon the claim is already atomic via the event loop; the
  * status guard is cheap insurance against future multi-process scenarios and any

@@ -1,12 +1,12 @@
 /**
- * `runOperator` — the dispatcher pipeline-runtime.md sketches (the worker calls
- * it inside `workerRun`). It resolves the snapshotted type, parses + validates
+ * `runOperator` — the dispatcher the worker calls inside `workerRun`. It
+ * resolves the snapshotted type, parses + validates
  * its config, builds the metered-client `resources` object from the type's
  * declared Contract via an injected factory, invokes the type's `run`, and
  * validates each output Tag's value against the declared output enum.
  *
  * It does NOT touch the DB: persistence (Tag rows, `triage_events`, settlement)
- * is the worker's / S2's job. `runOperator` returns the output Tags; the
+ * is the worker's job. `runOperator` returns the output Tags; the
  * injected clients accumulate their own events/usage via the `onEvent`/`onUsage`
  * wiring the worker closes over when it builds the factory.
  */
@@ -26,10 +26,10 @@ export interface RunOperatorArgs {
   readonly message: MessageView
   readonly tags: ReadonlyMap<string, string>
   /**
-   * Builds a metered client per declared Resource. Dependency-injected so S4's
-   * real clients OR a test fake plug in. The worker closes over the
-   * timeout signal + event/usage accumulators here (pipeline-runtime.md
-   * `buildContext`), keeping `runOperator` free of that plumbing.
+   * Builds a metered client per declared Resource. Dependency-injected so the
+   * real clients OR a test fake plug in. The worker closes over the timeout
+   * signal + event/usage accumulators here, keeping `runOperator` free of that
+   * plumbing.
    */
   readonly makeResourceClient: MakeResourceClient
   readonly signal: AbortSignal
@@ -109,8 +109,7 @@ function parseConfig<K extends OperatorTypeKey>(type: OperatorType<K>, opConfigJ
 
 /**
  * Enforces the app-level invariant "Tag value within declared enum"
- * (data-model "Application-enforced invariants"): every returned Tag must
- * declare against the Contract's outputs; a Tag for an enum output must carry
+ * (d-04s2n18o): every returned Tag must declare against the Contract's outputs; a Tag for an enum output must carry
  * a member value. Extracted outputs (`valueType`) have open, server-normalized
  * values — any emitted string is accepted for them (normalization happens in
  * the type's `run`; a value that failed it was already dropped there).

@@ -1,15 +1,13 @@
 /**
- * The lazy Message-body fetch (data-model.md "messages": body fields are
- * nullable, lazy-fetched when an Operator that consumes the body needs it).
- * Runs in the worker, between loading the Message row and building the
- * Operator's `MessageView`:
+ * The lazy Message-body fetch (d-nol93aud): body fields are nullable, fetched
+ * when an Operator that consumes the body needs it. Runs in the worker, between
+ * loading the Message row and building the Operator's `MessageView`:
  *
  *  1. **Need**: the run's config consumes the body (`operatorConsumesBody` —
  *     a `{{body}}` template placeholder, or a Rule `match` reading the `body`
  *     field). Otherwise the row passes through untouched.
  *  2. **Cache**: `body_fetched_at` non-NULL means a fetch was already
- *     attempted (possibly finding no body) — don't refetch (data-model.md
- *     `body_fetched_at` semantics).
+ *     attempted (possibly finding no body) — don't refetch (d-nol93aud).
  *  3. **Fetch**: `mailbox.fetch_body` through the run's metered client
  *     factory, so the fetch is Limit-checked, retried, evented, and metered
  *     against the Operator run that needed it — like every other Resource

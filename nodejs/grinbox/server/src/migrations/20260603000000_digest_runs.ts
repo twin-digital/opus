@@ -2,9 +2,8 @@ import { type Kysely, sql } from 'kysely'
 
 /**
  * `digest_runs` — one row per attempted scheduled occurrence of a Digest
- * delivery Operator on an Account (see data-model.md "digest_runs" and
- * pipeline-runtime.md "Digest scheduler"). The row is both the **claim** and
- * the **record**:
+ * delivery Operator on an Account (d-wf49d4jb). The row is both the **claim**
+ * (d-svanshcm) and the **record**:
  *
  *  - The UNIQUE `(operator_id, account_id, scheduled_for)` index makes the
  *    INSERT the atomic claim on a cron occurrence — two racing scheduler ticks

@@ -497,3 +497,120 @@ describe('mail-resources migration (limits rewrite)', () => {
     expect(counter).toEqual({ limit_id: applyLimit.id, count: 3 })
   })
 })
+
+describe('limit-origin migration (provenance backfill)', () => {
+  let db: DB
+
+  beforeEach(async () => {
+    db = openDatabase(':memory:')
+    await runMigrations(db)
+    // Rebuild `limits` in its pre-migration shape so the rebuild and the
+    // backfill run against what a deployed state actually held: no `origin`
+    // column, and uniqueness on `(user_id, resource, operation, scope)`.
+    await sql`DROP TABLE limits`.execute(db)
+    await sql`
+      CREATE TABLE limits (
+        id              INTEGER PRIMARY KEY,
+        user_id         INTEGER NOT NULL REFERENCES users(id),
+        resource        TEXT    NOT NULL,
+        operation       TEXT    NOT NULL,
+        scope           TEXT    NOT NULL CHECK (scope IN ('per_window', 'per_message')),
+        max_count       INTEGER NOT NULL CHECK (max_count > 0),
+        window_seconds  INTEGER,
+        created_at      INTEGER NOT NULL,
+        UNIQUE (user_id, resource, operation, scope),
+        CHECK ((scope = 'per_window' AND window_seconds IS NOT NULL AND window_seconds > 0)
+            OR (scope = 'per_message' AND window_seconds IS NULL))
+      )
+    `.execute(db)
+    await db.insertInto('users').values({ name: 'u', email: null, created_at: 1000 }).execute()
+  })
+  afterEach(async () => {
+    await closeDatabase(db)
+  })
+
+  /** Insert a pre-migration row (no `origin` column exists yet). */
+  async function oldLimit(resource: string, operation: string, scope: string, maxCount: number): Promise<void> {
+    await sql`
+      INSERT INTO limits (user_id, resource, operation, scope, max_count, window_seconds, created_at)
+      VALUES (1, ${resource}, ${operation}, ${scope}, ${maxCount}, ${scope === 'per_window' ? 600 : null}, 1000)
+    `.execute(db)
+  }
+
+  it("labels a row matching grinbox's seeded set as seeded, and anything else as the user's", async () => {
+    await oldLimit('pushover_api', 'send_notification', 'per_window', 10)
+    await oldLimit('llm_bedrock', 'invoke_model', 'per_message', 4)
+
+    const { up } = await import('../migrations/20260605000000_limit_origin.js')
+    await up(db as unknown as Parameters<typeof up>[0])
+
+    const rows = await db
+      .selectFrom('limits')
+      .select(['resource', 'operation', 'scope', 'origin', 'max_count'])
+      .orderBy('resource', 'asc')
+      .execute()
+    expect(rows).toEqual([
+      {
+        resource: 'llm_bedrock',
+        operation: 'invoke_model',
+        scope: 'per_message',
+        // Not in the seeded set at this migration, so it is the user's and stays
+        // removable; the seeded per_window cap is reinserted by the next boot.
+        origin: 'user',
+        max_count: 4,
+      },
+      {
+        resource: 'pushover_api',
+        operation: 'send_notification',
+        scope: 'per_window',
+        origin: 'seeded',
+        max_count: 10,
+      },
+    ])
+  })
+
+  it('preserves ids so the counter rows keep counting', async () => {
+    await oldLimit('mailbox', 'archive', 'per_window', 20)
+    const before = await db.selectFrom('limits').select('id').executeTakeFirstOrThrow()
+    await db.insertInto('limit_counters_window').values({ limit_id: before.id, window_start: 1000, count: 7 }).execute()
+
+    const { up } = await import('../migrations/20260605000000_limit_origin.js')
+    await up(db as unknown as Parameters<typeof up>[0])
+
+    const after = await db.selectFrom('limits').select(['id', 'origin']).executeTakeFirstOrThrow()
+    expect(after).toEqual({ id: before.id, origin: 'seeded' })
+    const counter = await db.selectFrom('limit_counters_window').select(['limit_id', 'count']).executeTakeFirstOrThrow()
+    expect(counter).toEqual({ limit_id: before.id, count: 7 })
+  })
+
+  it('lets a user cap layer over a seeded one once the uniqueness is widened', async () => {
+    await oldLimit('pushover_api', 'send_notification', 'per_window', 10)
+    const { up } = await import('../migrations/20260605000000_limit_origin.js')
+    await up(db as unknown as Parameters<typeof up>[0])
+
+    await db
+      .insertInto('limits')
+      .values({
+        user_id: 1,
+        resource: 'pushover_api',
+        operation: 'send_notification',
+        scope: 'per_window',
+        origin: 'user',
+        max_count: 2,
+        window_seconds: 600,
+        created_at: 2000,
+      })
+      .execute()
+
+    const bound = await db
+      .selectFrom('limits')
+      .select(['origin', 'max_count'])
+      .where('resource', '=', 'pushover_api')
+      .orderBy('origin', 'asc')
+      .execute()
+    expect(bound).toEqual([
+      { origin: 'seeded', max_count: 10 },
+      { origin: 'user', max_count: 2 },
+    ])
+  })
+})
