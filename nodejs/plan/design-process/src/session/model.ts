@@ -4,12 +4,15 @@ import type { OpenEntry, QuestionRoute } from './entries.js'
 import type { DecisionStatus, Staged } from './staging.js'
 
 /**
- * What the session is doing. `ratify` is the master list beside the detail pane, and is where a
- * draft carrying anything proposed or unanswered opens; the input modes are the ruling or the note
- * being taken on the selected entry; `landing` runs the fixed sequence and is offered only when
- * nothing is proposed and no question is open (d-7i1l1kfy).
+ * What the session is doing. `ratify` is the master list beside the detail pane, and is where every
+ * draft opens whatever statuses its entries hold (d-4uz3egbj); the input modes are the ruling or
+ * the note being taken on the selected entry; `landing` runs the fixed sequence and is offered only
+ * when nothing is proposed and no question is open (d-7i1l1kfy).
  */
 export type SessionMode = 'ratify' | 'reason' | 'answer' | 'route' | 'bulk' | 'note' | 'landing'
+
+/** The two lists the body swaps between; the rule above the body names the open one (d-26vs308h). */
+export type ListName = 'decisions' | 'requirements'
 
 /** What the header names: the draft, the branch, the pull request, and the inputs the list does not hold (d-kjwswmro). */
 export interface SessionHeader {
@@ -23,17 +26,34 @@ export interface SessionHeader {
   unresolved: number
 }
 
+/** What the last frame measured of the detail pane, so a page stops at the content's end (r-tb9nctcr). */
+export interface PaneExtent {
+  /** Rows the pane draws. */
+  rows: number
+  /** Rows the selected entry's detail comes to. */
+  content: number
+}
+
 export interface SessionState {
+  /** The decisions list: the draft's decisions in any status, its open questions, and its retirements. */
   entries: OpenEntry[]
+  /** The requirements list: the requirements the draft declares, its model bindings, and its retirements. */
+  requirements: OpenEntry[]
   header: SessionHeader
-  /** Index into `entries` of the selected row; the detail pane carries this one. */
+  /** Which list the body holds. */
+  list: ListName
+  /** Index into the open list of the selected row; the detail pane carries this one. */
   selected: number
+  /** The selection the other list keeps while this one is open. */
+  parked: number
   staged: Staged
   mode: SessionMode
   /** The text of the input mode in progress. */
   input: string
   /** First visible line of the detail pane, for an entry taller than the pane. */
   scroll: number
+  /** The pane the last frame drew; the driver measures it so paging can stop at the end (r-tb9nctcr). */
+  pane?: PaneExtent
   /** Set when the session has asked to submit or to land; the driver acts on it. */
   submit?: 'write' | 'land'
   /** Set when the owner has asked to leave; an abandoned session leaves the tree untouched. */
@@ -62,18 +82,43 @@ export const RULING_KEYS: Record<string, DecisionStatus | undefined> = {
 /** The key each route is answered with. */
 const ROUTE_KEYS: Record<string, QuestionRoute | undefined> = { f: 'fact', r: 'requirement', d: 'decision' }
 
-/** How far a page key moves; the driver's viewport is not the model's business. */
+/** How far a page key moves before the driver has measured a pane. */
 const PAGE = 8
 
-export const openSession = (entries: OpenEntry[], header: SessionHeader): SessionState => ({
+/** The last row a page may leave at the pane's top, so the content's last row stays in view (r-tb9nctcr). */
+const lastTop = (pane: PaneExtent): number => Math.max(pane.content - pane.rows, 0)
+
+/**
+ * Page the detail pane by the pane's own height, stopping at the content's first and last row. An
+ * unmeasured pane pages by the default and knows only its top, so the driver measures every frame
+ * (r-tb9nctcr).
+ */
+const paged = (state: SessionState, pages: number): SessionState => {
+  const { pane } = state
+  const wanted = Math.max(state.scroll + pages * (pane?.rows ?? PAGE), 0)
+  return { ...state, scroll: pane === undefined ? wanted : Math.min(wanted, lastTop(pane)), message: undefined }
+}
+
+export const openSession = (
+  entries: OpenEntry[],
+  header: SessionHeader,
+  requirements: OpenEntry[] = [],
+): SessionState => ({
   entries,
+  requirements,
   header,
+  list: 'decisions',
   selected: 0,
+  parked: 0,
   staged: emptyStaging(),
   mode: 'ratify',
   input: '',
   scroll: 0,
 })
+
+/** The list the body holds; the pane, the rule, and the selection all follow it. */
+export const openList = (state: SessionState): OpenEntry[] =>
+  state.list === 'decisions' ? state.entries : state.requirements
 
 /** Landing is available exactly when nothing is proposed and no question is open (d-4xkyfjzu). */
 export const canLand = (state: SessionState): boolean =>
@@ -85,11 +130,19 @@ export const canLand = (state: SessionState): boolean =>
     return (ruling?.kind === 'decision' ? ruling.status : entry.status) !== 'proposed'
   })
 
-const selected = (state: SessionState): OpenEntry | undefined => state.entries[state.selected]
+const selected = (state: SessionState): OpenEntry | undefined => openList(state)[state.selected]
 
 const move = (state: SessionState, by: number): SessionState => {
-  const selected = Math.min(Math.max(state.selected + by, 0), Math.max(state.entries.length - 1, 0))
+  const selected = Math.min(Math.max(state.selected + by, 0), Math.max(openList(state).length - 1, 0))
   return { ...state, selected, scroll: 0, message: undefined }
+}
+
+/** Swap the open list, each keeping the row it was left on. */
+const swap = (state: SessionState): SessionState => {
+  const list = state.list === 'decisions' ? 'requirements' : 'decisions'
+  const next: SessionState = { ...state, list }
+  const selected = Math.min(state.parked, Math.max(openList(next).length - 1, 0))
+  return { ...next, selected, parked: state.selected, scroll: 0, message: undefined }
 }
 
 const typed = (state: SessionState, key: Key): SessionState => {
@@ -135,12 +188,14 @@ const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): Se
       return move(state, -1)
     case 'pagedown':
     case 'space':
-      return { ...state, scroll: state.scroll + PAGE, message: undefined }
+      return paged(state, 1)
     case 'pageup':
-      return { ...state, scroll: Math.max(state.scroll - PAGE, 0), message: undefined }
+      return paged(state, -1)
     case 'q':
     case 'escape':
       return { ...state, quit: true }
+    case 'tab':
+      return swap(state)
     case 'b':
       return { ...state, mode: 'bulk', message: undefined }
     case 'n':
@@ -157,6 +212,10 @@ const ratify = (state: SessionState, key: Key, entry: OpenEntry | undefined): Se
       break
   }
   if (entry === undefined) {
+    return state
+  }
+  // a requirement, a model binding, and a retirement take a note and no ruling (d-26vs308h, d-ko3lggbr)
+  if (entry.kind === 'requirement' || entry.kind === 'binding' || entry.kind === 'retirement') {
     return state
   }
   if (entry.kind === 'question') {

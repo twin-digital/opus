@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
 
 import { citationLine, resolveCitations } from '../src/session/citations.js'
-import { collectOpenEntries, collectRatifyEntries } from '../src/session/entries.js'
+import { collectOpenEntries, collectSessionEntries } from '../src/session/entries.js'
 import { canLand, openSession, reduce } from '../src/session/model.js'
 import { renderSession } from '../src/session/render.js'
 import { diffRanges, draftReview, entryLine } from '../src/session/review.js'
@@ -74,6 +74,20 @@ const draftFiles = (): Files => {
       { id: 'd-33333333', title: 'already ruled', statement: 'the settled way.\n', status: 'accepted' },
     ],
   })
+  files[`${DRAFT}/requirements.yaml`] = yaml({
+    version: '1',
+    requirements: [
+      {
+        id: 'r-11111111',
+        title: 'the first rule',
+        statement: 'the product does the new thing.\n',
+        rationale: 'without it the owner reads yaml.\n',
+        verification: [{ do: 'open a session' }, { verify: 'the requirement is listed' }],
+      },
+      { id: 'r-22222222', title: 'the amended rule', statement: 'the product does it faster.\n', amends: 'r-bbbbbbbb' },
+    ],
+    model: [{ name: 'a-screen', surface: '/demo/a-screen@1', description: 'what the screen renders' }],
+  })
   files[`${DRAFT}/questions.yaml`] = yaml({
     version: '1',
     questions: [{ id: 'q-11111111', question: 'how fast is fast enough?\n', answer: 'fact' }],
@@ -88,7 +102,7 @@ const draftRepo = (): { root: string; tree: DirTree } => {
 }
 
 const entries = (): OpenEntry[] => collectOpenEntries(draftRepo().tree, 'demo')
-const listed = (): OpenEntry[] => collectRatifyEntries(draftRepo().tree, 'demo')
+const listed = (): OpenEntry[] => collectSessionEntries(draftRepo().tree, 'demo').decisions
 
 const open = (list: OpenEntry[] = listed()): SessionState => openSession(list, HEADER)
 
@@ -148,8 +162,8 @@ describe('the ratify list is the draft’s whole decision set — d-8abusqwe', (
   })
 
   it('shows the ruling an entry stands at beside it, and nothing where it stands proposed', () => {
-    expect(frame(press(open(), 'a'))).toMatch(/d-11111111\s+accepted/)
-    expect(frame(open())).toMatch(/d-11111111 +│/)
+    expect(frame(press(open(), 'down', 'a'))).toMatch(/d-22222222\s+accepted/)
+    expect(frame(open())).toMatch(/d-22222222 +│/)
     expect(frame(open())).toMatch(/d-33333333\s+accepted/)
   })
 })
@@ -205,7 +219,7 @@ describe('rulings stage and write nothing — d-ovlyaoht', () => {
   it('leaves the sources untouched while rulings are taken', () => {
     const { root, tree } = draftRepo()
     const before = readFileSync(join(root, `${DRAFT}/decisions.yaml`), 'utf8')
-    const list = collectRatifyEntries(tree, 'demo')
+    const list = collectSessionEntries(tree, 'demo').decisions
     stageRuling(emptyStaging(), { kind: 'decision', id: list[0].id, status: 'accepted' })
     expect(readFileSync(join(root, `${DRAFT}/decisions.yaml`), 'utf8')).toBe(before)
   })
@@ -238,7 +252,7 @@ describe('rulings stage and write nothing — d-ovlyaoht', () => {
 
   it('applies the staged set to the draft sources, editing only the spans it ruled', () => {
     const { root, tree } = draftRepo()
-    const list = collectRatifyEntries(tree, 'demo')
+    const list = collectSessionEntries(tree, 'demo').decisions
     const before = readFileSync(join(root, `${DRAFT}/decisions.yaml`), 'utf8')
     let staged = stageRuling(emptyStaging(), { kind: 'decision', id: 'd-11111111', status: 'accepted' })
     staged = stageRuling(staged, {
@@ -293,7 +307,7 @@ describe('the submit tallies what it ruled — d-lqmwczg3', () => {
 describe('a submit carrying notes posts one review — d-f1b5r2f8', () => {
   it('anchors a note to the lines of the entry it concerns', () => {
     const { root, tree } = draftRepo()
-    const list = collectRatifyEntries(tree, 'demo')
+    const list = collectSessionEntries(tree, 'demo').decisions
     const source = readFileSync(join(root, `${DRAFT}/decisions.yaml`), 'utf8')
     const line = entryLine(source, 'd-22222222')
     expect(line).toBeGreaterThan(0)
@@ -310,7 +324,7 @@ describe('a submit carrying notes posts one review — d-f1b5r2f8', () => {
 
   it('puts a note the diff does not reach into the review body, naming the entry', () => {
     const { root, tree } = draftRepo()
-    const list = collectRatifyEntries(tree, 'demo')
+    const list = collectSessionEntries(tree, 'demo').decisions
     const source = readFileSync(join(root, `${DRAFT}/decisions.yaml`), 'utf8')
     const review = draftReview([{ entry: list[1], note: 'out of the diff' }], () => source, new Map())
     expect(review?.comments).toEqual([])
@@ -386,5 +400,190 @@ describe('landing is offered only when nothing is open — d-7i1l1kfy', () => {
 
   it('opens on ratify when a draft carries anything proposed or unanswered', () => {
     expect(open().mode).toBe('ratify')
+  })
+})
+
+describe('a settled draft is reviewed, not only a proposed one — r-0h5q1lfl, d-4uz3egbj', () => {
+  it('lists the decisions of a draft whose every entry already carries a ruling', () => {
+    const files = draftFiles()
+    files[`${DRAFT}/questions.yaml`] = yaml({ version: '1', questions: [] })
+    files[`${DRAFT}/decisions.yaml`] = yaml({
+      version: '2',
+      decisions: [
+        { id: 'd-44444444', title: 'delegated one', statement: 'the built way.\n', status: 'delegated' },
+        { id: 'd-55555555', title: 'delegated two', statement: 'the other built way.\n', status: 'delegated' },
+      ],
+    })
+    const made = makeRepo(files)
+    roots.push(made.root)
+    const lists = collectSessionEntries(made.tree, 'demo', 'wip-001-a-draft')
+    const state = openSession(lists.decisions, HEADER, lists.requirements)
+    expect(state.mode).toBe('ratify')
+    expect(canLand(state)).toBe(true)
+    expect(frame(state)).toContain('d-44444444')
+    expect(frame(state)).toContain('the built way.')
+  })
+
+  it('re-rules an entry of a settled draft', () => {
+    const lists = collectSessionEntries(draftRepo().tree, 'demo', 'wip-001-a-draft')
+    const state = press(openSession(lists.decisions, HEADER, lists.requirements), 'down', 'down', 'r')
+    expect(state.mode).toBe('reason')
+  })
+})
+
+describe('the requirements list sits beside the decisions list — r-84zd8sfk, d-26vs308h', () => {
+  const opened = (): SessionState => {
+    const lists = collectSessionEntries(draftRepo().tree, 'demo', 'wip-001-a-draft')
+    return openSession(lists.decisions, HEADER, lists.requirements)
+  }
+
+  it('holds the requirements the draft declares, then its model bindings', () => {
+    expect(opened().requirements.map((entry) => entry.id)).toEqual(['r-11111111', 'r-22222222', '/demo/a-screen@1'])
+  })
+
+  it('names the open list and its count on the rule, and swaps between the two', () => {
+    expect(frame(opened())).toContain('── decisions (4)')
+    const swapped = press(opened(), 'tab')
+    expect(swapped.list).toBe('requirements')
+    expect(frame(swapped)).toContain('── requirements (3)')
+  })
+
+  it('reads a requirement in full: its statement, its rationale, and its verification', () => {
+    const shown = frame(press(opened(), 'tab'))
+    expect(shown).toContain('THE FIRST RULE [r-11111111]')
+    expect(shown).toContain('the product does the new thing.')
+    expect(shown).toContain('why it matters:')
+    expect(shown).toContain('without it the owner reads yaml.')
+    expect(shown).toContain('- do: open a session')
+    expect(shown).toContain('- verify: the requirement is listed')
+  })
+
+  it('shows a model binding as the contract it names', () => {
+    const shown = frame(press(opened(), 'tab', 'down', 'down'))
+    expect(shown).toContain('what the screen renders')
+    expect(shown).toContain('contract: /demo/a-screen@1')
+  })
+
+  it('takes a note on a requirement and no ruling, and leaves its source untouched', () => {
+    const { root, tree } = draftRepo()
+    const lists = collectSessionEntries(tree, 'demo', 'wip-001-a-draft')
+    const before = readFileSync(join(root, `${DRAFT}/requirements.yaml`), 'utf8')
+    let state = openSession(lists.decisions, HEADER, lists.requirements)
+    state = press(state, 'tab', 'a', 't', 'n', 'o', 'k', 'enter')
+    expect(state.staged.rulings.size).toBe(0)
+    expect(state.staged.notes.get('r-11111111')).toBe('ok')
+    // a note is not a ruling, so the staged set edits nothing
+    expect(applyStaged((path) => readFileSync(join(root, path), 'utf8'), lists.decisions, state.staged)).toEqual([])
+    expect(readFileSync(join(root, `${DRAFT}/requirements.yaml`), 'utf8')).toBe(before)
+  })
+
+  it('writes no commit for a submit carrying only notes', () => {
+    const state = press(openSession([], HEADER, opened().requirements), 'n', 'o', 'k', 'enter')
+    expect(commitBody(state.staged)).toBeUndefined()
+  })
+})
+
+describe('what a draft closes is legible from the list — r-n86ssoew, d-g00ah4em', () => {
+  it('tells apart an entry that closes, one that is closed, and one that does neither', () => {
+    const lists = collectSessionEntries(draftRepo().tree, 'demo', 'wip-001-a-draft')
+    const shown = frame(openSession(lists.decisions, HEADER, lists.requirements))
+    expect(shown).toMatch(/d-11111111 {2}closes d-bbbbbbbb/)
+    expect(shown).toMatch(/d-22222222 +│/)
+    expect(shown).toMatch(/d-33333333 {2,}accepted/)
+  })
+
+  it('marks the entry a later one of the same draft closes', () => {
+    const files = draftFiles()
+    files[`${DRAFT}/decisions.yaml`] = yaml({
+      version: '2',
+      decisions: [
+        { id: 'd-44444444', title: 'the earlier way', statement: 'the way.\n', status: 'proposed' },
+        {
+          id: 'd-55555555',
+          title: 'the later way',
+          statement: 'the better way.\n',
+          status: 'proposed',
+          supersedes: 'd-44444444',
+        },
+      ],
+    })
+    const made = makeRepo(files)
+    roots.push(made.root)
+    const lists = collectSessionEntries(made.tree, 'demo', 'wip-001-a-draft')
+    const shown = frame(openSession(lists.decisions, HEADER, lists.requirements))
+    expect(shown).toMatch(/d-44444444 {2}closed by d-55555555/)
+    expect(shown).toMatch(/d-55555555 {2}closes d-44444444/)
+  })
+
+  it('marks a requirement by what it amends', () => {
+    const lists = collectSessionEntries(draftRepo().tree, 'demo', 'wip-001-a-draft')
+    const shown = frame(press(openSession(lists.decisions, HEADER, lists.requirements), 'tab'))
+    expect(shown).toMatch(/r-22222222 {2}closes r-bbbbbbbb/)
+  })
+})
+
+describe('the session’s lists show a draft’s retirements — d-ko3lggbr', () => {
+  const retiringFiles = (): Files => {
+    const files = draftFiles()
+    files[`${DRAFT}/decisions.yaml`] = yaml({
+      version: '2',
+      decisions: [{ id: 'd-22222222', title: 'second choice', statement: 'the second way.\n', status: 'proposed' }],
+      retires: [{ id: 'd-bbbbbbbb', reason: 'the second thing is gone' }],
+    })
+    files[`${DRAFT}/requirements.yaml`] = yaml({
+      version: '1',
+      requirements: [{ id: 'r-11111111', title: 'the first rule', statement: 'the product does the new thing.\n' }],
+      model: [{ name: 'a-screen', surface: '/demo/a-screen@1', description: 'what the screen renders' }],
+      retires: [{ id: 'r-bbbbbbbb', reason: 'the second thing is dropped' }],
+    })
+    return files
+  }
+
+  const retiring = (): { decisions: OpenEntry[]; requirements: OpenEntry[] } => {
+    const made = makeRepo(retiringFiles())
+    roots.push(made.root)
+    return collectSessionEntries(made.tree, 'demo', 'wip-001-a-draft')
+  }
+
+  const retiringSession = (): SessionState => {
+    const lists = retiring()
+    return openSession(lists.decisions, HEADER, lists.requirements)
+  }
+
+  it('holds a retired decision after the entries the draft declares', () => {
+    expect(retiring().decisions.map((entry) => entry.id)).toEqual(['d-22222222', 'q-11111111', 'd-bbbbbbbb'])
+  })
+
+  it('holds a retired requirement after the declared requirements and the model bindings', () => {
+    expect(retiring().requirements.map((entry) => entry.id)).toEqual(['r-11111111', '/demo/a-screen@1', 'r-bbbbbbbb'])
+  })
+
+  it('recovers the retired foundation’s title and statement from the fold at head', () => {
+    expect(retiring().decisions.at(-1)).toMatchObject({
+      kind: 'retirement',
+      title: 'dependent choice',
+      reason: 'the second thing is gone',
+    })
+    expect(retiring().decisions.at(-1)?.text).toContain('the second thing builds on the first')
+  })
+
+  it('shows the retired title over the id, with “retired” where a ruling stands and no closure field', () => {
+    const shown = frame(press(retiringSession(), 'down', 'down'))
+    expect(shown).toContain('dependent choice')
+    expect(shown).toMatch(/d-bbbbbbbb\s+retired/)
+    expect(shown).not.toContain('closed by')
+  })
+
+  it('heads the pane with the retired entry and carries its reason in the metadata', () => {
+    const shown = frame(press(retiringSession(), 'down', 'down'))
+    expect(shown).toContain('DEPENDENT CHOICE [d-bbbbbbbb]')
+    expect(shown).toContain('the second thing builds on the first')
+    expect(shown).toContain('retired: the second thing is gone')
+  })
+
+  it('offers no ruling on a retirement, and takes a note as a requirement does', () => {
+    const state = press(retiringSession(), 'down', 'down')
+    expect(press(state, 'a').staged.rulings.size).toBe(0)
+    expect(press(state, 'n').mode).toBe('note')
   })
 })

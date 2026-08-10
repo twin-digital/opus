@@ -96,7 +96,7 @@ describe('the header names the draft and what is not in the list — d-kjwswmro'
     ).toEqual(['demo · wip-001-a-draft · plan/demo/a-draft · #197', 'also changed: facts (2)    3 unresolved'])
   })
 
-  it('omits each line the draft has nothing to say on', () => {
+  it('keeps the second row blank where the draft has nothing to say on it — d-ozagogc7', () => {
     expect(
       renderHeader({
         product: 'demo',
@@ -106,6 +106,6 @@ describe('the header names the draft and what is not in the list — d-kjwswmro'
         alsoChanged: [],
         unresolved: 0,
       }),
-    ).toEqual(['demo · wip-001-a-draft · plan/demo/a-draft · #197'])
+    ).toEqual(['demo · wip-001-a-draft · plan/demo/a-draft · #197', ''])
   })
 })
