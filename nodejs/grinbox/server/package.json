@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@grinbox/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The grinbox daemon: HTTP surface, poll schedule, triage execution, and the SQLite state store.",
   "type": "module",
   "exports": {
