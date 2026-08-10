@@ -5,14 +5,17 @@ import type { Database } from './schema.js'
 export { DEFAULT_LIMITS }
 
 /**
- * Insert any seeded Limit for `userId` that the `limits` table is missing,
+ * Bring the seeded Limits for `userId` into line with `DEFAULT_LIMITS`: insert
+ * any the `limits` table is missing, and update any whose bound has changed,
  * matched on `(resource, operation, scope)` among rows whose `origin` is
- * `seeded`. Returns the number of rows the DB actually inserted.
+ * `seeded`. Returns the number of rows inserted plus the number updated.
  *
  * Keying on origin is what makes the backstop hold (d-qv5l66ya): a user cap on
  * the same operation is a different row and does not shadow the seeded one, so
- * grinbox's own cap is reinserted whenever it is absent. A seeded row already
- * present is left exactly as it is.
+ * grinbox's own cap is reinserted whenever it is absent. The seeded caps are
+ * grinbox's and not the user's, so a release that ships a different bound moves
+ * the stored row to it — in either direction. A user's own caps are a different
+ * origin and are never touched here.
  *
  * Idempotent: a second call finds nothing missing, and the insert is
  * conflict-tolerant — the table's UNIQUE
@@ -29,16 +32,41 @@ export async function reconcileDefaultLimits(
   userId: number,
   now: number = Math.floor(Date.now() / 1000),
 ): Promise<number> {
+  const key = (l: { resource: string; operation: string; scope: string }) => `${l.resource} ${l.operation} ${l.scope}`
+
   const existing = await db
     .selectFrom('limits')
-    .select(['resource', 'operation', 'scope'])
+    .select(['id', 'resource', 'operation', 'scope', 'max_count', 'window_seconds'])
     .where('user_id', '=', userId)
     .where('origin', '=', 'seeded')
     .execute()
-  const present = new Set(existing.map((l) => `${l.resource} ${l.operation} ${l.scope}`))
-  const missing = DEFAULT_LIMITS.filter((l) => !present.has(`${l.resource} ${l.operation} ${l.scope}`))
+  const present = new Map(existing.map((l) => [key(l), l]))
+  const missing = DEFAULT_LIMITS.filter((l) => !present.has(key(l)))
+
+  // A seeded row whose bound no longer matches what this release ships.
+  const stale = DEFAULT_LIMITS.flatMap((limit) => {
+    const row = present.get(key(limit))
+    if (row === undefined) {
+      return []
+    }
+    if (row.max_count === limit.max_count && row.window_seconds === limit.window_seconds) {
+      return []
+    }
+    return [{ id: row.id, max_count: limit.max_count, window_seconds: limit.window_seconds }]
+  })
+
+  let updated = 0
+  for (const row of stale) {
+    await db
+      .updateTable('limits')
+      .set({ max_count: row.max_count, window_seconds: row.window_seconds })
+      .where('id', '=', row.id)
+      .execute()
+    updated += 1
+  }
+
   if (missing.length === 0) {
-    return 0
+    return updated
   }
 
   const result = await db
@@ -57,7 +85,7 @@ export async function reconcileDefaultLimits(
     )
     .onConflict((oc) => oc.doNothing())
     .executeTakeFirst()
-  return Number(result.numInsertedOrUpdatedRows ?? 0n)
+  return updated + Number(result.numInsertedOrUpdatedRows ?? 0n)
 }
 
 /**
