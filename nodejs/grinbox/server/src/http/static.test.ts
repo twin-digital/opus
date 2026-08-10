@@ -92,12 +92,15 @@ describe('static SPA serving', () => {
 })
 
 describe('resolveWebDistPath', () => {
-  it('resolves the sibling web/dist path when no path is configured', () => {
-    // The default branch (configuredPath === '') points at the compiled
-    // server's sibling `web/dist`.
-    const resolved = resolveWebDistPath('')
-    expect(resolved.replace(/\\/g, '/').endsWith('/web/dist')).toBe(true)
-    expect(isAbsolute(resolved)).toBe(true)
+  it("resolves the bundle's web/ beside the entry point when nothing is configured", () => {
+    // The release bundle unpacks to server/, web/, bin/, systemd/ and launches
+    // server/'s entry point, so the default lands on the sibling web/.
+    const resolved = resolveWebDistPath('', '/opt/grinbox/server')
+    expect(resolved).toBe(resolve('/opt/grinbox/web'))
+  })
+
+  it('resolves an absolute path with no configured path and no explicit entry dir', () => {
+    expect(isAbsolute(resolveWebDistPath(''))).toBe(true)
   })
 
   it('resolves a relative configured path against cwd', () => {

@@ -230,7 +230,7 @@ describe('POST /api/operators/preview', () => {
       // Missing required fields / wrong shape (e.g. an LLM-tagger-ish blob).
       const res = await post(db, {
         pipeline_id: pid,
-        config: { model_id: 'anthropic.claude', prompt: 'classify' },
+        config: { model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0', prompt: 'classify' },
       })
       expect(res.status).toBe(400)
     } finally {

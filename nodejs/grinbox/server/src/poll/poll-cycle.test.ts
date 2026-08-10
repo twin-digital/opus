@@ -102,7 +102,7 @@ describe('pollAccount', () => {
       .selectFrom('triages')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(triages.n)).toBe(1)
+    expect(triages.n).toBe(1)
 
     // Cursor still advanced on the second (no-new) poll.
     const account = await loadAccount()
@@ -237,7 +237,7 @@ describe('pollAccount', () => {
       .selectFrom('triages')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(triages.n)).toBe(0)
+    expect(triages.n).toBe(0)
   })
 
   it('applies source-state deltas to existing rows (and ignores deltas for unknown messages)', async () => {

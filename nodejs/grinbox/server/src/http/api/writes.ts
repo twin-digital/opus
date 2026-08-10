@@ -25,6 +25,7 @@
 import {
   ACCOUNT_COLORS,
   ACCOUNT_ICONS,
+  type ApiErrorBody,
   type OperatorTypeKey,
   limitDefinitionSchema,
   operatorConfigSchemas,
@@ -476,8 +477,12 @@ async function operatorTypeKey(deps: ApiDeps, operatorId: number): Promise<Opera
   return operatorTypeKeySchema.parse(row.type_key)
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Hono's context type is route-local.
-function handle(c: any, err: unknown): Response {
+/** The slice of Hono's route-local context these helpers use. */
+interface JsonContext {
+  json: (body: ApiErrorBody, status: 400 | 404 | 409) => Response
+}
+
+function handle(c: JsonContext, err: unknown): Response {
   const mapped = mapWriteError(err)
   if (mapped) {
     return c.json(mapped.body, mapped.status)
@@ -485,8 +490,7 @@ function handle(c: any, err: unknown): Response {
   throw err
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Hono's context type is route-local.
-function noUser(c: any): Response {
+function noUser(c: JsonContext): Response {
   return c.json(
     {
       error: {

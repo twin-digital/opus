@@ -148,7 +148,7 @@ export function createOperatorsRoutes(deps: ApiDeps) {
         // outputs — and the Tagger writes a *separate* `output_tag_key`, so
         // feeding the full current Tag set as input is safe: the value being
         // recomputed lives under a distinct key and never feeds itself.
-        const inputTags = tagsByTriage.get(row.triage_id) ?? new Map()
+        const inputTags = tagsByTriage.get(row.triage_id) ?? new Map<string, string>()
         const draftValue = evaluateRuleBasedTagger(config, messageView, inputTags)
         const currentValue = inputTags.get(config.output_tag_key) ?? null
         const changed = currentValue !== draftValue

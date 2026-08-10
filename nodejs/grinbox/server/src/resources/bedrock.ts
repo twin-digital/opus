@@ -2,11 +2,8 @@
  * The underlying Bedrock invocation for `llm_bedrock.invoke_model`, beneath the
  * metering/Limit layer. This module owns:
  *  - building the `BedrockRuntimeClient` (region from config),
- *  - mapping the configured model id to its `global.*` cross-region
- *    inference-profile ARN (architecture.md / implementation-plan.md M1
- *    operational notes: Claude must be invoked via the `global.` inference
- *    profile, never the bare foundation-model ARN, or the call fails with
- *    "on-demand throughput isn't supported"),
+ *  - mapping an offered model id to the `global.*` cross-region
+ *    inference profile it must be invoked through,
  *  - sending the `InvokeModelCommand` (Anthropic Messages API body) with the
  *    Operator-timeout `abortSignal`,
  *  - parsing the response text + token usage and computing `cost_usd_micros`.
@@ -22,6 +19,7 @@
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import type { InvokeModelCommandInput, InvokeModelCommandOutput } from '@aws-sdk/client-bedrock-runtime'
+import type { ModelId } from '@grinbox/shared'
 import type { LlmInvokeArgs, LlmUsage } from '../operators/types.js'
 
 /** Thrown when a configured model id has no mapped inference-profile ARN. */
@@ -35,48 +33,17 @@ export class BedrockResponseError extends Error {
 }
 
 /**
- * Map from a configured `model_id` to the `global.*` cross-region
- * inference-profile id it must actually be invoked through. Claude on Bedrock
- * rejects a bare foundation-model id for on-demand invocation with "on-demand
- * throughput isn't supported"; the `global.` profile carries no pricing premium
- * (implementation-plan.md M1).
- *
- * Both the bare id and the already-prefixed profile id map to the profile, so a
- * config that already names the profile is accepted unchanged. Unmapped ids
- * raise {@link UnmappedModelError} rather than silently passing a value Bedrock
- * will reject at call time.
+ * How each offered model (d-kv9ipb56, whose set `@grinbox/shared` owns) is
+ * actually invoked: the `global.*` cross-region inference-profile id. Claude on
+ * Bedrock rejects a bare foundation-model id for on-demand invocation with
+ * "on-demand throughput isn't supported"; the `global.` profile carries no
+ * pricing premium. Keyed by `ModelId`, so adding a model to the offered set is
+ * a compile error here until it has a profile.
  */
-export const MODEL_INFERENCE_PROFILES: Readonly<Record<string, string>> = {
+export const MODEL_INFERENCE_PROFILES: Readonly<Record<ModelId, string>> = {
   'anthropic.claude-haiku-4-5-20251001-v1:0': 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-  'global.anthropic.claude-haiku-4-5-20251001-v1:0': 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   'anthropic.claude-sonnet-4-5-20250929-v1:0': 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  'global.anthropic.claude-sonnet-4-5-20250929-v1:0': 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
 }
-
-/** One model as offered to pickers: the configurable id + display label. */
-export interface ModelOption {
-  readonly id: string
-  readonly label: string
-}
-
-/** Display labels by bare model id, for {@link MODEL_OPTIONS}. */
-const MODEL_LABELS: Readonly<Record<string, string>> = {
-  'anthropic.claude-haiku-4-5-20251001-v1:0': 'Claude Haiku 4.5',
-  'anthropic.claude-sonnet-4-5-20250929-v1:0': 'Claude Sonnet 4.5',
-}
-
-/**
- * The models offered in the UI's model pickers (`GET /api/models`): one entry
- * per bare model id in {@link MODEL_INFERENCE_PROFILES}, so every offered id is
- * invokable by construction (a picker can never offer an id that raises
- * {@link UnmappedModelError} at run time). A model without a display label
- * falls back to its id. Sorted by id so the response (and picker order) is
- * deterministic rather than an artifact of the map literal's key order.
- */
-export const MODEL_OPTIONS: readonly ModelOption[] = Object.keys(MODEL_INFERENCE_PROFILES)
-  .filter((id) => !id.startsWith('global.'))
-  .sort()
-  .map((id) => ({ id, label: MODEL_LABELS[id] ?? id }))
 
 /**
  * Per-1M-token USD pricing by inference-profile id, used to compute
@@ -85,7 +52,7 @@ export const MODEL_OPTIONS: readonly ModelOption[] = Object.keys(MODEL_INFERENCE
  * (the call already succeeded; metering a missing price as 0 is preferable to
  * losing the token counts).
  */
-const MODEL_PRICING_USD_PER_1M: Readonly<Record<string, { input: number; output: number }>> = {
+const MODEL_PRICING_USD_PER_1M: Readonly<Record<string, { input: number; output: number } | undefined>> = {
   'global.anthropic.claude-haiku-4-5-20251001-v1:0': { input: 1, output: 5 },
   'global.anthropic.claude-sonnet-4-5-20250929-v1:0': { input: 3, output: 15 },
 }
@@ -95,10 +62,10 @@ const MODEL_PRICING_USD_PER_1M: Readonly<Record<string, { input: number; output:
  * {@link UnmappedModelError} (citing the M1 note) when unmapped.
  */
 export function resolveInferenceProfile(modelId: string): string {
-  const profile = MODEL_INFERENCE_PROFILES[modelId]
+  const profile = MODEL_INFERENCE_PROFILES[modelId as ModelId] as string | undefined
   if (profile === undefined) {
     throw new UnmappedModelError(
-      `model id '${modelId}' has no mapped global.* inference-profile ARN; Claude on Bedrock must be invoked via a cross-region inference profile, not the bare foundation-model id (implementation-plan.md M1)`,
+      `model id '${modelId}' is not one grinbox offers, so it has no inference profile to invoke; Claude on Bedrock must be reached through a cross-region profile rather than the bare foundation-model id`,
     )
   }
   return profile
@@ -147,12 +114,14 @@ function parseResponse(output: InvokeModelCommandOutput): {
   text: string
   usage: LlmUsage
 } {
-  if (!output.body) {
+  // The SDK types `body` as required; a real response can still omit it.
+  const rawBody = output.body as Uint8Array | undefined
+  if (!rawBody) {
     throw new BedrockResponseError('Bedrock response had no body')
   }
   let parsed: unknown
   try {
-    const text = new TextDecoder().decode(output.body)
+    const text = new TextDecoder().decode(rawBody)
     parsed = JSON.parse(text)
   } catch (err) {
     throw new BedrockResponseError(`Bedrock response body was not valid JSON: ${(err as Error).message}`)

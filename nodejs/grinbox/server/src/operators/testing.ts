@@ -51,7 +51,7 @@ export function createFakeResourceClients(options: FakeResourceClientsOptions = 
 
   function record<T>(resource: Resource, operation: string, args: unknown): ResourceOpResult<T> {
     calls.push({ resource, operation, args })
-    const result = (canned[`${resource}.${operation}`] as ResourceOpResult<T>) ?? {
+    const result = (canned[`${resource}.${operation}`] as ResourceOpResult<T> | undefined) ?? {
       outcome: 'succeeded',
       value: cannedDefault(resource, operation) as T,
     }
@@ -96,19 +96,17 @@ function cannedDefault(resource: Resource, operation: string): unknown {
   if (resource === 'mail_sender') {
     return { message_id: 'fake-mail-id' }
   }
-  if (resource === 'mailbox') {
-    switch (operation) {
-      case 'apply_category':
-        return { applied: true }
-      case 'archive':
-        return { archived: true }
-      case 'fetch_metadata':
-        return { headers: {} }
-      case 'fetch_body':
-        return { bodyText: null, bodyHtml: null }
-      case 'list_messages':
-        return { ids: [] }
-    }
+  switch (operation) {
+    case 'apply_category':
+      return { applied: true }
+    case 'archive':
+      return { archived: true }
+    case 'fetch_metadata':
+      return { headers: {} }
+    case 'fetch_body':
+      return { bodyText: null, bodyHtml: null }
+    case 'list_messages':
+      return { ids: [] }
   }
   return {}
 }

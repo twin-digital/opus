@@ -1,4 +1,5 @@
 import type { InvokeModelCommandOutput } from '@aws-sdk/client-bedrock-runtime'
+import { MODEL_IDS } from '@grinbox/shared'
 import { describe, expect, it, vi } from 'vitest'
 import {
   BedrockResponseError,
@@ -31,38 +32,25 @@ describe('resolveInferenceProfile', () => {
     expect(resolveInferenceProfile(HAIKU)).toBe(HAIKU_PROFILE)
   })
 
-  it('accepts an already-prefixed profile id unchanged', () => {
-    expect(resolveInferenceProfile(HAIKU_PROFILE)).toBe(HAIKU_PROFILE)
-  })
-
   it('throws a clear error for an unmapped model id', () => {
     expect(() => resolveInferenceProfile('made-up-model')).toThrow(UnmappedModelError)
     expect(() => resolveInferenceProfile('made-up-model')).toThrow(/inference.profile/i)
   })
 })
 
-describe('model-id alignment with MODEL_INFERENCE_PROFILES', () => {
-  // The seed-demo LLM Tagger config and the web MODEL_OPTIONS pickers offer
-  // model ids that the daemon must be able to map, or an LLM Tagger throws
-  // UnmappedModelError at run time. These literals mirror those sources
-  // (seed-demo.ts llmConfig.model_id; web operator-types.ts MODEL_OPTIONS).
-  // seed-demo.ts runs main() on import, and the web id list lives in another
-  // package, so both are asserted as hardcoded literals here rather than
-  // imported — keep them in sync if those sources change.
-  const SUPPORTED = [
-    'anthropic.claude-haiku-4-5-20251001-v1:0', // tagger / fast (seed + web default)
-    'anthropic.claude-sonnet-4-5-20250929-v1:0', // summary / capable (web)
-  ] as const
-
-  it('every offered model id is a key in MODEL_INFERENCE_PROFILES', () => {
-    for (const id of SUPPORTED) {
+describe('every offered model is invokable', () => {
+  // d-kv9ipb56: a user picks a model from the closed set grinbox ships, which
+  // `@grinbox/shared` owns. An offered id with no inference profile would be
+  // saveable and then throw at run time, so the two sets must agree exactly.
+  it('every id in the offered set maps to an inference profile', () => {
+    for (const id of MODEL_IDS) {
       expect(MODEL_INFERENCE_PROFILES[id]).toBeDefined()
       expect(() => resolveInferenceProfile(id)).not.toThrow()
     }
   })
 
-  it("seed-demo's chosen tagger model id is the supported Haiku 4.5 id", () => {
-    expect(MODEL_INFERENCE_PROFILES['anthropic.claude-haiku-4-5-20251001-v1:0']).toBeDefined()
+  it('maps nothing the offered set does not name', () => {
+    expect(Object.keys(MODEL_INFERENCE_PROFILES).sort()).toEqual([...MODEL_IDS].sort())
   })
 })
 
@@ -88,7 +76,7 @@ describe('computeCostUsdMicros', () => {
 
 describe('invokeModel', () => {
   it('sends through the profile id, parses text + usage, computes cost', async () => {
-    const send: BedrockSend = vi.fn(async (input) => {
+    const send: BedrockSend = vi.fn<BedrockSend>(async (input) => {
       expect(input.modelId).toBe(HAIKU_PROFILE)
       return fakeOutput({
         content: [{ type: 'text', text: 'spam' }],
@@ -157,7 +145,7 @@ describe('invokeModel', () => {
 
   it('builds the request body with the prompt and default max_tokens', async () => {
     let captured: string | undefined
-    const send: BedrockSend = vi.fn(async (input) => {
+    const send: BedrockSend = vi.fn<BedrockSend>(async (input) => {
       captured = input.body as string
       return fakeOutput({
         content: [{ type: 'text', text: 'ok' }],
@@ -165,7 +153,11 @@ describe('invokeModel', () => {
       })
     })
     await invokeModel(send, { modelId: HAIKU, prompt: 'classify me' }, new AbortController().signal)
-    const body = JSON.parse(captured ?? '{}')
+    const body = JSON.parse(captured ?? '{}') as {
+      anthropic_version: string
+      max_tokens: number
+      messages: unknown
+    }
     expect(body.anthropic_version).toBe('bedrock-2023-05-31')
     expect(body.max_tokens).toBe(1024)
     expect(body.messages).toEqual([{ role: 'user', content: 'classify me' }])
@@ -173,7 +165,7 @@ describe('invokeModel', () => {
 
   it('honors a maxTokens override in the request body', async () => {
     let captured: string | undefined
-    const send: BedrockSend = vi.fn(async (input) => {
+    const send: BedrockSend = vi.fn<BedrockSend>(async (input) => {
       captured = input.body as string
       return fakeOutput({
         content: [{ type: 'text', text: 'ok' }],
@@ -181,6 +173,6 @@ describe('invokeModel', () => {
       })
     })
     await invokeModel(send, { modelId: HAIKU, prompt: 'x', maxTokens: 256 }, new AbortController().signal)
-    expect(JSON.parse(captured ?? '{}').max_tokens).toBe(256)
+    expect((JSON.parse(captured ?? '{}') as { max_tokens: number }).max_tokens).toBe(256)
   })
 })

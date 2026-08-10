@@ -61,7 +61,8 @@
  */
 
 import type { Kysely } from 'kysely'
-import type { Database, SourceState } from '../db/schema.js'
+import type { SourceState } from '@grinbox/shared'
+import type { Database } from '../db/schema.js'
 import { enqueueTriage } from '../pipeline/triage-enqueue.js'
 import { upsertMessage } from '../providers/message-upsert.js'
 import type { CandidateListing, Provider, ProviderAccount } from '../providers/provider.js'
@@ -391,7 +392,7 @@ async function setSourceState(
       .where('backend_message_id', 'in', chunk)
       .where('source_state', '!=', state)
       .executeTakeFirst()
-    changed += Number(res.numUpdatedRows ?? 0n)
+    changed += Number(res.numUpdatedRows)
   }
   return changed
 }

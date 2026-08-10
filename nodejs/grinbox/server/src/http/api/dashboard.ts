@@ -167,20 +167,20 @@ export function createDashboardRoutes(deps: ApiDeps) {
 
     const body: DashboardResponse = {
       first_run: {
-        has_account: Number(accountCount?.n ?? 0) > 0,
-        has_pipeline: Number(pipelineCount?.n ?? 0) > 0,
-        has_assigned_pipeline: Number(assignedCount?.n ?? 0) > 0,
+        has_account: (accountCount?.n ?? 0) > 0,
+        has_pipeline: (pipelineCount?.n ?? 0) > 0,
+        has_assigned_pipeline: (assignedCount?.n ?? 0) > 0,
       },
-      triages_last_24h: Number(triages24h?.n ?? 0),
+      triages_last_24h: triages24h?.n ?? 0,
       notifications_sent_today: notificationsSentToday,
       top_tags: topTagRows.map((r) => ({
         key: r.key,
         value: r.value,
-        count: Number(r.count),
+        count: r.count,
       })),
-      errors_last_24h: Number(errors24h?.n ?? 0),
-      limit_hits_last_24h: Number(limitHits24h?.n ?? 0),
-      failed_triages_last_24h: Number(failedTriages24h?.n ?? 0),
+      errors_last_24h: errors24h?.n ?? 0,
+      limit_hits_last_24h: limitHits24h?.n ?? 0,
+      failed_triages_last_24h: failedTriages24h?.n ?? 0,
       recent_operator_edits: edits.map((e) => ({
         change_log_id: e.id,
         operator_id: e.entity_id,

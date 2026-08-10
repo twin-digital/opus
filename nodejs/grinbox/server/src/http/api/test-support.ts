@@ -8,7 +8,8 @@ import type { Kysely } from 'kysely'
 import { openDatabase } from '../../db/connection.js'
 import type { DB } from '../../db/index.js'
 import { runMigrations } from '../../db/migrator.js'
-import type { Database, SourceState } from '../../db/schema.js'
+import type { SourceState } from '@grinbox/shared'
+import type { Database } from '../../db/schema.js'
 
 /** A fixed "now" the time-window tests anchor on (UNIX seconds). */
 export const FIXED_NOW = 1_700_000_000

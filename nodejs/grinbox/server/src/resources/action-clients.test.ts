@@ -237,7 +237,7 @@ describe('credential-backed Action clients through the worker', () => {
       resource: 'mailbox',
       operation: 'apply_category',
     })
-    const usage = JSON.parse(run.resource_usage_json as string)
+    const usage = JSON.parse(run.resource_usage_json as string) as Record<string, unknown>
     expect(usage['mailbox.apply_category']).toMatchObject({
       calls: 1,
       succeeded: 1,
@@ -295,7 +295,7 @@ describe('credential-backed Action clients through the worker', () => {
       operation: 'archive',
       archived: true,
     })
-    const usage = JSON.parse(run.resource_usage_json as string)
+    const usage = JSON.parse(run.resource_usage_json as string) as Record<string, unknown>
     expect(usage['mailbox.archive']).toMatchObject({
       calls: 1,
       succeeded: 1,

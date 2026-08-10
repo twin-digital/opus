@@ -215,6 +215,6 @@ describe('end-to-end silent triage (poll → enqueue → execute → tag → per
       .selectFrom('triages')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(triageCount.n)).toBe(3) // still 3 — no new Triages
+    expect(triageCount.n).toBe(3) // still 3 — no new Triages
   })
 })

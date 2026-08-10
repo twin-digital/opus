@@ -88,6 +88,8 @@ export function createExecutionLoop(deps: ExecutionLoopDeps): ExecutionLoop {
   /** In-flight worker promises, keyed by `"<triage>:<operator>"`. */
   const inFlight = new Map<string, Promise<void>>()
   let running = false
+  /** Read through a call: `running` flips while `runOnce` is awaiting. */
+  const isRunning = (): boolean => running
   let scheduled: ReturnType<typeof setTimeout> | null = null
 
   function availableSlots(): number {
@@ -183,7 +185,7 @@ export function createExecutionLoop(deps: ExecutionLoopDeps): ExecutionLoop {
   }
 
   async function runOnce(): Promise<void> {
-    if (!running) {
+    if (!isRunning()) {
       return
     }
     let dispatched = 0
@@ -192,7 +194,7 @@ export function createExecutionLoop(deps: ExecutionLoopDeps): ExecutionLoop {
     } catch (err) {
       console.error('[grinbox][execution] tick error', err)
     }
-    if (!running) {
+    if (!isRunning()) {
       return
     }
     scheduleNext(dispatched > 0 ? 0 : IDLE_SLEEP_MS)
@@ -254,10 +256,12 @@ async function classifyCandidate(
   for (const s of siblings) {
     let inputKeys: readonly string[] = []
     let outputKeys: readonly string[] = []
+    let extractedOutputKeys: readonly string[] = []
     try {
       const contract = resolveContract(s)
       inputKeys = contract.inputKeys
       outputKeys = contract.outputKeys
+      extractedOutputKeys = contract.extractedOutputKeys
     } catch {
       // A sibling whose snapshot can't resolve owns no usable outputs and
       // declares no usable inputs from our perspective; leave both empty.
@@ -269,6 +273,7 @@ async function classifyCandidate(
       operatorId: s.operator_id,
       inputKeys,
       outputKeys,
+      extractedOutputKeys,
       status: s.status,
     })
   }
@@ -304,5 +309,5 @@ async function countNonTerminal(db: DB): Promise<number> {
     .select((eb) => eb.fn.countAll<number>().as('n'))
     .where('status', 'in', ['pending', 'running'])
     .executeTakeFirstOrThrow()
-  return Number(rows.n)
+  return rows.n
 }

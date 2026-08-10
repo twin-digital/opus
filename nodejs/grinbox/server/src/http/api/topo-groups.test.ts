@@ -80,7 +80,7 @@ describe('topoGroups', () => {
     // declares output `urgency`; a notify gates on `when.tag_key=urgency`. The
     // edge now forms from the derived `inputs`, so the notify is NOT at group 0.
     const taggerContract: Contract = contractFromConfig('llm_tagger', {
-      model_id: 'm',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: 'p',
       outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
     })

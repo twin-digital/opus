@@ -26,7 +26,7 @@ function message(over: Partial<MessageView> = {}): MessageView {
 }
 
 const CONFIG = {
-  model_id: 'anthropic.claude-fast',
+  model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
   prompt_template: 'Subject: {{subject}} | hint={{tag.hint}} | x={{bogus}}',
   outputs: [
     { tag_key: 'category', value_enum: ['personal', 'work', 'spam'] },
@@ -89,7 +89,7 @@ describe('llm-tagger run', () => {
     const call = fake.calls.find((c) => c.operation === 'invoke_model')
     expect(call).toBeDefined()
     const sent = call?.args as { modelId: string; prompt: string }
-    expect(sent.modelId).toBe('anthropic.claude-fast')
+    expect(sent.modelId).toBe('anthropic.claude-haiku-4-5-20251001-v1:0')
     // {{subject}} and {{tag.hint}} substituted; unknown {{bogus}} -> empty.
     expect(sent.prompt).toContain('Subject: Invoice #42 due')
     expect(sent.prompt).toContain('hint=home | x=')
@@ -184,7 +184,7 @@ describe('llm-tagger run', () => {
 
 describe('llm-tagger extracted outputs (value_type)', () => {
   const EXTRACT_CONFIG = {
-    model_id: 'anthropic.claude-fast',
+    model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     prompt_template: 'Extract from: {{subject}}',
     outputs: [
       { tag_key: 'kind', value_enum: ['bill', 'other'] },

@@ -11,7 +11,7 @@ function llmRun(template: string): BodyFetchRun {
   return {
     type_key: 'llm_tagger',
     op_config_json: JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: template,
       outputs: [{ tag_key: 'kind', value_enum: ['a', 'b'] }],
     }),

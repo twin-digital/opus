@@ -71,7 +71,7 @@ describe('resolveGmailAccessToken', () => {
   // The provider may rotate the durable credential in on a renewal. Keeping the
   // superseded one fails at the next renewal, so whatever comes back is stored
   // (d-v5fyd7xd).
-  it.skip('stores a rotated refresh token', async () => {
+  it('stores a rotated refresh token', async () => {
     const { db, userId } = await freshDbWithUser()
     const encryptor = testEncryptor()
     const accountId = await seedAccount(db, userId)

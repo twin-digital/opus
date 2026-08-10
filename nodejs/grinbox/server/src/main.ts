@@ -29,7 +29,7 @@ async function main(): Promise<void> {
     daemon
       .shutdown()
       .then(() => process.exit(0))
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('[grinbox] error during shutdown:', err)
         process.exit(1)
       })
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   })
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error('[grinbox] fatal:', err)
   process.exit(1)
 })

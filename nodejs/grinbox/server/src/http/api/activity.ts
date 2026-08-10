@@ -177,11 +177,11 @@ function parseDigestEvents(json: string | null): { event_type: string; details: 
     return []
   }
   try {
-    const parsed = JSON.parse(json)
+    const parsed: unknown = JSON.parse(json)
     if (!Array.isArray(parsed)) {
       return []
     }
-    return parsed.flatMap((item) => {
+    return (parsed as unknown[]).flatMap((item) => {
       if (!item || typeof item !== 'object') {
         return []
       }
@@ -207,7 +207,7 @@ function parseDetails(json: string | null): Record<string, unknown> {
     return {}
   }
   try {
-    const v = JSON.parse(json)
+    const v: unknown = JSON.parse(json)
     return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {}
   } catch {
     return {}

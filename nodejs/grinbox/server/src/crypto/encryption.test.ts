@@ -44,7 +44,7 @@ describe('makeEncryptor', () => {
   it('rejects a tampered auth tag', () => {
     const { encrypt, decrypt } = makeEncryptor(KEY)
     const env = encrypt(Buffer.from('integrity matters'))
-    env[12] = (env[12] ?? 0) ^ 0xff // first byte of the tag
+    env[12] = env[12] ^ 0xff // first byte of the tag
     expect(() => decrypt(env)).toThrow()
   })
 

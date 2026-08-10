@@ -22,7 +22,8 @@ import type { FetchedMessage } from './provider.js'
  *   lazy-fetched later by a body-consuming Operator.
  */
 export function parseGmailMessage(payload: GmailMessagePayload): FetchedMessage {
-  const headers = payload.headers
+  // Widened: a Gmail payload omits headers it has no value for.
+  const headers: Record<string, string | undefined> = payload.headers
   return {
     backendMessageId: payload.id,
     backendThreadId: payload.threadId,
@@ -31,7 +32,7 @@ export function parseGmailMessage(payload: GmailMessagePayload): FetchedMessage 
     subject: headers.subject ?? null,
     snippet: payload.snippet,
     receivedAt: deriveReceivedAt(payload.internalDate, headers.date ?? null),
-    headers,
+    headers: payload.headers,
     bodyFetched: false,
   }
 }

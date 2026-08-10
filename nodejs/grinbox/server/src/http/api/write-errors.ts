@@ -1,11 +1,10 @@
 /**
- * Maps the write-pattern helper exceptions to an HTTP status + a structured
- * error body the UI can render. The UI depends on this shape: a JSON object
- * `{ error: { code, message, details? } }`, where `code` is a stable
- * machine-readable discriminator and `message` is human-readable (the toast /
- * inline-validation copy). `details` carries case-specific structured context
- * (e.g. the dependent Operator ids that block a Credential delete, or the
- * per-error list from a Pipeline validation failure).
+ * Maps the write-pattern helper exceptions to an HTTP status and the structured
+ * refusal `d-u2rotm38` requires: a refusal names what was wrong and where — the
+ * field, the operator, the offending value — rather than a sentence for a human
+ * to read, and the interface composes what the user sees from that. The body
+ * shape (`ApiErrorBody`) and the codes grinbox produces (`API_ERROR_CODES`) are
+ * declared in `@grinbox/shared`, so the browser parses what the daemon composes.
  *
  * Status mapping:
  *  - validation rejections (output-key collision, cycle, dangling input, bad
@@ -15,22 +14,17 @@
  *  - anything else rethrows (a real 500 — not a user-correctable condition).
  */
 
+import type { ApiErrorBody } from '@grinbox/shared'
 import { z } from 'zod'
 import { PipelineNotAssignableError, PollIntervalOutOfRangeError } from '../../config/account-config.js'
-import { LimitConflictError } from '../../config/limit-config.js'
+import { LimitConflictError, SeededLimitError } from '../../config/limit-config.js'
 import { CredentialInUseError, NotFoundError, PipelineValidationError } from '../../pipeline/operator-save.js'
 import { PipelineNameConflictError } from '../../pipeline/pipeline-config.js'
 
-/** A status + structured error body produced from a helper exception. */
+/** A status + the structured refusal body produced from a helper exception. */
 export interface MappedError {
   readonly status: 400 | 404 | 409
-  readonly body: {
-    readonly error: {
-      readonly code: string
-      readonly message: string
-      readonly details?: unknown
-    }
-  }
+  readonly body: ApiErrorBody
 }
 
 /**
@@ -78,7 +72,19 @@ export function mapWriteError(err: unknown): MappedError | null {
   if (err instanceof PipelineNameConflictError) {
     return {
       status: 409,
-      body: { error: { code: 'pipeline_name_conflict', message: err.message } },
+      body: { error: { code: 'name_conflict', message: err.message } },
+    }
+  }
+  if (err instanceof SeededLimitError) {
+    return {
+      status: 409,
+      body: {
+        error: {
+          code: 'seeded_limit',
+          message: err.message,
+          details: { limit_id: err.limitId },
+        },
+      },
     }
   }
   if (err instanceof LimitConflictError) {

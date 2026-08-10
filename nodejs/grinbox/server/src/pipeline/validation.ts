@@ -579,6 +579,11 @@ function safeJsonParse(json: string): unknown {
  * consumer. Returns the cycle as a list of operator_ids (closing back to the
  * first), or `null` when the graph is acyclic. Assumes single-producer (checked
  * earlier), so each input key maps to at most one producer.
+ *
+ * An operator consuming a key it produces itself is a cycle of length one, and
+ * r-qu9y7wgg names it among the configurations that could not run: at execution
+ * an operator becomes ready when every input key is present, so one waiting on
+ * its own output never runs and never settles.
  */
 function findCycle(
   contracts: ReadonlyMap<number, Contract>,
@@ -590,7 +595,7 @@ function findCycle(
     for (const inputKey of contract.inputs) {
       const ownerList = producers.get(inputKey)
       const owner = ownerList?.[0]
-      if (owner !== undefined && owner !== operatorId) {
+      if (owner !== undefined) {
         deps.push(owner)
       }
     }

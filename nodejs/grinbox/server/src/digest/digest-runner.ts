@@ -114,9 +114,13 @@ export async function executeDigestRun(deps: DigestRunnerDeps, claim: DigestRunC
     const window = await loadWindow(deps.db, claim)
     messageCount = window.candidates.length
 
-    if (window.candidates.length === 0) {
-      // Empty window: no candidates in any section. Complete (advancing the
-      // watermark) without rendering or sending — an empty digest is noise.
+    const ownCategories = new Set(claim.config.sections.map((section) => section.category))
+    if (window.candidates.length === 0 && reportedCount(window) === 0) {
+      // A window with nothing to show and nothing to report completes (advancing
+      // the watermark) without sending — an empty digest is noise (d-dmylyoqs).
+      // The test is over the whole window rather than over the candidates: a
+      // window holding only mail this edition does not show still owes the
+      // accounting, so it sends.
       await finishDigestRun(deps.db, claim.runId, {
         status: 'completed',
         messageCount: 0,
@@ -153,15 +157,18 @@ export async function executeDigestRun(deps: DigestRunnerDeps, claim: DigestRunC
 
     const rendered = renderSections(claim.config.sections, window.candidates)
 
-    // Reconciliation invariant: every selected candidate appears in exactly
-    // one rendered section (a failed template still yields a fallback line).
-    // A mismatch is a composition bug — fail loudly, never send a digest that
-    // silently dropped a Message.
+    // Reconciliation invariant (r-vd9mu8od): the items rendered plus every count
+    // the digest reports account for the whole window — not for the selection.
+    // The selection is category-keyed, so reconciling against it would be true
+    // of a selection that lost a Message before either side was counted.
     const renderedCount = rendered.reduce((n, s) => n + s.count, 0)
-    if (renderedCount !== window.candidates.length) {
+    const reported = reportedCount(window)
+    const elsewhere = accountedElsewhere(window, ownCategories)
+    if (renderedCount + reported + elsewhere !== window.coveredTotal) {
       throw new DigestRunError(
-        `digest reconciliation failed: rendered ${renderedCount} items across ` +
-          `sections but selected ${window.candidates.length} candidates`,
+        `digest reconciliation failed: rendered ${renderedCount} items, reported ${reported} more, ` +
+          `and left ${elsewhere} to a sibling edition or the never-digested value, ` +
+          `but the window covers ${window.coveredTotal} messages`,
       )
     }
 
@@ -240,6 +247,16 @@ export interface DigestWindow {
   readonly fallbackCategory: string | null
   /** Matching candidates beyond {@link MAX_DIGEST_CANDIDATES} not selected. */
   readonly truncatedOverflow: number
+  /**
+   * Messages the window covers that carry no `digest_category` Tag at all —
+   * their Triage failed before the producer ran, settled without it, or the
+   * Pipeline carried no producer when it ran. They are the account's mail inside
+   * the window (d-jsnfvo0m) and so are covered, but no category-keyed selection
+   * can see them.
+   */
+  readonly uncategorized: number
+  /** Every Message the window covers, whatever its Tags. */
+  readonly coveredTotal: number
 }
 
 /**
@@ -267,7 +284,7 @@ async function loadWindow(db: DB, claim: DigestRunClaim): Promise<DigestWindow> 
     .execute()
   const categoryCounts = new Map<string, number>()
   for (const row of countRows) {
-    categoryCounts.set(row.category, Number(row.n))
+    categoryCounts.set(row.category, row.n)
   }
 
   // Candidate Messages for this edition's categories, oldest first, capped.
@@ -312,6 +329,19 @@ async function loadWindow(db: DB, claim: DigestRunClaim): Promise<DigestWindow> 
 
   const matchingTotal = sectionCategories.reduce((n, c) => n + (categoryCounts.get(c) ?? 0), 0)
 
+  // Coverage is the account's mail in the window, not the tag-joined subset of
+  // it (d-jsnfvo0m). Counting it separately is what lets the reconciliation see
+  // a Message no category-keyed query returns.
+  const coveredRow = await db
+    .selectFrom('messages')
+    .select(({ fn }) => fn.countAll<number>().as('n'))
+    .where('account_id', '=', claim.accountId)
+    .where('created_at', '>', claim.coversFrom)
+    .where('created_at', '<=', claim.coversTo)
+    .executeTakeFirst()
+  const coveredTotal = coveredRow?.n ?? 0
+  const categorizedTotal = [...categoryCounts.values()].reduce((n, c) => n + c, 0)
+
   const pipelineContext = await loadPipelineContext(db, claim)
 
   return {
@@ -320,6 +350,8 @@ async function loadWindow(db: DB, claim: DigestRunClaim): Promise<DigestWindow> 
     claimedCategories: pipelineContext.claimedCategories,
     fallbackCategory: pipelineContext.fallbackCategory,
     truncatedOverflow: Math.max(0, matchingTotal - candidates.length),
+    uncategorized: Math.max(0, coveredTotal - categorizedTotal),
+    coveredTotal,
   }
 }
 
@@ -499,10 +531,46 @@ function sectionBlock(rendered: RenderedSection, before: string | null, after: s
 }
 
 /**
+ * Everything the window covers that this delivery does not show and reports as a
+ * count: Messages in categories no enabled edition claims, Messages the item
+ * bound cut, and Messages carrying no category at all.
+ */
+export function reportedCount(window: DigestWindow): number {
+  let unclaimed = 0
+  for (const [category, count] of window.categoryCounts) {
+    if (window.claimedCategories.has(category) || category === window.fallbackCategory) {
+      continue
+    }
+    unclaimed += count
+  }
+  return unclaimed + window.truncatedOverflow + window.uncategorized
+}
+
+/**
+ * What the window covers that this delivery owes no accounting for: mail a
+ * sibling edition claims and will show in its own delivery (editions claim
+ * disjoint categories, d-nfsr4h6f), and mail on the slotting tag's fallback
+ * value, which means never digested — the one exclusion d-tm2dbemu allows.
+ */
+export function accountedElsewhere(window: DigestWindow, ownCategories: ReadonlySet<string>): number {
+  let elsewhere = 0
+  for (const [category, count] of window.categoryCounts) {
+    if (
+      category === window.fallbackCategory ||
+      (window.claimedCategories.has(category) && !ownCategories.has(category))
+    ) {
+      elsewhere += count
+    }
+  }
+  return elsewhere
+}
+
+/**
  * The digest footer: Messages in categories with no claiming section (on any
  * enabled edition; the producer's fallback "never digested" value excluded)
- * counted per category, plus a truncation note when the candidate cap cut the
- * selection. Returns `null` when there is nothing to report.
+ * counted per category, the Messages carrying no category at all, plus a
+ * truncation note when the candidate cap cut the selection. Returns `null` when
+ * there is nothing to report.
  */
 export function digestFooter(window: DigestWindow): string | null {
   const unclaimed: string[] = []
@@ -528,6 +596,12 @@ export function digestFooter(window: DigestWindow): string | null {
     lines.push(
       `${window.truncatedOverflow} more message${window.truncatedOverflow === 1 ? '' : 's'} ` +
         `beyond the ${MAX_DIGEST_CANDIDATES}-item cap not shown`,
+    )
+  }
+  if (window.uncategorized > 0) {
+    lines.push(
+      `${window.uncategorized} message${window.uncategorized === 1 ? '' : 's'} ` +
+        `uncategorized: triage recorded no digest category for ${window.uncategorized === 1 ? 'it' : 'them'}`,
     )
   }
   return lines.length > 0 ? lines.join('\n') : null

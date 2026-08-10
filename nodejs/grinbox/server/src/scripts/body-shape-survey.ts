@@ -225,11 +225,11 @@ async function main(): Promise<void> {
   const db = openDatabase(args.dbPath ?? config.dbPath)
   const encryptor = makeEncryptor(config.tokenEncKey)
   // The redirect URI is unused by the refresh grant this script performs, but
-  // the client config requires one; reuse the deployment's when present.
+  // the client config requires one.
   const googleClient: GoogleOAuthClient = makeGoogleOAuthClient({
     clientId: config.oauthClientId,
     clientSecret: config.oauthClientSecret,
-    redirectUri: config.oauthRedirectUri ?? 'http://localhost/unused',
+    redirectUri: config.oauthRedirectUri,
   })
 
   const sample = await sampleMessages(db, args)
@@ -337,7 +337,7 @@ async function main(): Promise<void> {
   await closeDatabase(db)
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error('[body-shape-survey] failed:', err)
   process.exit(1)
 })

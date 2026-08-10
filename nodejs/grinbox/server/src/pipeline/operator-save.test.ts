@@ -79,7 +79,7 @@ describe('Operator save write patterns', () => {
       actorUserId: seed.userId,
     })
     const op = await db.selectFrom('operators').selectAll().where('id', '=', id).executeTakeFirstOrThrow()
-    expect(JSON.parse(op.config_json).output_tag_key).toBe('priority')
+    expect((JSON.parse(op.config_json) as { output_tag_key?: string }).output_tag_key).toBe('priority')
 
     const log = await lastChangeLog('operator', id)
     expect(log?.action).toBe('updated')
@@ -148,7 +148,7 @@ describe('Operator save write patterns', () => {
 
     // b unchanged (rolled back); no spurious change_log row for the failed edit.
     const opB = await db.selectFrom('operators').select('config_json').where('id', '=', b).executeTakeFirstOrThrow()
-    expect(JSON.parse(opB.config_json).output_tag_key).toBe('topic')
+    expect((JSON.parse(opB.config_json) as { output_tag_key?: string }).output_tag_key).toBe('topic')
     const logs = await db
       .selectFrom('change_log')
       .selectAll()
@@ -261,7 +261,7 @@ describe('Operator save write patterns', () => {
       .select(['config_json'])
       .where('id', '=', disabledId)
       .executeTakeFirstOrThrow()
-    expect(JSON.parse(op.config_json).output_tag_key).toBe('urgency')
+    expect((JSON.parse(op.config_json) as { output_tag_key?: string }).output_tag_key).toBe('urgency')
   })
 
   it('rejects enabling an Operator that would collide on an output key', async () => {
@@ -434,7 +434,7 @@ describe('Operator save — unknown template placeholders', () => {
 
   function llmConfig(promptTemplate: string): string {
     return JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: promptTemplate,
       outputs: [{ tag_key: 'kind', value_enum: ['a', 'b'] }],
     })

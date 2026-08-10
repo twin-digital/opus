@@ -10,7 +10,7 @@ const creds = { appToken: 'app', userKey: 'usr' }
 
 describe('pushover sendNotification', () => {
   it('posts credentials + message and returns the request id', async () => {
-    const fetch: FetchLike = vi.fn(async (_url, init) => {
+    const fetch: FetchLike = vi.fn<FetchLike>(async (_url, init) => {
       expect(init.method).toBe('POST')
       const params = new URLSearchParams(init.body)
       expect(params.get('token')).toBe('app')

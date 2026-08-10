@@ -18,6 +18,12 @@ import type { OperatorSnapshot } from '../operators/run.js'
 export interface SnapshotContract {
   readonly inputKeys: readonly string[]
   readonly outputKeys: readonly string[]
+  /**
+   * The subset of {@link outputKeys} declared as typed extractions rather than
+   * closed enums (d-04s2n18o). An extraction may be absent after a run that
+   * succeeded, so the classifier must not read its absence as a failure.
+   */
+  readonly extractedOutputKeys: readonly string[]
 }
 
 /**
@@ -36,5 +42,6 @@ export function resolveSnapshotContract(snapshot: OperatorSnapshot): SnapshotCon
   return {
     inputKeys: contract.inputs,
     outputKeys: contract.outputs.map((o) => o.key),
+    extractedOutputKeys: contract.outputs.filter((o) => 'valueType' in o).map((o) => o.key),
   }
 }

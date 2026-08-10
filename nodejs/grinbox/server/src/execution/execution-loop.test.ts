@@ -117,7 +117,7 @@ describe('execution loop — shutdown drain', () => {
     // once to dispatch the worker (it then blocks inside invoke_model), call
     // stop() (which must await the in-flight worker), release the call, and
     // confirm stop() only resolves AFTER the run reaches a terminal state.
-    let release: (() => void) | null = null
+    let release!: () => void
     let invoked = false
     let signalInvoked: (() => void) | null = null
     const invokedPromise = new Promise<void>((resolve) => {
@@ -127,7 +127,7 @@ describe('execution loop — shutdown drain', () => {
       release = resolve
     })
     const configJson = JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: 'classify {{subject}}',
       outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
     })
@@ -223,9 +223,7 @@ describe('execution loop — shutdown drain', () => {
 
     // Release the blocked call; the worker finishes + persists, then stop()
     // resolves.
-    if (release) {
-      ;(release as () => void)()
-    }
+    release()
     await stopPromise
     expect(stopResolved).toBe(true)
 
@@ -327,15 +325,20 @@ describe('execution loop — dependency ordering and cascade', () => {
     await closeDatabase(db)
   })
 
-  /** Resolve declared inputs from a synthetic `_inputs` array in the config. */
+  /**
+   * Resolve declared inputs from a synthetic `_inputs` array in the config, and
+   * extracted outputs from a synthetic `_extracted` flag.
+   */
   function syntheticResolve(snapshot: OperatorSnapshot): SnapshotContract {
     const cfg = JSON.parse(snapshot.op_config_json) as {
       output_tag_key: string
       _inputs?: string[]
+      _extracted?: boolean
     }
     return {
       inputKeys: cfg._inputs ?? [],
       outputKeys: [cfg.output_tag_key],
+      extractedOutputKeys: cfg._extracted ? [cfg.output_tag_key] : [],
     }
   }
 
@@ -594,7 +597,7 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
 
   /** An llm_tagger config producing the single `urgency` Tag. */
   const taggerCfg = JSON.stringify({
-    model_id: 'anthropic.claude',
+    model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     prompt_template: 'classify {{subject}}',
     outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
   })
@@ -692,7 +695,7 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
   it('holds the notify until the tagger settles (ordering edge is honored)', async () => {
     const { taggerId, notifyId } = await buildPipeline()
     const sends: string[] = []
-    let releaseBedrock: (() => void) | null = null
+    let releaseBedrock!: () => void
     const bedrockGate = new Promise<void>((r) => {
       releaseBedrock = r
     })
@@ -740,9 +743,7 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
     expect(sends).toHaveLength(0)
 
     // Release the tagger; the notify becomes eligible only now.
-    if (releaseBedrock) {
-      ;(releaseBedrock as () => void)()
-    }
+    releaseBedrock()
     await loop.runUntilIdle()
     await loop.stop()
 
@@ -832,7 +833,7 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
     })
 
     const sends: string[] = []
-    let releaseBedrock: (() => void) | null = null
+    let releaseBedrock!: () => void
     const bedrockGate = new Promise<void>((r) => {
       releaseBedrock = r
     })
@@ -877,9 +878,7 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
     expect(beforeById.get(notifyId)).toBe('pending')
     expect(sends).toHaveLength(0)
 
-    if (releaseBedrock) {
-      ;(releaseBedrock as () => void)()
-    }
+    releaseBedrock()
     await loop.runUntilIdle()
     await loop.stop()
 

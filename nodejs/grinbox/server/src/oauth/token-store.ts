@@ -20,7 +20,7 @@ import type { Kysely } from 'kysely'
 import { z } from 'zod'
 import type { Encryptor } from '../crypto/encryption.js'
 import type { Database } from '../db/schema.js'
-import { type GoogleOAuthClient, InvalidGrantError } from './google-client.js'
+import { type GoogleOAuthClient, InvalidGrantError, type RefreshResult } from './google-client.js'
 
 /** The `kind` discriminator for Gmail OAuth credentials. */
 export const GMAIL_OAUTH_KIND = 'gmail_oauth'
@@ -236,7 +236,7 @@ export async function resolveGmailAccessToken(
   }
 
   // Near (or past) expiry: refresh.
-  let refreshed: { accessToken: string; expiresInSeconds: number }
+  let refreshed: RefreshResult
   try {
     refreshed = await googleClient.refreshAccessToken(payload.refresh_token)
   } catch (err) {
@@ -253,10 +253,14 @@ export async function resolveGmailAccessToken(
     throw err
   }
 
+  // Store whatever the provider handed back, the durable credential included
+  // (d-v5fyd7xd): a provider that rotates the refresh token expects the
+  // replacement at the next renewal, and keeping the superseded one fails there.
   const updated: GmailTokenPayload = {
     ...payload,
     access_token: refreshed.accessToken,
     access_token_expires_at: now + refreshed.expiresInSeconds,
+    refresh_token: refreshed.refreshToken ?? payload.refresh_token,
   }
   const dataEnc = encryptTokenPayload(encryptor, updated)
 

@@ -5,22 +5,24 @@ import type { Database } from './schema.js'
 export { DEFAULT_LIMITS }
 
 /**
- * Insert any default Limit for `userId` that is missing from the `limits`
- * table, matched on `(resource, operation, scope)`. Existing rows are never
- * modified or deleted — a user-tuned `max_count`/`window_seconds` survives
- * every restart; only a wholly absent definition (which would otherwise run
- * unmetered) is inserted at its default. Returns the number of rows the DB
- * actually inserted.
+ * Insert any seeded Limit for `userId` that the `limits` table is missing,
+ * matched on `(resource, operation, scope)` among rows whose `origin` is
+ * `seeded`. Returns the number of rows the DB actually inserted.
  *
- * Idempotent: a second call finds nothing missing and inserts nothing, and the
- * insert itself is conflict-tolerant (the table's UNIQUE
- * `(user_id, resource, operation, scope)` makes a row that appears between the
- * read and the insert a skipped conflict, not a boot failure). Called on every
- * daemon boot (after migrations + user bootstrap) and by
- * {@link seedDefaultLimits} at install time.
+ * Keying on origin is what makes the backstop hold (d-qv5l66ya): a user cap on
+ * the same operation is a different row and does not shadow the seeded one, so
+ * grinbox's own cap is reinserted whenever it is absent. A seeded row already
+ * present is left exactly as it is.
  *
- * Seeding bypasses `change_log` — the seeded rows are conceptually part of the
- * install, not an action by anyone (see data-model.md "Limits" and "Audit").
+ * Idempotent: a second call finds nothing missing, and the insert is
+ * conflict-tolerant — the table's UNIQUE
+ * `(user_id, resource, operation, scope, origin)` makes a row that appears
+ * between the read and the insert a skipped conflict, not a boot failure.
+ * Called on every daemon boot, after migrations and user bootstrap, so a seeded
+ * cap cannot be absent for longer than one restart.
+ *
+ * Seeding bypasses `change_log` — the seeded rows are part of the install, not
+ * an action by anyone.
  */
 export async function reconcileDefaultLimits(
   db: Kysely<Database>,
@@ -31,6 +33,7 @@ export async function reconcileDefaultLimits(
     .selectFrom('limits')
     .select(['resource', 'operation', 'scope'])
     .where('user_id', '=', userId)
+    .where('origin', '=', 'seeded')
     .execute()
   const present = new Set(existing.map((l) => `${l.resource} ${l.operation} ${l.scope}`))
   const missing = DEFAULT_LIMITS.filter((l) => !present.has(`${l.resource} ${l.operation} ${l.scope}`))
@@ -46,6 +49,7 @@ export async function reconcileDefaultLimits(
         resource: limit.resource,
         operation: limit.operation,
         scope: limit.scope,
+        origin: 'seeded' as const,
         max_count: limit.max_count,
         window_seconds: limit.window_seconds,
         created_at: now,

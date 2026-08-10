@@ -50,7 +50,7 @@ export class StubProvider implements Provider {
     this.listCandidatesCalls++
     const idx = Math.min(this.pageIndex, this.pages.length - 1)
     this.pageIndex++
-    const page = this.pages[idx]
+    const page = this.pages.at(idx)
     if (page === undefined) {
       return { backendMessageIds: [], newCursor: 'EMPTY' }
     }

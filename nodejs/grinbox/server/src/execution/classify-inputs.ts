@@ -34,7 +34,7 @@ export interface ClassifyRun {
    * legitimately be absent after a successful run (d-04s2n18o), so a consumer
    * of one is not blocked by its absence — it renders empty (d-hl6z38i6).
    */
-  readonly extractedOutputKeys?: readonly string[]
+  readonly extractedOutputKeys: readonly string[]
   readonly status: RunStatus
 }
 
@@ -61,7 +61,10 @@ export type ClassifyResult =
  *  - present in `tagsInTriage` → satisfied
  *  - else find the sibling run that owns the key (declares it as an output):
  *    - owner `failed`/`skipped` → definitively_missing (cascade skip)
- *    - owner `completed` but the key isn't in `tagsInTriage` → data
+ *    - owner `completed`, the key isn't in `tagsInTriage`, and the key is one of
+ *      the owner's extracted outputs → satisfied (the extraction dropped; the
+ *      consumer renders it empty)
+ *    - owner `completed` but a closed-enum output isn't in `tagsInTriage` → data
  *      inconsistency: definitively_missing + a warning
  *    - owner `pending`/`running` → wait
  *  - no owner at all → definitively_missing (dangling dep; save-time validation
@@ -102,7 +105,15 @@ export function classifyInputs(
         reasons.push(`input Tag '${key}' not produced: Operator ${owner.operatorId} ${owner.status}`)
         break
       case 'completed': {
-        // Owner finished but the Tag isn't present — a data inconsistency.
+        // An extraction that normalized to nothing drops its Tag, and the run
+        // still succeeded (d-04s2n18o). The consumer runs with the Tag absent
+        // and renders it empty (d-hl6z38i6); nothing gates on an extraction
+        // (d-2asvd71w), so there is no decision waiting on the value.
+        if (owner.extractedOutputKeys.includes(key)) {
+          break
+        }
+        // A closed-enum output is produced whenever its Operator runs, so its
+        // absence after a completed run is a real inconsistency.
         const warning: ClassifyWarning = {
           inputKey: key,
           ownerOperatorId: owner.operatorId,

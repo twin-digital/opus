@@ -301,7 +301,7 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
     inFlight = cycle
     // Clear the guard (only if still ours) once it settles; the caller still
     // observes `cycle`'s resolution/rejection.
-    cycle.finally(() => {
+    void cycle.finally(() => {
       if (inFlight === cycle) {
         inFlight = null
       }
@@ -319,7 +319,7 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
     // authoritative guard is `pollDueAccounts`'s in-flight check, which holds
     // across the whole cycle regardless of cron timing.
     job = new Cron(tickCronPattern(config.pollSchedulerTickSeconds), { protect: true }, () => {
-      void pollDueAccounts().catch((err) => {
+      void pollDueAccounts().catch((err: unknown) => {
         console.error('[grinbox][poll] scheduler tick error', err)
       })
     })

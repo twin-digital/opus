@@ -236,6 +236,7 @@ export function makeGoogleOAuthClient(config: GoogleOAuthClientConfig): GoogleOA
         return {
           accessToken: credentials.access_token ?? '',
           expiresInSeconds,
+          ...(credentials.refresh_token ? { refreshToken: credentials.refresh_token } : {}),
         }
       } catch (err) {
         if (isInvalidGrant(err)) {

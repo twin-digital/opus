@@ -54,8 +54,6 @@ export {
   invokeModel,
   makeBedrockSend,
   MODEL_INFERENCE_PROFILES,
-  MODEL_OPTIONS,
-  type ModelOption,
   resolveInferenceProfile,
   UnmappedModelError,
 } from './bedrock.js'

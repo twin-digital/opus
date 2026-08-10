@@ -5,6 +5,7 @@ import * as accountLastReconciled from './20260602130000_account_last_reconciled
 import * as accountDisplay from './20260602140000_account_display.js'
 import * as digestRuns from './20260603000000_digest_runs.js'
 import * as mailResources from './20260604000000_mail_resources.js'
+import * as limitOrigin from './20260605000000_limit_origin.js'
 
 /**
  * Static migration registry: migration name → module. The migrator builds its
@@ -25,4 +26,5 @@ export const migrations: Record<string, Migration> = {
   '20260602140000_account_display': accountDisplay,
   '20260603000000_digest_runs': digestRuns,
   '20260604000000_mail_resources': mailResources,
+  '20260605000000_limit_origin': limitOrigin,
 }

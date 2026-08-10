@@ -26,7 +26,7 @@ describe('ensureBootstrapUser', () => {
       .selectFrom('users')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    return Number(row.n)
+    return row.n
   }
 
   it('creates exactly one User + the default Limits on a fresh DB', async () => {
@@ -45,7 +45,7 @@ describe('ensureBootstrapUser', () => {
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .where('user_id', '=', result.userId)
       .executeTakeFirstOrThrow()
-    expect(Number(limits.n)).toBe(DEFAULT_LIMITS.length)
+    expect(limits.n).toBe(DEFAULT_LIMITS.length)
   })
 
   it('is a no-op on a second call (still one User, no extra Limits)', async () => {
@@ -60,7 +60,7 @@ describe('ensureBootstrapUser', () => {
       .selectFrom('limits')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(limits.n)).toBe(DEFAULT_LIMITS.length)
+    expect(limits.n).toBe(DEFAULT_LIMITS.length)
   })
 
   it('uses GRINBOX_USER_EMAIL when set, NULL otherwise', async () => {

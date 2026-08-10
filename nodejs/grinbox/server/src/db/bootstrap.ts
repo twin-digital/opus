@@ -39,7 +39,8 @@ export async function ensureBootstrapUser(
       return { userId: existing.id, created: false }
     }
 
-    const email = env.GRINBOX_USER_EMAIL?.trim() || null
+    const trimmed = env.GRINBOX_USER_EMAIL?.trim()
+    const email = trimmed === undefined || trimmed === '' ? null : trimmed
     const inserted = await trx
       .insertInto('users')
       .values({ name: 'Grinbox', email, created_at: now })

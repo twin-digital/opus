@@ -7,7 +7,7 @@ import type { Database } from './schema.js'
  * migrations/index.ts for why this is preferred over `FileMigrationProvider`).
  */
 const provider: MigrationProvider = {
-  getMigrations: async () => migrations,
+  getMigrations: () => Promise.resolve(migrations),
 }
 
 /**

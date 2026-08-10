@@ -127,7 +127,7 @@ describe('startDaemon — live client wiring', () => {
       .selectFrom('limits')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(limits.n)).toBe(DEFAULT_LIMITS.length)
+    expect(limits.n).toBe(DEFAULT_LIMITS.length)
   })
 
   it('with OAuth unconfigured, the scheduler skips a credentialed Account (null factory)', async () => {

@@ -31,7 +31,7 @@ describe('resolveSnapshotContract', () => {
       type_key: 'llm_tagger',
       type_code_version: '1',
       op_config_json: JSON.stringify({
-        model_id: 'anthropic.claude',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'classify {{subject}}',
         outputs: [
           { tag_key: 'category', value_enum: ['work', 'personal'] },

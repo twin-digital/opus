@@ -1,5 +1,5 @@
 import { type Kysely, sql } from 'kysely'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { type MockedFunction, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Config } from '../config.js'
 import type { Database } from '../db/schema.js'
 import { seedDefaultLimits } from '../db/seed.js'
@@ -42,7 +42,7 @@ interface Fixture {
   pipelineId: number
   operatorId: number
   invoke: ReturnType<typeof vi.fn>
-  send: ReturnType<typeof vi.fn>
+  send: MockedFunction<() => Promise<{ message_id: string }>>
   scheduler: DigestScheduler
 }
 
@@ -320,6 +320,7 @@ describe('digest scheduler', () => {
     await seedCandidate(f, 'c1', JUN_10 + HOUR)
     let release: () => void = () => {}
     let parked = false
+    const hasParked = (): boolean => parked
     // Park the cycle inside its send so a second tick arrives mid-flight.
     f.send.mockImplementationOnce(
       () =>
@@ -333,7 +334,7 @@ describe('digest scheduler', () => {
     const now = JUN_10 + 21 * HOUR
     const first = f.scheduler.runDueDigests(now)
     // Let the cycle actually reach the parked send before the second tick.
-    while (!parked) {
+    while (!hasParked()) {
       await new Promise((r) => setImmediate(r))
     }
     const second = await f.scheduler.runDueDigests(now)

@@ -51,13 +51,13 @@ export function evaluateRuleBasedTagger(
  * gated Tagger that doesn't fire emits nothing — not even the fallback — and
  * downstream Operators that depend on its output cascade-skip.
  */
-async function run(input: OperatorRunInput<'rule_based_tagger'>): Promise<OperatorRunResult> {
+function run(input: OperatorRunInput<'rule_based_tagger'>): Promise<OperatorRunResult> {
   const { config, message, tags } = input
   if (!shouldFire(config.when, tags)) {
-    return { tags: [] }
+    return Promise.resolve({ tags: [] })
   }
   const value = evaluateRuleBasedTagger(config, message, tags)
-  return { tags: [{ key: config.output_tag_key, value }] }
+  return Promise.resolve({ tags: [{ key: config.output_tag_key, value }] })
 }
 
 /** Rule-based Tagger uses no Credentials. */

@@ -255,7 +255,7 @@ export function createDigestScheduler(deps: DigestSchedulerDeps): DigestSchedule
     }
     const cycle = runCycle(now)
     inFlight = cycle
-    cycle.finally(() => {
+    void cycle.finally(() => {
       if (inFlight === cycle) {
         inFlight = null
       }
@@ -268,7 +268,7 @@ export function createDigestScheduler(deps: DigestSchedulerDeps): DigestSchedule
       return
     }
     job = new Cron(tickCronPattern(config.digestSchedulerTickSeconds), { protect: true }, () => {
-      void runDueDigests().catch((err) => {
+      void runDueDigests().catch((err: unknown) => {
         console.error('[grinbox][digest] scheduler tick error', err)
       })
     })
@@ -282,7 +282,7 @@ export function createDigestScheduler(deps: DigestSchedulerDeps): DigestSchedule
     // Let an in-flight cycle finish its DB writes before the daemon closes the
     // connection. Failures were already handled inside the cycle.
     if (inFlight !== null) {
-      await inFlight.catch(() => {})
+      await inFlight.catch(() => undefined)
     }
   }
 

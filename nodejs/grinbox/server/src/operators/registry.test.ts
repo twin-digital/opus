@@ -11,25 +11,25 @@ describe('operator registry', () => {
   it('returns the implemented type for a known type_key', () => {
     const type = getOperatorType('rule_based_tagger')
     expect(type).toBeDefined()
-    expect(type?.type_key).toBe('rule_based_tagger')
-    expect(type?.code_version).toBe('1')
+    expect(type.type_key).toBe('rule_based_tagger')
+    expect(type.code_version).toBe('1')
   })
 
   it('returns the implemented llm_tagger type (O2)', () => {
     const type = getOperatorType('llm_tagger')
     expect(type).toBeDefined()
-    expect(type?.type_key).toBe('llm_tagger')
-    expect(type?.code_version).toBe('1')
+    expect(type.type_key).toBe('llm_tagger')
+    expect(type.code_version).toBe('1')
   })
 
   it('returns the implemented notify, apply_category, and archive Actions', () => {
-    expect(getOperatorType('notify')?.type_key).toBe('notify')
-    expect(getOperatorType('apply_category')?.type_key).toBe('apply_category')
-    expect(getOperatorType('archive')?.type_key).toBe('archive')
+    expect(getOperatorType('notify').type_key).toBe('notify')
+    expect(getOperatorType('apply_category').type_key).toBe('apply_category')
+    expect(getOperatorType('archive').type_key).toBe('archive')
   })
 
   it('returns the schedule-triggered digest_delivery type', () => {
-    expect(getOperatorType('digest_delivery')?.type_key).toBe('digest_delivery')
+    expect(getOperatorType('digest_delivery').type_key).toBe('digest_delivery')
   })
 
   it('returns undefined for an unknown type_key', () => {

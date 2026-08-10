@@ -79,7 +79,7 @@ export function parseAddress(raw: string | null | undefined): {
   // back to the first bare `addr@dom` token. Take the first address only.
   const bracketed = /<([^<>]+)>/.exec(raw)
   const candidate = bracketed ? bracketed[1] : (raw.split(',')[0] ?? '')
-  const m = /[^\s<>,"@]+@[^\s<>,"@]+/.exec(candidate ?? '')
+  const m = /[^\s<>,"@]+@[^\s<>,"@]+/.exec(candidate)
   if (!m) {
     return { email: '', domain: '' }
   }

@@ -28,7 +28,7 @@ import { type OperatorTypeKey, operatorTypeKeySchema } from '@grinbox/shared'
 import type { Kysely } from 'kysely'
 import type { Database } from '../db/schema.js'
 import { extractCredentialRefsFromConfigJson } from '../operators/credential-refs.js'
-import { type ImplementedTypeKey, currentCodeVersion, getOperatorType } from '../operators/registry.js'
+import { currentCodeVersion, getOperatorType } from '../operators/registry.js'
 import { withPipelineEditLock } from './edit-lock.js'
 import {
   type OperatorForValidation,
@@ -148,7 +148,9 @@ async function pipelineUserId(tx: Kysely<Database>, pipelineId: number): Promise
  * know — such a row is saveable but fails the runtime runnability recheck.
  */
 function resolveCodeVersion(typeKey: OperatorTypeKey): string {
-  if (!getOperatorType(typeKey)) {
+  // Widened to `string` for the overload that reports an unregistered type.
+  const registered = getOperatorType(typeKey as string)
+  if (!registered) {
     return '1'
   }
   return currentCodeVersion(typeKey)

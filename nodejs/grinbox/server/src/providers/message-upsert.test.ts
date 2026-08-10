@@ -92,7 +92,7 @@ describe('upsertMessage', () => {
       .selectFrom('messages')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(count.n)).toBe(1)
+    expect(count.n).toBe(1)
 
     const row = await loadMessageRow(db, second.messageId)
     expect(row.subject).toBe('updated')

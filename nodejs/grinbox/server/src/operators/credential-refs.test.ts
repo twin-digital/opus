@@ -16,7 +16,7 @@ describe('extractCredentialRefsFromOperatorConfig', () => {
   it('returns [] for an LLM Tagger', () => {
     expect(
       extractCredentialRefsFromOperatorConfig('llm_tagger', {
-        model_id: 'm',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'p',
         outputs: [{ tag_key: 'k', value_enum: ['a', 'b'] }],
       }),

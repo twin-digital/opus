@@ -113,7 +113,7 @@ export function createPipelinesRoutes(deps: ApiDeps) {
       const countByPipeline = new Map<number, number>()
       for (const c of counts) {
         if (c.pipeline_id !== null) {
-          countByPipeline.set(c.pipeline_id, Number(c.n))
+          countByPipeline.set(c.pipeline_id, c.n)
         }
       }
 
@@ -202,7 +202,7 @@ export function createPipelinesRoutes(deps: ApiDeps) {
         id: pipeline.id,
         name: pipeline.name,
         description: pipeline.description,
-        active_account_count: Number(accountCount?.n ?? 0),
+        active_account_count: accountCount?.n ?? 0,
         operators,
         tag_key_registry: tagKeyRegistry,
       }

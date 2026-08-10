@@ -147,7 +147,7 @@ describe('validatePipeline (config-driven)', () => {
         operator_id: 1,
         type_key: 'llm_tagger',
         config_json: JSON.stringify({
-          model_id: 'm',
+          model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
           prompt_template: 'p',
           outputs: [
             { tag_key: 'kind', value_enum: ['alert', 'fyi'] },
@@ -203,7 +203,7 @@ describe('validatePipeline (config-driven)', () => {
         operator_id: 1,
         type_key: 'llm_tagger',
         config_json: JSON.stringify({
-          model_id: 'm',
+          model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
           prompt_template: 'p',
           outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
         }),
@@ -257,7 +257,7 @@ describe('validatePipeline (config-driven)', () => {
         operator_id: 1,
         type_key: 'llm_tagger',
         config_json: JSON.stringify({
-          model_id: 'm',
+          model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
           prompt_template: 'p',
           outputs: [{ tag_key: 'kind', value_enum: ['alert', 'fyi'] }],
         }),
@@ -306,7 +306,7 @@ describe('validatePipeline (config-driven)', () => {
         operator_id: 2,
         type_key: 'llm_tagger',
         config_json: JSON.stringify({
-          model_id: 'm',
+          model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
           prompt_template: 'p',
           outputs: [{ tag_key: 'topic', value_enum: ['a', 'b'] }],
         }),
@@ -395,7 +395,7 @@ describe('validateContractGraph (graph-level checks)', () => {
   // not run (r-qu9y7wgg), refused at save like any other cycle (d-8y8i45y2).
   // findCycle drops the self-edge, so this operator saves and then never becomes
   // ready: its own output is the input it waits on.
-  it.skip('rejects an operator that depends on its own output', () => {
+  it('rejects an operator that depends on its own output', () => {
     const errors = validateContractGraph(new Map([[1, contract(['a'], ['a'])]]))
     const cycle = errors.find((e) => e.kind === 'cycle')
     expect(cycle).toBeDefined()
@@ -404,7 +404,7 @@ describe('validateContractGraph (graph-level checks)', () => {
     }
   })
 
-  it.skip('rejects a self-dependency reached through the gate', () => {
+  it('rejects a self-dependency reached through the gate', () => {
     // The same shape with a sibling present: the graph is otherwise runnable, so
     // nothing else fails the save and the self-edge is the only fault.
     const errors = validateContractGraph(
@@ -462,7 +462,7 @@ describe('saveTimeValidationErrors', () => {
       operator_id: operatorId,
       type_key: 'llm_tagger',
       config_json: JSON.stringify({
-        model_id: 'anthropic.claude',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: promptTemplate,
         outputs: [{ tag_key: 'kind', value_enum: ['a', 'b'] }],
       }),
@@ -595,7 +595,7 @@ describe('saveTimeValidationErrors', () => {
       operator_id: operatorId,
       type_key: 'llm_tagger',
       config_json: JSON.stringify({
-        model_id: 'm',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'extract',
         outputs: [{ tag_key: 'amount', value_type: 'money' }],
       }),
@@ -645,7 +645,7 @@ describe('saveTimeValidationErrors', () => {
       operator_id: 2,
       type_key: 'llm_tagger',
       config_json: JSON.stringify({
-        model_id: 'm',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'extract',
         outputs: [{ tag_key: 'amount', value_type: 'money' }],
         when: { tag_key: 'digest_category', equals: ['receipt'] },
@@ -712,7 +712,7 @@ describe('saveTimeValidationErrors', () => {
       operator_id: 2,
       type_key: 'llm_tagger',
       config_json: JSON.stringify({
-        model_id: 'm',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'extract',
         outputs: [
           { tag_key: 'payee', value_type: 'string' },
@@ -764,7 +764,7 @@ describe('saveTimeValidationErrors', () => {
       operator_id: 1,
       type_key: 'llm_tagger',
       config_json: JSON.stringify({
-        model_id: 'm',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'p',
         outputs: [{ tag_key: 'digest_category', value_type: 'string' }],
       }),

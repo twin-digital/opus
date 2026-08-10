@@ -22,6 +22,11 @@ const refreshAccessToken = vi.fn()
 const setCredentials = vi.fn()
 const getProfile = vi.fn()
 
+/** Query-encode a single option value. */
+function optionString(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value)
+}
+
 /** Records the (clientId, clientSecret, redirectUri) each OAuth2 is built with. */
 const oauth2Ctor = vi.fn()
 
@@ -42,7 +47,7 @@ class FakeOAuth2 {
       if (value === undefined) {
         continue
       }
-      url.searchParams.set(key, Array.isArray(value) ? value.join(' ') : String(value))
+      url.searchParams.set(key, Array.isArray(value) ? value.join(' ') : optionString(value))
     }
     return url.toString()
   }

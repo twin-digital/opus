@@ -1,3 +1,4 @@
+import type { SourceState } from '@grinbox/shared'
 import type { ColumnType, Generated, Kysely } from 'kysely'
 
 /**
@@ -102,10 +103,19 @@ export interface LimitsTable {
   operation: string
   /** Closed enum (CHECK): `per_window` | `per_message`. */
   scope: 'per_window' | 'per_message'
+  /**
+   * Who put the cap there (CHECK). A `seeded` cap is grinbox's own backstop and
+   * cannot be removed or loosened by anyone; a `user` cap layers over it and
+   * comes off freely (d-qv5l66ya).
+   */
+  origin: LimitOrigin
   max_count: number
   window_seconds: number | null
   created_at: CreatedAt
 }
+
+/** Provenance of a cap: grinbox's own backstop, or one the user added. */
+export type LimitOrigin = 'seeded' | 'user'
 
 export interface LimitCountersWindowTable {
   limit_id: number
@@ -141,9 +151,6 @@ export interface MessagesTable {
   /** Unix seconds the state was last confirmed against the backend; null until first sync. */
   source_synced_at: number | null
 }
-
-/** Backend disposition of a Message (CHECK-constrained; see `messages.source_state`). */
-export type SourceState = 'present' | 'archived' | 'trashed' | 'spam' | 'deleted'
 
 export interface TagsTable {
   triage_id: number

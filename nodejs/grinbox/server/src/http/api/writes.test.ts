@@ -75,7 +75,7 @@ describe('Pipeline write routes', () => {
     const res = await app.request(jsonReq('/api/pipelines', 'POST', { name: 'dup' }))
     expect(res.status).toBe(409)
     const body = (await res.json()) as { error: { code: string } }
-    expect(body.error.code).toBe('pipeline_name_conflict')
+    expect(body.error.code).toBe('name_conflict')
   })
 
   it('PATCH /api/pipelines/:id edits name + description', async () => {
@@ -176,7 +176,7 @@ describe('Operator write routes', () => {
       .selectFrom('operators')
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirstOrThrow()
-    expect(Number(count.n)).toBe(0)
+    expect(count.n).toBe(0)
   })
 
   it('PATCH edits operator config', async () => {
@@ -198,7 +198,7 @@ describe('Operator write routes', () => {
     )
     expect(res.status).toBe(200)
     const row = await db.selectFrom('operators').select('config_json').where('id', '=', opId).executeTakeFirstOrThrow()
-    expect(JSON.parse(row.config_json).output_value_enum).toEqual(['high', 'mid', 'low'])
+    expect((JSON.parse(row.config_json) as { output_value_enum: string[] }).output_value_enum).toEqual(['high', 'mid', 'low'])
     const log = await changeLog(db, 'operator', opId)
     expect(log.at(-1)?.action).toBe('updated')
   })
@@ -226,7 +226,7 @@ describe('Operator write routes', () => {
     expect(body.error.code).toBe('pipeline_validation_failed')
     // b must be unchanged.
     const row = await db.selectFrom('operators').select('config_json').where('id', '=', bId).executeTakeFirstOrThrow()
-    expect(JSON.parse(row.config_json).output_tag_key).toBe('bkey')
+    expect((JSON.parse(row.config_json) as { output_tag_key: string }).output_tag_key).toBe('bkey')
   })
 
   it('enable / disable toggle + change_log action', async () => {
@@ -514,7 +514,7 @@ describe('Limit write routes', () => {
   // loosened by anyone, and r-zmn2p7lf makes "no surface offers it" the check.
   // The `limits` table records no provenance, so every route treats a seeded cap
   // as the user's own.
-  it.skip('refuses to delete a seeded cap', async () => {
+  it('refuses to delete a seeded cap', async () => {
     await seedDefaultLimits(db, userId)
     const seeded = await db.selectFrom('limits').select('id').orderBy('id', 'asc').executeTakeFirstOrThrow()
     const app = appFor(db)
@@ -525,7 +525,7 @@ describe('Limit write routes', () => {
     expect(still).toBeDefined()
   })
 
-  it.skip('refuses to loosen a seeded cap, and allows tightening it', async () => {
+  it('refuses to loosen a seeded cap, and allows tightening it', async () => {
     await seedDefaultLimits(db, userId)
     const seeded = await db
       .selectFrom('limits')
@@ -550,7 +550,7 @@ describe('Limit write routes', () => {
   // and the first to deny denies. The UNIQUE (user, resource, operation, scope)
   // key makes the second row impossible today, so the user's only way to bound
   // an already-capped operation is to edit grinbox's own.
-  it.skip('accepts a user cap on an operation a seeded cap already covers', async () => {
+  it('accepts a user cap on an operation a seeded cap already covers', async () => {
     await seedDefaultLimits(db, userId)
     const seeded = await db
       .selectFrom('limits')

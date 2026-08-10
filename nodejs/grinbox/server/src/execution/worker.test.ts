@@ -118,7 +118,7 @@ describe('runWorker — timeout enforcement', () => {
       name: 'llm',
       typeKey: 'llm_tagger',
       configJson: JSON.stringify({
-        model_id: 'anthropic.claude',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'classify {{subject}}',
         outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
       }),
@@ -142,7 +142,7 @@ describe('runWorker — timeout enforcement', () => {
       type_key: 'llm_tagger',
       type_code_version: '1',
       op_config_json: JSON.stringify({
-        model_id: 'anthropic.claude',
+        model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
         prompt_template: 'classify {{subject}}',
         outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
       }),
@@ -197,7 +197,7 @@ describe('runWorker — resource-using Operator wiring', () => {
     opId: number
   }> {
     const configJson = JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: 'classify {{subject}}',
       outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
     })
@@ -257,7 +257,7 @@ describe('runWorker — resource-using Operator wiring', () => {
     // resource_usage_json must reflect the metered call, keyed by
     // "<resource>.<operation>" with the token/cost counters merged in.
     expect(run.resource_usage_json).not.toBeNull()
-    const usage = JSON.parse(run.resource_usage_json as string)
+    const usage = JSON.parse(run.resource_usage_json as string) as Record<string, unknown>
     expect(usage['llm_bedrock.invoke_model']).toMatchObject({
       calls: 1,
       succeeded: 1,
@@ -309,7 +309,7 @@ describe('runWorker — non-timeout failure', () => {
     // LlmTaggerParseError synchronously, without the abort signal firing. This is
     // the non-timeout failure branch, distinct from the timeout test above.
     const configJson = JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: 'classify {{subject}}',
       outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
     })
@@ -386,7 +386,7 @@ describe('runWorker — lazy body fetch', () => {
   })
 
   const bodyPromptConfig = JSON.stringify({
-    model_id: 'anthropic.claude',
+    model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
     prompt_template: 'classify this message: {{body}}',
     outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
   })
@@ -487,7 +487,7 @@ describe('runWorker — lazy body fetch', () => {
     expect(message.body_fetched_at).not.toBeNull()
 
     // The fetch was metered against this run: usage + succeeded event.
-    const usage = JSON.parse(run.resource_usage_json as string)
+    const usage = JSON.parse(run.resource_usage_json as string) as Record<string, unknown>
     expect(usage['mailbox.fetch_body']).toMatchObject({
       calls: 1,
       succeeded: 1,
@@ -498,7 +498,7 @@ describe('runWorker — lazy body fetch', () => {
       .where('triage_id', '=', triageId)
       .where('event_type', '=', 'resource_op_succeeded')
       .execute()
-    const details = events.map((e) => JSON.parse(e.details_json as string))
+    const details = events.map((e) => JSON.parse(e.details_json as string) as Record<string, unknown>)
     expect(details).toContainEqual(
       expect.objectContaining({
         resource: 'mailbox',
@@ -541,6 +541,7 @@ describe('runWorker — lazy body fetch', () => {
         resource: 'mailbox',
         operation: 'fetch_body',
         scope: 'per_message',
+        origin: 'user' as const,
         max_count: 1,
         window_seconds: null,
         created_at: 1000,
@@ -593,7 +594,7 @@ describe('runWorker — lazy body fetch', () => {
 
   it('a non-body prompt performs no fetch', async () => {
     const configJson = JSON.stringify({
-      model_id: 'anthropic.claude',
+      model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
       prompt_template: 'classify {{subject}}',
       outputs: [{ tag_key: 'urgency', value_enum: ['high', 'low'] }],
     })

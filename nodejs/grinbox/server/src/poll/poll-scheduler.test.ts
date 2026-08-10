@@ -17,9 +17,9 @@ import type { ProviderFactory } from './provider-factory.js'
 import { StubProvider, seedAccount, seedPipeline, seedUser } from './test-support.js'
 
 /** A deferred promise handle for driving the slow-poll overlap test. */
-function defer<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((res) => {
+function defer(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void
+  const promise = new Promise<void>((res) => {
     resolve = res
   })
   return { promise, resolve }
@@ -418,7 +418,7 @@ describe('createPollScheduler — pollDueAccounts', () => {
       lastPolledAt: null,
     })
     // First cycle blocks inside listCandidates until we resolve the gate.
-    const gate = defer<void>()
+    const gate = defer()
     const provider = new GatedProvider(gate.promise)
     const scheduler = createPollScheduler({
       db,

@@ -261,7 +261,7 @@ describe('GET /api/messages', () => {
     expect(body.messages).toHaveLength(2)
   })
 
-  it('merges current tags across two pipelines, scopes by pipelineId, and tiebreaks status by later-started triage', async () => {
+  it('shows the later-started triage alone, scopes by pipelineId, and tiebreaks status the same way', async () => {
     // One Message current under two Pipelines, each tagging a different key.
     const userId = await insertUser(db)
     const pA = await insertPipeline(db, userId, 'pipeA')
@@ -307,13 +307,14 @@ describe('GET /api/messages', () => {
 
     const app = createApiRoutes({ db, now: fixedNow })
 
-    // No pipelineId filter: tags from BOTH current triages merge; status is the
-    // later-started (pipeline B, partial) triage.
+    // No pipelineId filter: the later-started current triage (pipeline B) is
+    // what the row carries — its tags in full, and its status. Never a mixture
+    // of two (d-urdglhb6).
     const allRes = await app.request('/api/messages')
     const all = (await allRes.json()) as MessageListResponse
-    const merged = all.messages.find((m) => m.id === mid)
-    expect(merged?.current_tags.map((t) => t.key).sort()).toEqual(['category', 'urgency'])
-    expect(merged?.latest_triage_status).toBe('partial')
+    const row = all.messages.find((m) => m.id === mid)
+    expect(row?.current_tags.map((t) => t.key)).toEqual(['category'])
+    expect(row?.latest_triage_status).toBe('partial')
 
     // pipelineId=A scopes tags + status to pipeline A only.
     const aRes = await app.request(`/api/messages?pipelineId=${pA}`)
@@ -442,7 +443,7 @@ describe('an outcome resolves to the configuration that produced it', () => {
   // r-k6gh82fx requires a historical outcome to resolve to it. The snapshot is
   // written to `triage_operator_runs.op_config_json` and never read back out, so
   // the interface has only the operator's current configuration to show.
-  it.skip("returns each run's configuration snapshot on message detail", async () => {
+  it("returns each run's configuration snapshot on message detail", async () => {
     const userId = await insertUser(db)
     const pid = await insertPipeline(db, userId, 'pipe')
     const opId = await insertOperator(db, pid, {
@@ -470,9 +471,9 @@ describe('an outcome resolves to the configuration that produced it', () => {
 
     const app = createApiRoutes({ db, now: fixedNow })
     const body = (await (await app.request(`/api/messages/${m}`)).json()) as {
-      triages: { runs: { op_config_json: string }[] }[]
+      triages: { operator_runs: { op_config_json: string }[] }[]
     }
-    const run = body.triages.at(0)?.runs.at(0)
+    const run = body.triages.at(0)?.operator_runs.at(0)
     expect(run?.op_config_json).toContain('as-enqueued')
     expect(run?.op_config_json).not.toContain('edited-since')
   })
@@ -480,7 +481,7 @@ describe('an outcome resolves to the configuration that produced it', () => {
   // d-urdglhb6: what the user is shown as a message's current tags is the output
   // of its latest settled triage in full, never a mixture of two. A message
   // current under two pipelines returns the union of both triages' tags.
-  it.skip("shows one triage's tags, not a union across pipelines", async () => {
+  it("shows one triage's tags, not a union across pipelines", async () => {
     const userId = await insertUser(db)
     const pidA = await insertPipeline(db, userId, 'A')
     const pidB = await insertPipeline(db, userId, 'B')

@@ -120,7 +120,7 @@ describe('persistOperatorResult + settlement', () => {
 
   /** Indexes into a run's operator-id list, asserting presence (narrows away undefined). */
   function opId(ids: readonly number[], i: number): number {
-    const id = ids[i]
+    const id = ids.at(i)
     if (id === undefined) {
       throw new Error(`no operator id at index ${i}`)
     }

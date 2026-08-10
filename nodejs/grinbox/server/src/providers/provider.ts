@@ -24,7 +24,7 @@
  * `message-upsert.ts`.
  */
 
-import type { SourceState } from '../db/schema.js'
+import type { SourceState } from '@grinbox/shared'
 
 /**
  * The minimal Account context a Provider needs. A projection of the `accounts`

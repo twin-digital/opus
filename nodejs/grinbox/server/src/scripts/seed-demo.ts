@@ -61,7 +61,7 @@ function parseArgs(argv: readonly string[]): CliArgs {
   let dbPath: string | undefined
   let reset = false
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
+    const arg = argv.at(i)
     if (arg === undefined) {
       continue
     }
@@ -857,7 +857,7 @@ async function seedTriage(db: DB, args: SeedTriageArgs): Promise<void> {
   const triggeredBy = args.triggeredBy ?? 'message_arrival'
 
   // A failure run or a skipped action run makes the Triage `partial`.
-  const actionsCompleted = !(m.partial || m.failed)
+  const actionsCompleted = !(m.partial === true || m.failed === true)
   const finalStatus = actionsCompleted ? 'completed' : 'partial'
   const endedAt = startedAt + 6
 
@@ -1176,7 +1176,7 @@ async function main(): Promise<void> {
   let encKey: Buffer | null = null
   if (rawKey) {
     encKey = decodeKey(rawKey)
-    if (!encKey || encKey.length !== 32) {
+    if (encKey?.length !== 32) {
       throw new Error('GRINBOX_TOKEN_ENC_KEY must decode (base64 or hex) to exactly 32 bytes')
     }
   } else {
@@ -1205,7 +1205,7 @@ async function main(): Promise<void> {
       .select((eb) => eb.fn.countAll<number>().as('n'))
       .executeTakeFirst()
     console.log(
-      `[seed-demo] done. db=${args.dbPath} messages=${Number(counts?.n ?? 0)} ` +
+      `[seed-demo] done. db=${args.dbPath} messages=${counts?.n ?? 0} ` +
         `credentials=${encKey ? 'stored (accounts "ok")' : 'skipped (accounts "needs_auth")'}`,
     )
   } finally {
@@ -1213,7 +1213,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error('[seed-demo] failed:', err)
   process.exit(1)
 })

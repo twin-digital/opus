@@ -221,7 +221,11 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
     // 1. Stop accepting new HTTP requests.
     await new Promise<void>((resolve, reject) => {
       server.close((err) => {
-        err ? reject(err) : resolve()
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
       })
     })
 

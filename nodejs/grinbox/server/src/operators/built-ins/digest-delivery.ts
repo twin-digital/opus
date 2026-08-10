@@ -59,9 +59,11 @@ const configSchema: z.ZodType<DigestDeliveryConfig> = operatorConfigSchemas.dige
  * no run rows for it. Throwing (rather than a silent no-op) makes any future
  * bypass of that exclusion loud.
  */
-async function run(): Promise<OperatorRunResult> {
-  throw new Error(
-    'digest_delivery is schedule-triggered and cannot run inside a Triage; its runs are driven by the digest scheduler',
+function run(): Promise<OperatorRunResult> {
+  return Promise.reject(
+    new Error(
+      'digest_delivery is schedule-triggered and cannot run inside a Triage; its runs are driven by the digest scheduler',
+    ),
   )
 }
 

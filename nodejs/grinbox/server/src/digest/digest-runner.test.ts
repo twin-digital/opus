@@ -385,7 +385,7 @@ describe('executeDigestRun — deterministic composition', () => {
     const row = await runRow(f, claim.runId)
     expect(row.status).toBe('completed')
     expect(row.message_count).toBe(4)
-    const usage = JSON.parse(row.resource_usage_json ?? '{}')
+    const usage = JSON.parse(row.resource_usage_json ?? '{}') as Record<string, unknown>
     expect(usage['mail_sender.send_message']).toMatchObject({
       calls: 1,
       succeeded: 1,
@@ -726,6 +726,8 @@ describe('digestFooter', () => {
     claimedCategories: new Set(),
     fallbackCategory: null,
     truncatedOverflow: 0,
+    uncategorized: 0,
+    coveredTotal: 0,
     ...overrides,
   })
 
@@ -781,7 +783,7 @@ describe('executeDigestRun — the accounting covers the whole window', () => {
   // tag-joined selection, so an untagged Message is invisible to both sides of
   // it. The delivery completes, the watermark advances (d-jbqvsnox), and the
   // mail is never digested by anything — which r-vd9mu8od forbids.
-  it.skip('reports a Message the window covers that carries no category', async () => {
+  it('reports a Message the window covers that carries no category', async () => {
     await seedCandidate(f, {
       backendId: 'b1',
       createdAt: NOW - 300,
@@ -802,7 +804,7 @@ describe('executeDigestRun — the accounting covers the whole window', () => {
 
   // The same message with no Triage at all under the Pipeline — the window
   // closed before triage settled. Still the account's mail in the window.
-  it.skip('reports a Message the window covers that has no triage', async () => {
+  it('reports a Message the window covers that has no triage', async () => {
     await seedCandidate(f, {
       backendId: 'b1',
       createdAt: NOW - 300,
@@ -832,7 +834,7 @@ describe('executeDigestRun — the accounting covers the whole window', () => {
   // A window holding nothing but uncategorized mail still owes the accounting:
   // the "empty window sends nothing" path (d-dmylyoqs) keys on the candidate
   // count, which the untagged mail never reaches.
-  it.skip('does not treat a window of uncategorized mail as empty', async () => {
+  it('does not treat a window of uncategorized mail as empty', async () => {
     await seedUncategorized(f, { backendId: 'u1', createdAt: NOW - 200 })
 
     const claim = await claimRun(f, { from: NOW - 86_400, to: NOW })

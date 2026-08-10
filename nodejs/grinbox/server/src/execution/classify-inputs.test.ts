@@ -141,7 +141,7 @@ describe('classifyInputs', () => {
   // with the tag absent and renders it empty (d-hl6z38i6, d-svk1emrj) rather
   // than being skipped. Only a missing closed-enum output is the inconsistency
   // the cascade exists for.
-  it.skip('runs the consumer of an absent extracted output', () => {
+  it('runs the consumer of an absent extracted output', () => {
     const owner = run({
       operatorId: 1,
       outputKeys: ['amount'],
@@ -152,7 +152,7 @@ describe('classifyInputs', () => {
     expect(classifyInputs(consumer, [owner, consumer], new Set()).status).toBe('satisfied')
   })
 
-  it.skip('still skips the consumer of an absent closed-enum output', () => {
+  it('still skips the consumer of an absent closed-enum output', () => {
     const owner = run({ operatorId: 1, outputKeys: ['urgency'], status: 'completed' })
     const consumer = run({ operatorId: 2, inputKeys: ['urgency'] })
     const result = classifyInputs(consumer, [owner, consumer], new Set())

@@ -138,7 +138,7 @@ export async function checkAndConsumeLimits(
           return { allowed: false, limit_id: limit.id, scope: limit.scope }
         }
         windowState.set(limit.id, {
-          windowStart: expired ? now : (row?.window_start ?? now),
+          windowStart: expired ? now : row.window_start,
           count: effectiveCount,
           reset: expired,
         })

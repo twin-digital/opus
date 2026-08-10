@@ -1,6 +1,7 @@
 /**
- * `/api/limits` — the Limits settings subsection (ui-design.md "Settings →
- * Limits"). One entry per Limit with its current usage:
+ * `/api/limits` — every cap in force, with its provenance and current usage.
+ * Several caps may bind one operation: grinbox's seeded backstop and any the
+ * user layered over it, the first to deny denying (d-qv5l66ya).
  *
  *  - `per_window` Limits carry their tumbling-window counter state. The stored
  *    `window_start` may belong to an expired window; usage is reported as `0`
@@ -16,7 +17,10 @@
  */
 
 import { Hono } from 'hono'
+import type { LimitOrigin } from '../../db/schema.js'
 import type { ApiDeps } from './deps.js'
+
+export type { LimitOrigin }
 
 export interface WindowUsage {
   readonly kind: 'per_window'
@@ -39,6 +43,12 @@ export interface LimitEntry {
   readonly resource: string
   readonly operation: string
   readonly scope: 'per_window' | 'per_message'
+  /**
+   * `seeded` is grinbox's own backstop — the API refuses to remove or loosen it,
+   * so the interface offers neither affordance on it. `user` is one the user
+   * added over the top and may change or remove freely (d-qv5l66ya).
+   */
+  readonly origin: LimitOrigin
   readonly max_count: number
   readonly window_seconds: number | null
   readonly usage: WindowUsage | MessageUsage
@@ -50,10 +60,11 @@ export function createLimitsRoutes(deps: ApiDeps) {
 
     const limits = await deps.db
       .selectFrom('limits')
-      .select(['id', 'resource', 'operation', 'scope', 'max_count', 'window_seconds'])
+      .select(['id', 'resource', 'operation', 'scope', 'origin', 'max_count', 'window_seconds'])
       .orderBy('resource', 'asc')
       .orderBy('operation', 'asc')
       .orderBy('scope', 'asc')
+      .orderBy('origin', 'asc')
       .execute()
 
     const windowCounters = await deps.db
@@ -82,15 +93,15 @@ export function createLimitsRoutes(deps: ApiDeps) {
         usage = {
           kind: 'per_window',
           window_start: w?.window_start ?? null,
-          current_count: active ? (w?.count ?? 0) : 0,
+          current_count: active ? w.count : 0,
           window_active: active,
         }
       } else {
         const m = messageByLimit.get(l.id)
         usage = {
           kind: 'per_message',
-          messages_counted: Number(m?.messages_counted ?? 0),
-          max_message_count: Number(m?.max_message_count ?? 0),
+          messages_counted: m?.messages_counted ?? 0,
+          max_message_count: m?.max_message_count ?? 0,
         }
       }
       return {
@@ -98,6 +109,7 @@ export function createLimitsRoutes(deps: ApiDeps) {
         resource: l.resource,
         operation: l.operation,
         scope: l.scope,
+        origin: l.origin,
         max_count: l.max_count,
         window_seconds: l.window_seconds,
         usage,

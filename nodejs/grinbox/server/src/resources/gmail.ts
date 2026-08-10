@@ -120,20 +120,19 @@ export async function fetchBody(deps: GmailDeps, args: { backendMessageId: strin
  * canonical renditions; attachments (parts with a filename) are skipped.
  */
 export function extractBody(payload: GmailPayloadPart | null): GmailBody {
-  let text: string | null = null
-  let html: string | null = null
+  const found: { text: string | null; html: string | null } = { text: null, html: null }
 
   const visit = (part: GmailPayloadPart): void => {
-    if (text !== null && html !== null) {
+    if (found.text !== null && found.html !== null) {
       return
     }
     const data = part.body?.data
     const isAttachment = typeof part.filename === 'string' && part.filename.length > 0
     if (typeof data === 'string' && data.length > 0 && !isAttachment) {
-      if (part.mimeType === 'text/plain' && text === null) {
-        text = decodeBase64Url(data)
-      } else if (part.mimeType === 'text/html' && html === null) {
-        html = decodeBase64Url(data)
+      if (part.mimeType === 'text/plain' && found.text === null) {
+        found.text = decodeBase64Url(data)
+      } else if (part.mimeType === 'text/html' && found.html === null) {
+        found.html = decodeBase64Url(data)
       }
     }
     for (const child of part.parts ?? []) {
@@ -144,8 +143,8 @@ export function extractBody(payload: GmailPayloadPart | null): GmailBody {
     visit(payload)
   }
 
-  const bodyHtml: string | null = html
-  const bodyText: string | null = text ?? (bodyHtml !== null ? htmlToText(bodyHtml) : null)
+  const bodyHtml: string | null = found.html
+  const bodyText: string | null = found.text ?? (bodyHtml !== null ? htmlToText(bodyHtml) : null)
   return { bodyText, bodyHtml }
 }
 

@@ -1,17 +1,25 @@
 /**
- * Limit create / edit / hard-delete write patterns (data-model "Limits" and
- * "Limit hard-delete"). Limits are the one entity that hard-deletes rather than
- * soft-deletes; their ephemeral counters CASCADE away with the row.
+ * Limit create / edit / hard-delete write patterns. Limits are the one entity
+ * that hard-deletes rather than soft-deletes; their ephemeral counters CASCADE
+ * away with the row.
  *
- *  - {@link createLimit} — INSERT a Limit for the User; `change_log` `created`.
- *  - {@link editLimit} — UPDATE `max_count` / `window_seconds` (the policy
- *    knobs); `change_log` `updated`. The identity tuple
- *    `(resource, operation, scope)` is fixed at create — editing it would be an
- *    `UNIQUE` collision with a different Limit, so the route models a change of
- *    resource/operation/scope as delete + create, not an edit.
- *  - {@link hardDeleteLimit} — `DELETE FROM limits`; `limit_counters_window` and
- *    `limit_counters_message` rows CASCADE-delete (FK `ON DELETE CASCADE`). The
- *    `change_log` `deleted` row carries the Limit definition in `before_json`.
+ * Every one of these routes refuses a `seeded` cap. d-qv5l66ya makes grinbox's
+ * own caps the backstop — they cannot be removed or loosened by anyone — and
+ * r-zmn2p7lf states the check as "read every surface the user configures for a
+ * way to remove or loosen a cap grinbox itself seeded; none exists". These are
+ * those surfaces, so the refusal lives here rather than in the routes above
+ * them.
+ *
+ *  - {@link createLimit} — INSERT a `user` Limit; `change_log` `created`. It may
+ *    layer over a seeded cap on the same operation: both then bind, and the
+ *    first to deny denies.
+ *  - {@link editLimit} — UPDATE `max_count` / `window_seconds` on a `user`
+ *    Limit; `change_log` `updated`. The identity tuple
+ *    `(resource, operation, scope)` is fixed at create — editing it would be a
+ *    `UNIQUE` collision, so the route models such a change as delete + create.
+ *  - {@link hardDeleteLimit} — `DELETE FROM limits` for a `user` Limit;
+ *    `limit_counters_window` and `limit_counters_message` rows CASCADE-delete.
+ *    The `change_log` `deleted` row carries the definition in `before_json`.
  *
  * Shape validation (scope ⇄ window_seconds coherence, positive `max_count`) is
  * the caller's job via `@grinbox/shared`'s `limitDefinitionSchema`; these helpers
@@ -23,7 +31,22 @@ import type { Kysely } from 'kysely'
 import type { Database } from '../db/schema.js'
 import { NotFoundError } from '../pipeline/operator-save.js'
 
-/** Thrown when a Limit's `(resource, operation, scope)` already exists. */
+/**
+ * Thrown when a change would remove or loosen a cap grinbox seeded (d-qv5l66ya).
+ * A user tightens an operation by adding a cap of their own over the seeded one,
+ * which layers rather than replaces.
+ */
+export class SeededLimitError extends Error {
+  override readonly name = 'SeededLimitError'
+  constructor(readonly limitId: number) {
+    super(
+      `Limit ${limitId} is one grinbox seeded: it cannot be removed or loosened. ` +
+        `Add a limit of your own on the same operation to bind it more tightly.`,
+    )
+  }
+}
+
+/** Thrown when a user Limit's `(resource, operation, scope)` already exists. */
 export class LimitConflictError extends Error {
   override readonly name = 'LimitConflictError'
   constructor(
@@ -59,6 +82,7 @@ export async function createLimit(db: Kysely<Database>, input: CreateLimitInput)
       .where('resource', '=', input.resource)
       .where('operation', '=', input.operation)
       .where('scope', '=', input.scope)
+      .where('origin', '=', 'user')
       .executeTakeFirst()
     if (existing) {
       throw new LimitConflictError(input.resource, input.operation, input.scope)
@@ -72,6 +96,7 @@ export async function createLimit(db: Kysely<Database>, input: CreateLimitInput)
         resource: input.resource,
         operation: input.operation,
         scope: input.scope,
+        origin: 'user',
         max_count: input.maxCount,
         window_seconds: input.windowSeconds,
         created_at: ts,
@@ -109,11 +134,14 @@ export async function editLimit(db: Kysely<Database>, input: EditLimitInput): Pr
   return db.transaction().execute(async (tx) => {
     const limit = await tx
       .selectFrom('limits')
-      .select(['id', 'user_id', 'resource', 'operation', 'scope', 'max_count', 'window_seconds'])
+      .select(['id', 'user_id', 'resource', 'operation', 'scope', 'origin', 'max_count', 'window_seconds'])
       .where('id', '=', input.limitId)
       .executeTakeFirst()
     if (!limit) {
       throw new NotFoundError(`Limit ${input.limitId} not found`)
+    }
+    if (limit.origin === 'seeded') {
+      throw new SeededLimitError(input.limitId)
     }
     const ts = now()
 
@@ -167,11 +195,14 @@ export async function hardDeleteLimit(
   return db.transaction().execute(async (tx) => {
     const limit = await tx
       .selectFrom('limits')
-      .select(['id', 'user_id', 'resource', 'operation', 'scope', 'max_count', 'window_seconds'])
+      .select(['id', 'user_id', 'resource', 'operation', 'scope', 'origin', 'max_count', 'window_seconds'])
       .where('id', '=', limitId)
       .executeTakeFirst()
     if (!limit) {
       throw new NotFoundError(`Limit ${limitId} not found`)
+    }
+    if (limit.origin === 'seeded') {
+      throw new SeededLimitError(limitId)
     }
     const ts = now()
 

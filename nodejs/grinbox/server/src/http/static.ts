@@ -2,26 +2,37 @@ import { existsSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serveStatic } from '@hono/node-server/serve-static'
-import type { Hono } from 'hono'
+import type { Context, Hono, Next } from 'hono'
+import type { BlankEnv } from 'hono/types'
 
 /**
- * Resolve the directory holding the built web SPA.
+ * Resolve the directory holding the browser application's built assets.
  *
  * Precedence:
- *  1. an explicit `configuredPath` (the `GRINBOX_WEB_DIST` env value) when set —
- *     resolved to an absolute path against `process.cwd()` if it is relative.
- *  2. otherwise, the path relative to the compiled server: this module compiles
- *     to `packages/server/dist/http/static.js`, and the Vite build emits to the
- *     sibling package's `packages/web/dist`, so `../../../web/dist` from this
- *     module's dir is the standard production location. This makes a normal
- *     deployment work with no env var set.
+ *  1. an explicit `configuredPath` (`GRINBOX_WEB_DIST`) when set — resolved
+ *     against `process.cwd()` if it is relative.
+ *  2. otherwise `web/` beside the directory holding the daemon's entry point.
+ *     The release bundle (d-p77q4tob) unpacks to `server/`, `web/`, `bin/`, and
+ *     `systemd/`, and the deployment launches `server/`'s entry point, so this
+ *     lands on the bundle's `web/` with nothing configured. `entryDir` is the
+ *     launched script's directory rather than this module's: a build is free to
+ *     put this module anywhere under `server/`, and only the entry point's
+ *     location is fixed by the bundle layout.
  */
-export function resolveWebDistPath(configuredPath: string): string {
+export function resolveWebDistPath(configuredPath: string, entryDir = processEntryDir()): string {
   if (configuredPath !== '') {
     return isAbsolute(configuredPath) ? configuredPath : resolve(process.cwd(), configuredPath)
   }
-  const here = dirname(fileURLToPath(import.meta.url))
-  return resolve(here, '../../../web/dist')
+  return resolve(entryDir, '../web')
+}
+
+/**
+ * The directory of the script node was launched with, falling back to this
+ * module's own directory where there is none (a REPL, or an embedding host).
+ */
+function processEntryDir(): string {
+  const entry = process.argv.at(1)
+  return entry === undefined ? dirname(fileURLToPath(import.meta.url)) : dirname(resolve(entry))
 }
 
 /**
@@ -69,7 +80,7 @@ export function mountStatic(app: Hono, webDistPath: string): void {
   // serveStatic joins its `root` onto the request path. An absolute `root` joins
   // cleanly, so we pass the resolved dist dir directly rather than a cwd-relative
   // path. On a miss serveStatic calls `next()`, handing off to the SPA fallback.
-  app.use('*', async (c, next) => {
+  app.use('*', async (c: Context<BlankEnv, string>, next: Next) => {
     if (isReserved(c.req.path)) {
       return next()
     }

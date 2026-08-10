@@ -280,9 +280,14 @@ async function selectMatchingMessageIds(deps: ApiDeps, f: ListFilters): Promise<
 
 /**
  * Load current Tags (with provenance) for a set of messages, keyed by message
- * id. When `pipelineId` is set, only that Pipeline's current Triage
- * contributes; otherwise Tags from every current Triage of the Message are
- * merged.
+ * id. One Triage contributes per Message: the Pipeline's current Triage when
+ * `pipelineId` is set, otherwise the most-recently-started current Triage across
+ * Pipelines — the same one {@link loadLatestStatus} reports the status of.
+ *
+ * Never a merge across Pipelines. d-urdglhb6 scopes a Tag to the Triage that
+ * produced it and makes what the user sees the output of the latest settled
+ * Triage in full; a union of two Pipelines' Tags is a set no Triage ever held,
+ * and reading one back years later would be impossible.
  */
 async function loadCurrentTags(
   deps: ApiDeps,
@@ -301,6 +306,7 @@ async function loadCurrentTags(
     .select([
       'ct.message_id as message_id',
       'ct.pipeline_id as pipeline_id',
+      'ct.triage_started_at as triage_started_at',
       'tg.triage_id as triage_id',
       'tg.operator_id as operator_id',
       'tg.key as key',
@@ -310,7 +316,21 @@ async function loadCurrentTags(
     q = q.where('ct.pipeline_id', '=', pipelineId)
   }
   const rows = await q.orderBy('tg.key', 'asc').execute()
+
+  // Pick the contributing Triage per Message before collecting any Tag, so the
+  // result is one Triage's output rather than a mixture.
+  const contributing = new Map<number, { triageId: number; startedAt: number }>()
   for (const r of rows) {
+    const chosen = contributing.get(r.message_id)
+    if (chosen === undefined || r.triage_started_at > chosen.startedAt) {
+      contributing.set(r.message_id, { triageId: r.triage_id, startedAt: r.triage_started_at })
+    }
+  }
+
+  for (const r of rows) {
+    if (contributing.get(r.message_id)?.triageId !== r.triage_id) {
+      continue
+    }
     const list = out.get(r.message_id) ?? []
     list.push({
       key: r.key,
@@ -360,6 +380,13 @@ export interface OperatorRunDetail {
   readonly operator_id: number
   readonly type_key: string
   readonly type_code_version: string
+  /**
+   * The operator's configuration as it stood when the triage was enqueued
+   * (d-nr71oscu). r-k6gh82fx asks a historical outcome to resolve to the
+   * configuration that produced it, so this is what the interface renders — not
+   * the operator's current configuration, which may have been edited since.
+   */
+  readonly op_config_json: string
   readonly status: string
   readonly started_at: number | null
   readonly finished_at: number | null
@@ -382,6 +409,7 @@ async function loadRuns(deps: ApiDeps, triageIds: readonly number[]): Promise<Ma
       'operator_id',
       'type_key',
       'type_code_version',
+      'op_config_json',
       'status',
       'started_at',
       'finished_at',
@@ -399,6 +427,7 @@ async function loadRuns(deps: ApiDeps, triageIds: readonly number[]): Promise<Ma
       operator_id: r.operator_id,
       type_key: r.type_key,
       type_code_version: r.type_code_version,
+      op_config_json: r.op_config_json,
       status: r.status,
       started_at: r.started_at,
       finished_at: r.finished_at,

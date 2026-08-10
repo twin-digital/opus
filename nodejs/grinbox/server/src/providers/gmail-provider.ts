@@ -28,7 +28,8 @@
  *    `historyId`.
  */
 
-import type { DB, SourceState } from '../db/schema.js'
+import type { SourceState } from '@grinbox/shared'
+import type { DB } from '../db/schema.js'
 import { parseGmailMessage } from './gmail-shapes.js'
 import type {
   CandidateListing,
@@ -294,7 +295,7 @@ export class GmailProvider implements Provider {
     // Last observed state per Message id, in history order (later events
     // overwrite earlier ones — e.g. archived then re-added → present).
     const stateByMessage = new Map<string, SourceState>()
-    let newCursor = cursor
+    let newCursor: string
     let pageToken: string | undefined
 
     do {

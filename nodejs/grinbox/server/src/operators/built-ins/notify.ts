@@ -19,7 +19,7 @@
  * {@link ResourceOpResult}.
  */
 
-import { contractFromConfig, gmailMessageUrl, operatorConfigSchemas } from '@grinbox/shared'
+import { contractFromConfig, operatorConfigSchemas } from '@grinbox/shared'
 import type { OperatorRunInput, OperatorRunResult, OperatorType, PushoverClient } from '../types.js'
 import { shouldFire } from './action-gate.js'
 import { renderTemplate } from './template.js'
@@ -58,13 +58,10 @@ async function run(input: OperatorRunInput<'notify'>): Promise<OperatorRunResult
 
   signal.throwIfAborted()
 
-  // Deep-link the push back to the Message that triggered it. The id is the
-  // Gmail API message id (`backend_message_id`), which opens in Gmail web.
-  const result = await client.send_notification({
-    message: rendered,
-    url: gmailMessageUrl(message.backendMessageId),
-    url_title: 'Open in Gmail',
-  })
+  // The push carries the rendered text and nothing else: r-etj0gluz confines
+  // naming a mail backend to the account the message arrived on, and a link back
+  // into a backend's own web client names one everywhere the push goes.
+  const result = await client.send_notification({ message: rendered })
 
   switch (result.outcome) {
     case 'succeeded':

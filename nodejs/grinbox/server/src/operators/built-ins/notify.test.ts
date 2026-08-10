@@ -69,16 +69,9 @@ describe('notify run', () => {
     expect(result.tags).toEqual([])
     const call = fake.calls.find((c) => c.operation === 'send_notification')
     expect(call).toBeDefined()
-    const sent = call?.args as {
-      message: string
-      url?: string
-      url_title?: string
-    }
+    const sent = call?.args as { message: string }
     // Template renders Message fields and Tags.
     expect(sent.message).toBe('alice@example.com: Invoice #42 due (urgency=high)')
-    // The push deep-links back to the triggering Message in Gmail.
-    expect(sent.url).toBe('https://mail.google.com/mail/u/0/#all/m1')
-    expect(sent.url_title).toBe('Open in Gmail')
   })
 
   // r-etj0gluz confines naming a mail backend to the account the message arrived
@@ -86,7 +79,7 @@ describe('notify run', () => {
   // The push carries a Gmail web URL and an "Open in Gmail" label, and that URL
   // does not open the message on a phone. A backend-neutral link through the
   // provider seam is backlogged; the naive one goes.
-  it.skip('sends no mail-backend deep link with the push', async () => {
+  it('sends no mail-backend deep link with the push', async () => {
     const { fake, runArgs } = args(pushoverSucceeded(), { urgency: 'high' })
     await runOperator(snapshot(), runArgs)
     const sent = fake.calls.find((c) => c.operation === 'send_notification')?.args as {

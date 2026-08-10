@@ -125,9 +125,12 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
  * loop counts as the single Limit-charged operation.
  */
 export async function withRetry<T>(policy: RetryPolicy, signal: AbortSignal, op: () => Promise<T>): Promise<T> {
+  // Read through a call so the loop-top check doesn't narrow away the
+  // post-`op()` re-check.
+  const aborted = () => signal.aborted
   let lastError: unknown
   for (let attempt = 0; attempt <= policy.maxRetries; attempt++) {
-    if (signal.aborted) {
+    if (aborted()) {
       throw new RetryAbortedError(signal.reason)
     }
     try {
@@ -135,7 +138,7 @@ export async function withRetry<T>(policy: RetryPolicy, signal: AbortSignal, op:
     } catch (err) {
       lastError = err
       // The signal aborting mid-call means the Operator timed out; don't retry.
-      if (signal.aborted) {
+      if (aborted()) {
         throw err
       }
       if (attempt === policy.maxRetries) {
@@ -145,5 +148,19 @@ export async function withRetry<T>(policy: RetryPolicy, signal: AbortSignal, op:
       await delay(ms, signal)
     }
   }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError ?? 'operation failed'))
+  throw lastError instanceof Error ? lastError : new Error(describeThrown(lastError))
+}
+
+/** Message text for a non-Error throw. */
+function describeThrown(value: unknown): string {
+  if (value === undefined || value === null) {
+    return 'operation failed'
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'boolean' || typeof value === 'symbol') {
+    return String(value)
+  }
+  return Object.prototype.toString.call(value)
 }

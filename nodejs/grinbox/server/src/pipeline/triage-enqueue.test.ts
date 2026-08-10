@@ -64,7 +64,7 @@ describe('enqueueTriage', () => {
       expect(run.type_key).toBe('rule_based_tagger')
       expect(run.type_code_version).toBe('1')
       expect(run.message_id).toBe(seed.messageId)
-      expect(JSON.parse(run.op_config_json).output_tag_key).toBeTruthy()
+      expect((JSON.parse(run.op_config_json) as { output_tag_key?: string }).output_tag_key).toBeTruthy()
     }
   })
 
