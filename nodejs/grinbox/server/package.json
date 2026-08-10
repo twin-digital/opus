@@ -1,0 +1,64 @@
+{
+  "private": true,
+  "name": "@grinbox/server",
+  "version": "0.0.0",
+  "description": "The grinbox daemon: HTTP surface, poll schedule, triage execution, and the SQLite state store.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null
+  },
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "tsx watch src/main.ts",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "start": "node dist/main.js",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "catalog:",
+    "@grinbox/shared": "workspace:*",
+    "@hono/node-server": "^1.19.9",
+    "@hono/zod-validator": "^0.7.6",
+    "better-sqlite3": "^12.4.1",
+    "croner": "^9.1.0",
+    "googleapis": "^165.0.0",
+    "hono": "^4.10.6",
+    "kysely": "^0.28.9",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

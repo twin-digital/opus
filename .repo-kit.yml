@@ -13,6 +13,23 @@ packages:
     rules:
       eslint: false
       eslint-config-bootstrap: false
+  '@grinbox/shared':
+    # One public entry point by design: the barrel is the vocabulary the daemon and the browser
+    # application both import, so the generated `./*` subpath exports would offer every schema
+    # module as one.
+    rules:
+      package-manifest: false
+  '@grinbox/server':
+    # One public entry point by design: the daemon's importable surface is the route type the
+    # browser application builds its client from, so the generated `./*` subpath exports would
+    # offer the daemon's internals as a library.
+    rules:
+      package-manifest: false
+  '@grinbox/web':
+    # Nothing imports a browser application: what it publishes is a built asset tree, so the
+    # generated exports would offer its internals to a consumer that does not exist.
+    rules:
+      package-manifest: false
   '@twin-digital/design-process':
     # One public entry point by design: the CLI is the surface and the operations behind its
     # subcommands are re-exported by name from the package root, so the generated `./*` subpath

@@ -52,6 +52,10 @@ catalog:
 allowBuilds:
   '@julusian/midi': true
   audify: true
+  # grinbox's state store. Native, so the binary must match the Node ABI it runs on: this
+  # allowance covers the workspace's own install, and the deployment installs it again on the
+  # target rather than receiving a compiled one.
+  better-sqlite3: true
   esbuild: true
   hnswlib-node: true
   serverless: true
