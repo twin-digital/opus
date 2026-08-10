@@ -104,7 +104,7 @@ export const DEFAULT_LIMITS: readonly {
     resource: 'llm_bedrock',
     operation: 'invoke_model',
     scope: 'per_window',
-    max_count: 50,
+    max_count: 100,
     window_seconds: 600,
   },
 ]

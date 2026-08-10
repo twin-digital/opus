@@ -7,9 +7,11 @@ import type { DB } from './schema.js'
 import { reconcileDefaultLimits } from './seed.js'
 
 /**
- * Default-Limits startup reconcile: inserts any `(resource, operation, scope)`
- * present in DEFAULT_LIMITS but absent from the `limits` table, and never
- * modifies or deletes existing rows (user-tuned values survive).
+ * Default-Limits startup reconcile: brings the seeded rows into line with
+ * DEFAULT_LIMITS — inserting any `(resource, operation, scope)` it is missing
+ * and moving any whose bound this release has changed — while leaving the
+ * user's own caps alone. The seeded caps are grinbox's, not the user's
+ * (d-qv5l66ya).
  */
 
 describe('reconcileDefaultLimits', () => {
@@ -68,34 +70,92 @@ describe('reconcileDefaultLimits', () => {
     expect(bedrock?.max_count).toBe(bedrockDefault?.max_count)
   })
 
-  it('never modifies an existing user-tuned row', async () => {
+  it("never modifies the user's own cap", async () => {
     await db
-      .updateTable('limits')
-      .set({ max_count: 999 })
-      .where('user_id', '=', userId)
-      .where('resource', '=', 'pushover_api')
-      .where('scope', '=', 'per_window')
+      .insertInto('limits')
+      .values({
+        user_id: userId,
+        resource: 'llm_bedrock',
+        operation: 'invoke_model',
+        scope: 'per_window',
+        origin: 'user',
+        max_count: 5,
+        window_seconds: 600,
+        created_at: 1000,
+      })
       .execute()
-    // One row is also missing, so the reconcile has work to do alongside the
-    // tuned row.
+    // One seeded row is also missing, so the reconcile has work to do alongside
+    // the user's cap.
     await db
       .deleteFrom('limits')
       .where('user_id', '=', userId)
+      .where('origin', '=', 'seeded')
       .where('resource', '=', 'mail_sender')
       .where('scope', '=', 'per_message')
       .execute()
 
-    const inserted = await reconcileDefaultLimits(db, userId)
+    const changed = await reconcileDefaultLimits(db, userId)
 
-    expect(inserted).toBe(1)
-    const tuned = await db
+    expect(changed).toBe(1)
+    const own = await db
       .selectFrom('limits')
       .select(['max_count'])
       .where('user_id', '=', userId)
-      .where('resource', '=', 'pushover_api')
+      .where('origin', '=', 'user')
+      .executeTakeFirstOrThrow()
+    expect(own.max_count).toBe(5)
+  })
+
+  it('moves a seeded row this release has re-bounded', async () => {
+    const shipped = DEFAULT_LIMITS.find((l) => l.resource === 'llm_bedrock' && l.scope === 'per_window')
+    // The bound a previous release shipped, still stored.
+    await db
+      .updateTable('limits')
+      .set({ max_count: 50 })
+      .where('user_id', '=', userId)
+      .where('origin', '=', 'seeded')
+      .where('resource', '=', 'llm_bedrock')
+      .where('scope', '=', 'per_window')
+      .execute()
+
+    const changed = await reconcileDefaultLimits(db, userId)
+
+    expect(changed).toBe(1)
+    const row = await db
+      .selectFrom('limits')
+      .select(['max_count'])
+      .where('user_id', '=', userId)
+      .where('origin', '=', 'seeded')
+      .where('resource', '=', 'llm_bedrock')
       .where('scope', '=', 'per_window')
       .executeTakeFirstOrThrow()
-    expect(tuned.max_count).toBe(999)
+    expect(row.max_count).toBe(shipped?.max_count)
+    expect(row.max_count).toBe(100)
+    // Nothing else moved.
     expect(await limitRows()).toHaveLength(DEFAULT_LIMITS.length)
+  })
+
+  it('tightens a seeded row as readily as it loosens one', async () => {
+    await db
+      .updateTable('limits')
+      .set({ max_count: 100_000 })
+      .where('user_id', '=', userId)
+      .where('origin', '=', 'seeded')
+      .where('resource', '=', 'mail_sender')
+      .where('scope', '=', 'per_message')
+      .execute()
+
+    const changed = await reconcileDefaultLimits(db, userId)
+
+    expect(changed).toBe(1)
+    const row = await db
+      .selectFrom('limits')
+      .select(['max_count'])
+      .where('user_id', '=', userId)
+      .where('origin', '=', 'seeded')
+      .where('resource', '=', 'mail_sender')
+      .where('scope', '=', 'per_message')
+      .executeTakeFirstOrThrow()
+    expect(row.max_count).toBe(1)
   })
 })

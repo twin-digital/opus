@@ -57,7 +57,7 @@ describe('checkAndConsumeLimits', () => {
   it('allows up to a per_window cap then denies', async () => {
     const { userId, messageId } = await seedUserAndMessage(db)
     // mailbox.apply_category per_window cap is 100; lower-cap window is
-    // llm_bedrock.invoke_model = 50, but the cleanest is pushover per_window=10.
+    // llm_bedrock.invoke_model has a larger one; the cleanest is pushover per_window=10.
     // Use a custom message id per call is unnecessary for per_window.
     const args = {
       userId,
@@ -91,13 +91,14 @@ describe('checkAndConsumeLimits', () => {
     const { userId, messageId } = await seedUserAndMessage(db)
     const limit = await db
       .selectFrom('limits')
-      .select('id')
+      .select(['id', 'max_count'])
       .where('user_id', '=', userId)
       .where('resource', '=', 'llm_bedrock')
       .where('operation', '=', 'invoke_model')
       .where('scope', '=', 'per_window')
       .executeTakeFirstOrThrow()
-    // invoke_model only has a per_window cap (50), so per_message won't fire.
+    // invoke_model has only a per_window cap, so per_message never fires. Drive
+    // past whatever bound this release seeds rather than a number written here.
     let last = await checkAndConsumeLimits(
       db,
       {
@@ -108,7 +109,7 @@ describe('checkAndConsumeLimits', () => {
       },
       2000,
     )
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < limit.max_count + 10; i++) {
       last = await checkAndConsumeLimits(
         db,
         {
