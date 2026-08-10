@@ -1,5 +1,11 @@
 # @twin-digital/opus-scripts
 
+## 0.5.0
+
+### Minor Changes
+
+- 98cac7b: Add `release-asset-packages` and `upload-release-assets`, the detection and upload halves of the publish workflow's release-assets job as runnable scripts.
+
 ## 0.4.0
 
 ### Minor Changes
