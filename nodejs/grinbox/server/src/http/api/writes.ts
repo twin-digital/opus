@@ -35,6 +35,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { softDeleteAccount, updateAccount } from '../../config/account-config.js'
+import { createCooldown, deleteCooldown, editCooldown } from '../../config/cooldown-config.js'
 import { storePushoverCredential } from '../../config/credential-store.js'
 import { createLimit, editLimit, hardDeleteLimit } from '../../config/limit-config.js'
 import {
@@ -107,6 +108,18 @@ const createLimitBody = limitDefinitionSchema
 const editLimitBody = z.object({
   max_count: z.number().int().positive(),
   window_seconds: z.number().int().positive().nullable(),
+})
+
+// A cooldown's interval is whole seconds >= 1, no ceiling (d-t6mhv3aq). The
+// kind's trim/single-line normalization lives in `cooldown-config.ts`
+// (d-p8xrn2ce); the kind is fixed at create — changing it is delete + create.
+const createCooldownBody = z.object({
+  kind: z.string().min(1),
+  interval_seconds: z.number().int().min(1),
+})
+
+const editCooldownBody = z.object({
+  interval_seconds: z.number().int().min(1),
 })
 
 const createCredentialBody = z.object({
@@ -411,6 +424,57 @@ export function createWriteRoutes(deps: ApiDeps) {
         const { id } = c.req.valid('param')
         try {
           await hardDeleteLimit(deps.db, id, userId)
+          return c.json({ ok: true })
+        } catch (err) {
+          return handle(c, err)
+        }
+      })
+
+      // --- Cooldowns (notification kinds) ---
+      .post('/api/cooldowns', zValidator('json', createCooldownBody), async (c) => {
+        const userId = await resolveActingUserId(deps.db)
+        if (userId === null) {
+          return noUser(c)
+        }
+        const body = c.req.valid('json')
+        try {
+          const id = await createCooldown(deps.db, {
+            userId,
+            kind: body.kind,
+            intervalSeconds: body.interval_seconds,
+            actorUserId: userId,
+          })
+          return c.json({ id }, 201)
+        } catch (err) {
+          return handle(c, err)
+        }
+      })
+      .patch('/api/cooldowns/:id', zValidator('param', idParam), zValidator('json', editCooldownBody), async (c) => {
+        const userId = await resolveActingUserId(deps.db)
+        if (userId === null) {
+          return noUser(c)
+        }
+        const { id } = c.req.valid('param')
+        const body = c.req.valid('json')
+        try {
+          await editCooldown(deps.db, {
+            cooldownId: id,
+            intervalSeconds: body.interval_seconds,
+            actorUserId: userId,
+          })
+          return c.json({ ok: true })
+        } catch (err) {
+          return handle(c, err)
+        }
+      })
+      .delete('/api/cooldowns/:id', zValidator('param', idParam), async (c) => {
+        const userId = await resolveActingUserId(deps.db)
+        if (userId === null) {
+          return noUser(c)
+        }
+        const { id } = c.req.valid('param')
+        try {
+          await deleteCooldown(deps.db, id, userId)
           return c.json({ ok: true })
         } catch (err) {
           return handle(c, err)
