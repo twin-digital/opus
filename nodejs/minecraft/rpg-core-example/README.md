@@ -83,14 +83,15 @@ activated in the world `.minecraft.yml` names, then watches for changes.
 Join the server (add it in Bedrock by IP, port 19132) and verify, from spawn at `60 95 63`:
 
 1. **Every actor stands in the gallery** — the greeter at spawn, and one actor per preset in a
-   line running south. A placement that could not settle is reported in chat instead, naming the
-   pack to install.
+   line running south, each at exactly the coordinates the story placed it — an actor holds where
+   the spawn call put it, mid-air included. A placement that could not settle is reported in chat
+   instead, naming the pack to install.
 2. **Names** — hover the cursor over each actor: the gallery shows preset default names (the
    wizard's is `Wizard`), the greeter shows `Eldrin the Greeter`.
 3. **Facing** — walk toward an actor and around it: it turns to face you, and holds still
    otherwise. Note whether the turn tracks you continuously or in occasional glances.
 4. **Creative immunity** — in creative mode: hit the actor (no damage, no death), try a name tag
-   (no rename), push it and break the block under it (it stays put, gravity aside).
+   (no rename), push it and break the block under it (it stays exactly where it was placed).
 5. **Persistence** — `pnpm dev:stop`, then `pnpm dev` again and rejoin: the same actors stand at
    the same spots with the same names, and the gallery has not doubled.
 
@@ -104,3 +105,5 @@ docker exec twin-digital-monorepo-bedrock-1 send-command 'damage @e[type=rpg:wiz
 
 Damage must report `Could not apply damage`, and both `testfor` lines must find their target
 after a stop/start cycle — with the same entity count, so the story placed nothing twice.
+`querytarget @e[type=rpg:wizard]` must report each actor at its placement coordinates
+(the greeter at `60 95 63`, the gallery from `60 95 66` south), before and after the restart.
