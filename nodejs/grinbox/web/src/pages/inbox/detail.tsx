@@ -1,5 +1,5 @@
 import type { CurrentTag } from '@grinbox/server'
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -34,6 +34,9 @@ import { displayTagValue, useMoneyKeysByPipeline } from '@/lib/money'
 export function MessageDetailPage() {
   const { messageId } = useParams({ from: '/inbox/$messageId' })
   const id = Number(messageId)
+  // `?triage=<id>` deep-selects a Triage — the landing side of a suppression's
+  // cross-message deferral link (d-e9jslw4x).
+  const { triage: initialTriageId } = useSearch({ from: '/inbox/$messageId' })
   const { data, isPending, isError, error } = useMessage(id)
 
   return (
@@ -57,12 +60,20 @@ export function MessageDetailPage() {
           <div className='h-9 w-72 animate-pulse rounded bg-muted' />
           <div className='h-48 w-full animate-pulse rounded-lg bg-muted' />
         </div>
-      : <MessageDetailView detail={data} messageId={id} />}
+      : <MessageDetailView detail={data} messageId={id} initialTriageId={initialTriageId} />}
     </Page>
   )
 }
 
-function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messageId: number }) {
+function MessageDetailView({
+  detail,
+  messageId,
+  initialTriageId,
+}: {
+  detail: MessageDetail
+  messageId: number
+  initialTriageId?: number
+}) {
   const { message, current_tags, triages } = detail
 
   // Money-typed Tag keys per Pipeline this Message was triaged under, so every
@@ -105,7 +116,7 @@ function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messa
         </dl>
       </header>
 
-      <Tabs defaultValue='overview'>
+      <Tabs defaultValue={initialTriageId === undefined ? 'overview' : 'triage'}>
         <TabsList>
           <TabsTrigger value='overview'>Overview</TabsTrigger>
           <TabsTrigger value='tags'>Tags</TabsTrigger>
@@ -126,7 +137,7 @@ function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messa
         </TabsContent>
 
         <TabsContent value='triage'>
-          <TriageHistoryTab triages={triages} moneyByPipeline={moneyByPipeline} />
+          <TriageHistoryTab triages={triages} moneyByPipeline={moneyByPipeline} initialTriageId={initialTriageId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -265,12 +276,15 @@ function TagsTab({
 function TriageHistoryTab({
   triages,
   moneyByPipeline,
+  initialTriageId,
 }: {
   triages: readonly MessageTriage[]
   moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
+  initialTriageId?: number
 }) {
-  // Latest Triage selected by default (the list is most-recent-first).
-  const [selectedId, setSelectedId] = useState<number | null>(triages[0]?.id ?? null)
+  // Latest Triage selected by default (the list is most-recent-first); a
+  // `?triage=` deep link pre-selects that Triage instead.
+  const [selectedId, setSelectedId] = useState<number | null>(initialTriageId ?? triages.at(0)?.id ?? null)
 
   const first = triages.at(0)
   if (first === undefined) {
@@ -460,6 +474,7 @@ function EventRow({
       {suppression ?
         <SuppressionEventDetails
           suppression={suppression}
+          deferredToMessageId={event.deferred_to_message_id}
           knownTriageIds={knownTriageIds}
           onSelectTriage={onSelectTriage}
         />
@@ -502,19 +517,22 @@ function parseSuppression(json: string | null): SuppressionDetails | null {
 }
 
 /**
- * A suppressed push names its kind and the push it deferred to (d-e9jslw4x).
- * When the deferred-to run's Triage is one of this Message's own (a replay of
- * the same Message inside the cooldown), the reference resolves in place —
- * selecting that Triage in the history list. A deferral to another Message's
- * Triage renders the identifiers; resolving those to the other Message needs a
- * lookup the API does not offer yet.
+ * A suppressed push names its kind and the push it deferred to, and the
+ * reference resolves to that run's Triage (d-e9jslw4x). A deferral to one of
+ * this Message's own Triages (a replay inside the cooldown) selects it in the
+ * history list; a deferral to another Message's Triage links to that Message's
+ * detail, landing on the deferred-to Triage via `?triage=`. Where the
+ * deferred-to Triage is gone (`deferred_to_message_id` null), the identifiers
+ * render as text with no dead link.
  */
 function SuppressionEventDetails({
   suppression,
+  deferredToMessageId,
   knownTriageIds,
   onSelectTriage,
 }: {
   suppression: SuppressionDetails
+  deferredToMessageId: number | null | undefined
   knownTriageIds: ReadonlySet<number>
   onSelectTriage: (id: number) => void
 }) {
@@ -532,6 +550,15 @@ function SuppressionEventDetails({
         >
           {target}
         </button>
+      : typeof deferredToMessageId === 'number' ?
+        <Link
+          to='/inbox/$messageId'
+          params={{ messageId: String(deferredToMessageId) }}
+          search={{ triage: suppression.deferred_to_triage_id }}
+          className='underline underline-offset-2 hover:text-foreground'
+        >
+          {target}
+        </Link>
       : <span>{target}</span>}{' '}
       (run {suppression.deferred_to_operator_id})
     </span>

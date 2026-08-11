@@ -42,8 +42,10 @@ kind is fixed when a cooldown is created; renaming one is delete + create.
 
 A push suppressed by a cooldown is an outcome, not a failure (`d-5amonj40`): the run and its
 triage render completed, and the message detail shows the suppression, its kind, and the run
-whose push it deferred to (`d-e9jslw4x`). When that run's triage belongs to the same message,
-the reference selects it in place.
+whose push it deferred to (`d-e9jslw4x`). The reference resolves to that run's triage — selected
+in place when it belongs to the same message, linked to the other message's detail (landing on
+that triage via `?triage=`) otherwise. Where the deferred-to triage no longer exists, the
+identifiers render as text.
 
 ## Money in display form
 

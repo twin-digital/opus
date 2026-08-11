@@ -59,6 +59,13 @@ const messageDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/inbox/$messageId',
   component: MessageDetailPage,
+  // `?triage=<id>` deep-selects one Triage in the history tab — how a
+  // suppression's cross-message deferral lands on the run it deferred to
+  // (d-e9jslw4x).
+  validateSearch: (search: Record<string, unknown>): { triage?: number } => {
+    const triage = Number(search.triage)
+    return Number.isInteger(triage) && triage > 0 ? { triage } : {}
+  },
 })
 
 const pipelinesRoute = createRoute({
