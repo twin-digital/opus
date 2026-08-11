@@ -4,7 +4,8 @@
  * closed and open enums, the operator configuration shapes keyed by type key, the
  * contract skeleton and its derivation, the metered-client result type, the match
  * expression and template placeholder grammars, the seeded limits, the offered
- * models, and the shape a refused write answers in.
+ * models, the notification-kind and cooldown vocabulary, the money display
+ * form, and the shape a refused write answers in.
  *
  * It does not own the daemon's database row types, the runtime operator
  * implementations, or the API's route shapes — the browser application is typed
@@ -127,6 +128,11 @@ export {
 } from './template-placeholder.js'
 
 export { operatorConsumesBody } from './body-usage.js'
+
+export { cooldownIntervalSecondsSchema, cooldownSettingSchema, notificationKindSchema } from './notifications.js'
+export type { CooldownIntervalSeconds, CooldownSetting, NotificationKind } from './notifications.js'
+
+export { formatMoneyDisplay } from './money-display.js'
 
 export { API_ERROR_CODES, apiErrorBodySchema } from './api-error.js'
 export type { ApiErrorBody, ApiErrorCode } from './api-error.js'

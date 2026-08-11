@@ -63,7 +63,15 @@ describe('closed enum closedness', () => {
     {
       name: 'triageEventTypeSchema',
       schema: triageEventTypeSchema,
-      members: ['tag_set', 'resource_op_succeeded', 'resource_op_limited', 'resource_op_failed'],
+      // `resource_op_suppressed` is the cooldown-suppressed push's own outcome
+      // kind in the attempt vocabulary (d-e9jslw4x).
+      members: [
+        'tag_set',
+        'resource_op_succeeded',
+        'resource_op_limited',
+        'resource_op_failed',
+        'resource_op_suppressed',
+      ],
       outOfSet: 'tag_cleared',
     },
     {
@@ -145,6 +153,10 @@ describe('open enum guards', () => {
   it('changeLogEntityTypeSchema stays open (accepts a future entity type)', () => {
     expect(changeLogEntityTypeSchema.safeParse('schedule').success).toBe(true)
     expect(changeLogEntityTypeSchema.safeParse('pipeline').success).toBe(true)
+  })
+
+  it('changeLogEntityTypeSchema accepts the cooldown entity (d-w2fzk9bd)', () => {
+    expect(changeLogEntityTypeSchema.safeParse('cooldown').success).toBe(true)
   })
 })
 
