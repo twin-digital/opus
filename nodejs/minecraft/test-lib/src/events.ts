@@ -32,7 +32,7 @@ import {
   type SignalState,
 } from './runtime/state.js'
 
-/** How a signal is keyed within a bundle: its container and its name on that container. */
+/** How a signal is keyed within a server: its container and its name on that container. */
 const signalKey = (scope: SignalScope, name: string): string => `${scope}.${name}`
 
 /** The state behind a signal fake. */
@@ -101,7 +101,7 @@ const CONTAINERS = [
   { scope: 'system.beforeEvents', className: 'SystemBeforeEvents', names: SystemBeforeEventsManifest.properties },
 ] as const satisfies readonly { scope: SignalScope; className: string; names: readonly string[] }[]
 
-/** The four signal containers a bundle carries, with every declared signal already built. */
+/** The four signal containers a server carries, with every declared signal already built. */
 export interface SignalContainers {
   readonly worldAfterEvents: MC.WorldAfterEvents
   readonly worldBeforeEvents: MC.WorldBeforeEvents
@@ -110,7 +110,7 @@ export interface SignalContainers {
 }
 
 /**
- * Builds every declared signal for a bundle and the four containers that expose them. Every signal
+ * Builds every declared signal for a server and the four containers that expose them. Every signal
  * exists from the start, whether or not any fake behaviour raises it.
  */
 export const createSignals = (server: ServerState): SignalContainers => {

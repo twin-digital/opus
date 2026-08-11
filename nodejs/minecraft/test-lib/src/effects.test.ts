@@ -496,14 +496,14 @@ describe('effect duration', () => {
     expect(entity.getEffect(SPEED)!.duration).toBe(99)
   })
 
-  it('decays nothing on a bundle the test never advances', () => {
+  it('decays nothing on a server the test never advances', () => {
     const { entity } = setup()
     entity.addEffect(SPEED, 400)
 
     expect(entity.getEffect(SPEED)!.duration).toBe(400)
   })
 
-  it('decays only its own bundle', () => {
+  it('decays only its own server', () => {
     const { server, entity } = setup()
     const other = setup()
     entity.addEffect(SPEED, 100)

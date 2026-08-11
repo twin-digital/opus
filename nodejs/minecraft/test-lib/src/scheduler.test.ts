@@ -349,7 +349,7 @@ describe('advanceTicks', () => {
     ).toBe(thrown)
   })
 
-  it('advances only the bundle it was given', () => {
+  it('advances only the server it was given', () => {
     const a = createServer()
     const b = createServer()
     let bCalls = 0

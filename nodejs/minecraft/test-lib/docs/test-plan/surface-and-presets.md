@@ -40,7 +40,7 @@ will land once those areas do.
 
 ---
 
-## A. The bundle (`src/create-server.test.ts`)
+## A. The server (`src/create-server.test.ts`)
 
 > "`createServer()` returns a `FakeServer` whose properties are named exactly as `@minecraft/server`
 > exports them" [[d:server-bundle-mirrors-module-exports]]
@@ -49,14 +49,14 @@ will land once those areas do.
 | --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A1  | `createServer` > `returns the ten names @minecraft/server exports` | `Object.keys(createServer()).sort()` equals exactly `['BiomeTypes','BlockStates','BlockTypes','DimensionTypes','EffectTypes','EnchantmentTypes','EntityTypes','ItemTypes','system','world']` — 10 properties, no more. [[d:server-bundle-mirrors-module-exports]] |
 | A2  | `createServer` > `hands back a world object`                       | `server.world` is a non-null object whose `constructor.name` is `FakeWorld`. Spec: "A test obtains everything from one call".                                                                                                                                     |
-| A3  | `createServer` > `hands back a system object`                      | `server.system` is a non-null object whose `constructor.name` is `FakeSystem`. Spec: "The bundle is the only route to `system` and the registries".                                                                                                               |
+| A3  | `createServer` > `hands back a system object`                      | `server.system` is a non-null object whose `constructor.name` is `FakeSystem`. Spec: "The server is the only route to `system` and the registries".                                                                                                               |
 | A4  | `createServer` > `carries the world's event-signal containers`     | `server.world.afterEvents` and `server.world.beforeEvents` are objects. [[f:world-resting-state-observed]]                                                                                                                                                        |
 | A5  | `createServer` > `carries a scoreboard`                            | `server.world.scoreboard` is an object. [[f:world-resting-state-observed]]                                                                                                                                                                                        |
 
 ## B. `createServer()` populates nothing, and state is instance-scoped
 
 > "`createServer()` populates nothing. The world has no dimensions, no players, no objectives and no
-> dynamic properties" [[r:no-implicit-defaults]]; "All state a bundle holds belongs to that bundle"
+> dynamic properties" [[r:no-implicit-defaults]]; "All state a server holds belongs to that server"
 > [[r:instance-scoped-world]]
 
 | #   | `describe` > `it`                                                         | asserts                                                                                                                                                                           |
@@ -67,12 +67,12 @@ will land once those areas do.
 | B4  | `createServer` populates nothing > `has no dynamic properties`            | `world.getDynamicPropertyIds()` is `[]` and `world.getDynamicProperty('anything')` is `undefined`. [[r:no-implicit-defaults]] [[d:absence-reads-as-undefined]]                    |
 | B5  | `createServer` populates nothing > `starts the tick counter at zero`      | `server.system.currentTick === 0`. [[d:current-tick-starts-at-zero]]                                                                                                              |
 | B6  | `createServer` populates nothing > `records no handler errors`            | `getHandlerErrors(server)` is `[]`. [[d:handler-errors-are-isolated-and-recorded]]                                                                                                |
-| B7  | `instance-scoped state` > `two bundles share no dimensions`               | `withVanillaDimensions(a)`, then `b.world.getDimension('overworld')` throws while `a.world.getDimension('overworld')` resolves. [[r:instance-scoped-world]]                       |
-| B8  | `instance-scoped state` > `two bundles share no entities`                 | `createEntity(a, { typeId: 'minecraft:sheep' })`; `b.world.getAllPlayers()`/`b.world.getEntity(id)` see nothing, and `a.world.getEntity(id)` sees it. [[r:instance-scoped-world]] |
-| B9  | `instance-scoped state` > `two bundles issue ids independently`           | The first entity created in each bundle gets `id === '1'`, so a second bundle needs no reset hook. [[d:entity-ids-are-sequential-opaque-strings]] [[r:instance-scoped-world]]     |
-| B10 | `instance-scoped state` > `two bundles share no ticks`                    | `advanceTicks(a, 5)`; `a.system.currentTick === 5` and `b.system.currentTick === 0`. [[r:instance-scoped-world]]                                                                  |
-| B11 | `instance-scoped state` > `two bundles share no world dynamic properties` | Set a property on `a.world`; `b.world.getDynamicProperty(key)` is `undefined`. [[r:instance-scoped-world]]                                                                        |
-| B12 | `instance-scoped state` > `the world is the same object on every read`    | `server.world === server.world` and `server.world.scoreboard === server.world.scoreboard` — the bundle hands out one instance, not a fresh fake per read.                         |
+| B7  | `instance-scoped state` > `two servers share no dimensions`               | `withVanillaDimensions(a)`, then `b.world.getDimension('overworld')` throws while `a.world.getDimension('overworld')` resolves. [[r:instance-scoped-world]]                       |
+| B8  | `instance-scoped state` > `two servers share no entities`                 | `createEntity(a, { typeId: 'minecraft:sheep' })`; `b.world.getAllPlayers()`/`b.world.getEntity(id)` see nothing, and `a.world.getEntity(id)` sees it. [[r:instance-scoped-world]] |
+| B9  | `instance-scoped state` > `two servers issue ids independently`           | The first entity created in each server gets `id === '1'`, so a second server needs no reset hook. [[d:entity-ids-are-sequential-opaque-strings]] [[r:instance-scoped-world]]     |
+| B10 | `instance-scoped state` > `two servers share no ticks`                    | `advanceTicks(a, 5)`; `a.system.currentTick === 5` and `b.system.currentTick === 0`. [[r:instance-scoped-world]]                                                                  |
+| B11 | `instance-scoped state` > `two servers share no world dynamic properties` | Set a property on `a.world`; `b.world.getDynamicProperty(key)` is `undefined`. [[r:instance-scoped-world]]                                                                        |
+| B12 | `instance-scoped state` > `the world is the same object on every read`    | `server.world === server.world` and `server.world.scoreboard === server.world.scoreboard` — the server hands out one instance, not a fresh fake per read.                         |
 
 ## C. The eight registry classes
 
@@ -85,7 +85,7 @@ will land once those areas do.
 | C2  | `registry classes` > `every declared member throws NotImplementedError`    | Table-driven over `FAKED_CLASSES` ∩ the eight registry names, using each class's manifest: every method called with its declared minimum arity, and every property read, throws `NotImplementedError`. Exact count of members exercised is read from the manifest, so a version bump that adds one is covered automatically. [[d:registries-are-declared-and-throw]] [[d:out-of-scope-members-throw-not-implemented]] |
 | C3  | `registry classes` > `names the member it did not model`                   | `server.BiomeTypes.get('minecraft:plains')` throws `NotImplementedError` whose `.member` is `'BiomeTypes.get'` and whose message is `BiomeTypes.get is declared by @minecraft/server but is not modelled by this library.` [[d:out-of-scope-members-throw-not-implemented]]                                                                                                                                           |
 | C4  | `registry classes` > `checks arity before throwing NotImplementedError`    | `loosely(server.BiomeTypes).get()` throws `TypeError` `Incorrect number of arguments to function. Expected 1, received 0` — arity is first even for a member that models nothing. [[d:generated-members-check-arity-before-the-guard]]                                                                                                                                                                                |
-| C5  | `registry classes` > `are the same objects for every bundle`               | `createServer().BiomeTypes === createServer().BiomeTypes` — the registries hold no state, so sharing the class breaks no instance scoping. Spec: registries are "declared and throw"; [[r:instance-scoped-world]] is about state.                                                                                                                                                                                     |
+| C5  | `registry classes` > `are the same objects for every server`               | `createServer().BiomeTypes === createServer().BiomeTypes` — the registries hold no state, so sharing the class breaks no instance scoping. Spec: registries are "declared and throw"; [[r:instance-scoped-world]] is about state.                                                                                                                                                                                     |
 | C6  | `registry classes` > `DimensionTypes is untouched by the dimension preset` | After `withVanillaDimensions(server)`, `server.DimensionTypes.getAll()` still throws `NotImplementedError` — "`withVanillaDimensions` registers dimensions on the world without touching `DimensionTypes`". [[d:registries-are-declared-and-throw]]                                                                                                                                                                   |
 
 ## D. Dimensions and `getDimension` (`src/world.test.ts`)
@@ -123,7 +123,7 @@ will land once those areas do.
 | E10 | `withVanillaDimensions` > `registers exactly the seven ids observed`    | The seven aliases resolve and a spot list of near-misses — `'end'`, `'the_nether'`, `'minecraft:the end'`, `'Overworld'` — each throws `Dimension '<id>' is invalid.` [[r:no-implicit-defaults]] [[f:get-dimension-unknown-id-error]] |
 | E11 | `withVanillaDimensions` > `leaves the dimensions empty of entities`     | `getDimension('overworld').getEntities()` is `[]` — the preset supplies dimensions, not contents. [[r:presets-are-opt-in]]                                                                                                            |
 | E12 | `withVanillaDimensions` > `is idempotent`                               | Calling it twice leaves `getDimension('overworld')` resolving to one object and the world otherwise unchanged; presets "compose freely". [[r:presets-are-opt-in]]                                                                     |
-| E13 | `withVanillaDimensions` > `touches only the bundle it was given`        | Applied to `a`, `b.world.getDimension('overworld')` still throws. [[r:instance-scoped-world]]                                                                                                                                         |
+| E13 | `withVanillaDimensions` > `touches only the server it was given`        | Applied to `a`, `b.world.getDimension('overworld')` still throws. [[r:instance-scoped-world]]                                                                                                                                         |
 | E14 | `withVanillaDimensions` > `supplies no per-type vanilla data`           | An entity created in the overworld carries no components (`getComponents()` is `[]`) — "Neither preset invents per-type vanilla data". [[f:fresh-health-component-values-populated]] [[r:presets-are-opt-in]]                         |
 
 ## F. Preset — `asSpawnedEntity`
@@ -344,10 +344,10 @@ file typechecks under `pnpm typecheck` like any source.
 
 | #   | `describe` > `it`                                                        | asserts                                                                                                                                                                                                                                                                                           |
 | --- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M1  | `types` > `the bundle is assignable to a Pick of the module namespace`   | `const _bundle: Pick<typeof import('@minecraft/server'), 'world' \| 'system' \| 'BiomeTypes' \| 'BlockStates' \| 'BlockTypes' \| 'DimensionTypes' \| 'EffectTypes' \| 'EnchantmentTypes' \| 'EntityTypes' \| 'ItemTypes'> = createServer()` — no cast. [[d:server-bundle-mirrors-module-exports]] |
+| M1  | `types` > `the server is assignable to a Pick of the module namespace`   | `const _server: Pick<typeof import('@minecraft/server'), 'world' \| 'system' \| 'BiomeTypes' \| 'BlockStates' \| 'BlockTypes' \| 'DimensionTypes' \| 'EffectTypes' \| 'EnchantmentTypes' \| 'EntityTypes' \| 'ItemTypes'> = createServer()` — no cast. [[d:server-bundle-mirrors-module-exports]] |
 | M2  | `types` > `each registry property is the class's static side`            | `const _b: typeof MC.BiomeTypes = createServer().BiomeTypes` (and the other seven), so `prototype` is present. [[r:fakes-are-structurally-assignable]]                                                                                                                                            |
 | M3  | `types` > `an object literal is not assignable where a registry is`      | `@ts-expect-error` on `const _b: typeof MC.BiomeTypes = { get: () => undefined, getAll: () => [] }` — "an object literal is not assignable there". [[r:fakes-are-structurally-assignable]]                                                                                                        |
-| M4  | `types` > `the bundle carries nothing the module does not export`        | `@ts-expect-error` reading `createServer().Block` — the bundle's names mirror the module's exports. [[d:server-bundle-mirrors-module-exports]]                                                                                                                                                    |
+| M4  | `types` > `the server carries nothing the module does not export`        | `@ts-expect-error` reading `createServer().Block` — the server's names mirror the module's exports. [[d:server-bundle-mirrors-module-exports]]                                                                                                                                                    |
 | M5  | `types` > `a fake entity is assignable to MC.Entity with no cast`        | `const _e: MC.Entity = createEntity(server, { typeId: 'minecraft:sheep' })`. [[r:fakes-are-structurally-assignable]] [[f:server-classes-are-structurally-assignable]]                                                                                                                             |
 | M6  | `types` > `a fake player is assignable to MC.Player and to MC.Entity`    | `const _p: MC.Player = createPlayer(server); const _e: MC.Entity = _p`.                                                                                                                                                                                                                           |
 | M7  | `types` > `a fake dimension is assignable to MC.Dimension`               | `const _d: MC.Dimension = server.world.getDimension('overworld')`.                                                                                                                                                                                                                                |
@@ -360,7 +360,7 @@ file typechecks under `pnpm typecheck` like any source.
 | M14 | `types` > `InvalidEntityError's id and type are readonly`                | `@ts-expect-error` on assigning to `.id`. [[f:invalid-entity-error-shape]]                                                                                                                                                                                                                        |
 | M15 | `types` > `createEntity requires a typeId`                               | `@ts-expect-error` on `createEntity(server, {})`. [[r:ids-auto-assigned-typeid-required]]                                                                                                                                                                                                         |
 | M16 | `types` > `createEntity's dimension option takes a Dimension, not an id` | `@ts-expect-error` on `createEntity(server, { typeId: 'x', dimension: 'minecraft:overworld' })` — "a string would have to resolve against a registry that may hold nothing".                                                                                                                      |
-| M17 | `types` > `a preset takes the bundle`                                    | `withVanillaDimensions(createServer())` compiles, and `@ts-expect-error` on `withVanillaDimensions({})`. [[r:presets-are-opt-in]]                                                                                                                                                                 |
+| M17 | `types` > `a preset takes the server`                                    | `withVanillaDimensions(createServer())` compiles, and `@ts-expect-error` on `withVanillaDimensions({})`. [[r:presets-are-opt-in]]                                                                                                                                                                 |
 | M18 | `types` > `the entry point declares no subpath module`                   | `@ts-expect-error` on `import('@twin-digital/minecraft-test-lib/presets')`. [[d:one-public-entry-point]]                                                                                                                                                                                          |
 
 ---
@@ -382,7 +382,7 @@ wave**):
    that the second line is the _pack's_ own entry point. Followed by the constraint stated plainly:
    **the library never replaces or intercepts the module import**, so a pack that reaches the engine
    through a bare `import { world } from '@minecraft/server'` is outside its reach.
-4. **The bundle** — the ten properties `createServer()` returns, that they are named exactly as the
+4. **The server** — the ten properties `createServer()` returns, that they are named exactly as the
    module exports them and are assignable to a `Pick<>` of it, and that the eight registries are
    declared and throw.
 5. **Free functions** — the spec's twelve-row table verbatim (`createServer`, `createEntity`,
@@ -426,7 +426,7 @@ wave**):
 
 | section                                       | cases   |
 | --------------------------------------------- | ------- |
-| A — the bundle                                | 5       |
+| A — the server                                | 5       |
 | B — populates nothing / instance-scoped       | 12      |
 | C — registry classes                          | 6       |
 | D — dimension registration and `getDimension` | 10      |

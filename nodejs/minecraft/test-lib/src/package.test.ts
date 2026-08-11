@@ -140,6 +140,7 @@ const FREE_FUNCTIONS = [
   'addComponent',
   'removeComponent',
   'registerEffectBaseName',
+  'registerEntityType',
   'invalidate',
   'emit',
   'advanceTicks',
@@ -148,7 +149,7 @@ const FREE_FUNCTIONS = [
   'getHandlerErrors',
 ] as const
 
-const PRESETS = ['withVanillaDimensions', 'asSpawnedEntity'] as const
+const PRESETS = ['withVanillaDimensions', 'withVanillaEntityTypes', 'withVanillaWorld', 'asSpawnedEntity'] as const
 
 const ERROR_CLASSES = [
   'ArgumentOutOfBoundsError',
@@ -172,7 +173,7 @@ describe('entry point', () => {
     }
   })
 
-  it('exports both presets', () => {
+  it('exports the four presets', () => {
     for (const name of PRESETS) {
       expect(typeof exported[name]).toBe('function')
     }
@@ -322,6 +323,13 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
   ],
   ['spawn-entity-placement', '`dimension.spawnEntity` placement', 'divergence'],
   ['post-spawn-motion', 'post-spawn motion', 'divergence'],
+  ['entity-type-catalog', '`EntityTypes.get` and `EntityTypes.getAll`', 'modelled'],
+  ['entity-type-registration', 'how an entity type gets into the catalog', 'divergence'],
+  ['entity-type-catalog-early-execution', 'a catalog read during early execution', 'divergence'],
+  ['entity-type-argument-guards', '`EntityTypes.get` on a wrong-typed argument', 'divergence'],
+  ['entity-type-shape', "an `EntityType`'s `id` and `localizationKey`", 'modelled'],
+  ['spawn-entity-type-resolution', '`dimension.spawnEntity` entity-type resolution', 'modelled'],
+  ['create-entity-type-resolution', '`createEntity` and `createPlayer` entity-type resolution', 'not modelled'],
   ['entity-remove-cascade', '`entity.remove()`', 'modelled'],
   ['trigger-event', '`entity.triggerEvent`', 'divergence'],
   ['entity-kill-cascade', '`entity.kill()`', 'modelled'],
@@ -385,11 +393,11 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
   ['for-in-enumeration', '`for-in` over an entity', 'modelled'],
   [
     'out-of-scope-surfaces',
-    'items, blocks, containers, the player client surface, custom commands, the startup registries, and the eight registry classes',
+    'items, blocks, containers, the player client surface, custom commands, the startup registries, and the seven type catalogs beside `EntityTypes`',
     'not modelled',
   ],
   ['module-import-resolution', "a pack's `import` of `@minecraft/server`", 'modelled'],
-  ['module-singleton-bindings', 'the module-scope `world` and `system`', 'divergence'],
+  ['module-singleton-bindings', 'the module-scope `world`, `system` and `EntityTypes`', 'divergence'],
   ['class-identity-and-instanceof', '`instanceof` against a class the module exports', 'modelled'],
   ['enum-and-constant-values', 'enum members and module-level constants', 'modelled'],
   ['unimplemented-surface-classes', 'classes the module exports that the fakes do not implement', 'not modelled'],
@@ -414,7 +422,7 @@ describe('the README coverage table', () => {
 
   it('carries a row for every behaviour the design ruled on', () => {
     expect(COVERAGE_ROWS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
-    expect(COVERAGE_ROWS).toHaveLength(69)
+    expect(COVERAGE_ROWS).toHaveLength(76)
   })
 
   it('carries a row for every divergence the library rules on alone', () => {
@@ -451,11 +459,11 @@ describe('the README coverage table', () => {
     expect(bare).toEqual([])
   })
 
-  it('carries the seventeen divergences the design named, and none the library rules alone', () => {
-    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(17)
+  it('carries the twenty divergences the design named, and none the library rules alone', () => {
+    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(20)
     expect(LIBRARY_RULINGS).toHaveLength(0)
-    expect(divergences).toHaveLength(17)
-    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(17)
+    expect(divergences).toHaveLength(20)
+    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(20)
   })
 
   it('describes every divergence in a section of its own, named for its row', () => {
@@ -473,7 +481,7 @@ describe('the README coverage table', () => {
 // ---------------------------------------------------------------------------
 
 type ModuleNamespace = typeof import('@minecraft/server')
-type BundleShape = Pick<
+type ServerShape = Pick<
   ModuleNamespace,
   | 'world'
   | 'system'
@@ -489,7 +497,7 @@ type BundleShape = Pick<
 
 /** Each of these compiles or the build fails; none of them runs. */
 const typeChecks = {
-  bundleIsAssignable: (): BundleShape => createServer(),
+  serverIsAssignable: (): ServerShape => createServer(),
 
   registriesAreClassStaticSides: (): typeof MC.BiomeTypes => createServer().BiomeTypes,
 
@@ -499,8 +507,8 @@ const typeChecks = {
     void _registry
   },
 
-  bundleCarriesNothingTheModuleLacks: (): void => {
-    // @ts-expect-error the bundle's names mirror the module's exports
+  serverCarriesNothingTheModuleLacks: (): void => {
+    // @ts-expect-error the server's names mirror the module's exports
     void createServer().Block
   },
 
@@ -549,9 +557,9 @@ const typeChecks = {
     void createEntity(server, { typeId: 'minecraft:sheep', dimension: 'minecraft:overworld' })
   },
 
-  presetTakesTheBundle: (): void => {
+  presetTakesTheServer: (): void => {
     withVanillaDimensions(createServer())
-    // @ts-expect-error a preset needs the world the bundle carries
+    // @ts-expect-error a preset needs the world the server carries
     withVanillaDimensions({})
   },
 }

@@ -1,7 +1,7 @@
 /**
  * The per-instance state every behaving member reads and writes. All of it hangs off one
- * `ServerState`, which `createServer` makes and nothing else shares: two bundles in one process
- * have nothing in common, so a test needs no reset hook.
+ * `ServerState`, which `createServer` makes and nothing else shares: two fake servers in one
+ * process have nothing in common, so a test needs no reset hook.
  */
 
 import type * as minecraftcommon from '@minecraft/common'
@@ -67,7 +67,7 @@ export interface ObjectiveState {
 export interface ScoreboardState {
   readonly objectives: Map<string, ObjectiveState>
   readonly displaySlots: Map<MC.DisplaySlotId, { objective: MC.ScoreboardObjective; sortOrder?: MC.ObjectiveSortOrder }>
-  /** Every participant identity the bundle has issued, keyed as the objectives key their scores. */
+  /** Every participant identity the server has issued, keyed as the objectives key their scores. */
   identities?: Map<string, MC.ScoreboardIdentity>
   /** The next identity id to issue; the engine's are numbers with no promised spelling. */
   nextIdentityId?: number
@@ -137,9 +137,9 @@ export interface DimensionData {
   readonly localizationKey: string
 }
 
-/** One bundle's whole world: everything `createServer` made and everything a test has done to it. */
+/** One server's whole world: everything `createServer` made and everything a test has done to it. */
 export interface ServerState {
-  /** Assigned as the bundle is built: the world and `system` need the state they belong to. */
+  /** Assigned as the server is built: the world and `system` need the state they belong to. */
   world: MC.World
   system: MC.System
   /** Every entity ever registered, in creation order; `remove()` clears its `registered` flag. */
@@ -147,6 +147,8 @@ export interface ServerState {
   nextEntityId: number
   /** Every id a dimension answers to — prefixed, bare and aliased — mapped to that dimension. */
   readonly dimensions: Map<string, MC.Dimension>
+  /** The type catalog `EntityTypes` answers from, keyed by canonical id, in registration order. */
+  readonly entityTypes: Map<string, MC.EntityType>
   readonly signals: Map<string, SignalState>
   readonly handlerErrors: HandlerError[]
   currentTick: number
@@ -171,5 +173,5 @@ export const dataOf = <D>(fake: object): D => stateOf<D>(fake).data
 /** The entity behind an entity or player fake. */
 export const entityDataOf = (entity: MC.Entity): EntityData => dataOf<EntityData>(entity)
 
-/** The bundle a fake belongs to, whatever kind of fake it is. */
+/** The server a fake belongs to, whatever kind of fake it is. */
 export const serverOf = (fake: object): ServerState => dataOf<{ server: ServerState }>(fake).server

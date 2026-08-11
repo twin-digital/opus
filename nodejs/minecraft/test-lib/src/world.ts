@@ -15,7 +15,7 @@ import { construct } from './runtime/construct.js'
 import { registerBehaviour } from './runtime/member.js'
 import { dataOf, serverOf, type DimensionData, type EntityData, type ServerState } from './runtime/state.js'
 
-/** The state behind the world fake: its bundle, its signal containers and its scoreboard. */
+/** The state behind the world fake: its server, its signal containers and its scoreboard. */
 export interface WorldData {
   readonly server: ServerState
   readonly afterEvents: MC.WorldAfterEvents

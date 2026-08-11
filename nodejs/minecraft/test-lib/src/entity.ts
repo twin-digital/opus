@@ -11,6 +11,7 @@
 import type * as MC from '@minecraft/server'
 
 import type { ServerLike } from './create-server.js'
+import { lookupEntityType } from './entity-types.js'
 import { InvalidArgumentError, NotImplementedError, UnsetValueError } from './errors.js'
 import { deliver, dispatchAfter } from './events.js'
 import { canonicalId } from './ids.js'
@@ -91,7 +92,7 @@ const create = (server: ServerState, options: PlayerOptions, isPlayer: boolean):
 }
 
 /**
- * A fake entity registered with that bundle's world. An id the caller does not supply is assigned:
+ * A fake entity registered with that server's world. An id the caller does not supply is assigned:
  * a decimal string issued sequentially from `1` and never reissued, since in the engine the spawner
  * never chooses it either.
  */
@@ -208,14 +209,20 @@ registerBehaviour('Player', {
 
 registerBehaviour('Dimension', {
   spawnEntity: (fake: object, identifier: MC.EntityType | string, location: MC.Vector3, options?: unknown) => {
-    if (typeof identifier !== 'string') {
-      throw new NotImplementedError('Dimension.spawnEntity(EntityType)')
-    }
     if (options !== undefined) {
       throw new NotImplementedError('Dimension.spawnEntity(options)')
     }
     const { server } = dataOf<DimensionData>(fake)
-    const { entity } = create(server, { typeId: identifier, dimension: fake as MC.Dimension, location }, false)
+    // The engine surface has a counterpart, so it resolves through the server's type catalog; an
+    // `EntityType` is read for its id and nothing else.
+    const id = typeof identifier === 'string' ? identifier : identifier.id
+    const type = lookupEntityType(server, id)
+    if (!type) {
+      throw new InvalidArgumentError(
+        `Invalid value passed to argument [0]. '${canonicalId(id)}' is not a valid entity type.`,
+      )
+    }
+    const { entity } = create(server, { typeId: type.id, dimension: fake as MC.Dimension, location }, false)
     dispatchAfter(server, 'entitySpawn', { entity, cause: 'Spawned' as MC.EntityInitializationCause })
     return entity
   },
