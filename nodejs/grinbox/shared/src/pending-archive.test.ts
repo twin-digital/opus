@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { archiveDelaySecondsSchema, pendingArchiveSchema } from './index.js'
+import { archiveDelaySecondsSchema, pendingArchiveSchema, pendingArchiveSkipReasonSchema } from './index.js'
 import { archiveConfigSchema } from './operators.js'
 
 // --- archiveDelaySecondsSchema (d-grcdd4ov) -------------------------------
@@ -72,5 +72,24 @@ describe('pendingArchiveSchema', () => {
     expect(pendingArchiveSchema.safeParse({ due_at: 1.5, triage_id: 1, operator_id: 1 }).success).toBe(false)
     expect(pendingArchiveSchema.safeParse({ due_at: 1, triage_id: 0, operator_id: 1 }).success).toBe(false)
     expect(pendingArchiveSchema.safeParse({ due_at: 1, triage_id: 1, operator_id: 0 }).success).toBe(false)
+  })
+})
+
+// --- pendingArchiveSkipReasonSchema (d-41v9yqvh, d-ymvh4v9a) --------------
+//
+// The three reasons a due pending archive makes no mailbox call. Both tiers
+// read them: the server writes one into the event's details, the interface
+// renders each as a sentence.
+
+describe('pendingArchiveSkipReasonSchema', () => {
+  it('accepts each reason the sweep writes, spelled as it is stored', () => {
+    for (const reason of ['already_departed', 'abandoned', 'pipeline_inactive']) {
+      expect(pendingArchiveSkipReasonSchema.safeParse(reason).success).toBe(true)
+    }
+  })
+
+  it('rejects a reason outside the set', () => {
+    expect(pendingArchiveSkipReasonSchema.safeParse('limit_denied').success).toBe(false)
+    expect(pendingArchiveSkipReasonSchema.safeParse('').success).toBe(false)
   })
 })

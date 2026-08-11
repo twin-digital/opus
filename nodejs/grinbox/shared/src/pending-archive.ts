@@ -37,3 +37,23 @@ export const pendingArchiveSchema = z.object({
   operator_id: z.number().int().positive(),
 })
 export type PendingArchive = z.infer<typeof pendingArchiveSchema>
+
+/**
+ * Why a due pending archive made no mailbox call — the `reason` a
+ * `pending_archive_skipped` triage event carries in its details (d-41v9yqvh,
+ * d-ymvh4v9a):
+ *  - `already_departed` — the Message had already left the inbox, so the
+ *    mailbox was left untouched.
+ *  - `abandoned` — the pending archive's Pipeline or Account is gone; what was
+ *    recorded of it stays readable.
+ *  - `pipeline_inactive` — the Pipeline is not active on the Account. It fires
+ *    late if the Pipeline returns while the pending archive still stands.
+ *
+ * Closed, and code-resident rather than CHECK-constrained: the reason lives
+ * inside a triage event's details. Declaring it here is what stops the daemon
+ * writing a reason the interface has never heard of — it is not a gate the
+ * interface parses through. A reader that meets an unrecognised reason shows it
+ * as stored, so a daemon ahead of the interface still says something.
+ */
+export const pendingArchiveSkipReasonSchema = z.enum(['already_departed', 'abandoned', 'pipeline_inactive'])
+export type PendingArchiveSkipReason = z.infer<typeof pendingArchiveSkipReasonSchema>
