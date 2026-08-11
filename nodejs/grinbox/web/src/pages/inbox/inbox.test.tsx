@@ -24,9 +24,22 @@ const navigate = vi.fn((opts: { search?: (prev: Record<string, unknown>) => Reco
 })
 
 vi.mock('@tanstack/react-router', () => ({
+  // The stub composes a plain href from to/params/search so link targets are
+  // assertable without a RouterProvider.
   Link: ({ children, ...props }: { children: ReactNode }) => {
-    const { to: _to, params: _params, ...rest } = props as Record<string, unknown>
-    return <a {...rest}>{children}</a>
+    const { to, params, search, ...rest } = props as Record<string, unknown>
+    let href = typeof to === 'string' ? to : ''
+    for (const [key, value] of Object.entries((params ?? {}) as Record<string, unknown>)) {
+      href = href.replace(`$${key}`, String(value))
+    }
+    const query = Object.entries((search ?? {}) as Record<string, unknown>)
+      .map(([k, v]) => `${k}=${String(v)}`)
+      .join('&')
+    return (
+      <a href={query === '' ? href : `${href}?${query}`} {...rest}>
+        {children}
+      </a>
+    )
   },
   useParams: () => ({ messageId: '42' }),
   useSearch: () => currentSearch,
@@ -554,7 +567,7 @@ describe('MessageDetailPage', () => {
 // --- Suppression rendering (d-5amonj40 / d-e9jslw4x) -----------------------
 
 /** A Triage whose notify run was cooldown-suppressed: it completed, sent nothing. */
-function suppressedTriage(deferredToTriageId: number) {
+function suppressedTriage(deferredToTriageId: number, deferredToMessageId: number | null = null) {
   return {
     id: 201,
     pipeline_id: 7,
@@ -590,6 +603,9 @@ function suppressedTriage(deferredToTriageId: number) {
           deferred_to_operator_id: 11,
         }),
         recorded_at: now - 29,
+        // Derived at read time by the server; null where the deferred-to
+        // triage is gone.
+        deferred_to_message_id: deferredToMessageId,
       },
     ],
     tags: [],
@@ -635,7 +651,7 @@ describe('MessageDetailPage · suppressed push', () => {
     useMessage.mockReturnValue(
       queryStub({
         ...detailFixture,
-        triages: [suppressedTriage(199), ...detailFixture.triages],
+        triages: [suppressedTriage(199, 42), ...detailFixture.triages],
       }),
     )
     renderPage(<MessageDetailPage />)
@@ -649,11 +665,28 @@ describe('MessageDetailPage · suppressed push', () => {
     expect(screen.getByText('Resource op limited')).toBeInTheDocument()
   })
 
-  it('names a deferral to another message’s triage without a dead link', () => {
+  // d-e9jslw4x: a deferral to another message's triage links to that message's
+  // detail, landing on the deferred-to triage via `?triage=`.
+  it('links a cross-message deferral to the other message’s detail', () => {
     useMessage.mockReturnValue(
       queryStub({
         ...detailFixture,
-        triages: [suppressedTriage(4242), ...detailFixture.triages],
+        triages: [suppressedTriage(4242, 77), ...detailFixture.triages],
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    const link = screen.getByRole('link', { name: 'Triage 4242' })
+    expect(link).toHaveAttribute('href', '/inbox/77?triage=4242')
+    expect(screen.getByTestId('suppression-details')).toHaveTextContent('run 11')
+  })
+
+  it('names a deferral whose triage is gone without a dead link', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        triages: [suppressedTriage(4242, null), ...detailFixture.triages],
       }),
     )
     renderPage(<MessageDetailPage />)
@@ -662,5 +695,18 @@ describe('MessageDetailPage · suppressed push', () => {
     const details = screen.getByTestId('suppression-details')
     expect(details).toHaveTextContent('Triage 4242')
     expect(screen.queryByRole('button', { name: 'Triage 4242' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Triage 4242' })).not.toBeInTheDocument()
+  })
+
+  // The landing side of the cross-message link: `?triage=` opens the Triage
+  // history tab with that triage selected.
+  it('deep-selects the triage named by the ?triage search param', () => {
+    currentSearch = { triage: 199 }
+    useMessage.mockReturnValue(queryStub(detailFixture))
+    renderPage(<MessageDetailPage />)
+
+    // No tab click: the triage tab is active and Triage 199 is selected.
+    expect(screen.getByText('Resource op limited')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Triage 199/ })).toHaveAttribute('aria-pressed', 'true')
   })
 })
