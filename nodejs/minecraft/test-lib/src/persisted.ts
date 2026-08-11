@@ -77,7 +77,7 @@ interface IdentityData {
 const entityKey = (data: EntityData): string => `entity:${data.id}`
 const fakePlayerKey = (name: string): string => `fake-player:${name}`
 
-/** The identity registry a bundle issues from, built on first use. */
+/** The identity registry a server issues from, built on first use. */
 const registryOf = (scoreboard: ScoreboardState): Map<string, MC.ScoreboardIdentity> =>
   (scoreboard.identities ??= new Map<string, MC.ScoreboardIdentity>())
 
@@ -102,7 +102,7 @@ const identityFor = (server: ServerState, key: string, entity?: EntityData): MC.
 const identityOfEntity = (data: EntityData): MC.ScoreboardIdentity =>
   (data.scoreboardIdentity ??= identityFor(data.server, entityKey(data), data))
 
-/** All state is instance-scoped, so a participant from another bundle names nothing here. */
+/** All state is instance-scoped, so a participant from another server names nothing here. */
 const ownedBy = (server: ServerState, owner: ServerState, participant: object): void => {
   if (owner !== server) {
     throw new InvalidArgumentError(

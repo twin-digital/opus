@@ -1,5 +1,5 @@
 /**
- * The bundle, the generated shape, and the arity check.
+ * The server, the generated shape, and the arity check.
  *
  * The entity fakes here are built through the runtime seam rather than `createEntity`, because what
  * is under test is the generated surface itself — the emission rule, the arity check and the
@@ -13,6 +13,7 @@ import type * as MC from '@minecraft/server'
 import { createServer } from './create-server.js'
 import { addComponent } from './components.js'
 import { createEntity, createPlayer, invalidate } from './entity.js'
+import { registerEntityType } from './entity-types.js'
 import {
   ArgumentOutOfBoundsError,
   InvalidArgumentError,
@@ -70,8 +71,11 @@ const REGISTRY_NAMES = [
   'ItemTypes',
 ] as const
 
+/** The seven that stay declared with every member throwing; `EntityTypes` behaves. */
+const THROWING_REGISTRY_NAMES = REGISTRY_NAMES.filter((name) => name !== 'EntityTypes')
+
 // ---------------------------------------------------------------------------
-// The bundle
+// The server
 // ---------------------------------------------------------------------------
 
 describe('createServer', () => {
@@ -148,7 +152,7 @@ describe('createServer populates nothing', () => {
 })
 
 describe('instance-scoped state', () => {
-  it('shares no dimensions between two bundles', () => {
+  it('shares no dimensions between two servers', () => {
     const a = createServer()
     const b = createServer()
     withVanillaDimensions(a)
@@ -156,7 +160,7 @@ describe('instance-scoped state', () => {
     expect(() => b.world.getDimension('overworld')).toThrow("Dimension 'overworld' is invalid.")
   })
 
-  it('shares no entities between two bundles', () => {
+  it('shares no entities between two servers', () => {
     const a = createServer()
     const b = createServer()
     const entity = createEntity(a, { typeId: 'minecraft:sheep' })
@@ -164,12 +168,12 @@ describe('instance-scoped state', () => {
     expect(b.world.getEntity(entity.id)).toBeUndefined()
   })
 
-  it('issues ids independently in each bundle', () => {
+  it('issues ids independently in each server', () => {
     expect(createEntity(createServer(), { typeId: 'minecraft:sheep' }).id).toBe('1')
     expect(createEntity(createServer(), { typeId: 'minecraft:cow' }).id).toBe('1')
   })
 
-  it('shares no ticks between two bundles', () => {
+  it('shares no ticks between two servers', () => {
     const a = createServer()
     const b = createServer()
     advanceTicks(a, 5)
@@ -177,7 +181,7 @@ describe('instance-scoped state', () => {
     expect(b.system.currentTick).toBe(0)
   })
 
-  it('shares no world dynamic properties between two bundles', () => {
+  it('shares no world dynamic properties between two servers', () => {
     const a = createServer()
     const b = createServer()
     a.world.setDynamicProperty('key', 'value')
@@ -193,7 +197,7 @@ describe('instance-scoped state', () => {
 })
 
 // ---------------------------------------------------------------------------
-// The eight registry classes
+// The eight type catalogs
 // ---------------------------------------------------------------------------
 
 describe('registry classes', () => {
@@ -206,10 +210,10 @@ describe('registry classes', () => {
     }
   })
 
-  it('throw NotImplementedError from every declared member', () => {
+  it('throw NotImplementedError from every declared member of the seven that do not behave', () => {
     const server = createServer()
     let reached = 0
-    for (const name of REGISTRY_NAMES) {
+    for (const name of THROWING_REGISTRY_NAMES) {
       const registry = (server as unknown as Bag)[name] as object
       const manifest = manifestFor(name)
       for (const method of manifest.methods) {
@@ -223,7 +227,7 @@ describe('registry classes', () => {
         expect(() => (registry as Bag)[property]).toThrow(NotImplementedError)
       }
     }
-    expect(reached).toBe(16)
+    expect(reached).toBe(14)
   })
 
   it('name the member they did not model', () => {
@@ -248,8 +252,9 @@ describe('registry classes', () => {
     )
   })
 
-  it('are the same class objects for every bundle', () => {
+  it('are the same class objects for every server, but for the one holding state', () => {
     expect(createServer().BiomeTypes).toBe(createServer().BiomeTypes)
+    expect(createServer().EntityTypes).not.toBe(createServer().EntityTypes)
   })
 
   it('leave DimensionTypes untouched when the dimension preset runs', () => {
@@ -741,15 +746,15 @@ const describeOutcome = (outcome: Outcome): string =>
 
 /**
  * Every declared member of every faked class, called at its declared minimum arity, on the real
- * objects a bundle hands out wherever one exists. The generator is one program whose defects
+ * objects a server hands out wherever one exists. The generator is one program whose defects
  * reproduce across all 1032 members, so every outcome is classified rather than sampled: a member
  * with no behaviour behind it must say so with `NotImplementedError`, and one with a behaviour must
  * answer or fail in a shape the library declares.
  */
 describe('the whole generated surface', () => {
   /**
-   * A factory per faked class, yielding the object a test would really hold. Anything a bundle
-   * hands out is taken from the bundle — a stateless stand-in would let a behaviour read
+   * A factory per faked class, yielding the object a test would really hold. Anything a server
+   * hands out is taken from the server — a stateless stand-in would let a behaviour read
    * `undefined` and pass — and anything a member can destroy is rebuilt for each member.
    */
   const factoriesOf = (server: ReturnType<typeof createServer>): Map<string, () => object> => {
@@ -792,6 +797,9 @@ describe('the whole generated surface', () => {
     for (const [componentId, className] of Object.entries(manifests.COMPONENT_CLASS_BY_ID)) {
       factories.set(className, attach(componentId))
     }
+    // The catalog is per-server and its entries are built by registration, not by `construct`.
+    factories.set('EntityTypes', fixed(server.EntityTypes))
+    factories.set('EntityType', () => registerEntityType(server, `mctest:sweep_${String(state.entityTypes.size)}`))
     factories.set('ScreenDisplay', () => createPlayer(server, { name: 'Screen' }).onScreenDisplay)
     factories.set('ScoreboardObjective', () => {
       const id = `sweep-${String(state.entities.length)}-${String(Math.random())}`
@@ -849,7 +857,7 @@ describe('the whole generated surface', () => {
       return total + manifest.methods.length + manifest.properties.length
     }, 0)
     const targets = factoriesOf(createServer())
-    // A second bundle absorbs the delegation probe's own side effects.
+    // A second server absorbs the delegation probe's own side effects.
     const probes = factoriesOf(createServer())
     const unexpected: string[] = []
     let swept = 0
@@ -898,10 +906,11 @@ describe('the whole generated surface', () => {
     expect(swept).toBe(declared)
     expect(swept).toBeGreaterThanOrEqual(1037)
     expect(unmodelled).toBeGreaterThan(0)
-    expect(ownProperties).toBe(4)
+    // Entity and Player each carry `typeId` and `id`; EntityType carries `id` and `localizationKey`.
+    expect(ownProperties).toBe(6)
   })
 
-  it('sweeps the real objects a bundle hands out, not stateless stand-ins', () => {
+  it('sweeps the real objects a server hands out, not stateless stand-ins', () => {
     const factories = factoriesOf(createServer())
     for (const className of ['World', 'System', 'Scoreboard', 'Dimension', 'Entity', 'Player', 'Effect']) {
       const instance = factories.get(className)?.()

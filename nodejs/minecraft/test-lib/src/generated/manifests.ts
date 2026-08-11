@@ -1808,6 +1808,18 @@ type _EntityTameableComponentComplete = AssertNever<
 >
 export type { _EntityTameableComponentComplete }
 
+export const EntityTypeManifest = {
+  methods: [],
+  properties: ['id', 'localizationKey'],
+} as const satisfies ClassManifest<MC.EntityType>
+type _EntityTypeComplete = AssertNever<
+  Exclude<
+    keyof MC.EntityType,
+    (typeof EntityTypeManifest)['methods'][number]['name'] | (typeof EntityTypeManifest)['properties'][number]
+  >
+>
+export type { _EntityTypeComplete }
+
 export const EntityTypeFamilyComponentManifest = {
   methods: [
     { name: 'getTypeFamilies', minArity: 0, maxArity: 0 },
@@ -3152,6 +3164,7 @@ export const FAKED_CLASSES = [
   'EntityStrengthComponent',
   'EntityTameMountComponent',
   'EntityTameableComponent',
+  'EntityType',
   'EntityTypeFamilyComponent',
   'EntityTypes',
   'EntityUnderwaterMovementComponent',

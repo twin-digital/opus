@@ -139,7 +139,7 @@ describe('dynamic property scope', () => {
     expect(second.getDynamicProperty('k')).toBe('second')
   })
 
-  it('keeps two bundles apart', () => {
+  it('keeps two servers apart', () => {
     const a = createServer()
     const b = createServer()
     a.world.setDynamicProperty('k', 'a')
@@ -343,7 +343,7 @@ describe('scores', () => {
     expect(second.getScore('global')).toBe(2)
   })
 
-  it('refuses a participant from another bundle, in both the entity and the identity form', () => {
+  it('refuses a participant from another server, in both the entity and the identity form', () => {
     const a = createServer()
     const b = createServer()
     const foreign = anEntity(b)
@@ -457,7 +457,7 @@ describe('entity.scoreboardIdentity', () => {
     expect(identity?.isValid).toBe(false)
   })
 
-  it("keeps two bundles' scoreboards apart", () => {
+  it("keeps two servers' scoreboards apart", () => {
     const a = createServer()
     const b = createServer()
     a.world.scoreboard.addObjective('kills', 'Kills').setScore('global', 5)

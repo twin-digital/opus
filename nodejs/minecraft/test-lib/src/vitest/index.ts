@@ -54,7 +54,7 @@ export const minecraftTestLib = (): MinecraftTestLibPlugin => ({
 export interface LoadPackOptions {
   /**
    * The server to install, where a test needs one that differs before the pack evaluates. Build it
-   * inside the importer's own module generation — a bundle from a previous generation belongs to a
+   * inside the importer's own module generation — a server from a previous generation belongs to a
    * different copy of the library.
    */
   readonly server?: FakeServer

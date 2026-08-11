@@ -248,7 +248,7 @@ describe('registerEffectBaseName', () => {
   })
 
   // 86a
-  it('is scoped to the bundle it was registered on', () => {
+  it('is scoped to the server it was registered on', () => {
     const { server, entity } = setup()
     registerEffectBaseName(server, CUSTOM, 'Gravity Well')
     expect(entity.addEffect(CUSTOM, DURATION)!.displayName).toBe('Gravity Well')

@@ -1,10 +1,11 @@
 /**
- * `createServer` and the bundle it returns: the one call a test makes to obtain a world, `system`
- * and the registry classes, named exactly as `@minecraft/server` exports them.
+ * `createServer` and the fake server it returns: the one call a test makes to obtain a world,
+ * `system` and the type catalogs, named exactly as `@minecraft/server` exports them.
  */
 
 import type * as MC from '@minecraft/server'
 
+import { createEntityTypes } from './entity-types.js'
 import { createSignals } from './events.js'
 import {
   FakeBiomeTypes,
@@ -13,7 +14,6 @@ import {
   FakeDimensionTypes,
   FakeEffectTypes,
   FakeEnchantmentTypes,
-  FakeEntityTypes,
   FakeItemTypes,
 } from './generated/index.js'
 import './register.js'
@@ -24,8 +24,8 @@ import type { WorldData } from './world.js'
 
 /**
  * What a test is handed: the module's own exported names, so a pack written to receive its engine
- * handles as a parameter can take the whole bundle. All eight registries are declared and every
- * member on them throws — no behaviour in this cycle reads one.
+ * handles as a parameter can take the whole server. `EntityTypes` reads this server's own type
+ * catalog; the other seven type catalogs are declared with every member throwing.
  */
 export interface FakeServer {
   readonly world: MC.World
@@ -41,9 +41,9 @@ export interface FakeServer {
 }
 
 /**
- * A new bundle. It populates nothing: no dimensions, no players, no objectives and no dynamic
- * properties, and every state it holds belongs to it alone — two bundles in one process share
- * nothing, so a test needs no reset hook.
+ * A new fake server. It populates nothing: no dimensions, no entity types, no players, no
+ * objectives and no dynamic properties, and every state it holds belongs to it alone — two servers
+ * in one process share nothing, so a test needs no reset hook.
  *
  * @example
  * ```ts
@@ -58,6 +58,7 @@ export const createServer = (): FakeServer => {
     entities: [],
     nextEntityId: 1,
     dimensions: new Map(),
+    entityTypes: new Map(),
     signals: new Map(),
     handlerErrors: [],
     currentTick: 0,
@@ -99,10 +100,10 @@ export const createServer = (): FakeServer => {
     DimensionTypes: FakeDimensionTypes,
     EffectTypes: FakeEffectTypes,
     EnchantmentTypes: FakeEnchantmentTypes,
-    EntityTypes: FakeEntityTypes,
+    EntityTypes: createEntityTypes(server),
     ItemTypes: FakeItemTypes,
   }
 }
 
-/** The bundle a free function takes: anything carrying the world it belongs to. */
+/** The server a free function takes: anything carrying the world it belongs to. */
 export type ServerLike = Pick<FakeServer, 'world'>

@@ -7,6 +7,8 @@
 import type * as MC from '@minecraft/server'
 
 import type { ServerLike } from './create-server.js'
+import { registerEntityType } from './entity-types.js'
+import { VANILLA_ENTITY_TYPE_IDS } from './generated/vanilla.js'
 import { assertLiveEntity } from './runtime/member.js'
 import { entityDataOf, serverOf } from './runtime/state.js'
 import { registerDimension, type DimensionSpec } from './world.js'
@@ -47,6 +49,33 @@ export const withVanillaDimensions = (server: ServerLike): void => {
       registerDimension(state, dimension)
     }
   }
+}
+
+/**
+ * Registers the entity-type ids `@minecraft/vanilla-data` carries, in that source's order, so
+ * `EntityTypes.get` and `dimension.spawnEntity` answer for the vanilla types. An id a test has
+ * already registered is skipped, so this composes with a test's own registrations rather than
+ * colliding with the duplicate refusal.
+ *
+ * The list is `@minecraft/vanilla-data`'s, not a world's type catalog read back: an observed
+ * catalog held those ids plus whatever the installed content packs define.
+ */
+export const withVanillaEntityTypes = (server: ServerLike): void => {
+  const state = serverOf(server.world)
+  for (const id of VANILLA_ENTITY_TYPE_IDS) {
+    if (!state.entityTypes.has(id)) {
+      registerEntityType(server, id)
+    }
+  }
+}
+
+/**
+ * The two world-shaped presets in one call: `withVanillaDimensions` and `withVanillaEntityTypes`,
+ * and nothing else. `asSpawnedEntity` is per-entity and stands outside it.
+ */
+export const withVanillaWorld = (server: ServerLike): void => {
+  withVanillaDimensions(server)
+  withVanillaEntityTypes(server)
 }
 
 /**
