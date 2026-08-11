@@ -1,0 +1,42 @@
+{
+  "private": true,
+  "name": "@twin-digital/rpg-core-example",
+  "version": "0.1.0",
+  "description": "Worked example adventure for rpg-core: spawns every actor the product offers, carrying only its own story, triggers, and logic.",
+  "license": "UNLICENSED",
+  "author": "Sean Kleinjung <sean@twindigital.io>",
+  "type": "module",
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "minecraft-server start",
+    "dev:stop": "minecraft-server stop",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "release-assets": "mc-pack-archive",
+    "typecheck": "tsc --noEmit",
+    "watch": "watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/mc-dev-kit": "workspace:*",
+    "@twin-digital/mc-dev-server": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/tsdown-config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Worked example adventure: spawns every rpg-core actor. Carries its own logic only — no actor content.",
+    "uuid": "a54ed6c5-bc4b-4994-9af2-7396b8370d00",
+    "min_engine_version": [1, 26, 0]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "description": "The example adventure's logic.",
+      "uuid": "b3d2f142-1dc5-4891-b92b-b04d4e7c6a59",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.8.0"
+    }
+  ]
+}
