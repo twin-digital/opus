@@ -6,19 +6,6 @@
   "license": "UNLICENSED",
   "author": "Sean Kleinjung <sean@twindigital.io>",
   "type": "module",
-  "exports": {
-    "./*": {
-      "import": {
-        "source": "./src/*.ts",
-        "types": "./dist/*.d.ts",
-        "import": "./dist/*.js"
-      }
-    }
-  },
-  "files": [
-    "dist",
-    "!dist/**/*.d.ts.map"
-  ],
   "scripts": {
     "build": "build",
     "clean": "clean",
