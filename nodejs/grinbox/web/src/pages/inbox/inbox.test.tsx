@@ -1,6 +1,6 @@
 import type { MessageRow } from '@grinbox/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -112,6 +112,7 @@ const taggedMessage: MessageRow = {
   received_at: now - 120,
   source_state: 'present',
   latest_triage_status: 'completed',
+  pending_archive: null,
   // Five tags so the row shows 3 chips + a "+2" overflow.
   current_tags: [
     tag('urgency', 'high', 1),
@@ -131,6 +132,7 @@ const plainMessage: MessageRow = {
   received_at: now - 3600,
   source_state: 'present',
   latest_triage_status: 'partial',
+  pending_archive: null,
   current_tags: [],
 }
 
@@ -322,6 +324,24 @@ describe('InboxPage', () => {
 
     expect(screen.getByText('CHF 1,234.56')).toBeInTheDocument()
   })
+
+  // d-p0ea1t8q: the rows carry a standing pending archive; the filters do not
+  // change (no new scope, sort, or query parameter).
+  it('marks a row whose message has a standing pending archive', () => {
+    useMessages.mockReturnValue(
+      listStub([
+        { ...taggedMessage, pending_archive: { due_at: now + 3600, triage_id: 200, operator_id: 11 } },
+        plainMessage,
+      ]),
+    )
+    renderPage(<InboxPage />)
+
+    const badges = screen.getAllByTestId('pending-archive-badge')
+    expect(badges).toHaveLength(1)
+    expect(badges[0]).toHaveTextContent('Archives in 1h')
+    // The absolute moment is on the row for a reader who wants it.
+    expect(badges[0].getAttribute('title')).toMatch(/^Leaves the inbox /)
+  })
 })
 
 // --- Message detail tests ------------------------------------------------
@@ -352,6 +372,7 @@ const detailFixture = {
       pipeline_id: 7,
     },
   ],
+  pending_archive: null,
   triages: [
     {
       id: 200,
@@ -709,4 +730,148 @@ describe('MessageDetailPage · suppressed push', () => {
     expect(screen.getByText('Resource op limited')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Triage 199/ })).toHaveAttribute('aria-pressed', 'true')
   })
+
+  // --- Pending archive (d-p0ea1t8q) --------------------------------------
+
+  it('states the pending archive — the due moment and the triage that recorded it', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        pending_archive: { due_at: now + 7200, triage_id: 199, operator_id: 11 },
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+
+    const notice = screen.getByTestId('pending-archive-notice')
+    // The due moment reads as a countdown, and the recording triage is named —
+    // so what a re-triage would cancel is visible before it fires.
+    expect(notice).toHaveTextContent('Archives in 2h')
+    expect(within(notice).getByRole('button', { name: 'Triage 199' })).toBeInTheDocument()
+    // The lever that cancels it is named where it is read.
+    expect(notice).toHaveTextContent(/Replaying the Message/)
+  })
+
+  it('opens the recording triage from the pending archive', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        pending_archive: { due_at: now + 7200, triage_id: 199, operator_id: 11 },
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+
+    const notice = screen.getByTestId('pending-archive-notice')
+    fireEvent.click(within(notice).getByRole('button', { name: 'Triage 199' }))
+
+    // The Triage history tab opens with Triage 199 selected — its event log.
+    expect(screen.getByText('Resource op limited')).toBeInTheDocument()
+    const history = within(screen.getByRole('list', { name: 'Triage history' }))
+    expect(history.getByRole('button', { name: /Triage 199/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('shows no pending-archive surface when none stands', () => {
+    useMessage.mockReturnValue(queryStub(detailFixture))
+    renderPage(<MessageDetailPage />)
+    expect(screen.queryByTestId('pending-archive-notice')).not.toBeInTheDocument()
+  })
+
+  // A moment already past is due on the next heartbeat (d-gzv0jty7), so it
+  // reads as imminent rather than as a negative time.
+  it('reads an already-past due moment as due now', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        pending_archive: { due_at: now - 30, triage_id: 200, operator_id: 11 },
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+    expect(screen.getByTestId('pending-archive-notice')).toHaveTextContent('Archives due now')
+  })
+
+  // --- The delayed path's events (d-41v9yqvh) ----------------------------
+
+  it('names what an archive run scheduled instead of calling the mailbox', () => {
+    useMessage.mockReturnValue(queryStub(withEvents(archiveRun, recordedEvent)))
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    expect(screen.getByText('Archive scheduled')).toBeInTheDocument()
+    expect(screen.getByTestId('pending-archive-recorded-details')).toHaveTextContent('1h after the Message arrived')
+    // The run itself says what it scheduled, as a suppressed push does.
+    expect(screen.getByTestId('run-pending-archive')).toHaveTextContent('archive scheduled')
+  })
+
+  it('says in words why a due pending archive made no call', () => {
+    useMessage.mockReturnValue(queryStub(withEvents(archiveRun, skippedEvent('already_departed'))))
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    expect(screen.getByText('Pending archive skipped')).toBeInTheDocument()
+    expect(screen.getByTestId('pending-archive-skipped-details')).toHaveTextContent(
+      'the Message had already left the inbox',
+    )
+  })
+
+  it.each([
+    ['abandoned', 'its Pipeline or Account was deleted'],
+    ['pipeline_inactive', 'its Pipeline is no longer active on the Account'],
+    // A reason this build does not know still says something.
+    ['something_new', 'something_new'],
+  ])('renders the %s skip reason', (reason, text) => {
+    useMessage.mockReturnValue(queryStub(withEvents(archiveRun, skippedEvent(reason))))
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    expect(screen.getByTestId('pending-archive-skipped-details')).toHaveTextContent(text)
+  })
 })
+
+// --- Delayed-archive fixtures --------------------------------------------
+
+const archiveRun = {
+  operator_id: 11,
+  type_key: 'archive',
+  type_code_version: '1.0.0',
+  status: 'completed',
+  started_at: now - 60,
+  finished_at: now - 59,
+  duration_ms: 5,
+  skip_reason: null,
+  error_summary: null,
+  resource_usage_json: null,
+  op_config_json: JSON.stringify({ delay_seconds: 3600 }),
+}
+
+const recordedEvent = {
+  operator_id: 11,
+  sequence_num: 2,
+  event_type: 'pending_archive_recorded',
+  details_json: JSON.stringify({ due_at: now + 3600, delay_seconds: 3600 }),
+  recorded_at: now - 59,
+}
+
+function skippedEvent(reason: string) {
+  return {
+    operator_id: 11,
+    sequence_num: 2,
+    event_type: 'pending_archive_skipped',
+    details_json: JSON.stringify({ reason }),
+    recorded_at: now - 59,
+  }
+}
+
+/** The detail fixture with one extra run + event on its latest triage. */
+function withEvents(run: typeof archiveRun, event: typeof recordedEvent) {
+  const [latest, ...rest] = detailFixture.triages
+  return {
+    ...detailFixture,
+    triages: [
+      {
+        ...latest,
+        operator_runs: [...latest.operator_runs, run],
+        events: [...latest.events, event],
+      },
+      ...rest,
+    ],
+  }
+}

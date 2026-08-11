@@ -3,6 +3,7 @@ import type {
   MessageListResponse,
   MessageRow,
   OperatorRunDetail,
+  PendingArchiveSummary,
   TriageEventDetail,
   TriageTagDetail,
 } from '@grinbox/server'
@@ -156,6 +157,12 @@ export interface MessageDetailMessage {
 export interface MessageDetail {
   readonly message: MessageDetailMessage
   readonly current_tags: readonly CurrentTag[]
+  /**
+   * The Archive the latest settled Triage recorded and grinbox still owes this
+   * Message, or `null` where none stands (d-p0ea1t8q). Only a standing one is
+   * on the wire — a fired, cancelled, or superseded one is gone.
+   */
+  readonly pending_archive: PendingArchiveSummary | null
   readonly triages: readonly MessageTriage[]
 }
 
@@ -219,4 +226,4 @@ export function useSyncNow() {
   })
 }
 
-export type { MessageRow }
+export type { MessageRow, PendingArchiveSummary }
