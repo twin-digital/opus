@@ -25,8 +25,11 @@ import {
 export type SpawnFn = (preset: PresetName, place: ActorPlace, options?: SpawnActorOptions) => ActorHandle
 export type FindFn = (id: string) => ActorHandle | undefined
 
-/** Where the gallery starts, matching the dev world's spawn in `.minecraft.yml`. */
-export const STAGE = { x: 60, y: 95, z: 63 } as const
+/**
+ * Where the gallery starts, matching the dev world's spawn in `.minecraft.yml`. One block above
+ * the ground surface: actors are subject to gravity and settle onto it.
+ */
+export const STAGE = { x: 465, y: 70, z: -64 } as const
 
 /** Blocks between one actor and the next along the gallery's line. */
 export const SPACING = 3
@@ -65,7 +68,8 @@ export const placements = (): Placement[] => [
   ...PRESET_NAMES.map((preset, index) => ({
     key: preset,
     preset,
-    location: { x: STAGE.x, y: STAGE.y, z: STAGE.z + SPACING * (index + 1) },
+    // the clear ground runs north of the stage: the line extends toward decreasing z
+    location: { x: STAGE.x, y: STAGE.y, z: STAGE.z - SPACING * (index + 1) },
     options: { id: durableId(preset) },
   })),
 ]
@@ -89,12 +93,12 @@ const say = (world: World, text: string): void => {
  * Best-effort: the area may already exist from an earlier run, and a test world has no commands.
  */
 const prepareStage = (world: World): void => {
-  const zEnd = STAGE.z + SPACING * (PRESET_NAMES.length + 1)
+  const zNorth = STAGE.z - SPACING * (PRESET_NAMES.length + 1) - 2
   try {
     world
       .getDimension('overworld')
       .runCommand(
-        `tickingarea add ${STAGE.x - 2} ${STAGE.y} ${STAGE.z - 2} ${STAGE.x + 2} ${STAGE.y} ${zEnd} rpg-core-example-stage`,
+        `tickingarea add ${STAGE.x - 2} ${STAGE.y} ${zNorth} ${STAGE.x + 2} ${STAGE.y} ${STAGE.z + 2} rpg-core-example-stage`,
       )
   } catch {
     // an existing area of the same name, or a world without commands — placement retries cover it
