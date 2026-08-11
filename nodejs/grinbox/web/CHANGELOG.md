@@ -1,5 +1,14 @@
 # @grinbox/web
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [aa1c6a8]
+- Updated dependencies [e903659]
+  - @grinbox/server@0.2.2
+  - @grinbox/shared@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes

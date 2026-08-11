@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@grinbox/shared",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "The contracts grinbox's daemon and browser application both speak",
   "type": "module",
   "exports": {

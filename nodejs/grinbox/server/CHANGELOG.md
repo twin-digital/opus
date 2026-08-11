@@ -1,5 +1,13 @@
 # @grinbox/server
 
+## 0.2.2
+
+### Patch Changes
+
+- aa1c6a8: fix(deps): update all non-major dependencies
+- e903659: fix(deps): update dependency googleapis to v173
+  - @grinbox/shared@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes
