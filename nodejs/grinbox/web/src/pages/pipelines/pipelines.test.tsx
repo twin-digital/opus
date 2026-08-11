@@ -523,6 +523,80 @@ describe('OperatorEditor', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
+  // --- Notification kind (d-vn2jdxbs / d-p8xrn2ce) -------------------------
+
+  it('saves the notification kind trimmed when one is typed', async () => {
+    useCredentials.mockReturnValue(credStub())
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    renderEditor({
+      typeKey: 'notify',
+      initialConfig: { message_template: 'hi', credentials_id: 7 },
+      onSave,
+    })
+    fireEvent.change(screen.getByLabelText('Operator name'), {
+      target: { value: 'Push it' },
+    })
+    fireEvent.change(screen.getByLabelText(/Notification kind/), {
+      target: { value: 'Bank alerts ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1)
+    })
+    // Stored trimmed, otherwise as typed (d-p8xrn2ce) — the shared schema trims on Save.
+    expect(onSave).toHaveBeenCalledWith({
+      name: 'Push it',
+      config: {
+        message_template: 'hi',
+        credentials_id: 7,
+        notification_kind: 'Bank alerts',
+      },
+    })
+  })
+
+  // d-vn2jdxbs: an Operator naming no kind stands alone — the field is omitted
+  // from the saved config entirely, never stored as an empty string.
+  it('omits the notification kind from the saved config when left blank', async () => {
+    useCredentials.mockReturnValue(credStub())
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    renderEditor({
+      typeKey: 'notify',
+      initialConfig: { message_template: 'hi', credentials_id: 7 },
+      onSave,
+    })
+    fireEvent.change(screen.getByLabelText('Operator name'), {
+      target: { value: 'Push it' },
+    })
+    // Type a kind, then blank it again — the key must leave the draft.
+    const kindField = screen.getByLabelText(/Notification kind/)
+    fireEvent.change(kindField, { target: { value: 'Bank alerts' } })
+    fireEvent.change(kindField, { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1)
+    })
+    const config = onSave.mock.calls[0]?.[0].config as Record<string, unknown>
+    expect('notification_kind' in config).toBe(false)
+  })
+
+  it('pre-populates the notification kind from an existing config (edit)', () => {
+    useCredentials.mockReturnValue(credStub())
+    renderEditor({
+      mode: 'edit',
+      typeKey: 'notify',
+      initialName: 'Push it',
+      initialConfig: {
+        message_template: 'hi',
+        credentials_id: 7,
+        notification_kind: 'Bank alerts',
+      },
+    })
+    expect(screen.getByLabelText(/Notification kind/)).toHaveValue('Bank alerts')
+    expect(screen.getByText('No unsaved changes')).toBeInTheDocument()
+  })
+
   it('pre-populates the when gate from an existing Notify config (edit)', () => {
     useCredentials.mockReturnValue(credStub())
     renderEditor({

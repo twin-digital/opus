@@ -63,6 +63,18 @@ vi.mock('@/lib/pipelines', async () => {
   return { ...actual, usePipelineList: () => usePipelineList() }
 })
 
+// The per-Pipeline money-key lookup is mocked (it queries pipeline details);
+// the display rendering itself stays real, so the money assertions below
+// exercise `@grinbox/shared`'s formatMoneyDisplay through `displayTagValue`.
+const useMoneyKeysByPipeline = vi.fn()
+vi.mock('@/lib/money', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/money')>('@/lib/money')
+  return {
+    ...actual,
+    useMoneyKeysByPipeline: (ids: readonly number[]) => useMoneyKeysByPipeline(ids),
+  }
+})
+
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
 }))
@@ -161,6 +173,7 @@ beforeEach(() => {
   currentSearch = {}
   useAccounts.mockReturnValue(queryStub([{ id: 1, name: 'sean@example.com' }]))
   usePipelineList.mockReturnValue(queryStub([{ id: 7, name: 'Personal mail' }]))
+  useMoneyKeysByPipeline.mockReturnValue(new Map())
 })
 
 afterEach(() => {
@@ -257,6 +270,44 @@ describe('InboxPage', () => {
     })
     const { container } = renderPage(<InboxPage />)
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+  })
+
+  // d-u4gpx6ke / d-m6ingqyv: a chip under a key the Pipeline types as extracted
+  // money renders in display form; a non-money stored value under the same key
+  // renders verbatim, as does a money-shaped value under any other key.
+  it('renders money-typed tag chips in display form and everything else verbatim', () => {
+    useMoneyKeysByPipeline.mockReturnValue(new Map([[1, new Set(['amount'])]]))
+    useMessages.mockReturnValue(
+      listStub([
+        {
+          ...plainMessage,
+          current_tags: [
+            tag('amount', '19503:USD', 1),
+            tag('note', '19503:USD', 1), // not money-typed → verbatim
+          ],
+        },
+        {
+          ...plainMessage,
+          id: 44,
+          current_tags: [tag('amount', 'about twelve dollars', 1)], // not money → verbatim
+        },
+      ]),
+    )
+    renderPage(<InboxPage />)
+
+    expect(screen.getByText('$195.03')).toBeInTheDocument()
+    expect(screen.getByText('19503:USD')).toBeInTheDocument()
+    expect(screen.getByText('about twelve dollars')).toBeInTheDocument()
+  })
+
+  // d-oc073wsp cases: an unknown-symbol currency renders its ISO code before
+  // the amount, through the same shared formatter the digest uses.
+  it('renders an unknown-symbol currency as ISO code before the amount', () => {
+    useMoneyKeysByPipeline.mockReturnValue(new Map([[1, new Set(['amount'])]]))
+    useMessages.mockReturnValue(listStub([{ ...plainMessage, current_tags: [tag('amount', '123456:CHF', 1)] }]))
+    renderPage(<InboxPage />)
+
+    expect(screen.getByText('CHF 1,234.56')).toBeInTheDocument()
   })
 })
 
@@ -458,5 +509,158 @@ describe('MessageDetailPage', () => {
     for (const link of links) {
       expect(link.getAttribute('href') ?? '').not.toMatch(/mail\.google\.com/)
     }
+  })
+
+  // d-u4gpx6ke: the detail page shows money in display form wherever a Tag's
+  // value appears — Overview chips, the Tags tab, and tag_set event values.
+  it('renders money-typed tag values in display form across the detail surfaces', () => {
+    useMoneyKeysByPipeline.mockReturnValue(new Map([[7, new Set(['amount'])]]))
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        current_tags: [{ key: 'amount', value: '19503:USD', triage_id: 200, operator_id: 10, pipeline_id: 7 }],
+        triages: [
+          {
+            ...detailFixture.triages[0],
+            events: [
+              {
+                operator_id: 10,
+                sequence_num: 1,
+                event_type: 'tag_set',
+                details_json: JSON.stringify({ key: 'amount', value: '19503:USD' }),
+                recorded_at: now - 59,
+              },
+            ],
+            tags: [{ operator_id: 10, key: 'amount', value: '19503:USD' }],
+          },
+        ],
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+
+    // Overview chip (default tab).
+    expect(screen.getByText('$195.03')).toBeInTheDocument()
+
+    // Tags tab chip.
+    selectTab('Tags')
+    expect(screen.getByText('$195.03')).toBeInTheDocument()
+
+    // tag_set event value in the Triage history event log.
+    selectTab('Triage history')
+    expect(screen.getByText(/value=\$195\.03/)).toBeInTheDocument()
+  })
+})
+
+// --- Suppression rendering (d-5amonj40 / d-e9jslw4x) -----------------------
+
+/** A Triage whose notify run was cooldown-suppressed: it completed, sent nothing. */
+function suppressedTriage(deferredToTriageId: number) {
+  return {
+    id: 201,
+    pipeline_id: 7,
+    triggered_by: 'poll',
+    actor_user_id: null,
+    started_at: now - 30,
+    ended_at: now - 29,
+    status: 'completed',
+    error_summary: null,
+    operator_runs: [
+      {
+        operator_id: 11,
+        type_key: 'notify',
+        type_code_version: '1.0.0',
+        status: 'completed',
+        started_at: now - 30,
+        finished_at: now - 29,
+        duration_ms: 40,
+        skip_reason: null,
+        error_summary: null,
+        resource_usage_json: null,
+        op_config_json: null,
+      },
+    ],
+    events: [
+      {
+        operator_id: 11,
+        sequence_num: 1,
+        event_type: 'resource_op_suppressed',
+        details_json: JSON.stringify({
+          kind: 'Bank alerts',
+          deferred_to_triage_id: deferredToTriageId,
+          deferred_to_operator_id: 11,
+        }),
+        recorded_at: now - 29,
+      },
+    ],
+    tags: [],
+  }
+}
+
+describe('MessageDetailPage · suppressed push', () => {
+  beforeEach(() => {
+    useReplayMessage.mockReturnValue({ mutate: vi.fn(), isPending: false })
+  })
+
+  // d-5amonj40: a suppressed push is an outcome, not a failure — the run and
+  // its triage render as completed, and the suppression shows on the run with
+  // its kind.
+  it('renders a suppressed run as completed, with the suppression and its kind', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        triages: [suppressedTriage(199), ...detailFixture.triages],
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    // Latest triage (the suppressed one) selected by default. The run reads
+    // Completed — nothing renders as failed.
+    const runStatuses = screen.getAllByText('Completed')
+    expect(runStatuses.length).toBeGreaterThan(0)
+    expect(screen.queryByText('Failed')).not.toBeInTheDocument()
+
+    // The suppression is visible on the run itself, naming the kind…
+    const note = screen.getByTestId('run-suppression')
+    expect(note).toHaveTextContent('push suppressed')
+    expect(note).toHaveTextContent('Bank alerts')
+
+    // …and in the event log as its own outcome kind.
+    expect(screen.getByText('Push suppressed')).toBeInTheDocument()
+  })
+
+  // d-e9jslw4x: the record carries the run it deferred to; when that run's
+  // Triage is in this Message's own history, the reference resolves in place.
+  it('links a deferral to one of this message’s own triages', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        triages: [suppressedTriage(199), ...detailFixture.triages],
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    const details = screen.getByTestId('suppression-details')
+    expect(details).toHaveTextContent('Bank alerts')
+
+    // The deferred-to reference is a control that selects Triage 199.
+    fireEvent.click(screen.getByRole('button', { name: 'Triage 199' }))
+    expect(screen.getByText('Resource op limited')).toBeInTheDocument()
+  })
+
+  it('names a deferral to another message’s triage without a dead link', () => {
+    useMessage.mockReturnValue(
+      queryStub({
+        ...detailFixture,
+        triages: [suppressedTriage(4242), ...detailFixture.triages],
+      }),
+    )
+    renderPage(<MessageDetailPage />)
+    selectTab('Triage history')
+
+    const details = screen.getByTestId('suppression-details')
+    expect(details).toHaveTextContent('Triage 4242')
+    expect(screen.queryByRole('button', { name: 'Triage 4242' })).not.toBeInTheDocument()
   })
 })

@@ -16,6 +16,7 @@ import { useAccounts } from '@/lib/accounts'
 import { errorMessage } from '@/lib/api-error'
 import { relativeTime } from '@/lib/format'
 import { type SourceStateFilter, type TriageStatusFilter, useMessages, useSyncNow } from '@/lib/messages'
+import { displayTagValue, useMoneyKeysByPipeline } from '@/lib/money'
 import { usePipelineList } from '@/lib/pipelines'
 import { cn } from '@/lib/utils'
 import { type InboxSearch, filtersFromSearch, hasActiveFilters } from './search'
@@ -419,6 +420,10 @@ function MessagesTable({ messages, dimmed }: { messages: readonly MessageRow[]; 
   const { data: accounts } = useAccounts()
   const accountsById = new Map((accounts ?? []).map((a) => [a.id, a]))
 
+  // Money-typed Tag keys per producing Pipeline, so money chips render in
+  // display form (d-u4gpx6ke) while everything else stays verbatim.
+  const moneyByPipeline = useMoneyKeysByPipeline(messages.flatMap((m) => m.current_tags.map((t) => t.pipeline_id)))
+
   return (
     <div className={dimmed ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className='overflow-hidden rounded-lg border border-border'>
@@ -434,7 +439,12 @@ function MessagesTable({ messages, dimmed }: { messages: readonly MessageRow[]; 
         </div>
         <div className='divide-y divide-border'>
           {messages.map((m) => (
-            <MessageRowView key={m.id} message={m} account={accountsById.get(m.account_id)} />
+            <MessageRowView
+              key={m.id}
+              message={m}
+              account={accountsById.get(m.account_id)}
+              moneyByPipeline={moneyByPipeline}
+            />
           ))}
         </div>
       </div>
@@ -442,7 +452,15 @@ function MessagesTable({ messages, dimmed }: { messages: readonly MessageRow[]; 
   )
 }
 
-function MessageRowView({ message, account }: { message: MessageRow; account?: AccountSummary }) {
+function MessageRowView({
+  message,
+  account,
+  moneyByPipeline,
+}: {
+  message: MessageRow
+  account?: AccountSummary
+  moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
+}) {
   const tags = orderTagsByPriority(message.current_tags.map((t) => ({ ...t, key: t.key, value: t.value })))
   // Messages no longer in the inbox are dimmed and badged so they read as
   // history, not live items.
@@ -486,7 +504,11 @@ function MessageRowView({ message, account }: { message: MessageRow; account?: A
         {tags.length > 0 ?
           <div className='mt-3 flex flex-wrap gap-1'>
             {tags.map((t) => (
-              <TagChip key={`${t.key}:${t.value}`} tagKey={t.key} value={t.value} />
+              <TagChip
+                key={`${t.key}:${t.value}`}
+                tagKey={t.key}
+                value={displayTagValue(t.key, t.value, moneyByPipeline.get(t.pipeline_id))}
+              />
             ))}
           </div>
         : null}

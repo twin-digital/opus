@@ -29,7 +29,30 @@ area beside it rather than the landing page (`d-1uo9p5wq`):
 | `/pipelines` | the operator editors, one per shipped type, with a live preview on the rule-based tagger          |
 | `/accounts`  | mailboxes: authorization, poll cadence, and which pipeline is active                              |
 | `/activity`  | the chronological feed of failures, cap denials, and configuration edits                          |
-| `/settings`  | caps, notification credentials, and the build the daemon is running                               |
+| `/settings`  | caps, notification cooldowns and credentials, and the build the daemon is running                 |
+
+## Notification kinds and cooldowns
+
+A notify operator may name a notification kind — a short label grouping pushes that should not
+pile up (`d-vn2jdxbs`); the field is optional in the operator editor and omitted from the saved
+configuration when blank. Settings → Notification cooldowns holds the per-kind minimum interval
+(`d-k3wq81vn`): whole seconds, at least one (`d-t6mhv3aq`), freely set, changed, and removed —
+unlike the seeded caps on the Limits page, every cooldown is the user's own (`d-6ptxams7`). The
+kind is fixed when a cooldown is created; renaming one is delete + create.
+
+A push suppressed by a cooldown is an outcome, not a failure (`d-5amonj40`): the run and its
+triage render completed, and the message detail shows the suppression, its kind, and the run
+whose push it deferred to (`d-e9jslw4x`). When that run's triage belongs to the same message,
+the reference selects it in place.
+
+## Money in display form
+
+Wherever a tag's value is shown — inbox chips, the message detail's tags and events — a key the
+pipeline's enabled operators type as extracted money renders in display form (`d-u4gpx6ke`),
+through the same `formatMoneyDisplay` the digest uses, so `19503:USD` reads `$195.03` and an
+unknown-symbol currency leads with its ISO code (`CHF 1,234.56`). A stored value that is not
+money renders verbatim (`d-m6ingqyv`), and what the user types when configuring — a digest
+highlight threshold — stays in the stored form.
 
 ## Working on it
 
