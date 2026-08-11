@@ -16,7 +16,7 @@
       },
       "minecraft:physics": {
         "has_collision": true,
-        "has_gravity": true
+        "has_gravity": false
       },
       "minecraft:damage_sensor": {
         "triggers": [

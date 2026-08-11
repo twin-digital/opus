@@ -10,7 +10,10 @@ import { NAMESPACE, PRESET_NAMES, PRESETS } from '@twin-digital/rpg-core'
 import { describe, expect, it } from 'vitest'
 
 interface BehaviorEntityFile {
-  'minecraft:entity': { description: { identifier: string } }
+  'minecraft:entity': {
+    description: { identifier: string }
+    components: Record<string, unknown>
+  }
 }
 
 interface ClientEntityDescription {
@@ -34,10 +37,10 @@ const filesIn = (relativeDir: string, suffix: string): string[] =>
     .filter((name) => name.endsWith(suffix))
     .map((name) => path.join(relativeDir, name))
 
-const behaviorEntities = filesIn('behavior_pack/entities', '.json').map((file) => ({
-  file,
-  identifier: (readJson(file) as BehaviorEntityFile)['minecraft:entity'].description.identifier,
-}))
+const behaviorEntities = filesIn('behavior_pack/entities', '.json').map((file) => {
+  const entity = (readJson(file) as BehaviorEntityFile)['minecraft:entity']
+  return { file, identifier: entity.description.identifier, components: entity.components }
+})
 
 const clientEntities = filesIn('resource_pack/entity', '.entity.json').map((file) => ({
   file,
@@ -65,6 +68,14 @@ describe('preset registry consistency', () => {
     }
     for (const { file, description } of clientEntities) {
       expect(registryIds, file).toContain(description.identifier)
+    }
+  })
+})
+
+describe('shared actor components', () => {
+  it('disables gravity, so an actor holds exactly where it was placed', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:physics'], file).toMatchObject({ has_gravity: false })
     }
   })
 })
