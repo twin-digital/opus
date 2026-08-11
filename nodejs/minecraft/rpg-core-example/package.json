@@ -14,18 +14,25 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "release-assets": "mc-pack-archive",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@minecraft/server": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/mc-dev-kit": "workspace:*",
     "@twin-digital/mc-dev-server": "workspace:*",
+    "@twin-digital/minecraft-test-lib": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/rpg-core": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/tsdown-config": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
@@ -33,7 +40,8 @@
     "prettier-package-json": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "24.x",
