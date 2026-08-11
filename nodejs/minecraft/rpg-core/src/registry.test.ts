@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import { NAMESPACE, PACK_NAME, PRESET_NAMES, PRESETS } from './registry.js'
@@ -31,5 +33,14 @@ describe('the preset registry', () => {
 
   it('names the pack that supplies the definitions', () => {
     expect(PACK_NAME).not.toBe('')
+  })
+
+  it('agrees with the major the package version claims: bare token at 1, the major carried after', () => {
+    const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string
+    }
+    const major = Number(manifest.version.split('.')[0])
+    expect(major).toBeGreaterThanOrEqual(1)
+    expect(NAMESPACE).toBe(major === 1 ? 'rpg' : `rpg${major}`)
   })
 })
