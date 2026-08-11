@@ -1,5 +1,5 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: /design-process/fact@2
+$id: /design-process/fact@3
 title: fact
 description: one finding in the repo-wide facts/ pool; substance frozen once merged
 type: object
@@ -9,6 +9,9 @@ properties:
   id:
     type: string
     pattern: '^f-[0-9a-z]{8}$'
+  title:
+    type: string
+    description: the one-line name the fact is shown and cited by; the claim stays the body
   claim:
     type: string
   backing:

@@ -280,8 +280,23 @@ describe('an opaque fact id is cited bare or prefixed', () => {
   })
 })
 
-describe('a fact carries an optional title', () => {
+describe('a facts@3 fact carries an optional title', () => {
+  const withPool3 = (facts: Record<string, unknown>[]): Record<string, string> => {
+    const files = demoV3()
+    files['facts/vendor.yaml'] = yaml({ version: '3', facts })
+    return files
+  }
+
   it('validates a titled fact', () => {
-    expect(validateTree(makeRepo(withPool([fact2({ title: 'the vendor paginates' })])).tree)).toEqual([])
+    expect(validateTree(makeRepo(withPool3([fact2({ title: 'the vendor paginates' })])).tree)).toEqual([])
+  })
+
+  it('validates a fact@3 entry with no title', () => {
+    expect(validateTree(makeRepo(withPool3([fact2()])).tree)).toEqual([])
+  })
+
+  it('rejects a title on the frozen @2 dialect', () => {
+    const findings = validateTree(makeRepo(withPool([fact2({ title: 'the vendor paginates' })])).tree)
+    expect(rules(findings)).toContain('pool-entry-schema')
   })
 })

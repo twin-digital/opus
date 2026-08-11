@@ -207,7 +207,7 @@ describe('a cited id is shown as the title it resolves to — d-mhlya385', () =>
   it('shows a titled fact by its title, bare id and prefixed alike', () => {
     const files = draftFiles()
     files['facts/demo.yaml'] = yaml({
-      version: '1',
+      version: '3',
       facts: [
         {
           id: 'f-a1b2c3d4',

@@ -63,7 +63,7 @@ export const checkEvidenceBar = (tree: FileTree, schemaPool: SchemaPool, ajv: Aj
 }
 
 // rule 1: file shape via the pool schemas, when the tree ships them. A file validates against the
-// version its own wrapper declares, so the @1 and @2 dialects coexist (d-vkudjo4x, d-i47qv6oa);
+// version its own wrapper declares, so the pool dialects coexist (d-vkudjo4x, d-i47qv6oa);
 // each wrapper $refs its entry schema, so one validation covers the version and every entry.
 const checkSchemas = (pool: Pool, schemaPool: SchemaPool, ajv: Ajv2020, findings: Finding[]): void => {
   for (const file of pool.files) {
