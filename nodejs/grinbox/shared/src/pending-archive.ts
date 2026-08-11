@@ -19,17 +19,21 @@ export type ArchiveDelaySeconds = z.infer<typeof archiveDelaySecondsSchema>
 
 /**
  * A Message's pending archive: the one its latest settled Triage recorded, the
- * earliest due where that Triage recorded several (d-0tajzoy7). Carried on the
- * Message's read surfaces while it stands, so what a re-Triage would cancel is
- * visible before it fires (d-p0ea1t8q).
+ * earliest due where that Triage recorded several (d-0tajzoy7). Every read
+ * surface a Message appears on carries it while it stands — and `null` where
+ * the Message holds none — so what a re-Triage would cancel is visible before
+ * it fires (d-p0ea1t8q). Only a standing pending archive is carried, so the
+ * shape needs no status.
  *  - `due_at` — Unix seconds, the Message's take-in plus the recording
  *    Operator's delay. A moment already past when the Triage settled is due at
  *    once.
  *  - `triage_id` — the Triage that recorded it; the run it is recorded against
  *    when it performs.
+ *  - `operator_id` — the archive Operator whose run recorded it.
  */
 export const pendingArchiveSchema = z.object({
   due_at: z.number().int(),
   triage_id: z.number().int().positive(),
+  operator_id: z.number().int().positive(),
 })
 export type PendingArchive = z.infer<typeof pendingArchiveSchema>

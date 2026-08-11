@@ -64,16 +64,17 @@ describe('closed enum closedness', () => {
       name: 'triageEventTypeSchema',
       schema: triageEventTypeSchema,
       // `resource_op_suppressed` is the cooldown-suppressed push's own outcome
-      // kind in the attempt vocabulary (d-e9jslw4x); `resource_op_skipped` is
-      // the due pending archive whose Message has already left the inbox
-      // (d-41v9yqvh).
+      // kind in the attempt vocabulary (d-e9jslw4x); the `pending_archive_*`
+      // pair records the delayed Archive path (d-41v9yqvh). The members and
+      // their order mirror the `triage_events` CHECK.
       members: [
         'tag_set',
         'resource_op_succeeded',
         'resource_op_limited',
         'resource_op_failed',
         'resource_op_suppressed',
-        'resource_op_skipped',
+        'pending_archive_recorded',
+        'pending_archive_skipped',
       ],
       outOfSet: 'tag_cleared',
     },

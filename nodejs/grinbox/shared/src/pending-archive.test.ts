@@ -50,25 +50,27 @@ describe('archiveConfigSchema', () => {
 // that recorded it, carried on the Message's read surfaces while it stands.
 
 describe('pendingArchiveSchema', () => {
-  it('carries the due moment and the recording Triage', () => {
-    const parsed = pendingArchiveSchema.safeParse({ due_at: 1_770_000_000, triage_id: 42 })
+  it('carries the due moment, the recording Triage, and its Operator', () => {
+    const parsed = pendingArchiveSchema.safeParse({ due_at: 1_770_000_000, triage_id: 42, operator_id: 7 })
     expect(parsed.success).toBe(true)
     if (parsed.success) {
-      expect(parsed.data).toEqual({ due_at: 1_770_000_000, triage_id: 42 })
+      expect(parsed.data).toEqual({ due_at: 1_770_000_000, triage_id: 42, operator_id: 7 })
     }
   })
 
-  it('requires both the due moment and the Triage', () => {
-    expect(pendingArchiveSchema.safeParse({ due_at: 1_770_000_000 }).success).toBe(false)
-    expect(pendingArchiveSchema.safeParse({ triage_id: 42 }).success).toBe(false)
+  it('requires all three members', () => {
+    expect(pendingArchiveSchema.safeParse({ due_at: 1_770_000_000, triage_id: 42 }).success).toBe(false)
+    expect(pendingArchiveSchema.safeParse({ due_at: 1_770_000_000, operator_id: 7 }).success).toBe(false)
+    expect(pendingArchiveSchema.safeParse({ triage_id: 42, operator_id: 7 }).success).toBe(false)
   })
 
   it('takes a due moment already past (a delay elapsed at settle is due at once)', () => {
-    expect(pendingArchiveSchema.safeParse({ due_at: 0, triage_id: 1 }).success).toBe(true)
+    expect(pendingArchiveSchema.safeParse({ due_at: 0, triage_id: 1, operator_id: 1 }).success).toBe(true)
   })
 
-  it('rejects a non-integer due moment or a non-positive Triage id', () => {
-    expect(pendingArchiveSchema.safeParse({ due_at: 1.5, triage_id: 1 }).success).toBe(false)
-    expect(pendingArchiveSchema.safeParse({ due_at: 1, triage_id: 0 }).success).toBe(false)
+  it('rejects a non-integer due moment or a non-positive id', () => {
+    expect(pendingArchiveSchema.safeParse({ due_at: 1.5, triage_id: 1, operator_id: 1 }).success).toBe(false)
+    expect(pendingArchiveSchema.safeParse({ due_at: 1, triage_id: 0, operator_id: 1 }).success).toBe(false)
+    expect(pendingArchiveSchema.safeParse({ due_at: 1, triage_id: 1, operator_id: 0 }).success).toBe(false)
   })
 })
