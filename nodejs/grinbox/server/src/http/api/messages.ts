@@ -446,6 +446,14 @@ export interface TriageEventDetail {
   readonly event_type: string
   readonly details_json: string | null
   readonly recorded_at: number
+  /**
+   * On a `resource_op_suppressed` event: the message of the run the push
+   * deferred to, so the interface can route to that message's own triage
+   * (d-e9jslw4x) — a deferral is normally cross-message. Derived at read time
+   * from the deferred-to triage's row; `null` where that triage is gone.
+   * Absent on every other event kind.
+   */
+  readonly deferred_to_message_id?: number | null
 }
 
 async function loadEvents(deps: ApiDeps, triageIds: readonly number[]): Promise<Map<number, TriageEventDetail[]>> {
@@ -460,16 +468,66 @@ async function loadEvents(deps: ApiDeps, triageIds: readonly number[]): Promise<
     .orderBy('triage_id', 'asc')
     .orderBy('sequence_num', 'asc')
     .execute()
+  const deferredMessageIds = await loadDeferredMessageIds(deps, rows)
   for (const r of rows) {
     const list = out.get(r.triage_id) ?? []
+    const deferredTriageId = r.event_type === 'resource_op_suppressed' ? deferredTriageIdOf(r.details_json) : null
     list.push({
       operator_id: r.operator_id,
       sequence_num: r.sequence_num,
       event_type: r.event_type,
       details_json: r.details_json,
       recorded_at: r.recorded_at,
+      ...(r.event_type === 'resource_op_suppressed' ?
+        {
+          deferred_to_message_id: deferredTriageId === null ? null : (deferredMessageIds.get(deferredTriageId) ?? null),
+        }
+      : {}),
     })
     out.set(r.triage_id, list)
+  }
+  return out
+}
+
+/** The deferred-to triage id a suppression's `details_json` names, or `null`. */
+function deferredTriageIdOf(detailsJson: string | null): number | null {
+  if (detailsJson === null) {
+    return null
+  }
+  try {
+    const parsed: unknown = JSON.parse(detailsJson)
+    const id = (parsed as { deferred_to_triage_id?: unknown }).deferred_to_triage_id
+    return typeof id === 'number' ? id : null
+  } catch {
+    return null
+  }
+}
+
+/** Resolve the suppressions' deferred-to triages to their message ids, in one read. */
+async function loadDeferredMessageIds(
+  deps: ApiDeps,
+  rows: readonly { event_type: string; details_json: string | null }[],
+): Promise<Map<number, number>> {
+  const wanted = new Set<number>()
+  for (const r of rows) {
+    if (r.event_type === 'resource_op_suppressed') {
+      const id = deferredTriageIdOf(r.details_json)
+      if (id !== null) {
+        wanted.add(id)
+      }
+    }
+  }
+  const out = new Map<number, number>()
+  if (wanted.size === 0) {
+    return out
+  }
+  const triages = await deps.db
+    .selectFrom('triages')
+    .select(['id', 'message_id'])
+    .where('id', 'in', [...wanted])
+    .execute()
+  for (const t of triages) {
+    out.set(t.id, t.message_id)
   }
   return out
 }

@@ -309,23 +309,53 @@ export function encodeHeaderValue(value: string): string {
 
 export async function sendMessage(
   deps: GmailDeps,
-  args: { to: string; subject: string; body: string },
+  args: { to: string; subject: string; body: string; body_rich?: string },
 ): Promise<{ message_id: string }> {
   const gmail = google.gmail({ version: 'v1', auth: await deps.auth() })
-  const raw = Buffer.from(
-    [
-      `To: ${args.to}`,
-      `Subject: ${encodeHeaderValue(args.subject)}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      'Content-Transfer-Encoding: base64',
-      '',
-      Buffer.from(args.body, 'utf8').toString('base64'),
-    ].join('\r\n'),
-  )
+  const raw = Buffer.from(buildRfc822(args))
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '')
   const res = await gmail.users.messages.send({ userId: 'me', requestBody: { raw } }, { signal: deps.signal })
   return { message_id: res.data.id ?? '' }
+}
+
+/**
+ * Build the RFC822 source. With a rich rendition the mail is one
+ * `multipart/alternative` carrying the plain text first and the rich part
+ * second (the recipient's client picks; last-listed is preferred by
+ * convention) — one mail, two renditions of the same content (d-1oqjgi9m,
+ * d-rd986rrt). Without one, the plain-text single-part mail is unchanged.
+ */
+export function buildRfc822(args: { to: string; subject: string; body: string; body_rich?: string }): string {
+  const headers = [`To: ${args.to}`, `Subject: ${encodeHeaderValue(args.subject)}`]
+  if (args.body_rich === undefined) {
+    return [
+      ...headers,
+      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(args.body, 'utf8').toString('base64'),
+    ].join('\r\n')
+  }
+  // Boundary: not derived from the content, so no body text can collide with
+  // it by construction.
+  const boundary = `grinbox-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  return [
+    ...headers,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(args.body, 'utf8').toString('base64'),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(args.body_rich, 'utf8').toString('base64'),
+    `--${boundary}--`,
+  ].join('\r\n')
 }

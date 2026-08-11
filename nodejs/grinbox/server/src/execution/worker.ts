@@ -24,6 +24,7 @@
 
 import type { Config } from '../config.js'
 import type { DB, MessagesTable } from '../db/schema.js'
+import { createNotificationGate } from '../notifications/cooldown-gate.js'
 import { runOperator } from '../operators/run.js'
 import { messageViewFromRow } from '../operators/types.js'
 import { type OutputTag, type RunRef, type TriageEventInput, persistOperatorResult } from '../pipeline/persist.js'
@@ -100,6 +101,19 @@ export async function runWorker(
       ...body,
     } as unknown as MessagesTable)
 
+    // The cooldown gate is built per Notify run (d-5amonj40): its suppression
+    // events land in the same accumulator the metered clients report through.
+    const notifications =
+      run.type_key === 'notify' ?
+        createNotificationGate({
+          db,
+          userId,
+          triageId: run.triage_id,
+          operatorId: run.operator_id,
+          onEvent: (event) => events.push(event),
+        })
+      : undefined
+
     const result = await runOperator(
       {
         type_key: run.type_key,
@@ -111,6 +125,7 @@ export async function runWorker(
         tags,
         makeResourceClient,
         signal: controller.signal,
+        notifications,
       },
     )
 

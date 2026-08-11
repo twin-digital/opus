@@ -4,11 +4,15 @@
  * output Tags;
  * its effect is the side effect on `pushover_api.send_notification`.
  *
- * Two gates decide whether the push fires:
+ * Three gates decide whether the push fires:
  *  1. The operator-level `when` clause (see `action-gate.ts`) — a clean no-op
  *     when the Triage's gated Tag doesn't match, so an always-eligible Action
  *     can still pick the Triages it cares about (e.g. urgency ∈ [high]).
- *  2. The per-Message Limit on the operation (default 1), enforced inside the
+ *  2. The notification cooldown, when the config names a `notification_kind`
+ *     (d-vn2jdxbs): a push whose kind was delivered inside the user's interval
+ *     sends nothing and completes (d-5amonj40). Checked BEFORE any Resource is
+ *     reached, so a suppressed push counts against no Limit (d-6ptxams7).
+ *  3. The per-Message Limit on the operation (default 1), enforced inside the
  *     metered client. A replay of the same Message returns `skipped_by_limit`,
  *     which is the dedupe path (d-isyan49o) — NOT a failure.
  *
@@ -42,11 +46,24 @@ export class NotifyError extends Error {
  * Returns no Tags in every case (Actions produce no output Tags).
  */
 async function run(input: OperatorRunInput<'notify'>): Promise<OperatorRunResult> {
-  const { config, message, tags, resources, signal } = input
+  const { config, message, tags, resources, signal, notifications } = input
 
   if (!shouldFire(config.when, tags)) {
     // Gate didn't match: clean no-op, no Resource call.
     return { tags: [] }
+  }
+
+  // Cooldown check before any Resource is reached (d-6ptxams7). Only a config
+  // naming a kind has one (d-k3wq81vn); the gate records the suppression event
+  // against this run itself (d-e9jslw4x).
+  const kind = config.notification_kind
+  if (kind !== undefined && notifications !== undefined) {
+    const verdict = await notifications.checkCooldown(kind)
+    if (verdict.suppressed) {
+      // Send nothing, complete: a suppressed push is an outcome, not a failure
+      // (d-5amonj40); the triage settles as it would have.
+      return { tags: [] }
+    }
   }
 
   const client: PushoverClient | undefined = resources.pushover_api
@@ -65,9 +82,15 @@ async function run(input: OperatorRunInput<'notify'>): Promise<OperatorRunResult
 
   switch (result.outcome) {
     case 'succeeded':
+      // A delivered kind-named push is recorded so later runs of the kind can
+      // defer to it (r-lph86tsg); a kind-less push is grouped with nothing.
+      if (kind !== undefined && notifications !== undefined) {
+        await notifications.recordPush(kind)
+      }
+      return { tags: [] }
     case 'skipped_by_limit':
-      // Sent, or de-duped by the per-Message Limit — both are clean no-ops for
-      // an Action (no Tags either way).
+      // De-duped by the per-Message Limit — a clean no-op for an Action, and
+      // not a delivered push, so nothing is recorded for later runs to defer to.
       return { tags: [] }
     case 'failed':
       throw new NotifyError(`notify send_notification failed: ${result.error.message}`)

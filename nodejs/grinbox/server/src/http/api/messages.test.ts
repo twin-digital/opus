@@ -428,6 +428,121 @@ describe('GET /api/messages/:id', () => {
     const res = await app.request('/api/messages/4242')
     expect(res.status).toBe(404)
   })
+
+  it("surfaces a suppression with the run it deferred to, resolvable to that run's triage (d-e9jslw4x)", async () => {
+    const userId = await insertUser(db)
+    const pid = await insertPipeline(db, userId)
+    const opId = await insertOperator(db, pid, {
+      name: 'urgency',
+      typeKey: 'rule_based_tagger',
+      configJson: ruleTaggerConfig('urgency', ['high', 'low']),
+    })
+    const acctId = await insertAccount(db, userId, { activePipelineId: pid })
+
+    // The deferred-to run lives on ANOTHER message — the common cross-message
+    // case: a burst of related mail spans messages, and the first one's push
+    // is what the later ones defer to.
+    const firstMid = await insertMessage(db, acctId, { backendMessageId: 'first', receivedAt: 900 })
+    const deferredToTriageId = await insertTriage(db, {
+      messageId: firstMid,
+      pipelineId: pid,
+      operatorId: opId,
+      startedAt: 1000,
+      status: 'completed',
+      makeCurrent: true,
+      events: [
+        {
+          eventType: 'resource_op_succeeded',
+          detailsJson: JSON.stringify({ resource: 'pushover_api', operation: 'send_notification' }),
+          recordedAt: 1001,
+        },
+      ],
+    })
+
+    const mid = await insertMessage(db, acctId, { backendMessageId: 'm', receivedAt: 1000 })
+    await insertTriage(db, {
+      messageId: mid,
+      pipelineId: pid,
+      operatorId: opId,
+      startedAt: 1100,
+      status: 'completed',
+      makeCurrent: true,
+      events: [
+        {
+          eventType: 'resource_op_suppressed',
+          detailsJson: JSON.stringify({
+            kind: 'Bank alerts',
+            deferred_to_triage_id: deferredToTriageId,
+            deferred_to_operator_id: opId,
+          }),
+          recordedAt: 1101,
+        },
+      ],
+    })
+
+    const app = createApiRoutes({ db, now: fixedNow })
+    const res = await app.request(`/api/messages/${mid}`)
+    const body = (await res.json()) as {
+      triages: {
+        events: { event_type: string; details_json: string | null; deferred_to_message_id?: number | null }[]
+      }[]
+    }
+    const event = body.triages[0]?.events[0]
+    expect(event.event_type).toBe('resource_op_suppressed')
+    expect(JSON.parse(event.details_json as string)).toEqual({
+      kind: 'Bank alerts',
+      deferred_to_triage_id: deferredToTriageId,
+      deferred_to_operator_id: opId,
+    })
+    // The deferred-to run's message, derived at read time: the route from the
+    // suppression to that run's triage the interface renders (d-e9jslw4x).
+    expect(event.deferred_to_message_id).toBe(firstMid)
+    // Non-suppression events carry no deferred_to_message_id at all.
+    const other = await app.request(`/api/messages/${firstMid}`)
+    const otherBody = (await other.json()) as {
+      triages: { events: { deferred_to_message_id?: number | null }[] }[]
+    }
+    expect(otherBody.triages[0]?.events.every((e) => !('deferred_to_message_id' in e))).toBe(true)
+  })
+
+  it('a suppression whose deferred-to triage is gone resolves its message id to null', async () => {
+    const userId = await insertUser(db)
+    const pid = await insertPipeline(db, userId)
+    const opId = await insertOperator(db, pid, {
+      name: 'urgency',
+      typeKey: 'rule_based_tagger',
+      configJson: ruleTaggerConfig('urgency', ['high', 'low']),
+    })
+    const acctId = await insertAccount(db, userId, { activePipelineId: pid })
+    const mid = await insertMessage(db, acctId, { backendMessageId: 'm', receivedAt: 1000 })
+    await insertTriage(db, {
+      messageId: mid,
+      pipelineId: pid,
+      operatorId: opId,
+      startedAt: 1100,
+      status: 'completed',
+      makeCurrent: true,
+      events: [
+        {
+          eventType: 'resource_op_suppressed',
+          detailsJson: JSON.stringify({
+            kind: 'Bank alerts',
+            deferred_to_triage_id: 4242,
+            deferred_to_operator_id: 7,
+          }),
+          recordedAt: 1101,
+        },
+      ],
+    })
+
+    const app = createApiRoutes({ db, now: fixedNow })
+    const res = await app.request(`/api/messages/${mid}`)
+    const body = (await res.json()) as {
+      triages: { events: { deferred_to_message_id?: number | null }[] }[]
+    }
+    const event = body.triages[0]?.events[0]
+    expect(event).toHaveProperty('deferred_to_message_id', null)
+  })
 })
 
 describe('an outcome resolves to the configuration that produced it', () => {

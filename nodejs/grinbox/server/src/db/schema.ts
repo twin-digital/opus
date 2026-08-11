@@ -208,8 +208,14 @@ export interface TriageEventsTable {
   triage_id: number
   operator_id: number
   sequence_num: number
-  /** Closed enum (CHECK). */
-  event_type: 'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed'
+  /**
+   * Closed enum (CHECK). `resource_op_suppressed` is a cooldown-suppressed push's own
+   * outcome kind beside succeeded / limited / failed (d-e9jslw4x); its
+   * `details_json` carries the notification kind and the `(triage_id,
+   * operator_id)` of the run whose push it deferred to.
+   */
+  event_type:
+    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
   details_json: string | null
   recorded_at: number
 }
@@ -243,11 +249,40 @@ export interface DigestRunsTable {
   events_json: string | null
 }
 
+/**
+ * A notification kind's minimum interval — the user's per-kind cooldown
+ * setting (d-k3wq81vn). One row per `(user_id, kind)`; the kind's name is
+ * stored trimmed and matched character for character (d-p8xrn2ce). Removing
+ * the cooldown deletes the row (d-t6mhv3aq).
+ */
+export interface NotificationCooldownsTable {
+  id: Generated<number>
+  user_id: number
+  kind: string
+  /** Whole seconds, CHECK >= 1, no ceiling (d-t6mhv3aq). */
+  interval_seconds: number
+  created_at: CreatedAt
+}
+
+/**
+ * One delivered push that named a notification kind: what a later Notify run's
+ * cooldown check reads to find the push it defers to (d-5amonj40). Pushes
+ * naming no kind are not recorded here.
+ */
+export interface NotificationPushesTable {
+  id: Generated<number>
+  user_id: number
+  kind: string
+  triage_id: number
+  operator_id: number
+  sent_at: number
+}
+
 export interface ChangeLogTable {
   id: Generated<number>
   user_id: number
   actor_user_id: number | null
-  /** Open enum: `pipeline` | `operator` | `account` | `limit` | `credential`. */
+  /** Open enum: `pipeline` | `operator` | `account` | `limit` | `credential` | `cooldown`. */
   entity_type: string
   entity_id: number
   /** Closed enum (CHECK). */
@@ -285,6 +320,8 @@ export interface Database {
   triage_operator_runs: TriageOperatorRunsTable
   triage_events: TriageEventsTable
   digest_runs: DigestRunsTable
+  notification_cooldowns: NotificationCooldownsTable
+  notification_pushes: NotificationPushesTable
   change_log: ChangeLogTable
   schema_migrations: SchemaMigrationsTable
 }

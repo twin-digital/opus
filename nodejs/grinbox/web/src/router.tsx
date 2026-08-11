@@ -12,7 +12,13 @@ import { validateInboxSearch } from '@/pages/inbox/search'
 import { PipelineDetailPage } from '@/pages/pipelines/detail'
 import { PipelinesListPage } from '@/pages/pipelines/list'
 import { MetricsPage } from '@/pages/placeholders'
-import { SettingsAboutPage, SettingsCredentialsPage, SettingsLayout, SettingsLimitsPage } from '@/pages/settings'
+import {
+  SettingsAboutPage,
+  SettingsCooldownsPage,
+  SettingsCredentialsPage,
+  SettingsLayout,
+  SettingsLimitsPage,
+} from '@/pages/settings'
 
 /**
  * Code-based TanStack Router tree. The root route is the app shell — persistent
@@ -53,6 +59,13 @@ const messageDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/inbox/$messageId',
   component: MessageDetailPage,
+  // `?triage=<id>` deep-selects one Triage in the history tab — how a
+  // suppression's cross-message deferral lands on the run it deferred to
+  // (d-e9jslw4x).
+  validateSearch: (search: Record<string, unknown>): { triage?: number } => {
+    const triage = Number(search.triage)
+    return Number.isInteger(triage) && triage > 0 ? { triage } : {}
+  },
 })
 
 const pipelinesRoute = createRoute({
@@ -116,6 +129,12 @@ const settingsLimitsRoute = createRoute({
   component: SettingsLimitsPage,
 })
 
+const settingsCooldownsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'cooldowns',
+  component: SettingsCooldownsPage,
+})
+
 const settingsCredentialsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'credentials',
@@ -138,7 +157,13 @@ export const routeTree = rootRoute.addChildren([
   accountDetailRoute,
   activityRoute,
   metricsRoute,
-  settingsRoute.addChildren([settingsIndexRoute, settingsLimitsRoute, settingsCredentialsRoute, settingsAboutRoute]),
+  settingsRoute.addChildren([
+    settingsIndexRoute,
+    settingsLimitsRoute,
+    settingsCooldownsRoute,
+    settingsCredentialsRoute,
+    settingsAboutRoute,
+  ]),
 ])
 
 export const router = createRouter({ routeTree })

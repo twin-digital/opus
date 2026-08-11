@@ -1,5 +1,5 @@
 import type { CurrentTag } from '@grinbox/server'
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -20,6 +20,7 @@ import {
   useMessage,
   useReplayMessage,
 } from '@/lib/messages'
+import { displayTagValue, useMoneyKeysByPipeline } from '@/lib/money'
 
 /**
  * Message detail (ui-design.md "Message detail"): the "why did Grinbox do that"
@@ -33,6 +34,9 @@ import {
 export function MessageDetailPage() {
   const { messageId } = useParams({ from: '/inbox/$messageId' })
   const id = Number(messageId)
+  // `?triage=<id>` deep-selects a Triage — the landing side of a suppression's
+  // cross-message deferral link (d-e9jslw4x).
+  const { triage: initialTriageId } = useSearch({ from: '/inbox/$messageId' })
   const { data, isPending, isError, error } = useMessage(id)
 
   return (
@@ -56,13 +60,28 @@ export function MessageDetailPage() {
           <div className='h-9 w-72 animate-pulse rounded bg-muted' />
           <div className='h-48 w-full animate-pulse rounded-lg bg-muted' />
         </div>
-      : <MessageDetailView detail={data} messageId={id} />}
+      : <MessageDetailView detail={data} messageId={id} initialTriageId={initialTriageId} />}
     </Page>
   )
 }
 
-function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messageId: number }) {
+function MessageDetailView({
+  detail,
+  messageId,
+  initialTriageId,
+}: {
+  detail: MessageDetail
+  messageId: number
+  initialTriageId?: number
+}) {
   const { message, current_tags, triages } = detail
+
+  // Money-typed Tag keys per Pipeline this Message was triaged under, so every
+  // surface that shows a Tag's value renders money in display form (d-u4gpx6ke).
+  const moneyByPipeline = useMoneyKeysByPipeline([
+    ...current_tags.map((t) => t.pipeline_id),
+    ...triages.map((t) => t.pipeline_id),
+  ])
 
   return (
     <div>
@@ -97,7 +116,7 @@ function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messa
         </dl>
       </header>
 
-      <Tabs defaultValue='overview'>
+      <Tabs defaultValue={initialTriageId === undefined ? 'overview' : 'triage'}>
         <TabsList>
           <TabsTrigger value='overview'>Overview</TabsTrigger>
           <TabsTrigger value='tags'>Tags</TabsTrigger>
@@ -105,15 +124,20 @@ function MessageDetailView({ detail, messageId }: { detail: MessageDetail; messa
         </TabsList>
 
         <TabsContent value='overview'>
-          <OverviewTab currentTags={current_tags} triages={triages} messageId={messageId} />
+          <OverviewTab
+            currentTags={current_tags}
+            triages={triages}
+            messageId={messageId}
+            moneyByPipeline={moneyByPipeline}
+          />
         </TabsContent>
 
         <TabsContent value='tags'>
-          <TagsTab triages={triages} />
+          <TagsTab triages={triages} moneyByPipeline={moneyByPipeline} />
         </TabsContent>
 
         <TabsContent value='triage'>
-          <TriageHistoryTab triages={triages} />
+          <TriageHistoryTab triages={triages} moneyByPipeline={moneyByPipeline} initialTriageId={initialTriageId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -126,10 +150,12 @@ function OverviewTab({
   currentTags,
   triages,
   messageId,
+  moneyByPipeline,
 }: {
   currentTags: readonly CurrentTag[]
   triages: readonly MessageTriage[]
   messageId: number
+  moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
 }) {
   const triageById = new Map(triages.map((t) => [t.id, t]))
 
@@ -157,7 +183,7 @@ function OverviewTab({
               >
                 <TagChip
                   tagKey={tag.key}
-                  value={tag.value}
+                  value={displayTagValue(tag.key, tag.value, moneyByPipeline.get(tag.pipeline_id))}
                   provenance={tagProvenance(tag, triageById.get(tag.triage_id))}
                 />
                 <span className='text-xs text-muted-foreground'>
@@ -201,7 +227,13 @@ function tagProvenance(
 
 // --- Tags -----------------------------------------------------------------
 
-function TagsTab({ triages }: { triages: readonly MessageTriage[] }) {
+function TagsTab({
+  triages,
+  moneyByPipeline,
+}: {
+  triages: readonly MessageTriage[]
+  moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
+}) {
   const rows = triages.flatMap((t) => t.tags.map((tag) => ({ triage: t, tag })))
 
   if (rows.length === 0) {
@@ -221,7 +253,11 @@ function TagsTab({ triages }: { triages: readonly MessageTriage[] }) {
           }`
           return (
             <li key={`${triage.id}:${tag.operator_id}:${tag.key}:${tag.value}`} className='flex items-center gap-3'>
-              <TagChip tagKey={tag.key} value={tag.value} provenance={provenance} />
+              <TagChip
+                tagKey={tag.key}
+                value={displayTagValue(tag.key, tag.value, moneyByPipeline.get(triage.pipeline_id))}
+                provenance={provenance}
+              />
               <span className='text-xs text-muted-foreground'>
                 {provenance}
                 {' · '}
@@ -237,9 +273,18 @@ function TagsTab({ triages }: { triages: readonly MessageTriage[] }) {
 
 // --- Triage history -------------------------------------------------------
 
-function TriageHistoryTab({ triages }: { triages: readonly MessageTriage[] }) {
-  // Latest Triage selected by default (the list is most-recent-first).
-  const [selectedId, setSelectedId] = useState<number | null>(triages[0]?.id ?? null)
+function TriageHistoryTab({
+  triages,
+  moneyByPipeline,
+  initialTriageId,
+}: {
+  triages: readonly MessageTriage[]
+  moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
+  initialTriageId?: number
+}) {
+  // Latest Triage selected by default (the list is most-recent-first); a
+  // `?triage=` deep link pre-selects that Triage instead.
+  const [selectedId, setSelectedId] = useState<number | null>(initialTriageId ?? triages.at(0)?.id ?? null)
 
   const first = triages.at(0)
   if (first === undefined) {
@@ -247,6 +292,7 @@ function TriageHistoryTab({ triages }: { triages: readonly MessageTriage[] }) {
   }
 
   const selected = triages.find((t) => t.id === selectedId) ?? first
+  const triageIds = new Set(triages.map((t) => t.id))
 
   return (
     <div className='grid gap-6 md:grid-cols-[16rem_1fr]'>
@@ -278,12 +324,27 @@ function TriageHistoryTab({ triages }: { triages: readonly MessageTriage[] }) {
         })}
       </ul>
 
-      <TriageDetailPanel triage={selected} />
+      <TriageDetailPanel
+        triage={selected}
+        moneyKeys={moneyByPipeline.get(selected.pipeline_id)}
+        knownTriageIds={triageIds}
+        onSelectTriage={setSelectedId}
+      />
     </div>
   )
 }
 
-function TriageDetailPanel({ triage }: { triage: MessageTriage }) {
+function TriageDetailPanel({
+  triage,
+  moneyKeys,
+  knownTriageIds,
+  onSelectTriage,
+}: {
+  triage: MessageTriage
+  moneyKeys: ReadonlySet<string> | undefined
+  knownTriageIds: ReadonlySet<number>
+  onSelectTriage: (id: number) => void
+}) {
   return (
     <div className='space-y-6'>
       <section>
@@ -292,7 +353,7 @@ function TriageDetailPanel({ triage }: { triage: MessageTriage }) {
           <p className='text-sm text-muted-foreground'>No Operator runs.</p>
         : <ul className='space-y-2'>
             {triage.operator_runs.map((run) => (
-              <OperatorRunRow key={run.operator_id} run={run} />
+              <OperatorRunRow key={run.operator_id} run={run} events={triage.events} />
             ))}
           </ul>
         }
@@ -304,7 +365,13 @@ function TriageDetailPanel({ triage }: { triage: MessageTriage }) {
           <p className='text-sm text-muted-foreground'>No events recorded.</p>
         : <ol className='space-y-1'>
             {triage.events.map((ev) => (
-              <EventRow key={`${ev.operator_id}:${ev.sequence_num}`} event={ev} />
+              <EventRow
+                key={`${ev.operator_id}:${ev.sequence_num}`}
+                event={ev}
+                moneyKeys={moneyKeys}
+                knownTriageIds={knownTriageIds}
+                onSelectTriage={onSelectTriage}
+              />
             ))}
           </ol>
         }
@@ -313,7 +380,15 @@ function TriageDetailPanel({ triage }: { triage: MessageTriage }) {
   )
 }
 
-function OperatorRunRow({ run }: { run: MessageTriageRun }) {
+function OperatorRunRow({ run, events }: { run: MessageTriageRun; events: readonly MessageTriageEvent[] }) {
+  // A cooldown-suppressed push completes rather than fails (d-5amonj40): the
+  // status dot above stays whatever the run reports (completed), and the
+  // suppression shows on the run itself with its kind.
+  const suppression = events
+    .filter((ev) => ev.operator_id === run.operator_id && ev.event_type === 'resource_op_suppressed')
+    .map((ev) => parseSuppression(ev.details_json))
+    .find((s) => s !== null)
+
   return (
     <li className='rounded-md border border-border px-3 py-2'>
       <div className='flex items-center justify-between gap-2'>
@@ -330,6 +405,11 @@ function OperatorRunRow({ run }: { run: MessageTriageRun }) {
         : null}
         {run.error_summary ?
           <span className='[color:var(--danger)]'>{run.error_summary}</span>
+        : null}
+        {suppression ?
+          <span data-testid='run-suppression'>
+            push suppressed — cooldown on <span className='font-mono'>{suppression.kind}</span>
+          </span>
         : null}
         {formatResourceUsage(run.resource_usage_json).map((u) => (
           <span key={u}>{u}</span>
@@ -375,13 +455,113 @@ function formatSnapshot(snapshot: string): string {
   }
 }
 
-function EventRow({ event }: { event: MessageTriageEvent }) {
+function EventRow({
+  event,
+  moneyKeys,
+  knownTriageIds,
+  onSelectTriage,
+}: {
+  event: MessageTriageEvent
+  moneyKeys: ReadonlySet<string> | undefined
+  knownTriageIds: ReadonlySet<number>
+  onSelectTriage: (id: number) => void
+}) {
+  const suppression = event.event_type === 'resource_op_suppressed' ? parseSuppression(event.details_json) : null
   return (
     <li className='flex items-baseline gap-3 text-sm'>
       <span className='font-mono text-xs text-muted-foreground'>#{event.sequence_num}</span>
       <span className='font-medium'>{eventLabel(event.event_type)}</span>
-      <span className='font-mono text-xs text-muted-foreground'>{formatEventDetails(event.details_json)}</span>
+      {suppression ?
+        <SuppressionEventDetails
+          suppression={suppression}
+          deferredToMessageId={event.deferred_to_message_id}
+          knownTriageIds={knownTriageIds}
+          onSelectTriage={onSelectTriage}
+        />
+      : <span className='font-mono text-xs text-muted-foreground'>
+          {formatEventDetails(event.details_json, moneyKeys)}
+        </span>
+      }
     </li>
+  )
+}
+
+/** The `resource_op_suppressed` details the cooldown gate records (d-e9jslw4x). */
+interface SuppressionDetails {
+  readonly kind: string
+  readonly deferred_to_triage_id: number
+  readonly deferred_to_operator_id: number
+}
+
+function parseSuppression(json: string | null): SuppressionDetails | null {
+  if (!json) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>
+    if (
+      typeof parsed.kind === 'string' &&
+      typeof parsed.deferred_to_triage_id === 'number' &&
+      typeof parsed.deferred_to_operator_id === 'number'
+    ) {
+      return {
+        kind: parsed.kind,
+        deferred_to_triage_id: parsed.deferred_to_triage_id,
+        deferred_to_operator_id: parsed.deferred_to_operator_id,
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * A suppressed push names its kind and the push it deferred to, and the
+ * reference resolves to that run's Triage (d-e9jslw4x). A deferral to one of
+ * this Message's own Triages (a replay inside the cooldown) selects it in the
+ * history list; a deferral to another Message's Triage links to that Message's
+ * detail, landing on the deferred-to Triage via `?triage=`. Where the
+ * deferred-to Triage is gone (`deferred_to_message_id` null), the identifiers
+ * render as text with no dead link.
+ */
+function SuppressionEventDetails({
+  suppression,
+  deferredToMessageId,
+  knownTriageIds,
+  onSelectTriage,
+}: {
+  suppression: SuppressionDetails
+  deferredToMessageId: number | null | undefined
+  knownTriageIds: ReadonlySet<number>
+  onSelectTriage: (id: number) => void
+}) {
+  const target = `Triage ${suppression.deferred_to_triage_id}`
+  return (
+    <span className='text-xs text-muted-foreground' data-testid='suppression-details'>
+      cooldown on <span className='font-mono'>{suppression.kind}</span> — deferred to the push from{' '}
+      {knownTriageIds.has(suppression.deferred_to_triage_id) ?
+        <button
+          type='button'
+          className='underline underline-offset-2 hover:text-foreground'
+          onClick={() => {
+            onSelectTriage(suppression.deferred_to_triage_id)
+          }}
+        >
+          {target}
+        </button>
+      : typeof deferredToMessageId === 'number' ?
+        <Link
+          to='/inbox/$messageId'
+          params={{ messageId: String(deferredToMessageId) }}
+          search={{ triage: suppression.deferred_to_triage_id }}
+          className='underline underline-offset-2 hover:text-foreground'
+        >
+          {target}
+        </Link>
+      : <span>{target}</span>}{' '}
+      (run {suppression.deferred_to_operator_id})
+    </span>
   )
 }
 
@@ -405,6 +585,7 @@ const EVENT_LABELS: Record<string, string> = {
   resource_op_succeeded: 'Resource op succeeded',
   resource_op_limited: 'Resource op limited',
   resource_op_failed: 'Resource op failed',
+  resource_op_suppressed: 'Push suppressed',
 }
 
 function eventLabel(eventType: string): string {
@@ -441,16 +622,26 @@ function formatResourceUsage(json: string | null): string[] {
   }
 }
 
-/** Render an event's `details_json` as a compact `k=v` summary. */
-function formatEventDetails(json: string | null): string {
+/**
+ * Render an event's `details_json` as a compact `k=v` summary. A `tag_set`
+ * whose key the Pipeline types as extracted money shows its value in display
+ * form (d-u4gpx6ke) — the details are still `{key, value}`, so the money
+ * rendering applies to the `value` entry when `key` is money-typed.
+ */
+function formatEventDetails(json: string | null, moneyKeys?: ReadonlySet<string>): string {
   if (!json) {
     return ''
   }
   try {
     const parsed = JSON.parse(json) as Record<string, unknown>
+    const tagKey = typeof parsed.key === 'string' ? parsed.key : null
     return Object.entries(parsed)
       .filter(([, v]) => v !== null && typeof v !== 'object')
-      .map(([k, v]) => `${k}=${String(v)}`)
+      .map(([k, v]) =>
+        k === 'value' && tagKey !== null && typeof v === 'string' ?
+          `${k}=${displayTagValue(tagKey, v, moneyKeys)}`
+        : `${k}=${String(v)}`,
+      )
       .join(' ')
   } catch {
     return json

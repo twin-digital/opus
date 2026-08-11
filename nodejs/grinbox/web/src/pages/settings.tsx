@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils'
 /**
  * Settings layout with the internal sub-sidebar (ui-design.md "Settings"). The
  * outer left sidebar persists; this secondary nav switches between
- * Limits / Notification credentials / About, each its own `/settings/<section>`
- * route rendered through the nested <Outlet>.
+ * Limits / Notification cooldowns / Notification credentials / About, each its
+ * own `/settings/<section>` route rendered through the nested <Outlet>.
  */
 export function SettingsLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -45,5 +45,6 @@ export function SettingsLayout() {
 }
 
 export { SettingsLimitsPage } from './settings/limits'
+export { SettingsCooldownsPage } from './settings/cooldowns'
 export { SettingsCredentialsPage } from './settings/credentials'
 export { SettingsAboutPage } from './settings/about'

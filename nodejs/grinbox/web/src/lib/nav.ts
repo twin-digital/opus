@@ -30,6 +30,7 @@ export interface SettingsNavItem {
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { label: 'Limits', to: '/settings/limits' },
+  { label: 'Notification cooldowns', to: '/settings/cooldowns' },
   { label: 'Notification credentials', to: '/settings/credentials' },
   { label: 'About', to: '/settings/about' },
 ]

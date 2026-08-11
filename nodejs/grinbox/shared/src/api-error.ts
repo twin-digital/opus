@@ -31,7 +31,9 @@ export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>
 export const API_ERROR_CODES = [
   'pipeline_validation_failed',
   'invalid_config',
+  'invalid_kind_name',
   'credential_in_use',
+  'cooldown_conflict',
   'limit_conflict',
   'name_conflict',
   'pipeline_not_assignable',

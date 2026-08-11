@@ -39,12 +39,15 @@ export interface ActionWhenDraft {
 export interface NotifyDraft {
   message_template: string
   credentials_id: number
+  /** Optional notification kind (d-vn2jdxbs); absent ⇒ omitted from the saved config. */
+  notification_kind?: string
   when?: ActionWhenDraft
 }
 
 export function NotifyEditor({ value, onChange }: { value: NotifyDraft; onChange: (next: NotifyDraft) => void }) {
   const msgId = useId()
   const credId = useId()
+  const kindId = useId()
   const { data: credentials, isPending } = useCredentials('pushover')
   const hasCredentials = (credentials?.length ?? 0) > 0
   return (
@@ -93,6 +96,28 @@ export function NotifyEditor({ value, onChange }: { value: NotifyDraft; onChange
             here.
           </p>
         }
+      </div>
+      <div className='space-y-2'>
+        <Label htmlFor={kindId}>Notification kind (optional)</Label>
+        <p className='text-xs text-muted-foreground'>
+          A short name grouping pushes that should not pile up — Operators naming the same kind share one cooldown (set
+          under Settings → Notification cooldowns). Leave blank and this Operator's pushes are grouped with nothing.
+        </p>
+        <Input
+          id={kindId}
+          className='max-w-md'
+          placeholder='Bank alerts'
+          value={value.notification_kind ?? ''}
+          onChange={(e) => {
+            // Blank ⇒ the key is omitted from the saved config (d-vn2jdxbs: an
+            // Operator naming no kind stands alone). Kept as typed while
+            // editing; the shared schema trims surrounding whitespace on Save
+            // (d-p8xrn2ce).
+            const kind = e.target.value
+            const { notification_kind: _drop, ...rest } = value
+            onChange(kind.trim().length > 0 ? { ...rest, notification_kind: kind } : rest)
+          }}
+        />
       </div>
       <ActionWhenField
         value={value.when}

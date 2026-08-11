@@ -131,6 +131,31 @@ distinguishable outcome — capped, as against succeeded or failed — and the
 operator chooses what to make of it, most treating it as a clean no-op. Per-message
 caps are what make re-triage safe: the counter is already spent.
 
+## Notification kinds and cooldowns
+
+A notify operator may name a **notification kind** — a short name the user
+chooses — and every push it sends then belongs to that kind. Operators may share
+one, which is how pushes that should not pile up are grouped; an operator naming
+none stands alone. The name is stored trimmed and matched character for
+character.
+
+A **cooldown** is the user's per-kind minimum interval, managed at
+`/api/cooldowns` as its own settings collection: listing returns the stored
+settings beside the kind names enabled notify operators currently send, creating
+takes `{ kind, interval_seconds }`, editing changes only the interval, and
+deleting removes the setting. The kind is fixed at create — renaming is delete
+and create. The interval is whole seconds, at least one; a kind with no setting
+has no cooldown. Every accepted change writes a history entry like any other
+configuration change.
+
+A push whose kind was delivered inside the interval is **suppressed**: the
+operator sends nothing, completes, and the triage settles as it would have. The
+suppression records on the run as its own outcome — the kind and the run whose
+push it deferred to, which the interface resolves to that run's triage. The
+check runs before any resource is reached, so a suppressed push counts against
+no cap — and the cooldown is not a cap: the seeded caps on the push resource
+bind underneath and stay beyond the user's reach.
+
 ## The mail backend
 
 A backend meets the daemon at two seams and nowhere else:
@@ -194,6 +219,24 @@ message.
 Only a completed delivery moves the watermark, so a failed or missed delivery's
 window is absorbed into the next one rather than lost. Occurrences missed while
 the daemon was down collapse into one on return.
+
+A digest is one mail carrying **two renditions** of the same content — plain
+text and a rich one — and the recipient's client chooses which it shows; a
+client that renders no formatting shows the text rendition whole. The rich
+rendition carries its presentation on its own elements, references no external
+asset, and sets neither a page background nor a body text colour, so it reads
+on a light or a dark background. Its markup is grinbox's alone: template
+literals, model prose, and message-derived text reach the recipient as the
+characters they are, in both renditions. An item a section's threshold marks is
+marked in each rendition's own terms — a suffix in the text, styling in the
+rich one.
+
+A tag the pipeline types as extracted money renders in **display form** —
+`$195.03`, `CHF 1,234.56` — following from the ISO currency alone; a value
+under a money-typed key that is not stored money renders verbatim. The display
+form is rendered at composition, never stored: the normalized stored form
+stays what grinbox keeps and what a section's threshold compares. The
+interface shows money by the same rules.
 
 ## Working on it
 

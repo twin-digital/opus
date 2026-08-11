@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { modelIdSchema } from './models.js'
+import { notificationKindSchema } from './notifications.js'
 
 /**
  * Operator `config_json` shapes, keyed by `type_key`. This is the declarative
@@ -228,12 +229,17 @@ export type RuleBasedTaggerConfig = z.infer<typeof ruleBasedTaggerConfigSchema>
 /**
  * Notify config. Sends an out-of-band push (Pushover today). `credentials_id`
  * references a user-scoped `pushover` Credential — the server extracts this for
- * `operator_credential_references`. The optional `when` gate restricts firing to
- * Triages whose `tag_key` Tag is in `equals` (see {@link actionWhenSchema}).
+ * `operator_credential_references`. The optional `notification_kind` names the
+ * kind every push this Operator sends belongs to (d-vn2jdxbs): Operators may
+ * share one, which is how the user groups pushes under one cooldown; an
+ * Operator naming none stands alone, and a config stored before kinds existed
+ * parses unchanged. The optional `when` gate restricts firing to Triages whose
+ * `tag_key` Tag is in `equals` (see {@link actionWhenSchema}).
  */
 export const notifyConfigSchema = z.object({
   message_template: z.string().min(1),
   credentials_id: z.number().int().positive(),
+  notification_kind: notificationKindSchema.optional(),
   when: actionWhenSchema.optional(),
 })
 export type NotifyConfig = z.infer<typeof notifyConfigSchema>

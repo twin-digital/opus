@@ -18,6 +18,7 @@
 import { Hono } from 'hono'
 import { createAccountsRoutes } from './accounts.js'
 import { createActivityRoutes } from './activity.js'
+import { createCooldownsRoutes } from './cooldowns.js'
 import { createCredentialsRoutes } from './credentials.js'
 import { createDashboardRoutes } from './dashboard.js'
 import { type ApiDeps, type NowSeconds, systemNowSeconds } from './deps.js'
@@ -47,6 +48,7 @@ export function createApiRoutes(deps: ApiDeps) {
     .route('/api/messages', createMessagesRoutes(deps))
     .route('/api/operators', createOperatorsRoutes(deps))
     .route('/api/limits', createLimitsRoutes(deps))
+    .route('/api/cooldowns', createCooldownsRoutes(deps))
     .route('/api/models', createModelsRoutes())
     .route('/api/activity', createActivityRoutes(deps))
     .route('/api/dashboard', createDashboardRoutes(deps))

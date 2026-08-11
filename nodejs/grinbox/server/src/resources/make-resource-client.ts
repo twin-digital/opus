@@ -52,9 +52,13 @@ import { policyFor, withRetry } from './retry.js'
  *  - `resource_op_succeeded`: `{ resource, operation, ...op-specific }`
  *  - `resource_op_limited`:  `{ resource, operation, limit_id, scope }`
  *  - `resource_op_failed`:   `{ resource, operation, error }`
+ *  - `resource_op_suppressed`:      `{ kind, deferred_to_triage_id, deferred_to_operator_id }`
+ *    — emitted by the notification cooldown gate, not by a metered client: a
+ *    suppressed push reaches no Resource (d-6ptxams7) but records as its own
+ *    outcome kind in the attempt vocabulary (d-e9jslw4x).
  */
 export interface ResourceEvent {
-  readonly event_type: 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed'
+  readonly event_type: 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
   readonly details: Record<string, unknown>
 }
 
