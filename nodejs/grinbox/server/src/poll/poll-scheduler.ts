@@ -1,29 +1,25 @@
 /**
- * The poll scheduler (d-8fvu0g4z). One of the Daemon's two conceptual loops: on
- * a cadence it finds Accounts that are due for a poll, resolves each to a {@link Provider} via the injected
- * {@link ProviderFactory}, and runs one {@link pollAccount} cycle per Account.
+ * The poll scheduler (d-8fvu0g4z). On each beat of the daemon's heartbeat it
+ * finds Accounts that are due for a poll, resolves each to a {@link Provider}
+ * via the injected {@link ProviderFactory}, and runs one {@link pollAccount}
+ * cycle per Account.
  *
- * ## Cadence vs. per-Account interval
+ * ## Heartbeat vs. per-Account interval
  *
- * `start()` schedules a single croner job — the scheduler *tick* — every
- * `config.pollSchedulerTickSeconds` (default 60s). Each tick calls
+ * The scheduler keeps no timer: the daemon's one heartbeat (d-gzv0jty7) calls
  * {@link pollDueAccounts}, which selects only the Accounts whose own
  * `poll_interval_seconds` (default 600s) has elapsed since their
- * `last_polled_at`. So there is one shared heartbeat, not a timer per Account;
- * the per-Account interval is enforced by the due-selection query, not by the
- * cron cadence. The tick should be `<=` the smallest Account interval for poll
- * latency to track that interval closely.
+ * `last_polled_at`. The per-Account interval is enforced by the due-selection
+ * query, not by the beat cadence, so arrival latency is an Account's interval
+ * plus at most one beat.
  *
  * ## Test seam
  *
- * Tests drive `pollDueAccounts(now?)` and `pollAccount(...)` directly — never
- * `start()`. There is no real cron and no waiting in tests; `start()`/`stop()`
- * exist only for the daemon's lifecycle wiring. `pollDueAccounts` accepts an
- * injected `now` (Unix seconds) so due-selection and the persisted
+ * Tests drive `pollDueAccounts(now?)` and `pollAccount(...)` directly. Both
+ * accept an injected `now` (Unix seconds) so due-selection and the persisted
  * `last_polled_at` are deterministic.
  */
 
-import { Cron } from 'croner'
 import type { Config } from '../config.js'
 import type { DB } from '../db/schema.js'
 import type { Provider } from '../providers/provider.js'
@@ -55,14 +51,14 @@ export interface PollScheduler {
    *
    * ## In-flight guard
    *
-   * This is the guarded entry point the cron tick calls. A single cycle may
-   * outrun the tick interval (one slow Account's poll can exceed
-   * `pollSchedulerTickSeconds`); without a guard the next tick would re-select
-   * the same Accounts — their `last_polled_at` not yet written — and poll them
-   * concurrently. So a call made while a previous cycle is still in flight is a
-   * no-op: it returns an empty summary list and does not touch the DB. The guard
-   * clears once the in-flight cycle settles (success *or* failure), so the next
-   * tick runs normally.
+   * This is the guarded entry point the heartbeat calls. A single cycle may
+   * outrun the beat (one slow Account's poll can exceed `heartbeatSeconds`);
+   * without a guard the next beat would re-select the same Accounts — their
+   * `last_polled_at` not yet written — and poll them concurrently. So a call
+   * made while a previous cycle is still in flight is a no-op: it returns an
+   * empty summary list and does not touch the DB. The guard clears once the
+   * in-flight cycle settles (success *or* failure), so the next beat runs
+   * normally.
    */
   pollDueAccounts(now?: number): Promise<PollCycleSummary[]>
   /**
@@ -74,17 +70,13 @@ export interface PollScheduler {
    * Full resync of every eligible Account now (the Inbox "sync" button): re-fetch
    * all in-inbox Messages, backfilling ones Grinbox never ingested and refreshing
    * existing rows' metadata, then align source-state. Heavier than a poll; shares
-   * the in-flight guard with the scheduled tick.
+   * the in-flight guard with the scheduled sweep.
    */
   resyncAllNow(now?: number): Promise<ResyncSummary[]>
   /** Run one poll cycle for a specific Account (exposed for tests + targeted
    * polls). Resolves the Provider via the factory; throws if the factory
    * returns `null`. */
   pollAccount(account: PollableAccount, now?: number): Promise<PollCycleSummary>
-  /** Begin the croner tick (every `config.pollSchedulerTickSeconds`). */
-  start(): void
-  /** Cancel the croner tick. Idempotent. */
-  stop(): void
 }
 
 /** The `accounts` columns the due-selection reads. */
@@ -101,26 +93,6 @@ interface DueAccountRow {
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000)
-}
-
-/**
- * Build the croner pattern for a tick of `tickSeconds`. croner's seconds field
- * caps a step ("slash-n") at 60, so a sub-minute tick uses a seconds step and a
- * tick of a whole number of minutes uses a minutes step. Anything else (e.g.
- * 90s) rounds to the nearest whole minute — a coarser-but-valid heartbeat is
- * preferable to a pattern croner rejects (which would crash `start()`).
- */
-function tickCronPattern(tickSeconds: number): string {
-  if (tickSeconds < 60) {
-    return `*/${tickSeconds} * * * * *`
-  }
-  const minutes = Math.max(1, Math.round(tickSeconds / 60))
-  if (minutes >= 60) {
-    // A multi-hour tick is unusual; fall back to once per hour rather than risk
-    // an out-of-range minutes step.
-    return '0 0 * * * *'
-  }
-  return `0 */${minutes} * * * *`
 }
 
 /** Project a selected row into the {@link PollableAccount} a cycle consumes.
@@ -142,7 +114,6 @@ function toPollable(row: DueAccountRow): PollableAccount {
 
 export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
   const { db, config, providerFactory } = deps
-  let job: Cron | null = null
   // The in-flight cycle (poll or resync), or null when idle. The guards read it
   // to avoid overlapping cursor/metadata writes across the tick + manual paths;
   // the `.finally()` clears it.
@@ -257,13 +228,13 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
   /**
    * Guarded entry point (see {@link PollScheduler.pollDueAccounts}). If a cycle
    * is already in flight, skip — returning `[]` without re-selecting or polling
-   * — so two ticks never poll the same not-yet-advanced Accounts concurrently.
+   * — so two beats never poll the same not-yet-advanced Accounts concurrently.
    * Otherwise start a cycle, hold its promise, and clear the guard once it
    * settles (whether it resolves or rejects).
    */
   function pollDueAccounts(now: number = nowSeconds()): Promise<PollCycleSummary[]> {
     if (inFlight !== null) {
-      console.warn('[grinbox][poll] poll cycle still running, skipping tick')
+      console.warn('[grinbox][poll] poll cycle still running, skipping beat')
       return Promise.resolve([])
     }
     return guard(runPollCycle(now))
@@ -272,7 +243,7 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
   /**
    * Force a poll of every eligible Account *now*, ignoring per-Account intervals
    * (the manual "sync" the Inbox refresh triggers). Shares the in-flight guard
-   * with the scheduled tick: if a cycle is already running, this resolves to the
+   * with the scheduled sweep: if a cycle is already running, this resolves to the
    * in-flight cycle's result rather than starting an overlapping one (which could
    * race the cursor advance).
    */
@@ -308,35 +279,10 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
     return cycle
   }
 
-  function start(): void {
-    if (job !== null) {
-      return
-    }
-    // Croner heartbeat derived from `pollSchedulerTickSeconds` (see
-    // tickCronPattern for the seconds-vs-minutes field handling).
-    // `protect: true` is croner's own overlap guard (belt-and-suspenders); the
-    // authoritative guard is `pollDueAccounts`'s in-flight check, which holds
-    // across the whole cycle regardless of cron timing.
-    job = new Cron(tickCronPattern(config.pollSchedulerTickSeconds), { protect: true }, () => {
-      void pollDueAccounts().catch((err: unknown) => {
-        console.error('[grinbox][poll] scheduler tick error', err)
-      })
-    })
-  }
-
-  function stop(): void {
-    if (job !== null) {
-      job.stop()
-      job = null
-    }
-  }
-
   return {
     pollDueAccounts,
     pollAllNow,
     resyncAllNow,
     pollAccount: (account, now = nowSeconds()) => runOneAccount(account, now),
-    start,
-    stop,
   }
 }

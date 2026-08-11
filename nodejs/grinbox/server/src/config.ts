@@ -157,25 +157,18 @@ const configSchema = z.object({
   workerPoolSize: z.coerce.number().int().positive().default(3),
 
   /**
-   * Poll-scheduler tick cadence in seconds: how often the in-process croner job
-   * wakes to look for *due* Accounts. This is the scheduler's heartbeat, NOT the
-   * per-Account poll interval (d-nq4fk2xr): each Account is only polled once its
-   * own `poll_interval_seconds`
-   * has elapsed since its `last_polled_at`. A short tick (default 60s) keeps the
-   * effective poll latency close to each Account's interval (default 600s)
-   * without scheduling per-Account timers.
+   * The daemon's one heartbeat, in seconds (d-gzv0jty7). A single croner job
+   * wakes on it and acts on whatever is due: an Account whose
+   * `poll_interval_seconds` has elapsed (d-nq4fk2xr), a digest Edition whose
+   * cron cue has passed (d-6vnf59rv), a pending Archive past its moment
+   * (d-grcdd4ov). Nothing is scheduled per Account, Edition, or Message, and no
+   * scheduler keeps a timer of its own.
+   *
+   * It is the deployment's to set. It bounds every scheduler's latency: mail is
+   * noticed within an Account's interval plus this, and a pending Archive fires
+   * within this of coming due.
    */
-  pollSchedulerTickSeconds: z.coerce.number().int().positive().default(60),
-
-  /**
-   * Digest-scheduler tick cadence in seconds: how often the in-process croner
-   * job wakes to look for *due* digest occurrences. Like the poll tick, this is
-   * a heartbeat, not the digest cadence — each Digest delivery Operator fires on
-   * its own configured cron `schedule` (d-6vnf59rv); the tick only bounds how
-   * soon after a scheduled time the
-   * occurrence is noticed.
-   */
-  digestSchedulerTickSeconds: z.coerce.number().int().positive().default(60),
+  heartbeatSeconds: z.coerce.number().int().positive().default(60),
 
   /**
    * Whole-run timeout for one digest run in milliseconds. A run spans the
@@ -219,8 +212,7 @@ function fromEnv(env: NodeJS.ProcessEnv): Record<string, unknown> {
     bedrockRegion: env.GRINBOX_BEDROCK_REGION,
     operatorTimeoutMs: env.GRINBOX_OPERATOR_TIMEOUT_MS,
     workerPoolSize: env.GRINBOX_WORKER_POOL_SIZE,
-    pollSchedulerTickSeconds: env.GRINBOX_POLL_SCHEDULER_TICK_SECONDS,
-    digestSchedulerTickSeconds: env.GRINBOX_DIGEST_SCHEDULER_TICK_SECONDS,
+    heartbeatSeconds: env.GRINBOX_HEARTBEAT_SECONDS,
     digestTimeoutMs: env.GRINBOX_DIGEST_TIMEOUT_MS,
     reconcileIntervalSeconds: env.GRINBOX_RECONCILE_INTERVAL_SECONDS,
   }

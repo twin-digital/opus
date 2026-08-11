@@ -11,6 +11,7 @@
  */
 
 import { type Kysely, sql } from 'kysely'
+import { reconcilePendingArchiveOnSettle } from '../archive/pending-archive.js'
 import type { Database } from '../db/schema.js'
 import { withPipelineEditLock } from './edit-lock.js'
 
@@ -22,8 +23,7 @@ export interface OutputTag {
 
 /** A `triage_events` row to record (sequence_num is assigned in-transaction). */
 export interface TriageEventInput {
-  readonly eventType:
-    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
+  readonly eventType: Database['triage_events']['event_type']
   readonly detailsJson: string | null
 }
 
@@ -165,6 +165,10 @@ export async function settleTriageIfTerminal(tx: Kysely<Database>, triageId: num
       updated_at         = excluded.updated_at
     WHERE excluded.triage_started_at > current_triages.triage_started_at
   `.execute(tx)
+
+  // The Message's pending Archive is the latest settled Triage's (d-0tajzoy7),
+  // so it is reconciled here, in the settlement's own transaction.
+  await reconcilePendingArchiveOnSettle(tx, triageId, ts)
 
   return true
 }
