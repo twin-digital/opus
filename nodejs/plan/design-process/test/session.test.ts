@@ -190,7 +190,7 @@ describe('deferring is offered beside the four rulings — d-4xkyfjzu', () => {
   })
 })
 
-describe('a cited id is shown as the title it resolves to — d-mhlya385', () => {
+describe('a cited id is shown as the title it resolves to — d-okfuedqn', () => {
   it('resolves a citation against the product’s own entries and the facts pool', () => {
     const files = draftFiles()
     files['facts/demo.yaml'] = yaml({

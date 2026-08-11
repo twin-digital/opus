@@ -4,7 +4,7 @@ import { factLabel, loadPool } from '../pools.js'
 
 import type { FileTree } from '../tree.js'
 
-/** What a cited id resolves to: its title, or nothing where the citation reaches outside (d-mhlya385). */
+/** What a cited id resolves to: its title, or nothing where the citation reaches outside (d-okfuedqn). */
 export type Citations = (citation: string) => string | undefined
 
 /**

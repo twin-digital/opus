@@ -262,7 +262,7 @@ const requirementBlocks = (entry: OpenEntry): Block[] => {
   return blocks
 }
 
-/** The pinning proposal, then the citations, each cited id shown as the title it resolves to (d-mhlya385). */
+/** The pinning proposal, then the citations, each cited id shown as the title it resolves to (d-okfuedqn). */
 const metadataBlocks = (state: SessionState, entry: OpenEntry, resolve: Citations): Block[] => {
   const blocks: Block[] = []
   // the components the entry is ruled under, one per line (d-let447tx); a slug reaching no live
