@@ -12,7 +12,13 @@ import { validateInboxSearch } from '@/pages/inbox/search'
 import { PipelineDetailPage } from '@/pages/pipelines/detail'
 import { PipelinesListPage } from '@/pages/pipelines/list'
 import { MetricsPage } from '@/pages/placeholders'
-import { SettingsAboutPage, SettingsCredentialsPage, SettingsLayout, SettingsLimitsPage } from '@/pages/settings'
+import {
+  SettingsAboutPage,
+  SettingsCooldownsPage,
+  SettingsCredentialsPage,
+  SettingsLayout,
+  SettingsLimitsPage,
+} from '@/pages/settings'
 
 /**
  * Code-based TanStack Router tree. The root route is the app shell — persistent
@@ -116,6 +122,12 @@ const settingsLimitsRoute = createRoute({
   component: SettingsLimitsPage,
 })
 
+const settingsCooldownsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: 'cooldowns',
+  component: SettingsCooldownsPage,
+})
+
 const settingsCredentialsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: 'credentials',
@@ -138,7 +150,13 @@ export const routeTree = rootRoute.addChildren([
   accountDetailRoute,
   activityRoute,
   metricsRoute,
-  settingsRoute.addChildren([settingsIndexRoute, settingsLimitsRoute, settingsCredentialsRoute, settingsAboutRoute]),
+  settingsRoute.addChildren([
+    settingsIndexRoute,
+    settingsLimitsRoute,
+    settingsCooldownsRoute,
+    settingsCredentialsRoute,
+    settingsAboutRoute,
+  ]),
 ])
 
 export const router = createRouter({ routeTree })

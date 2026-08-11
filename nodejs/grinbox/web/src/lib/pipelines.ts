@@ -34,19 +34,22 @@ export function usePipelineList() {
   })
 }
 
+/** Fetch one Pipeline's detail — shared by {@link usePipeline} and the money-key lookup. */
+export async function fetchPipeline(id: number): Promise<PipelineDetail> {
+  const res = await api.api.pipelines[':id'].$get({
+    param: { id: String(id) },
+  })
+  if (!res.ok) {
+    throw await toApiError(res)
+  }
+  const { pipeline } = await res.json()
+  return pipeline
+}
+
 export function usePipeline(id: number) {
   return useQuery({
     queryKey: pipelineKey(id),
-    queryFn: async (): Promise<PipelineDetail> => {
-      const res = await api.api.pipelines[':id'].$get({
-        param: { id: String(id) },
-      })
-      if (!res.ok) {
-        throw await toApiError(res)
-      }
-      const { pipeline } = await res.json()
-      return pipeline
-    },
+    queryFn: () => fetchPipeline(id),
   })
 }
 
