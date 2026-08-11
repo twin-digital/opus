@@ -50,6 +50,9 @@ An adventure declares the product twice — code and assets travel separately:
   already standing, so a server restart re-runs the story without duplicating the gallery. Once
   every placement has settled, the adventure reports each actor found standing — `findActor` by
   durable id — in chat.
+- For the same reason, moving the stage does not move an existing world's gallery: the actors
+  already standing keep their positions, and only a fresh world places the gallery at a new
+  `STAGE`.
 - Placement retries once a second, up to fifteen attempts, because a freshly started server has
   not loaded the stage's chunks yet; the adventure also keeps the stage loaded with a ticking
   area so the gallery stands whether or not a player is near. Both are the adventure's own logic:
