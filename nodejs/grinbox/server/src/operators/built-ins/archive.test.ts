@@ -19,6 +19,7 @@ function message(over: Partial<MessageView> = {}): MessageView {
     bodyText: null,
     bodyHtml: null,
     receivedAt: 0,
+    takenInAt: 1000,
     headers: new Map(),
     thread: null,
     ...over,
@@ -27,6 +28,7 @@ function message(over: Partial<MessageView> = {}): MessageView {
 
 interface ArchiveConfigShape {
   when?: { tag_key: string; equals: [string, ...string[]] }
+  delay_seconds?: number
 }
 
 function snapshot(config: ArchiveConfigShape = {}) {
@@ -103,5 +105,48 @@ describe('archive run', () => {
     }
     const { runArgs } = args(failed)
     await expect(runOperator(snapshot(), runArgs)).rejects.toBeInstanceOf(ArchiveError)
+  })
+})
+
+describe('archive with a delay (d-grcdd4ov)', () => {
+  it('records a pending archive instead of calling the mailbox', async () => {
+    const { fake, runArgs } = args(archived())
+    const result = await runOperator(snapshot({ delay_seconds: 3600 }), runArgs)
+
+    expect(fake.calls.find((c) => c.operation === 'archive')).toBeUndefined()
+    expect(result.tags).toEqual([])
+    expect(result.events).toEqual([
+      {
+        eventType: 'pending_archive_recorded',
+        // The message fixture's take-in is 1000.
+        detailsJson: JSON.stringify({ due_at: 4600, delay_seconds: 3600 }),
+      },
+    ])
+  })
+
+  it('measures the delay from the take-in, not the triage', async () => {
+    const { runArgs } = args(archived())
+    const result = await runOperator(snapshot({ delay_seconds: 60 }), {
+      ...runArgs,
+      message: { ...runArgs.message, takenInAt: 5_000, receivedAt: 4_000 },
+    })
+    expect(JSON.parse(result.events?.[0]?.detailsJson ?? 'null')).toMatchObject({ due_at: 5_060 })
+  })
+
+  it('records nothing when the gate does not fire', async () => {
+    const { fake, runArgs } = args(archived(), { disposition: 'keep' })
+    const result = await runOperator(
+      snapshot({ delay_seconds: 60, when: { tag_key: 'disposition', equals: ['archive'] } }),
+      runArgs,
+    )
+    expect(result.events ?? []).toEqual([])
+    expect(fake.calls.find((c) => c.operation === 'archive')).toBeUndefined()
+  })
+
+  it('archives during the triage when no delay is stored', async () => {
+    const { fake, runArgs } = args(archived())
+    const result = await runOperator(snapshot({}), runArgs)
+    expect(fake.calls.find((c) => c.operation === 'archive')).toBeDefined()
+    expect(result.events ?? []).toEqual([])
   })
 })

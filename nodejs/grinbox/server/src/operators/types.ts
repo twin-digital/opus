@@ -10,6 +10,7 @@
 
 import type { Contract, OperatorConfigFor, OperatorTypeKey, Resource, ResourceOpResult } from '@grinbox/shared'
 import type { z } from 'zod'
+import type { TriageEventInput } from '../pipeline/triage-event.js'
 import type { MessagesTable } from '../db/schema.js'
 
 /**
@@ -50,6 +51,12 @@ export interface MessageView {
   readonly bodyText: string | null
   readonly bodyHtml: string | null
   readonly receivedAt: number | null
+  /**
+   * Unix seconds grinbox took the Message in — the moment a delayed Archive
+   * measures its delay from (d-grcdd4ov), and the same clock the digest's
+   * coverage span reads.
+   */
+  readonly takenInAt: number
   readonly headers: ReadonlyMap<string, string>
   readonly thread: {
     readonly backendThreadId: string | null
@@ -122,6 +129,7 @@ export function messageViewFromRow(row: MessagesTable): MessageView {
     bodyText: row.body_text,
     bodyHtml: row.body_html,
     receivedAt: row.received_at,
+    takenInAt: row.created_at as unknown as number,
     headers,
     thread:
       row.backend_thread_id ?
@@ -311,12 +319,15 @@ export interface OperatorRunInput<K extends OperatorTypeKey> {
 }
 
 /**
- * What an Operator's `run` returns: only its output Tags. Side effects
- * (notifications, labels, sends) go through the metered clients, which
- * accumulate their own events/usage; the run never reports them here.
+ * What an Operator's `run` returns: its output Tags, and any events it records
+ * itself. Side effects (notifications, labels, sends) go through the metered
+ * clients, which accumulate their own events; `events` is for what an Operator
+ * concluded without reaching a Resource at all — a delayed Archive recording a
+ * pending Archive rather than calling (d-grcdd4ov).
  */
 export interface OperatorRunResult {
   readonly tags: readonly { key: string; value: string }[]
+  readonly events?: readonly TriageEventInput[]
 }
 
 /**

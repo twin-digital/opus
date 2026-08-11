@@ -11,8 +11,10 @@
  */
 
 import { type Kysely, sql } from 'kysely'
+import { reconcilePendingArchiveOnSettle } from '../archive/pending-archive.js'
 import type { Database } from '../db/schema.js'
 import { withPipelineEditLock } from './edit-lock.js'
+import type { TriageEventInput } from './triage-event.js'
 
 /** A single output Tag an Operator produced. */
 export interface OutputTag {
@@ -20,12 +22,7 @@ export interface OutputTag {
   readonly value: string
 }
 
-/** A `triage_events` row to record (sequence_num is assigned in-transaction). */
-export interface TriageEventInput {
-  readonly eventType:
-    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
-  readonly detailsJson: string | null
-}
+export type { TriageEventInput } from './triage-event.js'
 
 /** The run being completed: identity + denormalized message id. */
 export interface RunRef {
@@ -88,6 +85,28 @@ export async function persistOperatorResult(
     }
 
     await settleTriageIfTerminal(tx, run.triageId, ts)
+  })
+}
+
+/**
+ * Appends events to an already-terminal Operator run, leaving its status,
+ * timings, and the Triage's settlement untouched. The pending-Archive sweep
+ * uses it to record what a due Archive did on the run that recorded it
+ * (d-41v9yqvh) long after that run completed.
+ */
+export async function appendTriageEvents(
+  db: Kysely<Database>,
+  run: RunRef,
+  events: readonly TriageEventInput[],
+): Promise<void> {
+  if (events.length === 0) {
+    return
+  }
+  return withPipelineEditLock(db, async (tx) => {
+    const ts = now()
+    for (const event of events) {
+      await insertTriageEvent(tx, run, event, ts)
+    }
   })
 }
 
@@ -165,6 +184,10 @@ export async function settleTriageIfTerminal(tx: Kysely<Database>, triageId: num
       updated_at         = excluded.updated_at
     WHERE excluded.triage_started_at > current_triages.triage_started_at
   `.execute(tx)
+
+  // The Message's pending Archive is the latest settled Triage's (d-0tajzoy7),
+  // so it is reconciled here, in the settlement's own transaction.
+  await reconcilePendingArchiveOnSettle(tx, triageId, ts)
 
   return true
 }

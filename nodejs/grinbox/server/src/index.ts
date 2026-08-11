@@ -17,6 +17,15 @@ export * from './db/index.js'
 // Config / env loader.
 export { type Config, loadConfig, TOKEN_ENC_KEY_ENV, TOKEN_ENC_KEY_BYTES } from './config.js'
 
+// The one heartbeat every scheduler wakes on (d-gzv0jty7).
+export {
+  type Heartbeat,
+  type HeartbeatDeps,
+  type HeartbeatTick,
+  createHeartbeat,
+  heartbeatCronPattern,
+} from './heartbeat.js'
+
 // Encryption seam (consumed by OAuth token storage).
 export { type Encryptor, makeEncryptor } from './crypto/encryption.js'
 
@@ -80,6 +89,10 @@ export * from './execution/index.js'
 // Provider (History-API discovery + normalization), the injected Gmail-client
 // interface OAuth fills, and the `messages` UPSERT the poll loop calls.
 export * from './providers/index.js'
+
+// Delayed archiving: the pending Archive's stored shape, the settlement
+// reconcile, and the sweep the heartbeat wakes.
+export * from './archive/index.js'
 
 // Poll loop: per-Account poll cycle (fetch + upsert + enqueue), the
 // ProviderFactory seam OAuth fills, and the croner-driven scheduler that polls

@@ -7,6 +7,7 @@ import * as digestRuns from './20260603000000_digest_runs.js'
 import * as mailResources from './20260604000000_mail_resources.js'
 import * as limitOrigin from './20260605000000_limit_origin.js'
 import * as notificationCooldowns from './20260811000000_notification_cooldowns.js'
+import * as pendingArchives from './20260812000000_pending_archives.js'
 
 /**
  * Static migration registry: migration name → module. The migrator builds its
@@ -29,4 +30,5 @@ export const migrations: Record<string, Migration> = {
   '20260604000000_mail_resources': mailResources,
   '20260605000000_limit_origin': limitOrigin,
   '20260811000000_notification_cooldowns': notificationCooldowns,
+  '20260812000000_pending_archives': pendingArchives,
 }

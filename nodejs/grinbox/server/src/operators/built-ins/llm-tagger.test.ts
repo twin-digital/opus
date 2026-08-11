@@ -19,6 +19,7 @@ function message(over: Partial<MessageView> = {}): MessageView {
     bodyText: 'the full body text',
     bodyHtml: null,
     receivedAt: 0,
+    takenInAt: 1000,
     headers: new Map(),
     thread: null,
     ...over,

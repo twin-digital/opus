@@ -1,4 +1,5 @@
 import { type ServerType, serve } from '@hono/node-server'
+import { type PendingArchiveScheduler, createPendingArchiveScheduler } from './archive/index.js'
 import { type Config, loadConfig } from './config.js'
 import { makeEncryptor } from './crypto/encryption.js'
 import {
@@ -11,6 +12,7 @@ import {
 } from './db/index.js'
 import { type DigestScheduler, createDigestScheduler, recoverInterruptedDigestRuns } from './digest/index.js'
 import { type ExecutionLoop, createExecutionLoop, recoverInterruptedRuns } from './execution/index.js'
+import { type Heartbeat, createHeartbeat } from './heartbeat.js'
 import { createApp } from './http/app.js'
 import { type GoogleOAuthClient, createPendingAuthStore, makeGoogleOAuthClient } from './oauth/index.js'
 import {
@@ -38,6 +40,10 @@ export interface Daemon {
   pollScheduler: PollScheduler
   /** The running digest scheduler (exposed so tests can drive it deterministically). */
   digestScheduler: DigestScheduler
+  /** The running pending-Archive sweep (exposed so tests can drive it deterministically). */
+  pendingArchiveScheduler: PendingArchiveScheduler
+  /** The one heartbeat every scheduler wakes on (d-gzv0jty7). */
+  heartbeat: Heartbeat
   /** Graceful shutdown: stop the HTTP server, stop the poll loop, drain workers,
    * close the DB, then resolve. Idempotent. */
   shutdown(): Promise<void>
@@ -55,8 +61,8 @@ export interface Daemon {
  *   6. recovery sweep — mark interrupted `running` runs `failed`
  *   7. create the HTTP app and start listening on host:port
  *   8. start the execution loop
- *   9. start the poll loop
- *  10. start the digest scheduler
+ *   9. start the heartbeat, which wakes the poll, digest, and pending-Archive
+ *      schedulers on one beat (d-gzv0jty7)
  *
  * The poll loop (per-Account fetch + Triage enqueue) only enqueues Triages; the
  * execution loop discovers their `pending` runs on its own ticks, so there is no
@@ -155,6 +161,10 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
   // (`llm_bedrock.invoke_model` + `mail_sender.send_message` as the Account).
   const digestScheduler = createDigestScheduler({ db, config, makeClients })
 
+  // Pending-Archive sweep: performs the Archives earlier Triages recorded for
+  // later, as each comes due (d-grcdd4ov, d-41v9yqvh).
+  const pendingArchiveScheduler = createPendingArchiveScheduler({ db, config, makeClients })
+
   // Poll loop: per-Account fetch + Triage enqueue, on a croner cadence. When
   // OAuth is configured the live ProviderFactory resolves each Gmail Account's
   // stored credential and returns a credential-backed `GmailProvider`; an Account
@@ -169,6 +179,18 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
     db,
     config,
     providerFactory,
+  })
+
+  // The one heartbeat (d-gzv0jty7). No scheduler keeps a timer of its own; each
+  // beat acts on whatever is due — an Account's elapsed interval, an Edition's
+  // passed cue, a pending Archive past its moment.
+  const heartbeat = createHeartbeat({
+    heartbeatSeconds: config.heartbeatSeconds,
+    ticks: [
+      { name: 'poll', run: () => pollScheduler.pollDueAccounts() },
+      { name: 'digest', run: () => digestScheduler.runDueDigests() },
+      { name: 'pending-archive', run: () => pendingArchiveScheduler.runDuePendingArchives() },
+    ],
   })
 
   const app = createApp({
@@ -199,13 +221,9 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
   // Execution loop: pull ready triage_operator_runs and dispatch to workers.
   executionLoop.start()
 
-  // Poll loop: start after the execution loop so any Triage it enqueues has a
-  // running loop to discover it.
-  pollScheduler.start()
-
-  // Digest scheduler: independent of the other loops (its runs live in
-  // `digest_runs`, not Triages).
-  digestScheduler.start()
+  // Heartbeat: started after the execution loop so any Triage a poll enqueues
+  // has a running loop to discover it.
+  heartbeat.start()
 
   console.log(`[grinbox] daemon listening on http://${config.httpHost}:${config.httpPort} (db=${config.dbPath})`)
 
@@ -227,10 +245,12 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
       })
     })
 
-    // 2. Stop the poll loop so no new Triages are enqueued during drain, and
-    //    the digest scheduler (awaiting any in-flight digest run's DB writes).
-    pollScheduler.stop()
-    await digestScheduler.stop()
+    // 2. Stop the heartbeat so no new Triages are enqueued during drain, then
+    //    let any in-flight digest run and pending-Archive sweep finish their
+    //    DB writes.
+    heartbeat.stop()
+    await digestScheduler.drain()
+    await pendingArchiveScheduler.drain()
 
     // 3. Stop the execution loop and drain in-flight workers. Workers still in
     //    flight resolve before this returns; any left `running` on a crash are
@@ -250,6 +270,8 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
     executionLoop,
     pollScheduler,
     digestScheduler,
+    pendingArchiveScheduler,
+    heartbeat,
     shutdown,
   }
 }

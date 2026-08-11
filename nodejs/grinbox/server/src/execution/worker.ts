@@ -136,7 +136,9 @@ export async function runWorker(
 
     await persistOperatorResult(db, ref(run, pipelineId), 'completed', {
       tags: outputTags,
-      events: toTriageEvents(events),
+      // The Operator's own events (a delayed Archive's recording) follow the
+      // metered clients' — the clients ran first.
+      events: [...toTriageEvents(events), ...(result.events ?? [])],
       usage: usageOrNull(usage),
       errorSummary: null,
       durationMs: Date.now() - startedMs,
