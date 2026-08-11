@@ -1,7 +1,7 @@
 ---
-"@grinbox/server": minor
-"@grinbox/web": minor
-"@grinbox/shared": minor
+'@grinbox/server': minor
+'@grinbox/web': minor
+'@grinbox/shared': minor
 ---
 
 Notification kinds and cooldowns, the digest's second rendition, and money in display form (grinbox 009).
