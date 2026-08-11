@@ -53,7 +53,6 @@ export type { PipelineSummary, PipelineDetail, OperatorDetail, TagKeyRegistryEnt
 export type {
   CurrentTag,
   MessageRow,
-  PendingArchiveSummary,
   MessageListResponse,
   OperatorRunDetail,
   TriageEventDetail,

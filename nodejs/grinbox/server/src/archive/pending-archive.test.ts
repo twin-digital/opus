@@ -205,3 +205,22 @@ describe('the settlement reconcile', () => {
     expect(rows).toHaveLength(1)
   })
 })
+
+describe('the delayed archive end to end', () => {
+  it('a triage whose archive run recorded one leaves the message holding it', async () => {
+    // The archive run's own event is what settlement reads, so the operator's
+    // recording and the reconcile meet on the stored event rather than on a
+    // call between them.
+    const triageId = await settleTriage(2000, [pendingArchiveDueAt(1000, 3600)])
+    expect(await standing()).toMatchObject({ due_at: 4600, triage_id: triageId })
+
+    const events = await db
+      .selectFrom('triage_events')
+      .select(['event_type', 'details_json'])
+      .where('triage_id', '=', triageId)
+      .execute()
+    expect(events).toHaveLength(1)
+    expect(events[0]?.event_type).toBe('pending_archive_recorded')
+    expect(JSON.parse(events[0]?.details_json ?? 'null')).toMatchObject({ due_at: 4600 })
+  })
+})

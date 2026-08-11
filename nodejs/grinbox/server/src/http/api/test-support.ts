@@ -9,7 +9,7 @@ import { openDatabase } from '../../db/connection.js'
 import type { DB } from '../../db/index.js'
 import { runMigrations } from '../../db/migrator.js'
 import type { SourceState } from '@grinbox/shared'
-import type { Database } from '../../db/schema.js'
+import type { Database, PendingArchiveStatus } from '../../db/schema.js'
 
 /** A fixed "now" the time-window tests anchor on (UNIX seconds). */
 export const FIXED_NOW = 1_700_000_000
@@ -211,8 +211,7 @@ export async function insertTriage(
     makeCurrent?: boolean
     tags?: { key: string; value: string }[]
     events?: {
-      eventType:
-        'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
+      eventType: Database['triage_events']['event_type']
       detailsJson?: string | null
       recordedAt: number
     }[]
@@ -314,4 +313,32 @@ export async function insertTriage(
   }
 
   return triage.id
+}
+
+/** Seed a pending Archive row; defaults to the standing status. */
+export async function insertPendingArchive(
+  db: Kysely<Database>,
+  values: {
+    messageId: number
+    triageId: number
+    operatorId: number
+    dueAt: number
+    status?: PendingArchiveStatus
+  },
+): Promise<number> {
+  const status = values.status ?? 'pending'
+  const r = await db
+    .insertInto('pending_archives')
+    .values({
+      message_id: values.messageId,
+      triage_id: values.triageId,
+      operator_id: values.operatorId,
+      due_at: values.dueAt,
+      status,
+      settled_at: status === 'pending' ? null : 1500,
+      created_at: 1000,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow()
+  return r.id
 }

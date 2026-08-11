@@ -14,6 +14,7 @@ import { type Kysely, sql } from 'kysely'
 import { reconcilePendingArchiveOnSettle } from '../archive/pending-archive.js'
 import type { Database } from '../db/schema.js'
 import { withPipelineEditLock } from './edit-lock.js'
+import type { TriageEventInput } from './triage-event.js'
 
 /** A single output Tag an Operator produced. */
 export interface OutputTag {
@@ -21,11 +22,7 @@ export interface OutputTag {
   readonly value: string
 }
 
-/** A `triage_events` row to record (sequence_num is assigned in-transaction). */
-export interface TriageEventInput {
-  readonly eventType: Database['triage_events']['event_type']
-  readonly detailsJson: string | null
-}
+export type { TriageEventInput } from './triage-event.js'
 
 /** The run being completed: identity + denormalized message id. */
 export interface RunRef {
@@ -88,6 +85,28 @@ export async function persistOperatorResult(
     }
 
     await settleTriageIfTerminal(tx, run.triageId, ts)
+  })
+}
+
+/**
+ * Appends events to an already-terminal Operator run, leaving its status,
+ * timings, and the Triage's settlement untouched. The pending-Archive sweep
+ * uses it to record what a due Archive did on the run that recorded it
+ * (d-41v9yqvh) long after that run completed.
+ */
+export async function appendTriageEvents(
+  db: Kysely<Database>,
+  run: RunRef,
+  events: readonly TriageEventInput[],
+): Promise<void> {
+  if (events.length === 0) {
+    return
+  }
+  return withPipelineEditLock(db, async (tx) => {
+    const ts = now()
+    for (const event of events) {
+      await insertTriageEvent(tx, run, event, ts)
+    }
   })
 }
 

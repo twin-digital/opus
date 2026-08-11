@@ -16,6 +16,7 @@ function message(over: Partial<MessageView> = {}): MessageView {
     bodyText: 'body here',
     bodyHtml: null,
     receivedAt: 0,
+    takenInAt: 1000,
     headers: new Map([['list-id', 'news.example.com']]),
     thread: null,
     ...over,

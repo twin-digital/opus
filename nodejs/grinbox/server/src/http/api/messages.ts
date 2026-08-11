@@ -21,6 +21,7 @@
  * with no current Triage in that Pipeline is excluded.
  */
 
+import type { PendingArchive } from '@grinbox/shared'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { sql } from 'kysely'
@@ -39,21 +40,6 @@ export interface CurrentTag {
   readonly pipeline_id: number
 }
 
-/**
- * The Archive a Triage recorded and grinbox still owes the Message
- * (d-p0ea1t8q). Carried by every read surface a Message appears on while it
- * stands, so what a re-triage would cancel is visible before it fires. `null`
- * where the Message holds none.
- */
-export interface PendingArchiveSummary {
-  /** Unix seconds the Archive comes due. */
-  readonly due_at: number
-  /** The Triage that recorded it. */
-  readonly triage_id: number
-  /** The Archive Operator whose run recorded it. */
-  readonly operator_id: number
-}
-
 export interface MessageRow {
   readonly id: number
   readonly account_id: number
@@ -66,8 +52,13 @@ export interface MessageRow {
   /** Latest Triage status across the Message's current Triages, if any. */
   readonly latest_triage_status: string | null
   readonly current_tags: readonly CurrentTag[]
-  /** The standing pending Archive, or `null` (d-p0ea1t8q). */
-  readonly pending_archive: PendingArchiveSummary | null
+  /**
+   * The standing pending Archive, or `null` (d-p0ea1t8q, d-qk3xs2eg). The
+   * member is always present and carries only a *standing* one — its absence
+   * is `null`, and there is no status discriminator to read. The value's shape
+   * is `@grinbox/shared`'s (d-a4yrn8sw).
+   */
+  readonly pending_archive: PendingArchive | null
 }
 
 export interface MessageListResponse {
@@ -231,14 +222,15 @@ export function createMessagesRoutes(deps: ApiDeps) {
     })
 }
 
-/** Project a standing row into the response shape; `null` where none stands. */
+/** Project a standing row into the response value; `null` where none stands. */
 function toPendingArchiveSummary(
-  standing: { due_at: number; triage_id: number; operator_id: number } | undefined,
-): PendingArchiveSummary | null {
+  standing: { message_id: number; due_at: number; triage_id: number; operator_id: number } | undefined,
+): PendingArchive | null {
   if (standing === undefined) {
     return null
   }
-  return { due_at: standing.due_at, triage_id: standing.triage_id, operator_id: standing.operator_id }
+  const { message_id: _messageId, ...value } = standing
+  return value
 }
 
 type ListFilters = z.infer<typeof listQuery>

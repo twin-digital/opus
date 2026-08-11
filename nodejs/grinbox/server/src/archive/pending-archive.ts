@@ -19,7 +19,7 @@
 
 import type { Kysely } from 'kysely'
 import type { Database, PendingArchiveStatus } from '../db/schema.js'
-import type { TriageEventInput } from '../pipeline/persist.js'
+import type { TriageEventInput } from '../pipeline/triage-event.js'
 
 /** The moment a delayed Archive comes due: take-in plus the delay. */
 export function pendingArchiveDueAt(takenInAt: number, delaySeconds: number): number {

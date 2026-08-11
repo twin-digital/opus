@@ -325,7 +325,7 @@ export interface PendingArchivesTable {
   operator_id: number
   /** Unix seconds: the Message's take-in plus the Operator's `delay_seconds`. */
   due_at: number
-  status: ColumnType<PendingArchiveStatus, PendingArchiveStatus, PendingArchiveStatus>
+  status: PendingArchiveStatus
   /** Unix seconds the row left `pending`; null while it stands. */
   settled_at: number | null
   created_at: CreatedAt
