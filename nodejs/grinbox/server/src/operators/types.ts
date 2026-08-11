@@ -186,7 +186,15 @@ export interface MailboxApplyCategoryArgs {
 export interface MailSendArgs {
   readonly to: string
   readonly subject: string
+  /** The required plain-text rendition (d-rd986rrt). */
   readonly body: string
+  /**
+   * Optional rich rendition of the same content, sent beside the plain text in
+   * one mail (d-rd986rrt, d-1oqjgi9m). Always permitted where sending is
+   * declared — a backend that cannot offer alternatives sends the plain text
+   * alone rather than failing (d-or4jo6s1).
+   */
+  readonly body_rich?: string
 }
 
 export interface MailboxFetchArgs {
@@ -257,12 +265,41 @@ export interface ResourceClients {
  */
 export type MakeResourceClient = <R extends Resource>(resource: R, operations: readonly string[]) => ResourceClients[R]
 
+// --- The notification cooldown gate (d-5amonj40, d-6ptxams7) ---
+
+/**
+ * The cooldown check's verdict. Suppression carries the kind and the run whose
+ * push it deferred to (d-e9jslw4x); the interface resolves that run to its
+ * Triage.
+ */
+export type CooldownVerdict =
+  | { readonly suppressed: false }
+  | {
+      readonly suppressed: true
+      readonly kind: string
+      readonly deferred_to: { readonly triage_id: number; readonly operator_id: number }
+    }
+
+/**
+ * The seam Notify consults before its push reaches any Resource. The check
+ * runs BEFORE the metered client — a suppressed push reaches no resource and
+ * counts against no Limit (d-6ptxams7). The gate is built per run by the
+ * worker: `checkCooldown` also records the `push_suppressed` event against the
+ * run when it suppresses, and `recordPush` records a delivered kind-named push
+ * so later runs can defer to it.
+ */
+export interface NotificationGate {
+  checkCooldown(kind: string): Promise<CooldownVerdict>
+  recordPush(kind: string): Promise<void>
+}
+
 /**
  * What an Operator's `run` receives. `config` is the type's parsed config;
  * `tags` are the input Tags in the current Triage's scope (key → value);
  * `resources` holds only the metered clients for the Resources the type
  * declares; `signal` is the Operator-timeout AbortSignal threaded into every
- * client.
+ * client. `notifications` is the cooldown gate the worker builds for Notify
+ * runs; absent for other types (and in digest runs, which push nothing).
  */
 export interface OperatorRunInput<K extends OperatorTypeKey> {
   readonly config: OperatorConfigFor<K>
@@ -270,6 +307,7 @@ export interface OperatorRunInput<K extends OperatorTypeKey> {
   readonly tags: ReadonlyMap<string, string>
   readonly resources: Partial<ResourceClients>
   readonly signal: AbortSignal
+  readonly notifications?: NotificationGate
 }
 
 /**

@@ -17,6 +17,7 @@
 import type { ApiErrorBody } from '@grinbox/shared'
 import { z } from 'zod'
 import { PipelineNotAssignableError, PollIntervalOutOfRangeError } from '../../config/account-config.js'
+import { CooldownConflictError, InvalidKindNameError } from '../../config/cooldown-config.js'
 import { LimitConflictError, SeededLimitError } from '../../config/limit-config.js'
 import { CredentialInUseError, NotFoundError, PipelineValidationError } from '../../pipeline/operator-save.js'
 import { PipelineNameConflictError } from '../../pipeline/pipeline-config.js'
@@ -91,6 +92,24 @@ export function mapWriteError(err: unknown): MappedError | null {
     return {
       status: 409,
       body: { error: { code: 'limit_conflict', message: err.message } },
+    }
+  }
+  if (err instanceof CooldownConflictError) {
+    return {
+      status: 409,
+      body: {
+        error: {
+          code: 'cooldown_conflict',
+          message: err.message,
+          details: { kind: err.kind },
+        },
+      },
+    }
+  }
+  if (err instanceof InvalidKindNameError) {
+    return {
+      status: 400,
+      body: { error: { code: 'invalid_kind_name', message: err.message } },
     }
   }
   if (err instanceof PollIntervalOutOfRangeError) {
