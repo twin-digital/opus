@@ -1,5 +1,6 @@
+import { FACT_ID } from '../ids.js'
 import { loadProducts } from '../load.js'
-import { loadPool } from '../pools.js'
+import { factLabel, loadPool } from '../pools.js'
 
 import type { FileTree } from '../tree.js'
 
@@ -8,9 +9,9 @@ export type Citations = (citation: string) => string | undefined
 
 /**
  * Resolve cited ids against the product's own entries and the repo-wide facts pool. The kind is
- * read from the id's prefix and nothing stores it; a fact carries no title, so it shows the first
- * line of its claim. An id resolving to nothing is shown as the id alone, since a dangling citation
- * is a merge-gate finding rather than the session's to report.
+ * read from the id's prefix and nothing stores it; a fact shows its title, or the first line of
+ * its claim where it has none. An id resolving to nothing is shown as the id alone, since a
+ * dangling citation is a merge-gate finding rather than the session's to report.
  */
 export const resolveCitations = (tree: FileTree, productId: string): Citations => {
   const titles = new Map<string, string>()
@@ -24,9 +25,11 @@ export const resolveCitations = (tree: FileTree, productId: string): Citations =
     }
   }
   for (const fact of loadPool(tree).facts) {
-    const claim = typeof fact.data.claim === 'string' ? fact.data.claim : ''
     if (fact.id !== '') {
-      titles.set(`f:${fact.id}`, claim.trim().split('\n')[0])
+      titles.set(`f:${fact.id}`, factLabel(fact))
+      if (FACT_ID.test(fact.id)) {
+        titles.set(fact.id, factLabel(fact)) // an opaque-id fact is cited bare too
+      }
     }
   }
   return (citation) => titles.get(citation)

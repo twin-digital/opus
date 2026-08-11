@@ -11,6 +11,8 @@ properties:
     pattern: '^f-[0-9a-z]{8}$'
   claim:
     type: string
+  title:
+    type: string
   backing:
     enum: [tested, documented, assumed]
   status:

@@ -10,6 +10,9 @@ const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
  */
 export type IdKind = 'r' | 'd' | 'q' | 'b' | 'f' | 'run'
 
+/** An opaque fact id. Facts with such an id are cited bare; a slug id needs the `f:` prefix. */
+export const FACT_ID = /^f-[0-9a-z]{8}$/
+
 /**
  * Every id-shaped token mentioned anywhere under products/, facts/, and evidence/ — declarations
  * and citations alike. Facts and runs share one pool namespace with the claim ids (d-kqofgshc).

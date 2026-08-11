@@ -1,4 +1,5 @@
 import { foldProduct } from './fold.js'
+import { FACT_ID } from './ids.js'
 import { loadProducts } from './load.js'
 import { loadPool } from './pools.js'
 
@@ -87,15 +88,17 @@ export const checkPoolFrozen = (head: FileTree, base: FileTree): Finding[] => {
   return findings
 }
 
-/** The in-force foundations of each product citing `f:<id>`, by product id. */
+/** The in-force foundations of each product citing the fact, in either spelling, by product id. */
 const citersOf = (tree: FileTree, factId: string): Map<string, string[]> => {
   const byProduct = new Map<string, string[]>()
-  const citation = `f:${factId}`
+  // an opaque fact id is also cited bare; a slug id resolves only through the prefix
+  const spellings = [`f:${factId}`, ...(FACT_ID.test(factId) ? [factId] : [])]
+  const cites = (citations: string[] | undefined) => (citations ?? []).some((citation) => spellings.includes(citation))
   for (const product of loadProducts(tree).products.values()) {
     const fold = foldProduct(product, undefined, true)
     const citers = [
-      ...[...fold.requirements.values()].filter(({ entry }) => (entry.informed_by ?? []).includes(citation)),
-      ...[...fold.decisions.values()].filter(({ entry }) => (entry.because ?? []).includes(citation)),
+      ...[...fold.requirements.values()].filter(({ entry }) => cites(entry.informed_by)),
+      ...[...fold.decisions.values()].filter(({ entry }) => cites(entry.because)),
     ].map(({ entry }) => entry.id)
     if (citers.length > 0) {
       byProduct.set(product.id, citers)

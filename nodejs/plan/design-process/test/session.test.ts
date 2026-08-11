@@ -204,6 +204,26 @@ describe('a cited id is shown as the title it resolves to — d-mhlya385', () =>
     expect(citationLine('f:a1b2c3d4', resolve)).toBe('the login provider needs a connection [f:a1b2c3d4]')
   })
 
+  it('shows a titled fact by its title, bare id and prefixed alike', () => {
+    const files = draftFiles()
+    files['facts/demo.yaml'] = yaml({
+      version: '1',
+      facts: [
+        {
+          id: 'f-a1b2c3d4',
+          title: 'the provider needs a connection',
+          claim: 'the login provider needs a connection',
+          sources: [],
+        },
+      ],
+    })
+    const made = makeRepo(files)
+    roots.push(made.root)
+    const resolve = resolveCitations(made.tree, 'demo')
+    expect(citationLine('f-a1b2c3d4', resolve)).toBe('the provider needs a connection [f-a1b2c3d4]')
+    expect(citationLine('f:f-a1b2c3d4', resolve)).toBe('the provider needs a connection [f:f-a1b2c3d4]')
+  })
+
   it('shows an id that resolves to nothing as the id alone', () => {
     expect(citationLine('d-99999999', NO_TITLES)).toBe('d-99999999')
   })
