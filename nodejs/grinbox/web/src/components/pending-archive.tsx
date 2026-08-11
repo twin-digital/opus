@@ -1,4 +1,4 @@
-import type { PendingArchiveSummary } from '@grinbox/server'
+import type { PendingArchive } from '@grinbox/shared'
 import { Clock } from 'lucide-react'
 
 import { absoluteTime, timeUntil } from '@/lib/format'
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
  */
 
 /** Compact row indication: a clock and the countdown, absolute moment on hover. */
-export function PendingArchiveBadge({ pending, className }: { pending: PendingArchiveSummary; className?: string }) {
+export function PendingArchiveBadge({ pending, className }: { pending: PendingArchive; className?: string }) {
   return (
     <span
       data-testid='pending-archive-badge'
@@ -43,7 +43,7 @@ export function PendingArchiveNotice({
   pending,
   onSelectTriage,
 }: {
-  pending: PendingArchiveSummary
+  pending: PendingArchive
   onSelectTriage: (triageId: number) => void
 }) {
   return (

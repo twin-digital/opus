@@ -3,10 +3,10 @@ import type {
   MessageListResponse,
   MessageRow,
   OperatorRunDetail,
-  PendingArchiveSummary,
   TriageEventDetail,
   TriageTagDetail,
 } from '@grinbox/server'
+import type { PendingArchive } from '@grinbox/shared'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from './api'
@@ -162,7 +162,7 @@ export interface MessageDetail {
    * Message, or `null` where none stands (d-p0ea1t8q). Only a standing one is
    * on the wire — a fired, cancelled, or superseded one is gone.
    */
-  readonly pending_archive: PendingArchiveSummary | null
+  readonly pending_archive: PendingArchive | null
   readonly triages: readonly MessageTriage[]
 }
 
@@ -226,4 +226,4 @@ export function useSyncNow() {
   })
 }
 
-export type { MessageRow, PendingArchiveSummary }
+export type { MessageRow, PendingArchive }
