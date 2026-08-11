@@ -206,6 +206,15 @@ describe('withVanillaDimensions', () => {
 // ---------------------------------------------------------------------------
 
 describe('withVanillaEntityTypes', () => {
+  // The shipped list is committed, and the count is written out here rather than derived, so a
+  // @minecraft/vanilla-data content bump fails this before it can ride the non-major auto-merge.
+  // Regenerate, read the diff of which ids moved, and move this number with it.
+  it('ships 128 ids, every one prefixed and issued once', () => {
+    expect(VANILLA_ENTITY_TYPE_IDS).toHaveLength(128)
+    expect(VANILLA_ENTITY_TYPE_IDS.filter((id) => !id.startsWith('minecraft:'))).toEqual([])
+    expect(new Set(VANILLA_ENTITY_TYPE_IDS).size).toBe(VANILLA_ENTITY_TYPE_IDS.length)
+  })
+
   it('registers the ids @minecraft/vanilla-data carries, in that source order', () => {
     const server = createServer()
     withVanillaEntityTypes(server)

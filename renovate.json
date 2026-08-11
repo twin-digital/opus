@@ -39,6 +39,14 @@
       "commitMessageTopic": "patched dependency {{depName}}"
     },
     {
+      "description": "`minecraft-test-lib` derives its whole shipped surface from these two at build time — the fake classes and manifests from `@minecraft/server`, the vanilla id lists a preset registers from `@minecraft/vanilla-data` — and states the versions it answers for. A bump changes what the package claims, so it never auto-merges: a human reads the regenerated diff and moves the counts the tests write out. Renovate installs with `--ignore-scripts` and commits only its changeset, so the generated files in its PR are stale by construction; regenerate locally before reviewing.",
+      "matchPackageNames": ["@minecraft/server", "@minecraft/vanilla-data"],
+      "groupName": null,
+      "automerge": false,
+      "addLabels": ["derived-surface"],
+      "commitMessageTopic": "derived-surface source {{depName}}"
+    },
+    {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
       "matchManagers": ["nvm"],
       "enabled": false
