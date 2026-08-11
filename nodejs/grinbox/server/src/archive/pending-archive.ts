@@ -17,6 +17,7 @@
  * concurrent settlements cannot both write a standing row.
  */
 
+import type { PendingArchiveSkipReason } from '@grinbox/shared'
 import type { Kysely } from 'kysely'
 import type { Database, PendingArchiveStatus } from '../db/schema.js'
 import type { TriageEventInput } from '../pipeline/triage-event.js'
@@ -37,10 +38,10 @@ export function pendingArchiveRecordedEvent(details: PendingArchiveRecordedDetai
   return { eventType: 'pending_archive_recorded', detailsJson: JSON.stringify(details) }
 }
 
-/** Why a due pending Archive made no call (d-41v9yqvh). */
-export type PendingArchiveSkipReason = 'already_departed' | 'abandoned' | 'pipeline_inactive'
-
-/** The event recorded on the run when a due pending Archive made no call. */
+/**
+ * The event recorded on the run when a due pending Archive made no call. The
+ * reason vocabulary is `@grinbox/shared`'s (d-a4yrn8sw).
+ */
 export function pendingArchiveSkippedEvent(reason: PendingArchiveSkipReason): TriageEventInput {
   return { eventType: 'pending_archive_skipped', detailsJson: JSON.stringify({ reason }) }
 }

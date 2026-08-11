@@ -1,6 +1,5 @@
 export {
   type PendingArchiveRecordedDetails,
-  type PendingArchiveSkipReason,
   type StandingPendingArchive,
   loadStandingPendingArchives,
   pendingArchiveDueAt,
