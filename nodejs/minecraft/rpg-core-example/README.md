@@ -83,7 +83,7 @@ activated in the world `.minecraft.yml` names, then watches for changes.
 
 ### Checking the product in the world
 
-Join the server (add it in Bedrock by IP, port 19132) and verify, from spawn at `60 95 63`:
+Join the server (add it in Bedrock by IP, port 19132) and verify, from spawn at `465 70 -64`:
 
 > **The resource pack must be applied, or every actor is invisible.** An actor's appearance lives
 > in the assets pack's resource half, and the dev server offers its resource packs as _optional_
@@ -93,15 +93,16 @@ Join the server (add it in Bedrock by IP, port 19132) and verify, from spawn at 
 > `TEXTUREPACK_REQUIRED: "true"` in that file (the next `pnpm dev` regenerates it).
 
 1. **Every actor stands in the gallery** — the greeter at spawn, and one actor per preset in a
-   line running south, each at exactly the coordinates the story placed it — an actor holds where
-   the spawn call put it, mid-air included. A placement that could not settle is reported in chat
+   line running north, each standing on the ground at its placement's x/z: actors are placed one
+   block up and settle onto the surface. A placement that could not settle is reported in chat
    instead, naming the pack to install.
 2. **Names** — hover the cursor over each actor: the gallery shows preset default names (the
    wizard's is `Wizard`), the greeter shows `Eldrin the Greeter`.
 3. **Facing** — walk toward an actor and around it: it turns to face you, and holds still
    otherwise. Note whether the turn tracks you continuously or in occasional glances.
 4. **Creative immunity** — in creative mode: hit the actor (no damage, no death), try a name tag
-   (no rename), push it and break the block under it (it stays exactly where it was placed).
+   (no rename), push it and break the block under it (it cannot be shoved; with the ground gone
+   it falls).
 5. **Persistence** — `pnpm dev:stop`, then `pnpm dev` again and rejoin: the same actors stand at
    the same spots with the same names, and the gallery has not doubled.
 
@@ -115,5 +116,6 @@ docker exec twin-digital-monorepo-bedrock-1 send-command 'damage @e[type=rpg:wiz
 
 Damage must report `Could not apply damage`, and both `testfor` lines must find their target
 after a stop/start cycle — with the same entity count, so the story placed nothing twice.
-`querytarget @e[type=rpg:wizard]` must report each actor at its placement coordinates
-(the greeter at `60 95 63`, the gallery from `60 95 66` south), before and after the restart.
+`querytarget @e[type=rpg:wizard]` must report each actor standing on the ground at its
+placement's x/z (the greeter at `465 -64`, the gallery from `465 -67` north, each settled onto
+the surface at y `69`), with the same position before and after the restart.

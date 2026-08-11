@@ -125,7 +125,7 @@ describe('installAdventure', () => {
     expect(calls.map((call) => call.place.location)).toContainEqual({
       x: STAGE.x,
       y: STAGE.y,
-      z: STAGE.z + SPACING,
+      z: STAGE.z - SPACING,
     })
   })
 
