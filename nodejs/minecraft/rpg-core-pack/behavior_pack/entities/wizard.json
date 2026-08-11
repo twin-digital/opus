@@ -16,7 +16,7 @@
       },
       "minecraft:physics": {
         "has_collision": true,
-        "has_gravity": false
+        "has_gravity": true
       },
       "minecraft:damage_sensor": {
         "triggers": [
@@ -31,6 +31,14 @@
       "minecraft:pushable": {
         "is_pushable": false,
         "is_pushable_by_piston": false
+      },
+      "minecraft:movement": {
+        "value": 0
+      },
+      "minecraft:movement.basic": {},
+      "minecraft:navigation.walk": {},
+      "minecraft:water_movement": {
+        "drag_factor": 0.0
       },
       "minecraft:fire_immune": {},
       "minecraft:persistent": {},

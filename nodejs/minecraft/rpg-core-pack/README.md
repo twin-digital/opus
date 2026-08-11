@@ -38,9 +38,14 @@ both. Inside this workspace the version is left out — the dev kit completes it
 
 One entity identifier per preset, over one shared set of behavior components. An actor refuses all
 damage, is summonable by identifier only (no spawn egg, so it never appears in the creative menu),
-cannot be pushed or knocked back, has no gravity — it holds exactly where the spawn call put it,
-mid-air included — persists across restarts and chunk unloads, cannot be renamed by a player, and
-turns its head to face a player who comes near.
+persists across restarts and chunk unloads, cannot be renamed by a player, and turns its head to
+face a player who comes near.
+
+Gravity applies: an actor stands on the ground like anything else, and settles if the ground under
+it is removed. Nothing else in play should move it — it refuses knockback, cannot be pushed by
+entities or pistons, and carries a zeroed movement system so currents have nothing to drive. One
+engine-level vector remains: a piston moving the block an actor stands on carries the actor with
+it, and no entity component governs that.
 
 An operator's console `/kill` does remove an actor — it is a command, not something available in
 play. The library respawns a durably named actor from its record on the adventure's next placement.

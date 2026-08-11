@@ -73,9 +73,22 @@ describe('preset registry consistency', () => {
 })
 
 describe('shared actor components', () => {
-  it('disables gravity, so an actor holds exactly where it was placed', () => {
+  it('leaves gravity in force: an actor stands on the ground like anything else', () => {
     for (const { file, components } of behaviorEntities) {
-      expect(components['minecraft:physics'], file).toMatchObject({ has_gravity: false })
+      expect(components['minecraft:physics'], file).toMatchObject({ has_gravity: true })
+    }
+  })
+
+  it('blocks every stoppable displacement vector', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:knockback_resistance'], file).toMatchObject({ value: 1.0 })
+      expect(components['minecraft:pushable'], file).toMatchObject({
+        is_pushable: false,
+        is_pushable_by_piston: false,
+      })
+      // the shulker recipe: a zeroed movement system anchors against passive drift
+      expect(components['minecraft:movement'], file).toMatchObject({ value: 0 })
+      expect(components['minecraft:water_movement'], file).toMatchObject({ drag_factor: 0.0 })
     }
   })
 })
