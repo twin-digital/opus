@@ -1,5 +1,16 @@
 import type { IncrementSources, Product } from './load.js'
-import type { Finding } from './types.js'
+import type { DecisionCase, Finding } from './types.js'
+
+/**
+ * The form a decision's cases take wherever a decision is shown — the projection and the ratify
+ * session alike — in source order, the first matching case governing (d-qv81x173, d-f2h4xeee).
+ */
+export const caseLines = (cases: DecisionCase[] | undefined): string[] =>
+  (cases ?? []).map((branch) =>
+    'otherwise' in branch ?
+      `- otherwise: ${branch.otherwise.trim()}`
+    : `- when ${branch.when.trim()}: ${branch.then.trim()}`,
+  )
 
 /** How the budget counts: whitespace-separated tokens (d-kjeqksd8). */
 export const wordCount = (text: string): number => text.split(/\s+/).filter((word) => word.length > 0).length

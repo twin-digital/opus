@@ -1,12 +1,22 @@
+import { componentTree, resolveScopeId, scopeIds } from '../components.js'
 import { foldProduct } from '../fold.js'
 import { loadProducts } from '../load.js'
 
 import type { DraftIncrement, Product } from '../load.js'
 import type { FileTree } from '../tree.js'
-import type { DecisionEntry, ModelEntry, RequirementEntry, RetireEntry } from '../types.js'
+import type { DecisionCase, DecisionEntry, ModelEntry, RequirementEntry, RetireEntry, Scope } from '../types.js'
 
 /** What a question routes to — the kind of foundation that would answer it. */
 export type QuestionRoute = 'fact' | 'requirement' | 'decision'
+
+/**
+ * One component of an entry's scope, resolved against the product's component fold (d-let447tx).
+ * A slug reaching no live component keeps the slug and carries no description.
+ */
+export interface ScopeItem {
+  id: string
+  description?: string
+}
 
 /** An entry of a draft one of the session's two lists holds (d-26vs308h, d-ko3lggbr). */
 export interface OpenEntry {
@@ -29,6 +39,10 @@ export interface OpenEntry {
   amends?: string
   /** A decision's citations. */
   because?: string[]
+  /** A decision's cases, in source order (d-f2h4xeee). */
+  cases?: DecisionCase[]
+  /** The components a requirement or a decision is scoped to, resolved (d-let447tx). */
+  scope?: ScopeItem[]
   /** The route a question carries. */
   route?: QuestionRoute
   /** A requirement's rationale, as written. */
@@ -45,6 +59,27 @@ export interface OpenEntry {
   closedBy?: string
 }
 
+/**
+ * An entry's scope against the product's components, the drafts folded in so a component the
+ * draft itself declares resolves. A slug reaching no live component is kept as written.
+ */
+type ScopeResolver = (scope: Scope | undefined) => ScopeItem[] | undefined
+
+const scopeResolver = (product: Product): ScopeResolver => {
+  const tree = componentTree(foldProduct(product, undefined, true))
+  return (scope) => {
+    const ids = scopeIds(scope)
+    if (ids.length === 0) {
+      return undefined
+    }
+    return ids.map((id) => {
+      const resolved = resolveScopeId(tree, id)
+      const entry = resolved === undefined ? undefined : tree.entries.get(resolved)?.entry
+      return entry === undefined ? { id } : { id: entry.id, description: entry.description }
+    })
+  }
+}
+
 /** What an entry closes, whichever field carries it (d-g00ah4em). */
 export const closes = (entry: OpenEntry): string | undefined => entry.supersedes ?? entry.amends
 
@@ -52,11 +87,14 @@ export const closes = (entry: OpenEntry): string | undefined => entry.supersedes
  * Every entry the product's drafts leave unsettled: a decision still proposed, and every question
  * still open. This is what refuses a landing.
  */
-export const collectOpenEntries = (tree: FileTree, productId: string): OpenEntry[] =>
-  drafts(productOf(tree, productId)).flatMap((draft) => [
-    ...decisionEntries(draft).filter((entry) => entry.status === 'proposed'),
+export const collectOpenEntries = (tree: FileTree, productId: string): OpenEntry[] => {
+  const product = productOf(tree, productId)
+  const scoped = scopeResolver(product)
+  return drafts(product).flatMap((draft) => [
+    ...decisionEntries(draft, scoped).filter((entry) => entry.status === 'proposed'),
     ...questionEntries(draft),
   ])
+}
 
 const productOf = (tree: FileTree, productId: string): Product => {
   const product = loadProducts(tree).products.get(productId)
@@ -69,7 +107,7 @@ const productOf = (tree: FileTree, productId: string): Product => {
 const drafts = (product: Product, increment?: string): DraftIncrement[] =>
   increment === undefined ? product.drafts : product.drafts.filter((draft) => draft.name === increment)
 
-const decisionEntries = (draft: DraftIncrement): OpenEntry[] =>
+const decisionEntries = (draft: DraftIncrement, scoped: ScopeResolver): OpenEntry[] =>
   (draft.decisions?.data.decisions ?? []).map((entry): OpenEntry => ({
     kind: 'decision',
     id: entry.id,
@@ -81,6 +119,8 @@ const decisionEntries = (draft: DraftIncrement): OpenEntry[] =>
     pinned: entry.pinned,
     supersedes: entry.supersedes,
     because: entry.because,
+    cases: entry.cases,
+    scope: scoped(entry.scope),
   }))
 
 /**
@@ -99,13 +139,14 @@ export const collectSessionEntries = (
   const found = drafts(product, increment)
   // a retirement names a foundation in force, so its title and statement come from the fold at head
   const head = foldProduct(product)
+  const scoped = scopeResolver(product)
   const decisions = found.flatMap((draft) => [
-    ...decisionEntries(draft),
+    ...decisionEntries(draft, scoped),
     ...questionEntries(draft),
     ...retirementEntries(draft, draft.decisions?.data.retires, 'decisions', (id) => head.decisions.get(id)?.entry),
   ])
   const requirements = found.flatMap((draft) => [
-    ...requirementEntries(draft),
+    ...requirementEntries(draft, scoped),
     ...bindingEntries(draft),
     ...retirementEntries(
       draft,
@@ -125,7 +166,7 @@ export const collectSessionEntries = (
   return { decisions: decisions.map(marked), requirements: requirements.map(marked) }
 }
 
-const requirementEntries = (draft: DraftIncrement): OpenEntry[] =>
+const requirementEntries = (draft: DraftIncrement, scoped: ScopeResolver): OpenEntry[] =>
   (draft.requirements?.data.requirements ?? []).map((entry): OpenEntry => ({
     kind: 'requirement',
     id: entry.id,
@@ -136,6 +177,7 @@ const requirementEntries = (draft: DraftIncrement): OpenEntry[] =>
     amends: entry.amends,
     rationale: entry.rationale,
     verification: entry.verification,
+    scope: scoped(entry.scope),
   }))
 
 /** A binding is named by the contract it references, which is what the list shows in place of an id. */

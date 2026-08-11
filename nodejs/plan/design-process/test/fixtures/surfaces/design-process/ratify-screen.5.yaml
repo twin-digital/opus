@@ -1,4 +1,4 @@
-# surface: /design-process/ratify-screen@4
+# surface: /design-process/ratify-screen@5
 #
 # What the session renders. The pane layouts and the form of each field are this surface.
 # Which entries a list holds, and how a cited id is resolved, are decisions.
@@ -42,6 +42,37 @@ mock:
                                          │ supersedes:
                                          │   - the submit tallies what it ruled and pushes
                                          │     [d-lqmwczg3]                                  ⌄
+
+  scoped: |
+    mc-test-lib · wip-007-entity-type-registration · plan/mc-test-lib/entity-type-registration · #227
+    also changed: facts (1), schemas (1)                                          2 unresolved
+    ── decisions (5) ──────────────────────────────────────────────────────────────────────────────
+    ›the type catalog belongs to the s…  │ THE TYPE CATALOG BELONGS TO THE SERVER
+     d-herh9vjy                accepted  │ [d-herh9vjy]
+                                         │
+     EntityTypes behaves; the other se…  │ `createServer()` returns an `EntityTypes` bound to that
+     d-uky2xju6  closes d-duelxt32       │ server's own type catalog, so two servers in one process
+                                         │ share nothing and a test needs no reset hook. No catalog
+     registration is a free function a…  │ state lives at module scope.
+     d-fhq1ng5m                accepted  │
+                                         │ - when a server is installed: the aliased surface's
+     lookup reproduces the engine, mis…  │   module-scope `EntityTypes` is a third binding beside
+     d-0m25p71q                          │   `world` and `system`, moving with them
+                                         │ - otherwise: it throws ShimNotInstalledError, as the
+     the type catalog gates spawning, …  │   other two do while unset
+     d-dub2g4kr                          │
+                                         │ ─────────────────────────────────────────────────────
+                                         │ scope:
+                                         │   - the in-memory fakes of the `@minecraft/server`
+                                         │     object model and their control plane [fakes]
+                                         │   - the import-level shim that stands the fakes in for a
+                                         │     direct `@minecraft/server` module import [shim]
+                                         │ pinned(public-api): `server.EntityTypes` is per-server
+                                         │   rather than the one shared class object every server
+                                         │   holds today
+                                         │ because:
+                                         │   - a fake's surface is the engine's, member for member
+                                         │     [r-qayd22z2]                                       ⌄
 
   requirements: |
     increment-process · wip-001-the-review-session · plan/increment-process/the-review-session · #214
@@ -178,6 +209,7 @@ detail-pane:
     - heading
     - blank line
     - statement
+    - cases, on a decision carrying them
     - rationale, on a requirement carrying one
     - verification, on a requirement carrying one
     - horizontal rule
@@ -198,6 +230,16 @@ detail-pane:
           - verify: <text>
       notes: one step per item, in the order the source carries them, each keyed as the source keys it
       absent: the block is omitted where the requirement carries no verification
+  cases:
+    applies-to: a decision carrying them
+    form: |
+      - when <when>: <then>
+      - otherwise: <otherwise>
+    notes: >-
+      the cases in the order the source carries them, one per item, directly beneath the
+      statement they qualify and normative with it; a terminal `otherwise` takes the same item
+      form, carrying no condition
+    absent: the block is omitted where the decision carries none, as most do
   model-binding:
     statement: the binding's description, where it carries one
     metadata: the contract reference, and the binding's status where it is not the default
@@ -229,6 +271,17 @@ detail-pane:
   horizontal-rule:
     form: a rule spanning the pane, present only where metadata follows
   metadata:
+    scope:
+      applies-to: a requirement and a decision alike
+      form: |
+        scope:
+          - <description> [<component>]
+      notes: >-
+        one component per item, in the order the entry carries them, each resolved against the
+        product's component fold; a slug resolving to no live component appears as "  - <slug>"
+      absent: >-
+        the block is omitted where the entry carries no scope, and a source in a dialect
+        carrying facets rather than scope shows nothing in its place
     pinned:
       form: 'pinned(<reason>): <notes>'
       no-notes: 'pinned(<reason>)'
@@ -245,6 +298,6 @@ detail-pane:
       notes: one cited entry per item; an id resolving to nothing appears as "  - <id>"
       absent: a label with no entries is omitted
   wrapping:
-    applies-to: every block the pane renders — statement, pinning notes, and citations
+    applies-to: every block the pane renders — statement, cases, scope, pinning notes, and citations
     form: text too wide for the pane continues on the next row
     list-items: a continuation is indented to sit under its item's text, not under its marker

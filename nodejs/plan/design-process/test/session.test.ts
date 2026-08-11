@@ -20,7 +20,7 @@ import {
 } from '../src/session/staging.js'
 import { DirTree } from '../src/tree.js'
 
-import { demoProduct, makeRepo, removeRepo, yaml } from './helpers.js'
+import { demoProduct, demoV3, makeRepo, removeRepo, yaml } from './helpers.js'
 
 import type { Citations } from '../src/session/citations.js'
 import type { OpenEntry } from '../src/session/entries.js'
@@ -605,5 +605,59 @@ describe('the session’s lists show a draft’s retirements — d-ko3lggbr', ()
     const state = press(retiringSession(), 'down', 'down')
     expect(press(state, 'a').staged.rulings.size).toBe(0)
     expect(press(state, 'n').mode).toBe('note')
+  })
+})
+
+describe('an entry carries the scope it is ruled under — d-let447tx', () => {
+  const scopedFiles = (scope: unknown): Files => {
+    const files = demoV3()
+    files['products/demo3/increments/wip-002-scoped/decisions.yaml'] = yaml({
+      version: '3',
+      decisions: [
+        {
+          id: 'd-eeeeeeee',
+          title: 'a scoped choice',
+          statement: 'the engine does it this way.\n',
+          status: 'proposed',
+          scope,
+          cases: [{ when: 'the input parses', then: 'it runs' }, { otherwise: 'it reports' }],
+        },
+      ],
+    })
+    files['products/demo3/increments/wip-002-scoped/requirements.yaml'] = yaml({
+      version: '3',
+      requirements: [{ id: 'r-eeeeeeee', title: 'a scoped rule', statement: 'the parser reports.\n', scope: 'parser' }],
+    })
+    return files
+  }
+
+  const scopedLists = (scope: unknown) => {
+    const made = makeRepo(scopedFiles(scope))
+    roots.push(made.root)
+    return collectSessionEntries(made.tree, 'demo3', 'wip-002-scoped')
+  }
+
+  it('resolves each component against the product’s component fold', () => {
+    expect(scopedLists(['engine', 'parser']).decisions[0].scope).toEqual([
+      { id: 'engine', description: 'the core engine' },
+      { id: 'parser', description: 'the input parser' },
+    ])
+  })
+
+  it('keeps a slug that reaches no live component as the slug alone', () => {
+    expect(scopedLists(['engine', 'nonesuch']).decisions[0].scope).toEqual([
+      { id: 'engine', description: 'the core engine' },
+      { id: 'nonesuch' },
+    ])
+  })
+
+  it('carries a requirement’s scope as it carries a decision’s', () => {
+    expect(scopedLists('engine').requirements[0].scope).toEqual([{ id: 'parser', description: 'the input parser' }])
+  })
+
+  it('leaves an unscoped entry with no scope, and carries a decision’s cases in source order', () => {
+    const decisions = scopedLists(undefined).decisions
+    expect(decisions[0].scope).toBeUndefined()
+    expect(decisions[0].cases).toEqual([{ when: 'the input parses', then: 'it runs' }, { otherwise: 'it reports' }])
   })
 })
