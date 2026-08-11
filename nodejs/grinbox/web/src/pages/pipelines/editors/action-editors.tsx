@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ import { ValueEnumField } from './value-enum-field'
  *
  *  - Notify: message template + Pushover Credential picker.
  *  - Apply Category: category-name template.
- *  - Archive: only the optional firing gate.
+ *  - Archive: the optional delay + the optional firing gate.
  *  - Digest delivery: cron schedule/timezone + the sections list (category,
  *    render shape, templates, highlight, prose blocks) + summary model.
  */
@@ -181,16 +181,56 @@ export function ApplyCategoryEditor({
 }
 
 export interface ArchiveDraft {
+  /**
+   * Optional delay (d-grcdd4ov): whole seconds, at least 1, no ceiling. Absent
+   * ⇒ the key is omitted from the saved config and the Message is archived
+   * during the Triage this Operator runs in. Held as a number so the draft goes
+   * to `archiveConfigSchema` unchanged; text that is not a number reaches the
+   * schema as `NaN` and is refused on Save rather than silently dropped.
+   */
+  delay_seconds?: number
   when?: ActionWhenDraft
 }
 
 export function ArchiveEditor({ value, onChange }: { value: ArchiveDraft; onChange: (next: ArchiveDraft) => void }) {
+  const delayId = useId()
+  // The raw text is local so a half-typed entry survives re-render; the draft
+  // carries the parsed number (or no key at all when the field is empty).
+  const [delayText, setDelayText] = useState(value.delay_seconds === undefined ? '' : String(value.delay_seconds))
+
+  const setDelay = (text: string) => {
+    setDelayText(text)
+    const { delay_seconds: _drop, ...rest } = value
+    onChange(text.trim() === '' ? rest : { ...rest, delay_seconds: Number(text) })
+  }
+
   return (
     <div className='space-y-6'>
       <p className='text-sm text-muted-foreground'>
         Removes the Message from the inbox on its mail backend. The Message keeps its Categories and stays searchable —
         only the inbox membership changes.
       </p>
+      <div className='space-y-2'>
+        <Label htmlFor={delayId}>Delay (seconds, optional)</Label>
+        <p className='text-xs text-muted-foreground'>
+          Leave blank to archive during the Triage. With a delay, the Triage schedules the archive for that many seconds
+          after the Message arrived — mail that is useful when it lands and worthless soon after leaves the inbox on its
+          own. A whole number of seconds, at least 1. Re-triaging the Message replaces or cancels what is pending.
+        </p>
+        <Input
+          id={delayId}
+          className='max-w-40'
+          inputMode='numeric'
+          placeholder='3600'
+          value={delayText}
+          onChange={(e) => {
+            setDelay(e.target.value)
+          }}
+        />
+        {delayText.trim() !== '' && !isWholeSecondsAtLeastOne(delayText) ?
+          <p className='text-xs [color:var(--warning)]'>The delay is a whole number of seconds, at least 1.</p>
+        : null}
+      </div>
       <ActionWhenField
         value={value.when}
         onChange={(when) => {
@@ -199,6 +239,12 @@ export function ArchiveEditor({ value, onChange }: { value: ArchiveDraft; onChan
       />
     </div>
   )
+}
+
+/** Whether the typed delay is what the shared schema will take (d-grcdd4ov). */
+function isWholeSecondsAtLeastOne(text: string): boolean {
+  const n = Number(text)
+  return Number.isInteger(n) && n >= 1
 }
 
 /**

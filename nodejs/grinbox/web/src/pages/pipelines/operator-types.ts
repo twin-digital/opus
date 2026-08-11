@@ -53,7 +53,7 @@ export const OPERATOR_TYPES: readonly OperatorTypeMeta[] = [
     label: 'Archive',
     kind: 'Action',
     description:
-      'Removes the Message from the inbox on its mail backend. The Message keeps its Categories and stays searchable — only the inbox membership changes.',
+      'Removes the Message from the inbox on its mail backend. The Message keeps its Categories and stays searchable — only the inbox membership changes. Takes an optional delay, so mail that is only briefly useful leaves the inbox a set time after it arrived.',
     icon: Archive,
   },
   {

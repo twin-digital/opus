@@ -444,6 +444,77 @@ describe('OperatorEditor', () => {
     expect(screen.getByText(/No Pushover Credentials yet/)).toBeInTheDocument()
   })
 
+  // --- Archive delay (r-cwc01n0t, d-grcdd4ov) -----------------------------
+
+  it('saves an Archive with a whole-seconds delay', async () => {
+    const { onSave } = renderEditor({ typeKey: 'archive' })
+    fireEvent.change(screen.getByLabelText('Operator name'), { target: { value: 'Archive codes' } })
+    fireEvent.change(screen.getByLabelText('Delay (seconds, optional)'), { target: { value: '3600' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ name: 'Archive codes', config: { delay_seconds: 3600 } })
+    })
+  })
+
+  it('saves an Archive with no delay when the field is left blank', async () => {
+    const { onSave } = renderEditor({ typeKey: 'archive' })
+    fireEvent.change(screen.getByLabelText('Operator name'), { target: { value: 'Archive all' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    // Blank ⇒ no `delay_seconds` key at all: the Archive runs during its Triage.
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ name: 'Archive all', config: {} })
+    })
+  })
+
+  it('clearing the delay drops the field rather than storing zero', async () => {
+    const { onSave } = renderEditor({
+      mode: 'edit',
+      typeKey: 'archive',
+      initialName: 'Archive codes',
+      initialConfig: { delay_seconds: 900 },
+    })
+    expect(screen.getByLabelText('Delay (seconds, optional)')).toHaveValue('900')
+    fireEvent.change(screen.getByLabelText('Delay (seconds, optional)'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({ name: 'Archive codes', config: {} })
+    })
+  })
+
+  it.each(['0', '1.5', 'soon'])('refuses %s as a delay', async (entry) => {
+    const { onSave } = renderEditor({ typeKey: 'archive' })
+    fireEvent.change(screen.getByLabelText('Operator name'), { target: { value: 'Archive codes' } })
+    fireEvent.change(screen.getByLabelText('Delay (seconds, optional)'), { target: { value: entry } })
+
+    // Named at the field as it is typed, and refused at Save.
+    expect(screen.getByText('The delay is a whole number of seconds, at least 1.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('keeps the delay and the gate together on one Archive', async () => {
+    const { onSave } = renderEditor({
+      mode: 'edit',
+      typeKey: 'archive',
+      initialName: 'Archive codes',
+      initialConfig: { delay_seconds: 600, when: { tag_key: 'disposition', equals: ['archive'] } },
+    })
+    expect(screen.getByLabelText('Delay (seconds, optional)')).toHaveValue('600')
+    fireEvent.change(screen.getByLabelText('Delay (seconds, optional)'), { target: { value: '1200' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({
+        name: 'Archive codes',
+        config: { delay_seconds: 1200, when: { tag_key: 'disposition', equals: ['archive'] } },
+      })
+    })
+  })
+
   // --- Action `when` gate -------------------------------------------------
 
   const credStub = () =>
