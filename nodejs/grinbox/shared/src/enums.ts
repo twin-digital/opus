@@ -40,6 +40,10 @@ export type ChangeLogAction = z.infer<typeof changeLogActionSchema>
  * `resource_op_suppressed` is a cooldown-suppressed push (d-e9jslw4x): its own
  * outcome kind beside succeeded, failed, and limited; the event carries the
  * notification kind and the run whose push it deferred to.
+ * `resource_op_skipped` is an operation the standing made unnecessary — a due
+ * pending archive whose Message has already left the inbox (d-41v9yqvh): the
+ * mailbox is untouched, and the outcome records against the run that recorded
+ * the pending archive.
  */
 export const triageEventTypeSchema = z.enum([
   'tag_set',
@@ -47,6 +51,7 @@ export const triageEventTypeSchema = z.enum([
   'resource_op_limited',
   'resource_op_failed',
   'resource_op_suppressed',
+  'resource_op_skipped',
 ])
 export type TriageEventType = z.infer<typeof triageEventTypeSchema>
 
