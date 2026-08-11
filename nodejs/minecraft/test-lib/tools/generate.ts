@@ -6,6 +6,8 @@
 //   src/generated/manifests.ts  — committed; the per-class member/arity manifest, checked against
 //                                 the declarations by `satisfies` and an exhaustiveness assertion
 //   src/generated/fakes/*.ts    — gitignored; the classes themselves
+//   src/generated/vanilla.ts    — gitignored; the id lists a preset registers, taken from
+//                                 @minecraft/vanilla-data so the package ships no runtime dependency
 //
 // Run: node tools/generate.ts
 
@@ -15,6 +17,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { format, resolveConfig } from 'prettier'
 import ts from 'typescript'
+import { MinecraftEntityTypes } from '@minecraft/vanilla-data'
 
 import guardData from '../src/guard-data.json' with { type: 'json' }
 
@@ -121,7 +124,7 @@ const componentClasses = [
   ]),
 ].sort()
 
-/** The registries the server bundle carries, each declared and throwing. */
+/** The type catalogs a fake server carries, reached as the class itself rather than an instance. */
 const REGISTRY_CLASSES = [
   'BiomeTypes',
   'BlockStates',
@@ -132,6 +135,9 @@ const REGISTRY_CLASSES = [
   'EntityTypes',
   'ItemTypes',
 ]
+
+/** The type catalogs whose members behave; the rest stay declared with every member throwing. */
+const BEHAVING_REGISTRY_CLASSES = ['EntityTypes']
 
 const SIGNAL_CONTAINERS = ['WorldAfterEvents', 'WorldBeforeEvents', 'SystemAfterEvents', 'SystemBeforeEvents']
 
@@ -144,6 +150,7 @@ const FAKED = [
     'Dimension',
     'Effect',
     'EffectType',
+    'EntityType',
     'System',
     'Scoreboard',
     'ScoreboardObjective',
@@ -385,6 +392,7 @@ const declaredTypeNames = moduleExports
 const OWN_PROPERTIES: Readonly<Record<string, readonly string[] | undefined>> = {
   Entity: ['typeId', 'id'],
   Player: ['typeId', 'id'],
+  EntityType: ['id', 'localizationKey'],
 }
 
 const RUNTIME_IMPORTS = [
@@ -438,30 +446,46 @@ const arityCheck = (method: Method): string | null => {
 }
 
 /**
- * A registry class: reached through the bundle as the class itself, so its members are static and
- * every one throws — no behaviour in this cycle reads a registry.
+ * A type catalog: reached as the class itself, so its members are static. A behaving one delegates
+ * like any faked member, reading the catalog of whichever server's subclass the call was made on;
+ * the rest are declared with every member throwing.
  */
 const registryFile = (name: string): string => {
   const { methods, properties } = surfaceFor(name)
+  const behaves = BEHAVING_REGISTRY_CLASSES.includes(name)
   const lines = [`export class Fake${name} {`]
   for (const property of properties) {
+    lines.push(`  static get ${property.name}(): ${property.type} {`)
     lines.push(
-      `  static get ${property.name}(): ${property.type} {`,
-      `    throw new NotImplementedError('${name}.${property.name}')`,
+      behaves ?
+        `    return delegate(this, '${name}', '${property.name}', [])`
+      : `    throw new NotImplementedError('${name}.${property.name}')`,
       '  }',
     )
   }
   for (const method of methods) {
     const arity = arityCheck(method)
+    const forwarded = method.parameters
+      .map((parameter) => (parameter.rest ? `...${parameter.name}` : parameter.name))
+      .join(', ')
     lines.push(`  ${method.signature} {`)
     if (arity) {
       lines.push(`    ${arity}`)
     }
-    lines.push(`    throw new NotImplementedError('${name}.${method.name}')`, '  }')
+    lines.push(
+      behaves ?
+        `    return delegate(this, '${name}', '${method.name}', [${forwarded}])`
+      : `    throw new NotImplementedError('${name}.${method.name}')`,
+      '  }',
+    )
   }
   lines.push('}', '', `Fake${name} satisfies typeof MC.${name}`, '')
   const body = lines.join('\n')
-  return [...preamble(`The declared static surface of ${name}. Every member throws.`, body), body].join('\n')
+  const what =
+    behaves ?
+      `The declared static surface of ${name}, delegating to the catalog of the server it is bound to.`
+    : `The declared static surface of ${name}. Every member throws.`
+  return [...preamble(what, body), body].join('\n')
 }
 
 /**
@@ -664,6 +688,12 @@ const declaredConstants = (): { name: string; value: string | number }[] =>
 const SINGLETONS = ['world', 'system']
 
 /**
+ * Classes the aliased surface takes from the bindings rather than re-exporting: a behaving type
+ * catalog belongs to one server, so the module-scope name has to move as the bindings do.
+ */
+const BOUND_CLASSES = BEHAVING_REGISTRY_CLASSES
+
+/**
  * Declared classes the library's own hand-written class stands in for. One class object per name,
  * so a pack's `catch (e) { e instanceof InvalidEntityError }` catches what the fakes actually
  * throw rather than a second class of the same name.
@@ -676,7 +706,7 @@ const literal = (value: string | number): string => (typeof value === 'string' ?
 
 const shimSurfaceFile = (): string => {
   const classNames = [...classes.keys()].sort()
-  const faked = classNames.filter((name) => FAKED.includes(name))
+  const faked = classNames.filter((name) => FAKED.includes(name) && !BOUND_CLASSES.includes(name))
   const libraryErrors = classNames.filter((name) => LIBRARY_ERROR_CLASSES[name] !== undefined)
   const errors = classNames.filter((name) => isErrorClass(name) && LIBRARY_ERROR_CLASSES[name] === undefined)
   const placeholders = classNames.filter(
@@ -908,6 +938,20 @@ fs.writeFileSync(
     'export const FAKE_CLASSES = {',
     ...FAKED.map((name) => `  ${name}: Fake${name},`),
     '}',
+    '',
+  ].join('\n'),
+)
+
+// Taken at build time so the ids ship with the package and `@minecraft/vanilla-data` stays a
+// development dependency: nothing a consumer installs pulls it in.
+fs.writeFileSync(
+  path.join(outDir, 'vanilla.ts'),
+  [
+    header('The vanilla id lists a preset registers, as @minecraft/vanilla-data carries them.'),
+    '/** Every entity-type id the source carries, in its own order. */',
+    'export const VANILLA_ENTITY_TYPE_IDS = [',
+    ...Object.values(MinecraftEntityTypes).map((id) => `  '${id}',`),
+    '] as const',
     '',
   ].join('\n'),
 )

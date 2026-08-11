@@ -9,7 +9,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { createEntity, createPlayer, createServer, addComponent, NotImplementedError } from '../index.js'
+import { __useServer, createEntity, createPlayer, createServer, addComponent, NotImplementedError } from '../index.js'
 import { SERVER_VERSION } from '../generated/shim/version.js'
 import * as shim from './index.js'
 
@@ -131,9 +131,15 @@ describe('instanceof', () => {
   })
 
   it('carries no hasInstance override on any exported class', () => {
-    for (const name of declaredClasses) {
-      const value = (shim as unknown as Record<string, object>)[name]
-      expect(Object.getOwnPropertySymbols(value), name).not.toContain(Symbol.hasInstance)
+    // `EntityTypes` is a binding: every access to it throws until a server is installed.
+    __useServer(createServer())
+    try {
+      for (const name of declaredClasses) {
+        const value = (shim as unknown as Record<string, object>)[name]
+        expect(Object.getOwnPropertySymbols(value), name).not.toContain(Symbol.hasInstance)
+      }
+    } finally {
+      __useServer()
     }
   })
 

@@ -909,7 +909,7 @@ describe('the guard table on an invalid owner', () => {
 })
 
 describe('instance scoping and read-order rules', () => {
-  it('two bundles share no component state', () => {
+  it('two servers share no component state', () => {
     const first = createServer()
     const second = createServer()
     const firstEntity = createEntity(first, { typeId: 'minecraft:sheep' })

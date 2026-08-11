@@ -1,5 +1,5 @@
 /**
- * Dimension registration and `getDimension` resolution, and the two presets a caller opts into.
+ * Dimension registration and `getDimension` resolution, and the four presets a caller opts into.
  *
  * These reach the fakes the way a test would: through the free functions the entry point exports.
  */
@@ -10,8 +10,10 @@ import type * as MC from '@minecraft/server'
 
 import { createServer } from './create-server.js'
 import { createEntity, createPlayer, invalidate } from './entity.js'
+import { registerEntityType } from './entity-types.js'
 import { InvalidEntityError, UnsetValueError } from './errors.js'
-import { asSpawnedEntity, withVanillaDimensions } from './presets.js'
+import { VANILLA_ENTITY_TYPE_IDS } from './generated/vanilla.js'
+import { asSpawnedEntity, withVanillaDimensions, withVanillaEntityTypes, withVanillaWorld } from './presets.js'
 import { serverOf } from './runtime/state.js'
 import { registerDimension } from './world.js'
 
@@ -182,7 +184,7 @@ describe('withVanillaDimensions', () => {
     expect(server.world.getDimension('overworld')).toBe(before)
   })
 
-  it('touches only the bundle it was given', () => {
+  it('touches only the server it was given', () => {
     const a = createServer()
     const b = createServer()
     withVanillaDimensions(a)
@@ -196,6 +198,76 @@ describe('withVanillaDimensions', () => {
       dimension: server.world.getDimension('overworld'),
     })
     expect(entity.getComponents()).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// withVanillaEntityTypes and withVanillaWorld
+// ---------------------------------------------------------------------------
+
+describe('withVanillaEntityTypes', () => {
+  it('registers the ids @minecraft/vanilla-data carries, in that source order', () => {
+    const server = createServer()
+    withVanillaEntityTypes(server)
+    expect(server.EntityTypes.getAll().map((type) => type.id)).toEqual([...VANILLA_ENTITY_TYPE_IDS])
+  })
+
+  it('registers nothing outside that list', () => {
+    const server = createServer()
+    withVanillaEntityTypes(server)
+    expect(server.EntityTypes.get('mctest:probe_dummy')).toBeUndefined()
+  })
+
+  it('skips an id the test registered itself, keeping the type that test holds', () => {
+    const server = createServer()
+    const mine = registerEntityType(server, 'minecraft:sheep', 'entity.mine.name')
+    expect(() => {
+      withVanillaEntityTypes(server)
+    }).not.toThrow()
+    expect(server.EntityTypes.get('minecraft:sheep')).toBe(mine)
+    expect(server.EntityTypes.getAll()).toHaveLength(VANILLA_ENTITY_TYPE_IDS.length)
+  })
+
+  it('composes with itself', () => {
+    const server = createServer()
+    withVanillaEntityTypes(server)
+    withVanillaEntityTypes(server)
+    expect(server.EntityTypes.getAll()).toHaveLength(VANILLA_ENTITY_TYPE_IDS.length)
+  })
+
+  it('touches only the server it was given', () => {
+    const a = createServer()
+    const b = createServer()
+    withVanillaEntityTypes(a)
+    expect(b.EntityTypes.getAll()).toEqual([])
+  })
+})
+
+describe('withVanillaWorld', () => {
+  it('supplies the dimensions and the entity types', () => {
+    const server = createServer()
+    withVanillaWorld(server)
+    expect(server.world.getDimension('overworld').id).toBe('minecraft:overworld')
+    expect(server.EntityTypes.get('minecraft:sheep')).toBeDefined()
+  })
+
+  it('supplies those two and nothing else', () => {
+    const server = createServer()
+    withVanillaWorld(server)
+    expect(server.world.getAllPlayers()).toEqual([])
+    expect(server.world.getDynamicPropertyIds()).toEqual([])
+    expect(server.world.scoreboard.getObjectives()).toEqual([])
+    expect(server.system.currentTick).toBe(0)
+  })
+
+  it('composes with the two presets it is made of', () => {
+    const server = createServer()
+    withVanillaDimensions(server)
+    withVanillaEntityTypes(server)
+    expect(() => {
+      withVanillaWorld(server)
+    }).not.toThrow()
+    expect(server.EntityTypes.getAll()).toHaveLength(VANILLA_ENTITY_TYPE_IDS.length)
   })
 })
 

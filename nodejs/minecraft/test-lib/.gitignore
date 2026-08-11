@@ -3,3 +3,4 @@
 src/generated/fakes/
 src/generated/index.ts
 src/generated/shim/
+src/generated/vanilla.ts

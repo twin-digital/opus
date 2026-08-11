@@ -6,13 +6,13 @@ import { EntityManifest } from './generated/manifests.js'
 import { createServer, type FakeServer } from './create-server.js'
 import { createEntity, createPlayer, getTriggeredEvents, invalidate } from './entity.js'
 import { InvalidArgumentError, InvalidEntityError, NotImplementedError, UnsetValueError } from './errors.js'
-import { withVanillaDimensions } from './presets.js'
+import { withVanillaWorld } from './presets.js'
 import { advanceTicks } from './scheduler.js'
 
-/** A bundle with the vanilla dimensions on it, and the overworld a test puts entities in. */
+/** A server with the vanilla dimensions on it, and the overworld a test puts entities in. */
 const setup = (): { server: FakeServer; world: MC.World; overworld: MC.Dimension } => {
   const server = createServer()
-  withVanillaDimensions(server)
+  withVanillaWorld(server)
   return { server, world: server.world, overworld: server.world.getDimension('overworld') }
 }
 
@@ -59,7 +59,7 @@ describe('createEntity', () => {
     expect(createEntity(server, { typeId: SHEEP }).typeId).toBe(SHEEP)
   })
 
-  it('registers the entity with that bundle world', () => {
+  it('registers the entity with that server world', () => {
     const { server, world } = setup()
     const entity = createEntity(server, { typeId: SHEEP })
     expect(world.getEntity(entity.id)).toBe(entity)
@@ -110,7 +110,7 @@ describe('createEntity', () => {
     expect(() => createEntity(server, { typeId: SHEEP, id: '7' })).toThrow(InvalidArgumentError)
   })
 
-  it('numbers ids per bundle', () => {
+  it('numbers ids per server', () => {
     const first = setup()
     const second = setup()
     const one = createEntity(first.server, { typeId: SHEEP })
@@ -408,7 +408,7 @@ describe('dimension.spawnEntity', () => {
     expect(createEntity(server, { typeId: COW }).id).not.toBe(entity.id)
   })
 
-  it('assigns an id from the bundle sequence', () => {
+  it('assigns an id from the server sequence', () => {
     const { server, overworld } = setup()
     expect(overworld.spawnEntity(SHEEP, ORIGIN).id).toBe('1')
     expect(createEntity(server, { typeId: SHEEP }).id).toBe('2')

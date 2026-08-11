@@ -10,7 +10,7 @@ import {
   emit,
   getHandlerErrors,
   NotImplementedError,
-  withVanillaDimensions,
+  withVanillaWorld,
   type FakeServer,
 } from './index.js'
 import { serverOf } from './runtime/state.js'
@@ -442,7 +442,7 @@ describe('a throwing handler', () => {
 })
 
 describe('getHandlerErrors', () => {
-  it('is empty on a bundle whose handlers have not thrown', () => {
+  it('is empty on a server whose handlers have not thrown', () => {
     const server = createServer()
     server.world.afterEvents.entityHurt.subscribe(() => undefined)
     emit(server.world.afterEvents.entityHurt, payload<MC.EntityHurtAfterEvent>({ damage: 1 }))
@@ -700,7 +700,7 @@ describe('before-event payload writes', () => {
 describe('raised signals', () => {
   it('raises entitySpawn from dimension.spawnEntity', () => {
     const server = createServer()
-    withVanillaDimensions(server)
+    withVanillaWorld(server)
     let spawned = 0
     server.world.afterEvents.entitySpawn.subscribe(() => {
       spawned += 1
@@ -765,7 +765,7 @@ describe('raised signals', () => {
 
   it('raises nothing outside the five after-events and three before-events', () => {
     const server = createServer()
-    withVanillaDimensions(server)
+    withVanillaWorld(server)
     const delivered: string[] = []
     watchAll(server.world.afterEvents, delivered, 'after')
     watchAll(server.world.beforeEvents, delivered, 'before')
@@ -803,7 +803,7 @@ describe('raised signals', () => {
   })
 })
 
-describe('two bundles', () => {
+describe('two servers', () => {
   it('share no signal subscribers', () => {
     const a = createServer()
     const b = createServer()

@@ -4,7 +4,7 @@
  * `registerEffectBaseName` free function behind custom types and overrides.
  *
  * An effect's duration decays one per tick the test advances, and the effect is removed on the tick
- * its duration reaches zero. Nothing decays on its own: an effect on a bundle the test never
+ * its duration reaches zero. Nothing decays on its own: an effect on a server the test never
  * advances reads back the number applied.
  */
 
@@ -131,7 +131,7 @@ const replaces = (existing: EffectState, amplifier: number, duration: number): b
   amplifier > existing.amplifier || (amplifier === existing.amplifier && duration >= existing.duration)
 
 /**
- * Takes one tick off every live effect in the bundle, and retires the ones that reach zero.
+ * Takes one tick off every live effect in the server, and retires the ones that reach zero.
  *
  * Called by `advanceTicks` between incrementing the tick and running that tick's callbacks, so a
  * callback reads the value for its own tick, and an effect that runs out partway through a
