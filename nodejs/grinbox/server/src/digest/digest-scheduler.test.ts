@@ -115,7 +115,7 @@ async function fixture(): Promise<Fixture> {
   const scheduler = createDigestScheduler({
     db,
     config: {
-      digestSchedulerTickSeconds: 60,
+      heartbeatSeconds: 60,
       digestTimeoutMs: 5000,
     } as Config,
     makeClients,

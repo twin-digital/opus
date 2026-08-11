@@ -25,6 +25,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { sql } from 'kysely'
 import { z } from 'zod'
+import { loadStandingPendingArchives } from '../../archive/pending-archive.js'
 import type { ApiDeps } from './deps.js'
 
 export interface CurrentTag {
@@ -36,6 +37,21 @@ export interface CurrentTag {
   readonly operator_id: number
   /** The Pipeline the producing Triage ran under. */
   readonly pipeline_id: number
+}
+
+/**
+ * The Archive a Triage recorded and grinbox still owes the Message
+ * (d-p0ea1t8q). Carried by every read surface a Message appears on while it
+ * stands, so what a re-triage would cancel is visible before it fires. `null`
+ * where the Message holds none.
+ */
+export interface PendingArchiveSummary {
+  /** Unix seconds the Archive comes due. */
+  readonly due_at: number
+  /** The Triage that recorded it. */
+  readonly triage_id: number
+  /** The Archive Operator whose run recorded it. */
+  readonly operator_id: number
 }
 
 export interface MessageRow {
@@ -50,6 +66,8 @@ export interface MessageRow {
   /** Latest Triage status across the Message's current Triages, if any. */
   readonly latest_triage_status: string | null
   readonly current_tags: readonly CurrentTag[]
+  /** The standing pending Archive, or `null` (d-p0ea1t8q). */
+  readonly pending_archive: PendingArchiveSummary | null
 }
 
 export interface MessageListResponse {
@@ -109,6 +127,7 @@ export function createMessagesRoutes(deps: ApiDeps) {
 
       const tagsByMessage = await loadCurrentTags(deps, pageIds, f.pipelineId)
       const statusByMessage = await loadLatestStatus(deps, pageIds, f.pipelineId)
+      const pendingArchives = await loadStandingPendingArchives(deps.db, pageIds)
 
       const byId = new Map(messageRows.map((m) => [m.id, m]))
       // Preserve the received_at DESC order from the id selection.
@@ -125,6 +144,7 @@ export function createMessagesRoutes(deps: ApiDeps) {
           source_state: m.source_state,
           latest_triage_status: statusByMessage.get(m.id) ?? null,
           current_tags: tagsByMessage.get(m.id) ?? [],
+          pending_archive: toPendingArchiveSummary(pendingArchives.get(m.id)),
         }))
 
       return c.json<MessageListResponse>({
@@ -162,6 +182,8 @@ export function createMessagesRoutes(deps: ApiDeps) {
       // current under).
       const currentTagsMap = await loadCurrentTags(deps, [id], undefined)
       const currentTags = currentTagsMap.get(id) ?? []
+
+      const pendingArchive = toPendingArchiveSummary((await loadStandingPendingArchives(deps.db, [id])).get(id))
 
       // Triage history, most recent first.
       const triages = await deps.db
@@ -203,9 +225,20 @@ export function createMessagesRoutes(deps: ApiDeps) {
       return c.json({
         message,
         current_tags: currentTags,
+        pending_archive: pendingArchive,
         triages: triageHistory,
       })
     })
+}
+
+/** Project a standing row into the response shape; `null` where none stands. */
+function toPendingArchiveSummary(
+  standing: { due_at: number; triage_id: number; operator_id: number } | undefined,
+): PendingArchiveSummary | null {
+  if (standing === undefined) {
+    return null
+  }
+  return { due_at: standing.due_at, triage_id: standing.triage_id, operator_id: standing.operator_id }
 }
 
 type ListFilters = z.infer<typeof listQuery>

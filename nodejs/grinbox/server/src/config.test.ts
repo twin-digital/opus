@@ -74,7 +74,7 @@ describe('loadConfig', () => {
     const cfg = loadConfig(envWith({}))
     expect(cfg.operatorTimeoutMs).toBe(30_000)
     expect(cfg.workerPoolSize).toBe(3)
-    expect(cfg.pollSchedulerTickSeconds).toBe(60)
+    expect(cfg.heartbeatSeconds).toBe(60)
   })
 
   it('coerces engine fields from their env strings', () => {
@@ -82,12 +82,12 @@ describe('loadConfig', () => {
       envWith({
         GRINBOX_OPERATOR_TIMEOUT_MS: '5000',
         GRINBOX_WORKER_POOL_SIZE: '8',
-        GRINBOX_POLL_SCHEDULER_TICK_SECONDS: '15',
+        GRINBOX_HEARTBEAT_SECONDS: '15',
       }),
     )
     expect(cfg.operatorTimeoutMs).toBe(5000)
     expect(cfg.workerPoolSize).toBe(8)
-    expect(cfg.pollSchedulerTickSeconds).toBe(15)
+    expect(cfg.heartbeatSeconds).toBe(15)
   })
 
   it('rejects a non-positive operatorTimeoutMs', () => {
@@ -99,10 +99,8 @@ describe('loadConfig', () => {
     expect(() => loadConfig(envWith({ GRINBOX_WORKER_POOL_SIZE: '0' }))).toThrow(/Invalid Grinbox configuration/)
   })
 
-  it('rejects a non-positive pollSchedulerTickSeconds', () => {
-    expect(() => loadConfig(envWith({ GRINBOX_POLL_SCHEDULER_TICK_SECONDS: '-5' }))).toThrow(
-      /Invalid Grinbox configuration/,
-    )
+  it('rejects a non-positive heartbeatSeconds', () => {
+    expect(() => loadConfig(envWith({ GRINBOX_HEARTBEAT_SECONDS: '-5' }))).toThrow(/Invalid Grinbox configuration/)
   })
 
   it('rejects an undecodable key with the base64/hex message (distinct from wrong-length)', () => {

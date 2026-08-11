@@ -1,9 +1,9 @@
 /**
  * The digest scheduler: the Daemon loop that fires Digest delivery Operators
- * on their cron schedules. Structure mirrors the poll scheduler — one croner
- * heartbeat (`config.digestSchedulerTickSeconds`), an in-flight guard so a
- * slow cycle is never overlapped, and a `runDueDigests(now?)` test seam driven
- * directly by tests (never `start()`).
+ * on their cron schedules. Structure mirrors the poll scheduler — the daemon's
+ * one heartbeat (d-gzv0jty7) calls `runDueDigests`, an in-flight guard keeps a
+ * slow cycle from being overlapped, and tests drive `runDueDigests(now?)`
+ * directly.
  *
  * ## Firing model
  *
@@ -15,7 +15,7 @@
  *
  * ## Occurrence claim (no double-send)
  *
- * Per tick, each pair resolves the most recent cron occurrence `<= now` that
+ * Per beat, each pair resolves the most recent cron occurrence `<= now` that
  * is strictly after its last *attempted* occurrence ({@link latestDueOccurrence};
  * the floor for a first-ever run is the Operator's `created_at`). The fire is
  * claimed by INSERTing the `digest_runs` row (`status='running'`) — the UNIQUE
@@ -25,7 +25,7 @@
  * = someone else claimed it.
  *
  * Missed occurrences (Daemon down over one or more scheduled times) collapse
- * into that single latest occurrence — fired once on the next tick — and any
+ * into that single latest occurrence — fired once on the next beat — and any
  * older missed ones are never fired. Their coverage isn't lost: the coverage
  * window starts at the last *completed* run's `covers_to` (else the Operator's
  * `created_at`), so the catch-up run covers the whole gap, and a failed run —
@@ -38,7 +38,6 @@
  */
 
 import { operatorConfigSchemas } from '@grinbox/shared'
-import { Cron } from 'croner'
 import type { Config } from '../config.js'
 import type { DB } from '../db/schema.js'
 import type { MakeUnderlyingClients } from '../resources/underlying-clients.js'
@@ -67,10 +66,9 @@ export interface DigestScheduler {
    * does not abort the others.
    */
   runDueDigests(now?: number): Promise<DigestFireSummary[]>
-  /** Begin the croner tick (every `config.digestSchedulerTickSeconds`). */
-  start(): void
-  /** Cancel the croner tick and await any in-flight cycle. Idempotent. */
-  stop(): Promise<void>
+  /** Await any in-flight cycle's DB writes, so shutdown can close the
+   * connection under it. Idempotent. */
+  drain(): Promise<void>
 }
 
 /** The digest Operator × Account pairs eligible for scheduling. */
@@ -88,21 +86,8 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000)
 }
 
-/** Same seconds-vs-minutes cron heartbeat derivation as the poll scheduler. */
-function tickCronPattern(tickSeconds: number): string {
-  if (tickSeconds < 60) {
-    return `*/${tickSeconds} * * * * *`
-  }
-  const minutes = Math.max(1, Math.round(tickSeconds / 60))
-  if (minutes >= 60) {
-    return '0 0 * * * *'
-  }
-  return `0 */${minutes} * * * *`
-}
-
 export function createDigestScheduler(deps: DigestSchedulerDeps): DigestScheduler {
   const { db, config, makeClients } = deps
-  let job: Cron | null = null
   let inFlight: Promise<DigestFireSummary[]> | null = null
 
   async function selectEligiblePairs(): Promise<EligiblePair[]> {
@@ -263,22 +248,7 @@ export function createDigestScheduler(deps: DigestSchedulerDeps): DigestSchedule
     return cycle
   }
 
-  function start(): void {
-    if (job !== null) {
-      return
-    }
-    job = new Cron(tickCronPattern(config.digestSchedulerTickSeconds), { protect: true }, () => {
-      void runDueDigests().catch((err: unknown) => {
-        console.error('[grinbox][digest] scheduler tick error', err)
-      })
-    })
-  }
-
-  async function stop(): Promise<void> {
-    if (job !== null) {
-      job.stop()
-      job = null
-    }
+  async function drain(): Promise<void> {
     // Let an in-flight cycle finish its DB writes before the daemon closes the
     // connection. Failures were already handled inside the cycle.
     if (inFlight !== null) {
@@ -286,7 +256,7 @@ export function createDigestScheduler(deps: DigestSchedulerDeps): DigestSchedule
     }
   }
 
-  return { runDueDigests, start, stop }
+  return { runDueDigests, drain }
 }
 
 function safeJsonParse(text: string): unknown {

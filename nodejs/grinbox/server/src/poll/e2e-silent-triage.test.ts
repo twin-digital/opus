@@ -60,7 +60,7 @@ function testConfig(overrides: Partial<Config> = {}): Config {
     tokenEncKey: Buffer.alloc(32),
     operatorTimeoutMs: 30_000,
     workerPoolSize: 3,
-    pollSchedulerTickSeconds: 60,
+    heartbeatSeconds: 60,
     ...overrides,
   } as Config
 }

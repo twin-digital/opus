@@ -92,7 +92,7 @@ function testConfig(overrides: Partial<Config> = {}): Config {
     tokenEncKey: Buffer.alloc(32),
     operatorTimeoutMs: 30_000,
     workerPoolSize: 3,
-    pollSchedulerTickSeconds: 60,
+    heartbeatSeconds: 60,
     reconcileIntervalSeconds: 86_400,
     ...overrides,
   } as Config
@@ -370,29 +370,6 @@ describe('createPollScheduler — pollDueAccounts', () => {
 
     const summaries = await scheduler.pollDueAccounts(10_000)
     expect(summaries.map((s) => s.accountId)).not.toContain(id)
-  })
-
-  it('start()/stop() construct a valid croner job across the configurable tick range', () => {
-    const provider = new StubProvider([{ backendMessageIds: [], newCursor: 'H1' }], [])
-    // Sub-minute, whole-minute, and >59 ticks must all yield a valid pattern
-    // (croner caps the seconds-field step at 60, so >59 must map to minutes).
-    for (const tick of [15, 60, 600]) {
-      const scheduler = createPollScheduler({
-        db,
-        config: testConfig({ pollSchedulerTickSeconds: tick }),
-        providerFactory: () => provider,
-      })
-      expect(() => {
-        scheduler.start()
-      }).not.toThrow()
-      expect(() => {
-        scheduler.stop()
-      }).not.toThrow()
-      // stop() is idempotent.
-      expect(() => {
-        scheduler.stop()
-      }).not.toThrow()
-    }
   })
 
   it('skips soft-deleted accounts', async () => {
