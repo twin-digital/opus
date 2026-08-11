@@ -7,6 +7,7 @@
  * have no cooldown (then it has none at all, d-t6mhv3aq).
  */
 
+import { operatorConfigSchemas } from '@grinbox/shared'
 import { Hono } from 'hono'
 import type { ApiDeps } from './deps.js'
 
@@ -34,8 +35,9 @@ export function createCooldownsRoutes(deps: ApiDeps) {
       created_at: r.created_at,
     }))
 
-    // Kinds named by enabled, non-deleted Notify Operators (d-vn2jdxbs). The
-    // stored config's optional `kind` was normalized at save; a config that
+    // Kinds named by enabled, non-deleted Notify Operators (d-vn2jdxbs), read
+    // through the shared config schema the save path validates against
+    // (d-l6bbgp05: the optional `notification_kind` field). A config that
     // doesn't parse contributes nothing.
     const operators = await deps.db
       .selectFrom('operators')
@@ -46,16 +48,20 @@ export function createCooldownsRoutes(deps: ApiDeps) {
       .execute()
     const kindsInUse = new Set<string>()
     for (const row of operators) {
-      try {
-        const kind = (JSON.parse(row.config_json) as { kind?: unknown }).kind
-        if (typeof kind === 'string' && kind.trim().length > 0) {
-          kindsInUse.add(kind.trim())
-        }
-      } catch {
-        // Unparseable config: contributes no kind.
+      const parsed = operatorConfigSchemas.notify.safeParse(safeJsonParse(row.config_json))
+      if (parsed.success && parsed.data.notification_kind !== undefined) {
+        kindsInUse.add(parsed.data.notification_kind)
       }
     }
 
     return c.json({ cooldowns, kinds_in_use: [...kindsInUse].sort() })
   })
+}
+
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
 }

@@ -23,7 +23,7 @@ export interface OutputTag {
 /** A `triage_events` row to record (sequence_num is assigned in-transaction). */
 export interface TriageEventInput {
   readonly eventType:
-    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'push_suppressed'
+    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
   readonly detailsJson: string | null
 }
 

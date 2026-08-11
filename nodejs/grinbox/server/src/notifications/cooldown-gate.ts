@@ -7,7 +7,7 @@
  *  - `checkCooldown(kind)` — reads the user's interval for the kind
  *    (`notification_cooldowns`, d-k3wq81vn) and the latest delivered push of
  *    that kind (`notification_pushes`). A push inside the interval suppresses:
- *    the gate emits a `push_suppressed` event against this run — carrying the
+ *    the gate emits a `resource_op_suppressed` event against this run — carrying the
  *    kind and the run whose push it deferred to (d-e9jslw4x) — and the verdict
  *    tells Notify to send nothing and complete.
  *  - `recordPush(kind)` — records this run's delivered push so later runs of
@@ -64,7 +64,7 @@ export function createNotificationGate(deps: CooldownGateDeps): NotificationGate
       }
 
       deps.onEvent({
-        event_type: 'push_suppressed',
+        event_type: 'resource_op_suppressed',
         details: {
           kind,
           deferred_to_triage_id: latest.triage_id,

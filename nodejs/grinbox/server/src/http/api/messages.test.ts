@@ -428,6 +428,50 @@ describe('GET /api/messages/:id', () => {
     const res = await app.request('/api/messages/4242')
     expect(res.status).toBe(404)
   })
+
+  it("surfaces a suppression with the run it deferred to, resolvable to that run's triage (d-e9jslw4x)", async () => {
+    const userId = await insertUser(db)
+    const pid = await insertPipeline(db, userId)
+    const opId = await insertOperator(db, pid, {
+      name: 'urgency',
+      typeKey: 'rule_based_tagger',
+      configJson: ruleTaggerConfig('urgency', ['high', 'low']),
+    })
+    const acctId = await insertAccount(db, userId, { activePipelineId: pid })
+    const mid = await insertMessage(db, acctId, { backendMessageId: 'm', receivedAt: 1000 })
+    await insertTriage(db, {
+      messageId: mid,
+      pipelineId: pid,
+      operatorId: opId,
+      startedAt: 1100,
+      status: 'completed',
+      makeCurrent: true,
+      events: [
+        {
+          eventType: 'resource_op_suppressed',
+          detailsJson: JSON.stringify({
+            kind: 'Bank alerts',
+            deferred_to_triage_id: 42,
+            deferred_to_operator_id: 7,
+          }),
+          recordedAt: 1101,
+        },
+      ],
+    })
+
+    const app = createApiRoutes({ db, now: fixedNow })
+    const res = await app.request(`/api/messages/${mid}`)
+    const body = (await res.json()) as {
+      triages: { events: { event_type: string; details_json: string | null }[] }[]
+    }
+    const event = body.triages[0]?.events[0]
+    expect(event.event_type).toBe('resource_op_suppressed')
+    expect(JSON.parse(event.details_json as string)).toEqual({
+      kind: 'Bank alerts',
+      deferred_to_triage_id: 42,
+      deferred_to_operator_id: 7,
+    })
+  })
 })
 
 describe('an outcome resolves to the configuration that produced it', () => {

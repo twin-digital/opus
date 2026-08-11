@@ -13,7 +13,14 @@
 
 import type { OperatorConfigFor, OperatorTypeKey, Resource } from '@grinbox/shared'
 import { resolveSnapshot } from './registry.js'
-import type { MakeResourceClient, MessageView, OperatorRunResult, OperatorType, ResourceClients } from './types.js'
+import type {
+  MakeResourceClient,
+  MessageView,
+  NotificationGate,
+  OperatorRunResult,
+  OperatorType,
+  ResourceClients,
+} from './types.js'
 
 /** The snapshot a `triage_operator_runs` row carries (the worker passes it in). */
 export interface OperatorSnapshot {
@@ -33,6 +40,11 @@ export interface RunOperatorArgs {
    */
   readonly makeResourceClient: MakeResourceClient
   readonly signal: AbortSignal
+  /**
+   * The per-run notification cooldown gate (d-5amonj40). The worker builds one
+   * for Notify runs; absent for every other type.
+   */
+  readonly notifications?: NotificationGate
   /**
    * Snapshot → behavioral type resolver. Defaults to the production
    * {@link resolveSnapshot} over the code-resident registry. Injectable only so
@@ -83,6 +95,7 @@ export async function runOperator(snapshot: OperatorSnapshot, args: RunOperatorA
     tags: args.tags,
     resources,
     signal: args.signal,
+    notifications: args.notifications,
   })
 
   validateOutputTags(type, contract, result)

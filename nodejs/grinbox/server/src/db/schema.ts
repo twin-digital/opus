@@ -209,12 +209,13 @@ export interface TriageEventsTable {
   operator_id: number
   sequence_num: number
   /**
-   * Closed enum (CHECK). `push_suppressed` is a cooldown-suppressed push's own
+   * Closed enum (CHECK). `resource_op_suppressed` is a cooldown-suppressed push's own
    * outcome kind beside succeeded / limited / failed (d-e9jslw4x); its
    * `details_json` carries the notification kind and the `(triage_id,
    * operator_id)` of the run whose push it deferred to.
    */
-  event_type: 'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'push_suppressed'
+  event_type:
+    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
   details_json: string | null
   recorded_at: number
 }
