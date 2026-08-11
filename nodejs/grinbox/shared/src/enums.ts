@@ -35,12 +35,18 @@ export type TriggeredBy = z.infer<typeof triggeredBySchema>
 export const changeLogActionSchema = z.enum(['created', 'updated', 'deleted', 'enabled', 'disabled'])
 export type ChangeLogAction = z.infer<typeof changeLogActionSchema>
 
-/** `triage_events.event_type` — the chronological Triage-event kinds. */
+/**
+ * `triage_events.event_type` — the chronological Triage-event kinds.
+ * `resource_op_suppressed` is a cooldown-suppressed push (d-e9jslw4x): its own
+ * outcome kind beside succeeded, failed, and limited; the event carries the
+ * notification kind and the run whose push it deferred to.
+ */
 export const triageEventTypeSchema = z.enum([
   'tag_set',
   'resource_op_succeeded',
   'resource_op_limited',
   'resource_op_failed',
+  'resource_op_suppressed',
 ])
 export type TriageEventType = z.infer<typeof triageEventTypeSchema>
 
@@ -80,7 +86,7 @@ export type CredentialKind = z.infer<typeof credentialKindSchema>
 /**
  * `change_log.entity_type`. Open so new configurable entity types can be
  * audited without a migration. Known today: `pipeline`, `operator`, `account`,
- * `limit`, `credential`.
+ * `limit`, `credential`, `cooldown` (d-w2fzk9bd).
  */
 export const changeLogEntityTypeSchema = z.string()
 export type ChangeLogEntityType = z.infer<typeof changeLogEntityTypeSchema>
