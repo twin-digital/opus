@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/design-process",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Validator, projection, backlog, and fold tools for the twin-digital incremental design process.",
   "type": "module",
   "exports": {
