@@ -132,8 +132,8 @@ export { operatorConsumesBody } from './body-usage.js'
 export { cooldownIntervalSecondsSchema, cooldownSettingSchema, notificationKindSchema } from './notifications.js'
 export type { CooldownIntervalSeconds, CooldownSetting, NotificationKind } from './notifications.js'
 
-export { archiveDelaySecondsSchema, pendingArchiveSchema } from './pending-archive.js'
-export type { ArchiveDelaySeconds, PendingArchive } from './pending-archive.js'
+export { archiveDelaySecondsSchema, pendingArchiveSchema, pendingArchiveSkipReasonSchema } from './pending-archive.js'
+export type { ArchiveDelaySeconds, PendingArchive, PendingArchiveSkipReason } from './pending-archive.js'
 
 export { formatMoneyDisplay } from './money-display.js'
 

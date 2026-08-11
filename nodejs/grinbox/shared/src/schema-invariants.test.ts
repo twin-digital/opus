@@ -13,6 +13,7 @@ import {
   operatorConfigSchemas,
   operatorRunStatusSchema,
   operatorTypeRegistry,
+  pendingArchiveSkipReasonSchema,
   providerTypeSchema,
   resourceOperationDeclarationSchema,
   sourceStateSchema,
@@ -114,6 +115,28 @@ describe('closed enum closedness', () => {
       expect(schema.safeParse(outOfSet).success).toBe(false)
     })
   }
+})
+
+// --- pendingArchiveSkipReasonSchema closedness ---------------------------
+//
+// Not a DB CHECK — the reason lives inside a `pending_archive_skipped` event's
+// details — but closed in code, and read by both tiers (d-ymvh4v9a). The
+// members are checked exactly the way the CHECK-constrained enums above are:
+// an added member is a reason the interface has never heard of, a dropped one
+// is a reason already written to events the interface would then reject.
+
+describe('pendingArchiveSkipReasonSchema closedness', () => {
+  it('has exactly its documented members', () => {
+    expect([...pendingArchiveSkipReasonSchema.options].sort()).toEqual([
+      'abandoned',
+      'already_departed',
+      'pipeline_inactive',
+    ])
+  })
+
+  it('rejects an out-of-set reason', () => {
+    expect(pendingArchiveSkipReasonSchema.safeParse('already_archived').success).toBe(false)
+  })
 })
 
 // --- operatorTypeKeySchema closedness ------------------------------------
