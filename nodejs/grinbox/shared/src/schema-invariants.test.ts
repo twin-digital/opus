@@ -64,13 +64,17 @@ describe('closed enum closedness', () => {
       name: 'triageEventTypeSchema',
       schema: triageEventTypeSchema,
       // `resource_op_suppressed` is the cooldown-suppressed push's own outcome
-      // kind in the attempt vocabulary (d-e9jslw4x).
+      // kind in the attempt vocabulary (d-e9jslw4x); the `pending_archive_*`
+      // pair records the delayed Archive path (d-41v9yqvh). The members and
+      // their order mirror the `triage_events` CHECK.
       members: [
         'tag_set',
         'resource_op_succeeded',
         'resource_op_limited',
         'resource_op_failed',
         'resource_op_suppressed',
+        'pending_archive_recorded',
+        'pending_archive_skipped',
       ],
       outOfSet: 'tag_cleared',
     },
@@ -421,6 +425,15 @@ describe('Action `when` gate schema', () => {
       }).success,
     ).toBe(true)
     expect(archive.safeParse({ when: { tag_key: 'disposition', equals: [] } }).success).toBe(false)
+  })
+
+  it('archive takes an optional whole-seconds delay of at least one (d-grcdd4ov)', () => {
+    const archive = operatorConfigSchemas.archive
+    expect(archive.safeParse({ delay_seconds: 3600 }).success).toBe(true)
+    expect(archive.safeParse({ delay_seconds: 1 }).success).toBe(true)
+    expect(archive.safeParse({ delay_seconds: 0 }).success).toBe(false)
+    expect(archive.safeParse({ delay_seconds: -60 }).success).toBe(false)
+    expect(archive.safeParse({ delay_seconds: 1.5 }).success).toBe(false)
   })
 
   it('rejects a `when` with an empty `equals`', () => {
