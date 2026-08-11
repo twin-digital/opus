@@ -18,6 +18,8 @@ separately on each side. That is the whole of its job.
 | `match-expression`, `match-vocabulary` | the rule language and the reader that evaluates it                                              |
 | `template-placeholder`, `body-usage`   | the placeholder grammar, and what reading it implies about fetching a body                      |
 | `limits`                               | a limit's shape, and the caps grinbox seeds on install                                          |
+| `notifications`                        | a notification kind's name, and the per-kind cooldown setting                                   |
+| `money-display`                        | the display form of a stored money value: `19503:USD` renders as `$195.03`                      |
 | `models`                               | the closed set of models a user may pick                                                        |
 | `api-error`                            | the structured form a refused write answers in                                                  |
 | `health`                               | the liveness payload                                                                            |
