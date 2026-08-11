@@ -1,6 +1,6 @@
 /**
  * The module-scope bindings: what an unset one does, what an install moves, what a replace refuses,
- * and that code reaching the engine through the module import reaches the bundle's own objects.
+ * and that code reaching the engine through the module import reaches the server's own objects.
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
@@ -10,6 +10,7 @@ import {
   createEntity,
   createServer,
   ShimNotInstalledError,
+  registerEntityType,
   ShimServerInUseError,
   withVanillaDimensions,
 } from '../index.js'
@@ -45,6 +46,13 @@ describe('an unset binding', () => {
   it('names the binding it stands for', () => {
     expect(() => bindings.system.currentTick).toThrow(/system/)
     expect(() => bindings.world.getDimension('overworld')).toThrow(/world/)
+    expect(() => bindings.EntityTypes.get('minecraft:sheep')).toThrow(/EntityTypes/)
+  })
+
+  it('covers EntityTypes too, in every access shape', () => {
+    for (const [shape, access] of Object.entries(accessShapes)) {
+      expect(() => access(bindings.EntityTypes as never), shape).toThrow(ShimNotInstalledError)
+    }
   })
 
   it('refuses currentServer()', () => {
@@ -53,11 +61,12 @@ describe('an unset binding', () => {
 })
 
 describe('installing', () => {
-  it('moves both bindings wholesale', () => {
+  it('moves all three bindings wholesale', () => {
     const server = createServer()
     bindings.__useServer(server)
     expect(bindings.world).toBe(server.world)
     expect(bindings.system).toBe(server.system)
+    expect(bindings.EntityTypes).toBe(server.EntityTypes)
     expect(bindings.currentServer()).toBe(server)
   })
 
@@ -66,9 +75,21 @@ describe('installing', () => {
     bindings.__useServer(server)
     expect(shim.world).toBe(server.world)
     expect(shim.system).toBe(server.system)
+    expect(shim.EntityTypes).toBe(server.EntityTypes)
   })
 
-  it('reaches the bundle by the surface the package supplies', () => {
+  it('points EntityTypes at the installed server type catalog, not a shared one', () => {
+    const first = createServer()
+    registerEntityType(first, 'mypack:guard')
+    bindings.__useServer(first)
+    expect(shim.EntityTypes.get('mypack:guard')).toBeDefined()
+
+    bindings.__useServer()
+    bindings.__useServer(createServer())
+    expect(shim.EntityTypes.get('mypack:guard')).toBeUndefined()
+  })
+
+  it('reaches the server by the surface the package supplies', () => {
     const server = createServer()
     withVanillaDimensions(server)
     bindings.__useServer(server)
@@ -76,7 +97,7 @@ describe('installing', () => {
       typeId: 'minecraft:sheep',
       dimension: server.world.getDimension('overworld'),
     })
-    // The module-import route and the bundle route land on the same objects.
+    // The module-import route and the server route land on the same objects.
     expect([...shim.world.getDimension('overworld').getEntities()]).toContain(entity)
     expect(shim.world).toBe(server.world)
   })

@@ -7,7 +7,7 @@ import { InvalidEntityError, NotImplementedError, UnsetValueError } from './erro
 import { withVanillaDimensions } from './presets.js'
 import { matchesQuery } from './query.js'
 
-/** A bundle with the vanilla dimensions on it, and the overworld a test puts entities in. */
+/** A server with the vanilla dimensions on it, and the overworld a test puts entities in. */
 const setup = (): { server: FakeServer; world: MC.World; overworld: MC.Dimension } => {
   const server = createServer()
   withVanillaDimensions(server)

@@ -1,6 +1,6 @@
 /**
- * The module-scope `world` and `system` a test points at its own fakes, and the one call that
- * points them. This is the only mutable state the package holds outside a world instance.
+ * The module-scope `world`, `system` and `EntityTypes` a test points at its own fakes, and the one
+ * call that points them. This is the only mutable state the package holds outside a world instance.
  *
  * The bindings are live ESM exports: the aliased `@minecraft/server` surface re-exports them, so
  * pack code reaching the engine through the module import reads whatever a test installed last.
@@ -38,7 +38,7 @@ const unsetBinding = (binding: string): never => {
   }) as never
 }
 
-/** The bundle currently installed, or `undefined` while the bindings are unset. */
+/** The server currently installed, or `undefined` while the bindings are unset. */
 let current: FakeServer | undefined
 
 /** The world code under test reaches through `import { world } from '@minecraft/server'`. */
@@ -46,6 +46,13 @@ export let world: MC.World = unsetBinding('world')
 
 /** The `system` code under test reaches through `import { system } from '@minecraft/server'`. */
 export let system: MC.System = unsetBinding('system')
+
+/**
+ * The type catalog code under test reaches through
+ * `import { EntityTypes } from '@minecraft/server'`. It belongs to one server, so it moves with the
+ * other two bindings rather than standing as one class object every server shares.
+ */
+export let EntityTypes: typeof MC.EntityTypes = unsetBinding('EntityTypes')
 
 /** How much of a pack is bound to a server: what a wholesale replace would strand. */
 const liveWork = (server: FakeServer): { subscribers: number; scheduledRuns: number } | null => {
@@ -63,8 +70,8 @@ const liveWork = (server: FakeServer): { subscribers: number; scheduledRuns: num
 }
 
 /**
- * Points the module-scope bindings at a bundle, or returns them to the unset state when called
- * with no argument. Both bindings move together — there is no way to install one alone.
+ * Points the module-scope bindings at a server, or returns them to the unset state when called
+ * with no argument. All three bindings move together — there is no way to install one alone.
  *
  * Replacing a server a pack has already registered against throws: the pack's subscriptions and
  * scheduled runs stay on the server it evaluated against, so the replacement would see none of its
@@ -82,6 +89,7 @@ export const __useServer = (server?: FakeServer): void => {
     current = undefined
     world = unsetBinding('world')
     system = unsetBinding('system')
+    EntityTypes = unsetBinding('EntityTypes')
     return
   }
 
@@ -95,10 +103,11 @@ export const __useServer = (server?: FakeServer): void => {
   current = server
   world = server.world
   system = server.system
+  EntityTypes = server.EntityTypes
 }
 
 /**
- * The bundle the bindings currently point at — how a test reaches the server the plugin's setup
+ * The server the bindings currently point at — how a test reaches the server the plugin's setup
  * module installed, for the free functions that take one.
  *
  * @example

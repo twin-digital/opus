@@ -5,6 +5,7 @@
 
 import './components.js'
 import './effects.js'
+import './entity-types.js'
 import './entity.js'
 import './events.js'
 import './output.js'

@@ -13,4 +13,4 @@
  */
 
 export * from '../generated/shim/surface.js'
-export { system, world } from './bindings.js'
+export { EntityTypes, system, world } from './bindings.js'

@@ -52,7 +52,7 @@ catalogs:
       specifier: 2.1.0
       version: 2.1.0
     '@minecraft/vanilla-data':
-      specifier: ^1.26.33
+      specifier: 1.26.33
       version: 1.26.33
     '@types/aws-lambda':
       specifier: ^8.10.159
@@ -114,6 +114,9 @@ catalogs:
     typescript:
       specifier: ^6.0.0
       version: 6.0.3
+    typescript-eslint:
+      specifier: ^8.47.0
+      version: 8.65.0
     vite:
       specifier: ^8.0.0
       version: 8.2.1

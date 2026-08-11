@@ -69,7 +69,7 @@ describe('getOutput', () => {
     expect(getOutput(player)).toHaveLength(2)
   })
 
-  it('keeps two bundles apart', () => {
+  it('keeps two servers apart', () => {
     const a = createServer()
     const b = createServer()
     a.world.sendMessage('for a')
