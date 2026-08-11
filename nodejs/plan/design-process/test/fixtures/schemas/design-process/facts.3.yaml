@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/facts@3
+title: facts
+description: a facts pool file
+type: object
+additionalProperties: false
+required: [version, facts]
+properties:
+  version:
+    const: '3'
+  facts:
+    type: array
+    minItems: 1
+    items:
+      $ref: '/design-process/fact@3'

@@ -52,6 +52,18 @@ export interface DecisionEntry {
   facets?: string | string[]
 }
 
+/**
+ * One entry of the repo-wide `facts/` pool, as the surfaces that show a fact read it. The
+ * evidence bar validates the whole entry against its schema; these are the fields rendered.
+ */
+export interface FactEntry {
+  id: string
+  claim: string
+  /** The short name a fact is shown by; where it has none, the claim's first line stands in. */
+  title?: string
+  status?: 'active' | 'retired'
+}
+
 export interface QuestionEntry {
   id: string
   question: string

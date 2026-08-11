@@ -201,3 +201,102 @@ describe('staleness reports and late-citation findings — d-hxxlgaw9, d-8y5vmff
     expect(rules(validateTree(makeRepo(files).tree))).toContain('run-source-retired')
   })
 })
+
+describe('an opaque fact id is cited bare or prefixed', () => {
+  const citing = (...citations: string[]): Record<string, string> => {
+    const files = withPool([fact2()])
+    files['products/demo3/increments/002/decisions.yaml'] = yaml({
+      version: '3',
+      decisions: citations.map((citation, index) => ({
+        id: `d-bbbbbbb${index}`,
+        statement: 'built on the fact.\n',
+        status: 'accepted',
+        because: [citation],
+      })),
+    })
+    return files
+  }
+
+  it('resolves a bare f-<id> citation against the facts pool', () => {
+    expect(validateTree(makeRepo(citing('f-a1b2c3d4')).tree)).toEqual([])
+  })
+
+  it('resolves a bare citation in informed_by too', () => {
+    const files = citing('f-a1b2c3d4')
+    files['products/demo3/increments/002/requirements.yaml'] = yaml({
+      version: '3',
+      requirements: [
+        { id: 'r-dddddddd', statement: 'the product reports the page size.\n', informed_by: ['f-a1b2c3d4'] },
+      ],
+    })
+    expect(validateTree(makeRepo(files).tree)).toEqual([])
+  })
+
+  it('fails a bare citation the pool does not declare', () => {
+    const findings = validateTree(makeRepo(citing('f-e5f6a7b8')).tree)
+    expect(rules(findings)).toContain('citation-resolves')
+    expect(rules(findings)).not.toContain('citation-form')
+  })
+
+  it('fails a bare citation of a retired fact in force, as the prefixed form does', () => {
+    const files = citing('f-a1b2c3d4')
+    files['facts/vendor.yaml'] = yaml({
+      version: '2',
+      facts: [fact2({ status: 'retired', reason: 'the vendor changed the page size' })],
+    })
+    expect(rules(validateTree(makeRepo(files).tree))).toContain('citation-fact-retired')
+  })
+
+  it('keeps f:<slug> resolving, the only spelling a slug-id fact has', () => {
+    const files = citing('f:vendor-paginates')
+    files['facts/legacy.yaml'] = yaml({
+      version: '1',
+      facts: [
+        {
+          id: 'vendor-paginates',
+          claim: 'the vendor API paginates at 100',
+          backing: 'documented',
+          sources: [{ url: 'https://example.com/docs', where: 'pagination', quote: 'pages hold 100 items' }],
+        },
+      ],
+    })
+    expect(validateTree(makeRepo(files).tree)).toEqual([])
+  })
+
+  it('fails a citation of neither form', () => {
+    expect(rules(validateTree(makeRepo(citing('vendor-paginates')).tree))).toContain('citation-form')
+  })
+
+  it('counts a bare citer in the debt a retirement owes', () => {
+    const { root, tree } = makeGitRepo(citing('f-a1b2c3d4'))
+    write(
+      root,
+      'facts/vendor.yaml',
+      yaml({ version: '2', facts: [fact2({ status: 'retired', reason: 'the vendor changed the page size' })] }),
+    )
+    expect(rules(validateTree(tree, { base: new GitTree(root, 'main'), backlog: () => [] }))).toContain(
+      'fact-retirement-debt',
+    )
+  })
+})
+
+describe('a facts@3 fact carries an optional title', () => {
+  const withPool3 = (facts: Record<string, unknown>[]): Record<string, string> => {
+    const files = demoV3()
+    files['facts/vendor.yaml'] = yaml({ version: '3', facts })
+    return files
+  }
+
+  it('validates a titled fact', () => {
+    expect(validateTree(makeRepo(withPool3([fact2({ title: 'the vendor paginates' })])).tree)).toEqual([])
+  })
+
+  it('validates a fact@3 entry with no title', () => {
+    expect(validateTree(makeRepo(withPool3([fact2()])).tree)).toEqual([])
+  })
+
+  it('rejects a title on the frozen @2 dialect', () => {
+    const findings = validateTree(makeRepo(withPool([fact2({ title: 'the vendor paginates' })])).tree)
+    expect(rules(findings)).toContain('pool-entry-schema')
+  })
+})

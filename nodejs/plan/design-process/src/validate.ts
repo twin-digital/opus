@@ -3,6 +3,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js'
 import { checkComponents, reparentingReports } from './components.js'
 import { checkEvidenceBar } from './evidence-bar.js'
 import { coverableClaimIds, foldProduct } from './fold.js'
+import { FACT_ID } from './ids.js'
 import { loadProducts } from './load.js'
 import { loadFacts, loadSchemaPool, loadSurfacePool } from './pools.js'
 import { closureRequirementIds, resolvePresetClosure } from './presets.js'
@@ -406,6 +407,36 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
    * published in-force citer predates the retirement and is the staleness model's `report`,
    * enforced by its own product's next landing; a draft citer is declared after it and gates.
    */
+  const checkFactCitation = (
+    factId: string,
+    citation: string,
+    path: string,
+    context: string,
+    entryInForce: boolean,
+    draft: boolean,
+  ) => {
+    if (!facts.ids.has(factId)) {
+      findings.push({
+        rule: 'citation-resolves',
+        claims: ['d-eaw3u72o'],
+        path,
+        message: `${context} cites ${citation}, which the facts pool does not declare`,
+      })
+    } else if (entryInForce && facts.retired.has(factId)) {
+      findings.push({
+        rule: 'citation-fact-retired',
+        claims: ['d-hxxlgaw9', 'r-ajpjx5w0'],
+        path,
+        message:
+          draft ?
+            `${context} cites ${citation}, which is already retired; cite its replacement instead`
+          : `${context} is in force and rests on retired fact ${citation}; a superseding entry re-bases or revises it at ${product.id}'s next landing`,
+        ...(draft ? {} : { severity: 'report' as const }),
+        product: product.id,
+      })
+    }
+  }
+
   const checkCitation = (citation: string, path: string, context: string, entryInForce: boolean, draft: boolean) => {
     if (QUESTION_ID.test(citation)) {
       findings.push({
@@ -423,33 +454,16 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
           message: `${context} cites ${citation}, which no increment of this product declares`,
         })
       }
+    } else if (FACT_ID.test(citation)) {
+      checkFactCitation(citation, citation, path, context, entryInForce, draft)
     } else if (citation.startsWith('f:')) {
-      if (!facts.ids.has(citation.slice(2))) {
-        findings.push({
-          rule: 'citation-resolves',
-          claims: ['d-eaw3u72o'],
-          path,
-          message: `${context} cites ${citation}, which the facts pool does not declare`,
-        })
-      } else if (entryInForce && facts.retired.has(citation.slice(2))) {
-        findings.push({
-          rule: 'citation-fact-retired',
-          claims: ['d-hxxlgaw9', 'r-ajpjx5w0'],
-          path,
-          message:
-            draft ?
-              `${context} cites ${citation}, which is already retired; cite its replacement instead`
-            : `${context} is in force and rests on retired fact ${citation}; a superseding entry re-bases or revises it at ${product.id}'s next landing`,
-          ...(draft ? {} : { severity: 'report' as const }),
-          product: product.id,
-        })
-      }
+      checkFactCitation(citation.slice(2), citation, path, context, entryInForce, draft)
     } else {
       findings.push({
         rule: 'citation-form',
         claims: ['d-eaw3u72o'],
         path,
-        message: `${context} cites ${JSON.stringify(citation)}, which is not a requirement, decision, or f:<fact> citation`,
+        message: `${context} cites ${JSON.stringify(citation)}, which is not a requirement, decision, f-<fact>, or f:<fact> citation`,
       })
     }
   }
@@ -486,7 +500,12 @@ const checkCitations = (product: Product, facts: FactsPool, productsTree: Produc
     if (requirementsSource) {
       for (const entry of requirementsSource.data.requirements ?? []) {
         for (const citation of entry.informed_by ?? []) {
-          if (QUESTION_ID.test(citation) || CLAIM_ID.test(citation) || citation.startsWith('f:')) {
+          if (
+            QUESTION_ID.test(citation) ||
+            CLAIM_ID.test(citation) ||
+            FACT_ID.test(citation) ||
+            citation.startsWith('f:')
+          ) {
             checkCitation(citation, requirementsSource.path, entry.id, inForce.has(entry.id), draft)
           }
         }

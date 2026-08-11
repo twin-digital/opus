@@ -1,0 +1,64 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: /design-process/fact@3
+title: fact
+description: one finding in the repo-wide facts/ pool; substance frozen once merged
+type: object
+additionalProperties: false
+required: [id, claim, backing, sources]
+properties:
+  id:
+    type: string
+    pattern: '^f-[0-9a-z]{8}$'
+  title:
+    type: string
+    description: the one-line name the fact is shown and cited by; the claim stays the body
+  claim:
+    type: string
+  backing:
+    enum: [tested, documented, assumed]
+  status:
+    enum: [active, retired]
+    description: active when absent
+  reason:
+    type: string
+    description: the retirement's reason, required when retired
+  superseded_by:
+    type: string
+    pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+    description: the replacement fact; resolves in either dialect
+  caveat:
+    type: string
+  sources:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+        run:
+          type: string
+          pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+        description:
+          type: string
+        where:
+          type: string
+        quote:
+          type: string
+      oneOf:
+        - required: [url, where, quote]
+        - required: [run, where, quote]
+        - required: [description]
+if:
+  properties:
+    status:
+      const: retired
+  required: [status]
+then:
+  required: [reason]
+else:
+  not:
+    anyOf:
+      - required: [reason]
+      - required: [superseded_by]

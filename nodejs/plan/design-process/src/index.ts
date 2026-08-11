@@ -53,6 +53,7 @@ export type { Fold, FoldedClaim, IncrementRef, OutOfForce } from './fold.js'
 export type {
   ComponentEntry,
   DecisionEntry,
+  FactEntry,
   Finding,
   ModelEntry,
   PresetEntry,

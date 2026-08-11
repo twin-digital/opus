@@ -12,7 +12,7 @@ import type { OpenEntry } from '../src/session/entries.js'
 import type { SessionHeader, SessionState } from '../src/session/model.js'
 
 /**
- * The render is diffed against `/design-process/ratify-screen@4`, the version the product's model
+ * The render is diffed against `/design-process/ratify-screen@5`, the version the product's model
  * binds; every version of that surface is read the same way (d-smnssz39, d-q50z7iq1).
  * `test/fixtures` carries a copy of the pool's file, its `mock:` frames verbatim. What the surface
  * commits to is arrangement, the order of things within a region, and the form of each field; what
@@ -21,7 +21,7 @@ import type { SessionHeader, SessionState } from '../src/session/model.js'
  * away.
  */
 const SURFACE = parse(
-  readFileSync(join(import.meta.dirname, 'fixtures/surfaces/design-process/ratify-screen.4.yaml'), 'utf8'),
+  readFileSync(join(import.meta.dirname, 'fixtures/surfaces/design-process/ratify-screen.5.yaml'), 'utf8'),
 ) as { mock: Record<string, string> }
 
 // wide enough to hold the mocks, whose rows run past the 95 their own rules declare
@@ -45,7 +45,7 @@ const unmarked = (row: string): string => row.replace(/\s[⌃⌄]\s*$/, '')
 
 /** The labels that begin a logical line of the pane; anything else continues the one above. */
 const STARTS =
-  /^(?:- |why it matters:|verification:|because:|supersedes:|amends:|answers:|note:|contract:|status:|retired:|pinned\()/
+  /^(?:- |why it matters:|verification:|scope:|because:|supersedes:|amends:|answers:|note:|contract:|status:|retired:|pinned\()/
 
 /** Fold a block back to its logical lines, since where the pane wraps follows its width. */
 const unwrap = (rows: string[]): string[] =>
@@ -208,7 +208,7 @@ const mock = (name: string): string[] => SURFACE.mock[name].split('\n').filter((
 
 const rendered = (state: SessionState) => shape(renderSession(state, VIEWPORT, resolve).slice(0, -1))
 
-describe('the decisions frame conforms to /design-process/ratify-screen@4', () => {
+describe('the decisions frame conforms to /design-process/ratify-screen@5', () => {
   const shown = rendered(session())
   const authored = shape(mock('ratify'))
 
@@ -234,7 +234,95 @@ describe('the decisions frame conforms to /design-process/ratify-screen@4', () =
   })
 })
 
-describe('the requirements frame conforms to /design-process/ratify-screen@4', () => {
+/** The scoped frame's own draft: a product that declares components, on a decision carrying cases. */
+const SCOPED_HEADER: SessionHeader = {
+  product: 'mc-test-lib',
+  increment: 'wip-007-entity-type-registration',
+  branch: 'plan/mc-test-lib/entity-type-registration',
+  pullRequest: 227,
+  alsoChanged: [
+    { kind: 'facts', count: 1 },
+    { kind: 'schemas', count: 1 },
+  ],
+  unresolved: 2,
+}
+
+const SCOPED_DRAFT = 'wip-007-entity-type-registration'
+const SCOPED_DECISIONS = `products/mc-test-lib/increments/${SCOPED_DRAFT}/decisions.yaml`
+
+const scopedDecision = (id: string, title: string, over: Partial<OpenEntry> = {}): OpenEntry => ({
+  kind: 'decision',
+  id,
+  title,
+  text: 'a statement the frame does not show.',
+  increment: SCOPED_DRAFT,
+  path: SCOPED_DECISIONS,
+  status: 'proposed',
+  ...over,
+})
+
+const SCOPED_ENTRIES: OpenEntry[] = [
+  scopedDecision('d-herh9vjy', 'the type catalog belongs to the server', {
+    status: 'accepted',
+    text: [
+      '`createServer()` returns an `EntityTypes` bound to that',
+      "server's own type catalog, so two servers in one process",
+      'share nothing and a test needs no reset hook. No catalog',
+      'state lives at module scope.',
+    ].join('\n'),
+    cases: [
+      {
+        when: 'a server is installed',
+        then: "the aliased surface's module-scope `EntityTypes` is a third binding beside `world` and `system`, moving with them",
+      },
+      { otherwise: 'it throws ShimNotInstalledError, as the other two do while unset' },
+    ],
+    scope: [
+      {
+        id: 'fakes',
+        description: 'the in-memory fakes of the `@minecraft/server` object model and their control plane',
+      },
+      {
+        id: 'shim',
+        description: 'the import-level shim that stands the fakes in for a direct `@minecraft/server` module import',
+      },
+    ],
+    pinned: {
+      reason: 'public-api',
+      notes: '`server.EntityTypes` is per-server rather than the one shared class object every server holds today',
+    },
+    because: ['r-qayd22z2'],
+  }),
+  scopedDecision('d-uky2xju6', 'EntityTypes behaves; the other services do not', { supersedes: 'd-duelxt32' }),
+  scopedDecision('d-fhq1ng5m', 'registration is a free function against the catalog', { status: 'accepted' }),
+  scopedDecision('d-0m25p71q', 'lookup reproduces the engine, misses included'),
+  scopedDecision('d-dub2g4kr', 'the type catalog gates spawning, not registration'),
+]
+
+const scopedResolve: Citations = (citation) =>
+  citation === 'r-qayd22z2' ? "a fake's surface is the engine's, member for member" : undefined
+
+describe('the scoped frame conforms to /design-process/ratify-screen@5', () => {
+  const shown = shape(renderSession(openSession(SCOPED_ENTRIES, SCOPED_HEADER), VIEWPORT, scopedResolve).slice(0, -1))
+  const authored = shape(mock('scoped'))
+
+  it('lists the draft’s decisions as the unscoped frame does', () => {
+    expect(shown.header).toEqual(authored.header)
+    expect(shown.rule).toBe(authored.rule)
+    expect(shown.list).toEqual(authored.list)
+  })
+
+  it('renders the cases beneath the statement they qualify, in source order (d-f2h4xeee)', () => {
+    expect(shown.heading).toBe(authored.heading)
+    expect(shown.body).toEqual(authored.body)
+  })
+
+  it('names the scope above the pinning and the citations, one component per item (d-let447tx)', () => {
+    expect(shown.metadata).toEqual(authored.metadata)
+  })
+})
+
+describe('the requirements frame conforms to /design-process/ratify-screen@5', () => {
   const shown = rendered(reduce(session(), { name: 'tab' }))
   const authored = shape(mock('requirements'))
 

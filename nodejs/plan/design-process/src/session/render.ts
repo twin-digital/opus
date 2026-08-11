@@ -1,3 +1,5 @@
+import { caseLines } from '../statements.js'
+
 import { citationLine } from './citations.js'
 import { closes } from './entries.js'
 import { openList } from './model.js'
@@ -39,7 +41,7 @@ const ruled = (label: string, columns: number): string =>
 /**
  * The frame the session draws, by mode: the ratify screen, the select-draft screen, and the
  * one-field overlay the input modes share. Returns one string per row, unpadded
- * (`/design-process/ratify-screen@4`).
+ * (`/design-process/ratify-screen@5`).
  */
 export const renderSession = (state: SessionState, viewport: Viewport, resolve: Citations): string[] => {
   const prompt = PROMPTS[state.mode]
@@ -223,11 +225,21 @@ const detailRows = (state: SessionState, width: number, resolve: Citations): str
       { text: `${(entry.title ?? entry.id).toUpperCase()} [${entry.id}]`, hang: 0 },
       { text: '', hang: 0 },
       ...reflow(entry.text),
+      ...caseBlocks(entry),
       ...requirementBlocks(entry),
       ...(metadata.length === 0 ? [] : [{ text: '', hang: 0 }, { text: RULE.repeat(width), hang: 0 }, ...metadata]),
     ],
     width,
   ).map((row) => truncate(row, width))
+}
+
+/**
+ * A decision's cases, directly beneath the statement they qualify and normative with it, in the
+ * form the projection prints (d-f2h4xeee). Omitted where the decision carries none, as most do.
+ */
+const caseBlocks = (entry: OpenEntry): Block[] => {
+  const cases = caseLines(entry.cases)
+  return cases.length === 0 ? [] : [{ text: '', hang: 0 }, ...cases.map((text) => ({ text, hang: 2 }))]
 }
 
 /** The rationale and the verification a requirement carries and a decision does not. */
@@ -250,9 +262,24 @@ const requirementBlocks = (entry: OpenEntry): Block[] => {
   return blocks
 }
 
-/** The pinning proposal, then the citations, each cited id shown as the title it resolves to (d-mhlya385). */
+/** The pinning proposal, then the citations, each cited id shown as the title it resolves to (d-okfuedqn). */
 const metadataBlocks = (state: SessionState, entry: OpenEntry, resolve: Citations): Block[] => {
   const blocks: Block[] = []
+  // the components the entry is ruled under, one per line (d-let447tx); a slug reaching no live
+  // component is shown as the slug alone
+  const scope = entry.scope ?? []
+  if (scope.length > 0) {
+    blocks.push(
+      { text: 'scope:', hang: 0 },
+      ...scope.map((component) => ({
+        text:
+          component.description === undefined ?
+            `  - ${component.id}`
+          : `  - ${component.description.trim()} [${component.id}]`,
+        hang: 4,
+      })),
+    )
+  }
   if (entry.pinned !== undefined && entry.pinned !== false) {
     const notes = entry.pinned.notes === undefined ? '' : `: ${entry.pinned.notes.trim()}`
     blocks.push({ text: `pinned(${entry.pinned.reason})${notes}`, hang: 2 })

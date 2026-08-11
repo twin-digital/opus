@@ -50,7 +50,7 @@ const detail = (rows: string[]): string[] =>
 
 const widest = (rows: string[]): number => Math.max(...rows.map((row) => row.length))
 
-describe('every row fits the viewport — /design-process/ratify-screen@4', () => {
+describe('every row fits the viewport — /design-process/ratify-screen@5', () => {
   it('clips a citation the detail pane cannot hold', () => {
     const resolve: Citations = () => 'opus workspace members sit two levels under nodejs'
     const state = open([decision('d-11111111', { because: ['f:opus-workspace-members-sit-two-levels-under-nodejs'] })])
@@ -68,7 +68,7 @@ describe('every row fits the viewport — /design-process/ratify-screen@4', () =
   })
 })
 
-describe('the frame fills the viewport exactly — /design-process/ratify-screen@4', () => {
+describe('the frame fills the viewport exactly — /design-process/ratify-screen@5', () => {
   it('emits one row per viewport row whatever the header holds', () => {
     expect(frame(open([decision('d-11111111')])).length).toBe(VIEW.rows)
   })
@@ -81,7 +81,7 @@ describe('the frame fills the viewport exactly — /design-process/ratify-screen
   })
 })
 
-describe('the footer — /design-process/ratify-screen@4', () => {
+describe('the footer — /design-process/ratify-screen@5', () => {
   it('shows what the last refused action said', () => {
     const state = press(open([decision('d-11111111')]), 'l')
     expect(state.message).toBe('landing waits on every entry being ruled')
@@ -89,7 +89,7 @@ describe('the footer — /design-process/ratify-screen@4', () => {
   })
 })
 
-describe('the list window follows the selection — /design-process/ratify-screen@4', () => {
+describe('the list window follows the selection — /design-process/ratify-screen@5', () => {
   const many = Array.from({ length: 10 }, (_, index) => decision(`d-${index}0000000`, { title: `choice ${index}` }))
 
   it('holds the selected entry once the list runs past the pane', () => {
@@ -99,7 +99,7 @@ describe('the list window follows the selection — /design-process/ratify-scree
   })
 })
 
-describe('the detail pane’s scroll — /design-process/ratify-screen@4', () => {
+describe('the detail pane’s scroll — /design-process/ratify-screen@5', () => {
   it('stops at the end of the entry rather than paging past it', () => {
     const state = press(open([decision('d-11111111')]), 'pagedown', 'pagedown')
     expect(detail(frame(state)).join('').trim()).not.toBe('')
@@ -159,5 +159,77 @@ describe('the whole of an entry’s detail is reachable — r-tb9nctcr', () => {
   it('moves the pane on the first press back', () => {
     const end = paging(open(tall()), ...Array.from({ length: 20 }, () => 'pagedown'))
     expect(detail(frame(paging(end, 'pageup')))).not.toEqual(detail(frame(end)))
+  })
+})
+
+/** Wide enough that a block sits on one row, which is where the order and the form show. */
+const WIDE: Viewport = { rows: 20, columns: 140 }
+
+describe('the detail pane renders a decision’s cases — d-f2h4xeee', () => {
+  const cases = [
+    { when: 'a server is installed', then: 'the binding moves with it' },
+    { otherwise: 'it throws, as the other two do while unset' },
+  ]
+
+  it('renders them beneath the statement, in source order, the otherwise last', () => {
+    const rows = detail(frame(open([decision('d-11111111', { cases })]), WIDE)).filter((row) => row.trim() !== '')
+    const statement = rows.findIndex((row) => row.startsWith('the statement.'))
+    const when = rows.findIndex((row) => row.startsWith('- when a server is installed: '))
+    const otherwise = rows.findIndex((row) => row.startsWith('- otherwise: '))
+    expect(statement).toBeGreaterThan(-1)
+    expect(when).toBe(statement + 1)
+    expect(otherwise).toBeGreaterThan(when)
+  })
+
+  it('renders no case block where the decision carries none', () => {
+    const rows = detail(frame(open([decision('d-11111111')]), WIDE))
+    expect(
+      rows.some((row) => row.trimStart().startsWith('- when ') || row.trimStart().startsWith('- otherwise:')),
+    ).toBe(false)
+  })
+
+  it('wraps a long clause under its item’s text — r-gzyfme0f', () => {
+    const long = [{ when: 'the workspace holds a package the release has not published yet', then: 'the deploy waits' }]
+    const rows = detail(frame(open([decision('d-11111111', { cases: long })]))).filter((row) => row.trim() !== '')
+    const first = rows.findIndex((row) => row.startsWith('- when '))
+    expect(first).toBeGreaterThan(-1)
+    expect(rows[first + 1]).toMatch(/^ {2}\S/)
+  })
+})
+
+describe('the detail pane names the scope an entry is ruled under — d-let447tx', () => {
+  const scope = [
+    { id: 'fakes', description: 'the in-memory fakes of the object model' },
+    { id: 'shim', description: 'the import-level shim' },
+  ]
+
+  it('names each component with its description, in the order the entry carries them', () => {
+    const rows = detail(frame(open([decision('d-11111111', { scope })]), WIDE)).filter((row) => row.trim() !== '')
+    const label = rows.findIndex((row) => row === 'scope:')
+    expect(label).toBeGreaterThan(-1)
+    expect(rows[label + 1]).toBe('  - the in-memory fakes of the object model [fakes]')
+    expect(rows[label + 2]).toBe('  - the import-level shim [shim]')
+  })
+
+  it('names a requirement’s scope as it names a decision’s', () => {
+    const requirement: OpenEntry = {
+      kind: 'requirement',
+      id: 'r-11111111',
+      title: 'a requirement',
+      text: 'the statement.\n',
+      increment: 'wip-001-a-draft',
+      path: 'products/demo/increments/wip-001-a-draft/requirements.yaml',
+      scope: [{ id: 'shim', description: 'the import-level shim' }],
+    }
+    expect(detail(frame(open([requirement]), WIDE))).toContain('scope:')
+  })
+
+  it('shows a slug that reached no live component as the slug alone', () => {
+    const rows = detail(frame(open([decision('d-11111111', { scope: [{ id: 'nonesuch' }] })]), WIDE))
+    expect(rows).toContain('  - nonesuch')
+  })
+
+  it('renders no scope block where the entry carries none', () => {
+    expect(detail(frame(open([decision('d-11111111')]), WIDE))).not.toContain('scope:')
   })
 })

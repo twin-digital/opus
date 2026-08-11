@@ -325,6 +325,16 @@ export const loadPool = (tree: FileTree): Pool => {
   return { files, findings, facts, runs, byId, duplicates }
 }
 
+/** How a fact is shown: its title, or the first line of its claim where it carries none. */
+export const factLabel = (fact: PoolItem): string => {
+  const title = typeof fact.data.title === 'string' ? fact.data.title.trim() : ''
+  if (title !== '') {
+    return title
+  }
+  const claim = typeof fact.data.claim === 'string' ? fact.data.claim : ''
+  return claim.trim().split('\n')[0]
+}
+
 /** Fact ids and statuses declared in the repo-wide `facts/` pool. */
 export const loadFacts = (tree: FileTree): FactsPool => {
   const ids = new Set<string>()

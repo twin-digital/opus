@@ -2,6 +2,7 @@ import { componentTree, resolveScopeId, scopeIds, subtree } from './components.j
 import { coverableClaimIds, foldProduct } from './fold.js'
 import { loadProducts } from './load.js'
 import { resolvePresetClosure } from './presets.js'
+import { caseLines } from './statements.js'
 
 import type { ComponentTree } from './components.js'
 import type { Fold, FoldedClaim, IncrementRef } from './fold.js'
@@ -306,15 +307,9 @@ const renderDecision = (entry: DecisionEntry, increment: IncrementRef, commentar
     '',
   ]
   // the cases are normative like the statement, in order, the first matching case governing (d-qv81x173)
-  for (const branch of entry.cases ?? []) {
-    lines.push(
-      'otherwise' in branch ?
-        `- otherwise: ${branch.otherwise.trim()}`
-      : `- when ${branch.when.trim()}: ${branch.then.trim()}`,
-    )
-  }
-  if (entry.cases !== undefined && entry.cases.length > 0) {
-    lines.push('')
+  const cases = caseLines(entry.cases)
+  if (cases.length > 0) {
+    lines.push(...cases, '')
   }
   // `decision@3` spells the rejection's reason `reason:` (d-4i5k9nsi)
   const rejection = entry.reason ?? entry.rejection_reason
