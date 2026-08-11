@@ -79,6 +79,7 @@ nodejs/dolmenwood/refbash/.data
 
 # Core dumps. A type-aware lint over a large package can exhaust its heap and
 # leave one of these — multi-gigabyte, and large enough that git accepts it and
-# the remote then refuses the push.
+# the remote then refuses the push. The suffix is the dumping pid, so match
+# digits only: a bare `core.*` also swallows source files named core.ts.
 core
-core.*
+core.[0-9]*
