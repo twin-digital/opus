@@ -41,6 +41,19 @@ packages:
     # so the generated `./*` subpath exports would offer every internal module as one.
     rules:
       package-manifest: false
+  '@twin-digital/rpg-core':
+    # One public entry point by design: an adventure reaches the presets, the spawn call, and the
+    # handle from the package root, so the generated `./*` subpath exports would contradict the
+    # published surface.
+    rules:
+      package-manifest: false
+  '@twin-digital/rpg-core-example':
+    # No importable surface by design: this is a behavior pack, and what it ships is the `.mcaddon`
+    # the dev kit archives. Its `src/` exists only because the shared test rule keys on
+    # `src/**/*.test.ts`, and the generated `files` and `./*` exports would offer the pack's
+    # internals as a library.
+    rules:
+      package-manifest: false
   '@twin-digital/village-guard':
     # No importable surface by design: this is a behavior pack, and what it ships is the `.mcaddon`
     # the dev kit archives. Its `src/` exists only because the shared test rule keys on
