@@ -15,8 +15,13 @@
  *  2. Render each non-empty section per its shape: `list` items through
  *     `item_template`, `table` cells per-column, `count` as a count line. A
  *     Message whose rendering is entirely empty falls back to `from — subject`
- *     (in a table, in its first column). `highlight` appends a ` (!)` marker
- *     by typed comparison over the normalized stored forms.
+ *     (in a table, in its first column). `highlight` compares once, by typed
+ *     comparison over the normalized stored forms; the mark reads per
+ *     rendition (d-7pviv01j) — a ` (!)` suffix in text, styling in the rich
+ *     one. A Tag the pipeline types as extracted money renders in display form
+ *     (`formatMoneyDisplay`, r-735kq72h), verbatim where the stored value is
+ *     not money (d-m6ingqyv); the threshold still compares the stored form
+ *     (d-nj43sz9w).
  *  3. **Reconcile**: the sum of rendered section item counts must equal the
  *     selected candidate count — asserted in code; a digest cannot silently
  *     drop a Message. Messages in declared-but-unclaimed categories (claimed
@@ -27,8 +32,10 @@
  *     section's rendered items, and is simply omitted on any failure — prose
  *     can never add, remove, or alter items, and never fails the run.
  *  5. Send via the metered `mail_sender.send_message` to the Account owner's own
- *     address. An empty window (no candidates in any section) completes
- *     without a send.
+ *     address — one mail, two renditions of the same content (d-1oqjgi9m): the
+ *     plain-text body plus the rich rendition (`rendition.ts`) as the optional
+ *     `body_rich` (d-rd986rrt). An empty window (no candidates in any section)
+ *     completes without a send.
  *
  * ## Metering
  *
@@ -42,13 +49,15 @@
  */
 
 import type { DigestDeliveryConfig, DigestProseBlock, DigestSection } from '@grinbox/shared'
-import { DIGEST_CATEGORY_TAG_KEY } from '@grinbox/shared'
+import { DIGEST_CATEGORY_TAG_KEY, formatMoneyDisplay } from '@grinbox/shared'
 import type { DB, MessagesTable } from '../db/schema.js'
 import { comparesOver } from '../operators/built-ins/normalize-extracted.js'
 import { renderTemplate } from '../operators/built-ins/template.js'
 import { type MessageView, messageViewFromRow } from '../operators/types.js'
 import { type ResourceEvent, type UsageDelta, createResourceClientFactory } from '../resources/make-resource-client.js'
 import type { MakeUnderlyingClients } from '../resources/underlying-clients.js'
+import { moneyTypedTagKeys } from './money-display.js'
+import { type RichSectionInput, renderRichDigest } from './rendition.js'
 
 /** The claimed `digest_runs` row plus its resolved scheduling context. */
 export interface DigestRunClaim {
@@ -154,7 +163,7 @@ export async function executeDigestRun(deps: DigestRunnerDeps, claim: DigestRunC
     const llm = makeResourceClient('llm_bedrock', ['invoke_model'])
     const sender = makeResourceClient('mail_sender', ['send_message'])
 
-    const rendered = renderSections(claim.config.sections, window.candidates)
+    const rendered = renderSections(claim.config.sections, window.candidates, window.moneyKeys)
 
     // Reconciliation invariant (r-vd9mu8od): the items rendered plus every count
     // the digest reports account for the whole window — not for the selection.
@@ -172,9 +181,12 @@ export async function executeDigestRun(deps: DigestRunnerDeps, claim: DigestRunC
     }
 
     // Prose blocks resolve per section through the metered LLM client; a
-    // denied/failed call omits its block and never fails the run.
+    // denied/failed call omits its block and never fails the run. Both
+    // renditions compose from this one pass — the same items, counts, prose,
+    // and footer (d-1oqjgi9m).
     const proseModelId = claim.config.summary_model_id
     const blocks: string[] = []
+    const richSections: RichSectionInput[] = []
     for (const section of rendered) {
       if (section.count === 0) {
         continue
@@ -182,14 +194,18 @@ export async function executeDigestRun(deps: DigestRunnerDeps, claim: DigestRunC
       const before = await resolveProse(llm, proseModelId, section.section.before, section)
       const after = await resolveProse(llm, proseModelId, section.section.after, section)
       blocks.push(sectionBlock(section, before, after))
+      richSections.push(richSection(section, before, after))
     }
 
+    const footerLines = digestFooterLines(window)
     const body = assembleBody(blocks, digestFooter(window))
+    const bodyRich = renderRichDigest(richSections, footerLines)
 
     const sent = await sender.send_message({
       to: toAddress,
       subject: digestSubject(claim),
       body,
+      body_rich: bodyRich,
     })
     if (sent.outcome !== 'succeeded') {
       throw new DigestRunError(
@@ -256,6 +272,8 @@ export interface DigestWindow {
   readonly uncategorized: number
   /** Every Message the window covers, whatever its Tags. */
   readonly coveredTotal: number
+  /** Tag keys the pipeline's enabled operators type as extracted money. */
+  readonly moneyKeys: ReadonlySet<string>
 }
 
 /**
@@ -351,17 +369,18 @@ async function loadWindow(db: DB, claim: DigestRunClaim): Promise<DigestWindow> 
     truncatedOverflow: Math.max(0, matchingTotal - candidates.length),
     uncategorized: Math.max(0, coveredTotal - categorizedTotal),
     coveredTotal,
+    moneyKeys: pipelineContext.moneyKeys,
   }
 }
 
 /**
- * Pipeline context for the footer: the categories claimed by any enabled
- * digest edition (this one included), and the `digest_category` producer's
+ * Pipeline context for composition: the categories claimed by any enabled
+ * digest edition (this one included), the `digest_category` producer's
  * fallback output — the "never digested" value a Rule-based producer emits
- * when no routing Rule matches. Both derive from the Pipeline's current
- * enabled Operator configs; a config that doesn't parse contributes nothing
- * (the footer degrades to counting more categories, never to dropping
- * Messages).
+ * when no routing Rule matches — and the Tag keys typed as extracted money
+ * (d-m6ingqyv). All derive from the Pipeline's current enabled Operator
+ * configs; a config that doesn't parse contributes nothing (the footer
+ * degrades to counting more categories, never to dropping Messages).
  */
 async function loadPipelineContext(
   db: DB,
@@ -369,6 +388,7 @@ async function loadPipelineContext(
 ): Promise<{
   claimedCategories: ReadonlySet<string>
   fallbackCategory: string | null
+  moneyKeys: ReadonlySet<string>
 }> {
   const rows = await db
     .selectFrom('operators')
@@ -406,15 +426,34 @@ async function loadPipelineContext(
       }
     }
   }
-  return { claimedCategories, fallbackCategory }
+  return { claimedCategories, fallbackCategory, moneyKeys: moneyTypedTagKeys(rows) }
 }
 
 // --- Rendering (pure) ------------------------------------------------------
 
-/** One section's deterministic rendering. */
+/** One rendered `list` item, unmarked: the mark reads per rendition (d-7pviv01j). */
+export interface RenderedItem {
+  readonly text: string
+  readonly marked: boolean
+}
+
+/** One rendered `table` row, cells without the mark. */
+export interface RenderedRow {
+  readonly cells: readonly string[]
+  readonly marked: boolean
+}
+
+/** One section's deterministic rendering — one accounting, both renditions. */
 export interface RenderedSection {
   readonly section: DigestSection
-  /** Rendered item/row lines (empty for `count` sections). */
+  /** `list` items (empty for other shapes). */
+  readonly items: readonly RenderedItem[]
+  /** `table` rows (empty for other shapes). */
+  readonly rows: readonly RenderedRow[]
+  /**
+   * The text rendition's item/row lines (empty for `count` sections): the mark
+   * suffixed as ` (!)`, a table led by its header + separator rows.
+   */
   readonly lines: readonly string[]
   /** Messages this section accounts for (= its candidates). */
   readonly count: number
@@ -425,11 +464,12 @@ export interface RenderedSection {
  * candidate lands in exactly one section (selection guaranteed category
  * membership; an edition claims each category at most once), so the
  * reconciliation invariant reduces to comparing totals. Pure — given the same
- * candidates and sections, the output is identical.
+ * candidates, sections, and money-typed keys, the output is identical.
  */
 export function renderSections(
   sections: readonly DigestSection[],
   candidates: readonly DigestCandidate[],
+  moneyKeys: ReadonlySet<string> = new Set(),
 ): RenderedSection[] {
   const byCategory = new Map<string, DigestCandidate[]>()
   for (const candidate of candidates) {
@@ -444,52 +484,101 @@ export function renderSections(
   return sections.map((section) => {
     const members = byCategory.get(section.category) ?? []
     switch (section.render) {
-      case 'list':
+      case 'list': {
+        const items = members.map((m) => renderListItem(section, m, moneyKeys))
         return {
           section,
           count: members.length,
-          lines: members.map((m) => `- ${renderListItem(section, m)}`),
+          items,
+          rows: [],
+          lines: items.map((item) => `- ${item.text}${item.marked ? HIGHLIGHT_MARKER : ''}`),
         }
-      case 'table':
+      }
+      case 'table': {
+        const rows = members.map((m) => renderTableRow(section, m, moneyKeys))
         return {
           section,
           count: members.length,
-          lines: members.length === 0 ? [] : renderTableLines(section, members),
+          items: [],
+          rows,
+          lines: members.length === 0 ? [] : renderTableLines(section, rows),
         }
+      }
       case 'count':
-        return { section, count: members.length, lines: [] }
+        return { section, count: members.length, items: [], rows: [], lines: [] }
     }
   })
 }
 
 /**
- * Render one `list` item: the `item_template` over the Message + its Tags,
- * falling back to `from — subject` when the rendering is entirely empty, plus
- * the highlight marker when the typed comparison fires.
+ * The Tag map a template renders from: keys the pipeline types as extracted
+ * money render in display form (r-735kq72h), verbatim where the stored value
+ * is not money (d-m6ingqyv). Rendered here at composition, never stored
+ * (d-nj43sz9w) — the highlight comparison reads the stored map.
  */
-function renderListItem(section: DigestSection, candidate: DigestCandidate): string {
-  const template = section.item_template ?? ''
-  const rendered = renderTemplate(template, candidate.message, candidate.tags).trim()
-  const text = rendered.length > 0 ? rendered : fallbackLine(candidate.message)
-  return isHighlighted(section, candidate) ? `${text}${HIGHLIGHT_MARKER}` : text
+function displayTags(tags: ReadonlyMap<string, string>, moneyKeys: ReadonlySet<string>): ReadonlyMap<string, string> {
+  if (moneyKeys.size === 0) {
+    return tags
+  }
+  const out = new Map(tags)
+  for (const key of moneyKeys) {
+    const stored = out.get(key)
+    if (stored !== undefined) {
+      out.set(key, formatMoneyDisplay(stored) ?? stored)
+    }
+  }
+  return out
 }
 
 /**
- * Render a `table` section: a header row, a separator, and one row per
- * Message with each cell rendered independently through its column's
- * template. A Message whose cells are ALL empty gets the fallback line in its
- * first column; a highlighted row carries the marker on its last cell.
+ * Render one `list` item: the `item_template` over the Message + its display
+ * Tags, falling back to `from — subject` when the rendering is entirely
+ * empty; `marked` when the typed comparison over the stored forms fires.
  */
-function renderTableLines(section: DigestSection, members: readonly DigestCandidate[]): string[] {
+function renderListItem(
+  section: DigestSection,
+  candidate: DigestCandidate,
+  moneyKeys: ReadonlySet<string>,
+): RenderedItem {
+  const template = section.item_template ?? ''
+  const rendered = renderTemplate(template, candidate.message, displayTags(candidate.tags, moneyKeys)).trim()
+  return {
+    text: rendered.length > 0 ? rendered : fallbackLine(candidate.message),
+    marked: isHighlighted(section, candidate),
+  }
+}
+
+/**
+ * Render one `table` row: each cell rendered independently through its
+ * column's template over the display Tags. A Message whose cells are ALL
+ * empty gets the fallback line in its first column.
+ */
+function renderTableRow(
+  section: DigestSection,
+  candidate: DigestCandidate,
+  moneyKeys: ReadonlySet<string>,
+): RenderedRow {
+  const columns = section.columns ?? []
+  const cells = columns.map((column) =>
+    renderTemplate(column.template, candidate.message, displayTags(candidate.tags, moneyKeys)).trim(),
+  )
+  if (cells.every((cell) => cell.length === 0)) {
+    cells[0] = fallbackLine(candidate.message)
+  }
+  return { cells, marked: isHighlighted(section, candidate) }
+}
+
+/**
+ * The text rendition's `table` lines: a header row, a separator, and one row
+ * per Message; a marked row carries the ` (!)` suffix on its last cell.
+ */
+function renderTableLines(section: DigestSection, rows: readonly RenderedRow[]): string[] {
   const columns = section.columns ?? []
   const row = (cells: readonly string[]): string => `| ${cells.join(' | ')} |`
   const lines = [row(columns.map((c) => c.header)), row(columns.map(() => '---'))]
-  for (const candidate of members) {
-    const cells = columns.map((column) => renderTemplate(column.template, candidate.message, candidate.tags).trim())
-    if (cells.every((cell) => cell.length === 0)) {
-      cells[0] = fallbackLine(candidate.message)
-    }
-    if (isHighlighted(section, candidate) && cells.length > 0) {
+  for (const rendered of rows) {
+    const cells = [...rendered.cells]
+    if (rendered.marked && cells.length > 0) {
       cells[cells.length - 1] = `${cells[cells.length - 1]}${HIGHLIGHT_MARKER}`.trim()
     }
     lines.push(row(cells))
@@ -510,6 +599,25 @@ function isHighlighted(section: DigestSection, candidate: DigestCandidate): bool
   }
   const value = candidate.tags.get(section.highlight.tag_key)
   return value !== undefined && comparesOver(value, section.highlight.over)
+}
+
+/**
+ * The same section as {@link sectionBlock} composes, shaped for the rich
+ * rendition (d-1oqjgi9m): unmarked items/rows with their `marked` flags —
+ * styling is the rich rendition's own reading of the mark (d-7pviv01j) — and
+ * the identical resolved prose. Escaping is rendition.ts's job (d-h5ycq7rm).
+ */
+function richSection(rendered: RenderedSection, before: string | null, after: string | null): RichSectionInput {
+  return {
+    title: rendered.section.title,
+    proseBefore: before,
+    proseAfter: after,
+    render: rendered.section.render,
+    items: rendered.items,
+    columns: (rendered.section.columns ?? []).map((c) => c.header),
+    rows: rendered.rows,
+    count: rendered.count,
+  }
 }
 
 /** One section's final text block: title, optional prose, items/count. */
@@ -565,13 +673,14 @@ export function accountedElsewhere(window: DigestWindow, ownCategories: Readonly
 }
 
 /**
- * The digest footer: Messages in categories with no claiming section (on any
- * enabled edition; the producer's fallback "never digested" value excluded)
- * counted per category, the Messages carrying no category at all, plus a
- * truncation note when the candidate cap cut the selection. Returns `null` when
- * there is nothing to report.
+ * The digest footer, one line per report: Messages in categories with no
+ * claiming section (on any enabled edition; the producer's fallback "never
+ * digested" value excluded) counted per category, the Messages carrying no
+ * category at all, plus a truncation note when the candidate cap cut the
+ * selection. Empty when there is nothing to report. Both renditions carry the
+ * same lines (d-1oqjgi9m).
  */
-export function digestFooter(window: DigestWindow): string | null {
+export function digestFooterLines(window: DigestWindow): string[] {
   const unclaimed: string[] = []
   let unclaimedTotal = 0
   for (const [category, count] of [...window.categoryCounts.entries()].sort(([a], [b]) => a.localeCompare(b))) {
@@ -603,6 +712,12 @@ export function digestFooter(window: DigestWindow): string | null {
         `uncategorized: triage recorded no digest category for ${window.uncategorized === 1 ? 'it' : 'them'}`,
     )
   }
+  return lines
+}
+
+/** The text rendition's footer block: {@link digestFooterLines} joined, or `null`. */
+export function digestFooter(window: DigestWindow): string | null {
+  const lines = digestFooterLines(window)
   return lines.length > 0 ? lines.join('\n') : null
 }
 

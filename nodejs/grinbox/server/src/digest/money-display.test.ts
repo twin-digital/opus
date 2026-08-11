@@ -1,28 +1,15 @@
+import { formatMoneyDisplay } from '@grinbox/shared'
 import { describe, expect, it } from 'vitest'
-import { formatMoneyDisplay, moneyTypedTagKeys } from './money-display.js'
+import { moneyTypedTagKeys } from './money-display.js'
 
-describe('formatMoneyDisplay (r-735kq72h, d-oc073wsp, d-b1ntd8go)', () => {
-  it('renders a known symbol before the amount', () => {
+// The display form itself is @grinbox/shared's and is specified there; this
+// asserts the digest consumes the shared conventions (d-oc073wsp, d-b1ntd8go:
+// symbol before the amount, ISO code before the amount space-separated).
+describe('formatMoneyDisplay (shared, consumed by the digest)', () => {
+  it('renders the shared conventions', () => {
     expect(formatMoneyDisplay('19503:USD')).toBe('$195.03')
-    expect(formatMoneyDisplay('100:EUR')).toBe('€1.00')
-    expect(formatMoneyDisplay('99:GBP')).toBe('£0.99')
-  })
-
-  it('groups thousands with commas and marks the decimal with a period', () => {
-    expect(formatMoneyDisplay('123456789:USD')).toBe('$1,234,567.89')
-  })
-
-  it('leads a negative amount with a minus sign', () => {
-    expect(formatMoneyDisplay('-19503:USD')).toBe('-$195.03')
-  })
-
-  it('carries no decimals where the minor unit is the whole unit', () => {
+    expect(formatMoneyDisplay('123456:CHF')).toBe('CHF 1,234.56')
     expect(formatMoneyDisplay('1000:JPY')).toBe('¥1,000')
-    expect(formatMoneyDisplay('2500000:KRW')).toBe('2,500,000 KRW')
-  })
-
-  it('renders the ISO code beside the amount where no symbol is known', () => {
-    expect(formatMoneyDisplay('123456:CHF')).toBe('1,234.56 CHF')
   })
 
   it('returns null for anything not in the stored money form (renders verbatim, d-m6ingqyv)', () => {

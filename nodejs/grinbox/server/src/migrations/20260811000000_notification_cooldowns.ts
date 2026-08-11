@@ -13,7 +13,7 @@ import { type Kysely, sql } from 'kysely'
  *    a later Notify run's cooldown check reads to find the push it defers to
  *    (d-5amonj40). A push naming no kind is not recorded here — nothing groups
  *    it with any other operator's.
- *  - `triage_events.event_type` gains `push_suppressed`, the suppression's own
+ *  - `triage_events.event_type` gains `resource_op_suppressed`, the suppression's own
  *    outcome kind beside succeeded / failed / skipped-by-limit (d-e9jslw4x).
  *    SQLite cannot alter a CHECK, so the table is rebuilt with foreign keys
  *    off, the ids carried across unchanged (same procedure as the
@@ -61,7 +61,7 @@ async function rebuildTriageEvents(db: Kysely<unknown>): Promise<void> {
       operator_id   INTEGER NOT NULL,
       sequence_num  INTEGER NOT NULL,
       event_type    TEXT    NOT NULL
-        CHECK (event_type IN ('tag_set','resource_op_succeeded','resource_op_limited','resource_op_failed','push_suppressed')),
+        CHECK (event_type IN ('tag_set','resource_op_succeeded','resource_op_limited','resource_op_failed','resource_op_suppressed')),
       details_json  TEXT,
       recorded_at   INTEGER NOT NULL,
       PRIMARY KEY (triage_id, sequence_num),
@@ -85,6 +85,6 @@ async function rebuildTriageEvents(db: Kysely<unknown>): Promise<void> {
       WHERE event_type IN ('resource_op_succeeded',
                            'resource_op_limited',
                            'resource_op_failed',
-                           'push_suppressed')
+                           'resource_op_suppressed')
   `.execute(db)
 }

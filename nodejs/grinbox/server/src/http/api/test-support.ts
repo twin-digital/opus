@@ -211,7 +211,8 @@ export async function insertTriage(
     makeCurrent?: boolean
     tags?: { key: string; value: string }[]
     events?: {
-      eventType: 'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed'
+      eventType:
+        'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
       detailsJson?: string | null
       recordedAt: number
     }[]

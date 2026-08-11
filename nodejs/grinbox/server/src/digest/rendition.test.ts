@@ -56,10 +56,7 @@ describe('renderRichDigest (d-zkb393z9, d-7pviv01j)', () => {
     expect(html).not.toContain('(!)')
   })
 
-  // Implement-phase tests (Code wave): the runner builds both renditions from
-  // one accounting, and the mail carries the pair through the send seam.
-  it.todo(
-    'digest-runner hands renderRichDigest the same items, counts, and footer the text rendition shows (d-1oqjgi9m)',
-  )
-  it.todo('a money-typed tag renders in display form in both renditions (r-735kq72h, d-nj43sz9w)')
+  // The runner-side pairing — both renditions built from one accounting and
+  // carried through the send seam, money display in both — is asserted in
+  // digest-runner.test.ts ('second rendition').
 })

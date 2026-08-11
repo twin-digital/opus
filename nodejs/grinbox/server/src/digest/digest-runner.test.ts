@@ -718,6 +718,140 @@ describe('executeDigestRun — deterministic composition', () => {
   })
 })
 
+describe('executeDigestRun — second rendition (d-1oqjgi9m, d-rd986rrt)', () => {
+  let f: Fixture
+  beforeEach(async () => {
+    f = await fixture()
+  })
+
+  function sentRich(): string {
+    return (f.send.mock.calls[0]?.[0] as { body_rich?: string }).body_rich ?? ''
+  }
+
+  /** Add an enabled llm_tagger typing `amount` as extracted money (d-m6ingqyv). */
+  async function addMoneyTagger(): Promise<void> {
+    await f.db
+      .insertInto('operators')
+      .values({
+        pipeline_id: f.pipelineId,
+        name: 'extract',
+        type_key: 'llm_tagger',
+        type_code_version: '1',
+        config_json: JSON.stringify({
+          model_id: 'anthropic.claude-haiku-4-5-20251001-v1:0',
+          prompt_template: 'extract',
+          outputs: [{ tag_key: 'amount', value_type: 'money' }],
+        }),
+        enabled: 1,
+        created_at: 1000,
+        updated_at: 1000,
+      })
+      .execute()
+  }
+
+  it('hands renderRichDigest the same items, counts, and footer the text rendition shows (d-1oqjgi9m)', async () => {
+    await seedCandidate(f, {
+      backendId: 'b1',
+      createdAt: NOW - 300,
+      category: 'bill',
+      tags: { payee: 'Water <Co>', amount: '4200:USD', due_date: '2026-08-10' },
+    })
+    await seedCandidate(f, {
+      backendId: 'r1',
+      createdAt: NOW - 200,
+      category: 'receipt',
+      from: 'Shop B <b@shop.example>',
+      tags: { amount: '19503:USD' }, // over the highlight threshold
+    })
+    await seedCandidate(f, { backendId: 'rel1', createdAt: NOW - 50, category: 'release' })
+    // 'deal' is unclaimed → the footer reports it in both renditions.
+    await seedCandidate(f, { backendId: 'd1', createdAt: NOW - 40, category: 'deal' })
+    const claim = await claimRun(f, { from: NOW - 1000, to: NOW })
+
+    const outcome = await executeDigestRun({ db: f.db, makeClients: f.makeClients, timeoutMs: 5000 }, claim)
+    expect(outcome.status).toBe('completed')
+
+    const body = sentBody(f)
+    const rich = sentRich()
+
+    // One mail carries both renditions of the same content.
+    expect(rich).not.toBe('')
+    // The same items, escaped (d-h5ycq7rm): template text reaches the
+    // recipient as the characters it is in both renditions.
+    expect(body).toContain('Water <Co> — 4200:USD due 2026-08-10')
+    expect(rich).toContain('Water &lt;Co&gt; — 4200:USD due 2026-08-10')
+    // The same table cells and count line.
+    expect(body).toContain('| Shop B <b@shop.example> | 19503:USD (!) |')
+    expect(rich).toContain('Shop B &lt;b@shop.example&gt;')
+    expect(body).toContain('1 message')
+    expect(rich).toContain('1 message')
+    // The same footer accounting (r-vd9mu8od).
+    const footerLine = 'Also in this window: 1 message in categories with no section: deal (1)'
+    expect(body).toContain(footerLine)
+    expect(rich).toContain(footerLine)
+    // The mark reads per rendition (d-7pviv01j): suffix in text, styling in rich.
+    expect(rich).not.toContain('(!)')
+    expect(rich).toContain('rgba(255, 196, 0, 0.28)')
+  })
+
+  it('a money-typed tag renders in display form in both renditions (r-735kq72h, d-nj43sz9w)', async () => {
+    await addMoneyTagger()
+    await seedCandidate(f, {
+      backendId: 'b1',
+      createdAt: NOW - 300,
+      category: 'bill',
+      tags: { payee: 'Water Co', amount: '4200:USD', due_date: '2026-08-10' },
+    })
+    await seedCandidate(f, {
+      backendId: 'r1',
+      createdAt: NOW - 200,
+      category: 'receipt',
+      from: 'Shop B <b@shop.example>',
+      tags: { amount: '19503:USD' },
+    })
+    const claim = await claimRun(f, { from: NOW - 1000, to: NOW })
+
+    await executeDigestRun({ db: f.db, makeClients: f.makeClients, timeoutMs: 5000 }, claim)
+
+    const body = sentBody(f)
+    const rich = sentRich()
+    // Display form in both renditions; the stored form appears in neither
+    // (rendered at composition, never stored — d-nj43sz9w).
+    expect(body).toContain('$42.00')
+    expect(rich).toContain('$42.00')
+    expect(body).not.toContain('4200:USD')
+    expect(rich).not.toContain('4200:USD')
+    // The threshold still compares the stored form: 19503:USD > 10000:USD
+    // marks the row even though what renders is $195.03.
+    expect(body).toContain('| Shop B <b@shop.example> | $195.03 (!) |')
+    expect(rich).toContain('$195.03')
+    // The stored value stays what grinbox keeps (d-nj43sz9w).
+    const stored = await f.db
+      .selectFrom('tags')
+      .select(['value'])
+      .where('key', '=', 'amount')
+      .orderBy('value', 'asc')
+      .execute()
+    expect(stored.map((t) => t.value)).toEqual(['19503:USD', '4200:USD'])
+  })
+
+  it('a money-typed tag whose stored value is not money renders verbatim (d-m6ingqyv)', async () => {
+    await addMoneyTagger()
+    await seedCandidate(f, {
+      backendId: 'b1',
+      createdAt: NOW - 300,
+      category: 'bill',
+      tags: { payee: 'Water Co', amount: 'about forty dollars', due_date: '2026-08-10' },
+    })
+    const claim = await claimRun(f, { from: NOW - 1000, to: NOW })
+
+    await executeDigestRun({ db: f.db, makeClients: f.makeClients, timeoutMs: 5000 }, claim)
+
+    expect(sentBody(f)).toContain('about forty dollars')
+    expect(sentRich()).toContain('about forty dollars')
+  })
+})
+
 describe('digestFooter', () => {
   const window = (overrides: Partial<DigestWindow>): DigestWindow => ({
     candidates: [],
@@ -727,6 +861,7 @@ describe('digestFooter', () => {
     truncatedOverflow: 0,
     uncategorized: 0,
     coveredTotal: 0,
+    moneyKeys: new Set<string>(),
     ...overrides,
   })
 

@@ -284,7 +284,7 @@ export type CooldownVerdict =
  * The seam Notify consults before its push reaches any Resource. The check
  * runs BEFORE the metered client — a suppressed push reaches no resource and
  * counts against no Limit (d-6ptxams7). The gate is built per run by the
- * worker: `checkCooldown` also records the `push_suppressed` event against the
+ * worker: `checkCooldown` also records the `resource_op_suppressed` event against the
  * run when it suppresses, and `recordPush` records a delivered kind-named push
  * so later runs can defer to it.
  */
