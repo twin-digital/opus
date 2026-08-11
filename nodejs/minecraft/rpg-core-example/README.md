@@ -82,6 +82,13 @@ activated in the world `.minecraft.yml` names, then watches for changes.
 
 Join the server (add it in Bedrock by IP, port 19132) and verify, from spawn at `60 95 63`:
 
+> **The resource pack must be applied, or every actor is invisible.** An actor's appearance lives
+> in the assets pack's resource half, and the dev server offers its resource packs as _optional_
+> (`TEXTUREPACK_REQUIRED=false`), so a client that skips the download joins a world of standing,
+> named, undamageable — and invisible — actors. Accept the pack when joining, or require it for
+> the session: `docker compose -f "$(ls /tmp/mc-dev-server/*/compose.yaml)" up -d` after setting
+> `TEXTUREPACK_REQUIRED: "true"` in that file (the next `pnpm dev` regenerates it).
+
 1. **Every actor stands in the gallery** — the greeter at spawn, and one actor per preset in a
    line running south, each at exactly the coordinates the story placed it — an actor holds where
    the spawn call put it, mid-air included. A placement that could not settle is reported in chat
