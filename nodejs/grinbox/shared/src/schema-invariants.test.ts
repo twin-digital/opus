@@ -13,6 +13,7 @@ import {
   operatorConfigSchemas,
   operatorRunStatusSchema,
   operatorTypeRegistry,
+  pendingArchiveSkipReasonSchema,
   providerTypeSchema,
   resourceOperationDeclarationSchema,
   sourceStateSchema,
@@ -64,13 +65,17 @@ describe('closed enum closedness', () => {
       name: 'triageEventTypeSchema',
       schema: triageEventTypeSchema,
       // `resource_op_suppressed` is the cooldown-suppressed push's own outcome
-      // kind in the attempt vocabulary (d-e9jslw4x).
+      // kind in the attempt vocabulary (d-e9jslw4x); the `pending_archive_*`
+      // pair records the delayed Archive path (d-41v9yqvh). The members and
+      // their order mirror the `triage_events` CHECK.
       members: [
         'tag_set',
         'resource_op_succeeded',
         'resource_op_limited',
         'resource_op_failed',
         'resource_op_suppressed',
+        'pending_archive_recorded',
+        'pending_archive_skipped',
       ],
       outOfSet: 'tag_cleared',
     },
@@ -110,6 +115,28 @@ describe('closed enum closedness', () => {
       expect(schema.safeParse(outOfSet).success).toBe(false)
     })
   }
+})
+
+// --- pendingArchiveSkipReasonSchema closedness ---------------------------
+//
+// Not a DB CHECK — the reason lives inside a `pending_archive_skipped` event's
+// details — but closed in code, and read by both tiers (d-ymvh4v9a). The
+// members are checked exactly the way the CHECK-constrained enums above are:
+// an added member is a reason the interface has never heard of, a dropped one
+// is a reason already written to events the interface would then reject.
+
+describe('pendingArchiveSkipReasonSchema closedness', () => {
+  it('has exactly its documented members', () => {
+    expect([...pendingArchiveSkipReasonSchema.options].sort()).toEqual([
+      'abandoned',
+      'already_departed',
+      'pipeline_inactive',
+    ])
+  })
+
+  it('rejects an out-of-set reason', () => {
+    expect(pendingArchiveSkipReasonSchema.safeParse('already_archived').success).toBe(false)
+  })
 })
 
 // --- operatorTypeKeySchema closedness ------------------------------------
@@ -421,6 +448,15 @@ describe('Action `when` gate schema', () => {
       }).success,
     ).toBe(true)
     expect(archive.safeParse({ when: { tag_key: 'disposition', equals: [] } }).success).toBe(false)
+  })
+
+  it('archive takes an optional whole-seconds delay of at least one (d-grcdd4ov)', () => {
+    const archive = operatorConfigSchemas.archive
+    expect(archive.safeParse({ delay_seconds: 3600 }).success).toBe(true)
+    expect(archive.safeParse({ delay_seconds: 1 }).success).toBe(true)
+    expect(archive.safeParse({ delay_seconds: 0 }).success).toBe(false)
+    expect(archive.safeParse({ delay_seconds: -60 }).success).toBe(false)
+    expect(archive.safeParse({ delay_seconds: 1.5 }).success).toBe(false)
   })
 
   it('rejects a `when` with an empty `equals`', () => {

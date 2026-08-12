@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { AccountIcon } from '@/components/account-icon'
 import { Page } from '@/components/page'
+import { PendingArchiveBadge } from '@/components/pending-archive'
 import { SourceStateBadge } from '@/components/source-state-badge'
 import { TagChip, orderTagsByPriority } from '@/components/tag-chip'
 import { TriageStatusIndicator } from '@/components/triage-status-indicator'
@@ -489,6 +490,11 @@ function MessageRowView({
             <span className='flex items-center gap-2'>
               <span className='truncate text-sm font-medium'>{message.subject ?? '(no subject)'}</span>
               <SourceStateBadge state={message.source_state} />
+              {/* The standing pending Archive rides the row, not the filters
+                  (d-p0ea1t8q): no new scope, sort, or query parameter. */}
+              {message.pending_archive ?
+                <PendingArchiveBadge pending={message.pending_archive} />
+              : null}
             </span>
             {message.snippet ?
               <span className='block truncate text-xs text-muted-foreground'>{message.snippet}</span>

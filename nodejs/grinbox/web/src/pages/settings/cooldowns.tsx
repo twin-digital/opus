@@ -30,6 +30,7 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { errorMessage } from '@/lib/api-error'
 import { type CooldownRow, useCooldowns, useCreateCooldown, useDeleteCooldown, useEditCooldown } from '@/lib/cooldowns'
+import { formatSeconds } from '@/lib/format'
 
 /**
  * Settings → Notification cooldowns. A cooldown is the user's per-kind minimum
@@ -142,7 +143,7 @@ function CooldownRowView({ cooldown, inUse }: { cooldown: CooldownRow; inUse: bo
         )}
       </TableCell>
       <TableCell className='text-right font-mono text-xs tabular-nums'>
-        {formatInterval(cooldown.interval_seconds)}
+        {formatSeconds(cooldown.interval_seconds)}
       </TableCell>
       <TableCell>
         <div className='flex items-center justify-end gap-1'>
@@ -152,20 +153,6 @@ function CooldownRowView({ cooldown, inUse }: { cooldown: CooldownRow; inUse: bo
       </TableCell>
     </TableRow>
   )
-}
-
-/** Compact interval rendering: "45s", "10m", "1h", "1d". */
-function formatInterval(seconds: number): string {
-  if (seconds % 86_400 === 0) {
-    return `${seconds / 86_400}d`
-  }
-  if (seconds % 3_600 === 0) {
-    return `${seconds / 3_600}h`
-  }
-  if (seconds % 60 === 0) {
-    return `${seconds / 60}m`
-  }
-  return `${seconds}s`
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { relativeTime } from './format'
+import { formatSeconds, relativeTime, timeUntil } from './format'
 
 describe('relativeTime', () => {
   const now = 1_700_000_000_000 // fixed ms
@@ -38,5 +38,35 @@ describe('relativeTime', () => {
 
   it('clamps a future timestamp to "just now" (no negative delta)', () => {
     expect(relativeTime(nowSec + 120, now)).toBe('just now')
+  })
+})
+
+describe('timeUntil', () => {
+  const now = 1_700_000_000_000
+  const nowSec = Math.floor(now / 1000)
+
+  it('counts down in seconds / minutes / hours / days', () => {
+    expect(timeUntil(nowSec + 45, now)).toBe('in 45s')
+    expect(timeUntil(nowSec + 600, now)).toBe('in 10m')
+    expect(timeUntil(nowSec + 2 * 3600, now)).toBe('in 2h')
+    expect(timeUntil(nowSec + 5 * 86_400, now)).toBe('in 5d')
+  })
+
+  // A due moment grinbox has not swept yet is imminent, not missed
+  // (d-gzv0jty7: the sweep acts late rather than never).
+  it('reads a past-due moment as "due now"', () => {
+    expect(timeUntil(nowSec, now)).toBe('due now')
+    expect(timeUntil(nowSec - 3600, now)).toBe('due now')
+  })
+})
+
+describe('formatSeconds', () => {
+  it('renders the largest whole unit', () => {
+    expect(formatSeconds(45)).toBe('45s')
+    expect(formatSeconds(600)).toBe('10m')
+    expect(formatSeconds(3600)).toBe('1h')
+    expect(formatSeconds(86_400)).toBe('1d')
+    // Not a whole minute → stays in seconds.
+    expect(formatSeconds(90)).toBe('90s')
   })
 })

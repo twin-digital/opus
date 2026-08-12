@@ -5,13 +5,14 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Page } from '@/components/page'
+import { PendingArchiveNotice } from '@/components/pending-archive'
 import { SourceStateBadge } from '@/components/source-state-badge'
 import { TagChip } from '@/components/tag-chip'
 import { TriageStatusIndicator } from '@/components/triage-status-indicator'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { errorMessage } from '@/lib/api-error'
-import { relativeTime } from '@/lib/format'
+import { absoluteTime, formatSeconds, relativeTime, timeUntil } from '@/lib/format'
 import {
   type MessageDetail,
   type MessageTriage,
@@ -74,7 +75,7 @@ function MessageDetailView({
   messageId: number
   initialTriageId?: number
 }) {
-  const { message, current_tags, triages } = detail
+  const { message, current_tags, pending_archive, triages } = detail
 
   // Money-typed Tag keys per Pipeline this Message was triaged under, so every
   // surface that shows a Tag's value renders money in display form (d-u4gpx6ke).
@@ -82,6 +83,17 @@ function MessageDetailView({
     ...current_tags.map((t) => t.pipeline_id),
     ...triages.map((t) => t.pipeline_id),
   ])
+
+  // The tab and the selected Triage are held here so a reference elsewhere on
+  // the page — the pending Archive's recording Triage — can open the history at
+  // that Triage.
+  const [tab, setTab] = useState(initialTriageId === undefined ? 'overview' : 'triage')
+  const [selectedTriageId, setSelectedTriageId] = useState<number | null>(initialTriageId ?? null)
+
+  const showTriage = (id: number) => {
+    setSelectedTriageId(id)
+    setTab('triage')
+  }
 
   return (
     <div>
@@ -114,9 +126,15 @@ function MessageDetailView({
             <dd>{relativeTime(message.received_at)}</dd>
           </div>
         </dl>
+        {/* The pending Archive sits in the header rather than on a tab: it is
+            about to change where the Message lives, so it reads beside the
+            Message's standing wherever the reader is (d-p0ea1t8q). */}
+        {pending_archive ?
+          <PendingArchiveNotice pending={pending_archive} onSelectTriage={showTriage} />
+        : null}
       </header>
 
-      <Tabs defaultValue={initialTriageId === undefined ? 'overview' : 'triage'}>
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value='overview'>Overview</TabsTrigger>
           <TabsTrigger value='tags'>Tags</TabsTrigger>
@@ -137,7 +155,12 @@ function MessageDetailView({
         </TabsContent>
 
         <TabsContent value='triage'>
-          <TriageHistoryTab triages={triages} moneyByPipeline={moneyByPipeline} initialTriageId={initialTriageId} />
+          <TriageHistoryTab
+            triages={triages}
+            moneyByPipeline={moneyByPipeline}
+            selectedId={selectedTriageId}
+            onSelect={setSelectedTriageId}
+          />
         </TabsContent>
       </Tabs>
     </div>
@@ -276,15 +299,16 @@ function TagsTab({
 function TriageHistoryTab({
   triages,
   moneyByPipeline,
-  initialTriageId,
+  selectedId,
+  onSelect,
 }: {
   triages: readonly MessageTriage[]
   moneyByPipeline: ReadonlyMap<number, ReadonlySet<string>>
-  initialTriageId?: number
+  /** Null selects the latest Triage (the list is most-recent-first). */
+  selectedId: number | null
+  onSelect: (id: number) => void
 }) {
-  // Latest Triage selected by default (the list is most-recent-first); a
-  // `?triage=` deep link pre-selects that Triage instead.
-  const [selectedId, setSelectedId] = useState<number | null>(initialTriageId ?? triages.at(0)?.id ?? null)
+  const setSelectedId = onSelect
 
   const first = triages.at(0)
   if (first === undefined) {
@@ -389,6 +413,14 @@ function OperatorRunRow({ run, events }: { run: MessageTriageRun; events: readon
     .map((ev) => parseSuppression(ev.details_json))
     .find((s) => s !== null)
 
+  // An Archive carrying a delay records the pending Archive instead of calling
+  // the mailbox (d-grcdd4ov): the run completes, and what it scheduled shows on
+  // the run the way a suppressed push does.
+  const recordedArchive = events
+    .filter((ev) => ev.operator_id === run.operator_id && ev.event_type === 'pending_archive_recorded')
+    .map((ev) => parseRecordedArchive(ev.details_json))
+    .find((r) => r !== null)
+
   return (
     <li className='rounded-md border border-border px-3 py-2'>
       <div className='flex items-center justify-between gap-2'>
@@ -410,6 +442,9 @@ function OperatorRunRow({ run, events }: { run: MessageTriageRun; events: readon
           <span data-testid='run-suppression'>
             push suppressed — cooldown on <span className='font-mono'>{suppression.kind}</span>
           </span>
+        : null}
+        {recordedArchive ?
+          <span data-testid='run-pending-archive'>archive scheduled — due {absoluteTime(recordedArchive.due_at)}</span>
         : null}
         {formatResourceUsage(run.resource_usage_json).map((u) => (
           <span key={u}>{u}</span>
@@ -467,6 +502,8 @@ function EventRow({
   onSelectTriage: (id: number) => void
 }) {
   const suppression = event.event_type === 'resource_op_suppressed' ? parseSuppression(event.details_json) : null
+  const recorded = event.event_type === 'pending_archive_recorded' ? parseRecordedArchive(event.details_json) : null
+  const skipped = event.event_type === 'pending_archive_skipped' ? parseSkippedArchive(event.details_json) : null
   return (
     <li className='flex items-baseline gap-3 text-sm'>
       <span className='font-mono text-xs text-muted-foreground'>#{event.sequence_num}</span>
@@ -478,12 +515,70 @@ function EventRow({
           knownTriageIds={knownTriageIds}
           onSelectTriage={onSelectTriage}
         />
+      : recorded ?
+        <span className='text-xs text-muted-foreground' data-testid='pending-archive-recorded-details'>
+          due {absoluteTime(recorded.due_at)} ({timeUntil(recorded.due_at)}) — {formatSeconds(recorded.delay_seconds)}{' '}
+          after the Message arrived
+        </span>
+      : skipped ?
+        <span className='text-xs text-muted-foreground' data-testid='pending-archive-skipped-details'>
+          {skipReasonText(skipped)}
+        </span>
       : <span className='font-mono text-xs text-muted-foreground'>
           {formatEventDetails(event.details_json, moneyKeys)}
         </span>
       }
     </li>
   )
+}
+
+/** The `pending_archive_recorded` details an Archive run records (d-grcdd4ov). */
+interface RecordedArchiveDetails {
+  readonly due_at: number
+  readonly delay_seconds: number
+}
+
+function parseRecordedArchive(json: string | null): RecordedArchiveDetails | null {
+  const parsed = parseDetails(json)
+  if (parsed && typeof parsed.due_at === 'number' && typeof parsed.delay_seconds === 'number') {
+    return { due_at: parsed.due_at, delay_seconds: parsed.delay_seconds }
+  }
+  return null
+}
+
+/** The reason a due pending Archive made no mailbox call (d-41v9yqvh). */
+function parseSkippedArchive(json: string | null): string | null {
+  const parsed = parseDetails(json)
+  return parsed && typeof parsed.reason === 'string' ? parsed.reason : null
+}
+
+function parseDetails(json: string | null): Record<string, unknown> | null {
+  if (!json) {
+    return null
+  }
+  try {
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Why the mailbox was left alone when the Archive came due. An unrecognised
+ * reason renders as it was stored rather than as nothing — a daemon ahead of
+ * this build still says something.
+ */
+function skipReasonText(reason: string): string {
+  switch (reason) {
+    case 'already_departed':
+      return 'the Message had already left the inbox'
+    case 'abandoned':
+      return 'its Pipeline or Account was deleted'
+    case 'pipeline_inactive':
+      return 'its Pipeline is no longer active on the Account'
+    default:
+      return reason
+  }
 }
 
 /** The `resource_op_suppressed` details the cooldown gate records (d-e9jslw4x). */
@@ -586,6 +681,8 @@ const EVENT_LABELS: Record<string, string> = {
   resource_op_limited: 'Resource op limited',
   resource_op_failed: 'Resource op failed',
   resource_op_suppressed: 'Push suppressed',
+  pending_archive_recorded: 'Archive scheduled',
+  pending_archive_skipped: 'Pending archive skipped',
 }
 
 function eventLabel(eventType: string): string {

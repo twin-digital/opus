@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { modelIdSchema } from './models.js'
 import { notificationKindSchema } from './notifications.js'
+import { archiveDelaySecondsSchema } from './pending-archive.js'
 
 /**
  * Operator `config_json` shapes, keyed by `type_key`. This is the declarative
@@ -269,8 +270,15 @@ export type ApplyCategoryConfig = z.infer<typeof applyCategoryConfigSchema>
  * {@link actionWhenSchema}). Without a gate, Archive fires for every Message
  * the Pipeline triages — so unlike Apply Category, most Archive configs
  * include a `when` gate.
+ *
+ * `delay_seconds` defers the archive (d-grcdd4ov): with none the Message is
+ * archived during the Triage the Operator runs in; with one the Triage records
+ * a pending archive due that many seconds past the Message's take-in, and
+ * grinbox performs it when it comes due. A config stored before delays existed
+ * parses unchanged.
  */
 export const archiveConfigSchema = z.object({
+  delay_seconds: archiveDelaySecondsSchema.optional(),
   when: actionWhenSchema.optional(),
 })
 export type ArchiveConfig = z.infer<typeof archiveConfigSchema>

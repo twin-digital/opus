@@ -47,6 +47,29 @@ in place when it belongs to the same message, linked to the other message's deta
 that triage via `?triage=`) otherwise. Where the deferred-to triage no longer exists, the
 identifiers render as text.
 
+## Delayed archives
+
+An archive operator takes an optional delay — whole seconds, at least one, no ceiling
+(`d-grcdd4ov`). Left blank, the field is omitted from the saved configuration and the message is
+archived during the triage the operator runs in; filled, the triage schedules the archive for
+that many seconds after the message arrived, so mail that is useful when it lands and worthless
+soon after leaves the inbox on its own (`r-cwc01n0t`). Clearing the field drops it rather than
+storing a zero, as the cooldown interval behaves.
+
+A message holds at most one pending archive (`d-0tajzoy7`), and every read surface carries it
+while it stands (`d-p0ea1t8q`): the inbox row shows the countdown, and message detail states the
+due moment, names the triage that recorded it — selecting that triage in the history — and says
+that replaying the message cancels or replaces what is pending. Nothing filters or sorts on it.
+A due moment already past reads "due now": the sweep runs on grinbox's heartbeat, so past-due is
+imminent rather than missed (`d-gzv0jty7`). The API omits a pending archive the moment it fires,
+is cancelled, or is superseded, so what is shown is always still ahead.
+
+What the delayed path did is readable on the triage that recorded it (`d-41v9yqvh`): the archive
+run says what it scheduled instead of calling the mailbox, and the event log names the schedule
+(the due moment and the delay) and, where the moment came and no call was made, why in
+words — the message had already left the inbox, its pipeline or account was deleted, or its
+pipeline is no longer active on the account.
+
 ## Money in display form
 
 Wherever a tag's value is shown — inbox chips, the message detail's tags and events — a key the

@@ -18,16 +18,17 @@ GRINBOX_TOKEN_ENC_KEY=<32 bytes, base64 or hex> \
 node dist/main.js
 ```
 
-| variable                                                                                                                                                                                                     | required        | what it is                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `GRINBOX_DB_PATH`                                                                                                                                                                                            | yes             | the SQLite file holding all state                                                                                           |
-| `GRINBOX_TOKEN_ENC_KEY`                                                                                                                                                                                      | yes             | 32-byte key the stored credentials are encrypted under                                                                      |
-| `GRINBOX_HTTP_PORT` / `GRINBOX_HTTP_HOST`                                                                                                                                                                    | no              | the listener                                                                                                                |
-| `GRINBOX_WEB_DIST`                                                                                                                                                                                           | no              | the browser application's built assets; defaults to `web/` beside the entry point's directory                               |
-| `GRINBOX_OAUTH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI`                                                                                                                                                      | for mailboxes   | the mail provider's OAuth client; without them the authorization routes report "not configured" rather than failing to boot |
-| `GRINBOX_OAUTH_OPENER_ORIGIN`                                                                                                                                                                                | no              | the origin the callback page posts back to                                                                                  |
-| `GRINBOX_BEDROCK_REGION`                                                                                                                                                                                     | for model calls | where model calls go                                                                                                        |
-| `GRINBOX_OPERATOR_TIMEOUT_MS`, `GRINBOX_WORKER_POOL_SIZE`, `GRINBOX_POLL_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_SCHEDULER_TICK_SECONDS`, `GRINBOX_DIGEST_TIMEOUT_MS`, `GRINBOX_RECONCILE_INTERVAL_SECONDS` | no              | timing knobs                                                                                                                |
+| variable                                                                                                                     | required        | what it is                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GRINBOX_DB_PATH`                                                                                                            | yes             | the SQLite file holding all state                                                                                           |
+| `GRINBOX_TOKEN_ENC_KEY`                                                                                                      | yes             | 32-byte key the stored credentials are encrypted under                                                                      |
+| `GRINBOX_HTTP_PORT` / `GRINBOX_HTTP_HOST`                                                                                    | no              | the listener                                                                                                                |
+| `GRINBOX_WEB_DIST`                                                                                                           | no              | the browser application's built assets; defaults to `web/` beside the entry point's directory                               |
+| `GRINBOX_OAUTH_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI`                                                                      | for mailboxes   | the mail provider's OAuth client; without them the authorization routes report "not configured" rather than failing to boot |
+| `GRINBOX_OAUTH_OPENER_ORIGIN`                                                                                                | no              | the origin the callback page posts back to                                                                                  |
+| `GRINBOX_BEDROCK_REGION`                                                                                                     | for model calls | where model calls go                                                                                                        |
+| `GRINBOX_HEARTBEAT_SECONDS`                                                                                                  | no              | the one beat the poll, digest, and pending-archive schedulers wake on; a minute by default                                  |
+| `GRINBOX_OPERATOR_TIMEOUT_MS`, `GRINBOX_WORKER_POOL_SIZE`, `GRINBOX_DIGEST_TIMEOUT_MS`, `GRINBOX_RECONCILE_INTERVAL_SECONDS` | no              | timing knobs                                                                                                                |
 
 `main.ts` is the process entry point and the only module with a side effect on
 import. The package barrel starts nothing.
@@ -73,6 +74,13 @@ rather than a sentence for a human to read.
 ```
 poll → ingest → enqueue a triage → run its operators → settle
 ```
+
+One **heartbeat** drives everything scheduled — a minute by default, set by the
+deployment. Each beat acts on whatever is due: an account whose poll interval has
+elapsed, a digest edition whose cue has passed, a pending archive past its
+moment. Nothing is scheduled per account, edition, or message, and no scheduler
+keeps a timer of its own. (The execution loop, which drains claimed operator
+runs rather than deciding that something is due, keeps its own faster tick.)
 
 **Polling** is incremental against a cursor stored per account, and an account is
 polled only while a pipeline is active on it. Within a cycle every message record
@@ -130,6 +138,39 @@ belong to the operation that spent the cap. An operation a cap denies returns a
 distinguishable outcome — capped, as against succeeded or failed — and the
 operator chooses what to make of it, most treating it as a clean no-op. Per-message
 caps are what make re-triage safe: the counter is already spent.
+
+## Delayed archiving
+
+The archive action takes an optional `delay_seconds` — whole seconds, at least
+one, no ceiling. Without it the message is archived during the triage the
+operator runs in. With it the run makes no mailbox call: it records a **pending
+archive** due that many seconds past the message's **take-in**, never past the
+triage. So a message triaged an hour after it arrived, under a one-day delay,
+still leaves the inbox a day after it arrived.
+
+A message holds at most one pending archive: the one its latest settled triage
+recorded, the earliest due where that triage recorded several. Re-triaging is
+the user's lever on it — a re-triage recording none cancels it, one recording
+another replaces it. Both read surfaces (`GET /api/messages` and
+`/api/messages/:id`) carry the standing one, so what a re-triage would cancel is
+visible before it fires; a message with none carries `pending_archive: null`.
+
+The heartbeat's sweep works each due one:
+
+| the case                                      | what happens                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| its pipeline, account, or operator is deleted | it never performs; what was recorded stays readable                           |
+| its pipeline is not active on the account     | nothing performs, and it fires late if the pipeline returns                   |
+| the message has already left the inbox        | the mailbox is untouched, and the outcome records on the run that recorded it |
+| a cap denies the call                         | it stays due, and the next beat tries again                                   |
+| the call fails past its retries               | it concludes failed on that run; the retry is a re-triage                     |
+| otherwise                                     | the message is archived, recorded on the run that recorded it                 |
+
+"Already left the inbox" is read from grinbox's own record of where the message
+stands, not from a fresh backend read — where that record is stale the call is
+made and the backend answers it as the no-op it is. A cap denial is recorded
+once, on the first beat that meets it, rather than once per beat for the life of
+the window.
 
 ## Notification kinds and cooldowns
 

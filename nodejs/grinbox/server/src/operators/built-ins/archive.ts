@@ -5,6 +5,13 @@
  * stays in "All Mail". It declares no output Tags; its effect is the side
  * effect on `mailbox.archive`.
  *
+ * A `delay_seconds` config defers the archive (d-grcdd4ov). The gate is
+ * evaluated the same way, but a firing Operator makes no mailbox call: it
+ * records `pending_archive_recorded` on its own run, due that many seconds past
+ * the Message's take-in. Settlement turns the Triage's recordings into the one
+ * pending Archive the Message holds (d-0tajzoy7), and the heartbeat's sweep
+ * performs it when it comes due.
+ *
  * Two gates decide whether the Message is archived:
  *  1. The operator-level `when` clause (see `action-gate.ts`). An Archive with
  *     no `when` archives every Message, so the gate is usually present.
@@ -23,6 +30,7 @@
  */
 
 import { contractFromConfig, operatorConfigSchemas } from '@grinbox/shared'
+import { pendingArchiveDueAt, pendingArchiveRecordedEvent } from '../../archive/pending-archive.js'
 import type { MailboxClient, OperatorRunInput, OperatorRunResult, OperatorType } from '../types.js'
 import { shouldFire } from './action-gate.js'
 
@@ -32,7 +40,8 @@ export class ArchiveError extends Error {
 }
 
 /**
- * Evaluates the `when` gate, and if it fires archives the Message. Reacts to
+ * Evaluates the `when` gate. If it fires and the config carries a delay, records
+ * the pending Archive and returns; otherwise archives the Message and reacts to
  * each {@link ResourceOpResult}:
  *  - `succeeded`: done.
  *  - `skipped_by_limit`: clean no-op. An Action's external effect is optional,
@@ -47,6 +56,19 @@ async function run(input: OperatorRunInput<'archive'>): Promise<OperatorRunResul
   if (!shouldFire(config.when, tags)) {
     // Gate didn't match: clean no-op, no Resource call.
     return { tags: [] }
+  }
+
+  // A delay defers the archive: record it and reach no Resource at all.
+  if (config.delay_seconds !== undefined) {
+    return {
+      tags: [],
+      events: [
+        pendingArchiveRecordedEvent({
+          due_at: pendingArchiveDueAt(message.takenInAt, config.delay_seconds),
+          delay_seconds: config.delay_seconds,
+        }),
+      ],
+    }
   }
 
   const client: MailboxClient | undefined = resources.mailbox

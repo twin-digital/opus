@@ -46,6 +46,7 @@ export {
   type PersistResultArgs,
   type RunRef,
   type TriageEventInput,
+  appendTriageEvents,
   deriveTriageStatus,
   markSkipped,
   persistOperatorResult,

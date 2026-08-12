@@ -213,9 +213,22 @@ export interface TriageEventsTable {
    * outcome kind beside succeeded / limited / failed (d-e9jslw4x); its
    * `details_json` carries the notification kind and the `(triage_id,
    * operator_id)` of the run whose push it deferred to.
+   *
+   * The two `pending_archive_*` kinds record the delayed Archive path on the
+   * run that recorded it (d-41v9yqvh): `pending_archive_recorded` when the
+   * Triage records the pending Archive (`details_json` carries `due_at` and
+   * `delay_seconds`), `pending_archive_skipped` when the moment came and
+   * nothing was called (`details_json` carries `reason`). The call itself, when
+   * it is made, records under the ordinary `resource_op_*` kinds.
    */
   event_type:
-    'tag_set' | 'resource_op_succeeded' | 'resource_op_limited' | 'resource_op_failed' | 'resource_op_suppressed'
+    | 'tag_set'
+    | 'resource_op_succeeded'
+    | 'resource_op_limited'
+    | 'resource_op_failed'
+    | 'resource_op_suppressed'
+    | 'pending_archive_recorded'
+    | 'pending_archive_skipped'
   details_json: string | null
   recorded_at: number
 }
@@ -278,6 +291,46 @@ export interface NotificationPushesTable {
   sent_at: number
 }
 
+/**
+ * What became of a pending Archive. `pending` is the standing one; every other
+ * value is terminal and names the case of d-41v9yqvh or d-0tajzoy7 it met.
+ *
+ *  - `archived` — it came due and the Message left the inbox.
+ *  - `already_departed` — it came due and the Message had already left; the
+ *    mailbox was untouched.
+ *  - `failed` — the archive call failed past its operation's retries. The retry
+ *    is a re-triage (d-0tebpjex).
+ *  - `cancelled` — a later settled Triage of the Message recorded none.
+ *  - `superseded` — a later settled Triage recorded another, or the recording
+ *    Triage recorded several and this was not the earliest due.
+ *  - `abandoned` — its Pipeline or Account was deleted, so it never performs
+ *    (d-s2kf8vjq).
+ */
+export type PendingArchiveStatus =
+  'pending' | 'archived' | 'already_departed' | 'failed' | 'cancelled' | 'superseded' | 'abandoned'
+
+/**
+ * An Archive a Triage recorded for later (d-grcdd4ov). At most one row per
+ * Message is `pending` — the one its latest settled Triage recorded, earliest
+ * due where that Triage recorded several (d-0tajzoy7) — enforced by a partial
+ * UNIQUE index. Settled rows stay so the outcome is readable beside the Triage
+ * that recorded it.
+ */
+export interface PendingArchivesTable {
+  id: Generated<number>
+  message_id: number
+  /** The Triage whose settled conclusion this pending Archive is. */
+  triage_id: number
+  /** The Archive Operator within that Triage whose run recorded it. */
+  operator_id: number
+  /** Unix seconds: the Message's take-in plus the Operator's `delay_seconds`. */
+  due_at: number
+  status: PendingArchiveStatus
+  /** Unix seconds the row left `pending`; null while it stands. */
+  settled_at: number | null
+  created_at: CreatedAt
+}
+
 export interface ChangeLogTable {
   id: Generated<number>
   user_id: number
@@ -322,6 +375,7 @@ export interface Database {
   digest_runs: DigestRunsTable
   notification_cooldowns: NotificationCooldownsTable
   notification_pushes: NotificationPushesTable
+  pending_archives: PendingArchivesTable
   change_log: ChangeLogTable
   schema_migrations: SchemaMigrationsTable
 }

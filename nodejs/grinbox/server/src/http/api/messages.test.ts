@@ -8,6 +8,7 @@ import {
   insertAccount,
   insertMessage,
   insertOperator,
+  insertPendingArchive,
   insertPipeline,
   insertTriage,
   insertUser,
@@ -636,5 +637,94 @@ describe('an outcome resolves to the configuration that produced it', () => {
     expect(pipelines.size).toBe(1)
     // The latest settled triage is B's; its tags are what the row carries.
     expect((row?.current_tags ?? []).map((t) => t.key)).toEqual(['topic'])
+  })
+})
+
+/**
+ * The standing pending Archive both read surfaces carry (d-p0ea1t8q). The
+ * member is always present and carries only a standing one — its absence is
+ * `null`, with no status to discriminate on (d-qk3xs2eg).
+ */
+describe('the pending archive on the message read surfaces', () => {
+  let db: DB
+  beforeEach(async () => {
+    db = await freshDb()
+  })
+  afterEach(async () => {
+    await closeDatabase(db)
+  })
+
+  async function seedWithPending(status?: 'pending' | 'cancelled') {
+    const userId = await insertUser(db)
+    const pid = await insertPipeline(db, userId)
+    const opId = await insertOperator(db, pid, {
+      name: 'archive',
+      typeKey: 'archive',
+      configJson: JSON.stringify({ delay_seconds: 3600 }),
+    })
+    const acctId = await insertAccount(db, userId, { activePipelineId: pid })
+    const mid = await insertMessage(db, acctId, { backendMessageId: 'm', subject: 'Receipt', receivedAt: 1000 })
+    const tid = await insertTriage(db, {
+      messageId: mid,
+      pipelineId: pid,
+      operatorId: opId,
+      typeKey: 'archive',
+      startedAt: 1100,
+      makeCurrent: true,
+    })
+    await insertPendingArchive(db, {
+      messageId: mid,
+      triageId: tid,
+      operatorId: opId,
+      dueAt: 4600,
+      status,
+    })
+    return { mid, tid, opId }
+  }
+
+  it('the list row carries the due moment and the triage that recorded it', async () => {
+    const { mid, tid, opId } = await seedWithPending()
+    const app = createApiRoutes({ db, now: fixedNow })
+
+    const body = (await (await app.request('/api/messages')).json()) as MessageListResponse
+    const row = body.messages.find((m) => m.id === mid)
+    expect(row?.pending_archive).toEqual({ due_at: 4600, triage_id: tid, operator_id: opId })
+  })
+
+  it('the detail carries it too', async () => {
+    const { mid, tid, opId } = await seedWithPending()
+    const app = createApiRoutes({ db, now: fixedNow })
+
+    const body = (await (await app.request(`/api/messages/${mid}`)).json()) as {
+      pending_archive: { due_at: number; triage_id: number; operator_id: number } | null
+    }
+    expect(body.pending_archive).toEqual({ due_at: 4600, triage_id: tid, operator_id: opId })
+  })
+
+  it('a message with none carries the member as null on both surfaces', async () => {
+    const userId = await insertUser(db)
+    const pid = await insertPipeline(db, userId)
+    const acctId = await insertAccount(db, userId, { activePipelineId: pid })
+    const mid = await insertMessage(db, acctId, { backendMessageId: 'm', receivedAt: 1000 })
+    const app = createApiRoutes({ db, now: fixedNow })
+
+    const list = (await (await app.request('/api/messages')).json()) as MessageListResponse
+    const row = list.messages.find((m) => m.id === mid)
+    expect(row).toHaveProperty('pending_archive')
+    expect(row?.pending_archive).toBeNull()
+
+    const detail = (await (await app.request(`/api/messages/${mid}`)).json()) as { pending_archive: unknown }
+    expect(detail.pending_archive).toBeNull()
+  })
+
+  it('a settled one is not carried — only a standing one is', async () => {
+    const { mid } = await seedWithPending('cancelled')
+    const app = createApiRoutes({ db, now: fixedNow })
+
+    const list = (await (await app.request('/api/messages')).json()) as MessageListResponse
+    expect(list.messages.find((m) => m.id === mid)?.pending_archive).toBeNull()
+
+    const detail = (await (await app.request(`/api/messages/${mid}`)).json()) as { pending_archive: unknown }
+    expect(detail.pending_archive).toBeNull()
   })
 })
