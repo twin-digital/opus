@@ -7,7 +7,10 @@
  * In a pack built with namespacing off the build stamped no family, and every call here answers
  * unchecked, exactly as the engine does.
  */
+import { world } from '@minecraft/server'
 import type { Dimension, Entity, EntityQueryOptions, SpawnEntityOptions, Vector3 } from '@minecraft/server'
+
+import { packFamily } from './identifier.js'
 
 /** Raised by a checked call whose one answering entity lacks the pack's own family. */
 export class ForeignEntityError extends Error {
@@ -29,6 +32,10 @@ export class ForeignEntityError extends Error {
   }
 }
 
+/** Whether the entity carries `family`; an entity with no type-family component carries none. */
+const carriesFamily = (entity: Entity, family: string): boolean =>
+  entity.getComponent('minecraft:type_family')?.hasTypeFamily(family) ?? false
+
 /**
  * Spawns one of this pack's own entities, as `Dimension.spawnEntity` does, and checks what came
  * back: an entity lacking the pack's own family is removed and the call raises
@@ -40,11 +47,14 @@ export function spawnEntity(
   location: Vector3,
   options?: SpawnEntityOptions,
 ): Entity {
-  void dimension
-  void identifier
-  void location
-  void options
-  throw new Error('not implemented')
+  const entity = dimension.spawnEntity(identifier, location, options)
+  const family = packFamily()
+  if (family !== undefined && !carriesFamily(entity, family)) {
+    const entityTypeId = entity.typeId
+    entity.remove()
+    throw new ForeignEntityError(entityTypeId, family, true)
+  }
+  return entity
 }
 
 /**
@@ -53,8 +63,15 @@ export function spawnEntity(
  * `undefined` where nothing answers, exactly as the engine reports it.
  */
 export function getEntity(entityId: string): Entity | undefined {
-  void entityId
-  throw new Error('not implemented')
+  const entity = world.getEntity(entityId)
+  if (entity === undefined) {
+    return undefined
+  }
+  const family = packFamily()
+  if (family !== undefined && !carriesFamily(entity, family)) {
+    throw new ForeignEntityError(entity.typeId, family, false)
+  }
+  return entity
 }
 
 /**
@@ -62,7 +79,10 @@ export function getEntity(entityId: string): Entity | undefined {
  * carrying the pack's own family: foreign entities are left out of the result, never raised over.
  */
 export function getEntities(dimension: Dimension, options?: EntityQueryOptions): Entity[] {
-  void dimension
-  void options
-  throw new Error('not implemented')
+  const family = packFamily()
+  if (family === undefined) {
+    return dimension.getEntities(options)
+  }
+  // `families` conjoins, so appending keeps every filter the caller asked for (f-a4ibml4h).
+  return dimension.getEntities({ ...options, families: [...(options?.families ?? []), family] })
 }
