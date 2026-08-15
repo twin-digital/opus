@@ -10,11 +10,12 @@
 
 import type * as MC from '@minecraft/server'
 
+import { addComponent, type ComponentsSpec } from './components.js'
 import type { ServerLike } from './create-server.js'
 import { lookupEntityType } from './entity-types.js'
 import { InvalidArgumentError, NotImplementedError, UnsetValueError } from './errors.js'
 import { deliver, dispatchAfter } from './events.js'
-import { canonicalId } from './ids.js'
+import { canonicalId, type EntityComponentId } from './ids.js'
 import { matchesQuery } from './query.js'
 import { construct } from './runtime/construct.js'
 import { isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
@@ -33,6 +34,8 @@ export interface EntityOptions {
   readonly id?: string
   readonly dimension?: MC.Dimension
   readonly location?: MC.Vector3
+  /** Components the new entity carries: adding each is exactly a call to `addComponent`. */
+  readonly components?: ComponentsSpec
 }
 
 /** As `EntityOptions`, plus the name a player is worth being given. */
@@ -88,6 +91,9 @@ const create = (server: ServerState, options: PlayerOptions, isPlayer: boolean):
   }) as MC.Entity
   ;(data as { entity: MC.Entity }).entity = entity
   server.entities.push(data)
+  for (const [componentId, state] of Object.entries(options.components ?? {})) {
+    addComponent(entity, componentId as EntityComponentId, state as never)
+  }
   return data
 }
 

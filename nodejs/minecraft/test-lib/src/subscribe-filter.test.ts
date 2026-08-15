@@ -100,7 +100,7 @@ describe('allowedDamageCauses', () => {
 })
 
 describe('entityFilter', () => {
-  it('runs the same six-field matcher an entity lookup runs', () => {
+  it('runs the same eight-field matcher an entity lookup runs', () => {
     const tagged = living('minecraft:sheep', ['keeper'])
     const seen: string[] = []
     server.world.afterEvents.entityHurt.subscribe(
@@ -112,6 +112,21 @@ describe('entityFilter', () => {
     tagged.applyDamage(1)
     sheep.applyDamage(1)
     expect(seen).toEqual([tagged.id])
+  })
+
+  it('filters on the families the matcher now honours', () => {
+    const mob = living('minecraft:sheep')
+    addComponent(mob, 'minecraft:type_family', ['mob'])
+    const seen: string[] = []
+    server.world.afterEvents.entityHurt.subscribe(
+      (event) => {
+        seen.push(event.hurtEntity.id)
+      },
+      { entityFilter: { families: ['mob'] } },
+    )
+    mob.applyDamage(1)
+    sheep.applyDamage(1)
+    expect(seen).toEqual([mob.id])
   })
 })
 

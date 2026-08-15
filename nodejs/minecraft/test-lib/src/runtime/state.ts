@@ -79,6 +79,8 @@ export interface ComponentState {
   readonly component: MC.EntityComponent
   /** The four attribute numbers, each unset until a caller supplies it. */
   readonly attribute?: AttributeValues
+  /** The family tokens a test seeded, in the order it supplied them. Type-family only. */
+  readonly families?: string[]
 }
 
 /** The numbers an attribute-shaped component holds. An unsupplied one reads `UnsetValueError`. */

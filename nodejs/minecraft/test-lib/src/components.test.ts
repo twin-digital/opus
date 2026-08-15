@@ -19,15 +19,15 @@ import {
   UnsetValueError,
 } from './errors.js'
 import { COMPONENT_CLASS_BY_ID } from './generated/manifests.js'
-import { ATTRIBUTE_COMPONENT_IDS, type EntityComponentId } from './ids.js'
+import { ATTRIBUTE_COMPONENT_IDS, TYPE_FAMILY_COMPONENT_ID, type EntityComponentId } from './ids.js'
 
 /** `EntityDamageCause` is types-only at runtime, so a cause is written as its string value. */
 const cause = (value: string): MC.EntityDamageCause => value as MC.EntityDamageCause
 
-/** Every declared component id, and the 61 that are not attribute-shaped. */
+/** Every declared component id, and the 60 the library models nothing of. */
 const ALL_COMPONENT_IDS = Object.keys(COMPONENT_CLASS_BY_ID) as EntityComponentId[]
 const OTHER_COMPONENT_IDS = ALL_COMPONENT_IDS.filter(
-  (id) => !(ATTRIBUTE_COMPONENT_IDS as readonly string[]).includes(id),
+  (id) => !(ATTRIBUTE_COMPONENT_IDS as readonly string[]).includes(id) && id !== TYPE_FAMILY_COMPONENT_ID,
 )
 
 /** The payload each recorded signal delivers. */
@@ -131,19 +131,23 @@ describe('addComponent', () => {
     }
   })
 
-  it('rejects the state argument on a non-attribute id', () => {
+  it('rejects the state argument on an id that carries no state', () => {
+    // @ts-expect-error -- the state argument's type is the component's own, and this id takes none
     const error = throws(() => addComponent(entity, 'minecraft:tameable', 20))
     expect(error).toBeInstanceOf(InvalidArgumentError)
     expect(error.name).toBe('InvalidArgumentError')
+    expect(error.message).toContain('minecraft:tameable')
   })
 
   it('attaches nothing when the state argument is rejected', () => {
+    // @ts-expect-error -- as above: the runtime refusal stands behind the compile-time one
     throws(() => addComponent(entity, 'minecraft:tameable', 20))
     expect(entity.hasComponent('minecraft:tameable')).toBe(false)
     expect(entity.getComponents()).toEqual([])
   })
 
-  it('rejects the state argument on a bare non-attribute id', () => {
+  it('rejects the state argument on a bare id that carries no state', () => {
+    // @ts-expect-error -- as above, written bare
     expect(() => addComponent(entity, 'tameable', 20)).toThrow(InvalidArgumentError)
   })
 
@@ -739,7 +743,95 @@ describe('the health-write cascade', () => {
   })
 })
 
-describe('the other 61 components', () => {
+describe('the type_family component', () => {
+  let server: FakeServer
+  let entity: MC.Entity
+
+  beforeEach(() => {
+    server = createServer()
+    entity = createEntity(server, { typeId: 'minecraft:sheep' })
+  })
+
+  it('reads back the tokens the test seeded, in the order supplied', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob', 'sheep', 'animal'])
+    expect(family.getTypeFamilies()).toEqual(['mob', 'sheep', 'animal'])
+  })
+
+  it('answers membership through hasTypeFamily', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob', 'sheep'])
+    expect(family.hasTypeFamily('sheep')).toBe(true)
+    expect(family.hasTypeFamily('monster')).toBe(false)
+  })
+
+  it('takes no minecraft: prefix — a family is not an identifier', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob'])
+    expect(family.getTypeFamilies()).toEqual(['mob'])
+    expect(family.hasTypeFamily('minecraft:mob')).toBe(false)
+  })
+
+  it('carries no families when it is added with no state', () => {
+    expect(addComponent(entity, 'minecraft:type_family').getTypeFamilies()).toEqual([])
+  })
+
+  it('accepts the bare id and stores the canonical one', () => {
+    const family = addComponent(entity, 'type_family', ['mob'])
+    expect(family.typeId).toBe('minecraft:type_family')
+    expect(entity.getComponent('minecraft:type_family')).toBe(family)
+  })
+
+  it('reads undefined where the entity carries no such component, as any absent component does', () => {
+    expect(entity.getComponent('minecraft:type_family')).toBeUndefined()
+    expect(entity.hasComponent('minecraft:type_family')).toBe(false)
+  })
+
+  it('copies the seeded list, so a later mutation of the caller’s array changes nothing', () => {
+    const seeded = ['mob']
+    const family = addComponent(entity, 'minecraft:type_family', seeded)
+    seeded.push('sheep')
+    expect(family.getTypeFamilies()).toEqual(['mob'])
+  })
+
+  it('hands back a copy, so mutating the result changes nothing', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob'])
+    family.getTypeFamilies().push('sheep')
+    expect(family.getTypeFamilies()).toEqual(['mob'])
+  })
+
+  it('carries the three members every component carries', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob'])
+    expect(family.typeId).toBe('minecraft:type_family')
+    expect(family.isValid).toBe(true)
+    expect(family.entity).toBe(entity)
+  })
+
+  it('both members throw InvalidEntityError on an invalid owner', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob'])
+    invalidate(entity)
+    expect(throws(() => family.getTypeFamilies())).toBeInstanceOf(InvalidEntityError)
+    expect(throws(() => family.hasTypeFamily('mob'))).toBeInstanceOf(InvalidEntityError)
+  })
+
+  it('families are the entity’s own: two entities of one type can differ', () => {
+    const other = createEntity(server, { typeId: 'minecraft:sheep' })
+    addComponent(entity, 'minecraft:type_family', ['mob', 'sheep'])
+    addComponent(other, 'minecraft:type_family', ['monster'])
+    expect(entity.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['mob', 'sheep'])
+    expect(other.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['monster'])
+  })
+
+  it('derives nothing from the typeId: a sheep the test never seeded carries no families', () => {
+    expect(addComponent(entity, 'minecraft:type_family').getTypeFamilies()).toEqual([])
+  })
+
+  it('detaches like any other component', () => {
+    const family = addComponent(entity, 'minecraft:type_family', ['mob'])
+    expect(removeComponent(entity, 'minecraft:type_family')).toBe(true)
+    expect(entity.getComponent('minecraft:type_family')).toBeUndefined()
+    expect(family.isValid).toBe(false)
+  })
+})
+
+describe('the other 60 components', () => {
   let server: FakeServer
   let entity: MC.Entity
 
@@ -749,7 +841,7 @@ describe('the other 61 components', () => {
   })
 
   it('attaches and reports its canonical typeId', () => {
-    expect(OTHER_COMPONENT_IDS).toHaveLength(61)
+    expect(OTHER_COMPONENT_IDS).toHaveLength(60)
     for (const id of OTHER_COMPONENT_IDS) {
       const own = createEntity(server, { typeId: 'minecraft:sheep' })
       expect(addComponent(own, id).typeId).toBe(id)
@@ -781,10 +873,10 @@ describe('the other 61 components', () => {
   })
 
   it('an unmodelled method throws NotImplementedError', () => {
-    const family = addComponent(entity, 'minecraft:type_family')
-    const error = throws(() => family.getTypeFamilies())
+    const tameable = addComponent(entity, 'minecraft:tameable')
+    const error = throws(() => tameable.tame(entity as MC.Player))
     expect(error).toBeInstanceOf(NotImplementedError)
-    expect((error as NotImplementedError).member).toBe('EntityTypeFamilyComponent.getTypeFamilies')
+    expect((error as NotImplementedError).member).toBe('EntityTameableComponent.tame')
   })
 
   it('an unmodelled member declared T | undefined still throws', () => {

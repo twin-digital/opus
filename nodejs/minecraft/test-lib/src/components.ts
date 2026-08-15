@@ -1,7 +1,8 @@
 /**
  * Entity components: the `addComponent` and `removeComponent` free functions, `getComponent` id
- * normalization, the seven attribute-shaped components with their bounds checks, and every cascade
- * that writes health — the component writes, `applyDamage`, and `kill`'s health-bearing branch.
+ * normalization, the seven attribute-shaped components with their bounds checks, the type-family
+ * component, and every cascade that writes health — the component writes, `applyDamage`, and
+ * `kill`'s health-bearing branch.
  *
  * Every other component can be attached and carries its declared shape, but only its `typeId`,
  * `isValid` and `entity` members behave; the rest throw `NotImplementedError`.
@@ -13,7 +14,15 @@ import { killWithoutHealth } from './entity.js'
 import { ArgumentOutOfBoundsError, InvalidArgumentError, UnsetValueError } from './errors.js'
 import { dispatchAfter, dispatchBefore } from './events.js'
 import { ATTRIBUTE_COMPONENT_CLASSES, COMPONENT_CLASSES, componentClassFor } from './generated/manifests.js'
-import { canonicalId, isAttributeComponentId, type EntityComponentId } from './ids.js'
+import {
+  canonicalId,
+  isAttributeComponentId,
+  isTypeFamilyComponentId,
+  TYPE_FAMILY_COMPONENT_ID,
+  type AttributeComponentId,
+  type EntityComponentId,
+  type TypeFamilyComponentId,
+} from './ids.js'
 import { construct } from './runtime/construct.js'
 import { CORPSE_INVALIDATION_TICKS, invalidateAtTick } from './scheduler.js'
 import { assertLiveEntity, isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
@@ -25,7 +34,25 @@ import { dataOf, entityDataOf, type AttributeValues, type ComponentState, type E
  * to it; a `[min, max]` pair gives those bounds with `currentValue` at `max`. Both leave
  * `defaultValue` unset, and each is exactly the record it abbreviates.
  */
-export type ComponentSpec = AttributeValues | number | readonly [min: number, max: number]
+export type AttributeSpec = AttributeValues | number | readonly [min: number, max: number]
+
+/**
+ * The state `minecraft:type_family` is attached with: the family tokens the entity carries, in the
+ * order supplied. A family is not an identifier, so a token is stored and matched verbatim.
+ */
+export type FamilySpec = readonly string[]
+
+/**
+ * The state `addComponent` takes for one component id — the shape that component carries. The
+ * components outside the attribute-shaped seven and `minecraft:type_family` take no state at all.
+ */
+export type ComponentSpec<T extends EntityComponentId = EntityComponentId> =
+  T extends AttributeComponentId ? AttributeSpec
+  : T extends TypeFamilyComponentId ? FamilySpec
+  : never
+
+/** A map from component id to the state `addComponent` takes for that id. */
+export type ComponentsSpec = { readonly [K in EntityComponentId]?: ComponentSpec<K> | undefined }
 
 /** The one component whose writes cascade: the fakes raise health events for no other. */
 const HEALTH_ID = 'minecraft:health'
@@ -38,7 +65,7 @@ interface ComponentData {
 }
 
 /** The record a spec abbreviates. Each shorthand is exactly the record it stands for. */
-const attributeValuesOf = (spec: ComponentSpec | undefined): AttributeValues => {
+const attributeValuesOf = (spec: AttributeSpec | undefined): AttributeValues => {
   if (spec === undefined) {
     return {}
   }
@@ -54,13 +81,14 @@ const attributeValuesOf = (spec: ComponentSpec | undefined): AttributeValues => 
 
 /**
  * Attaches a component to a live entity, because the real API reshapes an entity's components only
- * through data-driven paths these fakes do not model. The state argument is accepted only on one of
- * the seven attribute-shaped ids; passing it with any other id throws `InvalidArgumentError`.
+ * through data-driven paths these fakes do not model. The state argument is shaped by the component
+ * it adds — the four attribute numbers on the seven attribute-shaped ids, the family tokens on
+ * `minecraft:type_family` — and any other id takes none, throwing `InvalidArgumentError`.
  */
 export const addComponent = <T extends EntityComponentId>(
   entity: MC.Entity,
   componentId: T,
-  state?: ComponentSpec,
+  state?: ComponentSpec<T>,
 ): MC.EntityComponentTypeMap[T] => {
   assertLiveEntity(entity, 'addComponent')
   const id = canonicalId(componentId)
@@ -72,15 +100,18 @@ export const addComponent = <T extends EntityComponentId>(
   if (data.components.has(id)) {
     throw new InvalidArgumentError(`Invalid value passed to argument [1]. ${id} is already attached to this entity.`)
   }
-  if (state !== undefined && !isAttributeComponentId(id)) {
-    throw new InvalidArgumentError(`Invalid value passed to argument [2]. ${id} is not an attribute component.`)
+  const isAttribute = isAttributeComponentId(id)
+  const isTypeFamily = isTypeFamilyComponentId(id)
+  if (state !== undefined && !isAttribute && !isTypeFamily) {
+    throw new InvalidArgumentError(`Invalid value passed to argument [2]. ${id} carries no state.`)
   }
 
   const componentState: ComponentState = {
     componentId: id,
     // Filled the moment the fake exists: the state and the fake each need the other.
     component: undefined as unknown as MC.EntityComponent,
-    attribute: isAttributeComponentId(id) ? attributeValuesOf(state) : undefined,
+    attribute: isAttribute ? attributeValuesOf(state as AttributeSpec | undefined) : undefined,
+    families: isTypeFamily ? [...((state as FamilySpec | undefined) ?? [])] : undefined,
   }
   const component = construct(className, {
     data: { server: data.server, owner: data, state: componentState } satisfies ComponentData,
@@ -211,6 +242,19 @@ for (const className of COMPONENT_CLASSES) {
 for (const className of ATTRIBUTE_COMPONENT_CLASSES) {
   registerBehaviour(className, attributeBehaviour)
 }
+
+/** The tokens a component holds, in the order the test seeded them. */
+const familiesOfComponent = (fake: object): readonly string[] => dataOf<ComponentData>(fake).state.families ?? []
+
+registerBehaviour('EntityTypeFamilyComponent', {
+  ...componentBehaviour,
+  getTypeFamilies: (fake: object) => [...familiesOfComponent(fake)],
+  hasTypeFamily: (fake: object, typeFamily: string) => familiesOfComponent(fake).includes(typeFamily),
+})
+
+/** The families an entity carries: the tokens seeded on its type-family component, or none. */
+export const typeFamiliesOf = (entity: MC.Entity): readonly string[] =>
+  entityDataOf(entity).components.get(TYPE_FAMILY_COMPONENT_ID)?.families ?? []
 
 /** The health component an entity carries, or `undefined`. */
 const healthOf = (data: EntityData): MC.EntityAttributeComponent | undefined =>

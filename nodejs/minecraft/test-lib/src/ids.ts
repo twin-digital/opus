@@ -49,6 +49,15 @@ export type { _AttributeIdsComplete }
 export const isAttributeComponentId = (id: string): boolean =>
   (ATTRIBUTE_COMPONENT_IDS as readonly string[]).includes(canonicalId(id))
 
+/** The type-family component, whose state is a list of family tokens rather than numbers. */
+export const TYPE_FAMILY_COMPONENT_ID = 'minecraft:type_family'
+
+/** The two spellings of the type-family id, which the declarations carry as separate keys. */
+export type TypeFamilyComponentId = Extract<EntityComponentId, 'minecraft:type_family' | 'type_family'>
+
+/** Whether an id — in either form — names the type-family component. */
+export const isTypeFamilyComponentId = (id: string): boolean => canonicalId(id) === TYPE_FAMILY_COMPONENT_ID
+
 /**
  * The canonical, `minecraft:`-prefixed spelling of an id. The engine reports the prefixed form, so
  * storing it is what makes a read compare equal against the `@minecraft/vanilla-data` constants a

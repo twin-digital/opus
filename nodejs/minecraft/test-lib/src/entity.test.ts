@@ -221,6 +221,84 @@ describe('createEntity', () => {
   })
 })
 
+describe('the components construction option', () => {
+  it('adds exactly the components the map names, in the order it lists them', () => {
+    const { server } = setup()
+    const entity = createEntity(server, {
+      typeId: SHEEP,
+      components: { 'minecraft:health': [0, 8], 'minecraft:type_family': ['mob', 'sheep'] },
+    })
+    expect(entity.getComponents().map((component) => component.typeId)).toEqual([
+      'minecraft:health',
+      'minecraft:type_family',
+    ])
+  })
+
+  it('adds each one exactly as addComponent would', () => {
+    const { server } = setup()
+    const entity = createEntity(server, {
+      typeId: SHEEP,
+      components: { 'minecraft:health': [0, 8], 'minecraft:type_family': ['mob'] },
+    })
+    const health = entity.getComponent('minecraft:health')
+    expect(health?.effectiveMin).toBe(0)
+    expect(health?.effectiveMax).toBe(8)
+    expect(health?.currentValue).toBe(8)
+    expect(entity.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['mob'])
+  })
+
+  it('accepts the bare form of an id and the shorthands of a state', () => {
+    const { server } = setup()
+    const entity = createEntity(server, { typeId: SHEEP, components: { health: 20 } })
+    const health = entity.getComponent('minecraft:health')
+    expect(health?.currentValue).toBe(20)
+    expect(health?.effectiveMax).toBe(20)
+  })
+
+  it('attaches a component whose entry carries no state', () => {
+    const { server } = setup()
+    const entity = createEntity(server, {
+      typeId: SHEEP,
+      components: { 'minecraft:tameable': undefined, 'minecraft:health': undefined },
+    })
+    expect(entity.hasComponent('minecraft:tameable')).toBe(true)
+    expectThrown(
+      () => entity.getComponent('minecraft:health')?.currentValue,
+      UnsetValueError,
+      unsetMessage('EntityHealthComponent.currentValue'),
+    )
+  })
+
+  it('populates nothing when the option is omitted or empty', () => {
+    const { server } = setup()
+    expect(createEntity(server, { typeId: SHEEP }).getComponents()).toEqual([])
+    expect(createEntity(server, { typeId: SHEEP, components: {} }).getComponents()).toEqual([])
+  })
+
+  it('takes the same option on createPlayer', () => {
+    const { server } = setup()
+    const player = createPlayer(server, { name: 'Alex', components: { 'minecraft:type_family': ['player'] } })
+    expect(player.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['player'])
+  })
+
+  it('copies a seeded family list, in both directions, as addComponent does', () => {
+    const { server } = setup()
+    const seeded = ['mob']
+    const entity = createEntity(server, { typeId: SHEEP, components: { 'minecraft:type_family': seeded } })
+    seeded.push('sheep')
+    const read = entity.getComponent('minecraft:type_family')?.getTypeFamilies()
+    read?.push('monster')
+    expect(entity.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['mob'])
+  })
+
+  it('leaves the entity registered and valid', () => {
+    const { server, world } = setup()
+    const entity = createEntity(server, { typeId: SHEEP, components: { 'minecraft:health': 20 } })
+    expect(world.getEntity(entity.id)).toBe(entity)
+    expect(entity.isValid).toBe(true)
+  })
+})
+
 describe('createPlayer', () => {
   it('returns a player registered with the world', () => {
     const { server, world } = setup()

@@ -55,7 +55,7 @@ const sheep = (
   return entity
 }
 
-describe('matchesQuery - the honoured six', () => {
+describe('matchesQuery - the honoured eight', () => {
   it('matches everything when no options are given', () => {
     const { server, overworld } = setup()
     const entity = sheep(server, overworld)
@@ -178,6 +178,101 @@ describe('matchesQuery - the honoured six', () => {
   })
 })
 
+describe('matchesQuery - the family fields', () => {
+  /** A sheep carrying the families listed, seeded on its own type-family component. */
+  const withFamilies = (server: FakeServer, dimension: MC.Dimension, families: string[]): MC.Entity => {
+    const entity = createEntity(server, { typeId: SHEEP, dimension, components: { 'minecraft:type_family': families } })
+    return entity
+  }
+
+  it('requires every family listed in families', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, ['mob', 'sheep'])
+    expect(entity.matches({ families: ['mob'] })).toBe(true)
+    expect(entity.matches({ families: ['mob', 'sheep'] })).toBe(true)
+    expect(entity.matches({ families: ['mob', 'monster'] })).toBe(false)
+  })
+
+  it('drops an entity carrying any family listed in excludeFamilies', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, ['mob', 'sheep'])
+    expect(entity.matches({ excludeFamilies: ['monster'] })).toBe(true)
+    expect(entity.matches({ excludeFamilies: ['sheep', 'monster'] })).toBe(false)
+  })
+
+  it('matches an entity carrying no type-family component on no family', () => {
+    const { server, overworld } = setup()
+    const entity = sheep(server, overworld)
+    expect(entity.matches({ families: ['mob'] })).toBe(false)
+    expect(entity.matches({ excludeFamilies: ['mob'] })).toBe(true)
+  })
+
+  it('matches an entity whose component carries no families on no family', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, [])
+    expect(entity.matches({ families: ['mob'] })).toBe(false)
+    expect(entity.matches({ excludeFamilies: ['mob'] })).toBe(true)
+  })
+
+  it('compares a family token verbatim, with no id normalization', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, ['mob'])
+    expect(entity.matches({ families: ['mob'] })).toBe(true)
+    expect(entity.matches({ families: ['minecraft:mob'] })).toBe(false)
+  })
+
+  it('matches an empty families array', () => {
+    const { server, overworld } = setup()
+    expect(sheep(server, overworld).matches({ families: [] })).toBe(true)
+    expect(withFamilies(server, overworld, ['mob']).matches({ families: [] })).toBe(true)
+  })
+
+  it('drops nothing for an empty excludeFamilies array', () => {
+    const { server, overworld } = setup()
+    expect(sheep(server, overworld).matches({ excludeFamilies: [] })).toBe(true)
+    expect(withFamilies(server, overworld, ['mob']).matches({ excludeFamilies: [] })).toBe(true)
+  })
+
+  it('keeps every entity in a lookup for either empty array', () => {
+    const { server, overworld } = setup()
+    const seeded = withFamilies(server, overworld, ['mob'])
+    const bare = sheep(server, overworld)
+    expect(overworld.getEntities({ families: [] })).toEqual([seeded, bare])
+    expect(overworld.getEntities({ excludeFamilies: [] })).toEqual([seeded, bare])
+  })
+
+  it('asks for every included family and none of the excluded ones', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, ['mob', 'sheep'])
+    expect(entity.matches({ families: ['mob'], excludeFamilies: ['monster'] })).toBe(true)
+    expect(entity.matches({ families: ['mob'], excludeFamilies: ['sheep'] })).toBe(false)
+  })
+
+  it('intersects with the fields it is given beside', () => {
+    const { server, overworld } = setup()
+    const entity = withFamilies(server, overworld, ['mob'])
+    expect(entity.matches({ type: SHEEP, families: ['mob'] })).toBe(true)
+    expect(entity.matches({ type: COW, families: ['mob'] })).toBe(false)
+  })
+
+  it('filters the dimension and world lookups', () => {
+    const { server, world, overworld } = setup()
+    const mob = withFamilies(server, overworld, ['mob'])
+    const monster = withFamilies(server, overworld, ['monster'])
+    expect(overworld.getEntities({ families: ['mob'] })).toEqual([mob])
+    expect(overworld.getEntities({ excludeFamilies: ['mob'] })).toEqual([monster])
+    expect(world.getEntity(mob.id)).toBe(mob)
+  })
+
+  it('reads the families of the entity it is asked about, not of its type', () => {
+    const { server, overworld } = setup()
+    const seeded = withFamilies(server, overworld, ['mob'])
+    const bare = sheep(server, overworld)
+    expect(overworld.getEntities({ families: ['mob'] })).toEqual([seeded])
+    expect(bare.typeId).toBe(seeded.typeId)
+  })
+})
+
 describe('entity.matches', () => {
   it('answers the same as the lookup filter', () => {
     const { server, overworld } = setup()
@@ -216,7 +311,7 @@ describe('entity.matches', () => {
   })
 })
 
-/** The eighteen fields this cycle does not honour, each with a value that names it. */
+/** The sixteen fields this cycle does not honour, each with a value that names it. */
 const UNHONOURED: [string, MC.EntityQueryOptions][] = [
   ['closest', { closest: 1 }],
   ['farthest', { farthest: 1 }],
@@ -224,8 +319,6 @@ const UNHONOURED: [string, MC.EntityQueryOptions][] = [
   ['maxDistance', { maxDistance: 10 }],
   ['minDistance', { minDistance: 1 }],
   ['volume', { volume: { x: 1, y: 1, z: 1 } }],
-  ['families', { families: ['mob'] }],
-  ['excludeFamilies', { excludeFamilies: ['mob'] }],
   ['gameMode', { gameMode: 'Survival' as MC.GameMode }],
   ['excludeGameModes', { excludeGameModes: ['Survival' as MC.GameMode] }],
   ['minLevel', { minLevel: 1 }],
@@ -238,7 +331,11 @@ const UNHONOURED: [string, MC.EntityQueryOptions][] = [
   ['scoreOptions', { scoreOptions: [{ objective: 'o' }] }],
 ]
 
-describe('matchesQuery - the eighteen unhonoured fields', () => {
+describe('matchesQuery - the sixteen unhonoured fields', () => {
+  it('is sixteen of the twenty-four fields', () => {
+    expect(UNHONOURED).toHaveLength(16)
+  })
+
   it.each(UNHONOURED)('throws NotImplementedError naming %s', (field, options) => {
     const { server, overworld } = setup()
     const entity = sheep(server, overworld)
@@ -276,7 +373,7 @@ describe('matchesQuery - the eighteen unhonoured fields', () => {
   it('scans the query own fields ahead of the filter fields it inherits', () => {
     const { server, overworld } = setup()
     expectThrown(
-      () => sheep(server, overworld).matches({ families: ['mob'], closest: 1 }),
+      () => sheep(server, overworld).matches({ gameMode: 'Survival' as MC.GameMode, closest: 1 }),
       NotImplementedError,
       notImplementedMessage('EntityQueryOptions.closest'),
     )
