@@ -33,6 +33,8 @@ export const RESOLVED_PACK_ENTRY = `\0${PACK_ENTRY}`
 
 /** Options the fragment hands the plugin. */
 export interface PackBuildPluginOptions {
+  /** the namespace setting as the consumer wrote it; resolved against the package name at buildStart */
+  namespace?: boolean | string
   /** the absolute path of the package directory the build is for */
   packageDir: string
   /** whether the configuration named the virtual entry rather than the script sources */

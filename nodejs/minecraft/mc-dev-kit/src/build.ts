@@ -7,6 +7,16 @@ import { PACK_ENTRY, SCRIPT_SOURCE, packBuildPlugin } from './internal/pack-buil
 export interface PackBuildOptions {
   /** the filesystem path of the package directory the build is for */
   packageDir: string
+  /**
+   * Turns namespacing on: every identifier the package's packs declare is built carrying the
+   * namespace, written into no name by hand. `true` derives the namespace from the package's own
+   * name — the `@` dropped and the `/` a hyphen — and a string names one directly. A namespace
+   * holds only lowercase letters, digits, underscore, hyphen and dot; anything else fails the
+   * build naming the character. Left unset, nothing is namespaced and names reach the output as
+   * the source spells them — unless the package vendors anything, which needs a namespace and
+   * fails the build without one.
+   */
+  namespace?: boolean | string
 }
 
 /**
@@ -59,7 +69,7 @@ export function packBuild(options: PackBuildOptions): UserConfig {
     outDir: path.join(packageDir, 'dist', 'behavior_pack', 'scripts'),
     outputOptions: { entryFileNames: 'main.js' },
     platform: 'neutral',
-    plugins: [packBuildPlugin({ packageDir, virtualEntry })],
+    plugins: [packBuildPlugin({ namespace: options.namespace, packageDir, virtualEntry })],
     shims: false,
     sourcemap: false,
     target: 'es2022',
