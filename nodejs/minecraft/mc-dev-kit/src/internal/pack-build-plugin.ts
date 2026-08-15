@@ -223,7 +223,6 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
             kind: pack.kind,
             sourceDir: path.join(packageDir, path.basename(pack.sourceDir)),
             outputBase: path.basename(pack.outputDir),
-            uuid: pack.uuid,
           })),
           vendored: state.vendored,
         })

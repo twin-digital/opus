@@ -16,9 +16,11 @@ export interface PackBuildOptions {
    * the source spells them — unless the package vendors anything, which needs a namespace and
    * fails the build without one.
    *
-   * Entity identifiers and the localization keys derived from them carry the namespace; every
-   * other declared name — geometry, textures, materials, render controllers, animations,
-   * animation controllers — carries the pack's asset namespace, derived from its header uuid.
+   * Entity identifiers and the localization keys derived from them carry the namespace, and so
+   * does every other name the package itself declares — geometry, textures, materials, render
+   * controllers, animations, animation controllers — as the token written into the name's own
+   * structure. A vendored asset's names carry the vendored library's token plus a content hash
+   * instead, so an identical name always means identical bytes.
    * Script sources are never rewritten: code spells identifiers through
    * `@twin-digital/mc-pack-runtime`'s `packId`, which reads the namespace the build injects into
    * the bundle. A namespace chosen by hand is conventionally claimed at the Bedrock-OSS add-on

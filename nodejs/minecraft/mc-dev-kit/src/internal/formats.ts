@@ -29,11 +29,17 @@ export function claimName(packToken: string): string {
   return `${CLAIM_NAME_PREFIX}${packToken}`
 }
 
+/** The hex digits kept from the sha256 digest in a vendored asset's token. */
+export const VENDORED_HASH_LENGTH = 16
+
 /**
- * The asset namespace of a built pack, derived from its header uuid: `mcdk_` plus the uuid's hex
- * with the hyphens dropped. Internal asset names — geometry, textures, materials, render
- * controllers, animations, animation controllers — carry it instead of the pack's namespace.
+ * The token a vendored asset's names carry: the vendored library's package token plus the
+ * truncated content hash of the file declaring it, both visible in the name. Identical name means
+ * identical bytes by construction, so two consumers vendoring one library version share names for
+ * unchanged assets and diverge per asset where content differs.
+ *
+ * A pack's own asset names carry the pack namespace itself as their token, so they need no helper.
  */
-export function assetNamespace(uuid: string): string {
-  return `mcdk_${uuid.toLowerCase().replaceAll('-', '')}`
+export function vendoredAssetToken(libraryToken: string, contentHash: string): string {
+  return `${libraryToken}-${contentHash}`
 }
