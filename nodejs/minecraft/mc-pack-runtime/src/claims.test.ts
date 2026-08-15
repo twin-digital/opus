@@ -8,7 +8,7 @@ import type { PackRuntimeInjection } from './injection.js'
 const host = globalThis as { __MC_PACK_RUNTIME__?: PackRuntimeInjection }
 
 const inject = (namespace: string, packToken: string): void => {
-  host.__MC_PACK_RUNTIME__ = { namespace, packToken }
+  host.__MC_PACK_RUNTIME__ = { namespace, packToken, prefixes: [] }
 }
 
 // console.warn is the script engine's write to the content log, so the log is read off a spy.
