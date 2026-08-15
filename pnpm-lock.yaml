@@ -2327,6 +2327,9 @@ importers:
       '@pnpm/workspace.read-manifest':
         specifier: ^1000.1.7
         version: 1000.3.1
+      '@twin-digital/mc-pack-runtime':
+        specifier: workspace:*
+        version: link:../mc-pack-runtime
       adm-zip:
         specifier: ^0.6.0
         version: 0.6.0
