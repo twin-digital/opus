@@ -24,6 +24,36 @@ export function packFamily(packToken: string): string {
 /** The reserved prefix of claim entity names; an author's bare name landing in it is refused. */
 export const CLAIM_NAME_PREFIX = 'mcdk_claim_'
 
+/** An npm package name without its scope: `@rpg-libs/spell-fx` becomes `spell-fx`. */
+export function unscopedName(packageName: string): string {
+  return packageName.replace(/^@[^/]+\//u, '')
+}
+
+/**
+ * Resolves a merged dependency's entity prefix: the configured one, or the dependency's unscoped
+ * npm name. A prefix holds lowercase letters, digits, underscore and hyphen — never a dot, which
+ * is the separator between the prefix and the entity name — and may not land in the reserved
+ * claim spelling. Anything else fails naming what it found.
+ */
+export function resolvePrefix(packageName: string, configured: string | undefined): string {
+  const prefix = configured ?? unscopedName(packageName)
+  if (prefix === '') {
+    throw new Error(`the prefix for ${packageName} is empty: name at least one character`)
+  }
+  const offending = /[^a-z0-9_-]/u.exec(prefix)
+  if (offending !== null) {
+    throw new Error(
+      `the prefix ${JSON.stringify(prefix)} for ${packageName} holds ${JSON.stringify(offending[0])}: only lowercase letters, digits, underscore and hyphen are allowed`,
+    )
+  }
+  if (prefix.startsWith(CLAIM_NAME_PREFIX)) {
+    throw new Error(
+      `the prefix ${JSON.stringify(prefix)} for ${packageName} lands in the reserved ${CLAIM_NAME_PREFIX} spelling`,
+    )
+  }
+  return prefix
+}
+
 /** The bare name of the claim entity type the build adds to a namespaced behavior pack. */
 export function claimName(packToken: string): string {
   return `${CLAIM_NAME_PREFIX}${packToken}`

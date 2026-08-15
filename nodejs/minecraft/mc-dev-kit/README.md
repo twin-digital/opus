@@ -123,10 +123,11 @@ end of the build.
 - a behavior pack declares a script module while `behavior_pack/scripts/main.ts` is not there
 - an `@minecraft/`-scoped import the completed manifest does not declare resolves to nothing
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
-- with namespacing on: a source name already carrying a prefix, content whose names the build
-  cannot rewrite, an entity identifier declared by more than one of the merged packs, a reference
-  several other packs' declarations could satisfy, and a bare entity name landing in the reserved
-  `mcdk_claim_` spelling
+- with namespacing on: a source name already carrying a namespace, a bare entity name carrying a
+  dot, content whose names the build cannot rewrite, an asset reference several other packs'
+  declarations could satisfy, a reference only an un-admitted transitive supplier declares, two
+  merged dependencies resolving to one entity prefix, a prefix outside its charset, and a bare
+  entity name or prefix landing in the reserved `mcdk_claim_` spelling
 
 ### Namespacing
 
@@ -151,8 +152,11 @@ and the build writes them into their namespaced spellings; a source name that al
 prefix fails the build naming the file and the name. What each declared name becomes:
 
 - **entity identifiers**, and the `entity.<id>.name` / `item.spawn_egg.entity.<id>.name`
-  localization keys derived from them, carry the namespace: `wizard` builds as
-  `<namespace>:wizard`
+  localization keys derived from them, carry the namespace: your own `wizard` builds as
+  `<namespace>:wizard`, and a vendored pack's `minion` as `<namespace>:<prefix>.minion` — the
+  prefix being the per-dependency token you choose (see the vendor block below). A bare entity
+  name may not contain a dot, which the build reserves as the prefix separator; a dotted
+  declaration fails naming the file and the name
 - **every other name the package itself declares** — geometry, textures, materials, render
   controllers, animations, animation controllers — carries the namespace as a token written into
   the name's own structure: `geometry.wizard` builds as `geometry.<namespace>.wizard`, a texture
@@ -169,15 +173,22 @@ prefix fails the build naming the file and the name. What each declared name bec
 
 Only names the packs declare are rewritten, along with the references to them, so the two pack
 halves still join. A reference resolves against the pack that wrote it first — a vendored pack's
-internal references stay internal, and your own references prefer your own declarations — then
-against the other merged packs where exactly one declares the name; a bare name that several other
-packs declare is ambiguous and fails the build naming every candidate. A reference to a name no
-merged pack declares — `geometry.evoker.v1.8`, a vanilla texture or material — is copied through
-as written. Script sources are never rewritten:
-code spells a namespaced identifier through `@twin-digital/mc-pack-runtime`'s `packId` helper,
-which reads the namespace the build injects into the bundle ahead of all module code, so a bundled
-library's own calls resolve through the vendoring package's namespace with nothing passed per
-call.
+internal references stay internal, and your own references prefer your own declarations. Your own
+content also references a vendored entity by its composed spelling, `<prefix>.<name>`, which
+rewrites to `<namespace>:<prefix>.<name>`. An asset reference nothing in its own pack declares
+resolves against the other merged packs where exactly one declares the name; several is ambiguous
+and fails the build naming every candidate. A reference to a name no reachable vendored pack
+declares — `geometry.evoker.v1.8`, a vanilla texture or material — is copied through as written;
+one that only an **un-merged** transitive supplier declares fails the build naming the referencing
+file, the name, the supplying package, and the fix.
+
+Script sources are never rewritten: code spells a namespaced identifier through
+`@twin-digital/mc-pack-runtime`'s `packId` helper, which reads what the build injects into the
+bundle ahead of all module code — the namespace, the pack token, and the sorted prefixes of every
+merged dependency. In modules belonging to a merged dependency, the build binds the runtime import
+itself: their `packId` is wrapped to prepend the dependency's prefix, so a library's compiled-in
+calls — computed names included — land in its own entity cell with nothing passed per call. Your
+own modules import the runtime unwrapped.
 
 The build also stamps a type family, `mcdk_pack_<package token>`, on every entity type the
 namespaced pack declares, and adds one claim entity type,
@@ -207,11 +218,34 @@ my-lib/
       entity/minion.json
 ```
 
-A package vendors the `vendored_pack/` of every package in its own `dependencies` — never
-`devDependencies` — following those packages' dependencies transitively, workspace sibling and
-installed dependency alike. Nothing is listed anywhere: declaring the dependency is what makes the
-content arrive. For an installed dependency to work, the shared package must publish its
-`vendored_pack/` tree — add it to the `files` field of its `package.json`:
+What merges is explicit: the `vendored_pack/` of every package in this package's **own
+`dependencies`**, plus any package named in `packBuild`'s **`vendor` block** — never
+`devDependencies` — workspace sibling and installed dependency alike. Naming a package in the
+vendor block is how a transitive supplier is admitted without promoting it to a direct dependency,
+and a package reached along several dependency paths merges once. The transitive `dependencies`
+tree is still walked read-only, so a vendored reference that only an un-admitted supplier could
+satisfy fails with the fix spelled out ("add `@acme/particle-core` to dependencies or the vendor
+block") rather than shipping broken.
+
+The vendor block also names each merged dependency's **entity prefix**, defaulting to the
+dependency's unscoped npm name (`@rpg-libs/spell-fx` vendors as `spell-fx.*`). A prefix holds
+lowercase letters, digits, underscore and hyphen — never a dot, the separator — and two merged
+dependencies resolving to one prefix fail the build naming both, with an explicit prefix as the
+fix:
+
+```ts
+packBuild({
+  packageDir,
+  namespace: true,
+  vendor: {
+    '@rpg-libs/spell-fx': { prefix: 'fx' },
+    '@acme/particle-core': {}, // a transitive supplier, admitted explicitly
+  },
+})
+```
+
+For an installed dependency to work, the shared package must publish its `vendored_pack/` tree —
+add it to the `files` field of its `package.json`:
 
 ```jsonc
 {
@@ -233,11 +267,10 @@ one relative path never contend for it.
 
 A vendored pack may hold entity definitions, geometries, textures, materials, render controllers,
 animations, animation controllers, and localization entries keyed by an entity identifier; content
-of any other kind fails the build naming the file. An entity identifier declared by both the
-vendoring package and something it vendors, or by two of its vendorings, fails the build naming
-both declarations. Asset names never contend that way — each pack's build under its own token —
-but one asset name declared by two files of one vendored pack fails naming both, since its two
-content hashes would leave references nothing to pick. A file more than one merged pack
+of any other kind fails the build naming the file. Names never contend across the merged packs:
+entity identifiers differ by the prefix segment, asset names by each pack's token. One asset name
+declared by two files of one vendored pack still fails naming both, since its two content hashes
+would leave references nothing to pick. A file more than one merged pack
 contributes entries to — `texts/en_US.lang`, say — is composed; one the build cannot compose
 fails it, naming both contributors.
 
