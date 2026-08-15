@@ -18,7 +18,7 @@ import {
   type WorkspaceRoot,
   type WorkspaceRootOptions,
 } from '@twin-digital/mc-dev-kit'
-import { packBuild, type PackBuildOptions } from '@twin-digital/mc-dev-kit/build'
+import { packBuild, type PackBuildOptions, type VendorConfig } from '@twin-digital/mc-dev-kit/build'
 
 /** The shape a consumer meets: the entry point, and the types it hands back. */
 describe('the kit as a consumer imports it', () => {
@@ -46,7 +46,12 @@ describe('the kit as a consumer imports it', () => {
 
   it('exports the build fragment from its own subpath, so the discovery half names no bundler', () => {
     expectTypeOf(packBuild).toBeFunction()
-    expectTypeOf<PackBuildOptions>().toEqualTypeOf<{ packageDir: string; namespace?: boolean | string }>()
+    expectTypeOf<PackBuildOptions>().toEqualTypeOf<{
+      packageDir: string
+      namespace?: boolean | string
+      vendor?: VendorConfig
+    }>()
+    expectTypeOf<VendorConfig>().toEqualTypeOf<Record<string, { prefix?: string } | undefined>>()
   })
 
   it('reports where a built script belongs on every entry, null where a pack has none', async () => {

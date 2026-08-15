@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import type { Rolldown } from 'tsdown'
 import { discoverPacks } from '../discover-packs.js'
@@ -10,7 +10,7 @@ import { INJECTION_GLOBAL, packageToken } from './formats.js'
 import { messageOf } from './json.js'
 import { planMerge } from './merge-plan.js'
 import { resolveNamespace } from './namespace.js'
-import { findVendoredPacks, type VendoredPack } from './vendored-packs.js'
+import { findVendoredPacks, type VendorConfig, type VendoredPack } from './vendored-packs.js'
 
 /** The one plugin the fragment carries. */
 export type BuildPlugin = Rolldown.Plugin
@@ -35,12 +35,20 @@ export const PACK_ENTRY = 'mc-dev-kit:pack-entry'
 /** The resolved id the virtual entry loads under. */
 export const RESOLVED_PACK_ENTRY = `\0${PACK_ENTRY}`
 
+/** The engine-side runtime package, whose import a vendored library's modules get prefix-bound. */
+export const RUNTIME_PACKAGE = '@twin-digital/mc-pack-runtime'
+
+/** The virtual-module id prefix of the prefix-bound runtime; prefix and target follow, encoded. */
+const PREFIXED_RUNTIME = '\0mc-dev-kit:prefixed-runtime:'
+
 /** Options the fragment hands the plugin. */
 export interface PackBuildPluginOptions {
   /** the namespace setting as the consumer wrote it; resolved against the package name at buildStart */
   namespace?: boolean | string
   /** the absolute path of the package directory the build is for */
   packageDir: string
+  /** per-dependency vendoring configuration, and admissions of transitive suppliers */
+  vendor?: VendorConfig
   /** whether the configuration named the virtual entry rather than the script sources */
   virtualEntry: boolean
 }
@@ -55,8 +63,10 @@ interface BuildState {
   namespace?: string
   /** the package's own name as a token, set exactly when `namespace` is */
   packToken?: string
-  /** the vendored packs the package's dependencies reach */
+  /** the vendored packs that merge into this package's own packs */
   vendored: VendoredPack[]
+  /** vendored packs the walk reaches that nothing admitted, read for diagnosis only */
+  unmerged: VendoredPack[]
 }
 
 /**
@@ -134,7 +144,19 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       const packageName = packs[0].packageName
       state.namespace = resolveNamespace(options.namespace, packageName)
       state.packToken = state.namespace === undefined ? undefined : packageToken(packageName)
-      state.vendored = await findVendoredPacks({ packageDir, workspaceRoot: workspace.root })
+
+      const vendoredSet = await findVendoredPacks({
+        packageDir,
+        vendor: options.vendor,
+        workspaceRoot: workspace.root,
+      })
+      if (vendoredSet.problems.length > 0) {
+        throw new Error(
+          `the vendoring configuration does not resolve:\n${vendoredSet.problems.map((line) => `  ${line}`).join('\n')}`,
+        )
+      }
+      state.vendored = vendoredSet.merged
+      state.unmerged = vendoredSet.unmerged
 
       if (state.vendored.length > 0 && state.namespace === undefined) {
         const names = state.vendored.map((pack) => pack.name).join(', ')
@@ -170,6 +192,19 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       if (state.externals.has(id)) {
         return { id, external: true }
       }
+
+      // a vendored library's modules get the runtime with packId bound to the library's prefix,
+      // so its compiled-in calls — computed names included — land in its own entity cell
+      if (id === RUNTIME_PACKAGE && state.namespace !== undefined && importer !== undefined) {
+        const owner = await owningVendoredPack(state.vendored, importer)
+        if (owner !== undefined) {
+          const resolved = await this.resolve(id, importer, { ...extra, skipSelf: true })
+          if (resolved !== null) {
+            return `${PREFIXED_RUNTIME}${encodeURIComponent(owner.prefix)}:${encodeURIComponent(resolved.id)}`
+          }
+        }
+      }
+
       if (!id.startsWith('@minecraft/')) {
         return null
       }
@@ -185,15 +220,36 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     load(id: string) {
-      return id === RESOLVED_PACK_ENTRY ? 'export {}\n' : null
+      if (id === RESOLVED_PACK_ENTRY) {
+        return 'export {}\n'
+      }
+      if (id.startsWith(PREFIXED_RUNTIME)) {
+        const [prefix, target] = id
+          .slice(PREFIXED_RUNTIME.length)
+          .split(':')
+          .map((part) => decodeURIComponent(part))
+        const specifier = JSON.stringify(target)
+        return [
+          `export * from ${specifier}`,
+          `import { packId as __mcdkPackId } from ${specifier}`,
+          `export const packId = (name) => __mcdkPackId(${JSON.stringify(`${prefix}.`)} + name)`,
+          '',
+        ].join('\n')
+      }
+      return null
     },
 
     renderChunk(code) {
       if (state.namespace === undefined) {
         return null
       }
-      const injected = JSON.stringify({ namespace: state.namespace, packToken: state.packToken })
-      return `globalThis.${INJECTION_GLOBAL} = Object.freeze(${injected});\n${code}`
+      const prefixes = JSON.stringify(state.vendored.map((pack) => pack.prefix).sort())
+      const fields = [
+        `namespace: ${JSON.stringify(state.namespace)}`,
+        `packToken: ${JSON.stringify(state.packToken)}`,
+        `prefixes: Object.freeze(${prefixes})`,
+      ].join(', ')
+      return `globalThis.${INJECTION_GLOBAL} = Object.freeze({ ${fields} });\n${code}`
     },
 
     async generateBundle(outputOptions, bundle) {
@@ -225,6 +281,7 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
             outputBase: path.basename(pack.outputDir),
           })),
           vendored: state.vendored,
+          unmerged: state.unmerged,
         })
         for (const [relative, contents] of plan) {
           const target = path.join(outputRoot, relative)
@@ -239,7 +296,21 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
 
 /** A build's state before `buildStart` has read anything. */
 function emptyState(): BuildState {
-  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [] }
+  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [], unmerged: [] }
+}
+
+/** The merged vendored pack whose package directory holds `importer`, if any. */
+async function owningVendoredPack(
+  vendored: readonly VendoredPack[],
+  importer: string,
+): Promise<VendoredPack | undefined> {
+  let real: string
+  try {
+    real = await realpath(importer)
+  } catch {
+    return undefined
+  }
+  return vendored.find((pack) => real.startsWith(`${pack.packageDir}${path.sep}`))
 }
 
 /** The kinds the vendored packs contribute, each of which needs an own pack to merge into. */

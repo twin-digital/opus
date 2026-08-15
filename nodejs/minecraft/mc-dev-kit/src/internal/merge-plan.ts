@@ -21,7 +21,10 @@ export interface MergePlanOptions {
   namespace: string
   packToken: string
   packs: OwnPack[]
+  /** the vendored packs that merge, each carrying its entity prefix */
   vendored: VendoredPack[]
+  /** vendored packs the dependency walk reaches that nothing admitted — read for diagnosis only */
+  unmerged: VendoredPack[]
 }
 
 /** What a namespaced build writes besides the manifests and the script bundle. */
@@ -48,6 +51,8 @@ interface SourceHalf {
   /** `''` for the package's own pack; the vendored package's name otherwise */
   origin: string
   vendored: boolean
+  /** the vendored pack's entity prefix; `''` for the package's own pack */
+  prefix: string
   kind: PackKind
   dir: string
 }
@@ -87,21 +92,23 @@ const JSON_DIRECTORIES = new Map<string, ContentKind>([
 
 /**
  * Plans everything a namespaced build writes besides the manifests and the script bundle: the
- * package's own pack content and every vendored half, each declared name rewritten — entity
- * identifiers and their localization keys under the namespace, the pack's own asset names under
- * the namespace as their token, and every vendored asset's name under its library's token plus a
- * content hash — references to undeclared names copied as written, `.lang` files composed across
- * the merged packs, and the claim entity type added to the behavior half.
+ * package's own pack content and every vendored half, each declared name rewritten — the
+ * package's own entity identifiers as `<ns>:<name>` and a vendored pack's as
+ * `<ns>:<prefix>.<name>`, localization keys following the final ids, the pack's own asset names
+ * under the namespace as their token, and every vendored asset's name under its library's token
+ * plus a content hash — references to undeclared names copied as written, `.lang` files composed
+ * across the merged packs, and the claim entity type added to the behavior half.
  *
- * A reference resolves against the pack that wrote it first, then against the other merged packs
- * only where exactly one declares the name — several is ambiguous and fails naming every
- * candidate, none copies the reference as written.
+ * A reference resolves against the pack that wrote it first; the consumer's own content also
+ * reaches a vendored entity by its composed `prefix.name` spelling. An asset reference then falls
+ * back to the other merged packs only where exactly one declares the name — several is ambiguous
+ * and fails naming every candidate; one only an unmerged supplier declares fails naming the
+ * supplier and the fix; none copies the reference as written.
  *
  * Every fault is collected before anything is returned, and one error names them all: content of
- * a kind the build cannot rewrite, a source name already carrying a namespace, a bare name landing
- * in the reserved claim spelling, an entity identifier declared by more than one of the merged
- * packs, an ambiguous reference, and a file more than one pack contributes that the build cannot
- * compose.
+ * a kind the build cannot rewrite, a source name already carrying a namespace, a dotted bare
+ * entity name, a bare name landing in the reserved claim spelling, an ambiguous or dangling
+ * reference, and a file more than one pack contributes that the build cannot compose.
  */
 export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   const errors: string[] = []
@@ -140,18 +147,12 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   }
 
   const declarations = scanDeclarations(files, texts, errors)
-  checkEntityCollisions(declarations, errors)
   checkVendoredDuplicates(declarations, errors)
   checkReserved(declarations, errors)
 
-  const entityMap = new Map<string, string>()
-  for (const declaration of declarations) {
-    if (declaration.category === 'entity') {
-      entityMap.set(declaration.spelling, `${options.namespace}:${declaration.spelling}`)
-    }
-  }
-
-  const names = assetNames({ options, files, declarations, texts, bytes, libraryTokens, errors })
+  const diagnosis = await scanUnmergedDeclarations(options.unmerged)
+  const entities = entityNames(options, declarations, diagnosis, errors)
+  const names = assetNames({ options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors })
 
   if (errors.length > 0) {
     throw mergeError(errors)
@@ -188,7 +189,7 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
       }
       case 'lang': {
         const target = `${outputBase.get(source.half.kind) as string}/${source.rel}`
-        const rewritten = rewriteLang(source, texts.get(source.file) as string, entityMap, errors)
+        const rewritten = rewriteLang(source, texts.get(source.file) as string, entities.resolverFor(source), errors)
         const contributions = langContributions.get(target) ?? []
         contributions.push({ origin: source.half.origin, text: rewritten })
         langContributions.set(target, contributions)
@@ -196,8 +197,14 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
       }
       default: {
         const text = texts.get(source.file) as string
-        const resolve = names.resolverFor(source)
-        const rewritten = rewriteJson(source, text, entityMap, resolve, family, errors)
+        const rewritten = rewriteJson(
+          source,
+          text,
+          entities.resolverFor(source),
+          names.resolverFor(source),
+          family,
+          errors,
+        )
         if (rewritten !== undefined) {
           // a vendored definition file's basename carries its library token, so two merged packs
           // shipping one relative path — models/minion.geo.json, say — land side by side
@@ -240,15 +247,29 @@ function sourceHalves(options: MergePlanOptions): SourceHalf[] {
   const halves: SourceHalf[] = options.packs.map((pack) => ({
     origin: '',
     vendored: false,
+    prefix: '',
     kind: pack.kind,
     dir: pack.sourceDir,
   }))
   for (const pack of options.vendored) {
     for (const half of pack.halves) {
-      halves.push({ origin: pack.name, vendored: true, kind: half.kind, dir: half.dir })
+      halves.push({ origin: pack.name, vendored: true, prefix: pack.prefix, kind: half.kind, dir: half.dir })
     }
   }
   return halves
+}
+
+/** The unmerged packs' halves, read for diagnosis only. */
+function unmergedHalves(unmerged: VendoredPack[]): SourceHalf[] {
+  return unmerged.flatMap((pack) =>
+    pack.halves.map((half) => ({
+      origin: pack.name,
+      vendored: true,
+      prefix: pack.prefix,
+      kind: half.kind,
+      dir: half.dir,
+    })),
+  )
 }
 
 /**
@@ -328,6 +349,8 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
           errors.push(`${source.file}: not a behavior entity definition the build can rewrite`)
         } else if (identifier.includes(':')) {
           errors.push(`${source.file}: ${identifier} already carries a namespace — write the bare name`)
+        } else if (identifier.includes('.')) {
+          errors.push(`${source.file}: ${identifier} carries a dot, which the build reserves as the prefix separator`)
         } else {
           declare(source, 'entity', identifier, identifier)
         }
@@ -337,7 +360,15 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
         const identifier = entityIdentifier(parsed, 'minecraft:client_entity')
         if (typeof identifier !== 'string') {
           errors.push(`${source.file}: not a client entity definition the build can rewrite`)
-        } else if (!identifier.includes(':')) {
+        } else if (identifier.includes(':')) {
+          break // a reference to another pack's or vanilla's entity, copied as written
+        } else if (identifier.includes('.')) {
+          // the consumer's composed reference to a vendored entity, resolved at rewrite; a
+          // vendored pack cannot spell consumer prefixes, so a dotted name there is a fault
+          if (source.half.vendored) {
+            errors.push(`${source.file}: ${identifier} carries a dot, which the build reserves as the prefix separator`)
+          }
+        } else {
           declare(source, 'entity', identifier, identifier)
         }
         break
@@ -386,29 +417,135 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
   return declarations
 }
 
+/** What the unmerged, walk-reachable vendored packs declare — read for diagnosis only. */
+interface UnmergedDeclarations {
+  /** composed spelling — the pack's default prefix, a dot, the bare name — to its declaration */
+  entities: Map<string, { origin: string; file: string }>
+  /** `<kind> <spelling>` to the declaring unmerged pack */
+  assets: Map<string, { origin: string; file: string }>
+}
+
 /**
- * An entity identifier declared by more than one of the merged packs fails, naming every
- * declaration. Asset names do not collide across packs: each pack's spell under its own token.
+ * Scans the unmerged packs' trees for what they declare, so a dangling reference can name its
+ * supplier and the fix. Their content faults are not this build's to report: forbidden files are
+ * skipped and scan errors dropped.
  */
-function checkEntityCollisions(declarations: Declaration[], errors: string[]): void {
-  const groups = new Map<string, Declaration[]>()
+async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<UnmergedDeclarations> {
+  const entities = new Map<string, { origin: string; file: string }>()
+  const assets = new Map<string, { origin: string; file: string }>()
+  const prefixes = new Map(unmerged.map((pack) => [pack.name, pack.prefix]))
+
+  const files: SourceFile[] = []
+  for (const half of unmergedHalves(unmerged)) {
+    for (const file of await listFiles(half.dir)) {
+      const rel = path.relative(half.dir, file).split(path.sep).join('/')
+      const content = classify(rel, true)
+      if (content !== 'forbidden' && content !== 'skip') {
+        files.push({ half, file, rel, content })
+      }
+    }
+  }
+
+  const texts = new Map<string, string>()
+  for (const source of files) {
+    if (source.content !== 'texture' && source.content !== 'opaque') {
+      texts.set(source.file, await readFile(source.file, 'utf8'))
+    }
+  }
+
+  const dropped: string[] = []
+  for (const declaration of scanDeclarations(files, texts, dropped)) {
+    const entry = { origin: declaration.origin, file: declaration.file }
+    if (declaration.category === 'entity') {
+      const prefix = prefixes.get(declaration.origin)
+      if (prefix !== undefined && !entities.has(`${prefix}.${declaration.name}`)) {
+        entities.set(`${prefix}.${declaration.name}`, entry)
+      }
+    } else if (!assets.has(`${declaration.kind} ${declaration.spelling}`)) {
+      assets.set(`${declaration.kind} ${declaration.spelling}`, entry)
+    }
+  }
+
+  return { entities, assets }
+}
+
+/** The failure a reference gets when only a pack nothing admitted declares its name. */
+function danglingMessage(file: string, name: string, supplier: { origin: string; file: string }): string {
+  return `${file}: ${name} resolves to no merged declaration, but ${supplier.origin} declares it in ${supplier.file}: add ${supplier.origin} to dependencies or the vendor block`
+}
+
+/** The entity-name machinery: per-scope final ids, and the resolver a file's rewrites use. */
+interface EntityNames {
+  /** a resolver bound to one file: a spelling to its final id, or `undefined` to copy */
+  resolverFor(source: SourceFile): (spelling: string) => string | undefined
+}
+
+/**
+ * Builds the entity-name machinery. The package's own entities build as `<ns>:<name>`; a vendored
+ * pack's entities as `<ns>:<prefix>.<name>`, the prefix being the per-dependency token the
+ * consumer chose — so no two merged packs' final ids can contend, and the bare halves stay
+ * dot-free by the scan's rule.
+ *
+ * A spelling resolves against the scope that wrote it first: a bare name is the writing pack's
+ * own entity. The consumer's own content may also spell `prefix.name`, which resolves to the
+ * named dependency's entity — a prefix that matches a merged dependency declaring no such entity
+ * fails naming both halves, a spelling only an unmerged supplier declares fails naming the
+ * supplier and the fix, and anything else copies as written.
+ */
+function entityNames(
+  options: MergePlanOptions,
+  declarations: Declaration[],
+  diagnosis: UnmergedDeclarations,
+  errors: string[],
+): EntityNames {
+  const prefixByOrigin = new Map(options.vendored.map((pack) => [pack.name, pack.prefix]))
+  const originByPrefix = new Map(options.vendored.map((pack) => [pack.prefix, pack.name]))
+
+  const scopes = new Map<string, Map<string, string>>()
   for (const declaration of declarations) {
     if (declaration.category !== 'entity') {
       continue
     }
-    const group = groups.get(declaration.name) ?? []
-    group.push(declaration)
-    groups.set(declaration.name, group)
+    const prefix = declaration.origin === '' ? undefined : prefixByOrigin.get(declaration.origin)
+    const final =
+      prefix === undefined ?
+        `${options.namespace}:${declaration.name}`
+      : `${options.namespace}:${prefix}.${declaration.name}`
+    const scope = scopes.get(declaration.origin) ?? new Map<string, string>()
+    scope.set(declaration.name, final)
+    scopes.set(declaration.origin, scope)
   }
 
-  for (const group of groups.values()) {
-    const origins = new Set(group.map((declaration) => declaration.origin))
-    if (origins.size > 1) {
-      const claimants = group
-        .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
-        .join(' and ')
-      errors.push(`the entity name ${group[0].name} is declared by ${claimants}`)
-    }
+  return {
+    resolverFor: (source) => (spelling) => {
+      if (spelling.includes(':')) {
+        return undefined
+      }
+      const direct = scopes.get(source.half.origin)?.get(spelling)
+      if (direct !== undefined) {
+        return direct
+      }
+      const dot = spelling.indexOf('.')
+      if (dot === -1 || source.half.origin !== '') {
+        return undefined
+      }
+      const prefix = spelling.slice(0, dot)
+      const rest = spelling.slice(dot + 1)
+      const target = originByPrefix.get(prefix)
+      if (target !== undefined) {
+        const final = scopes.get(target)?.get(rest)
+        if (final !== undefined) {
+          return final
+        }
+        errors.push(`${source.file}: ${spelling} carries the prefix of ${target}, which declares no entity ${rest}`)
+        return undefined
+      }
+      const supplier = diagnosis.entities.get(spelling)
+      if (supplier !== undefined) {
+        errors.push(danglingMessage(source.file, spelling, supplier))
+      }
+      return undefined
+    },
   }
 }
 
@@ -423,7 +560,7 @@ function checkVendoredDuplicates(declarations: Declaration[], errors: string[]):
     if (declaration.category === 'entity' || declaration.origin === '') {
       continue
     }
-    const key = `${declaration.origin} ${declaration.kind} ${declaration.category} ${declaration.spelling}`
+    const key = `${declaration.origin} ${declaration.kind} ${declaration.category} ${declaration.spelling}`
     const group = groups.get(key) ?? []
     group.push(declaration)
     groups.set(key, group)
@@ -459,6 +596,8 @@ interface AssetNamesInputs {
   bytes: Map<string, Buffer>
   /** vendored package name to package token */
   libraryTokens: Map<string, string>
+  /** what the unmerged packs declare, so a dangling reference names its supplier */
+  diagnosis: UnmergedDeclarations
   errors: string[]
 }
 
@@ -486,11 +625,11 @@ interface AssetNames {
  * every candidate, none leaves the reference to copy as written.
  */
 function assetNames(inputs: AssetNamesInputs): AssetNames {
-  const { options, files, declarations, texts, bytes, libraryTokens, errors } = inputs
+  const { options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors } = inputs
   const sourceByFile = new Map(files.map((source) => [source.file, source]))
   const assets = declarations.filter((declaration) => declaration.category !== 'entity')
 
-  const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
+  const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
   const scopeIndex = new Map<string, Declaration>()
   const crossIndex = new Map<string, Declaration[]>()
   for (const declaration of assets) {
@@ -498,7 +637,7 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     if (!scopeIndex.has(key)) {
       scopeIndex.set(key, declaration)
     }
-    const cross = `${declaration.kind} ${declaration.spelling}`
+    const cross = `${declaration.kind} ${declaration.spelling}`
     const list = crossIndex.get(cross) ?? []
     list.push(declaration)
     crossIndex.set(cross, list)
@@ -517,11 +656,15 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     if (own !== undefined) {
       return own
     }
-    const candidates = (crossIndex.get(`${kind} ${spelling}`) ?? []).filter(
+    const candidates = (crossIndex.get(`${kind} ${spelling}`) ?? []).filter(
       (declaration) => declaration.origin !== origin,
     )
     const byOrigin = new Map(candidates.map((declaration) => [declaration.origin, declaration]))
     if (byOrigin.size === 0) {
+      const supplier = diagnosis.assets.get(`${kind} ${spelling}`)
+      if (supplier !== undefined) {
+        errors.push(danglingMessage(referencingFile, spelling, supplier))
+      }
       return undefined
     }
     if (byOrigin.size === 1) {
@@ -559,8 +702,8 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
 
     const digest = createHash('sha256')
       .update(bytes.get(file) ?? Buffer.from(texts.get(file) ?? ''))
-      .update(' ')
-      .update([...extras].sort().join(' '))
+      .update(' ')
+      .update([...extras].sort().join(' '))
       .digest('hex')
       .slice(0, VENDORED_HASH_LENGTH)
     hashMemo.set(file, digest)
@@ -636,7 +779,7 @@ function assetSpelling(declaration: Declaration, assetToken: string): string {
 function rewriteJson(
   source: SourceFile,
   text: string,
-  entityMap: Map<string, string>,
+  resolveEntity: (spelling: string) => string | undefined,
   resolve: (spelling: string) => string | undefined,
   family: string,
   errors: string[],
@@ -653,10 +796,10 @@ function rewriteJson(
 
   switch (source.content) {
     case 'behavior-entity':
-      rewriteBehaviorEntity(parsed, entityMap, resolve, family)
+      rewriteBehaviorEntity(parsed, resolveEntity, resolve, family)
       break
     case 'client-entity':
-      rewriteClientEntity(parsed, entityMap, resolve)
+      rewriteClientEntity(parsed, resolveEntity, resolve)
       break
     case 'geometry':
       rewriteGeometry(parsed, resolve)
@@ -681,7 +824,7 @@ function rewriteJson(
 
 function rewriteBehaviorEntity(
   parsed: Record<string, unknown>,
-  entityMap: Map<string, string>,
+  resolveEntity: (spelling: string) => string | undefined,
   resolve: (spelling: string) => string | undefined,
   family: string,
 ): void {
@@ -692,7 +835,7 @@ function rewriteBehaviorEntity(
   const description = entity.description
   if (isRecord(description)) {
     if (typeof description.identifier === 'string') {
-      description.identifier = entityMap.get(description.identifier) ?? description.identifier
+      description.identifier = resolveEntity(description.identifier) ?? description.identifier
     }
     rewriteRecordValues(description.animations, resolve)
   }
@@ -701,7 +844,7 @@ function rewriteBehaviorEntity(
 
 function rewriteClientEntity(
   parsed: Record<string, unknown>,
-  entityMap: Map<string, string>,
+  resolveEntity: (spelling: string) => string | undefined,
   resolve: (spelling: string) => string | undefined,
 ): void {
   const entity = parsed['minecraft:client_entity']
@@ -710,8 +853,8 @@ function rewriteClientEntity(
   }
   const description = entity.description
 
-  if (typeof description.identifier === 'string' && !description.identifier.includes(':')) {
-    description.identifier = entityMap.get(description.identifier) ?? description.identifier
+  if (typeof description.identifier === 'string') {
+    description.identifier = resolveEntity(description.identifier) ?? description.identifier
   }
   rewriteRecordValues(description.geometry, resolve)
   rewriteRecordValues(description.textures, resolve)
@@ -833,7 +976,12 @@ function stampFamily(entity: Record<string, unknown>, family: string): void {
 const LANG_ENTITY_KEY = /^(entity\.|item\.spawn_egg\.entity\.)(.+)(\.name)$/u
 
 /** Rewrites a `.lang` file's entity-keyed entries; in a vendored tree any other entry faults. */
-function rewriteLang(source: SourceFile, text: string, entityMap: Map<string, string>, errors: string[]): string {
+function rewriteLang(
+  source: SourceFile,
+  text: string,
+  resolveEntity: (spelling: string) => string | undefined,
+  errors: string[],
+): string {
   const lines = text.split('\n').map((line) => {
     const trimmed = line.trim()
     if (trimmed === '' || trimmed.startsWith('#')) {
@@ -847,7 +995,7 @@ function rewriteLang(source: SourceFile, text: string, entityMap: Map<string, st
       }
       return line
     }
-    const rewritten = entityMap.get(match[2])
+    const rewritten = resolveEntity(match[2])
     return rewritten === undefined ? line : line.replace(key.trim(), `${match[1]}${rewritten}${match[3]}`)
   })
   return lines.join('\n')
