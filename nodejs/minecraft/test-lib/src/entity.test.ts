@@ -281,6 +281,16 @@ describe('the components construction option', () => {
     expect(player.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['player'])
   })
 
+  it('copies a seeded family list, in both directions, as addComponent does', () => {
+    const { server } = setup()
+    const seeded = ['mob']
+    const entity = createEntity(server, { typeId: SHEEP, components: { 'minecraft:type_family': seeded } })
+    seeded.push('sheep')
+    const read = entity.getComponent('minecraft:type_family')?.getTypeFamilies()
+    read?.push('monster')
+    expect(entity.getComponent('minecraft:type_family')?.getTypeFamilies()).toEqual(['mob'])
+  })
+
   it('leaves the entity registered and valid', () => {
     const { server, world } = setup()
     const entity = createEntity(server, { typeId: SHEEP, components: { 'minecraft:health': 20 } })

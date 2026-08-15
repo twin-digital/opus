@@ -224,6 +224,21 @@ describe('matchesQuery - the family fields', () => {
   it('matches an empty families array', () => {
     const { server, overworld } = setup()
     expect(sheep(server, overworld).matches({ families: [] })).toBe(true)
+    expect(withFamilies(server, overworld, ['mob']).matches({ families: [] })).toBe(true)
+  })
+
+  it('drops nothing for an empty excludeFamilies array', () => {
+    const { server, overworld } = setup()
+    expect(sheep(server, overworld).matches({ excludeFamilies: [] })).toBe(true)
+    expect(withFamilies(server, overworld, ['mob']).matches({ excludeFamilies: [] })).toBe(true)
+  })
+
+  it('keeps every entity in a lookup for either empty array', () => {
+    const { server, overworld } = setup()
+    const seeded = withFamilies(server, overworld, ['mob'])
+    const bare = sheep(server, overworld)
+    expect(overworld.getEntities({ families: [] })).toEqual([seeded, bare])
+    expect(overworld.getEntities({ excludeFamilies: [] })).toEqual([seeded, bare])
   })
 
   it('asks for every included family and none of the excluded ones', () => {
