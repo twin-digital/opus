@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import type * as MC from '@minecraft/server'
 
 import { createServer } from './create-server.js'
+import { addComponent } from './components.js'
 import { createEntity, createPlayer } from './entity.js'
 import { InvalidEntityError } from './errors.js'
 import type { _EntityComplete, _PlayerComplete, _WorldComplete } from './generated/manifests.js'
@@ -336,7 +337,8 @@ const COVERAGE_ROWS: readonly (readonly [id: string, subject: string, coverage: 
   ['corpse-invalidation-after-kill', "invalidation of a mob's corpse after `kill()`", 'modelled'],
   ['kill-invalidation-without-health', 'invalidation after `kill()` on an entity with no health component', 'modelled'],
   ['attribute-shaped-components', 'the seven attribute-shaped components', 'modelled'],
-  ['non-attribute-components', 'the other 61 entity components', 'not modelled'],
+  ['type-family-component', 'the `minecraft:type_family` component', 'divergence'],
+  ['non-attribute-components', 'the other 60 entity components', 'not modelled'],
   ['runtime-component-mutation', 'runtime component attachment and detachment', 'not modelled'],
   ['namespace-prefix-tolerance', 'bare and prefixed id tolerance', 'modelled'],
   ['set-current-value-bounds', '`setCurrentValue` bounds check', 'modelled'],
@@ -422,7 +424,7 @@ describe('the README coverage table', () => {
 
   it('carries a row for every behaviour the design ruled on', () => {
     expect(COVERAGE_ROWS.map(([id]) => id).filter((id) => !byId.has(id))).toEqual([])
-    expect(COVERAGE_ROWS).toHaveLength(76)
+    expect(COVERAGE_ROWS).toHaveLength(77)
   })
 
   it('carries a row for every divergence the library rules on alone', () => {
@@ -459,11 +461,11 @@ describe('the README coverage table', () => {
     expect(bare).toEqual([])
   })
 
-  it('carries the twenty divergences the design named, and none the library rules alone', () => {
-    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(20)
+  it('carries the twenty-one divergences the design named, and none the library rules alone', () => {
+    expect(COVERAGE_ROWS.filter(([, , coverage]) => coverage === 'divergence')).toHaveLength(21)
     expect(LIBRARY_RULINGS).toHaveLength(0)
-    expect(divergences).toHaveLength(20)
-    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(20)
+    expect(divergences).toHaveLength(21)
+    expect(rows.filter((row) => row.coverage === 'divergence')).toHaveLength(21)
   })
 
   it('describes every divergence in a section of its own, named for its row', () => {
@@ -557,6 +559,24 @@ const typeChecks = {
     void createEntity(server, { typeId: 'minecraft:sheep', dimension: 'minecraft:overworld' })
   },
 
+  componentStateIsShapedByTheComponent: (server: ReturnType<typeof createServer>): void => {
+    const entity = createEntity(server, { typeId: 'minecraft:sheep' })
+    // @ts-expect-error a family list is not an attribute state
+    addComponent(entity, 'minecraft:health', ['mob'])
+    // @ts-expect-error an attribute state is not a family list
+    addComponent(entity, 'minecraft:type_family', 20)
+    // @ts-expect-error a component outside the two shapes carries no state
+    addComponent(entity, 'minecraft:tameable', 20)
+  },
+
+  constructionTakesTheSameComponentStates: (server: ReturnType<typeof createServer>): void => {
+    void createEntity(server, {
+      typeId: 'minecraft:sheep',
+      // @ts-expect-error as above, through the construction option
+      components: { 'minecraft:health': ['mob'] },
+    })
+  },
+
   presetTakesTheServer: (): void => {
     withVanillaDimensions(createServer())
     // @ts-expect-error a preset needs the world the server carries
@@ -570,6 +590,6 @@ type _GeneratedClassesAreComplete = [_EntityComplete, _PlayerComplete, _WorldCom
 describe('types', () => {
   it('holds every compile-time claim the surface rests on', () => {
     // The assertions are the declarations above; running them is neither possible nor the point.
-    expect(Object.keys(typeChecks)).toHaveLength(16)
+    expect(Object.keys(typeChecks)).toHaveLength(18)
   })
 })

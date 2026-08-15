@@ -22,7 +22,14 @@
  */
 
 export { createServer, type FakeServer, type ServerLike } from './create-server.js'
-export { addComponent, removeComponent, type ComponentSpec } from './components.js'
+export {
+  addComponent,
+  removeComponent,
+  type AttributeSpec,
+  type ComponentSpec,
+  type ComponentsSpec,
+  type FamilySpec,
+} from './components.js'
 export { registerEffectBaseName } from './effects.js'
 export {
   createEntity,

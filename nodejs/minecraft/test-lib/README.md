@@ -218,23 +218,23 @@ library that wraps a method by assignment works.
 Everything the real API cannot express is a free function over the fakes rather than a member the
 engine does not have.
 
-| function                                                               | what it does                                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `createServer()`                                                       | a new server: world, system, type catalogs                               |
-| `createEntity(server, { typeId, id?, dimension?, location? })`         | a fake entity registered with that world                                 |
-| `createPlayer(server, { typeId?, id?, name?, dimension?, location? })` | as above, a `Player`                                                     |
-| `addComponent(entity, componentId, state?)`                            | attach a component to a live entity                                      |
-| `removeComponent(entity, componentId)`                                 | detach one                                                               |
-| `registerEffectBaseName(server, effectTypeId, baseName)`               | the base name for a custom effect type, or an override for a shipped one |
-| `registerEntityType(server, id, localizationKey?)`                     | put an entity type in that server's catalog                              |
-| `invalidate(entity)`                                                   | put the reference into the engine's invalid state                        |
-| `emit(signal, payload)`                                                | deliver a payload to a signal's subscribers                              |
-| `advanceTicks(server, count)`                                          | step the clock: decay effect durations, then run each tick's callbacks   |
-| `getOutput(target)`                                                    | the messages and titles sent to a player or the world                    |
-| `getTriggeredEvents(entity)`                                           | the `triggerEvent` calls made on an entity                               |
-| `getHandlerErrors(server)`                                             | the errors thrown by subscribers and absorbed at dispatch                |
-| `__useServer(server?)`                                                 | point the three module-scope bindings at a server, or unset them         |
-| `currentServer()`                                                      | the server the module-scope bindings point at                            |
+| function                                                                            | what it does                                                               |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `createServer()`                                                                    | a new server: world, system, type catalogs                                 |
+| `createEntity(server, { typeId, id?, dimension?, location?, components? })`         | a fake entity registered with that world                                   |
+| `createPlayer(server, { typeId?, id?, name?, dimension?, location?, components? })` | as above, a `Player`                                                       |
+| `addComponent(entity, componentId, state?)`                                         | attach a component to a live entity, with the state that component carries |
+| `removeComponent(entity, componentId)`                                              | detach one                                                                 |
+| `registerEffectBaseName(server, effectTypeId, baseName)`                            | the base name for a custom effect type, or an override for a shipped one   |
+| `registerEntityType(server, id, localizationKey?)`                                  | put an entity type in that server's catalog                                |
+| `invalidate(entity)`                                                                | put the reference into the engine's invalid state                          |
+| `emit(signal, payload)`                                                             | deliver a payload to a signal's subscribers                                |
+| `advanceTicks(server, count)`                                                       | step the clock: decay effect durations, then run each tick's callbacks     |
+| `getOutput(target)`                                                                 | the messages and titles sent to a player or the world                      |
+| `getTriggeredEvents(entity)`                                                        | the `triggerEvent` calls made on an entity                                 |
+| `getHandlerErrors(server)`                                                          | the errors thrown by subscribers and absorbed at dispatch                  |
+| `__useServer(server?)`                                                              | point the three module-scope bindings at a server, or unset them           |
+| `currentServer()`                                                                   | the server the module-scope bindings point at                              |
 
 ## Presets
 
@@ -262,6 +262,19 @@ freely. Each supplies only values a source pins; neither invents per-type vanill
 A new server has no dimensions, no players, no objectives and no dynamic properties, and a new
 entity carries no components and no field values beyond the ones you passed. That is deliberately
 unlike the engine, where a freshly spawned entity always arrives carrying at least one component.
+
+Components are the test's to attach, at construction or afterwards: `createEntity` and
+`createPlayer` take a `components` map, and each entry adds exactly what `addComponent` would. The
+state an entry carries is shaped by the component it names — the four attribute numbers (or one of
+their shorthands) on the seven attribute-shaped ids, the family tokens on `minecraft:type_family` —
+and every other component takes none, refusing a state argument with `InvalidArgumentError`.
+
+```ts
+const sheep = createEntity(server, {
+  typeId: 'minecraft:sheep',
+  components: { 'minecraft:health': [0, 8], 'minecraft:type_family': ['mob', 'sheep'] },
+})
+```
 
 Two kinds of nothing, told apart by the declaration's own type:
 
@@ -355,7 +368,7 @@ halves take new ones, and a removed subject's id is never reissued.
 | `per-type-vanilla-data`                 | per-type vanilla data — a sheep's fourteen components, its 8/8/0/8 health                                                                       | not modelled | no preset supplies it; a package built on this one may                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `entity-id-assignment`                  | entity id assignment                                                                                                                            | divergence   | ids are decimal strings issued from `1` per server; the engine's are negative integers. `Entity.id` is documented opaque, so nothing may read the spelling either way                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `entity-lookups`                        | `world.getEntity`, `getAllPlayers`, `getPlayers`, `dimension.getEntities`, `dimension.getPlayers`                                               | modelled     | unfiltered, in creation order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `entity-query-options-filtering`        | `EntityQueryOptions` filtering, on the lookups and on `entity.matches`                                                                          | divergence   | six of the twenty-four fields filter — `type`, `tags`, `name` and their `exclude` counterparts; each of the other eighteen throws `NotImplementedError` naming itself, where the engine honours them all                                                                                                                                                                                                                                                                                                                                                                                    |
+| `entity-query-options-filtering`        | `EntityQueryOptions` filtering, on the lookups and on `entity.matches`                                                                          | divergence   | eight of the twenty-four fields filter — `type`, `tags`, `name`, `families` and their `exclude` counterparts; each of the other sixteen throws `NotImplementedError` naming itself, where the engine honours them all                                                                                                                                                                                                                                                                                                                                                                       |
 | `entity-tags`                           | entity tags — `addTag`, `removeTag`, `hasTag`, `getTags`                                                                                        | modelled     | a per-entity set, which the `tags` and `excludeTags` filters read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `positional-entity-lookups`             | the other entity lookups — `getEntitiesAtBlockLocation`, `getEntitiesFromRay`, `getEntitiesFromViewDirection` and the rest                      | not modelled |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `spawn-entity-placement`                | `dimension.spawnEntity` placement                                                                                                               | divergence   | the entity lands exactly where asked; the engine adjusts some placements — a boat by 0.2 on x and z                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -373,7 +386,8 @@ halves take new ones, and a removed subject's id is never reissued.
 | `corpse-invalidation-after-kill`        | invalidation of a mob's corpse after `kill()`                                                                                                   | modelled     | the corpse stays valid — inside the `entityDie` handler and after it — and turns invalid 21 ticks later, the constant the engine was measured at, so it goes stale when the test advances that far. Distinct from `remove()`, which invalidates at once                                                                                                                                                                                                                                                                                                                                     |
 | `kill-invalidation-without-health`      | invalidation after `kill()` on an entity with no health component                                                                               | modelled     | the reference goes invalid before `entityDie` is raised, as the engine's does within the call                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `attribute-shaped-components`           | the seven attribute-shaped components                                                                                                           | modelled     | all four values, the bounds check, and the health-write cascade                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `non-attribute-components`              | the other 61 entity components                                                                                                                  | not modelled | attachable, carrying `typeId`, `isValid` and `entity`; every other member throws                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `type-family-component`                 | the `minecraft:type_family` component                                                                                                           | divergence   | `getTypeFamilies` and `hasTypeFamily` answer from the tokens the test seeded on that entity; in the engine a type's definition fixes them for every entity of that type, and nothing here derives a family from a typeId                                                                                                                                                                                                                                                                                                                                                                    |
+| `non-attribute-components`              | the other 60 entity components                                                                                                                  | not modelled | attachable, carrying `typeId`, `isValid` and `entity`; every other member throws                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `runtime-component-mutation`            | runtime component attachment and detachment                                                                                                     | not modelled | the engine reaches it through data-driven paths; a test uses the `addComponent` / `removeComponent` free functions                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `namespace-prefix-tolerance`            | bare and prefixed id tolerance                                                                                                                  | modelled     | per-surface, as observed — `triggerEvent` rejects the bare form and the others accept it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `set-current-value-bounds`              | `setCurrentValue` bounds check                                                                                                                  | modelled     | including the message and both inclusive bounds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -484,11 +498,33 @@ The engine's are negative integers. `Entity.id` is documented as opaque with no 
 inferred from its structure, so nothing may read the spelling either way — but a test that asserts
 on the shape of an id, or parses one, is asserting on this library rather than on the engine.
 
+### `type-family-component` — the `minecraft:type_family` component
+
+The component behaves: `getTypeFamilies()` returns the tokens the test seeded, in the order it
+supplied them, and `hasTypeFamily(token)` answers membership. A family is not an identifier and takes
+no `minecraft:` prefix, so a token is stored and compared verbatim.
+
+The families are the entity's own. In the engine a type's definition fixes them, so every
+`minecraft:sheep` carries the same set; here two entities sharing a typeId can carry different
+families, and an entity the test never seeded carries none. Nothing derives a family from a typeId or
+from a registered entity type, and no table of vanilla families ships. Pack code that reads one
+entity's families and caches the answer against its typeId is right in the engine and wrong here.
+
+Seed them at construction or afterwards, whichever the test prefers:
+
+```ts
+const sheep = createEntity(server, {
+  typeId: 'minecraft:sheep',
+  components: { 'minecraft:type_family': ['mob', 'sheep'] },
+})
+addComponent(other, 'minecraft:type_family', ['monster'])
+```
+
 ### `entity-query-options-filtering` — `EntityQueryOptions` filtering, on the lookups and on `entity.matches`
 
-Six of the twenty-four fields filter: `type`, `tags`, `name`, and the exclusions `excludeTypes`,
-`excludeTags` and `excludeNames`. Each of the other eighteen throws `NotImplementedError` naming the
-field it could not honour, where the engine honours them all. The throw is per field, not per call,
+Eight of the twenty-four fields filter: `type`, `tags`, `name` and `families`, and the exclusions
+`excludeTypes`, `excludeTags`, `excludeNames` and `excludeFamilies`. Each of the other sixteen throws
+`NotImplementedError` naming the field it could not honour, where the engine honours them all. The throw is per field, not per call,
 so a test learns which filter was dropped instead of reading a result that quietly ignored it. Code
 that queries by `location` and `maxDistance` cannot be exercised here at all.
 
