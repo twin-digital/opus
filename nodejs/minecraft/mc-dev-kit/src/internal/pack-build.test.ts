@@ -330,6 +330,49 @@ describe('the plugin builds the package', () => {
   })
 })
 
+// increment 011: the cases below are authored in Code, once the vendoring build exists — the
+// injected-constant, family-token and claim-identifier spellings arrive with the runtime package.
+
+describe('the namespace setting', () => {
+  it.todo('fails the build naming the dependency when the package vendors anything and no namespace is set')
+  it.todo('leaves every name as the source spells it when no namespace is set and nothing is vendored')
+  it.todo('writes the namespace into a bare entity identifier, in the behavior and client halves alike')
+  it.todo('fails the build naming the file and the name when a source name already carries a prefix')
+  it.todo('does not rewrite script sources')
+})
+
+describe('what is rewritten', () => {
+  it.todo('rewrites a declared name and every reference to it, so the two halves still join')
+  it.todo('copies a reference to a name the package declares nowhere — vanilla geometry, say — as written')
+  it.todo('gives entity identifiers and their localization keys the namespace')
+  it.todo(
+    'gives geometry, textures, materials, render controllers and animations the asset namespace from the pack uuid',
+  )
+  it.todo('fails the build naming what it found when content declares a name it cannot rewrite')
+})
+
+describe('vendoring', () => {
+  it.todo('merges a dependency’s vendored_pack into this package’s own packs, under its namespace and uuid')
+  it.todo('builds one behavior pack and one resource pack whatever the package vendors')
+  it.todo('fails naming the manifest to add when the package holds no source manifest of a vendored kind')
+  it.todo('reads the vendored source tree without the depended-on package having been built')
+  it.todo('vendors the vendored_pack of every dependency, transitively, and of no devDependency')
+  it.todo('reads a vendored_pack from an installed dependency exactly as from a workspace sibling')
+  it.todo('fails naming the file when a vendored pack holds a content kind outside the allowed set')
+  it.todo('fails naming both declarations when own and vendored content declare one name, or two vendorings do')
+  it.todo('gives the same vendored pack a different spelling and identity in each package vendoring it')
+  it.todo('composes a file more than one merged pack contributes entries to — texts/en_US.lang, say')
+  it.todo('registers each vendored dependency’s vendored_pack tree as a watch input')
+  it.todo('archives the vendored content inside the vendoring package’s own mcaddon')
+})
+
+describe('what the build puts in the bundle and the manifest-adjacent content', () => {
+  it.todo('injects the namespace into the bundle as a constant the runtime helper reads')
+  it.todo('stamps a type family naming the pack on every entity type a namespaced pack declares')
+  it.todo('stamps no family when no namespace is set')
+  it.todo('adds a claim entity type carrying the pack’s own token to every namespaced pack with a behavior half')
+})
+
 /** Runs a plugin's `buildStart` against a context that records what it asked to be watched. */
 async function collectWatchFiles(plugin: BuildPlugin): Promise<string[]> {
   const watched: string[] = []

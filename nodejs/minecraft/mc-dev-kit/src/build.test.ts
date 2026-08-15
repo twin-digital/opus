@@ -84,6 +84,16 @@ describe('packBuild', () => {
   it('names the virtual entry where the package holds no script sources', () => {
     expect(fragment.entry).toEqual(['mc-dev-kit:pack-entry'])
   })
+
+  it('takes the namespace setting beside packageDir, and the fragment is the same shape', () => {
+    for (const namespace of [true, 'wizards'] as const) {
+      const namespaced = packBuild({ namespace, packageDir: '/workspace/packages/mc-pack-1' })
+      const plugins = namespaced.plugins as { name: string }[]
+
+      expect(plugins).toHaveLength(1)
+      expect(plugins[0]).toMatchObject({ name: 'mc-dev-kit:pack-build' })
+    }
+  })
 })
 
 // the plugin's own build cases run against real builds, in internal/pack-build.test.ts

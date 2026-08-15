@@ -46,7 +46,7 @@ describe('the kit as a consumer imports it', () => {
 
   it('exports the build fragment from its own subpath, so the discovery half names no bundler', () => {
     expectTypeOf(packBuild).toBeFunction()
-    expectTypeOf<PackBuildOptions>().toEqualTypeOf<{ packageDir: string }>()
+    expectTypeOf<PackBuildOptions>().toEqualTypeOf<{ packageDir: string; namespace?: boolean | string }>()
   })
 
   it('reports where a built script belongs on every entry, null where a pack has none', async () => {
