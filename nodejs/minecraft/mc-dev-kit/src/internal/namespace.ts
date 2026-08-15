@@ -1,3 +1,5 @@
+import { packageToken } from './formats.js'
+
 /**
  * Resolves the `namespace` build setting against the owning package's name. A string names the
  * namespace, `true` derives it from the package name — the `@` dropped and the `/` a hyphen — and
@@ -11,7 +13,7 @@ export function resolveNamespace(setting: boolean | string | undefined, packageN
     return undefined
   }
 
-  const namespace = setting === true ? packageName.replace(/^@/, '').replace('/', '-') : setting
+  const namespace = setting === true ? packageToken(packageName) : setting
   if (namespace === '') {
     throw new Error('the namespace is empty: name at least one character')
   }

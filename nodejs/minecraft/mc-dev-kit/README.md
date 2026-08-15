@@ -89,7 +89,8 @@ package then produces, for each of its packs:
   `module_name` dependencies the completed manifest declares left external and everything else
   inlined
 - **every other pack file** copied verbatim — dotfiles, `.lang` files, textures, unknown extensions
-  and all — except the source manifest and anything under `scripts/`
+  and all — except the source manifest and anything under `scripts/`. With namespacing on, files
+  carrying declared names are rewritten instead — see [Namespacing](#namespacing)
 
 A finished build loads as it stands, with nothing further to do to it.
 
@@ -104,9 +105,10 @@ output tree and keying on modification times sees only real changes. The build w
 what it changed — the output tree is the report.
 
 **A rebuild is triggered by any input the build reads.** The pack source directories, the source
-manifests, the package's `package.json`, and the `package.json` of each workspace package a pack
-depends on are all registered as watch inputs, so changing a texture or bumping a version rebuilds
-even though no module graph reaches those files.
+manifests, the package's `package.json`, the `package.json` of each workspace package a pack
+depends on, and the `vendored_pack/` tree of every dependency the build vendors are all registered
+as watch inputs, so changing a texture or bumping a version rebuilds even though no module graph
+reaches those files.
 
 A package whose behavior pack declares no script module, or which holds no behavior pack at all,
 builds too: the fragment falls back to a virtual entry and the chunk nothing claims is pruned at the
@@ -120,6 +122,108 @@ end of the build.
 - the kit's enumeration rejects, which any malformed `package.json` in the workspace can cause
 - a behavior pack declares a script module while `behavior_pack/scripts/main.ts` is not there
 - an `@minecraft/`-scoped import the completed manifest does not declare resolves to nothing
+- the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
+- with namespacing on: a source name already carrying a prefix, content whose names the build
+  cannot rewrite, a name declared by more than one of the merged packs, and a bare entity name
+  landing in the reserved `mcdk_claim_` spelling
+
+### Namespacing
+
+`packBuild` takes an optional `namespace` setting beside `packageDir`. Setting it turns namespacing
+on: `true` derives the namespace from the package's own name — the `@` dropped and the `/` a
+hyphen, so `@twin-digital/wizards` becomes `twin-digital-wizards` — and a string names one
+directly. A namespace holds only lowercase letters, digits, underscore, hyphen and dot; anything
+else fails the build naming the character. Left unset, nothing is namespaced and names reach the
+output exactly as the source spells them.
+
+```ts
+export default packBuild({ packageDir: new URL('../..', import.meta.url).pathname, namespace: true })
+```
+
+A namespace you choose by hand is conventionally claimed at the
+[Bedrock-OSS add-on registry](https://github.com/Bedrock-OSS/add-on-registry), which refuses a
+namespace another entry already holds. The build neither reads the registry nor requires an entry
+in it — claiming is how you avoid colliding with other add-ons that register.
+
+With namespacing on, **names are written bare in pack content** — `wizard`, `geometry.wizard` —
+and the build writes them into their namespaced spellings; a source name that already carries a
+prefix fails the build naming the file and the name. What each declared name becomes:
+
+- **entity identifiers**, and the `entity.<id>.name` / `item.spawn_egg.entity.<id>.name`
+  localization keys derived from them, carry the namespace: `wizard` builds as
+  `<namespace>:wizard`
+- **every other declared name** — geometry, textures, materials, render controllers, animations,
+  animation controllers — carries the built pack's _asset namespace_ instead: `mcdk_` plus the
+  pack's header uuid with the hyphens dropped. `geometry.wizard` builds as
+  `geometry.mcdk_<uuid>.wizard`, a texture at `textures/entity/wizard.png` moves to
+  `textures/mcdk_<uuid>/entity/wizard.png`, a material `wizard` becomes `mcdk_<uuid>_wizard`, and
+  render controllers, animations and animation controllers gain the token as a name segment.
+  These names are internal wiring: nothing outside the pack ever needs to address them, so they
+  are namespaced by identity rather than by the (contestable) namespace
+
+Only names the package declares are rewritten, along with the references to them, so the two pack
+halves still join. A reference to a name the package declares nowhere — `geometry.evoker.v1.8`,
+a vanilla texture or material — is copied through as written. Script sources are never rewritten:
+code spells a namespaced identifier through `@twin-digital/mc-pack-runtime`'s `packId` helper,
+which reads the namespace the build injects into the bundle ahead of all module code, so a bundled
+library's own calls resolve through the vendoring package's namespace with nothing passed per
+call.
+
+The build also stamps a type family, `mcdk_pack_<package token>`, on every entity type the
+namespaced pack declares, and adds one claim entity type,
+`<namespace>:mcdk_claim_<package token>`, to every namespaced pack with a behavior half. The
+runtime package's checked calls and `foreignNamespaceClaims()` read both; bare entity names
+starting with `mcdk_claim_` are reserved and fail the build.
+
+A namespaced pack may hold entity definitions (behavior and client), geometries, textures,
+materials, render controllers, animations, animation controllers, `.lang` files, `scripts/`, and
+its manifest. A `.json`, `.material`, `.lang` or `.mcfunction` file anywhere else may carry names
+the build cannot rewrite, so it fails the build naming the file; any other file — dotfiles,
+images outside `textures/`, unknown extensions — copies unchanged.
+
+### Vendoring shared packs
+
+A pack several packages depend on can be built into each of them as content of its own. The shared
+package puts its content under `vendored_pack/`, holding a kind-named subdirectory per half and no
+`manifest.json`, so the package bears no pack of its own:
+
+```
+my-lib/
+  package.json
+  vendored_pack/
+    behavior_pack/
+      entities/minion.json
+    resource_pack/
+      entity/minion.json
+```
+
+A package vendors the `vendored_pack/` of every package in its own `dependencies` — never
+`devDependencies` — following those packages' dependencies transitively, workspace sibling and
+installed dependency alike. Nothing is listed anywhere: declaring the dependency is what makes the
+content arrive. For an installed dependency to work, the shared package must publish its
+`vendored_pack/` tree — add it to the `files` field of its `package.json`:
+
+```jsonc
+{
+  "name": "@scope/my-lib",
+  "files": ["vendored_pack"],
+}
+```
+
+Vendoring requires a namespace, and the vendoring package must hold its own source manifest of
+every kind it vendors — the vendored content merges into that pack, under the vendoring package's
+namespace and header uuid, so each vendoring package ships one behavior pack and one resource pack
+whatever it vendors, and the same shared pack gets a different spelling and identity in every
+package that takes it up. The build reads the vendored source tree directly; the depended-on
+package never needs to have been built. Its `vendored_pack/` tree joins the watch inputs, and the
+`mc-pack-archive` command archives the merged output tree as it stands, vendored content included.
+
+A vendored pack may hold entity definitions, geometries, textures, materials, render controllers,
+animations, animation controllers, and localization entries keyed by an entity identifier; content
+of any other kind fails the build naming the file. A name declared by both the vendoring package
+and something it vendors, or by two of its vendorings, fails the build naming both declarations. A
+file more than one merged pack contributes entries to — `texts/en_US.lang`, say — is composed;
+one the build cannot compose fails it, naming both contributors.
 
 ### The settings the fragment states
 

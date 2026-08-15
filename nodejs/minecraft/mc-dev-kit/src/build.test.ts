@@ -25,6 +25,10 @@ describe('the build half ships in the kit package', () => {
   it('declares one command, and it is the archive half', () => {
     expect(packageJson.bin).toEqual({ 'mc-pack-archive': './bin/mc-pack-archive.js' })
   })
+
+  it('depends on the engine-side runtime package, so it reaches a consuming pack’s node_modules', () => {
+    expect(packageJson.dependencies).toHaveProperty('@twin-digital/mc-pack-runtime')
+  })
 })
 
 describe('packBuild', () => {
@@ -116,6 +120,16 @@ describe('the export is documented', () => {
     ]) {
       expect(readme, produced).toContain(produced)
     }
+  })
+
+  it('documents namespacing and vendoring, sending an author who overrides the default to the registry', () => {
+    expect(readme).toMatch(/^### Namespacing$/m)
+    expect(readme).toMatch(/^### Vendoring shared packs$/m)
+    // the registry a chosen namespace is claimed at, which the build neither reads nor requires
+    expect(readme).toContain('https://github.com/Bedrock-OSS/add-on-registry')
+    expect(readme).toMatch(/neither reads the registry nor requires an entry/)
+    // what a shared pack's package must publish for anyone to vendor it
+    expect(readme).toContain('"files": ["vendored_pack"]')
   })
 
   it('carries the same documentation as TSDoc on the exported function', async () => {

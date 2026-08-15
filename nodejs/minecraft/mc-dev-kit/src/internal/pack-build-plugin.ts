@@ -3,10 +3,14 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Rolldown } from 'tsdown'
 import { discoverPacks } from '../discover-packs.js'
-import type { PackEntry, ValidPackEntry } from '../types.js'
+import type { PackEntry, PackKind, ValidPackEntry } from '../types.js'
 import { resolveWorkspaceRoot } from '../workspace-root.js'
 import { bytesMatch, listFiles, pruneTree, writeIfChanged } from './build-outputs.js'
+import { INJECTION_GLOBAL, packageToken } from './formats.js'
 import { messageOf } from './json.js'
+import { planMerge } from './merge-plan.js'
+import { resolveNamespace } from './namespace.js'
+import { findVendoredPacks, type VendoredPack } from './vendored-packs.js'
 
 /** The one plugin the fragment carries. */
 export type BuildPlugin = Rolldown.Plugin
@@ -47,6 +51,12 @@ interface BuildState {
   externals: Set<string>
   /** absolute paths this build is entitled to leave in the output tree */
   claimed: Set<string>
+  /** the resolved namespace, or `undefined` when namespacing is off */
+  namespace?: string
+  /** the package's own name as a token, set exactly when `namespace` is */
+  packToken?: string
+  /** the vendored packs the package's dependencies reach */
+  vendored: VendoredPack[]
 }
 
 /**
@@ -60,10 +70,17 @@ interface BuildState {
  * - `buildStart` also registers the extra watch inputs: the pack source directories, the source
  *   manifests, this package's `package.json`, and the `package.json` of each workspace package a
  *   pack depends on.
+ * - `buildStart` resolves the namespace setting against the package's own name and walks the
+ *   package's `dependencies` for vendored packs; vendoring without a namespace, and vendoring a
+ *   kind the package holds no pack of, each fails the build there.
+ * - `renderChunk` assigns the namespace and pack token onto `globalThis` ahead of the bundle's
+ *   module code, so the runtime package's helpers read them with nothing passed per call.
  * - `generateBundle` drops any chunk whose bytes already sit at its output path, so the bundler
  *   rewrites nothing that did not change.
  * - `writeBundle` writes the completed manifests and copies every other pack file, each only where
- *   its bytes differ, then prunes the output the build did not write.
+ *   its bytes differ, then prunes the output the build did not write. With namespacing on, the
+ *   copy runs through the merge plan instead: every declared name rewritten, vendored halves
+ *   merged in, and the claim entity type added.
  */
 export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
   const packageDir = path.resolve(options.packageDir)
@@ -114,11 +131,35 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
         state.claimed.add(scriptOutput)
       }
 
+      const packageName = packs[0].packageName
+      state.namespace = resolveNamespace(options.namespace, packageName)
+      state.packToken = state.namespace === undefined ? undefined : packageToken(packageName)
+      state.vendored = await findVendoredPacks({ packageDir, workspaceRoot: workspace.root })
+
+      if (state.vendored.length > 0 && state.namespace === undefined) {
+        const names = state.vendored.map((pack) => pack.name).join(', ')
+        throw new Error(
+          `the package vendors the pack of ${names}, and vendored content needs a namespace: set the namespace option of packBuild`,
+        )
+      }
+
+      for (const kind of vendoredKinds(state.vendored)) {
+        if (!packs.some((pack) => pack.kind === kind)) {
+          const directory = kind === 'behavior' ? 'behavior_pack' : 'resource_pack'
+          throw new Error(
+            `the package vendors ${kind} pack content but declares no ${kind} pack of its own: add ${directory}/manifest.json to ${packageDir}`,
+          )
+        }
+      }
+
       state.packs = packs
       state.externals = moduleDependencies(packs)
 
       for (const input of watchInputs(workspace.root, packageDir, packs, all)) {
         this.addWatchFile(input)
+      }
+      for (const pack of state.vendored) {
+        this.addWatchFile(pack.vendoredDir)
       }
     },
 
@@ -147,6 +188,14 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       return id === RESOLVED_PACK_ENTRY ? 'export {}\n' : null
     },
 
+    renderChunk(code) {
+      if (state.namespace === undefined) {
+        return null
+      }
+      const injected = JSON.stringify({ namespace: state.namespace, packToken: state.packToken })
+      return `globalThis.${INJECTION_GLOBAL} = Object.freeze(${injected});\n${code}`
+    },
+
     async generateBundle(outputOptions, bundle) {
       const dir = outputOptions.dir ?? path.dirname(scriptOutput)
 
@@ -159,8 +208,30 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     async writeBundle() {
-      for (const pack of state.packs) {
-        await writePack(packageDir, pack, state.claimed)
+      if (state.namespace === undefined) {
+        for (const pack of state.packs) {
+          await writePack(packageDir, pack, state.claimed)
+        }
+      } else {
+        for (const pack of state.packs) {
+          await writeManifest(packageDir, pack, state.claimed)
+        }
+        const plan = await planMerge({
+          namespace: state.namespace,
+          packToken: state.packToken as string,
+          packs: state.packs.map((pack) => ({
+            kind: pack.kind,
+            sourceDir: path.join(packageDir, path.basename(pack.sourceDir)),
+            outputBase: path.basename(pack.outputDir),
+            uuid: pack.uuid,
+          })),
+          vendored: state.vendored,
+        })
+        for (const [relative, contents] of plan) {
+          const target = path.join(outputRoot, relative)
+          state.claimed.add(target)
+          await writeIfChanged(target, contents)
+        }
       }
       await pruneTree(outputRoot, state.claimed)
     },
@@ -169,7 +240,18 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
 
 /** A build's state before `buildStart` has read anything. */
 function emptyState(): BuildState {
-  return { packs: [], externals: new Set(), claimed: new Set() }
+  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [] }
+}
+
+/** The kinds the vendored packs contribute, each of which needs an own pack to merge into. */
+function vendoredKinds(vendored: readonly VendoredPack[]): Set<PackKind> {
+  const kinds = new Set<PackKind>()
+  for (const pack of vendored) {
+    for (const half of pack.halves) {
+      kinds.add(half.kind)
+    }
+  }
+  return kinds
 }
 
 /**
@@ -266,9 +348,7 @@ async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<
   const sourceDir = path.join(packageDir, path.basename(pack.sourceDir))
   const outputDir = path.join(packageDir, OUTPUT_ROOT, path.basename(pack.outputDir))
 
-  const manifest = path.join(outputDir, 'manifest.json')
-  claimed.add(manifest)
-  await writeIfChanged(manifest, Buffer.from(`${JSON.stringify(pack.manifest, null, 2)}\n`))
+  await writeManifest(packageDir, pack, claimed)
 
   for (const file of await listFiles(sourceDir)) {
     const relative = path.relative(sourceDir, file)
@@ -279,4 +359,11 @@ async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<
     claimed.add(target)
     await writeIfChanged(target, await readFile(file))
   }
+}
+
+/** Writes one pack's completed manifest, claiming its path. */
+async function writeManifest(packageDir: string, pack: ValidPackEntry, claimed: Set<string>): Promise<void> {
+  const manifest = path.join(packageDir, OUTPUT_ROOT, path.basename(pack.outputDir), 'manifest.json')
+  claimed.add(manifest)
+  await writeIfChanged(manifest, Buffer.from(`${JSON.stringify(pack.manifest, null, 2)}\n`))
 }
