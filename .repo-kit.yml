@@ -41,6 +41,11 @@ packages:
     # so the generated `./*` subpath exports would offer every internal module as one.
     rules:
       package-manifest: false
+  '@twin-digital/mc-pack-runtime':
+    # One public entry point with no subpath wildcard, by ruling (mc-dev-kit r-l4e55kqu): the
+    # generated `./*` subpath exports would contradict the published surface.
+    rules:
+      package-manifest: false
   '@twin-digital/village-guard':
     # No importable surface by design: this is a behavior pack, and what it ships is the `.mcaddon`
     # the dev kit archives. Its `src/` exists only because the shared test rule keys on
