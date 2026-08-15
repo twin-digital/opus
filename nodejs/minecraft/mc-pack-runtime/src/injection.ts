@@ -11,6 +11,11 @@ export interface PackRuntimeInjection {
   readonly namespace: string
   /** The token naming the built pack itself: its package name, the `@` dropped and the `/` a hyphen. */
   readonly packToken: string
+  /**
+   * The prefix tokens of the pack's vendored dependencies, sorted and frozen by the build.
+   * A composed name's first dot-segment must be one of these — see `packId`.
+   */
+  readonly prefixes: readonly string[]
 }
 
 /** The property the build assigns on `globalThis`. */

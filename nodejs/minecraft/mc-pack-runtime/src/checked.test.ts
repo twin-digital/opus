@@ -18,7 +18,7 @@ const host = globalThis as { __MC_PACK_RUNTIME__?: PackRuntimeInjection }
 const FAMILY = 'mcdk_pack_acme-arena'
 
 const inject = (): void => {
-  host.__MC_PACK_RUNTIME__ = { namespace: 'arena', packToken: 'acme-arena' }
+  host.__MC_PACK_RUNTIME__ = { namespace: 'arena', packToken: 'acme-arena', prefixes: [] }
 }
 
 let server: ReturnType<typeof createServer>

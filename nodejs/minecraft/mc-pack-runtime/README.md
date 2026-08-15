@@ -16,10 +16,11 @@ Node: no Node imports, `@minecraft/*` left external for the engine to provide.
 
 ## The injection
 
-In a namespaced pack the kit's build injects the pack's namespace and its pack token into the
-bundle ahead of every module. Everything here reads that injection, so nothing is passed or
-configured per call — a vendored library's own calls resolve through whichever package vendored
-it, spelling the same identifiers as the vendoring package's own code.
+In a namespaced pack the kit's build injects the pack's namespace, its pack token, and the
+prefix tokens of its vendored dependencies into the bundle ahead of every module. Everything
+here reads that injection, so nothing is passed or configured per call — a vendored library's
+own calls resolve through whichever package vendored it, spelling the same identifiers as the
+vendoring package's own code.
 
 A pack built with namespacing off gets no injection: the identifier helpers answer `undefined`,
 the checked calls answer unchecked, and `packId` throws — such a pack spells its identifiers in
@@ -31,14 +32,19 @@ full and has no bare names to spell.
 import { packFamily, packId, packNamespace } from '@twin-digital/mc-pack-runtime'
 
 packId('wizard') // 'arena:wizard' in a pack namespaced `arena`
+packId('pack1.fireball') // 'arena:pack1.fireball', where `pack1` is a vendored prefix
 packNamespace() // 'arena', or undefined with namespacing off
 packFamily() // the type family the build stamped on the pack's own entity types
 ```
 
-- **`packId(name)`** spells a bare name into the full identifier the build gave it. It throws on
-  a name already carrying a `:`, and where no namespace was injected — the engine would read a
-  bare name as `minecraft:<name>`, and a silent wrong-namespace lookup is the bug this helper
-  exists to prevent.
+- **`packId(name)`** spells a name into the full identifier the build gave it — a bare name like
+  `wizard`, or a composed one like `pack1.fireball` whose first dot-segment is a vendored
+  dependency's prefix. It throws on a name already carrying a `:`, and where no namespace was
+  injected — the engine would read a bare name as `minecraft:<name>`, and a silent
+  wrong-namespace lookup is the bug this helper exists to prevent. A bare entity name never
+  contains a dot, so a dotted name whose first segment is not one of the pack's vendored
+  prefixes is a typo or an un-merged dependency: the call throws naming the segment and the
+  known prefixes rather than spelling a nonexistent entity.
 - **`packNamespace()`** is the namespace the pack was built under.
 - **`packFamily()`** is the type family the build stamped on every entity type the pack declares —
   usable in your own `families` filters and `@e[family=]` selectors.

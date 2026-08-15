@@ -5,8 +5,14 @@ import { INJECTION_GLOBAL, type PackRuntimeInjection } from './injection.js'
 
 const host = globalThis as { __MC_PACK_RUNTIME__?: PackRuntimeInjection }
 
-const inject = (value: PackRuntimeInjection): void => {
-  host[INJECTION_GLOBAL] = value
+// Frozen value and frozen prefix list, exactly as the build assigns them: reading must never
+// depend on mutability.
+const inject = ({
+  namespace,
+  packToken,
+  prefixes = [],
+}: Omit<PackRuntimeInjection, 'prefixes'> & { prefixes?: readonly string[] }): void => {
+  host[INJECTION_GLOBAL] = Object.freeze({ namespace, packToken, prefixes: Object.freeze([...prefixes]) })
 }
 
 afterEach(() => {
@@ -31,9 +37,32 @@ describe('packId', () => {
     expect(vendoredLibraryCall()).toBe(vendoringPackCall())
   })
 
+  // The dotted forms: a composed name's first segment claims a vendored prefix, and the tail is
+  // the vendored pack's own name, not this helper's to validate.
+  it("spells a composed name whose prefix is one of the pack's vendored prefixes", () => {
+    inject({ namespace: 'arena', packToken: 'acme-arena', prefixes: ['pack1', 'pack2'] })
+    expect(packId('pack1.fireball')).toBe('arena:pack1.fireball')
+  })
+
+  it('spells a composed name with a dotted tail, validating the first segment only', () => {
+    inject({ namespace: 'arena', packToken: 'acme-arena', prefixes: ['pack1'] })
+    expect(packId('pack1.a.b')).toBe('arena:pack1.a.b')
+  })
+
+  it('rejects a dotted name whose first segment is no known prefix, naming the segment and the prefixes', () => {
+    inject({ namespace: 'arena', packToken: 'acme-arena', prefixes: ['pack1', 'pack2'] })
+    expect(() => packId('pack9.fireball')).toThrow(/'pack9'/)
+    expect(() => packId('pack9.fireball')).toThrow(/pack1, pack2/)
+  })
+
+  it('rejects a dotted name where the pack vendors nothing', () => {
+    inject({ namespace: 'arena', packToken: 'acme-arena' })
+    expect(() => packId('pack1.fireball')).toThrow(/known prefixes: none/)
+  })
+
   it('rejects a name already carrying a namespace', () => {
     inject({ namespace: 'arena', packToken: 'acme-arena' })
-    expect(() => packId('minecraft:sheep')).toThrow(/bare names only/)
+    expect(() => packId('minecraft:sheep')).toThrow(/unnamespaced names only/)
   })
 
   it('throws where no namespace was injected', () => {
