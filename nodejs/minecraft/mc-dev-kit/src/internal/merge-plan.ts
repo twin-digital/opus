@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PackKind } from '../types.js'
 import { listFiles } from './build-outputs.js'
-import { CLAIM_NAME_PREFIX, assetNamespace, claimName, packFamily } from './formats.js'
+import { CLAIM_NAME_PREFIX, VENDORED_HASH_LENGTH, claimName, packFamily, vendoredAssetToken } from './formats.js'
 import { isRecord, messageOf, parseJson } from './json.js'
 import type { VendoredPack } from './vendored-packs.js'
 
@@ -13,8 +14,6 @@ export interface OwnPack {
   sourceDir: string
   /** the kind-named output directory, `behavior_pack` or `resource_pack` */
   outputBase: string
-  /** the completed manifest's header uuid, which the asset namespace derives from */
-  uuid: string
 }
 
 /** Options for {@link planMerge}. */
@@ -89,20 +88,26 @@ const JSON_DIRECTORIES = new Map<string, ContentKind>([
 /**
  * Plans everything a namespaced build writes besides the manifests and the script bundle: the
  * package's own pack content and every vendored half, each declared name rewritten — entity
- * identifiers and their localization keys under the namespace, every other declared name under
- * the built pack's asset namespace — references to undeclared names copied as written, `.lang`
- * files composed across the merged packs, and the claim entity type added to the behavior half.
+ * identifiers and their localization keys under the namespace, the pack's own asset names under
+ * the namespace as their token, and every vendored asset's name under its library's token plus a
+ * content hash — references to undeclared names copied as written, `.lang` files composed across
+ * the merged packs, and the claim entity type added to the behavior half.
+ *
+ * A reference resolves against the pack that wrote it first, then against the other merged packs
+ * only where exactly one declares the name — several is ambiguous and fails naming every
+ * candidate, none copies the reference as written.
  *
  * Every fault is collected before anything is returned, and one error names them all: content of
  * a kind the build cannot rewrite, a source name already carrying a namespace, a bare name landing
- * in the reserved claim spelling, a name declared by more than one of the merged packs, and a
- * file more than one pack contributes that the build cannot compose.
+ * in the reserved claim spelling, an entity identifier declared by more than one of the merged
+ * packs, an ambiguous reference, and a file more than one pack contributes that the build cannot
+ * compose.
  */
 export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   const errors: string[] = []
   const halves = sourceHalves(options)
   const outputBase = new Map(options.packs.map((pack) => [pack.kind, pack.outputBase]))
-  const assetToken = new Map(options.packs.map((pack) => [pack.kind, assetNamespace(pack.uuid)]))
+  const libraryTokens = new Map(options.vendored.map((pack) => [pack.name, pack.token]))
 
   const files: SourceFile[] = []
   for (const half of halves) {
@@ -125,29 +130,28 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   }
 
   const texts = new Map<string, string>()
+  const bytes = new Map<string, Buffer>()
   for (const source of files) {
-    if (source.content !== 'texture' && source.content !== 'opaque') {
+    if (source.content === 'texture') {
+      bytes.set(source.file, await readFile(source.file))
+    } else if (source.content !== 'opaque') {
       texts.set(source.file, await readFile(source.file, 'utf8'))
     }
   }
 
   const declarations = scanDeclarations(files, texts, errors)
-  checkCollisions(declarations, errors)
+  checkEntityCollisions(declarations, errors)
+  checkVendoredDuplicates(declarations, errors)
   checkReserved(declarations, errors)
 
   const entityMap = new Map<string, string>()
-  const assetMaps = new Map<PackKind, Map<string, string>>([
-    ['behavior', new Map()],
-    ['resource', new Map()],
-  ])
   for (const declaration of declarations) {
     if (declaration.category === 'entity') {
       entityMap.set(declaration.spelling, `${options.namespace}:${declaration.spelling}`)
-    } else {
-      const token = assetToken.get(declaration.kind) as string
-      assetMaps.get(declaration.kind)?.set(declaration.spelling, assetSpelling(declaration, token))
     }
   }
+
+  const names = assetNames({ options, files, declarations, texts, bytes, libraryTokens, errors })
 
   if (errors.length > 0) {
     throw mergeError(errors)
@@ -172,12 +176,10 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   }
 
   for (const source of files) {
-    const assets = assetMaps.get(source.half.kind) as Map<string, string>
     switch (source.content) {
       case 'texture': {
-        const token = assetToken.get(source.half.kind) as string
         const under = source.rel.slice('textures/'.length)
-        emit(source, `textures/${token}/${under}`, await readFile(source.file))
+        emit(source, `textures/${names.tokenFor(source)}/${under}`, bytes.get(source.file) as Buffer)
         break
       }
       case 'opaque': {
@@ -194,9 +196,16 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
       }
       default: {
         const text = texts.get(source.file) as string
-        const rewritten = rewriteJson(source, text, entityMap, assets, family, errors)
+        const resolve = names.resolverFor(source)
+        const rewritten = rewriteJson(source, text, entityMap, resolve, family, errors)
         if (rewritten !== undefined) {
-          emit(source, source.rel, rewritten)
+          // a vendored definition file's basename carries its library token, so two merged packs
+          // shipping one relative path — models/minion.geo.json, say — land side by side
+          const target =
+            source.half.vendored ?
+              prefixedBasename(source.rel, libraryTokens.get(source.half.origin) ?? source.half.origin)
+            : source.rel
+          emit(source, target, rewritten)
         }
       }
     }
@@ -377,18 +386,19 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
   return declarations
 }
 
-/** A name declared by more than one of the merged packs fails, naming every declaration. */
-function checkCollisions(declarations: Declaration[], errors: string[]): void {
+/**
+ * An entity identifier declared by more than one of the merged packs fails, naming every
+ * declaration. Asset names do not collide across packs: each pack's spell under its own token.
+ */
+function checkEntityCollisions(declarations: Declaration[], errors: string[]): void {
   const groups = new Map<string, Declaration[]>()
   for (const declaration of declarations) {
-    // entity identifiers are pack-wide; asset names live within their half
-    const key =
-      declaration.category === 'entity' ?
-        `entity:${declaration.name}`
-      : `${declaration.kind}:${declaration.category}:${declaration.name}`
-    const group = groups.get(key) ?? []
+    if (declaration.category !== 'entity') {
+      continue
+    }
+    const group = groups.get(declaration.name) ?? []
     group.push(declaration)
-    groups.set(key, group)
+    groups.set(declaration.name, group)
   }
 
   for (const group of groups.values()) {
@@ -397,7 +407,34 @@ function checkCollisions(declarations: Declaration[], errors: string[]): void {
       const claimants = group
         .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
         .join(' and ')
-      errors.push(`the ${group[0].category} name ${group[0].name} is declared by ${claimants}`)
+      errors.push(`the entity name ${group[0].name} is declared by ${claimants}`)
+    }
+  }
+}
+
+/**
+ * Within one vendored pack, an asset name declared by two files has two content hashes and so two
+ * final names, which no reference could pick between — it fails naming both files. The consuming
+ * package's own duplicates keep today's behavior: one token, one final name, the engine's pick.
+ */
+function checkVendoredDuplicates(declarations: Declaration[], errors: string[]): void {
+  const groups = new Map<string, Declaration[]>()
+  for (const declaration of declarations) {
+    if (declaration.category === 'entity' || declaration.origin === '') {
+      continue
+    }
+    const key = `${declaration.origin} ${declaration.kind} ${declaration.category} ${declaration.spelling}`
+    const group = groups.get(key) ?? []
+    group.push(declaration)
+    groups.set(key, group)
+  }
+
+  for (const group of groups.values()) {
+    const files = new Set(group.map((declaration) => declaration.file))
+    if (files.size > 1) {
+      errors.push(
+        `the ${group[0].category} name ${group[0].name} is declared by more than one file of ${group[0].origin}: ${[...files].sort().join(' and ')}`,
+      )
     }
   }
 }
@@ -413,7 +450,166 @@ function checkReserved(declarations: Declaration[], errors: string[]): void {
   }
 }
 
-/** The rewritten spelling of a non-entity declaration: the asset namespace written into the name. */
+/** What {@link assetNames} works from. */
+interface AssetNamesInputs {
+  options: MergePlanOptions
+  files: SourceFile[]
+  declarations: Declaration[]
+  texts: Map<string, string>
+  bytes: Map<string, Buffer>
+  /** vendored package name to package token */
+  libraryTokens: Map<string, string>
+  errors: string[]
+}
+
+/** The final-name and resolution machinery for asset names. */
+interface AssetNames {
+  /** the final spelling of one asset declaration */
+  finalName(declaration: Declaration): string
+  /** the token a file's asset names carry — the namespace, or the library token plus content hash */
+  tokenFor(source: SourceFile): string
+  /** a resolver bound to one file: a reference spelling to its final name, or `undefined` to copy */
+  resolverFor(source: SourceFile): (spelling: string) => string | undefined
+}
+
+/**
+ * Builds the asset-name machinery. The package's own asset names carry the pack namespace as
+ * their token — the same value the entity identifiers use. A vendored asset's names carry its
+ * library's package token plus a truncated sha256 of the declaring file's bytes, so an identical
+ * name means identical bytes by construction: consumers vendoring one library version share names
+ * for unchanged assets and diverge per asset where content differs. Where a vendored material
+ * names a parent that is itself rewritten, the parent's final name folds into the hash input
+ * (sorted, so the digest is order-independent), and a parent cycle fails the build.
+ *
+ * A reference resolves against the declarations of the pack that wrote it first, then against the
+ * other merged packs: exactly one declaring pack resolves, several is ambiguous and fails naming
+ * every candidate, none leaves the reference to copy as written.
+ */
+function assetNames(inputs: AssetNamesInputs): AssetNames {
+  const { options, files, declarations, texts, bytes, libraryTokens, errors } = inputs
+  const sourceByFile = new Map(files.map((source) => [source.file, source]))
+  const assets = declarations.filter((declaration) => declaration.category !== 'entity')
+
+  const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
+  const scopeIndex = new Map<string, Declaration>()
+  const crossIndex = new Map<string, Declaration[]>()
+  for (const declaration of assets) {
+    const key = scopeKey(declaration.origin, declaration.kind, declaration.spelling)
+    if (!scopeIndex.has(key)) {
+      scopeIndex.set(key, declaration)
+    }
+    const cross = `${declaration.kind} ${declaration.spelling}`
+    const list = crossIndex.get(cross) ?? []
+    list.push(declaration)
+    crossIndex.set(cross, list)
+  }
+
+  const hashMemo = new Map<string, string>()
+  const hashing = new Set<string>()
+
+  function resolveDeclaration(
+    origin: string,
+    kind: PackKind,
+    spelling: string,
+    referencingFile: string,
+  ): Declaration | undefined {
+    const own = scopeIndex.get(scopeKey(origin, kind, spelling))
+    if (own !== undefined) {
+      return own
+    }
+    const candidates = (crossIndex.get(`${kind} ${spelling}`) ?? []).filter(
+      (declaration) => declaration.origin !== origin,
+    )
+    const byOrigin = new Map(candidates.map((declaration) => [declaration.origin, declaration]))
+    if (byOrigin.size === 0) {
+      return undefined
+    }
+    if (byOrigin.size === 1) {
+      return candidates[0]
+    }
+    const claimants = candidates
+      .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
+      .join(' and ')
+    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}`)
+    return undefined
+  }
+
+  function hashOf(file: string): string {
+    const memoised = hashMemo.get(file)
+    if (memoised !== undefined) {
+      return memoised
+    }
+    if (hashing.has(file)) {
+      errors.push(`${file}: its material parents form a reference cycle, so its names cannot be hashed`)
+      return 'cycle'
+    }
+    hashing.add(file)
+
+    const extras = new Set<string>()
+    const source = sourceByFile.get(file)
+    if (source?.content === 'material') {
+      for (const parent of materialParents(texts.get(file))) {
+        const referent = resolveDeclaration(source.half.origin, source.half.kind, parent, file)
+        if (referent !== undefined && referent.file !== file) {
+          extras.add(finalName(referent))
+        }
+      }
+    }
+    hashing.delete(file)
+
+    const digest = createHash('sha256')
+      .update(bytes.get(file) ?? Buffer.from(texts.get(file) ?? ''))
+      .update(' ')
+      .update([...extras].sort().join(' '))
+      .digest('hex')
+      .slice(0, VENDORED_HASH_LENGTH)
+    hashMemo.set(file, digest)
+    return digest
+  }
+
+  function tokenOf(origin: string, file: string): string {
+    return origin === '' ? options.namespace : vendoredAssetToken(libraryTokens.get(origin) ?? origin, hashOf(file))
+  }
+
+  function finalName(declaration: Declaration): string {
+    return assetSpelling(declaration, tokenOf(declaration.origin, declaration.file))
+  }
+
+  return {
+    finalName,
+    tokenFor: (source) => tokenOf(source.half.origin, source.file),
+    resolverFor: (source) => (spelling) => {
+      const declaration = resolveDeclaration(source.half.origin, source.half.kind, spelling, source.file)
+      return declaration === undefined ? undefined : finalName(declaration)
+    },
+  }
+}
+
+/** The relative path with its basename prefixed by a token: `models/minion.geo.json`, `lib.`. */
+function prefixedBasename(rel: string, token: string): string {
+  const dir = path.posix.dirname(rel)
+  const base = `${token}.${path.posix.basename(rel)}`
+  return dir === '.' ? base : `${dir}/${base}`
+}
+
+/** The parent names a `.material` file's declarations reference, in declaration order. */
+function materialParents(text: string | undefined): string[] {
+  if (text === undefined) {
+    return []
+  }
+  let parsed: unknown
+  try {
+    parsed = parseJson(text)
+  } catch {
+    return []
+  }
+  return materialKeys(parsed).flatMap((key) => {
+    const parts = key.split(':')
+    return parts.length > 1 ? [parts[1]] : []
+  })
+}
+
+/** The rewritten spelling of a non-entity declaration: the token written into the name. */
 function assetSpelling(declaration: Declaration, assetToken: string): string {
   switch (declaration.category) {
     case 'geometry':
@@ -441,7 +637,7 @@ function rewriteJson(
   source: SourceFile,
   text: string,
   entityMap: Map<string, string>,
-  assets: Map<string, string>,
+  resolve: (spelling: string) => string | undefined,
   family: string,
   errors: string[],
 ): Buffer | undefined {
@@ -457,25 +653,25 @@ function rewriteJson(
 
   switch (source.content) {
     case 'behavior-entity':
-      rewriteBehaviorEntity(parsed, entityMap, assets, family)
+      rewriteBehaviorEntity(parsed, entityMap, resolve, family)
       break
     case 'client-entity':
-      rewriteClientEntity(parsed, entityMap, assets)
+      rewriteClientEntity(parsed, entityMap, resolve)
       break
     case 'geometry':
-      rewriteGeometry(parsed, assets)
+      rewriteGeometry(parsed, resolve)
       break
     case 'material':
-      rewriteMaterial(parsed, assets)
+      rewriteMaterial(parsed, resolve)
       break
     case 'render-controller':
-      renameKeys(parsed, 'render_controllers', assets)
+      renameKeys(parsed, 'render_controllers', resolve)
       break
     case 'animation':
-      renameKeys(parsed, 'animations', assets)
+      renameKeys(parsed, 'animations', resolve)
       break
     case 'animation-controller':
-      renameKeys(parsed, 'animation_controllers', assets)
+      renameKeys(parsed, 'animation_controllers', resolve)
       break
     default:
       break
@@ -486,7 +682,7 @@ function rewriteJson(
 function rewriteBehaviorEntity(
   parsed: Record<string, unknown>,
   entityMap: Map<string, string>,
-  assets: Map<string, string>,
+  resolve: (spelling: string) => string | undefined,
   family: string,
 ): void {
   const entity = parsed['minecraft:entity']
@@ -498,7 +694,7 @@ function rewriteBehaviorEntity(
     if (typeof description.identifier === 'string') {
       description.identifier = entityMap.get(description.identifier) ?? description.identifier
     }
-    rewriteRecordValues(description.animations, assets)
+    rewriteRecordValues(description.animations, resolve)
   }
   stampFamily(entity, family)
 }
@@ -506,7 +702,7 @@ function rewriteBehaviorEntity(
 function rewriteClientEntity(
   parsed: Record<string, unknown>,
   entityMap: Map<string, string>,
-  assets: Map<string, string>,
+  resolve: (spelling: string) => string | undefined,
 ): void {
   const entity = parsed['minecraft:client_entity']
   if (!isRecord(entity) || !isRecord(entity.description)) {
@@ -517,36 +713,36 @@ function rewriteClientEntity(
   if (typeof description.identifier === 'string' && !description.identifier.includes(':')) {
     description.identifier = entityMap.get(description.identifier) ?? description.identifier
   }
-  rewriteRecordValues(description.geometry, assets)
-  rewriteRecordValues(description.textures, assets)
-  rewriteRecordValues(description.materials, assets)
-  rewriteRecordValues(description.animations, assets)
+  rewriteRecordValues(description.geometry, resolve)
+  rewriteRecordValues(description.textures, resolve)
+  rewriteRecordValues(description.materials, resolve)
+  rewriteRecordValues(description.animations, resolve)
 
   if (Array.isArray(description.render_controllers)) {
     description.render_controllers = description.render_controllers.map((entry) => {
       if (typeof entry === 'string') {
-        return assets.get(entry) ?? entry
+        return resolve(entry) ?? entry
       }
       if (isRecord(entry)) {
-        return Object.fromEntries(Object.entries(entry).map(([key, value]) => [assets.get(key) ?? key, value]))
+        return Object.fromEntries(Object.entries(entry).map(([key, value]) => [resolve(key) ?? key, value]))
       }
       return entry as unknown
     })
   }
 }
 
-function rewriteGeometry(parsed: Record<string, unknown>, assets: Map<string, string>): void {
+function rewriteGeometry(parsed: Record<string, unknown>, resolve: (spelling: string) => string | undefined): void {
   const modern = parsed['minecraft:geometry']
   if (Array.isArray(modern)) {
     for (const entry of modern) {
       if (isRecord(entry) && isRecord(entry.description) && typeof entry.description.identifier === 'string') {
-        entry.description.identifier = assets.get(entry.description.identifier) ?? entry.description.identifier
+        entry.description.identifier = resolve(entry.description.identifier) ?? entry.description.identifier
       }
     }
   }
   for (const key of Object.keys(parsed)) {
     if (key.startsWith('geometry.')) {
-      const renamed = assets.get(key)
+      const renamed = resolve(key)
       if (renamed !== undefined) {
         parsed[renamed] = parsed[key]
         Reflect.deleteProperty(parsed, key)
@@ -555,7 +751,7 @@ function rewriteGeometry(parsed: Record<string, unknown>, assets: Map<string, st
   }
 }
 
-function rewriteMaterial(parsed: Record<string, unknown>, assets: Map<string, string>): void {
+function rewriteMaterial(parsed: Record<string, unknown>, resolve: (spelling: string) => string | undefined): void {
   if (!isRecord(parsed.materials)) {
     return
   }
@@ -565,31 +761,35 @@ function rewriteMaterial(parsed: Record<string, unknown>, assets: Map<string, st
         return [key, value]
       }
       const parts = key.split(':')
-      const renamed = assets.get(parts[0]) ?? parts[0]
+      const renamed = resolve(parts[0]) ?? parts[0]
       if (parts.length === 1) {
         return [renamed, value]
       }
-      return [`${renamed}:${assets.get(parts[1]) ?? parts[1]}`, value]
+      return [`${renamed}:${resolve(parts[1]) ?? parts[1]}`, value]
     }),
   )
 }
 
-function renameKeys(parsed: Record<string, unknown>, field: string, assets: Map<string, string>): void {
+function renameKeys(
+  parsed: Record<string, unknown>,
+  field: string,
+  resolve: (spelling: string) => string | undefined,
+): void {
   const record = parsed[field]
   if (!isRecord(record)) {
     return
   }
-  parsed[field] = Object.fromEntries(Object.entries(record).map(([key, value]) => [assets.get(key) ?? key, value]))
+  parsed[field] = Object.fromEntries(Object.entries(record).map(([key, value]) => [resolve(key) ?? key, value]))
 }
 
 /** Rewrites the string values of a reference map — geometry, textures, materials, animations. */
-function rewriteRecordValues(value: unknown, assets: Map<string, string>): void {
+function rewriteRecordValues(value: unknown, resolve: (spelling: string) => string | undefined): void {
   if (!isRecord(value)) {
     return
   }
   for (const [key, entry] of Object.entries(value)) {
     if (typeof entry === 'string') {
-      value[key] = assets.get(entry) ?? entry
+      value[key] = resolve(entry) ?? entry
     }
   }
 }

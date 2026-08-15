@@ -124,8 +124,9 @@ end of the build.
 - an `@minecraft/`-scoped import the completed manifest does not declare resolves to nothing
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
 - with namespacing on: a source name already carrying a prefix, content whose names the build
-  cannot rewrite, a name declared by more than one of the merged packs, and a bare entity name
-  landing in the reserved `mcdk_claim_` spelling
+  cannot rewrite, an entity identifier declared by more than one of the merged packs, a reference
+  several other packs' declarations could satisfy, and a bare entity name landing in the reserved
+  `mcdk_claim_` spelling
 
 ### Namespacing
 
@@ -152,18 +153,27 @@ prefix fails the build naming the file and the name. What each declared name bec
 - **entity identifiers**, and the `entity.<id>.name` / `item.spawn_egg.entity.<id>.name`
   localization keys derived from them, carry the namespace: `wizard` builds as
   `<namespace>:wizard`
-- **every other declared name** — geometry, textures, materials, render controllers, animations,
-  animation controllers — carries the built pack's _asset namespace_ instead: `mcdk_` plus the
-  pack's header uuid with the hyphens dropped. `geometry.wizard` builds as
-  `geometry.mcdk_<uuid>.wizard`, a texture at `textures/entity/wizard.png` moves to
-  `textures/mcdk_<uuid>/entity/wizard.png`, a material `wizard` becomes `mcdk_<uuid>_wizard`, and
-  render controllers, animations and animation controllers gain the token as a name segment.
-  These names are internal wiring: nothing outside the pack ever needs to address them, so they
-  are namespaced by identity rather than by the (contestable) namespace
+- **every other name the package itself declares** — geometry, textures, materials, render
+  controllers, animations, animation controllers — carries the namespace as a token written into
+  the name's own structure: `geometry.wizard` builds as `geometry.<namespace>.wizard`, a texture
+  at `textures/entity/wizard.png` moves to `textures/<namespace>/entity/wizard.png`, a material
+  `wizard` becomes `<namespace>_wizard`, and render controllers, animations and animation
+  controllers gain the token as a name segment
+- **a vendored asset's names** carry the vendored library's package token plus a 16-hex sha256
+  content hash instead — `geometry.<library token>-<hash>.minion` — so an identical name always
+  means identical bytes: two packages vendoring one library version share names for unchanged
+  assets (whichever definition wins, they are the same), and where content differs each package
+  addresses exactly the bytes it built against. Upgrading a library changes the names of the
+  assets whose content changed and only those, so a vendored asset never changes appearance
+  underneath you, and unchanged assets deduplicate across consumers
 
-Only names the package declares are rewritten, along with the references to them, so the two pack
-halves still join. A reference to a name the package declares nowhere — `geometry.evoker.v1.8`,
-a vanilla texture or material — is copied through as written. Script sources are never rewritten:
+Only names the packs declare are rewritten, along with the references to them, so the two pack
+halves still join. A reference resolves against the pack that wrote it first — a vendored pack's
+internal references stay internal, and your own references prefer your own declarations — then
+against the other merged packs where exactly one declares the name; a bare name that several other
+packs declare is ambiguous and fails the build naming every candidate. A reference to a name no
+merged pack declares — `geometry.evoker.v1.8`, a vanilla texture or material — is copied through
+as written. Script sources are never rewritten:
 code spells a namespaced identifier through `@twin-digital/mc-pack-runtime`'s `packId` helper,
 which reads the namespace the build injects into the bundle ahead of all module code, so a bundled
 library's own calls resolve through the vendoring package's namespace with nothing passed per
@@ -213,17 +223,23 @@ content arrive. For an installed dependency to work, the shared package must pub
 Vendoring requires a namespace, and the vendoring package must hold its own source manifest of
 every kind it vendors — the vendored content merges into that pack, under the vendoring package's
 namespace and header uuid, so each vendoring package ships one behavior pack and one resource pack
-whatever it vendors, and the same shared pack gets a different spelling and identity in every
-package that takes it up. The build reads the vendored source tree directly; the depended-on
-package never needs to have been built. Its `vendored_pack/` tree joins the watch inputs, and the
-`mc-pack-archive` command archives the merged output tree as it stands, vendored content included.
+whatever it vendors, and the same shared pack's entity identifiers get a different spelling and
+identity in every package that takes it up. The build reads the vendored source tree directly; the
+depended-on package never needs to have been built. Its `vendored_pack/` tree joins the watch
+inputs, and the `mc-pack-archive` command archives the merged output tree as it stands, vendored
+content included. A vendored definition file lands beside your own with its library's token
+prefixed to its basename — `models/<library token>.minion.geo.json` — so two merged packs shipping
+one relative path never contend for it.
 
 A vendored pack may hold entity definitions, geometries, textures, materials, render controllers,
 animations, animation controllers, and localization entries keyed by an entity identifier; content
-of any other kind fails the build naming the file. A name declared by both the vendoring package
-and something it vendors, or by two of its vendorings, fails the build naming both declarations. A
-file more than one merged pack contributes entries to — `texts/en_US.lang`, say — is composed;
-one the build cannot compose fails it, naming both contributors.
+of any other kind fails the build naming the file. An entity identifier declared by both the
+vendoring package and something it vendors, or by two of its vendorings, fails the build naming
+both declarations. Asset names never contend that way — each pack's build under its own token —
+but one asset name declared by two files of one vendored pack fails naming both, since its two
+content hashes would leave references nothing to pick. A file more than one merged pack
+contributes entries to — `texts/en_US.lang`, say — is composed; one the build cannot compose
+fails it, naming both contributors.
 
 ### The settings the fragment states
 
