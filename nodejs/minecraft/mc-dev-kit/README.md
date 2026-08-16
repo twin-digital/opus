@@ -125,9 +125,11 @@ end of the build.
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
 - with namespacing on: a source name already carrying a namespace, a bare entity name carrying a
   dot, content whose names the build cannot rewrite, an asset reference several other packs'
-  declarations could satisfy, a reference only an un-admitted transitive supplier declares, two
-  merged dependencies resolving to one entity prefix, a prefix outside its charset, and a bare
-  entity name or prefix landing in the reserved `mcdk_claim_` spelling
+  declarations could satisfy, a qualified reference its named dependency does not declare, an own
+  declaration sitting in a merged prefix's qualifier position, a reference only an un-admitted
+  transitive supplier declares, two merged dependencies resolving to one entity prefix, a prefix
+  outside its charset, and a bare entity name or prefix landing in the reserved `mcdk_claim_`
+  spelling
 
 ### Namespacing
 
@@ -175,12 +177,27 @@ Only names the packs declare are rewritten, along with the references to them, s
 halves still join. A reference resolves against the pack that wrote it first — a vendored pack's
 internal references stay internal, and your own references prefer your own declarations. Your own
 content also references a vendored entity by its composed spelling, `<prefix>.<name>`, which
-rewrites to `<namespace>:<prefix>.<name>`. An asset reference nothing in its own pack declares
-resolves against the other merged packs where exactly one declares the name; several is ambiguous
-and fails the build naming every candidate. A reference to a name no reachable vendored pack
-declares — `geometry.evoker.v1.8`, a vanilla texture or material — is copied through as written;
-one that only an **un-merged** transitive supplier declares fails the build naming the referencing
-file, the name, the supplying package, and the fix.
+rewrites to `<namespace>:<prefix>.<name>`.
+
+Your own content can direct an **asset** reference the same way: a merged dependency's prefix in
+the qualifier position binds the reference to that dependency's declaration, and the build
+rewrites it to the final hashed name exactly as it rewrites a bare reference — the prefix is a
+source-level directing token that never reaches the output. The qualifier position per name kind:
+`geometry.<prefix>.<name>`, `animation.<prefix>.<name>`, `controller.render.<prefix>.<name>`,
+`controller.animation.<prefix>.<name>`, `textures/<prefix>/<path>` for a texture, and
+`<prefix>.<name>` for a material reference or parent. A qualified reference whose dependency
+declares no such asset fails naming the file, the spelling, and the dependency; and an own
+declaration sitting in a qualifier position — a geometry named `geometry.<prefix>.smoke`, a
+texture under `textures/<prefix>/` — fails the build naming the declaration and the prefix, so a
+qualified spelling can never be captured by your own names (change that dependency's prefix to
+resolve it).
+
+A bare asset reference nothing in its own pack declares still resolves against the other merged
+packs where exactly one declares the name; several is ambiguous and fails the build naming every
+candidate and printing each one's qualified spelling as the fix. A reference to a name no
+reachable vendored pack declares — `geometry.evoker.v1.8`, a vanilla texture or material — is
+copied through as written; one that only an **un-merged** transitive supplier declares fails the
+build naming the referencing file, the name, the supplying package, and the fix.
 
 Script sources are never rewritten: code spells a namespaced identifier through
 `@twin-digital/mc-pack-runtime`'s `packId` helper, which reads what the build injects into the
