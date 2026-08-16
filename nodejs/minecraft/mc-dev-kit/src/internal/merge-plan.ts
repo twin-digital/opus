@@ -424,8 +424,8 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
 interface UnmergedDeclarations {
   /** composed spelling — the pack's default prefix, a dot, the bare name — to its declaration */
   entities: Map<string, { origin: string; file: string }>
-  /** `<kind> <spelling>` to the declaring unmerged pack */
-  assets: Map<string, { origin: string; file: string }>
+  /** `<kind> <spelling>` to every declaring unmerged pack */
+  assets: Map<string, { origin: string; file: string }[]>
 }
 
 /**
@@ -435,7 +435,7 @@ interface UnmergedDeclarations {
  */
 async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<UnmergedDeclarations> {
   const entities = new Map<string, { origin: string; file: string }>()
-  const assets = new Map<string, { origin: string; file: string }>()
+  const assets = new Map<string, { origin: string; file: string }[]>()
   const prefixes = new Map(unmerged.map((pack) => [pack.name, pack.prefix]))
 
   const files: SourceFile[] = []
@@ -464,8 +464,13 @@ async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<Unmer
       if (prefix !== undefined && !entities.has(`${prefix}.${declaration.name}`)) {
         entities.set(`${prefix}.${declaration.name}`, entry)
       }
-    } else if (!assets.has(`${declaration.kind} ${declaration.spelling}`)) {
-      assets.set(`${declaration.kind} ${declaration.spelling}`, entry)
+    } else {
+      const key = `${declaration.kind} ${declaration.spelling}`
+      const declarers = assets.get(key) ?? []
+      if (!declarers.some((declarer) => declarer.origin === declaration.origin)) {
+        declarers.push(entry)
+      }
+      assets.set(key, declarers)
     }
   }
 
@@ -636,6 +641,14 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
   const assets = declarations.filter((declaration) => declaration.category !== 'entity')
   const originByPrefix = new Map(options.vendored.map((pack) => [pack.prefix, pack.name]))
   const prefixByOrigin = new Map(options.vendored.map((pack) => [pack.name, pack.prefix]))
+  const mergedNames = new Set(options.vendored.map((pack) => pack.name))
+  const directDependencies = new Map(options.vendored.map((pack) => [pack.name, new Set(pack.dependencies)]))
+  const directSuppliers = new Map(
+    options.vendored.map((pack) => [
+      pack.name,
+      new Set(pack.dependencies.filter((dependency) => mergedNames.has(dependency))),
+    ]),
+  )
 
   const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
   const scopeIndex = new Map<string, Declaration>()
@@ -685,6 +698,7 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
       (declaration) => declaration.origin !== origin,
     )
     const byOrigin = new Map(candidates.map((declaration) => [declaration.origin, declaration]))
+    const unmergedDeclarers = diagnosis.assets.get(`${kind} ${spelling}`) ?? []
 
     // in the consumer's own content, bare means yours or vanilla: an unqualified reference
     // never binds to a merged dependency, and one a merged pack declares fails loudly rather
@@ -705,29 +719,50 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
         )
         return undefined
       }
-      const supplier = diagnosis.assets.get(`${kind} ${spelling}`)
-      if (supplier !== undefined) {
-        errors.push(danglingMessage(referencingFile, spelling, supplier))
+      if (unmergedDeclarers.length > 0) {
+        errors.push(danglingMessage(referencingFile, spelling, unmergedDeclarers[0]))
       }
       return undefined
     }
 
-    // vendored content has no qualifier to write, so its cross-pack references keep the
-    // unique-declarer rule
-    if (byOrigin.size === 0) {
-      const supplier = diagnosis.assets.get(`${kind} ${spelling}`)
-      if (supplier !== undefined) {
-        errors.push(danglingMessage(referencingFile, spelling, supplier))
-      }
+    // a vendored pack's references resolve within its own dependency closure — itself plus the
+    // merged packs of its own direct dependencies — never the consumer's world, so what a
+    // library's references mean is fixed by its own dependency list alone
+    const scope = directSuppliers.get(origin) ?? new Set<string>()
+    const inScope = candidates.filter((declaration) => scope.has(declaration.origin))
+    const inScopeByOrigin = new Map(inScope.map((declaration) => [declaration.origin, declaration]))
+    if (inScopeByOrigin.size === 1) {
+      return inScope[0]
+    }
+    if (inScopeByOrigin.size > 1) {
+      const claimants = inScope
+        .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
+        .join(' and ')
+      errors.push(
+        `the reference ${spelling} in ${referencingFile} is ambiguous among the direct dependencies of ${origin}: it is declared by ${claimants}`,
+      )
       return undefined
     }
-    if (byOrigin.size === 1) {
-      return candidates[0]
+
+    // nothing in scope: an un-merged DIRECT supplier is the consumer's to admit; a merged pack
+    // outside the closure only the library can reach, by declaring it a direct dependency
+    const directNames = directDependencies.get(origin) ?? new Set<string>()
+    const admittable = unmergedDeclarers.find((declarer) => directNames.has(declarer.origin))
+    if (admittable !== undefined) {
+      errors.push(danglingMessage(referencingFile, spelling, admittable))
+      return undefined
     }
-    const claimants = candidates
-      .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
-      .join(' and ')
-    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}`)
+    const outOfScope = [...byOrigin.values()].filter((declaration) => declaration.origin !== '')
+    if (outOfScope.length > 0) {
+      const claimants = outOfScope
+        .map((declaration) => declaration.origin)
+        .sort()
+        .join(' and ')
+      errors.push(
+        `${referencingFile}: ${spelling} is declared by ${claimants}, outside the dependency closure of ${origin}: ${origin} must declare ${claimants} as a direct dependency`,
+      )
+      return undefined
+    }
     return undefined
   }
 

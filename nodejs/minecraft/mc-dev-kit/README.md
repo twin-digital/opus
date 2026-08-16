@@ -205,8 +205,14 @@ to a name no reachable vendored pack declares — `geometry.evoker.v1.8`, a vani
 material — is copied through as written; one that only an **un-merged** transitive supplier
 declares fails the build naming the referencing file, the name, the supplying package, and the
 fix. Vendored content resolves internally without qualifiers — it cannot know the prefixes you
-chose — and its cross-pack references keep the unique-declarer rule: exactly one other merged
-pack declaring the name binds, several fail as ambiguous.
+chose — and within its own dependency closure, never your world: a vendored pack's reference
+binds to its own declarations first, then to the merged vendored pack of one of **its own direct
+`dependencies`**; two of its direct suppliers declaring the name fail as ambiguous (a library
+authoring bug, identical for every consumer). A name declared only by a deeper or sibling merged
+pack fails with the honest fix — the library must declare that supplier a direct dependency —
+and one declared by an un-merged direct supplier keeps the admission diagnosis. A name nothing
+in its closure declares copies as written, your own declarations included: adding a dependency
+or declaring a name of your own never changes what a library's references mean.
 
 Script sources are never rewritten: code spells a namespaced identifier through
 `@twin-digital/mc-pack-runtime`'s `packId` helper, which reads what the build injects into the

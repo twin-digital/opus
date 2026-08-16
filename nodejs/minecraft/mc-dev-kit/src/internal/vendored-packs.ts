@@ -25,6 +25,8 @@ export interface VendoredPack {
   vendoredDir: string
   /** the halves the tree holds, in kind order */
   halves: VendoredHalf[]
+  /** the names of the package's own direct `dependencies` — its reference-resolution closure */
+  dependencies: string[]
 }
 
 /** Per-dependency vendoring configuration, keyed by npm package name. */
@@ -113,6 +115,7 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
     visited.add(real)
 
     const packageJson = await readPackageJson(real)
+    const dependencies = dependencyNames(packageJson)
     const halves = await vendoredHalves(real)
     if (halves.length > 0) {
       found.push({
@@ -122,10 +125,11 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
         packageDir: real,
         vendoredDir: path.join(real, 'vendored_pack'),
         halves,
+        dependencies,
       })
     }
 
-    for (const dependency of dependencyNames(packageJson)) {
+    for (const dependency of dependencies) {
       queue.push({ name: dependency, fromDir: real })
     }
   }
