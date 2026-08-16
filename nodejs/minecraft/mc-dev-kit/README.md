@@ -124,8 +124,9 @@ end of the build.
 - an `@minecraft/`-scoped import the completed manifest does not declare resolves to nothing
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
 - with namespacing on: a source name already carrying a namespace, a bare entity name carrying a
-  dot, content whose names the build cannot rewrite, an asset reference several other packs'
-  declarations could satisfy, a qualified reference its named dependency does not declare, an own
+  dot, content whose names the build cannot rewrite, an own bare asset reference a merged pack
+  declares, a vendored cross-pack reference several packs' declarations could satisfy, a
+  qualified reference its named dependency does not declare, an own
   declaration sitting in a merged prefix's qualifier position, a reference only an un-admitted
   transitive supplier declares, two merged dependencies resolving to one entity prefix, a prefix
   outside its charset, and a bare entity name or prefix landing in the reserved `mcdk_claim_`
@@ -192,12 +193,17 @@ texture under `textures/<prefix>/` — fails the build naming the declaration an
 qualified spelling can never be captured by your own names (change that dependency's prefix to
 resolve it).
 
-A bare asset reference nothing in its own pack declares still resolves against the other merged
-packs where exactly one declares the name; several is ambiguous and fails the build naming every
-candidate and printing each one's qualified spelling as the fix. A reference to a name no
-reachable vendored pack declares — `geometry.evoker.v1.8`, a vanilla texture or material — is
-copied through as written; one that only an **un-merged** transitive supplier declares fails the
-build naming the referencing file, the name, the supplying package, and the fix.
+In your own content, **bare means yours or vanilla, prefixed means theirs**: a bare asset
+reference binds to your own declaration or not at all — it never binds to a merged dependency.
+A bare reference that matches nothing of yours but that one or more merged packs declare fails
+the build naming every declarer and printing each one's qualified spelling as the fix, rather
+than silently binding — or silently shadowing a vanilla name of the same spelling. A reference
+to a name no reachable vendored pack declares — `geometry.evoker.v1.8`, a vanilla texture or
+material — is copied through as written; one that only an **un-merged** transitive supplier
+declares fails the build naming the referencing file, the name, the supplying package, and the
+fix. Vendored content resolves internally without qualifiers — it cannot know the prefixes you
+chose — and its cross-pack references keep the unique-declarer rule: exactly one other merged
+pack declaring the name binds, several fail as ambiguous.
 
 Script sources are never rewritten: code spells a namespaced identifier through
 `@twin-digital/mc-pack-runtime`'s `packId` helper, which reads what the build injects into the
