@@ -1,0 +1,31 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "rpg:wizard",
+      "materials": {
+        "default": "evoker"
+      },
+      "textures": {
+        "default": "textures/entity/rpg/wizard"
+      },
+      "geometry": {
+        "default": "geometry.rpg.wizard"
+      },
+      "scripts": {
+        "scale": "0.9375",
+        "animate": ["controller_general", "controller_move"]
+      },
+      "animations": {
+        "general": "animation.rpg.wizard.general",
+        "casting": "animation.rpg.wizard.casting",
+        "look_at_target": "animation.rpg.wizard.look_at_target",
+        "move": "animation.rpg.wizard.move",
+        "celebrating": "animation.rpg.wizard.celebrating",
+        "controller_general": "controller.animation.rpg.wizard.general",
+        "controller_move": "controller.animation.rpg.wizard.move"
+      },
+      "render_controllers": ["controller.render.rpg.wizard"]
+    }
+  }
+}

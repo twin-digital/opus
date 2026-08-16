@@ -15,8 +15,8 @@ import { findVendoredPacks, type VendorConfig, type VendoredPack } from './vendo
 /** The one plugin the fragment carries. */
 export type BuildPlugin = Rolldown.Plugin
 
-/** Where a behavior pack's script sources sit, relative to the package directory. */
-export const SCRIPT_SOURCE = 'behavior_pack/scripts/main.ts'
+/** Where a package's script sources sit, relative to the package directory. */
+export const SCRIPT_SOURCE = 'src/main.ts'
 
 /** Where the configuration points the bundler, relative to the package's output root. */
 export const SCRIPT_OUTPUT = 'behavior_pack/scripts/main.js'
@@ -130,6 +130,7 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       }
 
       const packs = mine as ValidPackEntry[]
+      checkNoScriptsDir(packageDir, packs)
       checkScriptLocation(workspace.root, scriptOutput, packs)
 
       if (declaresScriptModule(packs)) {
@@ -345,6 +346,21 @@ function describeProblems(packs: readonly PackEntry[]): string {
 }
 
 /**
+ * Fails the build where a pack directory holds a `scripts/` directory. Pack content is copied
+ * verbatim, so one would land on top of the bundle the build emits at `scripts/main.js`.
+ */
+function checkNoScriptsDir(packageDir: string, packs: readonly ValidPackEntry[]): void {
+  for (const pack of packs) {
+    const scripts = path.join(packageDir, path.basename(pack.sourceDir), 'scripts')
+    if (existsSync(scripts)) {
+      throw new Error(
+        `${pack.sourceDir} holds a scripts directory: script sources belong in ${SCRIPT_SOURCE}, and a pack directory holds only content copied into the output`,
+      )
+    }
+  }
+}
+
+/**
  * Fails the build where the pack set reports a script location the configuration does not point
  * at. A pack for which the pack set reports none — every resource pack — is not a mismatch.
  */
@@ -410,9 +426,8 @@ function watchInputs(
 }
 
 /**
- * Writes one pack's output: the completed manifest, and every source file but that manifest and
- * the script sources. Each write is compared first, and every path written joins the claimed set
- * the prune spares.
+ * Writes one pack's output: the completed manifest, and every other source file copied verbatim.
+ * Each write is compared first, and every path written joins the claimed set the prune spares.
  */
 async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<string>): Promise<void> {
   const sourceDir = path.join(packageDir, path.basename(pack.sourceDir))
@@ -422,7 +437,7 @@ async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<
 
   for (const file of await listFiles(sourceDir)) {
     const relative = path.relative(sourceDir, file)
-    if (relative === 'manifest.json' || relative.split(path.sep)[0] === 'scripts') {
+    if (relative === 'manifest.json') {
       continue
     }
     const target = path.join(outputDir, relative)

@@ -1,0 +1,4 @@
+version: '1'
+
+# A default world is enough to summon and view an actor (`/summon rpg:wizard`).
+eula: true

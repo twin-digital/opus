@@ -1,7 +1,7 @@
 /**
- * The pack's entry point — `behavior_pack/scripts/main.ts`, the one file the engine executes — is
- * exercised here as the engine executes it: evaluated for its side effects, against a world it
- * reached through its own `@minecraft/server` import. The rest of the suite drives
+ * The pack's entry point — `src/main.ts`, the one file the engine executes — is exercised here as
+ * the engine executes it: evaluated for its side effects, against a world it reached through its
+ * own `@minecraft/server` import. The rest of the suite drives
  * `installProtection` with handles it passes in, so it would pass unchanged against an entry that
  * imported the wrong name, called nothing, or handed over the wrong object. This file is what fails
  * in that case.
@@ -49,7 +49,7 @@ const healthOf = (entity: Entity): number | undefined => entity.getComponent('mi
 describe('the pack entry point', () => {
   beforeEach(async () => {
     // The entry evaluates here, against a world of its own and nothing this file hands it.
-    server = await loadPack(() => import('../behavior_pack/scripts/main.js'))
+    server = await loadPack(() => import('./main.js'))
     withVanillaDimensions(server)
   })
 

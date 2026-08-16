@@ -86,11 +86,11 @@ pnpm --filter @twin-digital/village-guard release-assets  # the .mcaddon, under 
 
 The build is [`@twin-digital/mc-dev-kit`](../mc-dev-kit/README.md)'s: it completes
 `behavior_pack/manifest.json` from this package's `package.json`, bundles
-`behavior_pack/scripts/main.ts`, and copies everything else. `dev` is
+`src/main.ts`, and copies everything else. `dev` is
 [`@twin-digital/mc-dev-server`](../mc-dev-server/README.md)'s, and `release-assets` is the kit's
 `mc-pack-archive`. This package implements none of the three.
 
 The protection itself is `src/protection.ts`, which takes its world as a parameter;
-`behavior_pack/scripts/main.ts` is the four lines that hand it the real one. The suite in
+`src/main.ts` is the four lines that hand it the real one. The suite in
 `src/protection.test.ts` drives the same function against
 [`@twin-digital/minecraft-test-lib`](../test-lib/README.md)'s in-memory engine.

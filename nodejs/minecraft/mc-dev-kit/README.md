@@ -25,15 +25,15 @@ development dependency of the kit and of the packages that build with it, never 
 
 ## The pack package layout
 
-A pack package holds its source packs in fixed, kind-named directories, and its built packs under
-`dist/`:
+A pack package holds its script sources under `src/`, its source packs in fixed, kind-named
+directories, and its built packs under `dist/`:
 
 ```
 packages/my-pack/
   package.json                          the name and version the manifests complete from
+  src/main.ts                           the script bundle's entry
   behavior_pack/
     manifest.json                       partial: no name, no version, no entry
-    scripts/main.ts                     the script bundle's entry — build input, never copied
     functions/…, entities/…             copied verbatim
   resource_pack/
     manifest.json
@@ -44,7 +44,9 @@ packages/my-pack/
     resource_pack/…
 ```
 
-Both packs are optional; a package holding neither is not a pack package.
+Both packs are optional; a package holding neither is not a pack package. Nothing under a pack
+directory is a build input — a pack directory holds only content, and a `scripts/` directory there
+fails the build.
 
 ## Discovery
 
@@ -89,8 +91,8 @@ package then produces, for each of its packs:
   `module_name` dependencies the completed manifest declares left external and everything else
   inlined
 - **every other pack file** copied verbatim — dotfiles, `.lang` files, textures, unknown extensions
-  and all — except the source manifest and anything under `scripts/`. With namespacing on, files
-  carrying declared names are rewritten instead — see [Namespacing](#namespacing)
+  and all — except the source manifest. With namespacing on, files carrying declared names are
+  rewritten instead — see [Namespacing](#namespacing)
 
 A finished build loads as it stands, with nothing further to do to it.
 
@@ -120,7 +122,8 @@ end of the build.
 - the kit reports one of the package's packs invalid — its problems are printed, and no sibling pack
   in the package is built
 - the kit's enumeration rejects, which any malformed `package.json` in the workspace can cause
-- a behavior pack declares a script module while `behavior_pack/scripts/main.ts` is not there
+- a behavior pack declares a script module while `src/main.ts` is not there
+- a pack directory holds a `scripts/` directory
 - an `@minecraft/`-scoped import the completed manifest does not declare resolves to nothing
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
 - with namespacing on: a source name already carrying a namespace, a bare entity name carrying a

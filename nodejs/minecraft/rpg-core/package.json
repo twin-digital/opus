@@ -1,0 +1,55 @@
+{
+  "name": "@twin-digital/rpg-core",
+  "version": "1.0.0",
+  "description": "Actor presets for Minecraft Bedrock adventures: spawn a named, durable NPC by preset name.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@minecraft/server": "catalog:"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@minecraft/server": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/minecraft-test-lib": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

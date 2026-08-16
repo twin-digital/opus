@@ -43,7 +43,9 @@ Repository of all public works developed by Twin Digital.
 - [@grinbox/web](./nodejs/grinbox/web): The grinbox browser application: a client of the daemon's API with no privileged path.
 - [@twin-digital/mc-dev-kit](./nodejs/minecraft/mc-dev-kit): Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.
 - [@twin-digital/mc-dev-server](./nodejs/minecraft/mc-dev-server): Runs a Minecraft Bedrock dev server under Docker and keeps a workspace's built packs deployed to it.
-- [@twin-digital/mc-pack-runtime](./nodejs/minecraft/mc-pack-runtime): Engine-side runtime for packs built with @twin-digital/mc-dev-kit: the pack-identifier helper, checked entity calls, and the namespace-claim report.
+- [@twin-digital/rpg-core](./nodejs/minecraft/rpg-core): Actor presets for Minecraft Bedrock adventures: spawn a named, durable NPC by preset name.
+- [@twin-digital/rpg-core-example](./nodejs/minecraft/rpg-core-example): Worked example adventure for rpg-core: spawns every actor the product offers, carrying only its own story, triggers, and logic.
+- [@twin-digital/rpg-core-pack](./nodejs/minecraft/rpg-core-pack): The assets pack of mc-rpg-core — the actor entity definitions and the appearances they render from, activated by one manifest dependency.
 - [@twin-digital/minecraft-test-lib](./nodejs/minecraft/test-lib): In-memory fakes of the @minecraft/server object model, for testing Minecraft Bedrock behavior packs.
 - [@twin-digital/village-guard](./nodejs/minecraft/village-guard): Minecraft Bedrock behavior pack that keeps every villager, wandering trader and iron golem alive.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
