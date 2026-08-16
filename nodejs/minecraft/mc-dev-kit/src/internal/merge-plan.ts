@@ -149,6 +149,7 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   const declarations = scanDeclarations(files, texts, errors)
   checkVendoredDuplicates(declarations, errors)
   checkReserved(declarations, errors)
+  checkPrefixShadowing(declarations, new Map(options.vendored.map((pack) => [pack.prefix, pack.name])), errors)
 
   const diagnosis = await scanUnmergedDeclarations(options.unmerged)
   const entities = entityNames(options, declarations, diagnosis, errors)
@@ -628,6 +629,8 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
   const { options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors } = inputs
   const sourceByFile = new Map(files.map((source) => [source.file, source]))
   const assets = declarations.filter((declaration) => declaration.category !== 'entity')
+  const originByPrefix = new Map(options.vendored.map((pack) => [pack.prefix, pack.name]))
+  const prefixByOrigin = new Map(options.vendored.map((pack) => [pack.name, pack.prefix]))
 
   const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
   const scopeIndex = new Map<string, Declaration>()
@@ -652,6 +655,23 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     spelling: string,
     referencingFile: string,
   ): Declaration | undefined {
+    // ahead of the bare steps: in the consumer's own content, a merged dependency's prefix in
+    // the qualifier position binds the reference to that dependency's declaration
+    if (origin === '') {
+      const qualified = parseQualified(spelling)
+      const target = qualified === undefined ? undefined : originByPrefix.get(qualified.prefix)
+      if (qualified !== undefined && target !== undefined) {
+        const bound = scopeIndex.get(scopeKey(target, kind, qualified.remainder))
+        if (bound !== undefined) {
+          return bound
+        }
+        errors.push(
+          `${referencingFile}: ${spelling} carries the prefix of ${target}, which declares no asset ${qualified.remainder}`,
+        )
+        return undefined
+      }
+    }
+
     const own = scopeIndex.get(scopeKey(origin, kind, spelling))
     if (own !== undefined) {
       return own
@@ -673,7 +693,16 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     const claimants = candidates
       .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
       .join(' and ')
-    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}`)
+    const qualifiedFixes =
+      origin === '' ?
+        [...byOrigin.values()]
+          .map((declaration) => prefixByOrigin.get(declaration.origin))
+          .filter((prefix): prefix is string => prefix !== undefined)
+          .sort()
+          .map((prefix) => qualifiedSpelling(prefix, spelling))
+      : []
+    const fix = qualifiedFixes.length > 0 ? `; qualify it as ${qualifiedFixes.join(' or ')}` : ''
+    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}${fix}`)
     return undefined
   }
 
@@ -725,6 +754,87 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
       const declaration = resolveDeclaration(source.half.origin, source.half.kind, spelling, source.file)
       return declaration === undefined ? undefined : finalName(declaration)
     },
+  }
+}
+
+/** The structural keywords a dotted asset spelling may open with, longest first. */
+const DOTTED_KEYWORDS = ['controller.render.', 'controller.animation.', 'animation.', 'geometry.']
+
+/** A reference spelling split at its qualifier position: the candidate prefix, and the rest. */
+interface QualifiedForm {
+  prefix: string
+  /** the spelling as the named dependency's own content writes it */
+  remainder: string
+}
+
+/**
+ * Splits an asset reference at its qualifier position: the segment after the structural keyword
+ * for the dotted kinds (`geometry.<q>.<name>`), the first path segment under `textures/` for a
+ * texture, and the first dot-segment of a flat material name. `undefined` where the spelling has
+ * no qualifier position — a bare name with nothing after the candidate, say. Whether the
+ * candidate is a merged prefix is the caller's to decide; the qualified spelling never reaches
+ * the output, so its engine validity is moot.
+ */
+function parseQualified(spelling: string): QualifiedForm | undefined {
+  for (const keyword of DOTTED_KEYWORDS) {
+    if (spelling.startsWith(keyword)) {
+      const rest = spelling.slice(keyword.length)
+      const dot = rest.indexOf('.')
+      if (dot <= 0 || dot === rest.length - 1) {
+        return undefined
+      }
+      return { prefix: rest.slice(0, dot), remainder: keyword + rest.slice(dot + 1) }
+    }
+  }
+  if (spelling.startsWith('textures/')) {
+    const rest = spelling.slice('textures/'.length)
+    const slash = rest.indexOf('/')
+    if (slash <= 0 || slash === rest.length - 1) {
+      return undefined
+    }
+    return { prefix: rest.slice(0, slash), remainder: `textures/${rest.slice(slash + 1)}` }
+  }
+  const dot = spelling.indexOf('.')
+  if (dot <= 0 || dot === spelling.length - 1) {
+    return undefined
+  }
+  return { prefix: spelling.slice(0, dot), remainder: spelling.slice(dot + 1) }
+}
+
+/** The qualified form of a dependency's bare spelling: the inverse of {@link parseQualified}. */
+function qualifiedSpelling(prefix: string, spelling: string): string {
+  for (const keyword of DOTTED_KEYWORDS) {
+    if (spelling.startsWith(keyword)) {
+      return `${keyword}${prefix}.${spelling.slice(keyword.length)}`
+    }
+  }
+  if (spelling.startsWith('textures/')) {
+    return `textures/${prefix}/${spelling.slice('textures/'.length)}`
+  }
+  return `${prefix}.${spelling}`
+}
+
+/**
+ * An own asset declaration whose qualifier-position segment equals a merged dependency's prefix
+ * would capture every qualified reference to that dependency, so it fails naming the declaration
+ * and the prefix; changing the prefix in the vendor block is the fix.
+ */
+function checkPrefixShadowing(
+  declarations: Declaration[],
+  originByPrefix: Map<string, string>,
+  errors: string[],
+): void {
+  for (const declaration of declarations) {
+    if (declaration.origin !== '' || declaration.category === 'entity') {
+      continue
+    }
+    const qualified = parseQualified(declaration.spelling)
+    const holder = qualified === undefined ? undefined : originByPrefix.get(qualified.prefix)
+    if (qualified !== undefined && holder !== undefined) {
+      errors.push(
+        `${declaration.file}: the ${declaration.category} name ${declaration.spelling} sits in the qualifier position of ${holder}'s prefix ${JSON.stringify(qualified.prefix)}, so a qualified reference could never reach that dependency: give ${holder} a different prefix in the vendor block`,
+      )
+    }
   }
 }
 

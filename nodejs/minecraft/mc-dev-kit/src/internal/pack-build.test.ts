@@ -862,6 +862,108 @@ describe('vendoring', () => {
     )
   })
 
+  it('binds a qualified reference — the prefix in the qualifier position — to that dependency, per name kind', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard', {
+        description: { identifier: 'wizard', animations: { march: 'animation.lib.march' } },
+      }),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.lib.minion' },
+        textures: { default: 'textures/lib/entity/minion' },
+        materials: { default: 'lib.minionbase' },
+        animations: { idle: 'animation.lib.idle' },
+        render_controllers: ['controller.render.lib.minion'],
+      }),
+      'packages/pack-1/resource_pack/materials/own.material': {
+        materials: { version: '1.0.0', 'mymat:lib.minionbase': {} },
+      },
+      'packages/lib/vendored_pack/behavior_pack/animations/march.json': { animations: { 'animation.march': {} } },
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+      'packages/lib/vendored_pack/resource_pack/textures/entity/minion.png': 'png bytes',
+      'packages/lib/vendored_pack/resource_pack/materials/base.material': {
+        materials: { version: '1.0.0', minionbase: {} },
+      },
+      'packages/lib/vendored_pack/resource_pack/animations/idle.json': { animations: { 'animation.idle': {} } },
+      'packages/lib/vendored_pack/resource_pack/render_controllers/rc.json': {
+        render_controllers: { 'controller.render.minion': {} },
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    // the built output is unchanged by qualification: each reference lands on the vendored
+    // declaration's final hashed name, exactly as a bare reference would
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib.minion.geo.json')
+    const geometryFinal = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const base = await builtJson(packageDir, 'resource_pack/materials/scope-lib.base.material')
+    const baseFinal = Object.keys(base.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+    const idle = await builtJson(packageDir, 'resource_pack/animations/scope-lib.idle.json')
+    const idleFinal = Object.keys(idle.animations as Record<string, unknown>)[0]
+    const march = await builtJson(packageDir, 'behavior_pack/animations/scope-lib.march.json')
+    const marchFinal = Object.keys(march.animations as Record<string, unknown>)[0]
+    const controllers = await builtJson(packageDir, 'resource_pack/render_controllers/scope-lib.rc.json')
+    const controllerFinal = Object.keys(controllers.render_controllers as Record<string, unknown>)[0]
+    const textures = await listTree(path.join(packageDir, 'dist/resource_pack/textures'))
+    const textureFinal = textures[0].replace(/\.png$/u, '')
+
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    expect(client['minecraft:client_entity']).toMatchObject({
+      description: {
+        geometry: { default: geometryFinal },
+        textures: { default: `textures/${textureFinal}` },
+        materials: { default: baseFinal },
+        animations: { idle: idleFinal },
+        render_controllers: [controllerFinal],
+      },
+    })
+    expect(geometryFinal).toMatch(/^geometry\.scope-lib-[0-9a-f]{16}\.minion$/)
+
+    const behavior = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    expect(behavior['minecraft:entity']).toMatchObject({ description: { animations: { march: marchFinal } } })
+
+    const own = await builtJson(packageDir, 'resource_pack/materials/own.material')
+    const ownKey = Object.keys(own.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+    expect(ownKey).toBe(`${NS}_mymat:${baseFinal}`)
+  })
+
+  it('fails a qualified reference whose named dependency declares no such asset', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.lib.nosuch' },
+      }),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /wizard\.json.*geometry\.lib\.nosuch.*@scope\/lib.*declares no asset geometry\.nosuch/s,
+    )
+  })
+
+  it('fails an own declaration sitting in the qualifier position of a merged prefix', async () => {
+    const dottedName = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/models/smoke.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.lib.smoke' } }],
+      },
+    })
+    await expect(buildPackage(path.join(dottedName, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /smoke\.geo\.json.*geometry\.lib\.smoke.*"lib".*different prefix in the vendor block/s,
+    )
+
+    const texturePath = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/textures/lib/entity/wizard.png': 'png bytes',
+    })
+    await expect(buildPackage(path.join(texturePath, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /textures\/lib\/entity\/wizard.*"lib".*different prefix in the vendor block/s,
+    )
+  })
+
   it('names a vendored asset by its library token and content hash, deterministically across rebuilds', async () => {
     const workspace = await vendoringWorkspace({
       'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
@@ -958,8 +1060,9 @@ describe('vendoring', () => {
     })
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    // the failure names every candidate, and prints each one's qualified spelling as the fix
     await expect(build).rejects.toThrow(
-      /geometry\.minion.*ambiguous.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json/s,
+      /geometry\.minion.*ambiguous.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
     )
   })
 
