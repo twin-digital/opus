@@ -502,6 +502,7 @@ function danglingMessage(file: string, name: string, supplier: { origin: string;
 function libraryAliases(
   pack: { name: string; dependencies: string[]; vendorField: VendorConfig },
   reachable: Set<string>,
+  defaultAliases: Map<string, string>,
   errors: string[],
 ): Map<string, string> {
   const aliases = new Map<string, string>()
@@ -531,12 +532,18 @@ function libraryAliases(
       errors.push(messageOf(error))
     }
   }
+  // no explicit entry: the supplier's shipped defaultAlias beats its unscoped name
   for (const name of pack.dependencies) {
     if (reachable.has(name) && pack.vendorField[name] === undefined) {
+      const shipped = defaultAliases.get(name)
       try {
-        claim(resolvePrefix(name, undefined), name)
+        claim(resolvePrefix(name, shipped), name)
       } catch (error) {
-        errors.push(messageOf(error))
+        errors.push(
+          shipped === undefined ?
+            messageOf(error)
+          : `the defaultAlias ${JSON.stringify(shipped)} shipped by ${name} is invalid — ${messageOf(error)} — set an explicit prefix for ${name} in the minecraft.vendor field of ${pack.name}`,
+        )
       }
     }
   }
@@ -548,11 +555,15 @@ function libraryAliases(
  * library's own tokens for its own direct suppliers.
  */
 function scopeAliasMaps(options: MergePlanOptions, errors: string[]): Map<string, Map<string, string>> {
-  const reachable = new Set([...options.vendored, ...options.unmerged].map((pack) => pack.name))
+  const everyPack = [...options.vendored, ...options.unmerged]
+  const reachable = new Set(everyPack.map((pack) => pack.name))
+  const defaultAliases = new Map(
+    everyPack.flatMap((pack) => (pack.defaultAlias === undefined ? [] : [[pack.name, pack.defaultAlias] as const])),
+  )
   const maps = new Map<string, Map<string, string>>()
   maps.set('', new Map(options.vendored.map((pack) => [pack.prefix, pack.name])))
   for (const pack of options.vendored) {
-    maps.set(pack.name, libraryAliases(pack, reachable, errors))
+    maps.set(pack.name, libraryAliases(pack, reachable, defaultAliases, errors))
   }
   return maps
 }
@@ -629,6 +640,20 @@ function entityNames(
             supplier !== undefined ?
               danglingMessage(source.file, spelling, supplier)
             : `${source.file}: ${spelling} carries the token of ${target}, which declares no entity ${rest}`,
+          )
+          return undefined
+        }
+        // an unknown token over a name a closure pack declares is a stale token — a changed
+        // defaultAlias, say: fail listing the resolved spellings, never rebind
+        const staleHits: string[] = []
+        for (const [candidateToken, closureTarget] of tokens) {
+          if (mergedNames.has(closureTarget) && scopes.get(closureTarget)?.has(rest) === true) {
+            staleHits.push(`${candidateToken}.${rest}`)
+          }
+        }
+        if (staleHits.length > 0) {
+          errors.push(
+            `${source.file}: ${spelling} carries ${JSON.stringify(token)}, which is not a token of this pack's world — its resolved tokens spell the reference ${staleHits.sort().join(' or ')}`,
           )
           return undefined
         }
@@ -809,6 +834,31 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     const own = scopeIndex.get(scopeKey(origin, kind, spelling))
     if (own !== undefined) {
       return own
+    }
+
+    // an unknown first segment over a remainder a closure pack declares is a stale token — a
+    // changed defaultAlias, say: fail listing the resolved spellings, never rebind
+    if (qualified !== undefined && target === undefined) {
+      const staleHits: { token: string; declaration: Declaration }[] = []
+      for (const [token, closureTarget] of tokens) {
+        if (!mergedNames.has(closureTarget)) {
+          continue
+        }
+        const bound = scopeIndex.get(scopeKey(closureTarget, kind, qualified.remainder))
+        if (bound !== undefined) {
+          staleHits.push({ token, declaration: bound })
+        }
+      }
+      if (staleHits.length > 0) {
+        const fixes = staleHits
+          .map((hit) => qualifiedSpelling(hit.token, qualified.remainder))
+          .sort()
+          .join(' or ')
+        errors.push(
+          `${referencingFile}: ${spelling} carries ${JSON.stringify(qualified.prefix)}, which is not a token of this pack's world — its resolved tokens spell the reference ${fixes}`,
+        )
+        return undefined
+      }
     }
 
     // bare never binds cross-pack: a name a closure pack declares fails with the token form,
@@ -1337,10 +1387,23 @@ function serializeJson(value: unknown): Buffer {
  */
 export async function validateVendoredLibrary(context: LibraryContext): Promise<void> {
   const errors: string[] = []
+  if (context.defaultAlias !== undefined) {
+    try {
+      resolvePrefix(context.packageName, context.defaultAlias)
+    } catch (error) {
+      errors.push(`the shipped defaultAlias of ${context.packageName} is invalid: ${messageOf(error)}`)
+    }
+  }
   const supplierNames = new Set(context.suppliers.map((supplier) => supplier.name))
+  const supplierDefaults = new Map(
+    context.suppliers.flatMap((supplier) =>
+      supplier.defaultAlias === undefined ? [] : [[supplier.name, supplier.defaultAlias] as const],
+    ),
+  )
   const aliases = libraryAliases(
     { name: context.packageName, dependencies: context.dependencies, vendorField: context.vendorField },
     new Set([...supplierNames, ...context.unlocated]),
+    supplierDefaults,
     errors,
   )
   const unlocated = new Set(context.unlocated)
@@ -1417,6 +1480,21 @@ export async function validateVendoredLibrary(context: LibraryContext): Promise<
       if (ownAssets.has(`${source.half.kind} ${spelling}`)) {
         return spelling
       }
+      if (qualified !== undefined && target === undefined) {
+        const stale: string[] = []
+        for (const [token, supplier] of aliases) {
+          const declarers = supplierDiagnosis.assets.get(`${source.half.kind} ${qualified.remainder}`) ?? []
+          if (declarers.some((declarer) => declarer.origin === supplier)) {
+            stale.push(qualifiedSpelling(token, qualified.remainder))
+          }
+        }
+        if (stale.length > 0) {
+          errors.push(
+            `${source.file}: ${spelling} carries ${JSON.stringify(qualified.prefix)}, which is not a token of this pack's world — its resolved tokens spell the reference ${stale.sort().join(' or ')}`,
+          )
+          return undefined
+        }
+      }
       const hits: string[] = []
       for (const [token, supplier] of aliases) {
         const declarers = supplierDiagnosis.assets.get(`${source.half.kind} ${spelling}`) ?? []
@@ -1446,6 +1524,17 @@ export async function validateVendoredLibrary(context: LibraryContext): Promise<
         const target = aliases.get(spelling.slice(0, dot))
         const rest = spelling.slice(dot + 1)
         if (target === undefined) {
+          const stale: string[] = []
+          for (const [token, supplier] of aliases) {
+            if (supplierDiagnosis.entitiesByOrigin.has(`${supplier} ${rest}`)) {
+              stale.push(`${token}.${rest}`)
+            }
+          }
+          if (stale.length > 0) {
+            errors.push(
+              `${source.file}: ${spelling} carries ${JSON.stringify(spelling.slice(0, dot))}, which is not a token of this pack's world — its resolved tokens spell the reference ${stale.sort().join(' or ')}`,
+            )
+          }
           return undefined
         }
         if (unlocated.has(target)) {

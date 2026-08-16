@@ -266,11 +266,17 @@ alike:
 ```
 
 The field has one meaning in both roles: **the token this package writes in its own source to
-reference that dependency's content**. Every direct dependency holding a vendored pack gets a
-token by default — its unscoped npm name (`@rpg-libs/spell-fx` is written as `spell-fx.*`) — and
-a field entry overrides it. A token holds lowercase letters, digits, underscore and hyphen —
-never a dot, the separator — and two dependencies resolving to one token fail the build naming
-both, with an explicit prefix as the fix. For the package whose build ships the packs, the token
+reference that dependency's content**. A token resolves in one order everywhere: your own
+explicit `prefix` entry, else the dependency's shipped **`minecraft.defaultAlias`** — a sibling
+of `vendor` a shared package may declare (`{ "minecraft": { "defaultAlias": "fx" } }`) — else
+the dependency's unscoped npm name (`@rpg-libs/spell-fx` is written as `spell-fx.*`). A token
+holds lowercase letters, digits, underscore and hyphen — never a dot, the separator — and two
+dependencies resolving to one token fail the build naming both, with an explicit prefix as the
+fix; an invalid `defaultAlias` fails its own package's build, and at a consumer's build fails
+naming the library with the same fix. A library changing its `defaultAlias` is a **breaking
+change**: your token references fail loudly, listing the resolved tokens — they never rebind or
+silently rename — and pinning the old token as an explicit `prefix` entry restores your build
+and preserves shipped-world entity ids exactly. For the package whose build ships the packs, the token
 additionally fixes the output entity-id segment, `<namespace>:<prefix>.<name>`; a vendored
 library's entries are source-side aliases only — the output naming of a supplier's entities is
 always governed by the shipping consumer's token for that supplier.

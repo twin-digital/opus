@@ -820,6 +820,124 @@ describe('vendoring', () => {
     expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:fx.minion` } })
   })
 
+  it('honors a dependency’s shipped defaultAlias, with an explicit prefix overriding it', async () => {
+    // no consumer field entry: the shipped defaultAlias beats the unscoped name
+    const shipped = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+    })
+    const shippedDir = path.join(shipped, 'packages/pack-1')
+    await buildPackage(shippedDir, { namespace: true })
+    const vendored = await builtJson(shippedDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:fx.minion` } })
+
+    // an explicit entry always wins
+    const overridden = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib': { prefix: 'mx' } } },
+      },
+    })
+    const overriddenDir = path.join(overridden, 'packages/pack-1')
+    await buildPackage(overriddenDir, { namespace: true })
+    const explicit = await builtJson(overriddenDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(explicit['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:mx.minion` } })
+  })
+
+  it('gives a library the same default: its supplier’s shipped alias, unless its own field overrides', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.fx.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
+    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
+  })
+
+  it('fails an invalid defaultAlias at the library’s own build, and at a consumer’s naming the fix', async () => {
+    // the library's own build validates its whole minecraft field
+    const libraryBuild = await writeWorkspace({
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'package.json': { name: 'root', version: '0.0.0', private: true },
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'F.x' } },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    await expect(buildPackage(path.join(libraryBuild, 'packages/lib'))).rejects.toThrow(
+      /defaultAlias of @scope\/lib is invalid/,
+    )
+
+    // at a consumer's build the failure names the library and the safe fix: an explicit prefix
+    const consumerBuild = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'F.x' } },
+    })
+    await expect(buildPackage(path.join(consumerBuild, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /defaultAlias "F\.x" shipped by @scope\/lib is invalid.*set an explicit prefix for @scope\/lib in the minecraft\.vendor field/s,
+    )
+  })
+
+  it('fails two dependencies whose resolved defaults collide, with the explicit-prefix fix', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/one.json': behaviorEntity('one'),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-b/vendored_pack/behavior_pack/entities/two.json': behaviorEntity('two'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/@scope\/lib-a.*@scope\/lib-b.*"fx".*minecraft\.vendor field/s)
+  })
+
+  it('fails a reference to a changed defaultAlias loudly, listing the resolved tokens — never rebinding', async () => {
+    // the library once shipped 'fx'; it now ships 'fx2', and the consumer's content still says fx
+    const workspace = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx2' } },
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/skin.json': clientEntity('fx.minion', {
+        geometry: { default: 'geometry.fx.minion' },
+      }),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/"fx", which is not a token of this pack's world.*fx2\.minion/s)
+    await expect(build).rejects.toThrow(/geometry\.fx2\.minion|fx2\.minion/)
+  })
+
   it('fails a dotted bare entity declaration, naming the file and the name', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
@@ -830,7 +948,7 @@ describe('vendoring', () => {
     await expect(build).rejects.toThrow(/entities\/wizard\.json.*wiz\.ard/s)
   })
 
-  it('rewrites the consumer’s composed reference — prefix.name — to the vendored entity\u2019s id', async () => {
+  it('rewrites the consumer’s composed reference — prefix.name — to the vendored entity’s id', async () => {
     const workspace = await vendoringWorkspace({
       'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
       'packages/pack-1/resource_pack/entity/skin.json': clientEntity('lib.minion'),

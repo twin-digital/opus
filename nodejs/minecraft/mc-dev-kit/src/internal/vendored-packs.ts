@@ -29,10 +29,20 @@ export interface VendoredPack {
   dependencies: string[]
   /** the package's own `minecraft.vendor` field: the tokens its source writes for its suppliers */
   vendorField: VendorConfig
+  /** the `minecraft.defaultAlias` the package ships — the default token others get for it */
+  defaultAlias?: string
 }
 
 /** The `minecraft.vendor` package.json field: per-dependency tokens, keyed by npm package name. */
 export type VendorConfig = Record<string, { prefix?: string } | undefined>
+
+/** The `minecraft.defaultAlias` a package ships: the default token others get for it. */
+export function defaultAliasOf(packageJson: unknown): string | undefined {
+  if (!isRecord(packageJson) || !isRecord(packageJson.minecraft)) {
+    return undefined
+  }
+  return typeof packageJson.minecraft.defaultAlias === 'string' ? packageJson.minecraft.defaultAlias : undefined
+}
 
 /** The parsed `minecraft.vendor` field of a `package.json`, empty where absent or malformed. */
 export function vendorField(packageJson: unknown): VendorConfig {
@@ -141,6 +151,7 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
         halves,
         dependencies,
         vendorField: vendorField(packageJson),
+        defaultAlias: defaultAliasOf(packageJson),
       })
     }
 
@@ -164,10 +175,17 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
 
   const byPrefix = new Map<string, VendoredPack>()
   for (const pack of merged) {
+    const explicit = vendor[pack.name]?.prefix
     try {
-      pack.prefix = resolvePrefix(pack.name, vendor[pack.name]?.prefix)
+      // an explicit entry wins; the dependency's shipped defaultAlias beats the unscoped name
+      pack.prefix = resolvePrefix(pack.name, explicit ?? pack.defaultAlias)
     } catch (error) {
-      problems.push(error instanceof Error ? error.message : String(error))
+      const reason = error instanceof Error ? error.message : String(error)
+      problems.push(
+        explicit === undefined && pack.defaultAlias !== undefined ?
+          `the defaultAlias ${JSON.stringify(pack.defaultAlias)} shipped by ${pack.name} is invalid — ${reason} — set an explicit prefix for ${pack.name} in the minecraft.vendor field`
+        : reason,
+      )
       continue
     }
     const holder = byPrefix.get(pack.prefix)
@@ -195,6 +213,8 @@ export interface LibraryContext {
   dependencies: string[]
   /** the package's own `minecraft.vendor` field */
   vendorField: VendorConfig
+  /** the package's own shipped `minecraft.defaultAlias`, validated at its own build */
+  defaultAlias?: string
   /** the located direct suppliers holding vendored packs */
   suppliers: VendoredPack[]
   /** direct dependencies that could not be located at all */
@@ -246,6 +266,7 @@ export async function locateLibraryContext(options: {
       halves: supplierHalves,
       dependencies: dependencyNames(supplierJson),
       vendorField: vendorField(supplierJson),
+      defaultAlias: defaultAliasOf(supplierJson),
     })
   }
 
@@ -255,6 +276,7 @@ export async function locateLibraryContext(options: {
     vendoredDir: path.join((await realDirectory(options.packageDir)) ?? options.packageDir, 'vendored_pack'),
     dependencies,
     vendorField: vendorField(packageJson),
+    defaultAlias: defaultAliasOf(packageJson),
     suppliers,
     unlocated,
   }
