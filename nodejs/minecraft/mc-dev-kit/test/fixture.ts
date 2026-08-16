@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { build } from 'tsdown'
 import { onTestFinished } from 'vitest'
-import { packBuild } from '../src/build.js'
+import { packBuild, type PackBuildOptions } from '../src/build.js'
 import type { CandidatePackage, WorkingEntry } from '../src/internal/candidate.js'
 import type { PackKind } from '../src/types.js'
 
@@ -36,8 +36,11 @@ export async function writeWorkspace(files: Record<string, FixtureFile>): Promis
  * configuration would. No config file is loaded and the bundler is silent, so the case sees only
  * what the build wrote.
  */
-export async function buildPackage(packageDir: string): Promise<void> {
-  await build({ ...packBuild({ packageDir }), config: false, logLevel: 'silent' })
+export async function buildPackage(
+  packageDir: string,
+  options: Omit<PackBuildOptions, 'packageDir'> = {},
+): Promise<void> {
+  await build({ ...packBuild({ packageDir, ...options }), config: false, logLevel: 'silent' })
 }
 
 /** Every file under `dir` as a sorted POSIX path relative to it; empty where the directory is absent. */

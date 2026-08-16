@@ -1,12 +1,17 @@
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, realpath } from 'node:fs/promises'
 import path from 'node:path'
 import type { Rolldown } from 'tsdown'
 import { discoverPacks } from '../discover-packs.js'
-import type { PackEntry, ValidPackEntry } from '../types.js'
+import type { PackEntry, PackKind, ValidPackEntry } from '../types.js'
 import { resolveWorkspaceRoot } from '../workspace-root.js'
 import { bytesMatch, listFiles, pruneTree, writeIfChanged } from './build-outputs.js'
+import { INJECTION_GLOBAL, packageToken } from './formats.js'
 import { messageOf } from './json.js'
+import { planMerge } from './merge-plan.js'
+import { resolveNamespace } from './namespace.js'
+import { validateVendoredLibrary } from './merge-plan.js'
+import { findVendoredPacks, locateLibraryContext, type LibraryContext, type VendoredPack } from './vendored-packs.js'
 
 /** The one plugin the fragment carries. */
 export type BuildPlugin = Rolldown.Plugin
@@ -31,8 +36,16 @@ export const PACK_ENTRY = 'mc-dev-kit:pack-entry'
 /** The resolved id the virtual entry loads under. */
 export const RESOLVED_PACK_ENTRY = `\0${PACK_ENTRY}`
 
+/** The engine-side runtime package, whose import a vendored library's modules get prefix-bound. */
+export const RUNTIME_PACKAGE = '@twin-digital/mc-pack-runtime'
+
+/** The virtual-module id prefix of the prefix-bound runtime; prefix and target follow, encoded. */
+const PREFIXED_RUNTIME = '\0mc-dev-kit:prefixed-runtime:'
+
 /** Options the fragment hands the plugin. */
 export interface PackBuildPluginOptions {
+  /** the namespace setting as the consumer wrote it; resolved against the package name at buildStart */
+  namespace?: boolean | string
   /** the absolute path of the package directory the build is for */
   packageDir: string
   /** whether the configuration named the virtual entry rather than the script sources */
@@ -45,6 +58,18 @@ interface BuildState {
   externals: Set<string>
   /** absolute paths this build is entitled to leave in the output tree */
   claimed: Set<string>
+  /** the resolved namespace, or `undefined` when namespacing is off */
+  namespace?: string
+  /** the package's own name as a token, set exactly when `namespace` is */
+  packToken?: string
+  /** the vendored packs that merge into this package's own packs */
+  vendored: VendoredPack[]
+  /** vendored packs the walk reaches that nothing admitted, read for diagnosis only */
+  unmerged: VendoredPack[]
+  /** the package's own vendored tree, validated at its own build where present */
+  library?: LibraryContext
+  /** true where the package holds only a vendored tree: validate, emit nothing */
+  libraryOnly: boolean
 }
 
 /**
@@ -58,10 +83,17 @@ interface BuildState {
  * - `buildStart` also registers the extra watch inputs: the pack source directories, the source
  *   manifests, this package's `package.json`, and the `package.json` of each workspace package a
  *   pack depends on.
+ * - `buildStart` resolves the namespace setting against the package's own name and walks the
+ *   package's `dependencies` for vendored packs; vendoring without a namespace, and vendoring a
+ *   kind the package holds no pack of, each fails the build there.
+ * - `renderChunk` assigns the namespace and pack token onto `globalThis` ahead of the bundle's
+ *   module code, so the runtime package's helpers read them with nothing passed per call.
  * - `generateBundle` drops any chunk whose bytes already sit at its output path, so the bundler
  *   rewrites nothing that did not change.
  * - `writeBundle` writes the completed manifests and copies every other pack file, each only where
- *   its bytes differ, then prunes the output the build did not write.
+ *   its bytes differ, then prunes the output the build did not write. With namespacing on, the
+ *   copy runs through the merge plan instead: every declared name rewritten, vendored halves
+ *   merged in, and the claim entity type added.
  */
 export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
   const packageDir = path.resolve(options.packageDir)
@@ -77,22 +109,36 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     async buildStart() {
       state = emptyState()
 
-      if (options.virtualEntry && existsSync(scriptSource)) {
-        throw new Error(
-          `the build was configured with no entry but ${SCRIPT_SOURCE} is on disk in ${packageDir}: the configuration was read before those sources existed, so re-run the build`,
-        )
-      }
-
       const workspace = await resolveWorkspaceRoot({ from: packageDir })
       if (workspace === undefined) {
         throw new Error(`no workspace root above ${packageDir}: no ancestor declares a pnpm or npm workspace`)
       }
 
+      state.library = await locateLibraryContext({ packageDir, workspaceRoot: workspace.root })
+
       const all = await readPackSet(workspace.root)
       const mine = all.filter((pack) => path.resolve(workspace.root, pack.packageDir) === packageDir)
 
       if (mine.length === 0) {
-        throw new Error(`no pack found in ${packageDir}: it holds neither behavior_pack nor resource_pack`)
+        // a package holding only a vendored tree validates and emits nothing
+        if (state.library !== undefined) {
+          state.libraryOnly = true
+          this.addWatchFile(path.join(packageDir, 'package.json'))
+          this.addWatchFile(state.library.vendoredDir)
+          for (const supplier of state.library.suppliers) {
+            this.addWatchFile(supplier.vendoredDir)
+          }
+          return
+        }
+        throw new Error(
+          `no pack found in ${packageDir}: it holds neither behavior_pack, resource_pack, nor vendored_pack`,
+        )
+      }
+
+      if (options.virtualEntry && existsSync(scriptSource)) {
+        throw new Error(
+          `the build was configured with no entry but ${SCRIPT_SOURCE} is on disk in ${packageDir}: the configuration was read before those sources existed, so re-run the build`,
+        )
       }
 
       const invalid = mine.filter((pack) => pack.status === 'invalid')
@@ -113,11 +159,43 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
         state.claimed.add(scriptOutput)
       }
 
+      const packageName = packs[0].packageName
+      state.namespace = resolveNamespace(options.namespace, packageName)
+      state.packToken = state.namespace === undefined ? undefined : packageToken(packageName)
+
+      const vendoredSet = await findVendoredPacks({ packageDir, workspaceRoot: workspace.root })
+      if (vendoredSet.problems.length > 0) {
+        throw new Error(
+          `the vendoring configuration does not resolve:\n${vendoredSet.problems.map((line) => `  ${line}`).join('\n')}`,
+        )
+      }
+      state.vendored = vendoredSet.merged
+      state.unmerged = vendoredSet.unmerged
+
+      if (state.vendored.length > 0 && state.namespace === undefined) {
+        const names = state.vendored.map((pack) => pack.name).join(', ')
+        throw new Error(
+          `the package vendors the pack of ${names}, and vendored content needs a namespace: set the namespace option of packBuild`,
+        )
+      }
+
+      for (const kind of vendoredKinds(state.vendored)) {
+        if (!packs.some((pack) => pack.kind === kind)) {
+          const directory = kind === 'behavior' ? 'behavior_pack' : 'resource_pack'
+          throw new Error(
+            `the package vendors ${kind} pack content but declares no ${kind} pack of its own: add ${directory}/manifest.json to ${packageDir}`,
+          )
+        }
+      }
+
       state.packs = packs
       state.externals = moduleDependencies(packs)
 
       for (const input of watchInputs(workspace.root, packageDir, packs, all)) {
         this.addWatchFile(input)
+      }
+      for (const pack of state.vendored) {
+        this.addWatchFile(pack.vendoredDir)
       }
     },
 
@@ -128,6 +206,19 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       if (state.externals.has(id)) {
         return { id, external: true }
       }
+
+      // a vendored library's modules get the runtime with packId bound to the library's prefix,
+      // so its compiled-in calls — computed names included — land in its own entity cell
+      if (id === RUNTIME_PACKAGE && state.namespace !== undefined && importer !== undefined) {
+        const owner = await owningVendoredPack(state.vendored, importer)
+        if (owner !== undefined) {
+          const resolved = await this.resolve(id, importer, { ...extra, skipSelf: true })
+          if (resolved !== null) {
+            return `${PREFIXED_RUNTIME}${encodeURIComponent(owner.prefix)}:${encodeURIComponent(resolved.id)}`
+          }
+        }
+      }
+
       if (!id.startsWith('@minecraft/')) {
         return null
       }
@@ -143,10 +234,46 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     load(id: string) {
-      return id === RESOLVED_PACK_ENTRY ? 'export {}\n' : null
+      if (id === RESOLVED_PACK_ENTRY) {
+        return 'export {}\n'
+      }
+      if (id.startsWith(PREFIXED_RUNTIME)) {
+        const [prefix, target] = id
+          .slice(PREFIXED_RUNTIME.length)
+          .split(':')
+          .map((part) => decodeURIComponent(part))
+        const specifier = JSON.stringify(target)
+        return [
+          `export * from ${specifier}`,
+          `import { packId as __mcdkPackId } from ${specifier}`,
+          `export const packId = (name) => __mcdkPackId(${JSON.stringify(`${prefix}.`)} + name)`,
+          '',
+        ].join('\n')
+      }
+      return null
+    },
+
+    renderChunk(code) {
+      if (state.namespace === undefined) {
+        return null
+      }
+      const prefixes = JSON.stringify(state.vendored.map((pack) => pack.prefix).sort())
+      const fields = [
+        `namespace: ${JSON.stringify(state.namespace)}`,
+        `packToken: ${JSON.stringify(state.packToken)}`,
+        `prefixes: Object.freeze(${prefixes})`,
+      ].join(', ')
+      return `globalThis.${INJECTION_GLOBAL} = Object.freeze({ ${fields} });\n${code}`
     },
 
     async generateBundle(outputOptions, bundle) {
+      // a library-only package emits nothing: the bundler's chunk never reaches disk
+      if (state.libraryOnly) {
+        for (const fileName of Object.keys(bundle)) {
+          Reflect.deleteProperty(bundle, fileName)
+        }
+        return
+      }
       const dir = outputOptions.dir ?? path.dirname(scriptOutput)
 
       for (const [fileName, file] of Object.entries(bundle)) {
@@ -158,8 +285,36 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     async writeBundle() {
-      for (const pack of state.packs) {
-        await writePack(packageDir, pack, state.claimed)
+      if (state.library !== undefined) {
+        await validateVendoredLibrary(state.library)
+      }
+      if (state.libraryOnly) {
+        return
+      }
+      if (state.namespace === undefined) {
+        for (const pack of state.packs) {
+          await writePack(packageDir, pack, state.claimed)
+        }
+      } else {
+        for (const pack of state.packs) {
+          await writeManifest(packageDir, pack, state.claimed)
+        }
+        const plan = await planMerge({
+          namespace: state.namespace,
+          packToken: state.packToken as string,
+          packs: state.packs.map((pack) => ({
+            kind: pack.kind,
+            sourceDir: path.join(packageDir, path.basename(pack.sourceDir)),
+            outputBase: path.basename(pack.outputDir),
+          })),
+          vendored: state.vendored,
+          unmerged: state.unmerged,
+        })
+        for (const [relative, contents] of plan) {
+          const target = path.join(outputRoot, relative)
+          state.claimed.add(target)
+          await writeIfChanged(target, contents)
+        }
       }
       await pruneTree(outputRoot, state.claimed)
     },
@@ -168,7 +323,32 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
 
 /** A build's state before `buildStart` has read anything. */
 function emptyState(): BuildState {
-  return { packs: [], externals: new Set(), claimed: new Set() }
+  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [], unmerged: [], libraryOnly: false }
+}
+
+/** The merged vendored pack whose package directory holds `importer`, if any. */
+async function owningVendoredPack(
+  vendored: readonly VendoredPack[],
+  importer: string,
+): Promise<VendoredPack | undefined> {
+  let real: string
+  try {
+    real = await realpath(importer)
+  } catch {
+    return undefined
+  }
+  return vendored.find((pack) => real.startsWith(`${pack.packageDir}${path.sep}`))
+}
+
+/** The kinds the vendored packs contribute, each of which needs an own pack to merge into. */
+function vendoredKinds(vendored: readonly VendoredPack[]): Set<PackKind> {
+  const kinds = new Set<PackKind>()
+  for (const pack of vendored) {
+    for (const half of pack.halves) {
+      kinds.add(half.kind)
+    }
+  }
+  return kinds
 }
 
 /**
@@ -279,9 +459,7 @@ async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<
   const sourceDir = path.join(packageDir, path.basename(pack.sourceDir))
   const outputDir = path.join(packageDir, OUTPUT_ROOT, path.basename(pack.outputDir))
 
-  const manifest = path.join(outputDir, 'manifest.json')
-  claimed.add(manifest)
-  await writeIfChanged(manifest, Buffer.from(`${JSON.stringify(pack.manifest, null, 2)}\n`))
+  await writeManifest(packageDir, pack, claimed)
 
   for (const file of await listFiles(sourceDir)) {
     const relative = path.relative(sourceDir, file)
@@ -292,4 +470,11 @@ async function writePack(packageDir: string, pack: ValidPackEntry, claimed: Set<
     claimed.add(target)
     await writeIfChanged(target, await readFile(file))
   }
+}
+
+/** Writes one pack's completed manifest, claiming its path. */
+async function writeManifest(packageDir: string, pack: ValidPackEntry, claimed: Set<string>): Promise<void> {
+  const manifest = path.join(packageDir, OUTPUT_ROOT, path.basename(pack.outputDir), 'manifest.json')
+  claimed.add(manifest)
+  await writeIfChanged(manifest, Buffer.from(`${JSON.stringify(pack.manifest, null, 2)}\n`))
 }

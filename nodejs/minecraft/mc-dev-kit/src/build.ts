@@ -7,6 +7,27 @@ import { PACK_ENTRY, SCRIPT_SOURCE, packBuildPlugin } from './internal/pack-buil
 export interface PackBuildOptions {
   /** the filesystem path of the package directory the build is for */
   packageDir: string
+  /**
+   * Turns namespacing on: every identifier the package's packs declare is built carrying the
+   * namespace, written into no name by hand. `true` derives the namespace from the package's own
+   * name — the `@` dropped and the `/` a hyphen — and a string names one directly. A namespace
+   * holds only lowercase letters, digits, underscore, hyphen and dot; anything else fails the
+   * build naming the character. Left unset, nothing is namespaced and names reach the output as
+   * the source spells them — unless the package vendors anything, which needs a namespace and
+   * fails the build without one.
+   *
+   * Entity identifiers and the localization keys derived from them carry the namespace, and so
+   * does every other name the package itself declares — geometry, textures, materials, render
+   * controllers, animations, animation controllers — as the token written into the name's own
+   * structure. A vendored asset's names carry the vendored library's token plus a content hash
+   * instead, so an identical name always means identical bytes.
+   * Script sources are never rewritten: code spells identifiers through
+   * `@twin-digital/mc-pack-runtime`'s `packId`, which reads the namespace the build injects into
+   * the bundle. A namespace chosen by hand is conventionally claimed at the Bedrock-OSS add-on
+   * registry (https://github.com/Bedrock-OSS/add-on-registry); the build neither reads the
+   * registry nor requires an entry in it.
+   */
+  namespace?: boolean | string
 }
 
 /**
@@ -17,6 +38,22 @@ export interface PackBuildOptions {
  * package's packs from the kit's pack set, completes their manifests, copies their assets, and
  * prunes output the build did not write. The bundler writes the script bundle and the plugin
  * writes everything else, so a finished build loads as it stands with nothing further to do.
+ *
+ * With `namespace` set, the plugin also rewrites every name the packs declare, merges the
+ * `vendored_pack/` content of the package's dependencies into its own packs, injects the
+ * namespace into the bundle for `@twin-digital/mc-pack-runtime` to read, stamps a type family on
+ * every declared entity type, and adds the pack's claim entity type. Vendoring is configured by
+ * the `minecraft.vendor` package.json field, not a build option — the tokens a package writes
+ * for its dependencies' content ship with the package, serving its consumers and its own build
+ * alike:
+ *
+ * ```jsonc
+ * { "minecraft": { "vendor": { "@rpg-libs/spell-fx": { "prefix": "fx" } } } }
+ * ```
+ *
+ * A package holding a `vendored_pack/` tree has that tree validated by its own build — content
+ * kinds, references, and its own tokens — and a package holding only a vendored tree validates
+ * and emits nothing.
  *
  * Every setting the build depends on is set here rather than inherited, so the fragment behaves
  * the same merged over a shared base as it does alone. `target` is `es2022` and `platform` is
@@ -59,7 +96,7 @@ export function packBuild(options: PackBuildOptions): UserConfig {
     outDir: path.join(packageDir, 'dist', 'behavior_pack', 'scripts'),
     outputOptions: { entryFileNames: 'main.js' },
     platform: 'neutral',
-    plugins: [packBuildPlugin({ packageDir, virtualEntry })],
+    plugins: [packBuildPlugin({ namespace: options.namespace, packageDir, virtualEntry })],
     shims: false,
     sourcemap: false,
     target: 'es2022',

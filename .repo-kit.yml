@@ -41,6 +41,11 @@ packages:
     # so the generated `./*` subpath exports would offer every internal module as one.
     rules:
       package-manifest: false
+  '@twin-digital/mc-pack-runtime':
+    # One public entry point with no subpath wildcard, by ruling (mc-dev-kit r-l4e55kqu): the
+    # generated `./*` subpath exports would contradict the published surface.
+    rules:
+      package-manifest: false
   '@twin-digital/rpg-core':
     # One public entry point by design: an adventure reaches the presets, the spawn call, and the
     # handle from the package root, so the generated `./*` subpath exports would contradict the

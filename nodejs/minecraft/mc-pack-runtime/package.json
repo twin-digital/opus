@@ -1,7 +1,7 @@
 {
-  "name": "@twin-digital/mc-dev-kit",
-  "version": "0.3.1",
-  "description": "Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.",
+  "name": "@twin-digital/mc-pack-runtime",
+  "version": "0.1.0",
+  "description": "Engine-side runtime for packs built with @twin-digital/mc-dev-kit: the pack-identifier helper, checked entity calls, and the namespace-claim report.",
   "license": "ISC",
   "type": "module",
   "exports": {
@@ -11,29 +11,9 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
       }
-    },
-    "./index": null,
-    "./index.js": null,
-    "./*": {
-      "import": {
-        "source": "./src/*.ts",
-        "types": "./dist/*.d.ts",
-        "import": "./dist/*.js"
-      }
-    },
-    "./build": {
-      "import": {
-        "source": "./src/build.ts",
-        "types": "./dist/build.d.ts",
-        "import": "./dist/build.js"
-      }
     }
   },
-  "bin": {
-    "mc-pack-archive": "./bin/mc-pack-archive.js"
-  },
   "files": [
-    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],
@@ -47,24 +27,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@npmcli/map-workspaces": "^6.0.0",
-    "@pnpm/workspace.find-packages": "^1000.0.65",
-    "@pnpm/workspace.read-manifest": "^1000.1.7",
-    "@twin-digital/mc-pack-runtime": "workspace:*",
-    "adm-zip": "^0.6.0",
-    "semver": "^7.7.3",
-    "yaml": "catalog:"
+    "@minecraft/server": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/minecraft-test-lib": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/tsdown-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
-    "@types/adm-zip": "^0.5.7",
     "@types/node": "catalog:",
-    "@types/semver": "^7.7.1",
     "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",

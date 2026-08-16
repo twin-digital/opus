@@ -128,6 +128,19 @@ describe('discoverPacks', () => {
     expect(found(await discoverPacks({ workspace }))).toEqual(['behavior_pack'])
   })
 
+  it('yields no entry for a package holding only a vendored_pack tree', async () => {
+    const workspace = await writeWorkspace({
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'package.json': { name: 'ws-root', version: '1.0.0' },
+      'packages/shared/package.json': { name: '@scope/shared', version: '1.0.0' },
+      'packages/shared/vendored_pack/behavior_pack/entities/wizard.json': '{}\n',
+      'packages/holder/package.json': { name: '@scope/holder', version: '1.0.0' },
+      'packages/holder/behavior_pack/manifest.json': packManifest('behavior', { header: { uuid: 'holder' } }),
+    })
+
+    expect(found(await discoverPacks({ workspace }))).toEqual(['packages/holder/behavior_pack'])
+  })
+
   describe('the workspace option', () => {
     const originalCwd = process.cwd()
     afterEach(() => {

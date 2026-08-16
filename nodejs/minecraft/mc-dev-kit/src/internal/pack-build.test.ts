@@ -1,9 +1,12 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import AdmZip from 'adm-zip'
 import { build } from 'tsdown'
 import { describe, expect, it } from 'vitest'
 import { buildPackage, listTree, packManifest, writeWorkspace, type FixtureFile } from '../../test/fixture.js'
 import { packBuild } from '../build.js'
+import { archivePackage } from './archive.js'
 import { packBuildPlugin, type BuildPlugin } from './pack-build-plugin.js'
 
 /** A workspace holding one pack package, plus whatever the case adds. */
@@ -334,6 +337,1489 @@ describe('the plugin builds the package', () => {
         path.join(packageDir, 'resource_pack/manifest.json'),
         path.join(workspace, 'packages/library/package.json'),
       ].sort(),
+    )
+  })
+})
+
+// increment 011: namespacing and vendoring. The package name is @scope/pack-1, so `true` resolves
+// the namespace to scope-pack-1; the package's own asset names carry that namespace as their
+// token, and a vendored asset's names carry its library's token plus a 16-hex content hash.
+const NS = 'scope-pack-1'
+
+/** A behavior entity definition declaring `identifier`, plus whatever the case overrides. */
+function behaviorEntity(identifier: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    format_version: '1.16.0',
+    'minecraft:entity': { description: { identifier }, components: {}, ...overrides },
+  }
+}
+
+/** A client entity definition declaring `identifier`, plus whatever description the case adds. */
+function clientEntity(identifier: string, description: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    format_version: '1.10.0',
+    'minecraft:client_entity': { description: { identifier, ...description } },
+  }
+}
+
+/** A parsed JSON file of the built output tree. */
+async function builtJson(packageDir: string, relative: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(path.join(packageDir, 'dist', relative), 'utf8')) as Record<string, unknown>
+}
+
+/** A vendored library package: `@scope/<basename>` holding one behavior entity, unbuilt. */
+function vendoredLibrary(
+  basename: string,
+  entity: string,
+  packageJson: Record<string, unknown> = {},
+): Record<string, FixtureFile> {
+  return {
+    [`packages/${basename}/package.json`]: { name: `@scope/${basename}`, version: '1.0.0', ...packageJson },
+    [`packages/${basename}/vendored_pack/behavior_pack/entities/${entity}.json`]: behaviorEntity(entity),
+  }
+}
+
+describe('the namespace setting', () => {
+  it('fails the build naming the dependency when the package vendors anything and no namespace is set', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      ...vendoredLibrary('lib', 'minion'),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/pack-1'))).rejects.toThrow(/@scope\/lib/)
+  })
+
+  it('leaves every name as the source spells it when no namespace is set and nothing is vendored', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir)
+
+    expect(await readFile(path.join(packageDir, 'dist/behavior_pack/entities/wizard.json'), 'utf8')).toBe(
+      await readFile(path.join(packageDir, 'behavior_pack/entities/wizard.json'), 'utf8'),
+    )
+  })
+
+  it('writes the namespace into a bare entity identifier, in the behavior and client halves alike', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const behavior = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    expect(behavior['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:wizard` } })
+    expect(client['minecraft:client_entity']).toMatchObject({ description: { identifier: `${NS}:wizard` } })
+  })
+
+  it('fails the build naming the file and the name when a source name already carries a prefix', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('other:wizard'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/entities\/wizard\.json.*other:wizard/s)
+  })
+
+  it('does not rewrite script sources', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/src/main.ts': "export const bare = 'wizard'\n",
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const bundle = await readFile(path.join(packageDir, 'dist/behavior_pack/scripts/main.js'), 'utf8')
+    expect(bundle).toContain('"wizard"')
+    expect(bundle).not.toContain(`${NS}:wizard`)
+  })
+})
+
+describe('what is rewritten', () => {
+  it('rewrites a declared name and every reference to it, so the two halves still join', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.wizard' },
+      }),
+      'packages/pack-1/resource_pack/models/wizard.geo.json': {
+        format_version: '1.12.0',
+        'minecraft:geometry': [{ description: { identifier: 'geometry.wizard' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const behavior = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    const geometry = await builtJson(packageDir, 'resource_pack/models/wizard.geo.json')
+
+    // the halves join on one namespaced identifier, and the geometry reference follows its declaration
+    expect(behavior['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:wizard` } })
+    expect(client['minecraft:client_entity']).toMatchObject({
+      description: { identifier: `${NS}:wizard`, geometry: { default: `geometry.${NS}.wizard` } },
+    })
+    expect(geometry['minecraft:geometry']).toMatchObject([{ description: { identifier: `geometry.${NS}.wizard` } }])
+  })
+
+  it('copies a reference to a name the package declares nowhere — vanilla geometry, say — as written', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.evoker.v1.8' },
+        textures: { default: 'textures/entity/evocation_illager' },
+        materials: { default: 'entity_alphatest' },
+      }),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    expect(client['minecraft:client_entity']).toMatchObject({
+      description: {
+        geometry: { default: 'geometry.evoker.v1.8' },
+        textures: { default: 'textures/entity/evocation_illager' },
+        materials: { default: 'entity_alphatest' },
+      },
+    })
+  })
+
+  it('gives entity identifiers and their localization keys the namespace', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/texts/en_US.lang':
+        'pack.name=My Pack\nentity.wizard.name=The Wizard\nitem.spawn_egg.entity.wizard.name=Wizard Egg\n',
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const lang = await readFile(path.join(packageDir, 'dist/resource_pack/texts/en_US.lang'), 'utf8')
+    expect(lang).toContain('pack.name=My Pack')
+    expect(lang).toContain(`entity.${NS}:wizard.name=The Wizard`)
+    expect(lang).toContain(`item.spawn_egg.entity.${NS}:wizard.name=Wizard Egg`)
+    expect(lang).not.toContain('entity.wizard.name')
+  })
+
+  it('gives own geometry, textures, materials, render controllers and animations the pack namespace as their token', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.wizard' },
+        textures: { default: 'textures/entity/wizard' },
+        materials: { default: 'wizard' },
+        animations: { idle: 'animation.wizard.idle' },
+        render_controllers: ['controller.render.wizard'],
+      }),
+      'packages/pack-1/resource_pack/models/wizard.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.wizard' } }],
+      },
+      'packages/pack-1/resource_pack/textures/entity/wizard.png': 'png bytes',
+      'packages/pack-1/resource_pack/materials/wizard.material': {
+        materials: { version: '1.0.0', 'wizard:entity_alphatest': {} },
+      },
+      'packages/pack-1/resource_pack/render_controllers/wizard.json': {
+        render_controllers: { 'controller.render.wizard': {} },
+      },
+      'packages/pack-1/resource_pack/animations/wizard.json': {
+        animations: { 'animation.wizard.idle': {} },
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    expect(client['minecraft:client_entity']).toMatchObject({
+      description: {
+        geometry: { default: `geometry.${NS}.wizard` },
+        textures: { default: `textures/${NS}/entity/wizard` },
+        materials: { default: `${NS}_wizard` },
+        animations: { idle: `animation.${NS}.wizard.idle` },
+        render_controllers: [`controller.render.${NS}.wizard`],
+      },
+    })
+
+    const material = await builtJson(packageDir, 'resource_pack/materials/wizard.material')
+    expect(material.materials).toMatchObject({ [`${NS}_wizard:entity_alphatest`]: {} })
+
+    const controllers = await builtJson(packageDir, 'resource_pack/render_controllers/wizard.json')
+    expect(controllers.render_controllers).toMatchObject({ [`controller.render.${NS}.wizard`]: {} })
+
+    const animations = await builtJson(packageDir, 'resource_pack/animations/wizard.json')
+    expect(animations.animations).toMatchObject({ [`animation.${NS}.wizard.idle`]: {} })
+
+    const tree = await listTree(path.join(packageDir, 'dist/resource_pack/textures'))
+    expect(tree).toEqual([`${NS}/entity/wizard.png`])
+  })
+
+  it('fails the build naming what it found when content declares a name it cannot rewrite', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/behavior_pack/functions/tick.mcfunction': 'say hi\n',
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/functions\/tick\.mcfunction/)
+  })
+})
+
+describe('vendoring', () => {
+  /** A workspace whose pack-1 vendors @scope/lib, which holds both halves of a minion. */
+  async function vendoringWorkspace(files: Record<string, FixtureFile> = {}): Promise<string> {
+    return workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion'),
+      ...files,
+    })
+  }
+
+  it('merges a dependency’s vendored_pack into this package’s own packs, under its namespace and uuid', async () => {
+    const workspace = await vendoringWorkspace()
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const behavior = await builtJson(packageDir, 'behavior_pack/entities/scope-lib.minion.json')
+    const client = await builtJson(packageDir, 'resource_pack/entity/scope-lib.minion.json')
+    // the default prefix is the dependency's unscoped npm name: @scope/lib vendors as lib.*
+    expect(behavior['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:lib.minion` } })
+    expect(client['minecraft:client_entity']).toMatchObject({ description: { identifier: `${NS}:lib.minion` } })
+
+    // the merged output carries the vendoring package's own identity, not the library's
+    const manifest = await builtJson(packageDir, 'behavior_pack/manifest.json')
+    expect(manifest.header).toMatchObject({ uuid: '11111111-1111-1111-1111-111111111111' })
+  })
+
+  it('builds one behavior pack and one resource pack whatever the package vendors', async () => {
+    const workspace = await vendoringWorkspace()
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const roots = new Set((await listTree(path.join(packageDir, 'dist'))).map((file) => file.split('/')[0]))
+    expect([...roots].sort()).toEqual(['behavior_pack', 'resource_pack'])
+  })
+
+  it('fails naming the manifest to add when the package holds no source manifest of a vendored kind', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/resource_pack\/manifest\.json/)
+  })
+
+  it('reads the vendored source tree without the depended-on package having been built', async () => {
+    const workspace = await vendoringWorkspace()
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    expect(await listTree(path.join(workspace, 'packages/lib/dist'))).toEqual([])
+    expect(await listTree(path.join(packageDir, 'dist/behavior_pack/entities'))).toContain('scope-lib.minion.json')
+  })
+
+  it('merges own dependencies only — no devDependency, and no transitive supplier nothing admitted', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        devDependencies: { '@scope/lib-c': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      ...vendoredLibrary('lib-a', 'soldier', { dependencies: { '@scope/lib-b': 'workspace:*' } }),
+      ...vendoredLibrary('lib-b', 'archer'),
+      ...vendoredLibrary('lib-c', 'spy'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const entities = await listTree(path.join(packageDir, 'dist/behavior_pack/entities'))
+    expect(entities).toContain('scope-lib-a.soldier.json')
+    expect(entities.join(' ')).not.toContain('archer')
+    expect(entities.join(' ')).not.toContain('spy')
+  })
+
+  it('admits a transitive supplier through the minecraft.vendor field, without a direct dependency', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      ...vendoredLibrary('lib-a', 'soldier', { dependencies: { '@scope/lib-b': 'workspace:*' } }),
+      ...vendoredLibrary('lib-b', 'archer'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const archer = await builtJson(packageDir, 'behavior_pack/entities/scope-lib-b.archer.json')
+    expect(archer['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:lib-b.archer` } })
+  })
+
+  it('merges a diamond once — one package, one cell, however many paths reach it', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-c': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      ...vendoredLibrary('lib-a', 'soldier', { dependencies: { '@scope/lib-c': 'workspace:*' } }),
+      ...vendoredLibrary('lib-b', 'archer', { dependencies: { '@scope/lib-c': 'workspace:*' } }),
+      ...vendoredLibrary('lib-c', 'spark'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const entities = await listTree(path.join(packageDir, 'dist/behavior_pack/entities'))
+    expect(entities.filter((file) => file.includes('spark'))).toEqual(['scope-lib-c.spark.json'])
+    const spark = await builtJson(packageDir, 'behavior_pack/entities/scope-lib-c.spark.json')
+    expect(spark['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:lib-c.spark` } })
+  })
+
+  it('reads a vendored_pack from an installed dependency exactly as from a workspace sibling', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/installed-lib': '^1.0.0' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'node_modules/@scope/installed-lib/package.json': { name: '@scope/installed-lib', version: '1.0.0' },
+      'node_modules/@scope/installed-lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const merged = await builtJson(packageDir, 'behavior_pack/entities/scope-installed-lib.minion.json')
+    expect(merged['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:installed-lib.minion` } })
+  })
+
+  it('fails naming the file when a vendored pack holds a content kind outside the allowed set', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/lib/vendored_pack/behavior_pack/functions/tick.mcfunction': 'say hi\n',
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/lib\/vendored_pack\/behavior_pack\/functions\/tick\.mcfunction/)
+  })
+
+  it('gives own and vendored declarations of one bare entity name distinct composed ids', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const own = await builtJson(packageDir, 'behavior_pack/entities/minion.json')
+    const vendored = await builtJson(packageDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(own['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:minion` } })
+    expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:lib.minion` } })
+  })
+
+  it('fails the build naming both dependencies when two merged packs resolve to one prefix', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@one/lib': 'workspace:*', '@two/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/one-lib/package.json': { name: '@one/lib', version: '1.0.0' },
+      'packages/one-lib/vendored_pack/behavior_pack/entities/one.json': behaviorEntity('one'),
+      'packages/two-lib/package.json': { name: '@two/lib', version: '1.0.0' },
+      'packages/two-lib/vendored_pack/behavior_pack/entities/two.json': behaviorEntity('two'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/@one\/lib.*@two\/lib.*"lib".*minecraft\.vendor field/s)
+  })
+
+  it('fails the build naming the character when a prefix steps outside its charset', async () => {
+    const consumerJson = (prefix: string): Record<string, unknown> => ({
+      name: '@scope/pack-1',
+      version: '1.2.3',
+      dependencies: { '@scope/lib': 'workspace:*' },
+      minecraft: { vendor: { '@scope/lib': { prefix } } },
+    })
+
+    const dotted = await vendoringWorkspace({ 'packages/pack-1/package.json': consumerJson('f.x') })
+    await expect(buildPackage(path.join(dotted, 'packages/pack-1'), { namespace: true })).rejects.toThrow(/"\."/)
+
+    const cased = await vendoringWorkspace({ 'packages/pack-1/package.json': consumerJson('Fx') })
+    await expect(buildPackage(path.join(cased, 'packages/pack-1'), { namespace: true })).rejects.toThrow(/"F"/)
+  })
+
+  it('takes an explicit prefix from the shipped minecraft.vendor field', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib': { prefix: 'fx' } } },
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const vendored = await builtJson(packageDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:fx.minion` } })
+  })
+
+  it('honors a dependency’s shipped defaultAlias, with an explicit prefix overriding it', async () => {
+    // no consumer field entry: the shipped defaultAlias beats the unscoped name
+    const shipped = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+    })
+    const shippedDir = path.join(shipped, 'packages/pack-1')
+    await buildPackage(shippedDir, { namespace: true })
+    const vendored = await builtJson(shippedDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:fx.minion` } })
+
+    // an explicit entry always wins
+    const overridden = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib': { prefix: 'mx' } } },
+      },
+    })
+    const overriddenDir = path.join(overridden, 'packages/pack-1')
+    await buildPackage(overriddenDir, { namespace: true })
+    const explicit = await builtJson(overriddenDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(explicit['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:mx.minion` } })
+  })
+
+  it('gives a library the same default: its supplier’s shipped alias, unless its own field overrides', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.fx.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
+    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
+  })
+
+  it('fails an invalid defaultAlias at the library’s own build, and at a consumer’s naming the fix', async () => {
+    // the library's own build validates its whole minecraft field
+    const libraryBuild = await writeWorkspace({
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'package.json': { name: 'root', version: '0.0.0', private: true },
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'F.x' } },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    await expect(buildPackage(path.join(libraryBuild, 'packages/lib'))).rejects.toThrow(
+      /defaultAlias of @scope\/lib is invalid/,
+    )
+
+    // at a consumer's build the failure names the library and the safe fix: an explicit prefix
+    const consumerBuild = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'F.x' } },
+    })
+    await expect(buildPackage(path.join(consumerBuild, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /defaultAlias "F\.x" shipped by @scope\/lib is invalid.*set an explicit prefix for @scope\/lib in the minecraft\.vendor field/s,
+    )
+  })
+
+  it('fails two dependencies whose resolved defaults collide, with the explicit-prefix fix', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/one.json': behaviorEntity('one'),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0', minecraft: { defaultAlias: 'fx' } },
+      'packages/lib-b/vendored_pack/behavior_pack/entities/two.json': behaviorEntity('two'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/@scope\/lib-a.*@scope\/lib-b.*"fx".*minecraft\.vendor field/s)
+  })
+
+  it('fails a reference to a changed defaultAlias loudly, listing the resolved tokens — never rebinding', async () => {
+    // the library once shipped 'fx'; it now ships 'fx2', and the consumer's content still says fx
+    const workspace = await vendoringWorkspace({
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0', minecraft: { defaultAlias: 'fx2' } },
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/skin.json': clientEntity('fx.minion', {
+        geometry: { default: 'geometry.fx.minion' },
+      }),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/"fx", which is not a token of this pack's world.*fx2\.minion/s)
+    await expect(build).rejects.toThrow(/geometry\.fx2\.minion|fx2\.minion/)
+  })
+
+  it('fails a dotted bare entity declaration, naming the file and the name', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wiz.ard'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(/entities\/wizard\.json.*wiz\.ard/s)
+  })
+
+  it('rewrites the consumer’s composed reference — prefix.name — to the vendored entity’s id', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/skin.json': clientEntity('lib.minion'),
+      'packages/pack-1/resource_pack/texts/en_US.lang': 'entity.lib.minion.name=The Minion\n',
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const skin = await builtJson(packageDir, 'resource_pack/entity/skin.json')
+    expect(skin['minecraft:client_entity']).toMatchObject({ description: { identifier: `${NS}:lib.minion` } })
+    const lang = await readFile(path.join(packageDir, 'dist/resource_pack/texts/en_US.lang'), 'utf8')
+    expect(lang).toContain(`entity.${NS}:lib.minion.name=The Minion`)
+  })
+
+  it('fails a dangling reference, naming the un-merged supplier and the fix', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.core_shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/core.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.core_shape' } }],
+      },
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /soldier\.json.*geometry\.core_shape.*@scope\/lib-b.*add @scope\/lib-b to the consuming package's dependencies or its minecraft\.vendor field/s,
+    )
+  })
+
+  it('binds a qualified reference — the prefix in the qualifier position — to that dependency, per name kind', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard', {
+        description: { identifier: 'wizard', animations: { march: 'animation.lib.march' } },
+      }),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.lib.minion' },
+        textures: { default: 'textures/lib/entity/minion' },
+        materials: { default: 'lib.minionbase' },
+        animations: { idle: 'animation.lib.idle' },
+        render_controllers: ['controller.render.lib.minion'],
+      }),
+      'packages/pack-1/resource_pack/materials/own.material': {
+        materials: { version: '1.0.0', 'mymat:lib.minionbase': {} },
+      },
+      'packages/lib/vendored_pack/behavior_pack/animations/march.json': { animations: { 'animation.march': {} } },
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+      'packages/lib/vendored_pack/resource_pack/textures/entity/minion.png': 'png bytes',
+      'packages/lib/vendored_pack/resource_pack/materials/base.material': {
+        materials: { version: '1.0.0', minionbase: {} },
+      },
+      'packages/lib/vendored_pack/resource_pack/animations/idle.json': { animations: { 'animation.idle': {} } },
+      'packages/lib/vendored_pack/resource_pack/render_controllers/rc.json': {
+        render_controllers: { 'controller.render.minion': {} },
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    // the built output is unchanged by qualification: each reference lands on the vendored
+    // declaration's final hashed name, exactly as a bare reference would
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib.minion.geo.json')
+    const geometryFinal = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const base = await builtJson(packageDir, 'resource_pack/materials/scope-lib.base.material')
+    const baseFinal = Object.keys(base.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+    const idle = await builtJson(packageDir, 'resource_pack/animations/scope-lib.idle.json')
+    const idleFinal = Object.keys(idle.animations as Record<string, unknown>)[0]
+    const march = await builtJson(packageDir, 'behavior_pack/animations/scope-lib.march.json')
+    const marchFinal = Object.keys(march.animations as Record<string, unknown>)[0]
+    const controllers = await builtJson(packageDir, 'resource_pack/render_controllers/scope-lib.rc.json')
+    const controllerFinal = Object.keys(controllers.render_controllers as Record<string, unknown>)[0]
+    const textures = await listTree(path.join(packageDir, 'dist/resource_pack/textures'))
+    const textureFinal = textures[0].replace(/\.png$/u, '')
+
+    const client = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    expect(client['minecraft:client_entity']).toMatchObject({
+      description: {
+        geometry: { default: geometryFinal },
+        textures: { default: `textures/${textureFinal}` },
+        materials: { default: baseFinal },
+        animations: { idle: idleFinal },
+        render_controllers: [controllerFinal],
+      },
+    })
+    expect(geometryFinal).toMatch(/^geometry\.scope-lib-[0-9a-f]{16}\.minion$/)
+
+    const behavior = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    expect(behavior['minecraft:entity']).toMatchObject({ description: { animations: { march: marchFinal } } })
+
+    const own = await builtJson(packageDir, 'resource_pack/materials/own.material')
+    const ownKey = Object.keys(own.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+    expect(ownKey).toBe(`${NS}_mymat:${baseFinal}`)
+  })
+
+  it('fails a qualified reference whose named dependency declares no such asset', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.lib.nosuch' },
+      }),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /wizard\.json.*geometry\.lib\.nosuch.*@scope\/lib.*declares no asset geometry\.nosuch/s,
+    )
+  })
+
+  it('fails an own declaration sitting in the qualifier position of a merged prefix', async () => {
+    const dottedName = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/models/smoke.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.lib.smoke' } }],
+      },
+    })
+    await expect(buildPackage(path.join(dottedName, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /smoke\.geo\.json.*geometry\.lib\.smoke.*"lib".*different prefix in the minecraft\.vendor field/s,
+    )
+
+    const texturePath = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/textures/lib/entity/wizard.png': 'png bytes',
+    })
+    await expect(buildPackage(path.join(texturePath, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /textures\/lib\/entity\/wizard.*"lib".*different prefix in the minecraft\.vendor field/s,
+    )
+  })
+
+  it('names a vendored asset by its library token and content hash, deterministically across rebuilds', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const client = await builtJson(packageDir, 'resource_pack/entity/scope-lib.minion.json')
+    const description = (client['minecraft:client_entity'] as { description: { geometry: { default: string } } })
+      .description
+    const reference = description.geometry.default
+    expect(reference).toMatch(/^geometry\.scope-lib-[0-9a-f]{16}\.minion$/)
+
+    // the declaration carries the same final name, so the reference still lands
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib.minion.geo.json')
+    expect(geometry['minecraft:geometry']).toMatchObject([{ description: { identifier: reference } }])
+
+    // rebuilding produces the identical name: the hash reads content, nothing run-specific
+    await buildPackage(packageDir, { namespace: true })
+    const again = await builtJson(packageDir, 'resource_pack/entity/scope-lib.minion.json')
+    expect(again).toEqual(client)
+  })
+
+  it('lets two vendorings declare one bare asset name, each built under its own token', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib-a/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['a'] }],
+      },
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/behavior_pack/entities/archer.json': behaviorEntity('archer'),
+      'packages/lib-b/vendored_pack/resource_pack/entity/archer.json': clientEntity('archer', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib-b/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['b'] }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    // each vendored reference resolved within its own source, under its own token and hash
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    const archer = await builtJson(packageDir, 'resource_pack/entity/scope-lib-b.archer.json')
+    const soldierGeometry = (soldier['minecraft:client_entity'] as { description: { geometry: { default: string } } })
+      .description.geometry.default
+    const archerGeometry = (archer['minecraft:client_entity'] as { description: { geometry: { default: string } } })
+      .description.geometry.default
+    expect(soldierGeometry).toMatch(/^geometry\.scope-lib-a-[0-9a-f]{16}\.minion$/)
+    expect(archerGeometry).toMatch(/^geometry\.scope-lib-b-[0-9a-f]{16}\.minion$/)
+    expect(soldierGeometry).not.toBe(archerGeometry)
+  })
+
+  it('fails an own bare reference that merged packs declare, naming every declarer and its qualified spelling', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['a'] }],
+      },
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['b'] }],
+      },
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    // own bare never binds to another pack: the failure names every declarer and prints
+    // each one's qualified spelling as the fix
+    await expect(build).rejects.toThrow(
+      /geometry\.minion.*never binds to another pack.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
+    )
+  })
+
+  it('fails an own bare reference that exactly one merged pack declares — bare means yours or vanilla', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /geometry\.minion.*never binds to another pack.*@scope\/lib.*qualify it as geometry\.lib\.minion/s,
+    )
+  })
+
+  it('binds a library’s token-qualified reference through its own minecraft.vendor field, deterministically', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': { prefix: 'core' } } },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.core.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+    await buildPackage(packageDir, { namespace: true })
+
+    // lib-a's own field spells its token for lib-b; the output carries lib-b's hashed final name
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
+    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
+    expect(final).toMatch(/^geometry\.scope-lib-b-[0-9a-f]{16}\.shape$/)
+
+    // hash inputs follow the library's own closure: a rebuild is byte-identical
+    await buildPackage(packageDir, { namespace: true })
+    expect(await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')).toEqual(soldier)
+  })
+
+  it('fails a library’s bare reference that its own supplier declares, printing the token form', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+
+    // the day-90 flip: a supplier gaining a name makes a bare vanilla reference fail loudly at
+    // worst — it never silently rebinds to the supplier
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /geometry\.shape.*never binds to another pack.*lib-b\/vendored_pack\/resource_pack\/models\/shape\.geo\.json.*qualify it as geometry\.lib-b\.shape/s,
+    )
+  })
+
+  it('fails a library alias that names a package outside its own dependencies', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      // lib-a aliases lib-b without depending on it: the library's own fault, at any consumer
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        minecraft: { vendor: { '@scope/lib-b': { prefix: 'core' } } },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/behavior_pack/entities/archer.json': behaviorEntity('archer'),
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /minecraft\.vendor field of @scope\/lib-a names @scope\/lib-b, which is not among its dependencies/,
+    )
+  })
+
+  it('copies a vendored reference to a name only an out-of-closure merged pack declares — vanilla from its seat', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      // lib-a does not depend on lib-b: the consumer's sibling dependency is vanilla from here
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({
+      description: { geometry: { default: 'geometry.shape' } },
+    })
+  })
+
+  it('copies a vendored reference to a name only the consumer declares — the consumer is not in a library’s world', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.shape' },
+      }),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    // the library's bare spelling survives as written, resolving to true vanilla in-engine —
+    // adding an own declaration never changes what a vendored reference means
+    const minion = await builtJson(packageDir, 'resource_pack/entity/scope-lib.minion.json')
+    expect(minion['minecraft:client_entity']).toMatchObject({
+      description: { geometry: { default: 'geometry.shape' } },
+    })
+  })
+
+  it('narrows the admission diagnosis to a vendored pack’s own direct suppliers', async () => {
+    // lib-x, un-merged and un-related to lib-a, declares the name: no diagnosis, copy as written
+    const unrelated = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-d': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.core_shape' },
+      }),
+      // reachable only through lib-d, which holds no vendored pack of its own
+      'packages/lib-d/package.json': {
+        name: '@scope/lib-d',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-x': 'workspace:*' },
+      },
+      'packages/lib-x/package.json': { name: '@scope/lib-x', version: '1.0.0' },
+      'packages/lib-x/vendored_pack/resource_pack/models/core.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.core_shape' } }],
+      },
+    })
+    const packageDir = path.join(unrelated, 'packages/pack-1')
+    await buildPackage(packageDir, { namespace: true })
+
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({
+      description: { geometry: { default: 'geometry.core_shape' } },
+    })
+  })
+
+  it('resolves an own reference to a name both own and vendored content declare to the own declaration', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/pack-1/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['own'] }],
+      },
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' }, bones: ['lib'] }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const own = await builtJson(packageDir, 'resource_pack/entity/wizard.json')
+    const vendored = await builtJson(packageDir, 'resource_pack/entity/scope-lib.minion.json')
+    expect(own['minecraft:client_entity']).toMatchObject({
+      description: { geometry: { default: `geometry.${NS}.minion` } },
+    })
+    expect(vendored['minecraft:client_entity']).toMatchObject({
+      description: {
+        geometry: { default: expect.stringMatching(/^geometry\.scope-lib-[0-9a-f]{16}\.minion$/) as string },
+      },
+    })
+  })
+
+  it('folds a vendored material parent’s final name into the hash, so a parent edit renames the child', async () => {
+    const files = (baseContents: Record<string, unknown>): Record<string, FixtureFile> => ({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/lib/vendored_pack/resource_pack/materials/base.material': {
+        materials: { version: '1.0.0', minionbase: baseContents },
+      },
+      'packages/lib/vendored_pack/resource_pack/materials/skin.material': {
+        materials: { version: '1.0.0', 'minionskin:minionbase': {} },
+      },
+    })
+
+    const materialNames = async (packageDir: string): Promise<{ base: string; skin: string; parent: string }> => {
+      const base = await builtJson(packageDir, 'resource_pack/materials/scope-lib.base.material')
+      const skin = await builtJson(packageDir, 'resource_pack/materials/scope-lib.skin.material')
+      const baseName = Object.keys(base.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+      const skinKey = Object.keys(skin.materials as Record<string, unknown>).find((key) => key !== 'version') as string
+      const [skinName, parent] = skinKey.split(':')
+      return { base: baseName, skin: skinName, parent }
+    }
+
+    const first = await vendoringWorkspace(files({}))
+    const firstDir = path.join(first, 'packages/pack-1')
+    await buildPackage(firstDir, { namespace: true })
+    const before = await materialNames(firstDir)
+
+    // the child's parent reference is the parent's final name
+    expect(before.parent).toBe(before.base)
+    expect(before.base).toMatch(/^scope-lib-[0-9a-f]{16}_minionbase$/)
+    expect(before.skin).toMatch(/^scope-lib-[0-9a-f]{16}_minionskin$/)
+
+    // editing the parent's bytes renames the parent — and the child, whose hash folds the parent's name
+    const second = await vendoringWorkspace(files({ '+defines': 'EDITED' }))
+    const secondDir = path.join(second, 'packages/pack-1')
+    await buildPackage(secondDir, { namespace: true })
+    const after = await materialNames(secondDir)
+
+    expect(after.parent).toBe(after.base)
+    expect(after.base).not.toBe(before.base)
+    expect(after.skin).not.toBe(before.skin)
+  })
+
+  it('gives the same vendored pack a different spelling and identity in each package vendoring it', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-2/package.json': {
+        name: '@scope/pack-2',
+        version: '2.0.0',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-2/behavior_pack/manifest.json': packManifest('behavior', {
+        header: { description: 'another pack', uuid: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
+      }),
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    const first = path.join(workspace, 'packages/pack-1')
+    const second = path.join(workspace, 'packages/pack-2')
+
+    await buildPackage(first, { namespace: true })
+    await buildPackage(second, { namespace: true })
+
+    const inFirst = await builtJson(first, 'behavior_pack/entities/scope-lib.minion.json')
+    const inSecond = await builtJson(second, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(inFirst['minecraft:entity']).toMatchObject({ description: { identifier: 'scope-pack-1:lib.minion' } })
+    expect(inSecond['minecraft:entity']).toMatchObject({ description: { identifier: 'scope-pack-2:lib.minion' } })
+
+    const firstManifest = await builtJson(first, 'behavior_pack/manifest.json')
+    const secondManifest = await builtJson(second, 'behavior_pack/manifest.json')
+    expect(firstManifest.header).toMatchObject({ uuid: '11111111-1111-1111-1111-111111111111' })
+    expect(secondManifest.header).toMatchObject({ uuid: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' })
+  })
+
+  it('composes a file more than one merged pack contributes entries to — texts/en_US.lang, say', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/texts/en_US.lang': 'pack.name=My Pack\nentity.wizard.name=The Wizard\n',
+      'packages/lib/vendored_pack/resource_pack/texts/en_US.lang': 'entity.minion.name=The Minion\n',
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const lang = await readFile(path.join(packageDir, 'dist/resource_pack/texts/en_US.lang'), 'utf8')
+    expect(lang).toContain('pack.name=My Pack')
+    expect(lang).toContain(`entity.${NS}:wizard.name=The Wizard`)
+    expect(lang).toContain(`entity.${NS}:lib.minion.name=The Minion`)
+  })
+
+  it('registers each vendored dependency’s vendored_pack tree as a watch input', async () => {
+    const workspace = await vendoringWorkspace()
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    const watched = await collectWatchFiles(packBuildPlugin({ namespace: true, packageDir, virtualEntry: true }))
+
+    expect(watched).toContain(await realpath(path.join(workspace, 'packages/lib/vendored_pack')))
+  })
+
+  it('archives the vendored content inside the vendoring package’s own mcaddon', async () => {
+    const workspace = await vendoringWorkspace()
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+    const archive = await archivePackage(packageDir)
+
+    const addon = new AdmZip(await readFile(archive))
+    const behaviorMember = addon.getEntry('behavior_pack.mcpack')?.getData()
+    expect(behaviorMember).toBeDefined()
+    const behaviorEntries = new AdmZip(behaviorMember as Buffer).getEntries().map((entry) => entry.entryName)
+    expect(behaviorEntries).toContain('entities/scope-lib.minion.json')
+    expect(behaviorEntries).toContain('manifest.json')
+  })
+})
+
+describe('a vendored library validates at its own build', () => {
+  /** A workspace whose lib package holds a vendored tree and, by default, no pack of its own. */
+  async function libraryWorkspace(files: Record<string, FixtureFile> = {}): Promise<string> {
+    return writeWorkspace({
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'package.json': { name: 'root', version: '0.0.0', private: true },
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+      ...files,
+    })
+  }
+
+  it('validates a vendored_pack-only package and emits nothing — it no longer fails as pack-less', async () => {
+    const workspace = await libraryWorkspace()
+    const packageDir = path.join(workspace, 'packages/lib')
+
+    await buildPackage(packageDir)
+
+    expect(await listTree(path.join(packageDir, 'dist'))).toEqual([])
+  })
+
+  it('fails the library build on content of a kind a vendored pack may not hold', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/vendored_pack/behavior_pack/functions/tick.mcfunction': 'say hi\n',
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /vendored_pack\/behavior_pack\/functions\/tick\.mcfunction/,
+    )
+  })
+
+  it('fails the library build on a dotted bare entity declaration', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/vendored_pack/behavior_pack/entities/bad.json': behaviorEntity('mi.nion'),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(/mi\.nion/)
+  })
+
+  it('fails the library build when its own field names a package outside its dependencies', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/package.json': {
+        name: '@scope/lib',
+        version: '1.0.0',
+        minecraft: { vendor: { '@scope/core': {} } },
+      },
+      'packages/core/package.json': { name: '@scope/core', version: '1.0.0' },
+      'packages/core/vendored_pack/behavior_pack/entities/spark.json': behaviorEntity('spark'),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /minecraft\.vendor field of @scope\/lib names @scope\/core, which is not among its dependencies/,
+    )
+  })
+
+  it('validates token-qualified references against its own suppliers — hit, miss, and bare capture', async () => {
+    const supplier = {
+      'packages/core/package.json': { name: '@scope/core', version: '1.0.0' },
+      'packages/core/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    }
+    const dependent = { name: '@scope/lib', version: '1.0.0', dependencies: { '@scope/core': 'workspace:*' } }
+
+    const hit = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.core.shape' },
+      }),
+    })
+    await buildPackage(path.join(hit, 'packages/lib'))
+
+    const miss = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.core.nosuch' },
+      }),
+    })
+    await expect(buildPackage(path.join(miss, 'packages/lib'))).rejects.toThrow(
+      /geometry\.core\.nosuch.*@scope\/core.*declares no asset geometry\.nosuch/s,
+    )
+
+    const bare = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.shape' },
+      }),
+    })
+    await expect(buildPackage(path.join(bare, 'packages/lib'))).rejects.toThrow(
+      /geometry\.shape.*never binds to another pack.*qualify it as geometry\.core\.shape/s,
+    )
+  })
+
+  it('reports a supplier that is not installed when a token references it', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/package.json': {
+        name: '@scope/lib',
+        version: '1.0.0',
+        dependencies: { '@scope/ghost': '^1.0.0' },
+      },
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.ghost.shape' },
+      }),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /geometry\.ghost\.shape.*@scope\/ghost.*not installed/s,
+    )
+  })
+})
+
+describe('what the build puts in the bundle and the manifest-adjacent content', () => {
+  it('injects the namespace into the bundle as a constant the runtime helper reads', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': { name: '@scope/pack-1', version: '1.2.3', type: 'module' },
+      'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
+      'packages/pack-1/src/main.ts': "import { packId } from 'fake-runtime'\nexport const id = packId('wizard')\n",
+      'node_modules/fake-runtime/package.json': {
+        name: 'fake-runtime',
+        version: '1.0.0',
+        type: 'module',
+        main: 'index.js',
+      },
+      // reads the injection lazily at call time, exactly as @twin-digital/mc-pack-runtime does
+      'node_modules/fake-runtime/index.js':
+        'export const packId = (name) => `${globalThis.__MC_PACK_RUNTIME__.namespace}:${name}`\n',
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: 'wizards' })
+
+    const bundlePath = path.join(packageDir, 'dist/behavior_pack/scripts/main.js')
+    const bundle = await readFile(bundlePath, 'utf8')
+    expect(bundle.startsWith('globalThis.__MC_PACK_RUNTIME__ = Object.freeze(')).toBe(true)
+
+    // the inlined library's own call resolves through the injected namespace, nothing passed per call
+    const loaded = (await import(pathToFileURL(bundlePath).href)) as { id: string }
+    expect(loaded.id).toBe('wizards:wizard')
+    const injected = (globalThis as Record<string, unknown>).__MC_PACK_RUNTIME__ as Record<string, unknown>
+    expect(injected).toMatchObject({ namespace: 'wizards', packToken: 'scope-pack-1', prefixes: [] })
+    expect(Object.isFrozen(injected)).toBe(true)
+    expect(Object.isFrozen(injected.prefixes)).toBe(true)
+    Reflect.deleteProperty(globalThis, '__MC_PACK_RUNTIME__')
+  })
+
+  it('binds a vendored library’s runtime import to its prefix, so computed packId names land in its cell', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        type: 'module',
+        dependencies: { '@scope/lib': '^1.0.0' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
+      'packages/pack-1/src/main.ts': [
+        "import { packId } from '@twin-digital/mc-pack-runtime'",
+        "import { libSpawnId } from '@scope/lib'",
+        "export const own = packId('wizard')",
+        "export const vendored = libSpawnId('min' + 'ion')",
+        '',
+      ].join('\n'),
+      // the vendored library: a vendored_pack plus engine-side modules importing the runtime
+      'node_modules/@scope/lib/package.json': {
+        name: '@scope/lib',
+        version: '1.0.0',
+        type: 'module',
+        main: 'index.js',
+      },
+      'node_modules/@scope/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+      'node_modules/@scope/lib/index.js':
+        "import { packId } from '@twin-digital/mc-pack-runtime'\nexport const libSpawnId = (name) => packId(name)\n",
+      // a stand-in runtime reading the injection lazily, exactly as @twin-digital/mc-pack-runtime does
+      'node_modules/@twin-digital/mc-pack-runtime/package.json': {
+        name: '@twin-digital/mc-pack-runtime',
+        version: '1.0.0',
+        type: 'module',
+        main: 'index.js',
+      },
+      'node_modules/@twin-digital/mc-pack-runtime/index.js':
+        'export const packId = (name) => `${globalThis.__MC_PACK_RUNTIME__.namespace}:${name}`\n',
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const bundlePath = path.join(packageDir, 'dist/behavior_pack/scripts/main.js')
+    const loaded = (await import(pathToFileURL(bundlePath).href)) as { own: string; vendored: string }
+    // the consumer's own import is unwrapped; the library's compiled-in call carries its prefix
+    expect(loaded.own).toBe(`${NS}:wizard`)
+    expect(loaded.vendored).toBe(`${NS}:lib.minion`)
+    const injected = (globalThis as Record<string, unknown>).__MC_PACK_RUNTIME__ as Record<string, unknown>
+    expect(injected).toMatchObject({ prefixes: ['lib'] })
+    Reflect.deleteProperty(globalThis, '__MC_PACK_RUNTIME__')
+  })
+
+  it('stamps a type family naming the pack on every entity type a namespaced pack declares', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard', {
+        components: { 'minecraft:type_family': { family: ['mob'] } },
+      }),
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const own = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    const vendored = await builtJson(packageDir, 'behavior_pack/entities/scope-lib.minion.json')
+    expect(own['minecraft:entity']).toMatchObject({
+      components: { 'minecraft:type_family': { family: ['mob', `mcdk_pack_${NS}`] } },
+    })
+    expect(vendored['minecraft:entity']).toMatchObject({
+      components: { 'minecraft:type_family': { family: [`mcdk_pack_${NS}`] } },
+    })
+  })
+
+  it('stamps no family when no namespace is set', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir)
+
+    const built = await builtJson(packageDir, 'behavior_pack/entities/wizard.json')
+    const entity = built['minecraft:entity'] as { components: Record<string, unknown> }
+    expect(entity.components).not.toHaveProperty('minecraft:type_family')
+  })
+
+  it('adds a claim entity type carrying the pack’s own token to every namespaced pack with a behavior half', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+
+    await buildPackage(packageDir, { namespace: true })
+
+    const claim = await builtJson(packageDir, `behavior_pack/entities/mcdk_claim_${NS}.json`)
+    expect(claim['minecraft:entity']).toMatchObject({
+      description: { identifier: `${NS}:mcdk_claim_${NS}`, is_spawnable: false, is_summonable: false },
+    })
+
+    // a resource-only namespaced package has no behavior half, so it gets no claim type
+    const resourceOnly = await workspaceWith({
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+    })
+    const resourceDir = path.join(resourceOnly, 'packages/pack-1')
+    await buildPackage(resourceDir, { namespace: true })
+    expect(await listTree(path.join(resourceDir, 'dist'))).toEqual(['resource_pack/manifest.json'])
+
+    // bare names landing in the claim spelling are reserved for the build
+    const reserved = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/behavior_pack/entities/evil.json': behaviorEntity('mcdk_claim_evil'),
+    })
+    await expect(buildPackage(path.join(reserved, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /mcdk_claim_evil/,
     )
   })
 })
