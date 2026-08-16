@@ -1,5 +1,13 @@
 # @twin-digital/mc-dev-server
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [fa6362c]
+- Updated dependencies [98b88d4]
+  - @twin-digital/mc-dev-kit@0.4.0
+
 ## 0.2.2
 
 ### Patch Changes
