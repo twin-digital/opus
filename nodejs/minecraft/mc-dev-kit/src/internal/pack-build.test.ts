@@ -1036,7 +1036,7 @@ describe('vendoring', () => {
     expect(soldierGeometry).not.toBe(archerGeometry)
   })
 
-  it('fails an own reference to a bare asset name that only several vendorings declare, naming every candidate', async () => {
+  it('fails an own bare reference that merged packs declare, naming every declarer and its qualified spelling', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/package.json': {
         name: '@scope/pack-1',
@@ -1060,10 +1060,85 @@ describe('vendoring', () => {
     })
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
-    // the failure names every candidate, and prints each one's qualified spelling as the fix
+    // own bare never binds to a merged dependency: the failure names every declarer and prints
+    // each one's qualified spelling as the fix
     await expect(build).rejects.toThrow(
-      /geometry\.minion.*ambiguous.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
+      /geometry\.minion.*never binds to a merged dependency.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
     )
+  })
+
+  it('fails an own bare reference that exactly one merged pack declares — bare means yours or vanilla', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/behavior_pack/entities/wizard.json': behaviorEntity('wizard'),
+      'packages/pack-1/resource_pack/entity/wizard.json': clientEntity('wizard', {
+        geometry: { default: 'geometry.minion' },
+      }),
+      'packages/lib/vendored_pack/resource_pack/models/minion.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.minion' } }],
+      },
+    })
+
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /geometry\.minion.*never binds to a merged dependency.*@scope\/lib.*qualify it as geometry\.lib\.minion/s,
+    )
+  })
+
+  it('keeps the unique-declarer rule for vendored cross-pack references, ambiguity included', async () => {
+    // lib-a references a name it does not declare; own and lib-b both declare it — ambiguous
+    const ambiguous = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/pack-1/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' }, bones: ['own'] }],
+      },
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' }, bones: ['lib-b'] }],
+      },
+    })
+    await expect(buildPackage(path.join(ambiguous, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
+      /geometry\.shape.*ambiguous.*shape\.geo\.json/s,
+    )
+
+    // with own out of contention, lib-b is the unique declarer and the vendored reference binds
+    const unique = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(unique, 'packages/pack-1')
+    await buildPackage(packageDir, { namespace: true })
+
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
+    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
+    expect(final).toMatch(/^geometry\.scope-lib-b-[0-9a-f]{16}\.shape$/)
   })
 
   it('resolves an own reference to a name both own and vendored content declare to the own declaration', async () => {

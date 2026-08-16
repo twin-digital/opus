@@ -100,10 +100,12 @@ const JSON_DIRECTORIES = new Map<string, ContentKind>([
  * across the merged packs, and the claim entity type added to the behavior half.
  *
  * A reference resolves against the pack that wrote it first; the consumer's own content also
- * reaches a vendored entity by its composed `prefix.name` spelling. An asset reference then falls
- * back to the other merged packs only where exactly one declares the name — several is ambiguous
- * and fails naming every candidate; one only an unmerged supplier declares fails naming the
- * supplier and the fix; none copies the reference as written.
+ * reaches a vendored entity or asset by its prefixed spelling. In own content, bare means yours
+ * or vanilla: a bare reference a merged pack declares never binds and fails printing the
+ * qualified spellings. Vendored content, which has no qualifier to write, keeps the
+ * unique-merged-declarer fallback, with several declarers ambiguous. On both paths, a name only
+ * an unmerged supplier declares fails naming the supplier and the fix, and a name nothing
+ * reachable declares copies as written.
  *
  * Every fault is collected before anything is returned, and one error names them all: content of
  * a kind the build cannot rewrite, a source name already carrying a namespace, a dotted bare
@@ -621,9 +623,12 @@ interface AssetNames {
  * names a parent that is itself rewritten, the parent's final name folds into the hash input
  * (sorted, so the digest is order-independent), and a parent cycle fails the build.
  *
- * A reference resolves against the declarations of the pack that wrote it first, then against the
- * other merged packs: exactly one declaring pack resolves, several is ambiguous and fails naming
- * every candidate, none leaves the reference to copy as written.
+ * A reference resolves against the declarations of the pack that wrote it first. In the
+ * consumer's own content that is the whole of bare binding — a bare reference a merged pack
+ * declares fails printing the qualified spellings, never binding and never copying. Vendored
+ * content falls back to the other merged packs where exactly one declares the name, several
+ * being ambiguous; on both paths an unbound name copies as written unless only an unmerged
+ * supplier declares it.
  */
 function assetNames(inputs: AssetNamesInputs): AssetNames {
   const { options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors } = inputs
@@ -680,6 +685,35 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
       (declaration) => declaration.origin !== origin,
     )
     const byOrigin = new Map(candidates.map((declaration) => [declaration.origin, declaration]))
+
+    // in the consumer's own content, bare means yours or vanilla: an unqualified reference
+    // never binds to a merged dependency, and one a merged pack declares fails loudly rather
+    // than silently binding — or silently shadowing a vanilla name — with the qualified
+    // spellings printed as the fix
+    if (origin === '') {
+      if (byOrigin.size > 0) {
+        const claimants = candidates
+          .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
+          .join(' and ')
+        const fixes = [...byOrigin.keys()]
+          .map((declarer) => prefixByOrigin.get(declarer))
+          .filter((prefix): prefix is string => prefix !== undefined)
+          .sort()
+          .map((prefix) => qualifiedSpelling(prefix, spelling))
+        errors.push(
+          `the bare reference ${spelling} in ${referencingFile} matches nothing this pack declares, and an unqualified reference never binds to a merged dependency — it is declared by ${claimants}: qualify it as ${fixes.join(' or ')}`,
+        )
+        return undefined
+      }
+      const supplier = diagnosis.assets.get(`${kind} ${spelling}`)
+      if (supplier !== undefined) {
+        errors.push(danglingMessage(referencingFile, spelling, supplier))
+      }
+      return undefined
+    }
+
+    // vendored content has no qualifier to write, so its cross-pack references keep the
+    // unique-declarer rule
     if (byOrigin.size === 0) {
       const supplier = diagnosis.assets.get(`${kind} ${spelling}`)
       if (supplier !== undefined) {
@@ -693,16 +727,7 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     const claimants = candidates
       .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
       .join(' and ')
-    const qualifiedFixes =
-      origin === '' ?
-        [...byOrigin.values()]
-          .map((declaration) => prefixByOrigin.get(declaration.origin))
-          .filter((prefix): prefix is string => prefix !== undefined)
-          .sort()
-          .map((prefix) => qualifiedSpelling(prefix, spelling))
-      : []
-    const fix = qualifiedFixes.length > 0 ? `; qualify it as ${qualifiedFixes.join(' or ')}` : ''
-    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}${fix}`)
+    errors.push(`the reference ${spelling} in ${referencingFile} is ambiguous: it is declared by ${claimants}`)
     return undefined
   }
 
