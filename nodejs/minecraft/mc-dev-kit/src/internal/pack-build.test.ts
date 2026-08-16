@@ -82,8 +82,7 @@ describe('the plugin builds the package', () => {
       'packages/pack-1/behavior_pack/manifest.json': scriptedManifest({
         dependencies: [{ module_name: '@minecraft/server', version: '2.0.0' }],
       }),
-      'packages/pack-1/behavior_pack/scripts/main.ts':
-        "import { world } from '@minecraft/server'\nexport const w = world\n",
+      'packages/pack-1/src/main.ts': "import { world } from '@minecraft/server'\nexport const w = world\n",
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
@@ -96,8 +95,7 @@ describe('the plugin builds the package', () => {
   it('fails an undeclared @minecraft/ import only where nothing importable resolves', async () => {
     const resolvable = await workspaceWith({
       'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
-      'packages/pack-1/behavior_pack/scripts/main.ts':
-        "import { thing } from '@minecraft/vanilla-data'\nexport const t = thing\n",
+      'packages/pack-1/src/main.ts': "import { thing } from '@minecraft/vanilla-data'\nexport const t = thing\n",
       'node_modules/@minecraft/vanilla-data/package.json': { name: '@minecraft/vanilla-data', main: 'index.js' },
       'node_modules/@minecraft/vanilla-data/index.js': 'export const thing = 1\n',
     })
@@ -108,8 +106,7 @@ describe('the plugin builds the package', () => {
 
     const missing = await workspaceWith({
       'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
-      'packages/pack-1/behavior_pack/scripts/main.ts':
-        "import { gone } from '@minecraft/not-installed'\nexport const g = gone\n",
+      'packages/pack-1/src/main.ts': "import { gone } from '@minecraft/not-installed'\nexport const g = gone\n",
     })
     await expect(buildPackage(path.join(missing, 'packages/pack-1'))).rejects.toThrow(/@minecraft\/not-installed/)
   })
@@ -152,18 +149,29 @@ describe('the plugin builds the package', () => {
     expect(await readFile(path.join(packageDir, 'dist/behavior_pack/entities/thing.weird'), 'utf8')).toBe('contents\n')
   })
 
-  it('copies nothing under behavior_pack/scripts/', async () => {
+  it('emits only the bundle under the output scripts directory', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
-      'packages/pack-1/behavior_pack/scripts/main.ts': 'export const a = 1\n',
-      'packages/pack-1/behavior_pack/scripts/helper.ts': 'export const b = 2\n',
-      'packages/pack-1/behavior_pack/scripts/notes.txt': 'not a build output\n',
+      'packages/pack-1/src/main.ts': "export { b } from './helper.js'\n",
+      'packages/pack-1/src/helper.ts': 'export const b = 2\n',
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
     await buildPackage(packageDir)
 
     expect(await listTree(path.join(packageDir, 'dist/behavior_pack/scripts'))).toEqual(['main.js'])
+  })
+
+  it('fails when a pack directory holds a scripts directory', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
+      'packages/pack-1/behavior_pack/scripts/notes.txt': 'not a build output\n',
+      'packages/pack-1/src/main.ts': 'export const a = 1\n',
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/pack-1'))).rejects.toThrow(
+      /holds a scripts directory.*src\/main\.ts/s,
+    )
   })
 
   it('creates no output directory for an empty source directory', async () => {
@@ -201,7 +209,7 @@ describe('the plugin builds the package', () => {
   it('drops an unchanged chunk before the bundler writes it', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/behavior_pack/manifest.json': scriptedManifest(),
-      'packages/pack-1/behavior_pack/scripts/main.ts': 'export const a = 1\n',
+      'packages/pack-1/src/main.ts': 'export const a = 1\n',
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
     const bundle = path.join(packageDir, 'dist/behavior_pack/scripts/main.js')
@@ -212,7 +220,7 @@ describe('the plugin builds the package', () => {
     await buildPackage(packageDir)
     expect((await stat(bundle)).mtimeMs).toBe(first)
 
-    await writeFile(path.join(packageDir, 'behavior_pack/scripts/main.ts'), 'export const a = 2\n')
+    await writeFile(path.join(packageDir, 'src/main.ts'), 'export const a = 2\n')
     await buildPackage(packageDir)
     expect(await readFile(bundle, 'utf8')).toMatch(/a = 2/)
   })
@@ -238,7 +246,7 @@ describe('the plugin builds the package', () => {
     const workspace = await workspaceWith({
       // sources on disk, but the manifest declares no script module
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
-      'packages/pack-1/behavior_pack/scripts/main.ts': 'export const a = 1\n',
+      'packages/pack-1/src/main.ts': 'export const a = 1\n',
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
@@ -287,8 +295,8 @@ describe('the plugin builds the package', () => {
     const fragment = packBuild({ packageDir })
     expect(fragment.entry).toEqual(['mc-dev-kit:pack-entry'])
 
-    await mkdir(path.join(packageDir, 'behavior_pack/scripts'), { recursive: true })
-    await writeFile(path.join(packageDir, 'behavior_pack/scripts/main.ts'), 'export const a = 1\n')
+    await mkdir(path.join(packageDir, 'src'), { recursive: true })
+    await writeFile(path.join(packageDir, 'src/main.ts'), 'export const a = 1\n')
 
     await expect(build({ ...fragment, config: false, logLevel: 'silent' })).rejects.toThrow(/configured with no entry/)
   })
