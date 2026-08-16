@@ -27,10 +27,24 @@ export interface VendoredPack {
   halves: VendoredHalf[]
   /** the names of the package's own direct `dependencies` — its reference-resolution closure */
   dependencies: string[]
+  /** the package's own `minecraft.vendor` field: the tokens its source writes for its suppliers */
+  vendorField: VendorConfig
 }
 
-/** Per-dependency vendoring configuration, keyed by npm package name. */
+/** The `minecraft.vendor` package.json field: per-dependency tokens, keyed by npm package name. */
 export type VendorConfig = Record<string, { prefix?: string } | undefined>
+
+/** The parsed `minecraft.vendor` field of a `package.json`, empty where absent or malformed. */
+export function vendorField(packageJson: unknown): VendorConfig {
+  if (!isRecord(packageJson) || !isRecord(packageJson.minecraft) || !isRecord(packageJson.minecraft.vendor)) {
+    return {}
+  }
+  const field: VendorConfig = {}
+  for (const [name, entry] of Object.entries(packageJson.minecraft.vendor)) {
+    field[name] = isRecord(entry) && typeof entry.prefix === 'string' ? { prefix: entry.prefix } : {}
+  }
+  return field
+}
 
 /** What the dependency walk found: what merges, what is reachable but not admitted, and faults. */
 export interface VendoredPackSet {
@@ -53,20 +67,20 @@ export interface FindVendoredPacksOptions {
   packageDir: string
   /** the absolute path of the workspace root, whose members resolve by name */
   workspaceRoot: string
-  /** the consumer's vendor block: per-dependency configuration and transitive admissions */
-  vendor?: VendorConfig
 }
 
 /**
  * Walks a package's `dependencies` — never its `devDependencies` — transitively, and partitions
  * every reached package holding a `vendored_pack/` tree: a pack merges when its package sits in
- * the consumer's own `dependencies` or is named in the `vendor` block, which is also how a
- * transitive supplier is admitted without becoming a direct dependency; anything else the walk
- * reaches is returned unmerged, read-only, so a dangling reference can name its supplier. A
- * package reached along several paths is one pack, visited once.
+ * the consumer's own `dependencies` or is named in the consumer's `minecraft.vendor` package.json
+ * field, which is also how a transitive supplier is admitted without becoming a direct
+ * dependency; anything else the walk reaches is returned unmerged, read-only, so a dangling
+ * reference can name its supplier. A package reached along several paths is one pack, visited
+ * once.
  *
- * Each merged pack carries its entity prefix — the configured one, or its unscoped npm name — and
- * a bad prefix, two merged packs resolving to one prefix, and a vendor name that resolves to no
+ * Each merged pack carries its entity prefix — the consumer's field entry, or its unscoped npm
+ * name — and its own field and dependencies, which govern its aliases for its own suppliers. A
+ * bad prefix, two merged packs resolving to one prefix, and a field name that resolves to no
  * vendored pack are returned as problems.
  *
  * A dependency resolves as a workspace member by name first, then by the `node_modules` ascent
@@ -75,7 +89,6 @@ export interface FindVendoredPacksOptions {
  * the build as it is to the module loader.
  */
 export async function findVendoredPacks(options: FindVendoredPacksOptions): Promise<VendoredPackSet> {
-  const vendor = options.vendor ?? {}
   const problems: string[] = []
   const byName = await workspaceMembersByName(options.workspaceRoot)
   const visited = new Set<string>()
@@ -88,6 +101,7 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
   visited.add(start)
 
   const ownPackageJson = await readPackageJson(options.packageDir)
+  const vendor = vendorField(ownPackageJson)
   const directDependencies = new Set(dependencyNames(ownPackageJson))
   const admitted = new Set([...directDependencies, ...Object.keys(vendor)])
 
@@ -126,6 +140,7 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
         vendoredDir: path.join(real, 'vendored_pack'),
         halves,
         dependencies,
+        vendorField: vendorField(packageJson),
       })
     }
 
@@ -141,7 +156,9 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
   const mergedNames = new Set(merged.map((pack) => pack.name))
   for (const name of Object.keys(vendor).sort()) {
     if (!mergedNames.has(name)) {
-      problems.push(`the vendor block names ${name}, but it resolves to no package holding a vendored_pack/ tree`)
+      problems.push(
+        `the minecraft.vendor field names ${name}, but it resolves to no package holding a vendored_pack/ tree`,
+      )
     }
   }
 
@@ -156,7 +173,7 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
     const holder = byPrefix.get(pack.prefix)
     if (holder !== undefined) {
       problems.push(
-        `${holder.name} and ${pack.name} both resolve to the prefix ${JSON.stringify(pack.prefix)}: set a distinct prefix for one of them in the vendor block`,
+        `${holder.name} and ${pack.name} both resolve to the prefix ${JSON.stringify(pack.prefix)}: set a distinct prefix for one of them in the minecraft.vendor field`,
       )
     } else {
       byPrefix.set(pack.prefix, pack)
@@ -164,6 +181,83 @@ export async function findVendoredPacks(options: FindVendoredPacksOptions): Prom
   }
 
   return { merged, unmerged, problems }
+}
+
+/** What a package's own vendored tree is validated against: its suppliers, by its own config. */
+export interface LibraryContext {
+  /** the package's npm name, or its directory basename where it declares none */
+  packageName: string
+  /** the package's own `vendored_pack/` halves */
+  halves: VendoredHalf[]
+  /** the absolute path of the `vendored_pack/` tree */
+  vendoredDir: string
+  /** the package's own direct dependency names */
+  dependencies: string[]
+  /** the package's own `minecraft.vendor` field */
+  vendorField: VendorConfig
+  /** the located direct suppliers holding vendored packs */
+  suppliers: VendoredPack[]
+  /** direct dependencies that could not be located at all */
+  unlocated: string[]
+}
+
+/**
+ * The context for validating a package's own `vendored_pack/` tree at its own build, or
+ * `undefined` where the package holds none. Each direct dependency is located — workspace member
+ * by name, then the `node_modules` ascent — and one that resolves to nothing is reported so a
+ * token referencing it can say the supplier is not installed.
+ */
+export async function locateLibraryContext(options: {
+  packageDir: string
+  workspaceRoot: string
+}): Promise<LibraryContext | undefined> {
+  const halves = await vendoredHalves(options.packageDir)
+  if (halves.length === 0) {
+    return undefined
+  }
+
+  const packageJson = await readPackageJson(options.packageDir)
+  const packageName =
+    isRecord(packageJson) && typeof packageJson.name === 'string' ? packageJson.name : path.basename(options.packageDir)
+  const dependencies = dependencyNames(packageJson)
+  const byName = await workspaceMembersByName(options.workspaceRoot)
+  const start = (await realDirectory(options.packageDir)) ?? options.packageDir
+
+  const suppliers: VendoredPack[] = []
+  const unlocated: string[] = []
+  for (const name of dependencies) {
+    const located = byName.get(name) ?? (await ascendNodeModules(start, name))
+    const real = located === undefined ? undefined : await realDirectory(located)
+    if (real === undefined) {
+      unlocated.push(name)
+      continue
+    }
+    const supplierHalves = await vendoredHalves(real)
+    if (supplierHalves.length === 0) {
+      continue
+    }
+    const supplierJson = await readPackageJson(real)
+    suppliers.push({
+      name,
+      token: packageToken(name),
+      prefix: unscopedName(name),
+      packageDir: real,
+      vendoredDir: path.join(real, 'vendored_pack'),
+      halves: supplierHalves,
+      dependencies: dependencyNames(supplierJson),
+      vendorField: vendorField(supplierJson),
+    })
+  }
+
+  return {
+    packageName,
+    halves,
+    vendoredDir: path.join((await realDirectory(options.packageDir)) ?? options.packageDir, 'vendored_pack'),
+    dependencies,
+    vendorField: vendorField(packageJson),
+    suppliers,
+    unlocated,
+  }
 }
 
 /** The workspace members by declared name; a name claimed twice keeps its first claimant. */

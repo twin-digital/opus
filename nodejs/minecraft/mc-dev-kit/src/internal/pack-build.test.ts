@@ -685,12 +685,13 @@ describe('vendoring', () => {
     expect(entities.join(' ')).not.toContain('spy')
   })
 
-  it('admits a transitive supplier through the vendor block, without a direct dependency', async () => {
+  it('admits a transitive supplier through the minecraft.vendor field, without a direct dependency', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/package.json': {
         name: '@scope/pack-1',
         version: '1.2.3',
         dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
       },
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
       ...vendoredLibrary('lib-a', 'soldier', { dependencies: { '@scope/lib-b': 'workspace:*' } }),
@@ -698,7 +699,7 @@ describe('vendoring', () => {
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
-    await buildPackage(packageDir, { namespace: true, vendor: { '@scope/lib-b': {} } })
+    await buildPackage(packageDir, { namespace: true })
 
     const archer = await builtJson(packageDir, 'behavior_pack/entities/scope-lib-b.archer.json')
     expect(archer['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:lib-b.archer` } })
@@ -710,6 +711,7 @@ describe('vendoring', () => {
         name: '@scope/pack-1',
         version: '1.2.3',
         dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-c': {} } },
       },
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
       ...vendoredLibrary('lib-a', 'soldier', { dependencies: { '@scope/lib-c': 'workspace:*' } }),
@@ -718,7 +720,7 @@ describe('vendoring', () => {
     })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
-    await buildPackage(packageDir, { namespace: true, vendor: { '@scope/lib-c': {} } })
+    await buildPackage(packageDir, { namespace: true })
 
     const entities = await listTree(path.join(packageDir, 'dist/behavior_pack/entities'))
     expect(entities.filter((file) => file.includes('spark'))).toEqual(['scope-lib-c.spark.json'])
@@ -783,32 +785,36 @@ describe('vendoring', () => {
     })
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
-    await expect(build).rejects.toThrow(/@one\/lib.*@two\/lib.*"lib".*vendor block/s)
+    await expect(build).rejects.toThrow(/@one\/lib.*@two\/lib.*"lib".*minecraft\.vendor field/s)
   })
 
   it('fails the build naming the character when a prefix steps outside its charset', async () => {
-    const dotted = await vendoringWorkspace()
-    await expect(
-      buildPackage(path.join(dotted, 'packages/pack-1'), {
-        namespace: true,
-        vendor: { '@scope/lib': { prefix: 'f.x' } },
-      }),
-    ).rejects.toThrow(/"\."/)
+    const consumerJson = (prefix: string): Record<string, unknown> => ({
+      name: '@scope/pack-1',
+      version: '1.2.3',
+      dependencies: { '@scope/lib': 'workspace:*' },
+      minecraft: { vendor: { '@scope/lib': { prefix } } },
+    })
 
-    const cased = await vendoringWorkspace()
-    await expect(
-      buildPackage(path.join(cased, 'packages/pack-1'), {
-        namespace: true,
-        vendor: { '@scope/lib': { prefix: 'Fx' } },
-      }),
-    ).rejects.toThrow(/"F"/)
+    const dotted = await vendoringWorkspace({ 'packages/pack-1/package.json': consumerJson('f.x') })
+    await expect(buildPackage(path.join(dotted, 'packages/pack-1'), { namespace: true })).rejects.toThrow(/"\."/)
+
+    const cased = await vendoringWorkspace({ 'packages/pack-1/package.json': consumerJson('Fx') })
+    await expect(buildPackage(path.join(cased, 'packages/pack-1'), { namespace: true })).rejects.toThrow(/"F"/)
   })
 
-  it('takes an explicit prefix from the vendor block', async () => {
-    const workspace = await vendoringWorkspace()
+  it('takes an explicit prefix from the shipped minecraft.vendor field', async () => {
+    const workspace = await vendoringWorkspace({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib': { prefix: 'fx' } } },
+      },
+    })
     const packageDir = path.join(workspace, 'packages/pack-1')
 
-    await buildPackage(packageDir, { namespace: true, vendor: { '@scope/lib': { prefix: 'fx' } } })
+    await buildPackage(packageDir, { namespace: true })
 
     const vendored = await builtJson(packageDir, 'behavior_pack/entities/scope-lib.minion.json')
     expect(vendored['minecraft:entity']).toMatchObject({ description: { identifier: `${NS}:fx.minion` } })
@@ -866,7 +872,7 @@ describe('vendoring', () => {
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
     await expect(build).rejects.toThrow(
-      /soldier\.json.*geometry\.core_shape.*@scope\/lib-b.*add @scope\/lib-b to dependencies or the vendor block/s,
+      /soldier\.json.*geometry\.core_shape.*@scope\/lib-b.*add @scope\/lib-b to the consuming package's dependencies or its minecraft\.vendor field/s,
     )
   })
 
@@ -960,7 +966,7 @@ describe('vendoring', () => {
       },
     })
     await expect(buildPackage(path.join(dottedName, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
-      /smoke\.geo\.json.*geometry\.lib\.smoke.*"lib".*different prefix in the vendor block/s,
+      /smoke\.geo\.json.*geometry\.lib\.smoke.*"lib".*different prefix in the minecraft\.vendor field/s,
     )
 
     const texturePath = await vendoringWorkspace({
@@ -968,7 +974,7 @@ describe('vendoring', () => {
       'packages/pack-1/resource_pack/textures/lib/entity/wizard.png': 'png bytes',
     })
     await expect(buildPackage(path.join(texturePath, 'packages/pack-1'), { namespace: true })).rejects.toThrow(
-      /textures\/lib\/entity\/wizard.*"lib".*different prefix in the vendor block/s,
+      /textures\/lib\/entity\/wizard.*"lib".*different prefix in the minecraft\.vendor field/s,
     )
   })
 
@@ -1068,10 +1074,10 @@ describe('vendoring', () => {
     })
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
-    // own bare never binds to a merged dependency: the failure names every declarer and prints
+    // own bare never binds to another pack: the failure names every declarer and prints
     // each one's qualified spelling as the fix
     await expect(build).rejects.toThrow(
-      /geometry\.minion.*never binds to a merged dependency.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
+      /geometry\.minion.*never binds to another pack.*lib-a\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*lib-b\/vendored_pack\/resource_pack\/models\/minion\.geo\.json.*qualify it as geometry\.lib-a\.minion or geometry\.lib-b\.minion/s,
     )
   })
 
@@ -1088,16 +1094,58 @@ describe('vendoring', () => {
 
     const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
     await expect(build).rejects.toThrow(
-      /geometry\.minion.*never binds to a merged dependency.*@scope\/lib.*qualify it as geometry\.lib\.minion/s,
+      /geometry\.minion.*never binds to another pack.*@scope\/lib.*qualify it as geometry\.lib\.minion/s,
     )
   })
 
-  it('resolves a vendored reference within its own closure: a direct merged supplier binds, deterministically', async () => {
+  it('binds a library’s token-qualified reference through its own minecraft.vendor field, deterministically', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/package.json': {
         name: '@scope/pack-1',
         version: '1.2.3',
         dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
+      },
+      'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
+      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      'packages/lib-a/package.json': {
+        name: '@scope/lib-a',
+        version: '1.0.0',
+        dependencies: { '@scope/lib-b': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': { prefix: 'core' } } },
+      },
+      'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
+      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
+        geometry: { default: 'geometry.core.shape' },
+      }),
+      'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
+      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    })
+    const packageDir = path.join(workspace, 'packages/pack-1')
+    await buildPackage(packageDir, { namespace: true })
+
+    // lib-a's own field spells its token for lib-b; the output carries lib-b's hashed final name
+    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
+    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
+      .identifier
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
+    expect(final).toMatch(/^geometry\.scope-lib-b-[0-9a-f]{16}\.shape$/)
+
+    // hash inputs follow the library's own closure: a rebuild is byte-identical
+    await buildPackage(packageDir, { namespace: true })
+    expect(await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')).toEqual(soldier)
+  })
+
+  it('fails a library’s bare reference that its own supplier declares, printing the token form', async () => {
+    const workspace = await workspaceWith({
+      'packages/pack-1/package.json': {
+        name: '@scope/pack-1',
+        version: '1.2.3',
+        dependencies: { '@scope/lib-a': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': {} } },
       },
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
       'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
@@ -1115,59 +1163,41 @@ describe('vendoring', () => {
         'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
       },
     })
-    const packageDir = path.join(workspace, 'packages/pack-1')
-    await buildPackage(packageDir, { namespace: true, vendor: { '@scope/lib-b': {} } })
 
-    const geometry = await builtJson(packageDir, 'resource_pack/models/scope-lib-b.shape.geo.json')
-    const final = (geometry['minecraft:geometry'] as { description: { identifier: string } }[])[0].description
-      .identifier
-    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
-    expect(soldier['minecraft:client_entity']).toMatchObject({ description: { geometry: { default: final } } })
-    expect(final).toMatch(/^geometry\.scope-lib-b-[0-9a-f]{16}\.shape$/)
-
-    // material-parent-free here, but the hash inputs follow this scope: a rebuild is byte-identical
-    await buildPackage(packageDir, { namespace: true, vendor: { '@scope/lib-b': {} } })
-    expect(await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')).toEqual(soldier)
+    // the day-90 flip: a supplier gaining a name makes a bare vanilla reference fail loudly at
+    // worst — it never silently rebinds to the supplier
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
+    await expect(build).rejects.toThrow(
+      /geometry\.shape.*never binds to another pack.*lib-b\/vendored_pack\/resource_pack\/models\/shape\.geo\.json.*qualify it as geometry\.lib-b\.shape/s,
+    )
   })
 
-  it('fails a vendored reference two of its direct suppliers declare, naming both', async () => {
+  it('fails a library alias that names a package outside its own dependencies', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/package.json': {
         name: '@scope/pack-1',
         version: '1.2.3',
-        dependencies: { '@scope/lib-a': 'workspace:*' },
+        dependencies: { '@scope/lib-a': 'workspace:*', '@scope/lib-b': 'workspace:*' },
       },
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
-      'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
+      // lib-a aliases lib-b without depending on it: the library's own fault, at any consumer
       'packages/lib-a/package.json': {
         name: '@scope/lib-a',
         version: '1.0.0',
-        dependencies: { '@scope/lib-b': 'workspace:*', '@scope/lib-c': 'workspace:*' },
+        minecraft: { vendor: { '@scope/lib-b': { prefix: 'core' } } },
       },
       'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
-      'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
-        geometry: { default: 'geometry.shape' },
-      }),
       'packages/lib-b/package.json': { name: '@scope/lib-b', version: '1.0.0' },
-      'packages/lib-b/vendored_pack/resource_pack/models/shape.geo.json': {
-        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' }, bones: ['b'] }],
-      },
-      'packages/lib-c/package.json': { name: '@scope/lib-c', version: '1.0.0' },
-      'packages/lib-c/vendored_pack/resource_pack/models/shape.geo.json': {
-        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' }, bones: ['c'] }],
-      },
+      'packages/lib-b/vendored_pack/behavior_pack/entities/archer.json': behaviorEntity('archer'),
     })
 
-    const build = buildPackage(path.join(workspace, 'packages/pack-1'), {
-      namespace: true,
-      vendor: { '@scope/lib-b': {}, '@scope/lib-c': {} },
-    })
+    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
     await expect(build).rejects.toThrow(
-      /geometry\.shape.*ambiguous among the direct dependencies of @scope\/lib-a.*lib-b\/vendored_pack\/resource_pack\/models\/shape\.geo\.json.*lib-c\/vendored_pack\/resource_pack\/models\/shape\.geo\.json/s,
+      /minecraft\.vendor field of @scope\/lib-a names @scope\/lib-b, which is not among its dependencies/,
     )
   })
 
-  it('fails a vendored reference only a deeper or sibling merged pack declares, naming the promotion fix', async () => {
+  it('copies a vendored reference to a name only an out-of-closure merged pack declares — vanilla from its seat', async () => {
     const workspace = await workspaceWith({
       'packages/pack-1/package.json': {
         name: '@scope/pack-1',
@@ -1176,7 +1206,7 @@ describe('vendoring', () => {
       },
       'packages/pack-1/behavior_pack/manifest.json': packManifest('behavior'),
       'packages/pack-1/resource_pack/manifest.json': packManifest('resource'),
-      // lib-a does not depend on lib-b: the consumer's sibling dependency is outside its closure
+      // lib-a does not depend on lib-b: the consumer's sibling dependency is vanilla from here
       'packages/lib-a/package.json': { name: '@scope/lib-a', version: '1.0.0' },
       'packages/lib-a/vendored_pack/behavior_pack/entities/soldier.json': behaviorEntity('soldier'),
       'packages/lib-a/vendored_pack/resource_pack/entity/soldier.json': clientEntity('soldier', {
@@ -1187,11 +1217,14 @@ describe('vendoring', () => {
         'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
       },
     })
+    const packageDir = path.join(workspace, 'packages/pack-1')
 
-    const build = buildPackage(path.join(workspace, 'packages/pack-1'), { namespace: true })
-    await expect(build).rejects.toThrow(
-      /soldier\.json.*geometry\.shape.*outside the dependency closure of @scope\/lib-a.*@scope\/lib-a must declare @scope\/lib-b as a direct dependency/s,
-    )
+    await buildPackage(packageDir, { namespace: true })
+
+    const soldier = await builtJson(packageDir, 'resource_pack/entity/scope-lib-a.soldier.json')
+    expect(soldier['minecraft:client_entity']).toMatchObject({
+      description: { geometry: { default: 'geometry.shape' } },
+    })
   })
 
   it('copies a vendored reference to a name only the consumer declares — the consumer is not in a library’s world', async () => {
@@ -1398,6 +1431,120 @@ describe('vendoring', () => {
     const behaviorEntries = new AdmZip(behaviorMember as Buffer).getEntries().map((entry) => entry.entryName)
     expect(behaviorEntries).toContain('entities/scope-lib.minion.json')
     expect(behaviorEntries).toContain('manifest.json')
+  })
+})
+
+describe('a vendored library validates at its own build', () => {
+  /** A workspace whose lib package holds a vendored tree and, by default, no pack of its own. */
+  async function libraryWorkspace(files: Record<string, FixtureFile> = {}): Promise<string> {
+    return writeWorkspace({
+      'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+      'package.json': { name: 'root', version: '0.0.0', private: true },
+      'packages/lib/package.json': { name: '@scope/lib', version: '1.0.0' },
+      'packages/lib/vendored_pack/behavior_pack/entities/minion.json': behaviorEntity('minion'),
+      ...files,
+    })
+  }
+
+  it('validates a vendored_pack-only package and emits nothing — it no longer fails as pack-less', async () => {
+    const workspace = await libraryWorkspace()
+    const packageDir = path.join(workspace, 'packages/lib')
+
+    await buildPackage(packageDir)
+
+    expect(await listTree(path.join(packageDir, 'dist'))).toEqual([])
+  })
+
+  it('fails the library build on content of a kind a vendored pack may not hold', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/vendored_pack/behavior_pack/functions/tick.mcfunction': 'say hi\n',
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /vendored_pack\/behavior_pack\/functions\/tick\.mcfunction/,
+    )
+  })
+
+  it('fails the library build on a dotted bare entity declaration', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/vendored_pack/behavior_pack/entities/bad.json': behaviorEntity('mi.nion'),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(/mi\.nion/)
+  })
+
+  it('fails the library build when its own field names a package outside its dependencies', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/package.json': {
+        name: '@scope/lib',
+        version: '1.0.0',
+        minecraft: { vendor: { '@scope/core': {} } },
+      },
+      'packages/core/package.json': { name: '@scope/core', version: '1.0.0' },
+      'packages/core/vendored_pack/behavior_pack/entities/spark.json': behaviorEntity('spark'),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /minecraft\.vendor field of @scope\/lib names @scope\/core, which is not among its dependencies/,
+    )
+  })
+
+  it('validates token-qualified references against its own suppliers — hit, miss, and bare capture', async () => {
+    const supplier = {
+      'packages/core/package.json': { name: '@scope/core', version: '1.0.0' },
+      'packages/core/vendored_pack/resource_pack/models/shape.geo.json': {
+        'minecraft:geometry': [{ description: { identifier: 'geometry.shape' } }],
+      },
+    }
+    const dependent = { name: '@scope/lib', version: '1.0.0', dependencies: { '@scope/core': 'workspace:*' } }
+
+    const hit = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.core.shape' },
+      }),
+    })
+    await buildPackage(path.join(hit, 'packages/lib'))
+
+    const miss = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.core.nosuch' },
+      }),
+    })
+    await expect(buildPackage(path.join(miss, 'packages/lib'))).rejects.toThrow(
+      /geometry\.core\.nosuch.*@scope\/core.*declares no asset geometry\.nosuch/s,
+    )
+
+    const bare = await libraryWorkspace({
+      ...supplier,
+      'packages/lib/package.json': dependent,
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.shape' },
+      }),
+    })
+    await expect(buildPackage(path.join(bare, 'packages/lib'))).rejects.toThrow(
+      /geometry\.shape.*never binds to another pack.*qualify it as geometry\.core\.shape/s,
+    )
+  })
+
+  it('reports a supplier that is not installed when a token references it', async () => {
+    const workspace = await libraryWorkspace({
+      'packages/lib/package.json': {
+        name: '@scope/lib',
+        version: '1.0.0',
+        dependencies: { '@scope/ghost': '^1.0.0' },
+      },
+      'packages/lib/vendored_pack/resource_pack/entity/minion.json': clientEntity('minion', {
+        geometry: { default: 'geometry.ghost.shape' },
+      }),
+    })
+
+    await expect(buildPackage(path.join(workspace, 'packages/lib'))).rejects.toThrow(
+      /geometry\.ghost\.shape.*@scope\/ghost.*not installed/s,
+    )
   })
 })
 

@@ -3,9 +3,16 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PackKind } from '../types.js'
 import { listFiles } from './build-outputs.js'
-import { CLAIM_NAME_PREFIX, VENDORED_HASH_LENGTH, claimName, packFamily, vendoredAssetToken } from './formats.js'
+import {
+  CLAIM_NAME_PREFIX,
+  VENDORED_HASH_LENGTH,
+  claimName,
+  packFamily,
+  resolvePrefix,
+  vendoredAssetToken,
+} from './formats.js'
 import { isRecord, messageOf, parseJson } from './json.js'
-import type { VendoredPack } from './vendored-packs.js'
+import type { LibraryContext, VendorConfig, VendoredPack } from './vendored-packs.js'
 
 /** One of the package's own packs, as the merge reads it. */
 export interface OwnPack {
@@ -151,11 +158,12 @@ export async function planMerge(options: MergePlanOptions): Promise<MergePlan> {
   const declarations = scanDeclarations(files, texts, errors)
   checkVendoredDuplicates(declarations, errors)
   checkReserved(declarations, errors)
-  checkPrefixShadowing(declarations, new Map(options.vendored.map((pack) => [pack.prefix, pack.name])), errors)
+  const aliases = scopeAliasMaps(options, errors)
+  checkPrefixShadowing(declarations, aliases, errors)
 
   const diagnosis = await scanUnmergedDeclarations(options.unmerged)
-  const entities = entityNames(options, declarations, diagnosis, errors)
-  const names = assetNames({ options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors })
+  const entities = entityNames(options, declarations, diagnosis, aliases, errors)
+  const names = assetNames({ options, files, declarations, texts, bytes, libraryTokens, diagnosis, aliases, errors })
 
   if (errors.length > 0) {
     throw mergeError(errors)
@@ -366,11 +374,8 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
         } else if (identifier.includes(':')) {
           break // a reference to another pack's or vanilla's entity, copied as written
         } else if (identifier.includes('.')) {
-          // the consumer's composed reference to a vendored entity, resolved at rewrite; a
-          // vendored pack cannot spell consumer prefixes, so a dotted name there is a fault
-          if (source.half.vendored) {
-            errors.push(`${source.file}: ${identifier} carries a dot, which the build reserves as the prefix separator`)
-          }
+          // a token-composed reference to a supplier's entity, resolved at rewrite time against
+          // the writing pack's own aliases — never a declaration
         } else {
           declare(source, 'entity', identifier, identifier)
         }
@@ -424,6 +429,8 @@ function scanDeclarations(files: SourceFile[], texts: Map<string, string>, error
 interface UnmergedDeclarations {
   /** composed spelling — the pack's default prefix, a dot, the bare name — to its declaration */
   entities: Map<string, { origin: string; file: string }>
+  /** `<origin> <bare name>` to the declaration, for a writer's own-supplier lookups */
+  entitiesByOrigin: Map<string, { origin: string; file: string }>
   /** `<kind> <spelling>` to every declaring unmerged pack */
   assets: Map<string, { origin: string; file: string }[]>
 }
@@ -435,6 +442,7 @@ interface UnmergedDeclarations {
  */
 async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<UnmergedDeclarations> {
   const entities = new Map<string, { origin: string; file: string }>()
+  const entitiesByOrigin = new Map<string, { origin: string; file: string }>()
   const assets = new Map<string, { origin: string; file: string }[]>()
   const prefixes = new Map(unmerged.map((pack) => [pack.name, pack.prefix]))
 
@@ -464,6 +472,9 @@ async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<Unmer
       if (prefix !== undefined && !entities.has(`${prefix}.${declaration.name}`)) {
         entities.set(`${prefix}.${declaration.name}`, entry)
       }
+      if (!entitiesByOrigin.has(`${declaration.origin} ${declaration.name}`)) {
+        entitiesByOrigin.set(`${declaration.origin} ${declaration.name}`, entry)
+      }
     } else {
       const key = `${declaration.kind} ${declaration.spelling}`
       const declarers = assets.get(key) ?? []
@@ -474,12 +485,76 @@ async function scanUnmergedDeclarations(unmerged: VendoredPack[]): Promise<Unmer
     }
   }
 
-  return { entities, assets }
+  return { entities, entitiesByOrigin, assets }
 }
 
 /** The failure a reference gets when only a pack nothing admitted declares its name. */
 function danglingMessage(file: string, name: string, supplier: { origin: string; file: string }): string {
-  return `${file}: ${name} resolves to no merged declaration, but ${supplier.origin} declares it in ${supplier.file}: add ${supplier.origin} to dependencies or the vendor block`
+  return `${file}: ${name} resolves to no merged declaration, but ${supplier.origin} declares it in ${supplier.file}: add ${supplier.origin} to the consuming package's dependencies or its minecraft.vendor field`
+}
+
+/**
+ * A scope's aliases: the tokens its own source writes for its direct suppliers, from its own
+ * `minecraft.vendor` field over unscoped-name defaults. A field entry naming a non-dependency, a
+ * token outside its charset, and two dependencies resolving to one token are the declaring
+ * package's faults.
+ */
+function libraryAliases(
+  pack: { name: string; dependencies: string[]; vendorField: VendorConfig },
+  reachable: Set<string>,
+  errors: string[],
+): Map<string, string> {
+  const aliases = new Map<string, string>()
+  const dependencies = new Set(pack.dependencies)
+
+  const claim = (token: string, target: string): void => {
+    const holder = aliases.get(token)
+    if (holder !== undefined && holder !== target) {
+      errors.push(
+        `${holder} and ${target} both resolve to the token ${JSON.stringify(token)} in the world of ${pack.name}: set a distinct prefix for one of them in the minecraft.vendor field of ${pack.name}`,
+      )
+      return
+    }
+    aliases.set(token, target)
+  }
+
+  for (const [name, entry] of Object.entries(pack.vendorField)) {
+    if (!dependencies.has(name)) {
+      errors.push(
+        `the minecraft.vendor field of ${pack.name} names ${name}, which is not among its dependencies: ${pack.name} must declare it a direct dependency`,
+      )
+      continue
+    }
+    try {
+      claim(resolvePrefix(name, entry?.prefix), name)
+    } catch (error) {
+      errors.push(messageOf(error))
+    }
+  }
+  for (const name of pack.dependencies) {
+    if (reachable.has(name) && pack.vendorField[name] === undefined) {
+      try {
+        claim(resolvePrefix(name, undefined), name)
+      } catch (error) {
+        errors.push(messageOf(error))
+      }
+    }
+  }
+  return aliases
+}
+
+/**
+ * The alias map per scope: the consumer's merged-prefix tokens under `''`, and each merged
+ * library's own tokens for its own direct suppliers.
+ */
+function scopeAliasMaps(options: MergePlanOptions, errors: string[]): Map<string, Map<string, string>> {
+  const reachable = new Set([...options.vendored, ...options.unmerged].map((pack) => pack.name))
+  const maps = new Map<string, Map<string, string>>()
+  maps.set('', new Map(options.vendored.map((pack) => [pack.prefix, pack.name])))
+  for (const pack of options.vendored) {
+    maps.set(pack.name, libraryAliases(pack, reachable, errors))
+  }
+  return maps
 }
 
 /** The entity-name machinery: per-scope final ids, and the resolver a file's rewrites use. */
@@ -504,10 +579,11 @@ function entityNames(
   options: MergePlanOptions,
   declarations: Declaration[],
   diagnosis: UnmergedDeclarations,
+  aliases: Map<string, Map<string, string>>,
   errors: string[],
 ): EntityNames {
   const prefixByOrigin = new Map(options.vendored.map((pack) => [pack.name, pack.prefix]))
-  const originByPrefix = new Map(options.vendored.map((pack) => [pack.prefix, pack.name]))
+  const mergedNames = new Set(options.vendored.map((pack) => pack.name))
 
   const scopes = new Map<string, Map<string, string>>()
   for (const declaration of declarations) {
@@ -533,24 +609,62 @@ function entityNames(
       if (direct !== undefined) {
         return direct
       }
+      const tokens = aliases.get(source.half.origin) ?? new Map<string, string>()
       const dot = spelling.indexOf('.')
-      if (dot === -1 || source.half.origin !== '') {
-        return undefined
-      }
-      const prefix = spelling.slice(0, dot)
-      const rest = spelling.slice(dot + 1)
-      const target = originByPrefix.get(prefix)
-      if (target !== undefined) {
-        const final = scopes.get(target)?.get(rest)
-        if (final !== undefined) {
-          return final
+      if (dot > 0) {
+        const token = spelling.slice(0, dot)
+        const rest = spelling.slice(dot + 1)
+        const target = tokens.get(token)
+        if (target !== undefined) {
+          if (mergedNames.has(target)) {
+            const final = scopes.get(target)?.get(rest)
+            if (final !== undefined) {
+              return final
+            }
+            errors.push(`${source.file}: ${spelling} carries the token of ${target}, which declares no entity ${rest}`)
+            return undefined
+          }
+          const supplier = diagnosis.entitiesByOrigin.get(`${target} ${rest}`)
+          errors.push(
+            supplier !== undefined ?
+              danglingMessage(source.file, spelling, supplier)
+            : `${source.file}: ${spelling} carries the token of ${target}, which declares no entity ${rest}`,
+          )
+          return undefined
         }
-        errors.push(`${source.file}: ${spelling} carries the prefix of ${target}, which declares no entity ${rest}`)
+        // an unknown token: the consumer's composed diagnosis for un-admitted suppliers applies
+        if (source.half.origin === '') {
+          const supplier = diagnosis.entities.get(spelling)
+          if (supplier !== undefined) {
+            errors.push(danglingMessage(source.file, spelling, supplier))
+          }
+        }
         return undefined
       }
-      const supplier = diagnosis.entities.get(spelling)
-      if (supplier !== undefined) {
-        errors.push(danglingMessage(source.file, spelling, supplier))
+      // bare never binds cross-pack: a name a closure pack declares fails with the token form
+      const closureHits: { token: string; target: string }[] = []
+      for (const [token, target] of tokens) {
+        if (mergedNames.has(target) && scopes.get(target)?.has(spelling) === true) {
+          closureHits.push({ token, target })
+        }
+      }
+      if (closureHits.length > 0) {
+        const claimants = closureHits.map((hit) => hit.target).join(' and ')
+        const fixes = closureHits
+          .map((hit) => `${hit.token}.${spelling}`)
+          .sort()
+          .join(' or ')
+        errors.push(
+          `the bare reference ${spelling} in ${source.file} matches no entity this pack declares, and a bare name never binds to another pack — it is declared by ${claimants}: write ${fixes}`,
+        )
+        return undefined
+      }
+      for (const target of tokens.values()) {
+        const supplier = diagnosis.entitiesByOrigin.get(`${target} ${spelling}`)
+        if (supplier !== undefined) {
+          errors.push(danglingMessage(source.file, spelling, supplier))
+          return undefined
+        }
       }
       return undefined
     },
@@ -606,6 +720,8 @@ interface AssetNamesInputs {
   libraryTokens: Map<string, string>
   /** what the unmerged packs declare, so a dangling reference names its supplier */
   diagnosis: UnmergedDeclarations
+  /** each scope's tokens for its own suppliers */
+  aliases: Map<string, Map<string, string>>
   errors: string[]
 }
 
@@ -636,19 +752,10 @@ interface AssetNames {
  * supplier declares it.
  */
 function assetNames(inputs: AssetNamesInputs): AssetNames {
-  const { options, files, declarations, texts, bytes, libraryTokens, diagnosis, errors } = inputs
+  const { options, files, declarations, texts, bytes, libraryTokens, diagnosis, aliases, errors } = inputs
   const sourceByFile = new Map(files.map((source) => [source.file, source]))
   const assets = declarations.filter((declaration) => declaration.category !== 'entity')
-  const originByPrefix = new Map(options.vendored.map((pack) => [pack.prefix, pack.name]))
-  const prefixByOrigin = new Map(options.vendored.map((pack) => [pack.name, pack.prefix]))
   const mergedNames = new Set(options.vendored.map((pack) => pack.name))
-  const directDependencies = new Map(options.vendored.map((pack) => [pack.name, new Set(pack.dependencies)]))
-  const directSuppliers = new Map(
-    options.vendored.map((pack) => [
-      pack.name,
-      new Set(pack.dependencies.filter((dependency) => mergedNames.has(dependency))),
-    ]),
-  )
 
   const scopeKey = (origin: string, kind: PackKind, spelling: string): string => `${origin} ${kind} ${spelling}`
   const scopeIndex = new Map<string, Declaration>()
@@ -673,95 +780,77 @@ function assetNames(inputs: AssetNamesInputs): AssetNames {
     spelling: string,
     referencingFile: string,
   ): Declaration | undefined {
-    // ahead of the bare steps: in the consumer's own content, a merged dependency's prefix in
-    // the qualifier position binds the reference to that dependency's declaration
-    if (origin === '') {
-      const qualified = parseQualified(spelling)
-      const target = qualified === undefined ? undefined : originByPrefix.get(qualified.prefix)
-      if (qualified !== undefined && target !== undefined) {
+    const tokens = aliases.get(origin) ?? new Map<string, string>()
+
+    // a token in the qualifier position binds the reference within the writer's own closure
+    const qualified = parseQualified(spelling)
+    const target = qualified === undefined ? undefined : tokens.get(qualified.prefix)
+    if (qualified !== undefined && target !== undefined) {
+      if (mergedNames.has(target)) {
         const bound = scopeIndex.get(scopeKey(target, kind, qualified.remainder))
         if (bound !== undefined) {
           return bound
         }
         errors.push(
-          `${referencingFile}: ${spelling} carries the prefix of ${target}, which declares no asset ${qualified.remainder}`,
+          `${referencingFile}: ${spelling} carries the token of ${target}, which declares no asset ${qualified.remainder}`,
         )
         return undefined
       }
+      const declarers = diagnosis.assets.get(`${kind} ${qualified.remainder}`) ?? []
+      const supplier = declarers.find((declarer) => declarer.origin === target)
+      errors.push(
+        supplier !== undefined ?
+          danglingMessage(referencingFile, spelling, supplier)
+        : `${referencingFile}: ${spelling} carries the token of ${target}, which declares no asset ${qualified.remainder}`,
+      )
+      return undefined
     }
 
     const own = scopeIndex.get(scopeKey(origin, kind, spelling))
     if (own !== undefined) {
       return own
     }
-    const candidates = (crossIndex.get(`${kind} ${spelling}`) ?? []).filter(
-      (declaration) => declaration.origin !== origin,
-    )
-    const byOrigin = new Map(candidates.map((declaration) => [declaration.origin, declaration]))
-    const unmergedDeclarers = diagnosis.assets.get(`${kind} ${spelling}`) ?? []
 
-    // in the consumer's own content, bare means yours or vanilla: an unqualified reference
-    // never binds to a merged dependency, and one a merged pack declares fails loudly rather
-    // than silently binding — or silently shadowing a vanilla name — with the qualified
-    // spellings printed as the fix
-    if (origin === '') {
-      if (byOrigin.size > 0) {
-        const claimants = candidates
-          .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
-          .join(' and ')
-        const fixes = [...byOrigin.keys()]
-          .map((declarer) => prefixByOrigin.get(declarer))
-          .filter((prefix): prefix is string => prefix !== undefined)
-          .sort()
-          .map((prefix) => qualifiedSpelling(prefix, spelling))
-        errors.push(
-          `the bare reference ${spelling} in ${referencingFile} matches nothing this pack declares, and an unqualified reference never binds to a merged dependency — it is declared by ${claimants}: qualify it as ${fixes.join(' or ')}`,
-        )
-        return undefined
+    // bare never binds cross-pack: a name a closure pack declares fails with the token form,
+    // so a supplier gaining a name turns a vanilla reference loud rather than rebinding it
+    const closureHits: { token: string; declaration: Declaration }[] = []
+    for (const [token, closureTarget] of tokens) {
+      if (!mergedNames.has(closureTarget)) {
+        continue
       }
+      const bound = scopeIndex.get(scopeKey(closureTarget, kind, spelling))
+      if (bound !== undefined) {
+        closureHits.push({ token, declaration: bound })
+      }
+    }
+    if (closureHits.length > 0) {
+      const claimants = closureHits
+        .map((hit) => `${hit.declaration.file} (${originLabel(hit.declaration.origin)})`)
+        .join(' and ')
+      const fixes = closureHits
+        .map((hit) => qualifiedSpelling(hit.token, spelling))
+        .sort()
+        .join(' or ')
+      errors.push(
+        `the bare reference ${spelling} in ${referencingFile} matches nothing this pack declares, and a bare name never binds to another pack — it is declared by ${claimants}: qualify it as ${fixes}`,
+      )
+      return undefined
+    }
+
+    // out-of-closure merged packs are vanilla from the writer's seat; un-merged suppliers in the
+    // writer's own world get the admission diagnosis — every reachable one for the consumer,
+    // the writer's own direct suppliers for a library
+    const unmergedDeclarers = diagnosis.assets.get(`${kind} ${spelling}`) ?? []
+    if (origin === '') {
       if (unmergedDeclarers.length > 0) {
         errors.push(danglingMessage(referencingFile, spelling, unmergedDeclarers[0]))
       }
       return undefined
     }
-
-    // a vendored pack's references resolve within its own dependency closure — itself plus the
-    // merged packs of its own direct dependencies — never the consumer's world, so what a
-    // library's references mean is fixed by its own dependency list alone
-    const scope = directSuppliers.get(origin) ?? new Set<string>()
-    const inScope = candidates.filter((declaration) => scope.has(declaration.origin))
-    const inScopeByOrigin = new Map(inScope.map((declaration) => [declaration.origin, declaration]))
-    if (inScopeByOrigin.size === 1) {
-      return inScope[0]
-    }
-    if (inScopeByOrigin.size > 1) {
-      const claimants = inScope
-        .map((declaration) => `${declaration.file} (${originLabel(declaration.origin)})`)
-        .join(' and ')
-      errors.push(
-        `the reference ${spelling} in ${referencingFile} is ambiguous among the direct dependencies of ${origin}: it is declared by ${claimants}`,
-      )
-      return undefined
-    }
-
-    // nothing in scope: an un-merged DIRECT supplier is the consumer's to admit; a merged pack
-    // outside the closure only the library can reach, by declaring it a direct dependency
-    const directNames = directDependencies.get(origin) ?? new Set<string>()
-    const admittable = unmergedDeclarers.find((declarer) => directNames.has(declarer.origin))
-    if (admittable !== undefined) {
-      errors.push(danglingMessage(referencingFile, spelling, admittable))
-      return undefined
-    }
-    const outOfScope = [...byOrigin.values()].filter((declaration) => declaration.origin !== '')
-    if (outOfScope.length > 0) {
-      const claimants = outOfScope
-        .map((declaration) => declaration.origin)
-        .sort()
-        .join(' and ')
-      errors.push(
-        `${referencingFile}: ${spelling} is declared by ${claimants}, outside the dependency closure of ${origin}: ${origin} must declare ${claimants} as a direct dependency`,
-      )
-      return undefined
+    const targets = new Set([...tokens.values()])
+    const direct = unmergedDeclarers.find((declarer) => targets.has(declarer.origin))
+    if (direct !== undefined) {
+      errors.push(danglingMessage(referencingFile, spelling, direct))
     }
     return undefined
   }
@@ -875,24 +964,29 @@ function qualifiedSpelling(prefix: string, spelling: string): string {
 }
 
 /**
- * An own asset declaration whose qualifier-position segment equals a merged dependency's prefix
- * would capture every qualified reference to that dependency, so it fails naming the declaration
- * and the prefix; changing the prefix in the vendor block is the fix.
+ * An asset declaration whose qualifier-position segment equals one of its own pack's tokens
+ * would capture every token-qualified reference to that supplier, so it fails naming the
+ * declaration and the token; changing that supplier's prefix in the declaring package's
+ * minecraft.vendor field is the fix.
  */
 function checkPrefixShadowing(
   declarations: Declaration[],
-  originByPrefix: Map<string, string>,
+  aliases: Map<string, Map<string, string>>,
   errors: string[],
 ): void {
   for (const declaration of declarations) {
-    if (declaration.origin !== '' || declaration.category === 'entity') {
+    if (declaration.category === 'entity') {
+      continue
+    }
+    const tokens = aliases.get(declaration.origin)
+    if (tokens === undefined || tokens.size === 0) {
       continue
     }
     const qualified = parseQualified(declaration.spelling)
-    const holder = qualified === undefined ? undefined : originByPrefix.get(qualified.prefix)
+    const holder = qualified === undefined ? undefined : tokens.get(qualified.prefix)
     if (qualified !== undefined && holder !== undefined) {
       errors.push(
-        `${declaration.file}: the ${declaration.category} name ${declaration.spelling} sits in the qualifier position of ${holder}'s prefix ${JSON.stringify(qualified.prefix)}, so a qualified reference could never reach that dependency: give ${holder} a different prefix in the vendor block`,
+        `${declaration.file}: the ${declaration.category} name ${declaration.spelling} sits in the qualifier position of ${holder}'s token ${JSON.stringify(qualified.prefix)}, so a qualified reference could never reach that dependency: give ${holder} a different prefix in the minecraft.vendor field`,
       )
     }
   }
@@ -1229,6 +1323,172 @@ function readJsonContent(source: SourceFile, text: string, errors: string[]): un
 
 function serializeJson(value: unknown): Buffer {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`)
+}
+
+/**
+ * Validates a package's own `vendored_pack/` tree at its author's build: content kinds against
+ * the closed list, declarations (dot rules, reserved names, duplicates), token shadowing, and
+ * every reference — own names bare, supplier names through the package's own `minecraft.vendor`
+ * tokens over its own direct dependencies. A token naming an uninstalled dependency reports the
+ * supplier as not installed; a bare name a supplier declares fails printing the token form. The
+ * consumer's build re-validates everything regardless: a shipped tree is untrusted input there.
+ *
+ * Throws one error naming every fault; a clean tree returns.
+ */
+export async function validateVendoredLibrary(context: LibraryContext): Promise<void> {
+  const errors: string[] = []
+  const supplierNames = new Set(context.suppliers.map((supplier) => supplier.name))
+  const aliases = libraryAliases(
+    { name: context.packageName, dependencies: context.dependencies, vendorField: context.vendorField },
+    new Set([...supplierNames, ...context.unlocated]),
+    errors,
+  )
+  const unlocated = new Set(context.unlocated)
+
+  const files: SourceFile[] = []
+  for (const half of context.halves) {
+    const sourceHalf: SourceHalf = {
+      origin: context.packageName,
+      vendored: true,
+      prefix: '',
+      kind: half.kind,
+      dir: half.dir,
+    }
+    for (const file of await listFiles(half.dir)) {
+      const rel = path.relative(half.dir, file).split(path.sep).join('/')
+      const content = classify(rel, true)
+      if (content === 'skip') {
+        continue
+      }
+      if (content === 'forbidden') {
+        errors.push(`${file}: a vendored pack may not hold content of this kind`)
+        continue
+      }
+      files.push({ half: sourceHalf, file, rel, content })
+    }
+  }
+
+  const texts = new Map<string, string>()
+  for (const source of files) {
+    if (source.content !== 'texture' && source.content !== 'opaque') {
+      texts.set(source.file, await readFile(source.file, 'utf8'))
+    }
+  }
+
+  const declarations = scanDeclarations(files, texts, errors)
+  checkVendoredDuplicates(declarations, errors)
+  checkReserved(declarations, errors)
+  checkPrefixShadowing(declarations, new Map([[context.packageName, aliases]]), errors)
+
+  const ownAssets = new Set<string>()
+  const ownEntities = new Set<string>()
+  for (const declaration of declarations) {
+    if (declaration.category === 'entity') {
+      ownEntities.add(`${declaration.kind} ${declaration.name}`)
+      ownEntities.add(declaration.name)
+    } else {
+      ownAssets.add(`${declaration.kind} ${declaration.spelling}`)
+    }
+  }
+
+  const supplierDiagnosis = await scanUnmergedDeclarations(context.suppliers)
+
+  const resolveAsset =
+    (source: SourceFile) =>
+    (spelling: string): string | undefined => {
+      const qualified = parseQualified(spelling)
+      const target = qualified === undefined ? undefined : aliases.get(qualified.prefix)
+      if (qualified !== undefined && target !== undefined) {
+        if (unlocated.has(target)) {
+          errors.push(
+            `${source.file}: ${spelling} names ${target}, which is not installed — install it to validate the reference`,
+          )
+          return undefined
+        }
+        const declarers = supplierDiagnosis.assets.get(`${source.half.kind} ${qualified.remainder}`) ?? []
+        if (declarers.some((declarer) => declarer.origin === target)) {
+          return spelling
+        }
+        errors.push(
+          `${source.file}: ${spelling} carries the token of ${target}, which declares no asset ${qualified.remainder}`,
+        )
+        return undefined
+      }
+      if (ownAssets.has(`${source.half.kind} ${spelling}`)) {
+        return spelling
+      }
+      const hits: string[] = []
+      for (const [token, supplier] of aliases) {
+        const declarers = supplierDiagnosis.assets.get(`${source.half.kind} ${spelling}`) ?? []
+        if (declarers.some((declarer) => declarer.origin === supplier)) {
+          hits.push(qualifiedSpelling(token, spelling))
+        }
+      }
+      if (hits.length > 0) {
+        errors.push(
+          `the bare reference ${spelling} in ${source.file} matches nothing this pack declares, and a bare name never binds to another pack: qualify it as ${hits.sort().join(' or ')}`,
+        )
+      }
+      return undefined
+    }
+
+  const resolveEntity =
+    (source: SourceFile) =>
+    (spelling: string): string | undefined => {
+      if (spelling.includes(':')) {
+        return undefined
+      }
+      if (ownEntities.has(spelling)) {
+        return spelling
+      }
+      const dot = spelling.indexOf('.')
+      if (dot > 0) {
+        const target = aliases.get(spelling.slice(0, dot))
+        const rest = spelling.slice(dot + 1)
+        if (target === undefined) {
+          return undefined
+        }
+        if (unlocated.has(target)) {
+          errors.push(
+            `${source.file}: ${spelling} names ${target}, which is not installed — install it to validate the reference`,
+          )
+          return undefined
+        }
+        if (supplierDiagnosis.entitiesByOrigin.has(`${target} ${rest}`)) {
+          return spelling
+        }
+        errors.push(`${source.file}: ${spelling} carries the token of ${target}, which declares no entity ${rest}`)
+        return undefined
+      }
+      const hits: string[] = []
+      for (const [token, supplier] of aliases) {
+        if (supplierDiagnosis.entitiesByOrigin.has(`${supplier} ${spelling}`)) {
+          hits.push(`${token}.${spelling}`)
+        }
+      }
+      if (hits.length > 0) {
+        errors.push(
+          `the bare reference ${spelling} in ${source.file} matches no entity this pack declares, and a bare name never binds to another pack: write ${hits.sort().join(' or ')}`,
+        )
+      }
+      return undefined
+    }
+
+  for (const source of files) {
+    if (source.content === 'texture' || source.content === 'opaque') {
+      continue
+    }
+    const text = texts.get(source.file) as string
+    if (source.content === 'lang') {
+      rewriteLang(source, text, resolveEntity(source), errors)
+    } else {
+      rewriteJson(source, text, resolveEntity(source), resolveAsset(source), 'mcdk_validation', errors)
+    }
+  }
+
+  if (errors.length > 0) {
+    throw mergeError(errors)
+  }
 }
 
 function originLabel(origin: string): string {
