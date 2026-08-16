@@ -1,0 +1,15 @@
+version: '1'
+
+# The world this adventure is developed against. The spawn matches the adventure's STAGE constant,
+# so a run starts beside the actor gallery.
+level: rpg-core-example-dev
+seed: 424242
+spawn: [465, 70, -64]
+
+eula: true
+
+# Only this adventure and the packs it depends on; the workspace's other packs stay out of the world.
+defaultProfile: example
+profiles:
+  example:
+    packs: ['@twin-digital/rpg-core-example', '@twin-digital/rpg-core-pack']
