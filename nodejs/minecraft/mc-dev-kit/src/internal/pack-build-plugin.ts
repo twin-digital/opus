@@ -10,7 +10,8 @@ import { INJECTION_GLOBAL, packageToken } from './formats.js'
 import { messageOf } from './json.js'
 import { planMerge } from './merge-plan.js'
 import { resolveNamespace } from './namespace.js'
-import { findVendoredPacks, type VendorConfig, type VendoredPack } from './vendored-packs.js'
+import { validateVendoredLibrary } from './merge-plan.js'
+import { findVendoredPacks, locateLibraryContext, type LibraryContext, type VendoredPack } from './vendored-packs.js'
 
 /** The one plugin the fragment carries. */
 export type BuildPlugin = Rolldown.Plugin
@@ -47,8 +48,6 @@ export interface PackBuildPluginOptions {
   namespace?: boolean | string
   /** the absolute path of the package directory the build is for */
   packageDir: string
-  /** per-dependency vendoring configuration, and admissions of transitive suppliers */
-  vendor?: VendorConfig
   /** whether the configuration named the virtual entry rather than the script sources */
   virtualEntry: boolean
 }
@@ -67,6 +66,10 @@ interface BuildState {
   vendored: VendoredPack[]
   /** vendored packs the walk reaches that nothing admitted, read for diagnosis only */
   unmerged: VendoredPack[]
+  /** the package's own vendored tree, validated at its own build where present */
+  library?: LibraryContext
+  /** true where the package holds only a vendored tree: validate, emit nothing */
+  libraryOnly: boolean
 }
 
 /**
@@ -106,22 +109,36 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     async buildStart() {
       state = emptyState()
 
-      if (options.virtualEntry && existsSync(scriptSource)) {
-        throw new Error(
-          `the build was configured with no entry but ${SCRIPT_SOURCE} is on disk in ${packageDir}: the configuration was read before those sources existed, so re-run the build`,
-        )
-      }
-
       const workspace = await resolveWorkspaceRoot({ from: packageDir })
       if (workspace === undefined) {
         throw new Error(`no workspace root above ${packageDir}: no ancestor declares a pnpm or npm workspace`)
       }
 
+      state.library = await locateLibraryContext({ packageDir, workspaceRoot: workspace.root })
+
       const all = await readPackSet(workspace.root)
       const mine = all.filter((pack) => path.resolve(workspace.root, pack.packageDir) === packageDir)
 
       if (mine.length === 0) {
-        throw new Error(`no pack found in ${packageDir}: it holds neither behavior_pack nor resource_pack`)
+        // a package holding only a vendored tree validates and emits nothing
+        if (state.library !== undefined) {
+          state.libraryOnly = true
+          this.addWatchFile(path.join(packageDir, 'package.json'))
+          this.addWatchFile(state.library.vendoredDir)
+          for (const supplier of state.library.suppliers) {
+            this.addWatchFile(supplier.vendoredDir)
+          }
+          return
+        }
+        throw new Error(
+          `no pack found in ${packageDir}: it holds neither behavior_pack, resource_pack, nor vendored_pack`,
+        )
+      }
+
+      if (options.virtualEntry && existsSync(scriptSource)) {
+        throw new Error(
+          `the build was configured with no entry but ${SCRIPT_SOURCE} is on disk in ${packageDir}: the configuration was read before those sources existed, so re-run the build`,
+        )
       }
 
       const invalid = mine.filter((pack) => pack.status === 'invalid')
@@ -146,11 +163,7 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
       state.namespace = resolveNamespace(options.namespace, packageName)
       state.packToken = state.namespace === undefined ? undefined : packageToken(packageName)
 
-      const vendoredSet = await findVendoredPacks({
-        packageDir,
-        vendor: options.vendor,
-        workspaceRoot: workspace.root,
-      })
+      const vendoredSet = await findVendoredPacks({ packageDir, workspaceRoot: workspace.root })
       if (vendoredSet.problems.length > 0) {
         throw new Error(
           `the vendoring configuration does not resolve:\n${vendoredSet.problems.map((line) => `  ${line}`).join('\n')}`,
@@ -254,6 +267,13 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     async generateBundle(outputOptions, bundle) {
+      // a library-only package emits nothing: the bundler's chunk never reaches disk
+      if (state.libraryOnly) {
+        for (const fileName of Object.keys(bundle)) {
+          Reflect.deleteProperty(bundle, fileName)
+        }
+        return
+      }
       const dir = outputOptions.dir ?? path.dirname(scriptOutput)
 
       for (const [fileName, file] of Object.entries(bundle)) {
@@ -265,6 +285,12 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
     },
 
     async writeBundle() {
+      if (state.library !== undefined) {
+        await validateVendoredLibrary(state.library)
+      }
+      if (state.libraryOnly) {
+        return
+      }
       if (state.namespace === undefined) {
         for (const pack of state.packs) {
           await writePack(packageDir, pack, state.claimed)
@@ -297,7 +323,7 @@ export function packBuildPlugin(options: PackBuildPluginOptions): BuildPlugin {
 
 /** A build's state before `buildStart` has read anything. */
 function emptyState(): BuildState {
-  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [], unmerged: [] }
+  return { packs: [], externals: new Set(), claimed: new Set(), vendored: [], unmerged: [], libraryOnly: false }
 }
 
 /** The merged vendored pack whose package directory holds `importer`, if any. */

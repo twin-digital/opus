@@ -128,8 +128,9 @@ end of the build.
 - the package vendors anything while no namespace is set, or vendors a kind it holds no pack of
 - with namespacing on: a source name already carrying a namespace, a bare entity name carrying a
   dot, content whose names the build cannot rewrite, an own bare asset reference a merged pack
-  declares, a vendored cross-pack reference several packs' declarations could satisfy, a
-  qualified reference its named dependency does not declare, an own
+  declares, a bare reference in any merged pack that its own supplier declares, a
+  token-qualified reference its named dependency does not declare, a library field entry naming
+  a package outside its dependencies, an own
   declaration sitting in a merged prefix's qualifier position, a reference only an un-admitted
   transitive supplier declares, two merged dependencies resolving to one entity prefix, a prefix
   outside its charset, and a bare entity name or prefix landing in the reserved `mcdk_claim_`
@@ -204,15 +205,15 @@ than silently binding — or silently shadowing a vanilla name of the same spell
 to a name no reachable vendored pack declares — `geometry.evoker.v1.8`, a vanilla texture or
 material — is copied through as written; one that only an **un-merged** transitive supplier
 declares fails the build naming the referencing file, the name, the supplying package, and the
-fix. Vendored content resolves internally without qualifiers — it cannot know the prefixes you
-chose — and within its own dependency closure, never your world: a vendored pack's reference
-binds to its own declarations first, then to the merged vendored pack of one of **its own direct
-`dependencies`**; two of its direct suppliers declaring the name fail as ambiguous (a library
-authoring bug, identical for every consumer). A name declared only by a deeper or sibling merged
-pack fails with the honest fix — the library must declare that supplier a direct dependency —
-and one declared by an un-merged direct supplier keeps the admission diagnosis. A name nothing
-in its closure declares copies as written, your own declarations included: adding a dependency
-or declaring a name of your own never changes what a library's references mean.
+fix. Vendored content resolves within its own world, never yours: bare is that pack's own or
+vanilla, and its suppliers are reached through **its own** `minecraft.vendor` tokens over **its
+own** direct `dependencies` — `geometry.fx-core.orb`, `fx-core.spark`. A bare name one of its
+own suppliers declares fails printing its token form (a supplier gaining a name turns a vanilla
+reference loud, never silently rebound); a token naming an un-admitted direct supplier gets the
+admission diagnosis; and a name nothing in its world declares copies as written — your own
+declarations and your other dependencies included, which are vanilla from the library's seat.
+Adding a dependency or declaring a name of your own never changes what a library's references
+mean.
 
 Script sources are never rewritten: code spells a namespaced identifier through
 `@twin-digital/mc-pack-runtime`'s `packId` helper, which reads what the build injects into the
@@ -250,31 +251,44 @@ my-lib/
       entity/minion.json
 ```
 
-What merges is explicit: the `vendored_pack/` of every package in this package's **own
-`dependencies`**, plus any package named in `packBuild`'s **`vendor` block** — never
-`devDependencies` — workspace sibling and installed dependency alike. Naming a package in the
-vendor block is how a transitive supplier is admitted without promoting it to a direct dependency,
-and a package reached along several dependency paths merges once. The transitive `dependencies`
-tree is still walked read-only, so a vendored reference that only an un-admitted supplier could
-satisfy fails with the fix spelled out ("add `@acme/particle-core` to dependencies or the vendor
-block") rather than shipping broken.
+Vendoring is configured by one shipped `package.json` field, serving consumers and libraries
+alike:
 
-The vendor block also names each merged dependency's **entity prefix**, defaulting to the
-dependency's unscoped npm name (`@rpg-libs/spell-fx` vendors as `spell-fx.*`). A prefix holds
-lowercase letters, digits, underscore and hyphen — never a dot, the separator — and two merged
-dependencies resolving to one prefix fail the build naming both, with an explicit prefix as the
-fix:
-
-```ts
-packBuild({
-  packageDir,
-  namespace: true,
-  vendor: {
-    '@rpg-libs/spell-fx': { prefix: 'fx' },
-    '@acme/particle-core': {}, // a transitive supplier, admitted explicitly
+```jsonc
+{
+  "minecraft": {
+    "vendor": {
+      "@rpg-libs/spell-fx": { "prefix": "fx" },
+      "@acme/particle-core": {}, // a transitive supplier, admitted explicitly
+    },
   },
-})
+}
 ```
+
+The field has one meaning in both roles: **the token this package writes in its own source to
+reference that dependency's content**. Every direct dependency holding a vendored pack gets a
+token by default — its unscoped npm name (`@rpg-libs/spell-fx` is written as `spell-fx.*`) — and
+a field entry overrides it. A token holds lowercase letters, digits, underscore and hyphen —
+never a dot, the separator — and two dependencies resolving to one token fail the build naming
+both, with an explicit prefix as the fix. For the package whose build ships the packs, the token
+additionally fixes the output entity-id segment, `<namespace>:<prefix>.<name>`; a vendored
+library's entries are source-side aliases only — the output naming of a supplier's entities is
+always governed by the shipping consumer's token for that supplier.
+
+What merges is explicit: the `vendored_pack/` of every package in the shipping package's **own
+`dependencies`**, plus any package named in its **`minecraft.vendor` field** — never
+`devDependencies` — workspace sibling and installed dependency alike. A field entry naming a
+package outside `dependencies` is, for the shipping consumer, how a transitive supplier is
+admitted; for a vendored library it is a fault — a library reaching deeper promotes the supplier
+to a direct dependency. A package reached along several dependency paths merges once, and the
+transitive tree is still walked read-only, so a reference that only an un-admitted supplier could
+satisfy fails with the fix spelled out rather than shipping broken.
+
+A package holding a `vendored_pack/` tree is validated by **its own build** as well: content
+kinds, its declarations, its tokens against its own direct dependencies (a token naming an
+uninstalled supplier is reported as such), and every reference. A package holding only a vendored
+tree validates and emits nothing. The consumer's build re-validates everything regardless — a
+shipped tree is untrusted input, and a workspace sibling may never have run its own build.
 
 For an installed dependency to work, the shared package must publish its `vendored_pack/` tree —
 add it to the `files` field of its `package.json`:

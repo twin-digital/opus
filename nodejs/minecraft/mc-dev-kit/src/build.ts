@@ -2,9 +2,6 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import type { UserConfig } from 'tsdown'
 import { PACK_ENTRY, SCRIPT_SOURCE, packBuildPlugin } from './internal/pack-build-plugin.js'
-import type { VendorConfig } from './internal/vendored-packs.js'
-
-export type { VendorConfig } from './internal/vendored-packs.js'
 
 /** Options for {@link packBuild}. */
 export interface PackBuildOptions {
@@ -31,28 +28,6 @@ export interface PackBuildOptions {
    * registry nor requires an entry in it.
    */
   namespace?: boolean | string
-  /**
-   * Per-dependency vendoring configuration, keyed by npm package name. Only packages in this
-   * package's own `dependencies`, plus the packages named here, merge their `vendored_pack/`
-   * content — naming one admits a transitive supplier without promoting it to a direct
-   * dependency. Each merged dependency's entities build as `<namespace>:<prefix>.<name>`;
-   * `prefix` overrides the default, which is the dependency's unscoped npm name
-   * (`@rpg-libs/spell-fx` becomes `spell-fx`). A prefix holds lowercase letters, digits,
-   * underscore and hyphen — never a dot, the separator — and two merged dependencies resolving
-   * to one prefix fail the build, with an explicit prefix here as the fix.
-   *
-   * ```ts
-   * packBuild({
-   *   packageDir,
-   *   namespace: true,
-   *   vendor: {
-   *     '@rpg-libs/spell-fx': { prefix: 'fx' },
-   *     '@acme/particle-core': {}, // a transitive supplier, admitted explicitly
-   *   },
-   * })
-   * ```
-   */
-  vendor?: VendorConfig
 }
 
 /**
@@ -67,7 +42,18 @@ export interface PackBuildOptions {
  * With `namespace` set, the plugin also rewrites every name the packs declare, merges the
  * `vendored_pack/` content of the package's dependencies into its own packs, injects the
  * namespace into the bundle for `@twin-digital/mc-pack-runtime` to read, stamps a type family on
- * every declared entity type, and adds the pack's claim entity type.
+ * every declared entity type, and adds the pack's claim entity type. Vendoring is configured by
+ * the `minecraft.vendor` package.json field, not a build option — the tokens a package writes
+ * for its dependencies' content ship with the package, serving its consumers and its own build
+ * alike:
+ *
+ * ```jsonc
+ * { "minecraft": { "vendor": { "@rpg-libs/spell-fx": { "prefix": "fx" } } } }
+ * ```
+ *
+ * A package holding a `vendored_pack/` tree has that tree validated by its own build — content
+ * kinds, references, and its own tokens — and a package holding only a vendored tree validates
+ * and emits nothing.
  *
  * Every setting the build depends on is set here rather than inherited, so the fragment behaves
  * the same merged over a shared base as it does alone. `target` is `es2022` and `platform` is
@@ -110,7 +96,7 @@ export function packBuild(options: PackBuildOptions): UserConfig {
     outDir: path.join(packageDir, 'dist', 'behavior_pack', 'scripts'),
     outputOptions: { entryFileNames: 'main.js' },
     platform: 'neutral',
-    plugins: [packBuildPlugin({ namespace: options.namespace, packageDir, vendor: options.vendor, virtualEntry })],
+    plugins: [packBuildPlugin({ namespace: options.namespace, packageDir, virtualEntry })],
     shims: false,
     sourcemap: false,
     target: 'es2022',
