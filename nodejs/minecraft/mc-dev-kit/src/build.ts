@@ -25,9 +25,9 @@ export interface PackBuildOptions {
  * and `clean` is false because emptying the output directory would take the end-of-build prune's
  * inputs with it.
  *
- * A package whose behavior pack carries no `behavior_pack/scripts/main.ts` builds through a
- * virtual entry, so a script-less pack and a resource-pack-only package both build; the chunk
- * nothing claims is pruned at the end of the build.
+ * A package that carries no `src/main.ts` builds through a virtual entry, so a script-less pack
+ * and a resource-pack-only package both build; the chunk nothing claims is pruned at the end of
+ * the build.
  *
  * In the opus monorepo the fragment reaches the configuration through a `tsdown.config.d/` file:
  *

@@ -1,7 +1,7 @@
 /**
- * The pack's entry point — `behavior_pack/scripts/main.ts`, the one file the engine executes — is
- * exercised as the engine executes it: evaluated for its side effects, against a world and system
- * it reached through its own `@minecraft/server` import. The rest of the suite drives the
+ * The pack's entry point — `src/main.ts`, the one file the engine executes — is exercised as the
+ * engine executes it: evaluated for its side effects, against a world and system it reached
+ * through its own `@minecraft/server` import. The rest of the suite drives the
  * adventure through handles it passes in, so it would pass unchanged against an entry that
  * imported the wrong names or called nothing. This file is what fails in that case.
  *
@@ -29,7 +29,7 @@ let server: FakeServer
 
 beforeEach(async () => {
   // The entry evaluates here, against a world of its own and nothing this file hands it.
-  server = await loadPack(() => import('../behavior_pack/scripts/main.js'))
+  server = await loadPack(() => import('./main.js'))
   withVanillaDimensions(server)
 })
 
