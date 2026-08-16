@@ -21,7 +21,8 @@ export interface NamespaceClaim {
   readonly entityTypeId: string
 }
 
-let claims: readonly NamespaceClaim[] = []
+/** The report the last enumeration built; `undefined` until the first world load. */
+let claims: readonly NamespaceClaim[] | undefined
 
 /** Enumerates the catalog and replaces the report; the catalog only answers after world load. */
 const enumerate = (): void => {
@@ -50,9 +51,17 @@ world.afterEvents.worldLoad.subscribe(enumerate)
 
 /**
  * The rival claims on this pack's namespace, one entry per contending pack. Empty where the
- * namespace is uncontended, where the pack was built with namespacing off, and before the world
- * has loaded — the type catalog answers no read earlier.
+ * namespace is uncontended, and where the pack was built with namespacing off.
+ *
+ * Throws before the world has loaded: the report is built at world load — the type catalog
+ * answers no read earlier — and does not exist yet, and an empty answer would read as "no
+ * rivals found", a claim the runtime cannot make yet.
  */
 export function foreignNamespaceClaims(): readonly NamespaceClaim[] {
+  if (claims === undefined) {
+    throw new Error(
+      'foreignNamespaceClaims() called before the world has loaded: the report is built at world load and does not exist yet',
+    )
+  }
   return claims
 }
