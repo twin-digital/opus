@@ -95,5 +95,6 @@ for (const claim of foreignNamespaceClaims()) {
 ```
 
 Each contention is also written to the content log as a warning. With no rival — or with
-namespacing off — the value is empty and nothing is logged. The value is empty before the world
-has loaded too: the engine's type catalog answers no read earlier.
+namespacing off — the value is empty and nothing is logged. Calling before the world has loaded
+throws: the report is built at world load — the engine's type catalog answers no read earlier —
+and an empty answer would falsely read as "no rivals found".
