@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/mc-pack-runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Engine-side runtime for packs built with @twin-digital/mc-dev-kit: the pack-identifier helper, checked entity calls, and the namespace-claim report.",
   "license": "ISC",
   "type": "module",
