@@ -26,6 +26,8 @@ import type { Config } from '../config.js'
 import type { DB, MessagesTable } from '../db/schema.js'
 import { createNotificationGate } from '../notifications/cooldown-gate.js'
 import { runOperator } from '../operators/run.js'
+import type { AccountCapabilityDeclaration } from '../providers/account-capabilities.js'
+import { parseCapabilities } from '../providers/account-capabilities.js'
 import { messageViewFromRow } from '../operators/types.js'
 import { type OutputTag, type RunRef, type TriageEventInput, persistOperatorResult } from '../pipeline/persist.js'
 import { type ResourceEvent, type UsageDelta, createResourceClientFactory } from '../resources/make-resource-client.js'
@@ -66,7 +68,7 @@ export async function runWorker(
   }, config.operatorTimeoutMs)
 
   try {
-    const { messageRow, tags, userId, accountId, pipelineId } = await loadContext(db, run)
+    const { messageRow, tags, userId, accountId, capabilities, pipelineId } = await loadContext(db, run)
 
     // Per-run underlying Action clients: gmail auth keyed on the Message's
     // Account, pushover auth on the Notify Operator's referenced credential
@@ -126,6 +128,7 @@ export async function runWorker(
         makeResourceClient,
         signal: controller.signal,
         notifications,
+        account: { id: accountId, capabilities },
       },
     )
 
@@ -176,6 +179,8 @@ interface WorkerContext {
   readonly userId: number
   /** The Message's Account id — keys the per-run gmail credential resolution. */
   readonly accountId: number
+  /** What the Account's backend last declared it can carry (d-bzw8qoiy). */
+  readonly capabilities: AccountCapabilityDeclaration | null
   readonly pipelineId: number
 }
 
@@ -220,7 +225,7 @@ async function loadContext(db: DB, run: WorkerRunRow): Promise<WorkerContext> {
   // user_id for the Limit scope: message → account → user.
   const account = await db
     .selectFrom('accounts')
-    .select(['user_id'])
+    .select(['user_id', 'capabilities_json'])
     .where('id', '=', messageRow.account_id)
     .executeTakeFirstOrThrow()
 
@@ -237,6 +242,7 @@ async function loadContext(db: DB, run: WorkerRunRow): Promise<WorkerContext> {
     tags,
     userId: account.user_id,
     accountId: messageRow.account_id,
+    capabilities: parseCapabilities(account.capabilities_json),
     pipelineId: pipeline,
   }
 }

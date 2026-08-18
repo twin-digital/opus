@@ -275,7 +275,9 @@ function templatesOf(typeKey: OperatorTypeKey, config: Record<string, unknown>):
     case 'notify':
       return single('message_template')
     case 'apply_category':
+    case 'set_aside':
       return single('category_template')
+
     case 'digest_delivery': {
       const c = config as unknown as OperatorConfigFor<'digest_delivery'>
       const out: { label: string; template: string }[] = []
@@ -295,8 +297,10 @@ function templatesOf(typeKey: OperatorTypeKey, config: Record<string, unknown>):
       })
       return out
     }
+    // A File names its folder literally rather than composing it (d-jj2mymbi).
     case 'rule_based_tagger':
     case 'archive':
+    case 'file':
       return []
   }
 }

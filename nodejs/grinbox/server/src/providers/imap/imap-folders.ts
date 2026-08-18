@@ -9,26 +9,26 @@
  * and a role it cannot propose is left for the user to name.
  */
 
-import type { SourceState } from '@grinbox/shared'
+import type { FolderRole, SourceState } from '@grinbox/shared'
 import type { ImapFolderListing } from './imap-client.js'
-import type { ImapFolderRole, ImapFolders } from './imap-settings.js'
+import type { AccountFolders } from './imap-settings.js'
 
 /** The special-use role a server advertises for each of grinbox's roles. */
-const ADVERTISED_ROLE: Readonly<Record<Exclude<ImapFolderRole, 'arrival'>, string>> = {
+const ADVERTISED_ROLE: Readonly<Record<Exclude<FolderRole, 'arrival'>, string>> = {
   archived: '\\Archive',
   trashed: '\\Trash',
   spam: '\\Junk',
 }
 
 /** Names commonly given to each role where the server advertises nothing. */
-const CUSTOMARY_NAMES: Readonly<Record<Exclude<ImapFolderRole, 'arrival'>, readonly string[]>> = {
+const CUSTOMARY_NAMES: Readonly<Record<Exclude<FolderRole, 'arrival'>, readonly string[]>> = {
   archived: ['Archive', 'Archives', 'All Mail'],
   trashed: ['Trash', 'Deleted Items', 'Deleted Messages'],
   spam: ['Junk', 'Spam', 'Junk E-mail'],
 }
 
 /** A proposal for one role: the folder proposed, or null where none was found. */
-export type FolderProposal = Partial<Record<ImapFolderRole, string>>
+export type FolderProposal = Partial<Record<FolderRole, string>>
 
 /**
  * Propose the four folders from what the server listed. Arrival is INBOX, which
@@ -70,7 +70,7 @@ export function proposeFolders(listings: readonly ImapFolderListing[]): FolderPr
  * none of the four is recorded `archived`. No message on an IMAP Account is
  * recorded `deleted` — grinbox never concludes a deletion it did not see.
  */
-export function standingOfFolder(folders: ImapFolders, folder: string): SourceState {
+export function standingOfFolder(folders: AccountFolders, folder: string): SourceState {
   switch (folder) {
     case folders.arrival:
       return 'present'

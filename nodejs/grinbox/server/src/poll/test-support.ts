@@ -17,7 +17,7 @@ import type {
   SnapshotEntry,
   ThreadMembership,
 } from '../providers/provider.js'
-import type { AccountCapabilities } from '../providers/account-capabilities.js'
+import type { AccountCapabilityDeclaration } from '../providers/account-capabilities.js'
 import { allCapabilities } from '../providers/account-capabilities.js'
 
 /** A fixture backend Message the stub Provider serves. */
@@ -46,7 +46,7 @@ export class StubProvider implements Provider {
   reconcileCalls = 0
   declareCapabilitiesCalls = 0
   /** What `declareCapabilities` reports; every capability by default. */
-  capabilities: AccountCapabilities = allCapabilities(0)
+  capabilities: AccountCapabilityDeclaration = allCapabilities(0)
 
   /** Convenience for tests that only care which ids are present. */
   set reconcilePresentIds(ids: string[]) {
@@ -96,7 +96,7 @@ export class StubProvider implements Provider {
     return { entries: this.snapshotEntries }
   }
 
-  async declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilities> {
+  async declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilityDeclaration> {
     this.declareCapabilitiesCalls++
     return this.capabilities
   }

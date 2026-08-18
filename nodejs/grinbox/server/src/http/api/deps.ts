@@ -12,10 +12,8 @@
 
 import type { Encryptor } from '../../crypto/encryption.js'
 import type { DB } from '../../db/index.js'
-import type { AccountCapabilities } from '../../providers/account-capabilities.js'
-import type { ImapFolderListing } from '../../providers/imap/imap-client.js'
-import type { FolderProposal } from '../../providers/imap/imap-folders.js'
-import type { ImapConnection } from '../../providers/imap/imap-settings.js'
+import type { Folder, ImapAccountSettings } from '@grinbox/shared'
+import type { AccountCapabilityDeclaration } from '../../providers/account-capabilities.js'
 
 /** Returns the current time in UNIX seconds (the State DB's timestamp unit). */
 export type NowSeconds = () => number
@@ -78,17 +76,16 @@ export interface ApiDeps {
 }
 
 /** Lists the folders an Account holds, by Account id. */
-export type AccountFolders = (accountId: number) => Promise<readonly ImapFolderListing[]>
+export type AccountFolders = (accountId: number) => Promise<readonly Folder[]>
 
 /**
  * What logging in to an IMAP server reported. Nothing here carries the password
  * back out (r-0kn0oida).
  */
 export interface ImapProbeResult {
-  readonly folders: readonly ImapFolderListing[]
-  /** Grinbox's proposal for the four roles, from the roles and the names. */
-  readonly proposed: FolderProposal
-  readonly capabilities: AccountCapabilities
+  /** Every folder the account holds, each with the role grinbox proposes for it. */
+  readonly folders: readonly Folder[]
+  readonly capabilities: AccountCapabilityDeclaration
 }
 
 /**
@@ -96,7 +93,7 @@ export interface ImapProbeResult {
  * credential surfaces as {@link ImapCredentialRejectedError}; every other
  * failure propagates as itself.
  */
-export type ImapProbe = (connection: ImapConnection, password: string) => Promise<ImapProbeResult>
+export type ImapProbe = (connection: ImapAccountSettings, password: string) => Promise<ImapProbeResult>
 
 /**
  * Resolve the acting/owning `user_id` for the single-User MVP (no auth): the

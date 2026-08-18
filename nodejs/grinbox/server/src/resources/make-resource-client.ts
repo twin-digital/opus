@@ -270,7 +270,10 @@ function makeMailboxClient(deps: ResourceClientFactoryDeps): MailboxClient {
         'apply_category',
         () => deps.clients.mailbox.apply_category(args, deps.signal),
         () => ({}),
-        (v) => ({ applied: v.applied }),
+        // The run records the Category actually applied, which is what the
+        // mailbox now carries rather than what the template composed
+        // (d-mbh2pthe).
+        (v) => ({ category: args.category, applied: v.applied }),
       ),
     archive: (args) =>
       meter(

@@ -22,9 +22,10 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import type { AccountCapabilities } from '../../providers/account-capabilities.js'
+import type { AccountFolders } from '@grinbox/shared'
+import type { AccountCapabilityDeclaration } from '../../providers/account-capabilities.js'
 import { parseCapabilities } from '../../providers/account-capabilities.js'
-import { IMAP_PASSWORD_KIND, IMAP_PROVIDER_TYPE } from '../../providers/imap/imap-settings.js'
+import { IMAP_PASSWORD_KIND, IMAP_PROVIDER_TYPE, parseImapSettings } from '../../providers/imap/imap-settings.js'
 import type { ApiDeps } from './deps.js'
 
 export type AccountStatus = 'ok' | 'no_pipeline' | 'needs_auth' | 'paused'
@@ -48,9 +49,50 @@ export interface AccountSummary {
    * to say which accounts cannot carry an operation, and why (d-qzxvoph1,
    * d-5h66e3zl).
    */
-  readonly capabilities: AccountCapabilities | null
+  readonly capabilities: AccountCapabilityDeclaration | null
   /** Why polling is paused, or null while it runs (d-v4mejzw5). */
   readonly paused_reason: string | null
+  /**
+   * An IMAP Account's stored connection and folders, so the interface can show
+   * them and pre-fill a repair with everything but the password (d-r3ogwkv7).
+   * Null on every other backend. The password is never here, in any encoding
+   * (r-0kn0oida).
+   */
+  readonly imap: ImapAccountView | null
+}
+
+/** An IMAP Account's stored configuration, password excluded. */
+export interface ImapAccountView {
+  readonly host: string
+  readonly port: number
+  readonly security: string
+  readonly username: string
+  readonly address: string
+  readonly folders: AccountFolders
+}
+
+/**
+ * Read an Account's IMAP configuration out of its stored settings. A row whose
+ * settings do not parse as IMAP settings reads as null rather than failing the
+ * list: one malformed Account must not hide every other.
+ */
+function imapView(providerType: string, settingsJson: string): ImapAccountView | null {
+  if (providerType !== IMAP_PROVIDER_TYPE) {
+    return null
+  }
+  try {
+    const settings = parseImapSettings(settingsJson)
+    return {
+      host: settings.host,
+      port: settings.port,
+      security: settings.security,
+      username: settings.username,
+      address: settings.address,
+      folders: settings.folders,
+    }
+  } catch {
+    return null
+  }
 }
 
 const idParam = z.object({ id: z.coerce.number().int().positive() })
@@ -75,6 +117,7 @@ export function createAccountsRoutes(deps: ApiDeps) {
           'accounts.poll_interval_seconds as poll_interval_seconds',
           'accounts.capabilities_json as capabilities_json',
           'accounts.paused_reason as paused_reason',
+          'accounts.settings_json as settings_json',
           'pipelines.name as active_pipeline_name',
         ])
         .orderBy('accounts.name', 'asc')
@@ -97,6 +140,7 @@ export function createAccountsRoutes(deps: ApiDeps) {
         status: deriveStatus(r.active_pipeline_id, isAuthorized(credentialed, r.id, r.provider_type), r.paused_reason),
         capabilities: parseCapabilities(r.capabilities_json),
         paused_reason: r.paused_reason,
+        imap: imapView(r.provider_type, r.settings_json),
       }))
 
       return c.json({ accounts })
@@ -121,6 +165,7 @@ export function createAccountsRoutes(deps: ApiDeps) {
           'accounts.poll_interval_seconds as poll_interval_seconds',
           'accounts.capabilities_json as capabilities_json',
           'accounts.paused_reason as paused_reason',
+          'accounts.settings_json as settings_json',
           'pipelines.name as active_pipeline_name',
         ])
         .executeTakeFirst()
@@ -143,6 +188,7 @@ export function createAccountsRoutes(deps: ApiDeps) {
         status: deriveStatus(r.active_pipeline_id, isAuthorized(credentialed, r.id, r.provider_type), r.paused_reason),
         capabilities: parseCapabilities(r.capabilities_json),
         paused_reason: r.paused_reason,
+        imap: imapView(r.provider_type, r.settings_json),
       }
       return c.json({ account })
     })

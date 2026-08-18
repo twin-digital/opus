@@ -24,7 +24,7 @@
  */
 
 import type { SourceState } from '@grinbox/shared'
-import type { AccountCapabilities } from './account-capabilities.js'
+import type { AccountCapabilityDeclaration } from './account-capabilities.js'
 
 /**
  * The minimal Account context a Provider needs. A projection of the `accounts`
@@ -113,6 +113,12 @@ export interface FetchedMessage {
   readonly bodyFetched: boolean
   readonly bodyText?: string | null
   readonly bodyHtml?: string | null
+  /**
+   * Where the backend currently holds the Message, for backends whose message
+   * identity does not follow it between folders (d-k4nt8zbu). The upsert stores
+   * it; a backend whose ids follow the Message on their own supplies none.
+   */
+  readonly imapLocation?: { folder: string; uidValidity: number; uid: number }
 }
 
 /**
@@ -184,5 +190,5 @@ export interface Provider {
    * cannot archive or file, and an arrival folder that does not admit
    * client-defined keywords cannot carry a category.
    */
-  declareCapabilities(account: ProviderAccount): Promise<AccountCapabilities>
+  declareCapabilities(account: ProviderAccount): Promise<AccountCapabilityDeclaration>
 }
