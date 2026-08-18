@@ -1,23 +1,49 @@
 // The public surface, exercised through the module-scope bindings the shim installs per file.
-// The definitions check runs against the fake catalog: `registerEntityType` stands in for the
-// assets pack being active, its absence for the pack missing. The engine's early-execution
-// refusal has no counterpart in the fakes (lookups answer whenever a test makes them), so that
-// case rests on the check having no handler around it — see catalog.ts — and the example
-// adventure's in-world run.
+// The pack's namespace, token, and vendored prefixes are what the kit's build injects into a
+// namespaced bundle; a test assigns the same global by hand, standing in for a build that
+// vendored this library under the prefix `rpg` into an adventure namespaced `adventure`.
+import { world } from '@minecraft/server'
 import {
   __useServer,
+  addComponent,
+  createEntity,
   createServer,
   registerEntityType,
   withVanillaDimensions,
   type FakeServer,
 } from '@twin-digital/minecraft-test-lib'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { actorPropertyKey } from './actor.js'
-import { ActorDefinitionsMissingError, findActor, PACK_NAME, PRESETS, spawnActor, type ActorPlace } from './index.js'
+import { findActor, ForeignEntityError, PRESETS, spawnActor, type ActorPlace } from './index.js'
+
+interface Injection {
+  readonly namespace: string
+  readonly packToken: string
+  readonly prefixes: readonly string[]
+}
+
+const host = globalThis as { __MC_PACK_RUNTIME__?: Injection }
+
+const NAMESPACE = 'adventure'
+const PACK_TOKEN = 'twin-digital-adventure'
+const FAMILY = `mcdk_pack_${PACK_TOKEN}`
+// The library's own calls are prefix-bound by the build; a unit test spells the bound form.
+const WIZARD_ID = `${NAMESPACE}:wizard`
+
+const inject = (): void => {
+  host.__MC_PACK_RUNTIME__ = { namespace: NAMESPACE, packToken: PACK_TOKEN, prefixes: ['rpg'] }
+}
 
 let server: FakeServer
 let place: ActorPlace
+
+/** Stamps this pack's family on everything spawned, as the build's stamped definitions do. */
+const stampOwnFamily = (): void => {
+  world.afterEvents.entitySpawn.subscribe((event) => {
+    addComponent(event.entity, 'minecraft:type_family', [FAMILY])
+  })
+}
 
 beforeEach(() => {
   // The shim installs one server per file; each test gets its own instead.
@@ -25,192 +51,151 @@ beforeEach(() => {
   server = createServer()
   __useServer(server)
   withVanillaDimensions(server)
+  inject()
+  registerEntityType(server, WIZARD_ID)
   place = { dimension: server.world.getDimension('overworld'), location: { x: 0.5, y: 64, z: 0.5 } }
 })
 
-/** The assets pack active in the world, as far as definitions go. */
-const withDefinitions = (): void => {
-  registerEntityType(server, PRESETS.wizard.entityId)
-}
+afterEach(() => {
+  delete host.__MC_PACK_RUNTIME__
+})
 
-const entityCount = (): number => [...place.dimension.getEntities()].length
-
-describe('spawnActor with the entity type registered', () => {
-  beforeEach(withDefinitions)
-
-  it('proceeds: spawns an entity of the preset identifier at the given place', () => {
-    const handle = spawnActor('wizard', place)
-    expect(handle.entity.typeId).toBe('rpg:wizard')
-    expect(handle.entity.dimension).toBe(place.dimension)
-    expect(handle.entity.location).toEqual(place.location)
-    expect(handle.preset).toBe('wizard')
-    expect(handle.entityId).toBe('rpg:wizard')
-    expect(entityCount()).toBe(1)
+describe('spawnActor', () => {
+  it('spawns an actor from a preset name alone', () => {
+    stampOwnFamily()
+    const wizard = spawnActor('wizard', place)
+    expect(wizard.preset).toBe('wizard')
+    expect(wizard.entity.isValid).toBe(true)
   })
 
-  it('applies the preset default name when no override is given', () => {
+  it("composes the identifier as the adventure's namespace over this product's prefix", () => {
+    stampOwnFamily()
+    expect(spawnActor('wizard', place).entityId).toBe(WIZARD_ID)
+  })
+
+  it("applies the preset's default name", () => {
+    stampOwnFamily()
     expect(spawnActor('wizard', place).entity.nameTag).toBe(PRESETS.wizard.defaultName)
   })
 
-  it('applies options.name in place of the default name', () => {
+  it('applies a display-name override in place of the default', () => {
+    stampOwnFamily()
     expect(spawnActor('wizard', place, { name: 'Eldrin' }).entity.nameTag).toBe('Eldrin')
   })
 
-  it('holds no durable record when no id is given', () => {
-    const handle = spawnActor('wizard', place)
-    expect(handle.id).toBeUndefined()
-    expect(server.world.getDynamicPropertyIds()).toEqual([])
+  it('rejects a preset the catalogue does not hold', () => {
+    expect(() => spawnActor('sorcerer' as 'wizard', place)).toThrow(TypeError)
   })
 
-  it('records a durable id under the product namespace', () => {
-    spawnActor('wizard', place, { id: 'tower-wizard' })
-    expect(server.world.getDynamicPropertyIds()).toEqual([actorPropertyKey('tower-wizard')])
+  it("raises ForeignEntityError where the spawned entity is not this pack's own", () => {
+    expect(() => spawnActor('wizard', place)).toThrow(ForeignEntityError)
   })
 
-  it('returns the actor already there when spawned again under the same id', () => {
+  it('records a durable name and resolves it again in place of a second actor', () => {
+    stampOwnFamily()
     const first = spawnActor('wizard', place, { id: 'tower-wizard' })
     const second = spawnActor('wizard', place, { id: 'tower-wizard' })
     expect(second.entity.id).toBe(first.entity.id)
-    expect(second.id).toBe('tower-wizard')
-    expect(entityCount()).toBe(1)
+    expect(place.dimension.getEntities()).toHaveLength(1)
   })
 
-  it('changes nothing about the actor already there — a name override included', () => {
-    spawnActor('wizard', place, { id: 'tower-wizard', name: 'Eldrin' })
-    const again = spawnActor('wizard', place, { id: 'tower-wizard', name: 'Someone Else' })
-    expect(again.entity.nameTag).toBe('Eldrin')
+  it('leaves the standing actor unchanged, a display-name override included', () => {
+    stampOwnFamily()
+    spawnActor('wizard', place, { id: 'tower-wizard' })
+    const second = spawnActor('wizard', place, { id: 'tower-wizard', name: 'Eldrin' })
+    expect(second.entity.nameTag).toBe(PRESETS.wizard.defaultName)
   })
 
-  it('spawns fresh and re-records when the recorded actor no longer exists', () => {
+  it("raises ForeignEntityError, and leaves the record, where the record's actor is not this pack's own", () => {
+    stampOwnFamily()
+    spawnActor('wizard', place, { id: 'tower-wizard' })
+    const stored = world.getDynamicProperty(actorPropertyKey('tower-wizard'))
+    // A rival pack's definition answering the identifier: same entity id, no family of ours.
+    const foreign = createEntity(server, { typeId: WIZARD_ID, dimension: place.dimension })
+    world.setDynamicProperty(actorPropertyKey('tower-wizard'), JSON.stringify({ preset: 'wizard', entity: foreign.id }))
+    expect(() => spawnActor('wizard', place, { id: 'tower-wizard' })).toThrow(ForeignEntityError)
+    expect(world.getDynamicProperty(actorPropertyKey('tower-wizard'))).not.toBe(stored)
+    expect(JSON.parse(world.getDynamicProperty(actorPropertyKey('tower-wizard')) as string)).toMatchObject({
+      entity: foreign.id,
+    })
+  })
+
+  it('spawns afresh and overwrites the record where the record is stale', () => {
+    stampOwnFamily()
     const first = spawnActor('wizard', place, { id: 'tower-wizard' })
     first.entity.remove()
     const second = spawnActor('wizard', place, { id: 'tower-wizard' })
     expect(second.entity.id).not.toBe(first.entity.id)
-    expect(second.entity.isValid).toBe(true)
-    expect(findActor('tower-wizard')?.entity.id).toBe(second.entity.id)
-  })
-})
-
-describe('spawnActor with the entity type not registered', () => {
-  it('throws the product error, naming the preset, the identifier, and the pack', () => {
-    let thrown: unknown
-    try {
-      spawnActor('wizard', place)
-    } catch (error) {
-      thrown = error
-    }
-    expect(thrown).toBeInstanceOf(ActorDefinitionsMissingError)
-    const error = thrown as ActorDefinitionsMissingError
-    expect(error.preset).toBe('wizard')
-    expect(error.identifier).toBe('rpg:wizard')
-    expect(error.pack).toBe(PACK_NAME)
-    expect(error.message).toContain('wizard')
-    expect(error.message).toContain('rpg:wizard')
-    expect(error.message).toContain(PACK_NAME)
+    expect(JSON.parse(world.getDynamicProperty(actorPropertyKey('tower-wizard')) as string)).toMatchObject({
+      preset: 'wizard',
+      entity: second.entity.id,
+    })
   })
 
-  it('checks before acting: a failed call has spawned and recorded nothing', () => {
-    expect(() => spawnActor('wizard', place, { id: 'tower-wizard' })).toThrow(ActorDefinitionsMissingError)
-    expect(entityCount()).toBe(0)
-    expect(server.world.getDynamicPropertyIds()).toEqual([])
+  it('keys the record on the adventure namespace and stores the bare preset name', () => {
+    stampOwnFamily()
+    spawnActor('wizard', place, { id: 'tower-wizard' })
+    expect(actorPropertyKey('tower-wizard')).toBe(`${NAMESPACE}:rpg-core.actor.tower-wizard`)
+    expect(JSON.parse(world.getDynamicProperty(actorPropertyKey('tower-wizard')) as string)).toMatchObject({
+      preset: 'wizard',
+    })
   })
 
-  it('rejects an unknown preset by name, before the definitions check', () => {
-    expect(() => spawnActor('goblin' as 'wizard', place)).toThrow(/goblin.*wizard/)
-    expect(() => spawnActor('goblin' as 'wizard', place)).not.toThrow(ActorDefinitionsMissingError)
+  it("rejects a durable name holding a ':'", () => {
+    stampOwnFamily()
+    expect(() => spawnActor('wizard', place, { id: 'a:b' })).toThrow(TypeError)
   })
 })
 
 describe('findActor', () => {
-  it('resolves a handle by durable id, reaching the same actor', () => {
-    withDefinitions()
-    const spawned = spawnActor('wizard', place, { id: 'tower-wizard', name: 'Eldrin' })
+  it('resolves a handle to the actor spawned under a durable name', () => {
+    stampOwnFamily()
+    const wizard = spawnActor('wizard', place, { id: 'tower-wizard' })
     const found = findActor('tower-wizard')
-    expect(found?.entity.id).toBe(spawned.entity.id)
-    expect(found?.entity.nameTag).toBe('Eldrin')
+    expect(found?.entity.id).toBe(wizard.entity.id)
     expect(found?.preset).toBe('wizard')
-    expect(found?.entityId).toBe('rpg:wizard')
+    expect(found?.entityId).toBe(WIZARD_ID)
     expect(found?.id).toBe('tower-wizard')
   })
 
-  it('resolves through the world record alone — no in-process state', () => {
-    // A world built by hand, as a later session would present it: the definitions, the record,
-    // and the entity exist, but no spawnActor call ran in this process.
-    withDefinitions()
-    const entity = place.dimension.spawnEntity('rpg:wizard', place.location)
-    entity.nameTag = 'Eldrin'
-    server.world.setDynamicProperty(
-      actorPropertyKey('tower-wizard'),
-      JSON.stringify({ preset: 'wizard', typeId: 'rpg:wizard', entity: entity.id }),
-    )
-    expect(findActor('tower-wizard')?.entity.id).toBe(entity.id)
-  })
-
-  it('returns undefined for an id no actor holds — no check made, there is no actor to act on', () => {
-    // The entity type is not registered here: a call that consulted the catalog would throw.
+  it('returns undefined for a name no record holds, without touching the world', () => {
     expect(findActor('nobody')).toBeUndefined()
+    expect(place.dimension.getEntities()).toHaveLength(0)
   })
 
-  it('checks the stored record before touching the entity', () => {
-    server.world.setDynamicProperty(
-      actorPropertyKey('tower-wizard'),
-      JSON.stringify({ preset: 'wizard', typeId: 'rpg:wizard', entity: '1' }),
-    )
-    let thrown: unknown
-    try {
-      findActor('tower-wizard')
-    } catch (error) {
-      thrown = error
-    }
-    expect(thrown).toBeInstanceOf(ActorDefinitionsMissingError)
-    expect((thrown as ActorDefinitionsMissingError).identifier).toBe('rpg:wizard')
-  })
-
-  it('returns undefined when the recorded actor no longer exists', () => {
-    withDefinitions()
-    const spawned = spawnActor('wizard', place, { id: 'tower-wizard' })
-    spawned.entity.remove()
+  it('returns undefined where the record is stale, leaving the record in place', () => {
+    stampOwnFamily()
+    spawnActor('wizard', place, { id: 'tower-wizard' }).entity.remove()
     expect(findActor('tower-wizard')).toBeUndefined()
+    expect(world.getDynamicProperty(actorPropertyKey('tower-wizard'))).toBeTypeOf('string')
   })
 
-  it('treats an unreadable record as absent', () => {
-    withDefinitions()
-    server.world.setDynamicProperty(actorPropertyKey('tower-wizard'), 'not json')
+  it("raises ForeignEntityError where the record's actor is not this pack's own", () => {
+    const foreign = createEntity(server, { typeId: WIZARD_ID, dimension: place.dimension })
+    world.setDynamicProperty(actorPropertyKey('tower-wizard'), JSON.stringify({ preset: 'wizard', entity: foreign.id }))
+    expect(() => findActor('tower-wizard')).toThrow(ForeignEntityError)
+  })
+})
+
+describe('a handle', () => {
+  it('removes the actor and releases its durable name', () => {
+    stampOwnFamily()
+    const wizard = spawnActor('wizard', place, { id: 'tower-wizard' })
+    wizard.remove()
+    expect(place.dimension.getEntities()).toHaveLength(0)
+    expect(world.getDynamicProperty(actorPropertyKey('tower-wizard'))).toBeUndefined()
     expect(findActor('tower-wizard')).toBeUndefined()
   })
 })
 
-describe('ActorHandle.remove', () => {
-  beforeEach(withDefinitions)
-
-  it('removes the actor from the world', () => {
-    const handle = spawnActor('wizard', place)
-    handle.remove()
-    expect(handle.entity.isValid).toBe(false)
-    expect(entityCount()).toBe(0)
-  })
-
-  it('releases the durable name', () => {
-    const handle = spawnActor('wizard', place, { id: 'tower-wizard' })
-    handle.remove()
-    expect(server.world.getDynamicPropertyIds()).toEqual([])
-    expect(findActor('tower-wizard')).toBeUndefined()
-  })
-
-  it('checks definitions first, and removes nothing when the world lacks them', () => {
-    const handle = spawnActor('wizard', place, { id: 'tower-wizard' })
-    // A world without the assets pack: a fresh server holding no registration.
-    __useServer()
-    __useServer(createServer())
-    try {
-      expect(() => {
-        handle.remove()
-      }).toThrow(ActorDefinitionsMissingError)
-      expect(handle.entity.isValid).toBe(true)
-    } finally {
-      __useServer()
-      __useServer(server)
+describe('the entry point', () => {
+  it('exports no entity identifier, namespace, or pack name', async () => {
+    const entry: Record<string, unknown> = await import('./index.js')
+    expect(Object.keys(entry).sort()).toEqual(
+      ['ForeignEntityError', 'PRESETS', 'PRESET_NAMES', 'findActor', 'spawnActor'].sort(),
+    )
+    for (const preset of Object.values(PRESETS)) {
+      expect(Object.keys(preset).sort()).toEqual(['defaultName', 'preset'])
     }
-    expect(server.world.getDynamicPropertyIds()).toEqual([actorPropertyKey('tower-wizard')])
   })
 })

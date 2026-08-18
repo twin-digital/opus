@@ -1,7 +1,7 @@
 {
   "format_version": "1.10.0",
   "animation_controllers": {
-    "controller.animation.rpg.wizard.general": {
+    "controller.animation.wizard.general": {
       "initial_state": "default",
       "states": {
         "casting": {
@@ -37,7 +37,7 @@
         }
       }
     },
-    "controller.animation.rpg.wizard.move": {
+    "controller.animation.wizard.move": {
       "initial_state": "default",
       "states": {
         "default": {
