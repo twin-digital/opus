@@ -78,15 +78,18 @@ export type SourceState = z.infer<typeof sourceStateSchema>
 // but NOT enforced here — enforcing them would defeat the open-enum design.
 
 /**
- * `accounts.provider_type`. Open so `imap` (and future backends) can be added
- * without a schema migration. Known today: `gmail`.
+ * `accounts.provider_type` — the backend an Account was added with, which never
+ * changes (d-oevikmal). Open so a future backend is added without a schema
+ * migration. Known today: `gmail`, `imap` (see `MAIL_BACKEND_KINDS`).
  */
 export const providerTypeSchema = z.string()
 export type ProviderType = z.infer<typeof providerTypeSchema>
 
 /**
- * `credentials.kind`. Open so new notification-channel credential kinds can be
- * added without a migration. Known today: `gmail_oauth`, `pushover`.
+ * `credentials.kind`. Open so new notification-channel and backend credential
+ * kinds can be added without a migration. Known today: `gmail_oauth`,
+ * `imap_password` (the password the user obtained from their provider,
+ * d-ioso3voc), `pushover`.
  */
 export const credentialKindSchema = z.string()
 export type CredentialKind = z.infer<typeof credentialKindSchema>

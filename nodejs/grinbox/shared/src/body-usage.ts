@@ -4,12 +4,13 @@
  * reads it, determined from that Operator's configuration). An Operator
  * consumes the body when its config actually reads it:
  *
- *  - `llm_tagger` / `notify` / `apply_category`: the rendered template
- *    (`prompt_template` / `message_template` / `category_template`) contains a
- *    `{{body}}` placeholder.
+ *  - `llm_tagger` / `notify` / `apply_category` / `set_aside`: the rendered
+ *    template (`prompt_template` / `message_template` / `category_template`)
+ *    contains a `{{body}}` placeholder.
  *  - `rule_based_tagger`: any Rule's `match` expression references the bare
  *    `body` Message field.
- *  - `archive`: never — its config carries no template or expression.
+ *  - `archive` / `file`: never — neither config carries a template or an
+ *    expression; a File's folder is a literal name.
  *  - `digest_delivery`: never — its section templates run at digest time,
  *    outside any Triage; a `{{body}}` placeholder there renders whatever body
  *    is already cached (or empty) and never triggers a fetch.
@@ -45,6 +46,10 @@ export function operatorConsumesBody<K extends OperatorTypeKey>(typeKey: K, conf
       const c = config as OperatorConfigFor<'apply_category'>
       return templateReferencesBody(c.category_template)
     }
+    case 'set_aside': {
+      const c = config as OperatorConfigFor<'set_aside'>
+      return templateReferencesBody(c.category_template)
+    }
     case 'rule_based_tagger': {
       const c = config as OperatorConfigFor<'rule_based_tagger'>
       return c.rules.some((rule) => {
@@ -57,6 +62,7 @@ export function operatorConsumesBody<K extends OperatorTypeKey>(typeKey: K, conf
       })
     }
     case 'archive':
+    case 'file':
     case 'digest_delivery':
       return false
   }
