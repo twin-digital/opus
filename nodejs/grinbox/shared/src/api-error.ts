@@ -40,6 +40,9 @@ export const API_ERROR_CODES = [
   'poll_interval_out_of_range',
   'seeded_limit',
   'not_found',
+  'invalid_category_name',
+  'duplicate_folder_role',
+  'account_login_failed',
 ] as const
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number]

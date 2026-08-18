@@ -63,6 +63,10 @@ export type Contract = z.infer<typeof contractSchema>
  *  - Notify: `pushover_api.send_notification`.
  *  - Apply Category: `mailbox.apply_category`.
  *  - Archive: `mailbox.archive`.
+ *  - File: `mailbox.file`.
+ *  - Set Aside: both `mailbox.apply_category` and `mailbox.file` — it reaches
+ *    whichever the Account can carry, and declaring both is what makes both
+ *    reachable (d-9fkp4tzv).
  *  - Digest also: `mail_sender.send_message`.
  *  - Rule-based Tagger: deterministic, no Resource operations.
  *
@@ -74,6 +78,8 @@ export const STATIC_RESOURCES = {
   notify: [{ resource: 'pushover_api', operations: ['send_notification'] }],
   apply_category: [{ resource: 'mailbox', operations: ['apply_category'] }],
   archive: [{ resource: 'mailbox', operations: ['archive'] }],
+  file: [{ resource: 'mailbox', operations: ['file'] }],
+  set_aside: [{ resource: 'mailbox', operations: ['apply_category', 'file'] }],
   digest_delivery: [
     { resource: 'llm_bedrock', operations: ['invoke_model'] },
     { resource: 'mail_sender', operations: ['send_message'] },
@@ -99,15 +105,16 @@ export const STATIC_RESOURCES = {
  *    already-invalid expression here; the save-time config validator (and
  *    run-time compile) is where invalidity is reported, not Contract
  *    derivation.
- *  - **Notify / Apply Category**: Actions; no output Tags. Their declared inputs
+ *  - **Notify / Apply Category / Set Aside**: Actions; no output Tags. Their declared inputs
  *    are the Tags they read: the optional `config.when.tag_key` they gate on,
  *    plus the distinct `{{tag.<key>}}` refs in the template they render
  *    (`config.message_template` for Notify, `config.category_template` for Apply
  *    Category). Each must be produced upstream. A template that interpolates
  *    only Message fields (`{{from}}`, `{{subject}}`) contributes no inputs, and
  *    an Action with no `when` and no template Tag refs declares no inputs.
- *  - **Archive**: an Action with no output Tags and no template; its only
- *    config-driven input is the optional `when` gate's Tag.
+ *  - **Archive / File**: Actions with no output Tags and no template; the only
+ *    config-driven input is the optional `when` gate's Tag. A File's folder is
+ *    a literal name, not a template, so it contributes none.
  *  - **Digest delivery**: an Action with no output Tags. Its declared inputs
  *    are the Tags its collation reads: `digest_category` (sections slot by
  *    it), the distinct `{{tag.<key>}}` refs across every section's
@@ -187,11 +194,12 @@ export function contractFromConfig<K extends OperatorTypeKey>(typeKey: K, config
       break
     }
     case 'notify':
-    case 'apply_category': {
+    case 'apply_category':
+    case 'set_aside': {
       // An Action's config-driven inputs are the Tags it reads: the optional
       // `when` gate's Tag, plus every `{{tag.<key>}}` ref in the template the
       // Action renders (`message_template` for Notify, `category_template` for
-      // Apply Category). Each must be produced upstream. A template that reads
+      // Apply Category and Set Aside). Each must be produced upstream. A template that reads
       // only Message fields (`{{from}}`, `{{subject}}`) contributes no inputs.
       const c = config as {
         when?: { tag_key: string }
@@ -209,9 +217,10 @@ export function contractFromConfig<K extends OperatorTypeKey>(typeKey: K, config
       }
       break
     }
-    case 'archive': {
-      // Archive renders no template; its only config-driven input is the
-      // optional `when` gate's Tag.
+    case 'archive':
+    case 'file': {
+      // Neither renders a template — a File names its folder literally — so
+      // the only config-driven input is the optional `when` gate's Tag.
       const c = config as { when?: { tag_key: string } }
       if (c.when) {
         addInput(c.when.tag_key)
@@ -277,6 +286,14 @@ export const operatorTypeRegistry = {
   archive: {
     configSchema: operatorConfigSchemas.archive,
     contractFromConfig: (c: OperatorConfigFor<'archive'>) => contractFromConfig('archive', c),
+  },
+  file: {
+    configSchema: operatorConfigSchemas.file,
+    contractFromConfig: (c: OperatorConfigFor<'file'>) => contractFromConfig('file', c),
+  },
+  set_aside: {
+    configSchema: operatorConfigSchemas.set_aside,
+    contractFromConfig: (c: OperatorConfigFor<'set_aside'>) => contractFromConfig('set_aside', c),
   },
   digest_delivery: {
     configSchema: operatorConfigSchemas.digest_delivery,
