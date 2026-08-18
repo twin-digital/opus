@@ -27,6 +27,11 @@ export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>
  * string — a client branches on the codes it knows and falls back on the
  * `message` for any it does not — so adding a refusal is not a breaking change
  * to the envelope.
+ *
+ * `certificate_unverified` is its own code rather than a shade of
+ * `account_login_failed`: grinbox refuses an Account whose server it cannot
+ * verify and nothing the user configures waives the check (d-lru4i8rp), so the
+ * user has to be able to tell that refusal from a server that would not answer.
  */
 export const API_ERROR_CODES = [
   'pipeline_validation_failed',
@@ -43,6 +48,7 @@ export const API_ERROR_CODES = [
   'invalid_category_name',
   'duplicate_folder_role',
   'account_login_failed',
+  'certificate_unverified',
 ] as const
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number]

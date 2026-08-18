@@ -38,9 +38,56 @@ export const ACCOUNT_CAPABILITIES = ['apply_category', 'archive', 'file', 'send_
 export const accountCapabilitySchema = z.enum(ACCOUNT_CAPABILITIES)
 export type AccountCapability = z.infer<typeof accountCapabilitySchema>
 
-/** What an Account supports, as last read when grinbox logged in (d-bzw8qoiy). */
-export const accountCapabilitiesSchema = z.array(accountCapabilitySchema)
+/**
+ * What an Account supports, as last read when grinbox logged in (d-bzw8qoiy).
+ * `supported` is what it can carry; `unsupported` explains each gap in the
+ * user's terms, so the interface can say which Accounts cannot carry an
+ * operation and why (d-5h66e3zl, r-x3jb6wlq). The reason is prose the backend
+ * wrote rather than a code: what makes a gap understandable — an arrival folder
+ * that admits no keywords, a server advertising no move — is the backend's to
+ * say, and the interface shows it as given.
+ *
+ * `read_at` is when the declaration was read, in Unix seconds. A capability
+ * appears in exactly one of the two members.
+ */
+export const accountCapabilitiesSchema = z
+  .object({
+    supported: z.array(accountCapabilitySchema),
+    unsupported: z.partialRecord(accountCapabilitySchema, z.string().min(1)),
+    read_at: z.number().int(),
+  })
+  .superRefine((declaration, ctx) => {
+    for (const capability of declaration.supported) {
+      if (declaration.unsupported[capability] !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `'${capability}' is declared both supported and unsupported`,
+          path: ['unsupported', capability],
+        })
+      }
+    }
+  })
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>
+
+/** Whether the declaration admits `capability`. A missing declaration admits nothing. */
+export function accountSupports(declaration: AccountCapabilities | null, capability: AccountCapability): boolean {
+  return declaration?.supported.includes(capability) === true
+}
+
+/**
+ * Why the Account does not carry `capability`, or `null` where it does — and
+ * where nothing has been declared yet, since an Account grinbox has not logged
+ * in to has no gap to explain.
+ */
+export function capabilityAbsenceReason(
+  declaration: AccountCapabilities | null,
+  capability: AccountCapability,
+): string | null {
+  if (declaration === null || declaration.supported.includes(capability)) {
+    return null
+  }
+  return declaration.unsupported[capability] ?? null
+}
 
 const CAPABILITY_SET: ReadonlySet<string> = new Set(ACCOUNT_CAPABILITIES)
 

@@ -22,7 +22,8 @@ import { accountFoldersSchema } from './folders.js'
  * an Account whose server it cannot verify; nothing the user configures waives
  * the check (d-lru4i8rp).
  */
-export const imapConnectionSecuritySchema = z.enum(['tls', 'starttls'])
+export const IMAP_CONNECTION_SECURITIES = ['tls', 'starttls'] as const
+export const imapConnectionSecuritySchema = z.enum(IMAP_CONNECTION_SECURITIES)
 export type ImapConnectionSecurity = z.infer<typeof imapConnectionSecuritySchema>
 
 /** A TCP port. */
