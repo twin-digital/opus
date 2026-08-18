@@ -81,6 +81,13 @@ export const DEFAULT_LIMITS: readonly {
   },
   {
     resource: 'mailbox',
+    operation: 'file',
+    scope: 'per_window',
+    max_count: 100,
+    window_seconds: 600,
+  },
+  {
+    resource: 'mailbox',
     operation: 'fetch_body',
     scope: 'per_window',
     max_count: 100,
