@@ -1,5 +1,7 @@
+import { CATEGORY_FORBIDDEN_CHARS, forbiddenCategoryTemplateChars } from '@grinbox/shared'
 import { useId, useState } from 'react'
 
+import { FolderPicker } from '@/components/folder-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -152,24 +154,149 @@ export function ApplyCategoryEditor({
   value: ApplyCategoryDraft
   onChange: (next: ApplyCategoryDraft) => void
 }) {
-  const catId = useId()
   return (
     <div className='space-y-6'>
-      <div className='space-y-2'>
-        <Label htmlFor={catId}>Category name</Label>
-        <p className='text-xs text-muted-foreground'>
-          The Grinbox-owned Category to apply (Gmail: a label). May be templated from Message fields.
+      <CategoryTemplateField
+        value={value.category_template}
+        onChange={(category_template) => {
+          onChange({ ...value, category_template })
+        }}
+      />
+      <ActionWhenField
+        value={value.when}
+        onChange={(when) => {
+          onChange({ ...value, when })
+        }}
+      />
+    </div>
+  )
+}
+
+/**
+ * The Category name template, and the check the save runs over it. A Category
+ * is composed from a template, so what the user saves is checked for the
+ * characters the template's own text carries, and a barred one refuses the save
+ * naming it (d-mbh2pthe, d-8v30vkou). Placeholders are skipped here — what they
+ * render is unknown until a Triage runs, and each barred character the
+ * rendering produces becomes an underscore then.
+ *
+ * The same check runs in the shared schema on Save and on the daemon; this is
+ * where the user meets it while typing.
+ */
+export function CategoryTemplateField({
+  value,
+  onChange,
+  description,
+}: {
+  value: string
+  onChange: (next: string) => void
+  description?: string
+}) {
+  const catId = useId()
+  const forbidden = forbiddenCategoryTemplateChars(value)
+  return (
+    <div className='space-y-2'>
+      <Label htmlFor={catId}>Category name</Label>
+      <p className='text-xs text-muted-foreground'>
+        {description ??
+          'The Grinbox-owned marker put on the Message, so you see it in your own mail client (Gmail: a label; IMAP: a keyword). May be templated from Message fields.'}
+      </p>
+      <Input
+        id={catId}
+        className='max-w-md font-mono'
+        placeholder='Grinbox/{{category}}'
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+        }}
+        aria-invalid={forbidden.length > 0}
+      />
+      {forbidden.length > 0 ?
+        <p className='text-xs [color:var(--danger)]'>
+          A Category cannot carry {forbidden.map((c) => `'${c}'`).join(', ')}. Saving is refused until it goes.
         </p>
-        <Input
-          id={catId}
-          className='max-w-md font-mono'
-          placeholder='Grinbox/{{category}}'
-          value={value.category_template}
-          onChange={(e) => {
-            onChange({ ...value, category_template: e.target.value })
-          }}
-        />
-      </div>
+      : <p className='text-xs text-muted-foreground'>
+          A Category carries none of{' '}
+          {CATEGORY_FORBIDDEN_CHARS.map((c) => (c === ' ' ? 'a space' : `'${c}'`)).join(', ')}, or a control character.
+          What a placeholder renders is made carriable when the Triage runs.
+        </p>
+      }
+    </div>
+  )
+}
+
+/**
+ * File config (d-jj2mymbi): the folder the Message is moved into, named
+ * literally rather than composed from the Message. Grinbox creates no folder,
+ * so a name no Account has is a run-time failure on that Account rather than a
+ * refused save (d-qzxvoph1).
+ */
+export interface FileDraft {
+  folder: string
+  when?: ActionWhenDraft
+}
+
+export function FileEditor({ value, onChange }: { value: FileDraft; onChange: (next: FileDraft) => void }) {
+  return (
+    <div className='space-y-6'>
+      <p className='text-sm text-muted-foreground'>
+        Moves the Message into a folder of the Account it arrived on. The Message keeps every marker it had and stays
+        findable — only where it sits changes.
+      </p>
+      <FolderPicker
+        label='Folder'
+        description='Named exactly as the server spells it — grinbox reads no hierarchy into it and translates no separator. Grinbox creates no folder: where an Account has none of this name, this Operator fails on that Account.'
+        value={value.folder}
+        onChange={(folder) => {
+          onChange({ ...value, folder })
+        }}
+      />
+      <ActionWhenField
+        value={value.when}
+        onChange={(when) => {
+          onChange({ ...value, when })
+        }}
+      />
+    </div>
+  )
+}
+
+/**
+ * Set Aside config (d-hj9nac5f, r-blqzjemx): one thing the user configures to
+ * mark a Message for later on every Account they have, carried out the best way
+ * each Account's backend allows. Both halves are required — the point of the
+ * type is that one configuration serves an Account that categorizes and one
+ * that can only file.
+ */
+export interface SetAsideDraft {
+  category_template: string
+  folder: string
+  when?: ActionWhenDraft
+}
+
+export function SetAsideEditor({ value, onChange }: { value: SetAsideDraft; onChange: (next: SetAsideDraft) => void }) {
+  return (
+    <div className='space-y-6'>
+      <p className='text-sm text-muted-foreground'>
+        One way to set a Message aside, whatever the Account can do. On an Account that can apply Categories it applies
+        the Category; on one that cannot but can file, it files into the folder; on an Account that can do neither it
+        fails.
+      </p>
+      <CategoryTemplateField
+        value={value.category_template}
+        onChange={(category_template) => {
+          onChange({ ...value, category_template })
+        }}
+        description='Applied on Accounts that can carry a Category.'
+      />
+      <FolderPicker
+        label='Folder'
+        description='Where the Message goes on an Account that cannot carry a Category. Named exactly as the server spells it; grinbox creates no folder.'
+        value={value.folder}
+        onChange={(folder) => {
+          onChange({ ...value, folder })
+        }}
+      />
       <ActionWhenField
         value={value.when}
         onChange={(when) => {

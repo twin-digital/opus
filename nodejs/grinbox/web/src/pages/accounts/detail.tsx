@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { AccountIcon } from '@/components/account-icon'
+import { ActivationWarnings } from '@/components/capability-warnings'
 import { Page } from '@/components/page'
 import { StatusIndicator } from '@/components/status-indicator'
 import {
@@ -27,9 +28,11 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { accountsKey, useAccount, useDeleteAccount, usePipelines, useUpdateAccount } from '@/lib/accounts'
 import { ApiError } from '@/lib/api-error'
+import { describeWarnings, warningsFromResponse } from '@/lib/capabilities'
 import { runOAuthFlow } from '@/lib/oauth'
 import { cn } from '@/lib/utils'
 import { handleOAuthResult } from './add-account-button'
+import { AccountCapabilitiesCard, AccountFoldersCard, ImapConnectionCard, PausedBanner } from './imap-account-cards'
 
 /** Cadence bounds the daemon enforces (oauth/account-config out-of-range error). */
 const MIN_CADENCE = 60
@@ -130,7 +133,18 @@ function AccountSettings({ account, id }: { account: AccountSummary; id: number 
         color: colorChanged ? color || null : undefined,
       },
       {
-        onSuccess: () => toast.success('Account settings saved'),
+        onSuccess: (result) => {
+          // Activating a Pipeline on this Account warns for what it cannot
+          // carry, and saves anyway (d-qzxvoph1).
+          const warnings = warningsFromResponse(result)
+          if (warnings.length > 0) {
+            toast('Account settings saved, with a warning', {
+              description: describeWarnings(warnings, [account]),
+            })
+            return
+          }
+          toast.success('Account settings saved')
+        },
         onError: (err) => toast.error('Save failed', { description: msg(err) }),
       },
     )
@@ -167,11 +181,13 @@ function AccountSettings({ account, id }: { account: AccountSummary; id: number 
       <header>
         <h1 className='text-3xl font-semibold tracking-tight'>{account.name}</h1>
         <div className='mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground'>
-          <span className='capitalize'>{account.provider_type === 'gmail' ? 'Gmail' : account.provider_type}</span>
+          <span>{providerLabel(account.provider_type)}</span>
           <span aria-hidden='true'>·</span>
           <StatusIndicator status={account.status} />
         </div>
       </header>
+
+      <PausedBanner account={account} />
 
       <Card>
         <CardHeader>
@@ -292,14 +308,14 @@ function AccountSettings({ account, id }: { account: AccountSummary; id: number 
             <p className='text-xs text-muted-foreground'>
               With no Pipeline assigned, new Messages on this Account won't be triaged.
             </p>
-          : null}
+          : <ActivationWarnings account={account} pipelineId={Number(pipelineValue)} />}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Polling</CardTitle>
-          <CardDescription>How often the daemon checks Gmail for new Messages on this Account.</CardDescription>
+          <CardDescription>How often the daemon checks this mailbox for new Messages.</CardDescription>
         </CardHeader>
         <CardContent className='space-y-2'>
           <Label htmlFor='cadence'>Poll cadence (seconds)</Label>
@@ -326,20 +342,26 @@ function AccountSettings({ account, id }: { account: AccountSummary; id: number 
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Authorization</CardTitle>
-          <CardDescription>
-            Re-run Google consent for this Account — needed after a revoked or expired grant, or to widen scopes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant='outline' disabled={reauthPending} onClick={() => void onReauth()}>
-            <KeyRound />
-            {reauthPending ? 'Waiting on Google…' : 'Re-authorize'}
-          </Button>
-        </CardContent>
-      </Card>
+      <ImapConnectionCard account={account} />
+      <AccountFoldersCard account={account} />
+      <AccountCapabilitiesCard account={account} />
+
+      {isImap(account.provider_type) ? null : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Authorization</CardTitle>
+            <CardDescription>
+              Re-run Google consent for this Account — needed after a revoked or expired grant, or to widen scopes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant='outline' disabled={reauthPending} onClick={() => void onReauth()}>
+              <KeyRound />
+              {reauthPending ? 'Waiting on Google…' : 'Re-authorize'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className='sticky bottom-0 -mx-8 flex items-center justify-between gap-4 border-t border-border bg-background/95 px-8 py-4 backdrop-blur'>
         <DeleteAccountDialog accountName={account.name} pending={remove.isPending} onConfirm={onDelete} />
@@ -376,8 +398,8 @@ function DeleteAccountDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {accountName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the Account and stops Grinbox from polling it. Its stored Gmail authorization is revoked from
-            Grinbox. This can't be undone.
+            This removes the Account and stops Grinbox from polling it. Its stored credentials are deleted with it. This
+            can't be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -404,4 +426,20 @@ function msg(err: unknown): string {
     return err.message
   }
   return 'Something went wrong.'
+}
+
+/** Whether this Account's backend is IMAP — the one repaired rather than re-authorized. */
+function isImap(providerType: string): boolean {
+  return providerType === 'imap'
+}
+
+/** How a backend reads in the interface. */
+function providerLabel(providerType: string): string {
+  if (providerType === 'gmail') {
+    return 'Gmail'
+  }
+  if (providerType === 'imap') {
+    return 'IMAP'
+  }
+  return providerType
 }

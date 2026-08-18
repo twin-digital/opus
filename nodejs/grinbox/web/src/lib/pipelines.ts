@@ -142,12 +142,7 @@ export function useDeletePipeline(id: number) {
 export function useCreateOperator(pipelineId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (input: {
-      name: string
-      type_key: OperatorTypeKey
-      config: unknown
-      enabled?: boolean
-    }): Promise<number> => {
+    mutationFn: async (input: { name: string; type_key: OperatorTypeKey; config: unknown; enabled?: boolean }) => {
       const res = await api.api.pipelines[':id'].operators.$post({
         param: { id: String(pipelineId) },
         json: {
@@ -160,8 +155,9 @@ export function useCreateOperator(pipelineId: number) {
       if (!res.ok) {
         throw await toApiError(res)
       }
-      const body = (await res.json()) as { id: number }
-      return body.id
+      // The body carries the new id and any capability warnings the save drew
+      // — a 201 with warnings, never a blocked save (d-qzxvoph1).
+      return res.json()
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: pipelineKey(pipelineId) })

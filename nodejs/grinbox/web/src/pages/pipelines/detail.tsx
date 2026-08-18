@@ -5,6 +5,7 @@ import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
 
+import { CapabilityWarnings } from '@/components/capability-warnings'
 import { Page } from '@/components/page'
 import {
   AlertDialog,
@@ -42,6 +43,8 @@ import {
   useUpdatePipeline,
 } from '@/lib/pipelines'
 import { AddOperatorButton } from './add-operator'
+import { useAccounts } from '@/lib/accounts'
+import { describeWarnings, deriveCapabilityWarnings, warningsFromResponse } from '@/lib/capabilities'
 import { OperatorEditor } from './editors/operator-editor'
 import { blankConfigFor, operatorTypeFor } from './operator-types'
 
@@ -85,9 +88,18 @@ export function PipelineDetailPage() {
 }
 
 function PipelineBody({ pipeline, id }: { pipeline: PipelineDetail; id: number }) {
+  const { data: accounts } = useAccounts()
   return (
     <div className='space-y-6'>
       <PipelineHeader pipeline={pipeline} id={id} />
+      {/* Naming an operation an Account cannot carry never refuses a save; it
+          warns, here and on activation, and the Operator fails there when it
+          runs (d-qzxvoph1). */}
+      <CapabilityWarnings
+        warnings={deriveCapabilityWarnings(pipeline.operators, accounts ?? [])}
+        accounts={accounts ?? []}
+        operators={pipeline.operators}
+      />
       <OperatorsSection pipeline={pipeline} id={id} />
       <TagKeyRegistry registry={pipeline.tag_key_registry} />
       <div className='text-right'>
@@ -190,6 +202,7 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
   const setEnabled = useSetOperatorEnabled(pipelineId)
   const remove = useDeleteOperator(pipelineId)
   const update = useUpdateOperator(pipelineId)
+  const { data: accounts } = useAccounts()
   const [editing, setEditing] = useState(false)
 
   const outputs = operator.contract?.outputs ?? []
@@ -198,7 +211,16 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
     setEnabled.mutate(
       { operatorId: operator.id, enabled },
       {
-        onSuccess: () => toast.success(enabled ? 'Operator enabled' : 'Operator disabled'),
+        onSuccess: (result) => {
+          const warnings = warningsFromResponse(result)
+          if (warnings.length > 0) {
+            toast(enabled ? 'Operator enabled, with a warning' : 'Operator disabled', {
+              description: describeWarnings(warnings, accounts ?? []),
+            })
+            return
+          }
+          toast.success(enabled ? 'Operator enabled' : 'Operator disabled')
+        },
         onError: (err) =>
           toast.error('Could not update Operator', {
             description: errorMessage(err),
@@ -289,7 +311,14 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
           // read API couldn't parse the stored JSON.
           initialConfig={operator.config ?? blankConfigFor(operator.type_key as OperatorTypeKey)}
           onSave={async ({ name, config }) => {
-            await update.mutateAsync({ operatorId: operator.id, name, config })
+            const saved = await update.mutateAsync({ operatorId: operator.id, name, config })
+            const warnings = warningsFromResponse(saved)
+            if (warnings.length > 0) {
+              toast('Operator saved, with a warning', {
+                description: describeWarnings(warnings, accounts ?? []),
+              })
+              return
+            }
             toast.success('Operator saved')
           }}
         />

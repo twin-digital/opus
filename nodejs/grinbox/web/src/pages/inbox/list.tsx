@@ -91,8 +91,8 @@ export function InboxPage() {
             })
           }}
           disabled={refreshing}
-          aria-label='Sync with Gmail'
-          title='Sync with Gmail'
+          aria-label='Poll every Account now'
+          title='Poll every Account now'
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
