@@ -213,6 +213,17 @@ export interface MailboxArchiveArgs {
   readonly backendMessageId: string
 }
 
+/**
+ * Filing a Message into a folder of the user's Account (d-jj2mymbi). `folder`
+ * is named literally in the Operator's own configuration and matched against
+ * the backend's folder names character for character (d-k8va629q) — grinbox
+ * reads no hierarchy into it and creates nothing.
+ */
+export interface MailboxFileArgs {
+  readonly backendMessageId: string
+  readonly folder: string
+}
+
 export interface MailboxListArgs {
   readonly query: string
 }
@@ -238,6 +249,7 @@ export interface MailboxBodyResult {
 export interface MailboxClient {
   apply_category(args: MailboxApplyCategoryArgs): Promise<ResourceOpResult<{ applied: boolean }>>
   archive(args: MailboxArchiveArgs): Promise<ResourceOpResult<{ archived: boolean }>>
+  file(args: MailboxFileArgs): Promise<ResourceOpResult<{ filed: boolean }>>
   fetch_metadata(args: MailboxFetchArgs): Promise<ResourceOpResult<{ headers: Record<string, string> }>>
   fetch_body(args: MailboxFetchArgs): Promise<ResourceOpResult<MailboxBodyResult>>
   list_messages(args: MailboxListArgs): Promise<ResourceOpResult<{ ids: string[] }>>

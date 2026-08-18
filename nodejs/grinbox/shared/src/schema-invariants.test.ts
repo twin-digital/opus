@@ -506,6 +506,8 @@ describe('contract.inputs', () => {
     ['notify', { message_template: 'x', credentials_id: 1 }, []],
     ['apply_category', { category_template: 'Grinbox/VIP' }, []],
     ['archive', {}, []],
+    ['file', { folder: 'Later' }, []],
+    ['set_aside', { category_template: 'Grinbox/Later', folder: 'Later' }, []],
     [
       'digest_delivery',
       {
@@ -558,6 +560,8 @@ describe('operatorTypeRegistry', () => {
     notify: { message_template: 'x', credentials_id: 1 },
     apply_category: { category_template: 'Grinbox/VIP' },
     archive: { when: { tag_key: 'disposition', equals: ['archive'] } },
+    file: { folder: 'Later', when: { tag_key: 'disposition', equals: ['file'] } },
+    set_aside: { category_template: 'Grinbox/{{tag.urgency}}', folder: 'Later' },
     digest_delivery: {
       schedule: '0 8 * * *',
       sections: [{ category: 'release', title: 'Releases', render: 'count' }],

@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDatabase } from '../db/connection.js'
 import type { Database } from '../db/schema.js'
 import { freshDb } from '../pipeline/test-helpers.js'
+import {
+  allCapabilities,
+  capabilitiesFrom,
+  parseCapabilities,
+  serializeCapabilities,
+  unsupportedReason,
+} from '../providers/account-capabilities.js'
 import type { CandidateListing, FetchedMessage, Provider, ProviderAccount } from '../providers/provider.js'
 import { type PollableAccount, pollAccount, reconcileAccount, resyncAccount } from './poll-cycle.js'
 import { StubProvider, seedAccount, seedPipeline, seedUser } from './test-support.js'
@@ -40,6 +47,46 @@ describe('pollAccount', () => {
       lastReconciledAt: row.last_reconciled_at,
     }
   }
+
+  it('re-reads what the account supports and stores it on the account (d-bzw8qoiy)', async () => {
+    const provider = new StubProvider([{ backendMessageIds: [], newCursor: 'H1' }], [])
+    provider.capabilities = capabilitiesFrom(['apply_category'], { archive: 'no safe move' }, 0)
+
+    const summary = await pollAccount(db, await loadAccount(), provider, 7000)
+    expect(summary.capabilitiesRead).toBe(true)
+    expect(provider.declareCapabilitiesCalls).toBe(1)
+
+    const row = await db
+      .selectFrom('accounts')
+      .select('capabilities_json')
+      .where('id', '=', accountId)
+      .executeTakeFirstOrThrow()
+    const stored = parseCapabilities(row.capabilities_json)
+    expect(stored?.supported).toEqual(['apply_category'])
+    expect(stored?.readAt).toBe(7000)
+    expect(unsupportedReason(stored, 'archive')).toBe('no safe move')
+  })
+
+  it('keeps the stored declaration when the capability read fails', async () => {
+    await db
+      .updateTable('accounts')
+      .set({ capabilities_json: serializeCapabilities(allCapabilities(1000)) })
+      .where('id', '=', accountId)
+      .execute()
+    const provider = new StubProvider([{ backendMessageIds: [], newCursor: 'H1' }], [])
+    provider.declareCapabilities = () => Promise.reject(new Error('login refused'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const summary = await pollAccount(db, await loadAccount(), provider, 7000)
+    expect(summary.capabilitiesRead).toBe(false)
+
+    const row = await db
+      .selectFrom('accounts')
+      .select('capabilities_json')
+      .where('id', '=', accountId)
+      .executeTakeFirstOrThrow()
+    expect(parseCapabilities(row.capabilities_json)?.readAt).toBe(1000)
+  })
 
   it('upserts messages, enqueues a Triage per new message, advances cursor + last_polled_at atomically', async () => {
     const provider = new StubProvider(
@@ -139,7 +186,8 @@ describe('pollAccount', () => {
         isReply: false,
         messageCount: 0,
       }),
-      reconcile: async () => ({ presentBackendIds: [] }),
+      snapshot: async () => ({ entries: [] }),
+      declareCapabilities: async () => allCapabilities(0),
     }
 
     const summary = await pollAccount(db, await loadAccount(), provider, 7000)
@@ -200,7 +248,8 @@ describe('pollAccount', () => {
         isReply: false,
         messageCount: 0,
       }),
-      reconcile: async () => ({ presentBackendIds: [] }),
+      snapshot: async () => ({ entries: [] }),
+      declareCapabilities: async () => allCapabilities(0),
     }
 
     const account = await loadAccount()
@@ -299,7 +348,7 @@ describe('pollAccount', () => {
     expect(again.stateUpdated).toBe(0)
   })
 
-  it('reconcileAccount aligns known rows to the inbox snapshot (archive departed, restore returned)', async () => {
+  it('reconcileAccount takes the standings the snapshot reports, and records what it did not find as departed', async () => {
     const seed: [string, 'present' | 'archived'][] = [
       ['m1', 'present'], // stays present (in snapshot)
       ['m2', 'present'], // departs (absent from snapshot) → archived
@@ -326,7 +375,7 @@ describe('pollAccount', () => {
       provider,
       8000,
     )
-    expect(summary).toEqual({ accountId, archived: 1, restored: 1 })
+    expect(summary).toEqual({ accountId, realigned: 1, unfound: 1 })
 
     const rows = await db
       .selectFrom('messages')
@@ -380,8 +429,8 @@ describe('pollAccount', () => {
       newMessages: 1,
       enqueued: 1,
       failedMessages: 0,
-      archived: 1,
-      restored: 0,
+      realigned: 0,
+      unfound: 1,
     })
 
     const rows = await db
