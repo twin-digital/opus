@@ -21,21 +21,15 @@
 import { contractFromConfig, operatorConfigSchemas } from '@grinbox/shared'
 import type { MailboxClient, OperatorRunInput, OperatorRunResult, OperatorType } from '../types.js'
 import { shouldFire } from './action-gate.js'
-import { renderTemplate } from './template.js'
+import { applyRenderedCategory } from './category-apply.js'
 
-/** Thrown when the backend call itself failed after the client's retries. */
-export class ApplyCategoryError extends Error {
-  override readonly name = 'ApplyCategoryError'
-}
+export { CategoryApplyError as ApplyCategoryError, EmptyCategoryError } from './category-apply.js'
 
 /**
- * Evaluates the `when` gate, and if it fires renders `category_template` to a
- * Category name and applies it. Reacts to each {@link ResourceOpResult}:
- *  - `succeeded`: done.
- *  - `skipped_by_limit`: clean no-op. An Action's external effect is optional,
- *    so a Limit denial is an expected outcome, not a failed run (contrast the
- *    LLM Tagger, whose Tags are required).
- *  - `failed`: throw (the worker marks the run failed).
+ * Evaluates the `when` gate, and if it fires renders `category_template`, makes
+ * the result carriable, and applies it (see `category-apply.ts`). A Limit denial
+ * is a clean no-op — an Action's outside effect is optional, unlike the LLM
+ * Tagger's Tags. A failed call throws and the worker marks the run failed.
  *
  * Returns no Tags in every case (Actions produce no output Tags).
  */
@@ -49,25 +43,13 @@ async function run(input: OperatorRunInput<'apply_category'>): Promise<OperatorR
 
   const client: MailboxClient | undefined = resources.mailbox
   if (!client) {
-    throw new ApplyCategoryError('apply_category requires the mailbox client but it was not provided')
+    throw new Error('apply_category requires the mailbox client but it was not provided')
   }
-
-  const category = renderTemplate(config.category_template, message, tags)
 
   signal.throwIfAborted()
 
-  const result = await client.apply_category({
-    backendMessageId: message.backendMessageId,
-    category,
-  })
-
-  switch (result.outcome) {
-    case 'succeeded':
-    case 'skipped_by_limit':
-      return { tags: [] }
-    case 'failed':
-      throw new ApplyCategoryError(`apply_category failed: ${result.error.message}`)
-  }
+  await applyRenderedCategory(client, config.category_template, message, tags)
+  return { tags: [] }
 }
 
 /** Apply Category uses no Credentials (mailbox auth is account-side). */

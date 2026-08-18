@@ -15,7 +15,7 @@
  *    (d-5h66e3zl).
  */
 
-import type { AccountCapabilities, AccountCapability } from '../account-capabilities.js'
+import type { AccountCapability, AccountCapabilities } from '../account-capabilities.js'
 import { capabilitiesFrom } from '../account-capabilities.js'
 
 /** PERMANENTFLAGS' `\*`: the mailbox admits client-defined keywords. */

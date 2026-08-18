@@ -113,6 +113,12 @@ export interface FetchedMessage {
   readonly bodyFetched: boolean
   readonly bodyText?: string | null
   readonly bodyHtml?: string | null
+  /**
+   * Where the backend currently holds the Message, for backends whose message
+   * identity does not follow it between folders (d-k4nt8zbu). The upsert stores
+   * it; a backend whose ids follow the Message on their own supplies none.
+   */
+  readonly imapLocation?: { folder: string; uidValidity: number; uid: number }
 }
 
 /**

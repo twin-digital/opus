@@ -29,30 +29,23 @@ export {
   ACCOUNT_CAPABILITIES,
   type AccountCapabilities,
   type AccountCapability,
+  accountSupports,
   allCapabilities,
   capabilitiesFrom,
+  capabilityAbsenceReason,
   parseCapabilities,
   serializeCapabilities,
-  supports,
-  unsupportedReason,
 } from './account-capabilities.js'
 
 // The IMAP backend: its stored settings, its session seam, the capability
 // reading, folder choice, and the category-as-keyword rules.
 export {
   IMAP_PASSWORD_KIND,
-  IMAP_FOLDER_ROLES,
   IMAP_PROVIDER_TYPE,
-  type ImapConnection,
-  type ImapFolderRole,
-  type ImapFolders,
-  type ImapSecurity,
   type ImapSettings,
-  imapConnectionSchema,
-  imapFoldersSchema,
-  imapSecuritySchema,
   imapSettingsSchema,
   parseImapSettings,
+  serializeImapSettings,
 } from './imap/imap-settings.js'
 export {
   type ImapConnect,
@@ -65,11 +58,35 @@ export {
   type ImapSession,
 } from './imap/imap-client.js'
 export { admitsKeywords, hasSafeMove, imapCapabilities } from './imap/imap-capabilities.js'
-export { type FolderProposal, matchFolder, proposeFolders, standingOfFolder } from './imap/imap-folders.js'
-export { isCarriableKeyword, makeCarriable, uncarriableCharacters } from './imap/keyword.js'
 export {
+  ImapCertificateError,
+  classifyConnectError,
+  makeSerializedConnect,
+  messageIdOf,
+  openImapSession,
+  parseHeaderBlock,
+  splitMimeBody,
+} from './imap/imap-session.js'
+export {
+  headerValue,
+  type ImapLocation,
+  type ImapMessageStore,
+  isLocationKey,
+  locationKey,
+  makeImapMessageStore,
+  referencedMessageIds,
+  type ThreadPlacement,
+  type UnidentifiedMessage,
+} from './imap/imap-message-store.js'
+export { createImapWiring, type ImapProbeReport, type ImapWiring } from './imap/imap-wiring.js'
+export { type FolderProposal, matchFolder, proposeFolders, standingOfFolder } from './imap/imap-folders.js'
+export {
+  DEFAULT_FIRST_POLL_WINDOW,
+  folderList,
   type ImapCursor,
+  ImapMessageNotFoundError,
   ImapProvider,
+  parseHeaderDate,
   type ImapProviderDeps,
   type OpenImapSession,
   cursorAppliesTo,

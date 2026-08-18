@@ -152,6 +152,7 @@ export {
   imapAccountSetupSchema,
   imapConnectionSecuritySchema,
   imapPortSchema,
+  IMAP_CONNECTION_SECURITIES,
 } from './imap-account.js'
 export type {
   ImapAccountCredentials,
@@ -164,8 +165,10 @@ export {
   accountCapabilitiesSchema,
   accountCapabilitySchema,
   accountCapabilityWarningSchema,
+  accountSupports,
   ACCOUNT_CAPABILITIES,
   capabilitiesRequiredBy,
+  capabilityAbsenceReason,
   mailBackendKindSchema,
   MAIL_BACKEND_KINDS,
 } from './backends.js'

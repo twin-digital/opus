@@ -35,10 +35,11 @@ import type {
   MailboxFileArgs,
 } from '../operators/types.js'
 import type { AccountCapabilities, AccountCapability } from '../providers/account-capabilities.js'
-import { parseCapabilities, unsupportedReason } from '../providers/account-capabilities.js'
-import type { OpenImapSession } from '../providers/imap/imap-provider.js'
+import { parseCapabilities, capabilityAbsenceReason } from '../providers/account-capabilities.js'
+import type { ImapMessageStore } from '../providers/imap/imap-message-store.js'
 import { IMAP_PROVIDER_TYPE } from '../providers/imap/imap-settings.js'
 import { gmailMailSenderBackend, gmailMailboxBackend } from './gmail-backend.js'
+import type { OpenAccountSession } from './imap-backend.js'
 import { imapMailboxBackend } from './imap-backend.js'
 import type { GmailBackendDeps } from './gmail-backend.js'
 
@@ -79,11 +80,12 @@ export interface MailProviderRegistry {
 /** Deps the provider backends close over (superset of every backend's needs). */
 export interface MailProviderRegistryDeps extends GmailBackendDeps {
   /**
-   * Opens a logged-in IMAP session for an Account. Absent until the IMAP
-   * transport is wired, which leaves an IMAP Account's `mailbox` operations
-   * unimplemented — the graceful per-op failure, never a crash.
+   * Opens a logged-in IMAP session for an Account, and the reads the backend
+   * makes against grinbox's own record. Absent until the IMAP transport is
+   * wired, which leaves an IMAP Account's `mailbox` operations unimplemented —
+   * the graceful per-op failure, never a crash.
    */
-  readonly openImapSession?: OpenImapSession
+  readonly imap?: { openSession: OpenAccountSession; store: ImapMessageStore }
 }
 
 /**
@@ -92,8 +94,8 @@ export interface MailProviderRegistryDeps extends GmailBackendDeps {
  */
 export function buildMailProviderRegistry(deps: MailProviderRegistryDeps): MailProviderRegistry {
   const mailbox: Record<string, MailboxBackend> = { gmail: gmailMailboxBackend(deps) }
-  if (deps.openImapSession) {
-    mailbox[IMAP_PROVIDER_TYPE] = imapMailboxBackend({ db: deps.db, openSession: deps.openImapSession })
+  if (deps.imap) {
+    mailbox[IMAP_PROVIDER_TYPE] = imapMailboxBackend({ db: deps.db, ...deps.imap })
   }
   return {
     mailbox,
@@ -157,7 +159,7 @@ function requireCapability(capabilities: AccountCapabilities | null, capability:
   if (capabilities === null) {
     return
   }
-  const reason = unsupportedReason(capabilities, capability)
+  const reason = capabilityAbsenceReason(capabilities, capability)
   if (reason !== null) {
     throw new UnsupportedAccountOperationError(capability, reason)
   }

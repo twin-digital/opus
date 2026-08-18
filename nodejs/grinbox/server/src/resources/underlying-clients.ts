@@ -46,6 +46,7 @@ import type { DB } from '../db/schema.js'
 import type { GoogleOAuthClient } from '../oauth/google-client.js'
 import { type BedrockSend, invokeModel, makeBedrockSend } from './bedrock.js'
 import type { UnderlyingClients } from './make-resource-client.js'
+import type { MailProviderRegistryDeps } from './provider-backends.js'
 import { buildMailProviderRegistry, mailSenderBackendFor, mailboxBackendFor } from './provider-backends.js'
 import { sendNotification } from './pushover.js'
 
@@ -140,6 +141,12 @@ export interface MakeUnderlyingClientsDeps {
    * resolve / refresh an Account's access token).
    */
   readonly googleClient: GoogleOAuthClient | null
+  /**
+   * The IMAP session opener and message store, present when the IMAP backend is
+   * wired. Absent leaves an IMAP Account's `mailbox` operations unimplemented —
+   * the graceful per-op failure, never a crash.
+   */
+  readonly imap?: MailProviderRegistryDeps['imap']
 }
 
 /**
@@ -163,6 +170,7 @@ export function buildMakeUnderlyingClients(deps: MakeUnderlyingClientsDeps): Mak
     db: deps.db,
     encryptor: deps.encryptor,
     googleClient: deps.googleClient,
+    imap: deps.imap,
   })
 
   return (ctx) => ({

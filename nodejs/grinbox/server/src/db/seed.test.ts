@@ -159,3 +159,33 @@ describe('reconcileDefaultLimits', () => {
     expect(row.max_count).toBe(1)
   })
 })
+
+describe('the seeded limit on filing (d-zcg4r2z9)', () => {
+  let db: DB
+  let userId: number
+
+  beforeEach(async () => {
+    db = openDatabase(':memory:')
+    await runMigrations(db)
+    userId = (await ensureBootstrapUser(db, {}, 1000)).userId
+  })
+  afterEach(async () => {
+    await closeDatabase(db)
+  })
+
+  it('caps mailbox.file at 100 in 600 seconds, seeded on the next boot', async () => {
+    {
+      await reconcileDefaultLimits(db, userId, 1000)
+
+      const limit = await db
+        .selectFrom('limits')
+        .selectAll()
+        .where('user_id', '=', userId)
+        .where('resource', '=', 'mailbox')
+        .where('operation', '=', 'file')
+        .executeTakeFirstOrThrow()
+
+      expect(limit).toMatchObject({ scope: 'per_window', max_count: 100, window_seconds: 600, origin: 'seeded' })
+    }
+  })
+})

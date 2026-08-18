@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   accountCapabilitiesSchema,
   accountCapabilityWarningSchema,
+  accountSupports,
   ACCOUNT_CAPABILITIES,
   capabilitiesRequiredBy,
+  capabilityAbsenceReason,
   contractFromConfig,
   MAIL_BACKEND_KINDS,
 } from './index.js'
+import type { AccountCapabilities } from './index.js'
 
 // --- the backends an Account may be added with (d-oevikmal) ---------------
 
@@ -23,16 +26,67 @@ describe('accountCapabilitiesSchema', () => {
     expect(ACCOUNT_CAPABILITIES).toEqual(['apply_category', 'archive', 'file', 'send_message'])
   })
 
-  it('reads an Account that can categorize and move but not send', () => {
-    expect(accountCapabilitiesSchema.safeParse(['apply_category', 'archive', 'file']).success).toBe(true)
+  it('reads an Account that can categorize and move but not send, and why', () => {
+    const parsed = accountCapabilitiesSchema.safeParse({
+      supported: ['apply_category', 'archive', 'file'],
+      unsupported: { send_message: 'an IMAP account cannot send mail' },
+      read_at: 1_760_000_000,
+    })
+    expect(parsed.success).toBe(true)
   })
 
   it('reads an Account that can carry nothing', () => {
-    expect(accountCapabilitiesSchema.safeParse([]).success).toBe(true)
+    expect(
+      accountCapabilitiesSchema.safeParse({
+        supported: [],
+        unsupported: {
+          apply_category: 'the arrival folder admits no keywords',
+          archive: 'the server advertises no safe move',
+          file: 'the server advertises no safe move',
+          send_message: 'an IMAP account cannot send mail',
+        },
+        read_at: 1_760_000_000,
+      }).success,
+    ).toBe(true)
   })
 
   it('refuses an operation whose availability does not turn on the Account', () => {
-    expect(accountCapabilitiesSchema.safeParse(['fetch_body']).success).toBe(false)
+    expect(
+      accountCapabilitiesSchema.safeParse({ supported: ['fetch_body'], unsupported: {}, read_at: 0 }).success,
+    ).toBe(false)
+  })
+
+  it('refuses a capability declared both ways', () => {
+    expect(
+      accountCapabilitiesSchema.safeParse({
+        supported: ['archive'],
+        unsupported: { archive: 'no safe move' },
+        read_at: 0,
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('reading a declaration', () => {
+  const declaration: AccountCapabilities = {
+    supported: ['apply_category', 'archive', 'file'],
+    unsupported: { send_message: 'an IMAP account cannot send mail' },
+    read_at: 1_760_000_000,
+  }
+
+  it('admits what the Account carries', () => {
+    expect(accountSupports(declaration, 'archive')).toBe(true)
+    expect(accountSupports(declaration, 'send_message')).toBe(false)
+  })
+
+  it('admits nothing where grinbox has not logged in yet', () => {
+    expect(accountSupports(null, 'archive')).toBe(false)
+    expect(capabilityAbsenceReason(null, 'archive')).toBeNull()
+  })
+
+  it('says why a gap is a gap, and nothing where there is none', () => {
+    expect(capabilityAbsenceReason(declaration, 'send_message')).toBe('an IMAP account cannot send mail')
+    expect(capabilityAbsenceReason(declaration, 'archive')).toBeNull()
   })
 })
 

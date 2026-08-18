@@ -12,6 +12,7 @@ import type { Contract, OperatorConfigFor, OperatorTypeKey, Resource, ResourceOp
 import type { z } from 'zod'
 import type { TriageEventInput } from '../pipeline/triage-event.js'
 import type { MessagesTable } from '../db/schema.js'
+import type { AccountCapabilities } from '../providers/account-capabilities.js'
 
 /**
  * The raw Message fields an Operator sees. Read-only projection of the
@@ -328,6 +329,19 @@ export interface OperatorRunInput<K extends OperatorTypeKey> {
   readonly resources: Partial<ResourceClients>
   readonly signal: AbortSignal
   readonly notifications?: NotificationGate
+  /**
+   * The Message's Account, with what its backend last declared it can carry
+   * (d-bzw8qoiy). An Operator that behaves differently by Account — Set Aside
+   * categorizes where it can and files where it cannot (d-hj9nac5f) — reads it
+   * to choose. `capabilities` is null on an Account that has never polled.
+   */
+  readonly account?: RunAccount
+}
+
+/** The Account context a run is given. */
+export interface RunAccount {
+  readonly id: number
+  readonly capabilities: AccountCapabilities | null
 }
 
 /**
