@@ -1,7 +1,7 @@
 {
   "format_version": "1.8.0",
   "animations": {
-    "animation.rpg.wizard.general": {
+    "animation.wizard.general": {
       "loop": true,
       "bones": {
         "arms": {
@@ -17,7 +17,7 @@
         }
       }
     },
-    "animation.rpg.wizard.casting": {
+    "animation.wizard.casting": {
       "loop": true,
       "bones": {
         "arms": {
@@ -33,7 +33,7 @@
         }
       }
     },
-    "animation.rpg.wizard.move": {
+    "animation.wizard.move": {
       "anim_time_update": "query.modified_distance_moved",
       "loop": true,
       "bones": {
@@ -45,7 +45,7 @@
         }
       }
     },
-    "animation.rpg.wizard.look_at_target": {
+    "animation.wizard.look_at_target": {
       "loop": true,
       "bones": {
         "head": {
@@ -56,7 +56,7 @@
         }
       }
     },
-    "animation.rpg.wizard.celebrating": {
+    "animation.wizard.celebrating": {
       "loop": true,
       "bones": {
         "leftarm": {
