@@ -23,7 +23,7 @@ describe('the account read surface for an IMAP account', () => {
       userId: 1,
       actorUserId: 1,
       name: 'work',
-      settings: { ...CONNECTION, address: 'u@example.com', folders: FOLDERS },
+      settings: { ...CONNECTION, folders: FOLDERS },
       password: 'the-secret',
     })
   })
@@ -45,7 +45,6 @@ describe('the account read surface for an IMAP account', () => {
       port: 993,
       security: 'tls',
       username: 'user@example.com',
-      address: 'u@example.com',
       folders: FOLDERS,
     })
     expect(JSON.stringify(account)).not.toContain('the-secret')
@@ -70,7 +69,7 @@ describe('the account read surface for an IMAP account', () => {
       file: 'no safe move',
       send_message: 'an IMAP account does not send',
     })
-    expect(account.capabilities?.readAt).toBe(4000)
+    expect(account.capabilities?.read_at).toBe(4000)
   })
 
   it('carries no declaration for an account that has never polled', async () => {
@@ -143,7 +142,7 @@ describe('GET /api/accounts/:id/folders (r-e40s6olu)', () => {
       userId: 1,
       actorUserId: 1,
       name: 'work',
-      settings: { ...CONNECTION, address: 'u@example.com', folders: FOLDERS },
+      settings: { ...CONNECTION, folders: FOLDERS },
       password: 'p',
     })
     const folders = [

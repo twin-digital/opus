@@ -24,7 +24,7 @@
  */
 
 import type { SourceState } from '@grinbox/shared'
-import type { AccountCapabilityDeclaration } from './account-capabilities.js'
+import type { AccountCapabilities } from './account-capabilities.js'
 
 /**
  * The minimal Account context a Provider needs. A projection of the `accounts`
@@ -190,5 +190,5 @@ export interface Provider {
    * cannot archive or file, and an arrival folder that does not admit
    * client-defined keywords cannot carry a category.
    */
-  declareCapabilities(account: ProviderAccount): Promise<AccountCapabilityDeclaration>
+  declareCapabilities(account: ProviderAccount): Promise<AccountCapabilities>
 }

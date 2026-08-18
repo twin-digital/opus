@@ -13,7 +13,7 @@
 import type { Encryptor } from '../../crypto/encryption.js'
 import type { DB } from '../../db/index.js'
 import type { Folder, ImapAccountSettings } from '@grinbox/shared'
-import type { AccountCapabilityDeclaration } from '../../providers/account-capabilities.js'
+import type { AccountCapabilities } from '../../providers/account-capabilities.js'
 
 /** Returns the current time in UNIX seconds (the State DB's timestamp unit). */
 export type NowSeconds = () => number
@@ -85,7 +85,7 @@ export type AccountFolders = (accountId: number) => Promise<readonly Folder[]>
 export interface ImapProbeResult {
   /** Every folder the account holds, each with the role grinbox proposes for it. */
   readonly folders: readonly Folder[]
-  readonly capabilities: AccountCapabilityDeclaration
+  readonly capabilities: AccountCapabilities
 }
 
 /**

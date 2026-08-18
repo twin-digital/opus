@@ -12,7 +12,7 @@ import type { Contract, OperatorConfigFor, OperatorTypeKey, Resource, ResourceOp
 import type { z } from 'zod'
 import type { TriageEventInput } from '../pipeline/triage-event.js'
 import type { MessagesTable } from '../db/schema.js'
-import type { AccountCapabilityDeclaration } from '../providers/account-capabilities.js'
+import type { AccountCapabilities } from '../providers/account-capabilities.js'
 
 /**
  * The raw Message fields an Operator sees. Read-only projection of the
@@ -341,7 +341,7 @@ export interface OperatorRunInput<K extends OperatorTypeKey> {
 /** The Account context a run is given. */
 export interface RunAccount {
   readonly id: number
-  readonly capabilities: AccountCapabilityDeclaration | null
+  readonly capabilities: AccountCapabilities | null
 }
 
 /**

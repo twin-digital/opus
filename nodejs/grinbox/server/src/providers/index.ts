@@ -27,14 +27,14 @@ export type {
 // (d-bzw8qoiy).
 export {
   ACCOUNT_CAPABILITIES,
+  type AccountCapabilities,
   type AccountCapability,
-  type AccountCapabilityDeclaration,
+  accountSupports,
   allCapabilities,
   capabilitiesFrom,
+  capabilityAbsenceReason,
   parseCapabilities,
   serializeCapabilities,
-  supports,
-  unsupportedReason,
 } from './account-capabilities.js'
 
 // The IMAP backend: its stored settings, its session seam, the capability

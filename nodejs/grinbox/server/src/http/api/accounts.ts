@@ -23,7 +23,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import type { AccountFolders } from '@grinbox/shared'
-import type { AccountCapabilityDeclaration } from '../../providers/account-capabilities.js'
+import type { AccountCapabilities } from '../../providers/account-capabilities.js'
 import { parseCapabilities } from '../../providers/account-capabilities.js'
 import { IMAP_PASSWORD_KIND, IMAP_PROVIDER_TYPE, parseImapSettings } from '../../providers/imap/imap-settings.js'
 import type { ApiDeps } from './deps.js'
@@ -49,7 +49,7 @@ export interface AccountSummary {
    * to say which accounts cannot carry an operation, and why (d-qzxvoph1,
    * d-5h66e3zl).
    */
-  readonly capabilities: AccountCapabilityDeclaration | null
+  readonly capabilities: AccountCapabilities | null
   /** Why polling is paused, or null while it runs (d-v4mejzw5). */
   readonly paused_reason: string | null
   /**
@@ -67,7 +67,6 @@ export interface ImapAccountView {
   readonly port: number
   readonly security: string
   readonly username: string
-  readonly address: string
   readonly folders: AccountFolders
 }
 
@@ -87,7 +86,6 @@ function imapView(providerType: string, settingsJson: string): ImapAccountView |
       port: settings.port,
       security: settings.security,
       username: settings.username,
-      address: settings.address,
       folders: settings.folders,
     }
   } catch {

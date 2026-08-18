@@ -9,7 +9,7 @@
  * opener, so an Account is worked one connection at a time whichever path asked.
  */
 
-import type { AccountCapabilityDeclaration } from '../account-capabilities.js'
+import type { AccountCapabilities } from '../account-capabilities.js'
 import type { Folder, ImapAccountSettings } from '@grinbox/shared'
 import { resolveImapCredentials } from '../../config/imap-account.js'
 import type { Encryptor } from '../../crypto/encryption.js'
@@ -24,7 +24,7 @@ import { makeSerializedConnect, openImapSession } from './imap-session.js'
 /** What a probe of a server reports back (no password, in any encoding). */
 export interface ImapProbeReport {
   readonly folders: readonly Folder[]
-  readonly capabilities: AccountCapabilityDeclaration
+  readonly capabilities: AccountCapabilities
 }
 
 /** The IMAP pieces the daemon hands to the poll loop, the resources, and the API. */

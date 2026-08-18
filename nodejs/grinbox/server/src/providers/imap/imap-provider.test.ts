@@ -4,6 +4,7 @@ import type { ProviderAccount } from '../provider.js'
 import type { ImapLocation, ImapMessageStore, UnidentifiedMessage } from './imap-message-store.js'
 import { headerValue } from './imap-message-store.js'
 import {
+  DEFAULT_FIRST_POLL_WINDOW,
   ImapMessageNotFoundError,
   ImapProvider,
   cursorAppliesTo,
@@ -23,7 +24,6 @@ function account(cursorless = true): ProviderAccount {
       port: 993,
       security: 'tls',
       username: 'u',
-      address: 'u@example.com',
       folders: FOLDERS,
     }),
     lastPolledAt: cursorless ? null : 1000,
@@ -113,7 +113,18 @@ describe('listCandidates', () => {
     expect(parseImapCursor(listing.newCursor)).toEqual({ uidValidity: 100, highestUid: 5 })
   })
 
-  it('keys a message carrying no Message-ID by where it was found (d-00smatg0)', async () => {
+  it('bounds a first poll at two hundred of the most recent, and takes the bound injected (d-ti1jnva6)', async () => {
+    expect(DEFAULT_FIRST_POLL_WINDOW).toBe(200)
+
+    const server = fakeServer()
+    server.folders.INBOX.messages = [1, 2, 3, 4, 5].map((uid) => fakeMessage(uid, { 'message-id': `<${uid}@x>` }))
+    const { provider } = providerOver(server, {}, 3)
+
+    const listing = await provider.listCandidates(account(), null)
+    expect(listing.backendMessageIds).toEqual(['<3@x>', '<4@x>', '<5@x>'])
+  })
+
+  it('keys a message carrying no Message-ID by where it was found (d-00smatg0, d-m6bufvwy)', async () => {
     const server = fakeServer()
     server.folders.INBOX.messages = [fakeMessage(7)]
     const { provider } = providerOver(server)

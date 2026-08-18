@@ -13,7 +13,7 @@
  */
 
 import { contractFromConfig, operatorConfigSchemas } from '@grinbox/shared'
-import { supports } from '../../providers/account-capabilities.js'
+import { accountSupports } from '../../providers/account-capabilities.js'
 import type { MailboxClient, OperatorRunInput, OperatorRunResult, OperatorType } from '../types.js'
 import { shouldFire } from './action-gate.js'
 import { applyRenderedCategory } from './category-apply.js'
@@ -41,10 +41,10 @@ async function run(input: OperatorRunInput<'set_aside'>): Promise<OperatorRunRes
   }
 
   const declaration = account?.capabilities ?? null
-  const canFile = supports(declaration, 'file')
+  const canFile = accountSupports(declaration, 'file')
   // No declaration means never polled: attempt the Category and let the
   // backend refuse it, rather than treating silence as inability.
-  const canCategorize = declaration === null || supports(declaration, 'apply_category')
+  const canCategorize = declaration === null || accountSupports(declaration, 'apply_category')
 
   signal.throwIfAborted()
 
