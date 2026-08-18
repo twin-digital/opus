@@ -1,5 +1,5 @@
 /**
- * Per-Resource-operation retry policy (d-eqwrgoyv). The retry happens *inside*
+ * Per-Resource-operation retry policy (d-b4yifc70). The retry happens *inside*
  * the client wrapper, transparent to the Operator, and is entirely separate from the Limit check:
  * the Limit is consumed once before the retry loop, so all attempts of one
  * operation count once against the Limit.
@@ -12,6 +12,7 @@
  * | `mail_sender.send_message`      | no retry (double-send is bad)   |
  * | `mailbox.apply_category`        | retry 2× with backoff           |
  * | `mailbox.archive`               | retry 2× with backoff           |
+ * | `mailbox.file`                  | retry 2× with backoff           |
  * | `mailbox.fetch_metadata`        | retry 3× with exponential backoff |
  * | `mailbox.fetch_body`            | retry 3× with exponential backoff |
  * | `mailbox.list_messages`         | retry 3× with exponential backoff |
@@ -55,6 +56,13 @@ export const RETRY_POLICIES: Readonly<Record<string, RetryPolicy>> = {
     exponential: false,
   },
   'mailbox.archive': {
+    maxRetries: 2,
+    baseDelayMs: 200,
+    exponential: false,
+  },
+  // Every write to the mailbox takes the same two further attempts at a fixed
+  // wait (d-b4yifc70), filing included.
+  'mailbox.file': {
     maxRetries: 2,
     baseDelayMs: 200,
     exponential: false,

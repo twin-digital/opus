@@ -4,6 +4,7 @@ import type { Config } from '../config.js'
 import { closeDatabase } from '../db/connection.js'
 import type { Database } from '../db/schema.js'
 import { freshDb } from '../pipeline/test-helpers.js'
+import { allCapabilities } from '../providers/account-capabilities.js'
 import type {
   CandidateListing,
   Category,
@@ -73,8 +74,11 @@ class GatedProvider implements Provider {
   async threadMembership(): Promise<ThreadMembership> {
     return { backendThreadId: null, isReply: false, messageCount: 0 }
   }
-  async reconcile() {
-    return { presentBackendIds: [] }
+  async snapshot() {
+    return { entries: [] }
+  }
+  async declareCapabilities() {
+    return allCapabilities(0)
   }
 }
 
@@ -195,7 +199,7 @@ describe('createPollScheduler — pollDueAccounts', () => {
 
     const summaries = await scheduler.resyncAllNow(10_000)
     expect(summaries).toHaveLength(1)
-    expect(summaries[0]).toMatchObject({ archived: 1, newMessages: 0 })
+    expect(summaries[0]).toMatchObject({ unfound: 1, newMessages: 0 })
 
     const row = await db
       .selectFrom('messages')
@@ -319,7 +323,8 @@ describe('createPollScheduler — pollDueAccounts', () => {
         isReply: false,
         messageCount: 0,
       }),
-      reconcile: async () => ({ presentBackendIds: [] }),
+      snapshot: async () => ({ entries: [] }),
+      declareCapabilities: async () => allCapabilities(0),
     }
     const factory: ProviderFactory = (account) => (account.id === failingId ? failing : healthy)
 

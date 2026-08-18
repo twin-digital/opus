@@ -12,6 +12,10 @@
 
 import type { Encryptor } from '../../crypto/encryption.js'
 import type { DB } from '../../db/index.js'
+import type { AccountCapabilities } from '../../providers/account-capabilities.js'
+import type { ImapFolderListing } from '../../providers/imap/imap-client.js'
+import type { FolderProposal } from '../../providers/imap/imap-folders.js'
+import type { ImapConnection } from '../../providers/imap/imap-settings.js'
 
 /** Returns the current time in UNIX seconds (the State DB's timestamp unit). */
 export type NowSeconds = () => number
@@ -56,7 +60,43 @@ export interface ApiDeps {
    * structured 503 (`sync_unavailable`).
    */
   readonly syncNow?: SyncNow
+  /**
+   * Log in to an IMAP server and read back what it offers — the folders it
+   * holds, the roles it advertises, and what the account can carry. It is what
+   * authorizes a credential the user holds (d-fuln110d) and what lets the
+   * interface offer the folders the account actually has (r-e40s6olu). Injected
+   * by the daemon; when absent the IMAP routes return a structured 503.
+   */
+  readonly imapProbe?: ImapProbe
+  /**
+   * List the folders an existing Account holds, so that wherever grinbox asks
+   * the user to name a folder it offers the ones the account actually has
+   * (r-e40s6olu). Injected by the daemon; when absent, `GET
+   * /api/accounts/:id/folders` reports that it cannot look.
+   */
+  readonly accountFolders?: AccountFolders
 }
+
+/** Lists the folders an Account holds, by Account id. */
+export type AccountFolders = (accountId: number) => Promise<readonly ImapFolderListing[]>
+
+/**
+ * What logging in to an IMAP server reported. Nothing here carries the password
+ * back out (r-0kn0oida).
+ */
+export interface ImapProbeResult {
+  readonly folders: readonly ImapFolderListing[]
+  /** Grinbox's proposal for the four roles, from the roles and the names. */
+  readonly proposed: FolderProposal
+  readonly capabilities: AccountCapabilities
+}
+
+/**
+ * Probe an IMAP server with a connection and a password. A refusal naming the
+ * credential surfaces as {@link ImapCredentialRejectedError}; every other
+ * failure propagates as itself.
+ */
+export type ImapProbe = (connection: ImapConnection, password: string) => Promise<ImapProbeResult>
 
 /**
  * Resolve the acting/owning `user_id` for the single-User MVP (no auth): the

@@ -41,6 +41,7 @@ function clients(): UnderlyingClients {
         archiveCalls.push(args)
         return archiveBehaviour()
       },
+      file: () => Promise.reject(new Error('not wired')),
       fetch_metadata: () => Promise.reject(new Error('not wired')),
       fetch_body: () => Promise.reject(new Error('not wired')),
       list_messages: () => Promise.reject(new Error('not wired')),
