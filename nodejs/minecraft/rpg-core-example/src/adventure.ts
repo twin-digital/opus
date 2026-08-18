@@ -11,8 +11,8 @@
 
 import type { System, Vector3, World } from '@minecraft/server'
 import {
-  ActorDefinitionsMissingError,
   findActor,
+  ForeignEntityError,
   PRESET_NAMES,
   spawnActor,
   type ActorHandle,
@@ -40,9 +40,10 @@ export const PLACEMENT_ATTEMPTS = 15
 
 /**
  * The durable id an actor is placed under — the adventure's own name for it, stable across
- * restarts, so re-running the story returns the actors already in the world.
+ * restarts, so re-running the story returns the actors already in the world. A durable id holds
+ * no `:`; the library keys the world record on the adventure's namespace itself.
  */
-export const durableId = (preset: PresetName): string => `example:${preset}`
+export const durableId = (preset: PresetName): string => `gallery.${preset}`
 
 /** One actor the story places: who, where, and under what durable id. */
 export interface Placement {
@@ -63,7 +64,7 @@ export const placements = (): Placement[] => [
     key: 'greeter',
     preset: 'wizard',
     location: { ...STAGE },
-    options: { id: 'example:greeter', name: 'Eldrin the Greeter' },
+    options: { id: 'greeter', name: 'Eldrin the Greeter' },
   },
   ...PRESET_NAMES.map((preset, index) => ({
     key: preset,
@@ -106,8 +107,9 @@ const prepareStage = (world: World): void => {
 }
 
 /**
- * Attempts every placement still pending, in place. Success and missing definitions both settle a
- * placement; any other failure — typically chunks that have not finished loading — leaves it for
+ * Attempts every placement still pending, in place. A success settles a placement, and so does a
+ * `ForeignEntityError`, which a retry cannot clear: another pack's content answers the identifier.
+ * Any other failure — typically chunks that have not finished loading — leaves the placement for
  * the next attempt.
  */
 const attemptPlacements = (world: World, spawn: SpawnFn, pending: Map<string, Placement>): void => {
@@ -120,7 +122,7 @@ const attemptPlacements = (world: World, spawn: SpawnFn, pending: Map<string, Pl
       )
       pending.delete(placement.key)
     } catch (error) {
-      if (error instanceof ActorDefinitionsMissingError) {
+      if (error instanceof ForeignEntityError) {
         say(world, `could not place '${placement.key}': ${error.message}`)
         pending.delete(placement.key)
       }
