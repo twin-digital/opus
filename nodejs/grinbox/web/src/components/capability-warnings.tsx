@@ -2,7 +2,7 @@ import type { AccountSummary, OperatorDetail } from '@grinbox/server'
 import type { AccountCapabilityWarning } from '@grinbox/shared'
 import { TriangleAlert } from 'lucide-react'
 
-import { CAPABILITY_LABELS, deriveCapabilityWarnings, unsupportedReason } from '@/lib/capabilities'
+import { CAPABILITY_LABELS, deriveCapabilityWarnings, UNEXPLAINED_GAP, unsupportedReason } from '@/lib/capabilities'
 import { usePipeline } from '@/lib/pipelines'
 
 /**
@@ -106,7 +106,7 @@ function CapabilityWarningItem({
           <li key={account.id}>
             <span className='font-medium text-foreground'>{account.name}</span>
             {' — '}
-            {unsupportedReason(account, warning.capability) ?? 'this Account does not support this operation'}
+            {unsupportedReason(account, warning.capability) ?? UNEXPLAINED_GAP}
           </li>
         ))}
       </ul>

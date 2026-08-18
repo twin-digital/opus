@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { accountsKey, useAccount, useDeleteAccount, usePipelines, useUpdateAccount } from '@/lib/accounts'
 import { ApiError } from '@/lib/api-error'
+import { describeWarnings, warningsFromResponse } from '@/lib/capabilities'
 import { runOAuthFlow } from '@/lib/oauth'
 import { cn } from '@/lib/utils'
 import { handleOAuthResult } from './add-account-button'
@@ -132,7 +133,18 @@ function AccountSettings({ account, id }: { account: AccountSummary; id: number 
         color: colorChanged ? color || null : undefined,
       },
       {
-        onSuccess: () => toast.success('Account settings saved'),
+        onSuccess: (result) => {
+          // Activating a Pipeline on this Account warns for what it cannot
+          // carry, and saves anyway (d-qzxvoph1).
+          const warnings = warningsFromResponse(result)
+          if (warnings.length > 0) {
+            toast('Account settings saved, with a warning', {
+              description: describeWarnings(warnings, [account]),
+            })
+            return
+          }
+          toast.success('Account settings saved')
+        },
         onError: (err) => toast.error('Save failed', { description: msg(err) }),
       },
     )

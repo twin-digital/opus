@@ -1,3 +1,4 @@
+import type { Folder } from '@grinbox/shared'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from './api'
@@ -13,12 +14,6 @@ import { toApiError } from './api-error'
  * own order and is offered in it.
  */
 
-/** One folder an Account holds: its name, and the roles the server advertises. */
-export interface AccountFolder {
-  readonly name: string
-  readonly roles: readonly string[]
-}
-
 export const accountFoldersKey = (accountId: number) => ['accounts', accountId, 'folders'] as const
 
 /**
@@ -32,7 +27,7 @@ export function useAccountFolders(accountId: number | null) {
   return useQuery({
     queryKey: accountFoldersKey(accountId ?? 0),
     enabled: accountId !== null,
-    queryFn: async (): Promise<AccountFolder[]> => {
+    queryFn: async (): Promise<readonly Folder[]> => {
       const res = await api.api.accounts[':id'].folders.$get({
         param: { id: String(accountId) },
       })
@@ -40,7 +35,7 @@ export function useAccountFolders(accountId: number | null) {
         throw await toApiError(res)
       }
       const { folders } = await res.json()
-      return folders.map((folder) => ({ name: folder.name, roles: folder.roles }))
+      return folders
     },
   })
 }

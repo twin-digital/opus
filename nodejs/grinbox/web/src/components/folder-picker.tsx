@@ -3,8 +3,10 @@ import { useId, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import type { Folder } from '@grinbox/shared'
+
 import { useAccounts } from '@/lib/accounts'
-import { type AccountFolder, useAccountFolders } from '@/lib/folders'
+import { useAccountFolders } from '@/lib/folders'
 
 /**
  * Naming a folder. Wherever grinbox asks for one it offers the folders the
@@ -37,7 +39,7 @@ export function FolderNameField({
   description?: string
   value: string
   onChange: (next: string) => void
-  folders: readonly AccountFolder[]
+  folders: readonly Folder[]
   /** What to say when no listing is available (not looked up, or the look failed). */
   emptyHint?: string
   invalid?: string | null

@@ -13,7 +13,13 @@ import { accountsKey } from '@/lib/accounts'
 import { CAPABILITY_LABELS } from '@/lib/capabilities'
 import { type ImapLogin, type ImapProbe, imapRefusalMessage, useCreateImapAccount, useImapProbe } from '@/lib/imap'
 import { type OAuthResult, runOAuthFlow } from '@/lib/oauth'
-import { acceptedFolders, draftFromProposal, type FolderRoleDraft, FolderRoleFields } from './folder-role-fields'
+import {
+  acceptedFolders,
+  draftFromProposal,
+  type FolderRoleDraft,
+  FolderRoleFields,
+  proposalFromFolders,
+} from './folder-role-fields'
 import { blankLogin, ImapConnectionFields, loginComplete } from './imap-connection-fields'
 
 /**
@@ -199,10 +205,8 @@ function ImapFlow({
   onCreated: () => void
 }) {
   const nameId = useId()
-  const addressId = useId()
   const [login, setLogin] = useState<ImapLogin>(blankLogin)
   const [name, setName] = useState('')
-  const [address, setAddress] = useState('')
   const [probe, setProbe] = useState<ImapProbe | null>(null)
   const [folders, setFolders] = useState<FolderRoleDraft>(() => draftFromProposal({}))
   const [error, setError] = useState<string | null>(null)
@@ -210,14 +214,14 @@ function ImapFlow({
   const probing = useImapProbe()
   const create = useCreateImapAccount()
 
-  const identityComplete = name.trim().length > 0 && address.trim().length > 0
+  const identityComplete = name.trim().length > 0
 
   const onLogIn = () => {
     setError(null)
     probing.mutate(login, {
       onSuccess: (result) => {
         setProbe(result)
-        setFolders(draftFromProposal(result.proposed))
+        setFolders(draftFromProposal(proposalFromFolders(result.folders)))
         onStep('folders')
       },
       onError: (err) => {
@@ -234,7 +238,7 @@ function ImapFlow({
     }
     setError(null)
     create.mutate(
-      { login, name: name.trim(), address: address.trim(), folders: accepted },
+      { login, name: name.trim(), folders: accepted },
       {
         onSuccess: () => {
           toast.success('Account added', {
@@ -254,30 +258,18 @@ function ImapFlow({
       <DialogBody className='space-y-6'>
         {step === 'connection' ?
           <>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor={nameId}>Account name</Label>
-                <Input
-                  id={nameId}
-                  placeholder='Personal mail'
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                  }}
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor={addressId}>Mail address</Label>
-                <Input
-                  id={addressId}
-                  autoComplete='off'
-                  placeholder='you@example.com'
-                  value={address}
-                  onChange={(e) => {
-                    setAddress(e.target.value)
-                  }}
-                />
-              </div>
+            <div className='space-y-2'>
+              <Label htmlFor={nameId}>Account name</Label>
+              <p className='text-xs text-muted-foreground'>What this mailbox is called in grinbox.</p>
+              <Input
+                id={nameId}
+                className='max-w-md'
+                placeholder='Personal mail'
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                }}
+              />
             </div>
             <ImapConnectionFields value={login} onChange={setLogin} />
           </>

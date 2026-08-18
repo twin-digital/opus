@@ -76,22 +76,24 @@ import { AccountDetailPage } from './detail'
 
 // --- Fixtures ------------------------------------------------------------
 
+// Each folder carries the role grinbox proposes for it (d-zxvkt95o).
 const SERVER_FOLDERS = [
-  { name: 'INBOX', roles: [] },
-  { name: 'INBOX.Archive', roles: ['\\Archive'] },
-  { name: 'Trash', roles: ['\\Trash'] },
-  { name: 'Junk', roles: ['\\Junk'] },
-  { name: 'INBOX.Receipts', roles: [] },
+  { name: 'INBOX', proposed_role: 'arrival' as const },
+  { name: 'INBOX.Archive', proposed_role: 'archived' as const },
+  { name: 'Trash', proposed_role: 'trashed' as const },
+  { name: 'Junk', proposed_role: 'spam' as const },
+  { name: 'INBOX.Receipts', proposed_role: null },
 ]
+
+const CAPABILITIES = {
+  supported: ['apply_category', 'archive', 'file'],
+  unsupported: { send_message: 'grinbox cannot send mail through IMAP' },
+  read_at: 100,
+}
 
 const PROBE = {
   folders: SERVER_FOLDERS,
-  proposed: { arrival: 'INBOX', archived: 'INBOX.Archive', trashed: 'Trash', spam: 'Junk' },
-  capabilities: {
-    supported: ['apply_category', 'archive', 'file'] as const,
-    unsupported: { send_message: 'grinbox cannot send mail through IMAP' },
-    readAt: 100,
-  },
+  capabilities: CAPABILITIES,
 }
 
 const imapAccount = {
@@ -105,19 +107,14 @@ const imapAccount = {
   last_polled_at: null,
   poll_interval_seconds: 300,
   status: 'ok',
-  capabilities: {
-    supported: ['apply_category', 'archive', 'file'],
-    unsupported: { send_message: 'grinbox cannot send mail through IMAP' },
-    readAt: 100,
-  },
+  capabilities: CAPABILITIES,
   paused_reason: null,
   // The stored connection the interface reads back — never the password.
-  settings: {
+  imap: {
     host: 'imap.example.net',
     port: 993,
-    security: 'implicit',
+    security: 'tls',
     username: 'sean',
-    address: 'mail@example.net',
     folders: { arrival: 'INBOX', archived: 'INBOX.Archive', trashed: 'Trash', spam: 'Junk' },
   },
 } as unknown as AccountSummary
@@ -157,7 +154,6 @@ function openImapForm() {
 /** Fill a complete login and press Log in. */
 function logIn() {
   fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Personal' } })
-  fireEvent.change(screen.getByLabelText('Mail address'), { target: { value: 'mail@example.net' } })
   fireEvent.change(screen.getByLabelText('Server'), { target: { value: 'imap.example.net' } })
   fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'sean' } })
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'hunter2' } })
@@ -253,7 +249,6 @@ describe('adding an Account (d-rydjjggx)', () => {
     expect(createMutate).toHaveBeenCalledTimes(1)
     expect(createMutate.mock.calls[0]?.[0]).toMatchObject({
       name: 'Personal',
-      address: 'mail@example.net',
       folders: { arrival: 'INBOX', archived: 'INBOX.Archive', trashed: 'Trash', spam: 'Junk' },
     })
   })

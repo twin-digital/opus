@@ -31,6 +31,11 @@ export const SECURITY_LABELS: Record<ImapConnectionSecurity, string> = {
   starttls: 'Upgraded after connecting (STARTTLS)',
 }
 
+/** How a stored connection's protection reads. Anything unknown reads as itself. */
+export function securityLabel(security: string): string {
+  return security === 'starttls' || security === 'tls' ? SECURITY_LABELS[security] : security
+}
+
 /** A blank connection, as the add form opens. */
 export function blankLogin(): ImapLogin {
   return { host: '', port: CONVENTIONAL_PORT.tls, security: 'tls', username: '', password: '' }

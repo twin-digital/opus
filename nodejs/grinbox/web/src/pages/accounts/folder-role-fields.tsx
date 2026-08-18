@@ -1,8 +1,7 @@
-import { type AccountFolders, FOLDER_ROLES, type FolderRole } from '@grinbox/shared'
+import { type AccountFolders, type Folder, FOLDER_ROLES, type FolderRole } from '@grinbox/shared'
 import { useId } from 'react'
 
 import { FolderNameField } from '@/components/folder-picker'
-import type { AccountFolder } from '@/lib/folders'
 
 /**
  * The four folders an Account names (d-zxvkt95o): where mail arrives, and the
@@ -36,6 +35,21 @@ const ROLE_DESCRIPTIONS: Record<FolderRole, string> = {
 
 /** A draft of the four roles — each may be empty while the user is filling them. */
 export type FolderRoleDraft = Record<FolderRole, string>
+
+/**
+ * Grinbox's proposal for the four roles, read off the folders it listed: each
+ * folder carries the role grinbox proposes for it, from the roles the server
+ * advertises and from the Account's own folder names (d-zxvkt95o).
+ */
+export function proposalFromFolders(folders: readonly Folder[]): Partial<Record<FolderRole, string>> {
+  const proposal: Partial<Record<FolderRole, string>> = {}
+  for (const folder of folders) {
+    if (folder.proposed_role !== null && proposal[folder.proposed_role] === undefined) {
+      proposal[folder.proposed_role] = folder.name
+    }
+  }
+  return proposal
+}
 
 /** An empty draft, seeded from whatever grinbox proposed. */
 export function draftFromProposal(proposed: Partial<Record<FolderRole, string>>): FolderRoleDraft {
@@ -80,7 +94,7 @@ export function FolderRoleFields({
 }: {
   value: FolderRoleDraft
   onChange: (next: FolderRoleDraft) => void
-  folders: readonly AccountFolder[]
+  folders: readonly Folder[]
 }) {
   const idPrefix = useId()
   const duplicates = duplicateRoles(value)

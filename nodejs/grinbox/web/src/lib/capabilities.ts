@@ -1,5 +1,11 @@
 import type { AccountSummary, OperatorDetail } from '@grinbox/server'
-import { type AccountCapability, type AccountCapabilityWarning, capabilitiesRequiredBy } from '@grinbox/shared'
+import {
+  type AccountCapability,
+  type AccountCapabilityWarning,
+  accountSupports as declarationSupports,
+  capabilitiesRequiredBy,
+  capabilityAbsenceReason,
+} from '@grinbox/shared'
 
 /**
  * What an Account can carry, and which Accounts cannot carry what a Pipeline
@@ -27,7 +33,7 @@ export const CAPABILITY_LABELS: Record<AccountCapability, string> = {
 
 /** Whether the Account's stored declaration admits `capability`. */
 export function accountSupports(account: AccountSummary, capability: AccountCapability): boolean {
-  return account.capabilities?.supported.includes(capability) === true
+  return declarationSupports(account.capabilities, capability)
 }
 
 /**
@@ -36,12 +42,14 @@ export function accountSupports(account: AccountSummary, capability: AccountCapa
  * Null where it can carry it, and where nothing has been read yet.
  */
 export function unsupportedReason(account: AccountSummary, capability: AccountCapability): string | null {
-  const capabilities = account.capabilities
-  if (capabilities === null || capabilities.supported.includes(capability)) {
+  if (account.capabilities === null || accountSupports(account, capability)) {
     return null
   }
-  return capabilities.unsupported[capability] ?? 'this Account does not support this operation'
+  return capabilityAbsenceReason(account.capabilities, capability) ?? UNEXPLAINED_GAP
 }
+
+/** What a gap the backend explained nothing about reads as. */
+export const UNEXPLAINED_GAP = 'this Account does not support this operation'
 
 /** The Accounts known to lack `capability` — never one whose declaration is unread. */
 export function accountsLacking(
@@ -106,6 +114,25 @@ export function warningsFromResponse(payload: unknown): AccountCapabilityWarning
     return []
   }
   return warnings.filter(isCapabilityWarning)
+}
+
+/**
+ * One line naming what a write warned about: the capability, and the Accounts
+ * the Operator will fail on (d-x198jell). An Account the browser has not
+ * loaded is named by its id rather than dropped.
+ */
+export function describeWarnings(
+  warnings: readonly AccountCapabilityWarning[],
+  accounts: readonly AccountSummary[],
+): string {
+  return warnings
+    .map((warning) => {
+      const named = warning.account_ids.map(
+        (id) => accounts.find((account) => account.id === id)?.name ?? `account ${String(id)}`,
+      )
+      return `${named.join(', ')} cannot ${CAPABILITY_LABELS[warning.capability]}`
+    })
+    .join('; ')
 }
 
 function isCapabilityWarning(value: unknown): value is AccountCapabilityWarning {

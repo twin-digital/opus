@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   accountSupports,
   accountsLacking,
+  describeWarnings,
   deriveCapabilityWarnings,
   unsupportedReason,
   warningsFromResponse,
@@ -29,6 +30,7 @@ function account(id: number, name: string, capabilities: AccountSummary['capabil
     status: 'ok',
     capabilities,
     paused_reason: null,
+    imap: null,
   }
 }
 
@@ -53,7 +55,7 @@ const FILE_OPERATOR = operator(1, 'file', { folder: 'Later' })
 const GMAIL = account(1, 'sean@example.com', {
   supported: ['apply_category', 'archive', 'file', 'send_message'],
   unsupported: {},
-  readAt: 100,
+  read_at: 100,
 })
 
 const IMAP = account(2, 'mail@example.net', {
@@ -62,7 +64,7 @@ const IMAP = account(2, 'mail@example.net', {
     file: 'this server offers no safe way to move a message',
     send_message: 'grinbox cannot send mail through IMAP',
   },
-  readAt: 100,
+  read_at: 100,
 })
 
 /** Never polled: nothing has been read from it yet. */
@@ -140,6 +142,20 @@ describe('warningsFromResponse', () => {
   it('drops an entry naming a capability it does not know', () => {
     expect(warningsFromResponse({ warnings: [{ capability: 'teleport', operator_ids: [], account_ids: [] }] })).toEqual(
       [],
+    )
+  })
+})
+
+describe('describeWarnings (d-x198jell)', () => {
+  it('names the Accounts and what they cannot carry', () => {
+    expect(describeWarnings([{ capability: 'file', operator_ids: [1], account_ids: [2] }], [GMAIL, IMAP])).toBe(
+      'mail@example.net cannot file a Message into a folder',
+    )
+  })
+
+  it('names an Account it has not loaded by its id rather than dropping it', () => {
+    expect(describeWarnings([{ capability: 'send_message', operator_ids: [4], account_ids: [9] }], [])).toBe(
+      'account 9 cannot send mail',
     )
   })
 })

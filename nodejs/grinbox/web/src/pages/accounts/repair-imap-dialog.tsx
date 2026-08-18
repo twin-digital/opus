@@ -9,14 +9,19 @@ import {
   type ImapLogin,
   type ImapProbe,
   imapRefusalMessage,
-  imapSettingsOf,
   loginFromSettings,
   useImapProbe,
   useRepairImapConnection,
   useRepointFolders,
 } from '@/lib/imap'
 import { CapabilityNotice } from './add-account-button'
-import { acceptedFolders, draftFromProposal, type FolderRoleDraft, FolderRoleFields } from './folder-role-fields'
+import {
+  acceptedFolders,
+  draftFromProposal,
+  type FolderRoleDraft,
+  FolderRoleFields,
+  proposalFromFolders,
+} from './folder-role-fields'
 import { blankLogin, ImapConnectionFields, loginComplete } from './imap-connection-fields'
 
 /**
@@ -38,7 +43,7 @@ export function RepairImapDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const stored = imapSettingsOf(account)
+  const stored = account.imap
   const [step, setStep] = useState<'connection' | 'folders'>('connection')
   const [login, setLogin] = useState<ImapLogin>(() => (stored === null ? blankLogin() : loginFromSettings(stored)))
   const [probe, setProbe] = useState<ImapProbe | null>(null)
@@ -56,7 +61,7 @@ export function RepairImapDialog({
         setProbe(result)
         // What is stored stays the proposal on a repair: the user is fixing a
         // password, and re-pointing a folder is a separate, deliberate change.
-        setFolders(draftFromProposal(stored?.folders ?? result.proposed))
+        setFolders(draftFromProposal(stored?.folders ?? proposalFromFolders(result.folders)))
         setStep('folders')
       },
       onError: (err) => {

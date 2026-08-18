@@ -1,12 +1,10 @@
 import type { AccountSummary } from '@grinbox/server'
-import type { AccountFolders, ImapAccountSettings, ImapConnectionSecurity } from '@grinbox/shared'
+import type { AccountCapabilities, AccountFolders, Folder, ImapAccountSettings } from '@grinbox/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { accountKey, accountsKey } from './accounts'
 import { api } from './api'
 import { ApiError, toApiError } from './api-error'
-import type { AccountFolder } from './folders'
 
 /**
  * Adding, repairing, and re-pointing an IMAP Account.
@@ -24,31 +22,15 @@ import type { AccountFolder } from './folders'
 
 /** What the connection form collects — the settings plus the password. */
 export interface ImapLogin extends ImapAccountSettings {
-  security: ImapConnectionSecurity
   password: string
 }
 
-/** What a successful probe reported: the folders, a proposal, what it can carry. */
+/** What a successful probe reported: the folders, and what the Account can carry. */
 export interface ImapProbe {
-  readonly folders: readonly AccountFolder[]
-  /** Grinbox's proposal per role, from the advertised roles and the names. */
-  readonly proposed: Partial<Record<keyof AccountFolders, string>>
+  /** Every folder the Account holds, each with the role grinbox proposes for it. */
+  readonly folders: readonly Folder[]
   /** What the Account can carry, and why it cannot carry the rest (d-jl5giafw). */
-  readonly capabilities: AccountSummary['capabilities']
-}
-
-type ProbeBody = InferRequestType<typeof api.api.imap.probe.$post>['json']
-
-/**
- * How the wire spells the connection's protection. d-eyi05i6b names the values
- * `tls` and `starttls`, which is what the interface and `@grinbox/shared` use;
- * the daemon still spells the first one `implicit`. The translation lives here
- * alone, and the day the daemon takes the ruled name this map stops
- * type-checking — which is where the rename should be noticed.
- */
-const WIRE_SECURITY: Record<ImapConnectionSecurity, ProbeBody['security']> = {
-  tls: 'implicit',
-  starttls: 'starttls',
+  readonly capabilities: AccountCapabilities
 }
 
 /** The connection, as the API takes it. */
@@ -56,19 +38,9 @@ function connectionBody(login: ImapLogin) {
   return {
     host: login.host,
     port: login.port,
-    security: WIRE_SECURITY[login.security],
+    security: login.security,
     username: login.username,
     password: login.password,
-  }
-}
-
-type ProbeResponse = InferResponseType<typeof api.api.imap.probe.$post, 200>
-
-function toProbe(body: ProbeResponse): ImapProbe {
-  return {
-    folders: body.folders.map((folder) => ({ name: folder.name, roles: folder.roles })),
-    proposed: body.proposed,
-    capabilities: body.capabilities,
   }
 }
 
@@ -84,16 +56,15 @@ export function useImapProbe() {
       if (!res.ok) {
         throw await toApiError(res)
       }
-      return toProbe(await res.json())
+      return res.json()
     },
   })
 }
 
-/** What creating an IMAP Account takes: the login, a display name and address, the folders. */
+/** What creating an IMAP Account takes: the login, a display name, the folders. */
 export interface ImapAccountDraft {
   login: ImapLogin
   name: string
-  address: string
   folders: AccountFolders
 }
 
@@ -106,14 +77,9 @@ export function useCreateImapAccount() {
         json: {
           ...connectionBody(draft.login),
           name: draft.name,
-          address: draft.address,
           folders: draft.folders,
         },
       })
-      // The daemon declares only a refusal on this route so far, which types
-      // `ok` as literally `false`; the check is there for the answer it will
-      // give once the handler is implemented.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!res.ok) {
         throw await toApiError(res)
       }
@@ -138,10 +104,6 @@ export function useRepairImapConnection(id: number) {
         param: { id: String(id) },
         json: connectionBody(login),
       })
-      // The daemon declares only a refusal on this route so far, which types
-      // `ok` as literally `false`; the check is there for the answer it will
-      // give once the handler is implemented.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!res.ok) {
         throw await toApiError(res)
       }
@@ -167,10 +129,6 @@ export function useRepointFolders(id: number) {
         param: { id: String(id) },
         json: { folders },
       })
-      // The daemon declares only a refusal on this route so far, which types
-      // `ok` as literally `false`; the check is there for the answer it will
-      // give once the handler is implemented.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!res.ok) {
         throw await toApiError(res)
       }
@@ -183,63 +141,16 @@ export function useRepointFolders(id: number) {
   })
 }
 
-/** An Account's stored IMAP configuration, without the password. */
-export interface StoredImapSettings extends ImapAccountSettings {
-  security: ImapConnectionSecurity
-  address: string
-  folders: AccountFolders
-}
-
 /**
- * An Account's stored IMAP settings — what a repair opens pre-filled, every
- * field but the password (d-mcdtvppm), and where its four folders currently
- * point (d-8pdx8qsd).
- *
- * The daemon carries them on the Account read surfaces under `settings`. Until
- * it does this reads as null, and the repair form opens empty rather than
- * showing settings it does not have.
+ * The connection to open a repair with: everything the Account is configured
+ * with, and an empty password (d-mcdtvppm). The stored configuration never
+ * carries the password, in any encoding (r-0kn0oida).
  */
-export function imapSettingsOf(account: AccountSummary): StoredImapSettings | null {
-  const settings = (account as { settings?: unknown }).settings
-  if (!settings || typeof settings !== 'object') {
-    return null
-  }
-  const raw = settings as Record<string, unknown>
-  const folders = raw.folders
-  if (
-    typeof raw.host !== 'string' ||
-    typeof raw.port !== 'number' ||
-    typeof raw.username !== 'string' ||
-    !folders ||
-    typeof folders !== 'object'
-  ) {
-    return null
-  }
-  const named = folders as Record<string, unknown>
-  const accepted: Partial<AccountFolders> = {}
-  for (const role of ['arrival', 'archived', 'trashed', 'spam'] as const) {
-    const name = named[role]
-    if (typeof name !== 'string') {
-      return null
-    }
-    accepted[role] = name
-  }
-  return {
-    host: raw.host,
-    port: raw.port,
-    username: raw.username,
-    security: raw.security === 'starttls' ? 'starttls' : 'tls',
-    address: typeof raw.address === 'string' ? raw.address : '',
-    folders: accepted as AccountFolders,
-  }
-}
-
-/** The connection to open a repair with: what is stored, and an empty password. */
-export function loginFromSettings(settings: StoredImapSettings): ImapLogin {
+export function loginFromSettings(settings: NonNullable<AccountSummary['imap']>): ImapLogin {
   return {
     host: settings.host,
     port: settings.port,
-    security: settings.security,
+    security: settings.security === 'starttls' ? 'starttls' : 'tls',
     username: settings.username,
     password: '',
   }
@@ -257,12 +168,15 @@ export function imapRefusalMessage(err: unknown): string {
   }
   switch (err.code) {
     case 'account_login_failed':
-    case 'imap_credential_rejected':
       return 'The server refused this username and password. Check them with your provider and try again.'
     case 'certificate_unverified':
       return 'Grinbox could not verify this server’s certificate, and it will not talk to a server it cannot verify. There is no way to turn that check off — fix the certificate, or use a hostname it is issued for.'
     case 'duplicate_folder_role':
       return 'Two roles name the same folder. Each of the four roles needs a folder of its own.'
+    case 'not_found':
+      return `${err.message} Grinbox creates no folder — name one the account already has.`
+    case 'encryption_unavailable':
+      return 'This deployment has no encryption key configured, so grinbox cannot store a password.'
     case 'imap_unavailable':
       return 'This deployment has no IMAP transport configured.'
     default:

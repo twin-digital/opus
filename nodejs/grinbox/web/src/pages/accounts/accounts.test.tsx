@@ -72,7 +72,7 @@ const NOW_SEC = Math.floor(NOW_MS / 1000)
 const ALL_CAPABILITIES: AccountSummary['capabilities'] = {
   supported: ['apply_category', 'archive', 'file', 'send_message'],
   unsupported: {},
-  readAt: NOW_SEC,
+  read_at: NOW_SEC,
 }
 
 const okAccount: AccountSummary = {
@@ -88,6 +88,7 @@ const okAccount: AccountSummary = {
   status: 'ok',
   capabilities: ALL_CAPABILITIES,
   paused_reason: null,
+  imap: null,
 }
 
 const noPipelineAccount: AccountSummary = {
@@ -103,6 +104,7 @@ const noPipelineAccount: AccountSummary = {
   status: 'no_pipeline',
   capabilities: ALL_CAPABILITIES,
   paused_reason: null,
+  imap: null,
 }
 
 const needsAuthAccount: AccountSummary = {
@@ -118,6 +120,7 @@ const needsAuthAccount: AccountSummary = {
   status: 'needs_auth',
   capabilities: null,
   paused_reason: null,
+  imap: null,
 }
 
 function queryStub<T>(data: T | undefined, overrides = {}) {

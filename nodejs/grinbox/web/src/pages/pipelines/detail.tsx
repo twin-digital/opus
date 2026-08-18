@@ -44,7 +44,7 @@ import {
 } from '@/lib/pipelines'
 import { AddOperatorButton } from './add-operator'
 import { useAccounts } from '@/lib/accounts'
-import { deriveCapabilityWarnings } from '@/lib/capabilities'
+import { describeWarnings, deriveCapabilityWarnings, warningsFromResponse } from '@/lib/capabilities'
 import { OperatorEditor } from './editors/operator-editor'
 import { blankConfigFor, operatorTypeFor } from './operator-types'
 
@@ -202,6 +202,7 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
   const setEnabled = useSetOperatorEnabled(pipelineId)
   const remove = useDeleteOperator(pipelineId)
   const update = useUpdateOperator(pipelineId)
+  const { data: accounts } = useAccounts()
   const [editing, setEditing] = useState(false)
 
   const outputs = operator.contract?.outputs ?? []
@@ -210,7 +211,16 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
     setEnabled.mutate(
       { operatorId: operator.id, enabled },
       {
-        onSuccess: () => toast.success(enabled ? 'Operator enabled' : 'Operator disabled'),
+        onSuccess: (result) => {
+          const warnings = warningsFromResponse(result)
+          if (warnings.length > 0) {
+            toast(enabled ? 'Operator enabled, with a warning' : 'Operator disabled', {
+              description: describeWarnings(warnings, accounts ?? []),
+            })
+            return
+          }
+          toast.success(enabled ? 'Operator enabled' : 'Operator disabled')
+        },
         onError: (err) =>
           toast.error('Could not update Operator', {
             description: errorMessage(err),
@@ -301,7 +311,14 @@ function OperatorRow({ operator, pipelineId }: { operator: OperatorDetail; pipel
           // read API couldn't parse the stored JSON.
           initialConfig={operator.config ?? blankConfigFor(operator.type_key as OperatorTypeKey)}
           onSave={async ({ name, config }) => {
-            await update.mutateAsync({ operatorId: operator.id, name, config })
+            const saved = await update.mutateAsync({ operatorId: operator.id, name, config })
+            const warnings = warningsFromResponse(saved)
+            if (warnings.length > 0) {
+              toast('Operator saved, with a warning', {
+                description: describeWarnings(warnings, accounts ?? []),
+              })
+              return
+            }
             toast.success('Operator saved')
           }}
         />

@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CAPABILITY_LABELS, accountSupports, unsupportedReason } from '@/lib/capabilities'
 import { useAccountFolders } from '@/lib/folders'
-import { imapRefusalMessage, imapSettingsOf, useRepointFolders } from '@/lib/imap'
+import { imapRefusalMessage, useRepointFolders } from '@/lib/imap'
 import { acceptedFolders, draftFromProposal, type FolderRoleDraft, FolderRoleFields } from './folder-role-fields'
-import { SECURITY_LABELS } from './imap-connection-fields'
+import { securityLabel } from './imap-connection-fields'
 import { RepairImapDialog } from './repair-imap-dialog'
 
 /**
@@ -74,7 +74,7 @@ export function PausedBanner({ account }: { account: AccountSummary }) {
 /** The connection an IMAP Account is reached on (d-ioso3voc). Never its password. */
 export function ImapConnectionCard({ account }: { account: AccountSummary }) {
   const [repairing, setRepairing] = useState(false)
-  const settings = imapSettingsOf(account)
+  const settings = account.imap
   if (!isImap(account)) {
     return null
   }
@@ -96,7 +96,7 @@ export function ImapConnectionCard({ account }: { account: AccountSummary }) {
               {settings.host}:{settings.port}
             </dd>
             <dt className='text-muted-foreground'>Connection</dt>
-            <dd>{SECURITY_LABELS[settings.security]}</dd>
+            <dd>{securityLabel(settings.security)}</dd>
             <dt className='text-muted-foreground'>Username</dt>
             <dd className='font-mono'>{settings.username}</dd>
             <dt className='text-muted-foreground'>Password</dt>
@@ -125,7 +125,7 @@ export function ImapConnectionCard({ account }: { account: AccountSummary }) {
  * what the next poll and the next reconcile read.
  */
 export function AccountFoldersCard({ account }: { account: AccountSummary }) {
-  const settings = imapSettingsOf(account)
+  const settings = account.imap
   const { data: folders } = useAccountFolders(isImap(account) ? account.id : null)
   const repoint = useRepointFolders(account.id)
   const [draft, setDraft] = useState<FolderRoleDraft | null>(null)

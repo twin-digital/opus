@@ -28,9 +28,9 @@ import { OperatorEditor } from './editors/operator-editor'
 import { blankConfigFor, OPERATOR_TYPE_BY_KEY } from './operator-types'
 
 const FOLDERS = [
-  { name: 'INBOX', roles: [] },
-  { name: 'INBOX.Archive', roles: ['\\Archive'] },
-  { name: 'INBOX.Receipts', roles: [] },
+  { name: 'INBOX', proposed_role: 'arrival' as const },
+  { name: 'INBOX.Archive', proposed_role: 'archived' as const },
+  { name: 'INBOX.Receipts', proposed_role: null },
 ]
 
 const ACCOUNT = { id: 1, name: 'mail@example.net' } as AccountSummary
