@@ -2585,6 +2585,10 @@ importers:
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(jsdom@29.1.1)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.1)(yaml@2.9.0))
 
   nodejs/minecraft/rpg-core-example:
+    dependencies:
+      '@twin-digital/rpg-core':
+        specifier: workspace:*
+        version: link:../rpg-core
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -2607,9 +2611,6 @@ importers:
       '@twin-digital/opus-scripts':
         specifier: workspace:*
         version: link:../../../tooling/scripts
-      '@twin-digital/rpg-core':
-        specifier: workspace:*
-        version: link:../rpg-core
       '@twin-digital/tsconfig':
         specifier: workspace:*
         version: link:../../devtools/tsconfig
