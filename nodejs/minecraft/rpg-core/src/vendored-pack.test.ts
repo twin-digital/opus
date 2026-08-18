@@ -12,7 +12,7 @@ import { PRESET_NAMES } from './presets.js'
 
 interface BehaviorEntityFile {
   'minecraft:entity': {
-    description: { identifier: string }
+    description: { identifier: string; is_spawnable?: boolean; is_summonable?: boolean }
     components: Record<string, unknown>
   }
 }
@@ -43,7 +43,12 @@ const filesIn = (relativeDir: string, suffix: string): string[] =>
 
 const behaviorEntities = filesIn('behavior_pack/entities', '.json').map((file) => {
   const entity = (readJson(file) as BehaviorEntityFile)['minecraft:entity']
-  return { file, identifier: entity.description.identifier, components: entity.components }
+  return {
+    file,
+    identifier: entity.description.identifier,
+    description: entity.description,
+    components: entity.components,
+  }
 })
 
 const clientEntities = filesIn('resource_pack/entity', '.entity.json').map((file) => ({
@@ -120,6 +125,41 @@ describe('shared actor components', () => {
   it("declares no type family of this product's own — the family is the adventure build's", () => {
     for (const { file, components } of behaviorEntities) {
       expect(components['minecraft:type_family'], file).toBeUndefined()
+    }
+  })
+
+  it('refuses damage from every cause', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:damage_sensor'], file).toMatchObject({ triggers: [{ deals_damage: 'no' }] })
+      expect(components['minecraft:fire_immune'], file).toBeDefined()
+    }
+  })
+
+  it('is summonable by identifier and reaches the creative menu through no spawn egg', () => {
+    for (const { file, description } of behaviorEntities) {
+      expect(description.is_summonable, file).toBe(true)
+      expect(description.is_spawnable, file).toBe(false)
+    }
+  })
+
+  it('cannot be renamed by a player: no component makes an actor nameable', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:nameable'], file).toBeUndefined()
+    }
+  })
+
+  it('survives a restart and a chunk unload with no player near', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:persistent'], file).toBeDefined()
+      expect(components['minecraft:despawn'], file).toBeUndefined()
+    }
+  })
+
+  it('watches a nearby player continuously, and goes after nothing else', () => {
+    for (const { file, components } of behaviorEntities) {
+      expect(components['minecraft:behavior.look_at_player'], file).toMatchObject({ probability: 1.0 })
+      const behaviors = Object.keys(components).filter((name) => name.startsWith('minecraft:behavior.'))
+      expect(behaviors, file).toEqual(['minecraft:behavior.look_at_player'])
     }
   })
 })
