@@ -16,10 +16,66 @@ export type {
   CandidateListing,
   Category,
   FetchedMessage,
+  MailboxSnapshot,
   Provider,
   ProviderAccount,
+  SnapshotEntry,
   ThreadMembership,
 } from './provider.js'
+
+// What one Account can carry, read at each poll and read back everywhere else
+// (d-bzw8qoiy).
+export {
+  ACCOUNT_CAPABILITIES,
+  type AccountCapabilities,
+  type AccountCapability,
+  allCapabilities,
+  capabilitiesFrom,
+  parseCapabilities,
+  serializeCapabilities,
+  supports,
+  unsupportedReason,
+} from './account-capabilities.js'
+
+// The IMAP backend: its stored settings, its session seam, the capability
+// reading, folder choice, and the category-as-keyword rules.
+export {
+  IMAP_PASSWORD_KIND,
+  IMAP_FOLDER_ROLES,
+  IMAP_PROVIDER_TYPE,
+  type ImapConnection,
+  type ImapFolderRole,
+  type ImapFolders,
+  type ImapSecurity,
+  type ImapSettings,
+  imapConnectionSchema,
+  imapFoldersSchema,
+  imapSecuritySchema,
+  imapSettingsSchema,
+  parseImapSettings,
+} from './imap/imap-settings.js'
+export {
+  type ImapConnect,
+  ImapCredentialRejectedError,
+  type ImapFetchedMessage,
+  type ImapFolderEntry,
+  type ImapFolderListing,
+  type ImapFolderState,
+  type ImapMoveResult,
+  type ImapSession,
+} from './imap/imap-client.js'
+export { admitsKeywords, hasSafeMove, imapCapabilities } from './imap/imap-capabilities.js'
+export { type FolderProposal, matchFolder, proposeFolders, standingOfFolder } from './imap/imap-folders.js'
+export { isCarriableKeyword, makeCarriable, uncarriableCharacters } from './imap/keyword.js'
+export {
+  type ImapCursor,
+  ImapProvider,
+  type ImapProviderDeps,
+  type OpenImapSession,
+  cursorAppliesTo,
+  parseImapCursor,
+  serializeImapCursor,
+} from './imap/imap-provider.js'
 
 export {
   fallbackQuery,

@@ -30,6 +30,7 @@ function throwingClients(): UnderlyingClients {
     mailbox: {
       apply_category: fail,
       archive: fail,
+      file: fail,
       fetch_metadata: fail,
       fetch_body: fail,
       list_messages: fail,
@@ -149,6 +150,9 @@ describe('execution loop — shutdown drain', () => {
           throw new Error('unused')
         },
         archive: () => {
+          throw new Error('unused')
+        },
+        file: () => {
           throw new Error('unused')
         },
         fetch_body: () => {
@@ -642,6 +646,9 @@ describe('execution loop — notify gating on an upstream-produced Tag (real der
           throw new Error('unused')
         },
         archive: () => {
+          throw new Error('unused')
+        },
+        file: () => {
           throw new Error('unused')
         },
         fetch_body: () => {

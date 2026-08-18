@@ -40,8 +40,11 @@ export { type AppDeps, createApp } from './http/app.js'
 // DTOs. Response DTO types live inline with each route group (re-exported here
 // for callers that want the named shapes directly).
 export {
+  type AccountFolders,
   type ApiRoutes,
   type ApiDeps,
+  type ImapProbe,
+  type ImapProbeResult,
   type NowSeconds,
   createApiRoutes,
   makeApiDeps,

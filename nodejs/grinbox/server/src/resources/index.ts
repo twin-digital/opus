@@ -30,17 +30,19 @@ export {
 
 export {
   buildMailProviderRegistry,
-  MAIL_PROVIDER_CAPABILITIES,
   type MailboxBackend,
   type MailProviderRegistry,
   type MailProviderRegistryDeps,
   type MailSenderBackend,
   mailboxBackendFor,
   mailSenderBackendFor,
+  UnsupportedAccountOperationError,
   UnsupportedMailProviderError,
 } from './provider-backends.js'
 
 export { type GmailBackendDeps, gmailMailboxBackend, gmailMailSenderBackend } from './gmail-backend.js'
+
+export { type ImapBackendDeps, imapMailboxBackend } from './imap-backend.js'
 
 export { checkAndConsumeLimits, type LimitDecision } from './limits.js'
 

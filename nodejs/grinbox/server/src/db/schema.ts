@@ -52,6 +52,18 @@ export interface AccountsTable {
   last_history_cursor: string | null
   /** Unix seconds of the last source-state reconcile; null until the first. */
   last_reconciled_at: number | null
+  /**
+   * What this Account's backend declared it can carry, read at each poll and
+   * read back by every other path (d-bzw8qoiy). Serialized
+   * {@link AccountCapabilities}; null until the first successful poll.
+   */
+  capabilities_json: string | null
+  /**
+   * Why polling is paused, or null while it runs. `credential_rejected` is a
+   * password the server refused as the credential (d-v4mejzw5): polling stops
+   * and the user is told, and nothing about the Account is deleted.
+   */
+  paused_reason: string | null
   created_at: CreatedAt
   deleted_at: number | null
 }
@@ -150,6 +162,17 @@ export interface MessagesTable {
   source_state_at: number | null
   /** Unix seconds the state was last confirmed against the backend; null until first sync. */
   source_synced_at: number | null
+  /**
+   * Where an IMAP Message currently is (d-k4nt8zbu): the folder holding it,
+   * that folder's UIDVALIDITY, and its UID there. The triple names one message
+   * on the server (f-ubjw3f0i) and is rewritten whenever the Message moves; a
+   * moved Message is identified afresh by its destination (f-1hjkefq3). Null on
+   * every non-IMAP Account, whose `backend_message_id` follows the Message on
+   * its own.
+   */
+  imap_folder: string | null
+  imap_uidvalidity: number | null
+  imap_uid: number | null
 }
 
 export interface TagsTable {

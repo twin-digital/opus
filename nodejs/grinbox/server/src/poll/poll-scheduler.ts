@@ -144,9 +144,9 @@ export function createPollScheduler(deps: PollSchedulerDeps): PollScheduler {
     try {
       const summary = await reconcileAccount(db, account, provider, now)
       await db.updateTable('accounts').set({ last_reconciled_at: now }).where('id', '=', account.id).execute()
-      if (summary.archived > 0 || summary.restored > 0) {
+      if (summary.realigned > 0 || summary.unfound > 0) {
         console.log(
-          `[grinbox][reconcile] account=${account.id} archived=${summary.archived} restored=${summary.restored}`,
+          `[grinbox][reconcile] account=${account.id} realigned=${summary.realigned} unfound=${summary.unfound}`,
         )
       }
     } catch (err) {

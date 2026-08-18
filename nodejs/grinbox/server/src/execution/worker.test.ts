@@ -55,6 +55,7 @@ function fakeBedrockClients(value: {
     mailbox: {
       apply_category: unused,
       archive: unused,
+      file: unused,
       fetch_metadata: unused,
       fetch_body: unused,
       list_messages: unused,
@@ -90,6 +91,7 @@ function slowBedrockClients(): UnderlyingClients {
     mailbox: {
       apply_category: unused,
       archive: unused,
+      file: unused,
       fetch_metadata: unused,
       fetch_body: unused,
       list_messages: unused,
@@ -413,6 +415,7 @@ describe('runWorker — lazy body fetch', () => {
       mailbox: {
         apply_category: unused,
         archive: unused,
+        file: unused,
         fetch_metadata: unused,
         fetch_body: fetchBody,
         list_messages: unused,

@@ -43,6 +43,7 @@ function notConfiguredClients(): UnderlyingClients {
     mailbox: {
       apply_category: fail('mailbox.apply_category'),
       archive: fail('mailbox.archive'),
+      file: fail('mailbox.file'),
       fetch_metadata: fail('mailbox.fetch_metadata'),
       fetch_body: fail('mailbox.fetch_body'),
       list_messages: fail('mailbox.list_messages'),
