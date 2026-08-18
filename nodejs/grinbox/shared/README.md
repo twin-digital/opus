@@ -9,23 +9,27 @@ and both siblings depend on it with `workspace:*`.
 Every shape that crosses the API is declared once, in this package, rather than
 separately on each side. That is the whole of its job.
 
-| module                                 | what it declares                                                                                                 |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `resources`                            | the closed set of resources and the operations each exposes                                                      |
-| `operators`                            | the operator type keys and the configuration shape of each built-in type                                         |
-| `contract`                             | an operator's declared inputs, outputs, and resource operations, derived from its configuration                  |
-| `enums`                                | the closed vocabularies the state schema CHECK-constrains, and the ones deliberately left open                   |
-| `match-expression`, `match-vocabulary` | the rule language and the reader that evaluates it                                                               |
-| `template-placeholder`, `body-usage`   | the placeholder grammar, and what reading it implies about fetching a body                                       |
-| `limits`                               | a limit's shape, and the caps grinbox seeds on install                                                           |
-| `notifications`                        | a notification kind's name, and the per-kind cooldown setting                                                    |
-| `pending-archive`                      | an archive operator's delay, the pending archive a message's read surfaces carry, and why a due one made no call |
-| `money-display`                        | the display form of a stored money value: `19503:USD` renders as `$195.03`                                       |
-| `models`                               | the closed set of models a user may pick                                                                         |
-| `api-error`                            | the structured form a refused write answers in                                                                   |
-| `health`                               | the liveness payload                                                                                             |
-| `resource-op-result`                   | the outcome a metered resource operation returns                                                                 |
-| `account-display`                      | the icon and colour vocabularies for an account badge                                                            |
+| module                                 | what it declares                                                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `resources`                            | the closed set of resources and the operations each exposes                                                                  |
+| `operators`                            | the operator type keys and the configuration shape of each built-in type                                                     |
+| `contract`                             | an operator's declared inputs, outputs, and resource operations, derived from its configuration                              |
+| `enums`                                | the closed vocabularies the state schema CHECK-constrains, and the ones deliberately left open                               |
+| `match-expression`, `match-vocabulary` | the rule language and the reader that evaluates it                                                                           |
+| `template-placeholder`, `body-usage`   | the placeholder grammar, and what reading it implies about fetching a body                                                   |
+| `limits`                               | a limit's shape, and the caps grinbox seeds on install                                                                       |
+| `notifications`                        | a notification kind's name, and the per-kind cooldown setting                                                                |
+| `pending-archive`                      | an archive operator's delay, the pending archive a message's read surfaces carry, and why a due one made no call             |
+| `money-display`                        | the display form of a stored money value: `19503:USD` renders as `$195.03`                                                   |
+| `models`                               | the closed set of models a user may pick                                                                                     |
+| `api-error`                            | the structured form a refused write answers in                                                                               |
+| `health`                               | the liveness payload                                                                                                         |
+| `resource-op-result`                   | the outcome a metered resource operation returns                                                                             |
+| `account-display`                      | the icon and colour vocabularies for an account badge                                                                        |
+| `backends`                             | the backends an account may be added with, what an account can carry and why it cannot, and the warning that reports the gap |
+| `imap-account`                         | an IMAP account's connection, the credentials its login takes, and the setup that creates it                                 |
+| `folders`                              | a folder name as the user wrote it, the four roles an account names, and the folders the interface offers                    |
+| `category-name`                        | what a category may contain — checked over a template's own text at save, and made carriable when it renders                 |
 
 The daemon owns everything behavioural: the database row types, the operator
 implementations, the code version, the metered clients, and the routes. The
@@ -59,6 +63,10 @@ no build of this package: TypeScript and the bundlers read `src/` directly.
 - A new operator type needs a `type_key`, a configuration schema, an entry in
   `operatorTypeRegistry`, and its static resource declarations. The invariant
   tests assert those four stay in step.
+- A vocabulary an account's backend varies over — what it can carry, how it is
+  reached — goes in `backends.ts` or the backend's own module, and the daemon
+  imports it rather than restating it. A value the browser application renders
+  or offers in a picker is one of these.
 
 ## Working on it
 
