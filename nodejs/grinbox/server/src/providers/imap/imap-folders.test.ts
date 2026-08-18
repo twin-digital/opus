@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ImapFolderListing } from './imap-client.js'
 import { matchFolder, proposeFolders, standingOfFolder } from './imap-folders.js'
-import type { ImapFolders } from './imap-settings.js'
+import type { AccountFolders } from './imap-settings.js'
 
 /** A stock dovecot: roles for Drafts, Junk, Sent, Trash, and no archive (f-yj818owe). */
 const STOCK_DOVECOT: ImapFolderListing[] = [
@@ -43,7 +43,7 @@ describe('proposeFolders (d-zxvkt95o, r-e40s6olu)', () => {
   })
 })
 
-const FOLDERS: ImapFolders = { arrival: 'INBOX', archived: 'Archive', trashed: 'Trash', spam: 'Junk' }
+const FOLDERS: AccountFolders = { arrival: 'INBOX', archived: 'Archive', trashed: 'Trash', spam: 'Junk' }
 
 describe('standingOfFolder (d-qstpa7y0)', () => {
   it('reads the arrival folder as present', () => {

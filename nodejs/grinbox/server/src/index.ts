@@ -50,7 +50,7 @@ export {
   makeApiDeps,
   systemNowSeconds,
 } from './http/api/index.js'
-export type { AccountStatus, AccountSummary } from './http/api/accounts.js'
+export type { AccountStatus, AccountSummary, ImapAccountView } from './http/api/accounts.js'
 export type { CredentialSummary } from './http/api/credentials.js'
 export type { PipelineSummary, PipelineDetail, OperatorDetail, TagKeyRegistryEntry } from './http/api/pipelines.js'
 export type {
@@ -71,6 +71,21 @@ export { type Daemon, startDaemon } from './daemon.js'
 
 // Operator framework: behavioral registry, runOperator, the built-in types.
 export * from './operators/index.js'
+
+// Capability warnings: which Accounts cannot carry part of a Pipeline, and why
+// (d-qzxvoph1). Carried beside a successful save, never as a refusal.
+export { capabilityWarnings, pipelineOfOperator } from './pipeline/capability-warnings.js'
+
+// IMAP accounts: adding, repairing, re-pointing, and resolving a session.
+export {
+  createImapAccount,
+  ImapAccountNotFoundError,
+  PAUSED_CREDENTIAL_REJECTED,
+  pauseForRejectedCredential,
+  repairImapAccount,
+  repointImapFolders,
+  resolveImapCredentials,
+} from './config/imap-account.js'
 
 // Pipeline write patterns + validation: edit-lock, Pipeline validation,
 // Operator save/enable/disable/soft-delete, Credential/Pipeline soft-delete,

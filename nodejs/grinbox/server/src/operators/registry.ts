@@ -31,9 +31,11 @@ import type { OperatorTypeKey } from '@grinbox/shared'
 import { applyCategoryType } from './built-ins/apply-category.js'
 import { archiveType } from './built-ins/archive.js'
 import { digestDeliveryType } from './built-ins/digest-delivery.js'
+import { fileType } from './built-ins/file.js'
 import { llmTaggerType } from './built-ins/llm-tagger.js'
 import { notifyType } from './built-ins/notify.js'
 import { ruleBasedTaggerType } from './built-ins/rule-based-tagger.js'
+import { setAsideType } from './built-ins/set-aside.js'
 import type { OperatorType } from './types.js'
 
 /**
@@ -48,6 +50,8 @@ const OPERATOR_TYPES = {
   notify: notifyType,
   apply_category: applyCategoryType,
   archive: archiveType,
+  file: fileType,
+  set_aside: setAsideType,
   digest_delivery: digestDeliveryType,
 } satisfies Partial<{
   [K in OperatorTypeKey]: OperatorType<K>

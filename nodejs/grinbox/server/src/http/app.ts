@@ -6,7 +6,14 @@ import type { DB } from '../db/index.js'
 import type { GoogleOAuthClient } from '../oauth/google-client.js'
 import { type PendingAuthStore, createPendingAuthStore } from '../oauth/pending-auth.js'
 import { createOAuthRoutes } from '../oauth/routes.js'
-import { type NowSeconds, type SyncNow, createApiRoutes, systemNowSeconds } from './api/index.js'
+import {
+  type AccountFolders,
+  type ImapProbe,
+  type NowSeconds,
+  type SyncNow,
+  createApiRoutes,
+  systemNowSeconds,
+} from './api/index.js'
 import { mountStatic, resolveWebDistPath } from './static.js'
 
 /**
@@ -46,6 +53,17 @@ export interface AppDeps {
    * unconfigured boots, where the route reports `sync_unavailable`.
    */
   syncNow?: SyncNow
+  /**
+   * Log in to an IMAP server and read back what it offers — what the add and
+   * repair flows call (d-fuln110d). Omitted where no IMAP transport is wired;
+   * the `/api/imap/*` routes then report it plainly.
+   */
+  imapProbe?: ImapProbe
+  /**
+   * List the folders an existing Account holds, so the interface offers the ones
+   * the account actually has (r-e40s6olu).
+   */
+  accountFolders?: AccountFolders
 }
 
 /**
@@ -87,6 +105,8 @@ export function createApp(deps: AppDeps): Hono {
       now: deps.now ?? systemNowSeconds,
       encryptor: deps.encryptor,
       syncNow: deps.syncNow,
+      imapProbe: deps.imapProbe,
+      accountFolders: deps.accountFolders,
     }),
   )
 

@@ -18,8 +18,10 @@ type Extractor<K extends OperatorTypeKey> = (config: OperatorConfigFor<K>) => nu
 /**
  * Per-type credential-reference extractors. Correct-for-now for every declared
  * type:
- *  - **rule_based_tagger / llm_tagger / apply_category / archive /
- *    digest_delivery**: their config carries no Credential reference → `[]`.
+ *  - **rule_based_tagger / llm_tagger / apply_category / archive / file /
+ *    set_aside / digest_delivery**: their config carries no Credential
+ *    reference → `[]`. The mailbox they reach authenticates as the Message's
+ *    Account, whose credential the Account holds rather than the Operator.
  *  - **notify**: references its `pushover` Credential by `credentials_id`. The
  *    field is in shared's `notifyConfigSchema`, so the extractor reads it
  *    directly.
@@ -29,6 +31,8 @@ const EXTRACTORS: { [K in OperatorTypeKey]: Extractor<K> } = {
   llm_tagger: () => [],
   apply_category: () => [],
   archive: () => [],
+  file: () => [],
+  set_aside: () => [],
   digest_delivery: () => [],
   notify: (config) => [config.credentials_id],
 }

@@ -4,19 +4,13 @@
  * the Limit is consumed once before the retry loop, so all attempts of one
  * operation count once against the Limit.
  *
- * Policy table (resource.operation → behavior):
+ * Three classes, and every operation falls in one:
  *
- * | Operation                       | Policy                          |
- * |---------------------------------|---------------------------------|
- * | `pushover_api.send_notification`| no retry (non-idempotent)       |
- * | `mail_sender.send_message`      | no retry (double-send is bad)   |
- * | `mailbox.apply_category`        | retry 2× with backoff           |
- * | `mailbox.archive`               | retry 2× with backoff           |
- * | `mailbox.file`                  | retry 2× with backoff           |
- * | `mailbox.fetch_metadata`        | retry 3× with exponential backoff |
- * | `mailbox.fetch_body`            | retry 3× with exponential backoff |
- * | `mailbox.list_messages`         | retry 3× with exponential backoff |
- * | `llm_bedrock.invoke_model`      | retry 3× with exponential backoff |
+ * | Class                                  | Operations                                                        | Policy                              |
+ * |----------------------------------------|-------------------------------------------------------------------|-------------------------------------|
+ * | a read — a mailbox listing, a message's metadata or body, a model | `mailbox.fetch_metadata`, `mailbox.fetch_body`, `mailbox.list_messages`, `llm_bedrock.invoke_model` | 3 further attempts, doubling wait |
+ * | a write to the mailbox                 | `mailbox.apply_category`, `mailbox.archive`, `mailbox.file`        | 2 further attempts, fixed wait      |
+ * | a notification, a send, or no policy of its own | `pushover_api.send_notification`, `mail_sender.send_message` | never retried                       |
  *
  * The `AbortSignal` is honored: if it aborts (the Operator timeout), the wrapper
  * stops retrying and rejects immediately. The underlying op is also expected to

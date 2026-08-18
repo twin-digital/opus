@@ -38,6 +38,7 @@ import type { DB } from '../db/schema.js'
 import type { GoogleOAuthClient } from '../oauth/google-client.js'
 import { GmailProvider } from '../providers/gmail-provider.js'
 import { makeLiveGmailClient } from '../providers/live-gmail-client.js'
+import { IMAP_PROVIDER_TYPE } from '../providers/imap/imap-settings.js'
 import type { Provider, ProviderAccount } from '../providers/provider.js'
 import type { PollableAccount } from './poll-cycle.js'
 import type { ProviderFactory } from './provider-factory.js'
@@ -46,9 +47,10 @@ import type { ProviderFactory } from './provider-factory.js'
 export interface LiveProviderFactoryDeps {
   readonly db: DB
   readonly encryptor: Encryptor
-  /** The live Google OAuth client — only built when OAuth is configured, which
-   * is exactly when this factory is wired in (see daemon). */
-  readonly googleClient: GoogleOAuthClient
+  /** The live Google OAuth client, or null when OAuth is not configured. */
+  readonly googleClient: GoogleOAuthClient | null
+  /** The IMAP Provider, or null where no encryption key backs its credentials. */
+  readonly imapProvider?: Provider | null
   /** Provider config (initial-sync window). Passed through to `GmailProvider`. */
   readonly providerConfig?: ConstructorParameters<typeof GmailProvider>[2]
 }
@@ -63,27 +65,34 @@ const GMAIL_PROVIDER_TYPE = 'gmail'
  * client (see the module header).
  */
 export function createLiveProviderFactory(deps: LiveProviderFactoryDeps): ProviderFactory {
-  // One Provider instance, reused across Accounts: it is stateless w.r.t. the
-  // Account (it takes the ProviderAccount per call) and resolves a per-Account
-  // live client through `makeClient`.
-  const provider = new GmailProvider(
-    deps.db,
-    (account: ProviderAccount) =>
-      makeLiveGmailClient({
-        db: deps.db,
-        encryptor: deps.encryptor,
-        googleClient: deps.googleClient,
-        accountId: account.id,
-      }),
-    deps.providerConfig,
-  )
+  // One Provider instance per backend, reused across Accounts: each is
+  // stateless w.r.t. the Account (it takes the ProviderAccount per call) and
+  // resolves per-Account credentials itself.
+  const googleClient = deps.googleClient
+  const gmail =
+    googleClient === null ? null : (
+      new GmailProvider(
+        deps.db,
+        (account: ProviderAccount) =>
+          makeLiveGmailClient({
+            db: deps.db,
+            encryptor: deps.encryptor,
+            googleClient,
+            accountId: account.id,
+          }),
+        deps.providerConfig,
+      )
+    )
 
   return (account: PollableAccount): Provider | null => {
-    if (account.providerType !== GMAIL_PROVIDER_TYPE) {
+    const provider =
+      account.providerType === GMAIL_PROVIDER_TYPE ? gmail
+      : account.providerType === IMAP_PROVIDER_TYPE ? (deps.imapProvider ?? null)
+      : null
+    if (provider === null) {
       console.info(
-        `[grinbox][poll] account=${account.id} provider_type='${account.providerType}' is not supported; skipping`,
+        `[grinbox][poll] account=${account.id} provider_type='${account.providerType}' has no configured backend; skipping`,
       )
-      return null
     }
     return provider
   }

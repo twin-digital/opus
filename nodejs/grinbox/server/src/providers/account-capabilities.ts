@@ -1,5 +1,12 @@
 /**
- * What one Account can carry (d-bzw8qoiy, d-f9tj4wnr).
+ * What one Account can carry, as its backend last declared it (d-bzw8qoiy,
+ * d-f9tj4wnr).
+ *
+ * The vocabulary — which operations are Account-dependent at all — is
+ * `@grinbox/shared`'s {@link ACCOUNT_CAPABILITIES}. What this module adds is the
+ * stored form: the supported set, a reason for each gap so the interface can say
+ * why an Account cannot send or file (d-5h66e3zl, d-qzxvoph1), and when it was
+ * read.
  *
  * The declaration is per Account, not per backend: two IMAP accounts of one
  * server differ by what their arrival folder admits and what the server
@@ -7,22 +14,18 @@
  * (`Provider.declareCapabilities`) and stores it on the Account; every other
  * path — the resource dispatch, the pipeline save warning, the interface —
  * reads what was stored.
- *
- * A capability is named for the resource operation it gates, so the gap the
- * user meets is the gap the configuration names (d-qzxvoph1).
  */
 
-/** The operations an Account's backend may or may not be able to carry. */
-export const ACCOUNT_CAPABILITIES = ['apply_category', 'archive', 'file', 'send_message'] as const
+import { ACCOUNT_CAPABILITIES, type AccountCapability } from '@grinbox/shared'
 
-export type AccountCapability = (typeof ACCOUNT_CAPABILITIES)[number]
+export { ACCOUNT_CAPABILITIES }
+export type { AccountCapability }
 
 /**
  * The stored declaration. `supported` is what the Account can carry;
- * `unsupported` explains each gap in the user's terms, so the interface can say
- * which accounts cannot carry an operation and why (d-5h66e3zl, r-x3jb6wlq).
+ * `unsupported` explains each gap in the user's terms.
  */
-export interface AccountCapabilities {
+export interface AccountCapabilityDeclaration {
   readonly supported: readonly AccountCapability[]
   readonly unsupported: Readonly<Partial<Record<AccountCapability, string>>>
   /** Unix seconds the declaration was last read from the backend. */
@@ -30,7 +33,7 @@ export interface AccountCapabilities {
 }
 
 /** Every capability supported, with nothing to explain — the Gmail case. */
-export function allCapabilities(readAt: number): AccountCapabilities {
+export function allCapabilities(readAt: number): AccountCapabilityDeclaration {
   return { supported: [...ACCOUNT_CAPABILITIES], unsupported: {}, readAt }
 }
 
@@ -39,7 +42,7 @@ export function capabilitiesFrom(
   supported: readonly AccountCapability[],
   reasons: Readonly<Partial<Record<AccountCapability, string>>>,
   readAt: number,
-): AccountCapabilities {
+): AccountCapabilityDeclaration {
   const kept = ACCOUNT_CAPABILITIES.filter((c) => supported.includes(c))
   const unsupported: Partial<Record<AccountCapability, string>> = {}
   for (const capability of ACCOUNT_CAPABILITIES) {
@@ -51,13 +54,13 @@ export function capabilitiesFrom(
 }
 
 /** Does the stored declaration admit `capability`? */
-export function supports(capabilities: AccountCapabilities | null, capability: AccountCapability): boolean {
+export function supports(capabilities: AccountCapabilityDeclaration | null, capability: AccountCapability): boolean {
   return capabilities?.supported.includes(capability) === true
 }
 
 /** Why `capability` is not carried; null when it is, or when nothing is stored. */
 export function unsupportedReason(
-  capabilities: AccountCapabilities | null,
+  capabilities: AccountCapabilityDeclaration | null,
   capability: AccountCapability,
 ): string | null {
   if (capabilities?.supported.includes(capability) !== false) {
@@ -67,7 +70,7 @@ export function unsupportedReason(
 }
 
 /** Serialize for `accounts.capabilities_json`. */
-export function serializeCapabilities(capabilities: AccountCapabilities): string {
+export function serializeCapabilities(capabilities: AccountCapabilityDeclaration): string {
   return JSON.stringify(capabilities)
 }
 
@@ -76,7 +79,7 @@ export function serializeCapabilities(capabilities: AccountCapabilities): string
  * malformed blob reads as no declaration — the caller decides what an Account
  * whose capabilities have not been read yet may do.
  */
-export function parseCapabilities(json: string | null): AccountCapabilities | null {
+export function parseCapabilities(json: string | null): AccountCapabilityDeclaration | null {
   if (!json) {
     return null
   }

@@ -10,7 +10,7 @@
  * waives it (d-lru4i8rp).
  */
 
-import type { ImapConnection } from './imap-settings.js'
+import type { ImapAccountSettings } from './imap-settings.js'
 
 /** One folder the server listed, with the roles it advertises for it. */
 export interface ImapFolderListing {
@@ -97,4 +97,4 @@ export interface ImapSession {
  * Opens a session against an Account's server. The live implementation verifies
  * the certificate; a test passes a fake.
  */
-export type ImapConnect = (connection: ImapConnection, password: string) => Promise<ImapSession>
+export type ImapConnect = (connection: ImapAccountSettings, password: string) => Promise<ImapSession>
