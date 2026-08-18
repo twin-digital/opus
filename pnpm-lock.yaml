@@ -55,8 +55,8 @@ catalogs:
       specifier: ^7.0.1
       version: 7.1.0
     chalk:
-      specifier: ^5.6.2
-      version: 5.6.2
+      specifier: ^6.0.0
+      version: 6.0.0
     dotenv:
       specifier: ^17.2.3
       version: 17.4.2
@@ -433,7 +433,7 @@ importers:
         version: 5.0.6
       chalk:
         specifier: 'catalog:'
-        version: 5.6.2
+        version: 6.0.0
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -1029,7 +1029,7 @@ importers:
         version: link:../json-patch-x
       chalk:
         specifier: 'catalog:'
-        version: 5.6.2
+        version: 6.0.0
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -1315,7 +1315,7 @@ importers:
         version: link:../dolmenwood
       chalk:
         specifier: 'catalog:'
-        version: 5.6.2
+        version: 6.0.0
       discord.js:
         specifier: ^14.24.2
         version: 14.27.0
@@ -1519,7 +1519,7 @@ importers:
         version: link:../dolmenwood
       chalk:
         specifier: 'catalog:'
-        version: 5.6.2
+        version: 6.0.0
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -3068,7 +3068,7 @@ importers:
     dependencies:
       chalk:
         specifier: 'catalog:'
-        version: 5.6.2
+        version: 6.0.0
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -6991,6 +6991,10 @@ packages:
   chalk@5.6.2:
     resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  chalk@6.0.0:
+    resolution: {integrity: sha512-2uNTXIuTTxk7ciZgAU1BQcgnchcG0xXnrs6jzkQfj9SsRa9M2s5zE8WT96hS6KmG4MzWHSrvH43DF1m4XRkrFg==}
+    engines: {node: '>=22'}
 
   char-regex@1.0.2:
     resolution: {integrity: sha512-kWWXztvZ5SBQV+eRgKFeh8q5sLuZY2+8WUIzlxWVTg+oGwY14qylx1KbKzHd8P6ZYkAg0xyIDU9JMHhyJMZ1jw==}
@@ -15874,6 +15878,8 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.6.2: {}
+
+  chalk@6.0.0: {}
 
   char-regex@1.0.2: {}
 
