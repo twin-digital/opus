@@ -1,6 +1,6 @@
 {
   "name": "@twin-digital/mc-dev-kit",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Discovers the Minecraft Bedrock packs in a workspace and reports each one validated and completed.",
   "license": "ISC",
   "type": "module",
