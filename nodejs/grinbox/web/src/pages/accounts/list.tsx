@@ -26,7 +26,9 @@ export function AccountsListPage() {
       <header className='mb-8 flex items-start justify-between gap-4'>
         <div>
           <h1 className='text-3xl font-semibold tracking-tight'>Accounts</h1>
-          <p className='mt-2 text-sm text-muted-foreground'>Connected mailboxes and their OAuth health.</p>
+          <p className='mt-2 text-sm text-muted-foreground'>
+            Connected mailboxes and whether grinbox can still reach them.
+          </p>
         </div>
         {data && data.length > 0 ?
           <AddAccountButton />
@@ -79,7 +81,7 @@ function AccountRow({ account }: { account: AccountSummary }) {
           {account.name}
         </Link>
       </TableCell>
-      <TableCell className='capitalize text-muted-foreground'>{providerLabel(account.provider_type)}</TableCell>
+      <TableCell className='text-muted-foreground'>{providerLabel(account.provider_type)}</TableCell>
       <TableCell>
         <StatusIndicator status={account.status} />
       </TableCell>
@@ -99,6 +101,9 @@ function providerLabel(providerType: string): string {
   if (providerType === 'gmail') {
     return 'Gmail'
   }
+  if (providerType === 'imap') {
+    return 'IMAP'
+  }
   return providerType
 }
 
@@ -108,8 +113,8 @@ function EmptyAccounts() {
       <p className='text-xl font-medium'>:)</p>
       <p className='mt-2 text-base font-medium'>No mailboxes yet</p>
       <p className='mt-1 max-w-md text-sm text-muted-foreground'>
-        Connect a Gmail account to let Grinbox start reading and triaging your mail. You can assign a Pipeline once it's
-        connected.
+        Connect a mailbox — Gmail, or anything reachable by IMAP — to let Grinbox start reading and triaging your mail.
+        You can assign a Pipeline once it's connected.
       </p>
       <div className='mt-6'>
         <AddAccountButton size='lg' />

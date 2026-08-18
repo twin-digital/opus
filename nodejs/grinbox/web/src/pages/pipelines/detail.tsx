@@ -5,6 +5,7 @@ import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
 
+import { CapabilityWarnings } from '@/components/capability-warnings'
 import { Page } from '@/components/page'
 import {
   AlertDialog,
@@ -42,6 +43,8 @@ import {
   useUpdatePipeline,
 } from '@/lib/pipelines'
 import { AddOperatorButton } from './add-operator'
+import { useAccounts } from '@/lib/accounts'
+import { deriveCapabilityWarnings } from '@/lib/capabilities'
 import { OperatorEditor } from './editors/operator-editor'
 import { blankConfigFor, operatorTypeFor } from './operator-types'
 
@@ -85,9 +88,18 @@ export function PipelineDetailPage() {
 }
 
 function PipelineBody({ pipeline, id }: { pipeline: PipelineDetail; id: number }) {
+  const { data: accounts } = useAccounts()
   return (
     <div className='space-y-6'>
       <PipelineHeader pipeline={pipeline} id={id} />
+      {/* Naming an operation an Account cannot carry never refuses a save; it
+          warns, here and on activation, and the Operator fails there when it
+          runs (d-qzxvoph1). */}
+      <CapabilityWarnings
+        warnings={deriveCapabilityWarnings(pipeline.operators, accounts ?? [])}
+        accounts={accounts ?? []}
+        operators={pipeline.operators}
+      />
       <OperatorsSection pipeline={pipeline} id={id} />
       <TagKeyRegistry registry={pipeline.tag_key_registry} />
       <div className='text-right'>
