@@ -32,6 +32,9 @@ const TAG_PREFIX = 'tag.'
  * source shared by the server's `renderTemplate` (which substitutes these) and
  * save-time template validation (which rejects any other bare name), so the
  * two can never drift on what counts as a known field.
+ *
+ * `snippet` renders empty where the backend supplies no preview of the Message
+ * (d-y3uh9ofx) — it is never derived from the body.
  */
 export const TEMPLATE_MESSAGE_FIELDS = ['from', 'to', 'subject', 'snippet', 'body'] as const
 

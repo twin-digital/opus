@@ -70,6 +70,9 @@ function row(over: Partial<MessagesTable> = {}): MessagesTable {
     source_state: 'present' as unknown as MessagesTable['source_state'],
     source_state_at: null,
     source_synced_at: null,
+    imap_folder: null,
+    imap_uidvalidity: null,
+    imap_uid: null,
     ...over,
   }
 }

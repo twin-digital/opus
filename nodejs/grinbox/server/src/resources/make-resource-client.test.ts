@@ -75,6 +75,7 @@ async function setup(overrides: Partial<UnderlyingClients> = {}): Promise<Harnes
     mailbox: {
       apply_category: vi.fn(async () => ({ applied: true })),
       archive: vi.fn(async () => ({ archived: true })),
+      file: vi.fn(async () => ({ filed: true })),
       fetch_metadata: vi.fn(async () => ({ headers: {} })),
       fetch_body: vi.fn(async () => ({ bodyText: null, bodyHtml: null })),
       list_messages: vi.fn(async () => ({ ids: [] })),
@@ -195,6 +196,7 @@ describe('createResourceClientFactory', () => {
           throw new Error('boom')
         }),
         archive: vi.fn(),
+        file: vi.fn(),
         fetch_metadata: vi.fn(),
         fetch_body: vi.fn(),
         list_messages: vi.fn(),

@@ -68,6 +68,13 @@ import { AccountsListPage } from './list'
 const NOW_MS = 1_700_000_000_000
 const NOW_SEC = Math.floor(NOW_MS / 1000)
 
+/** A backend carrying everything — the Gmail case (d-bzw8qoiy). */
+const ALL_CAPABILITIES: AccountSummary['capabilities'] = {
+  supported: ['apply_category', 'archive', 'file', 'send_message'],
+  unsupported: {},
+  read_at: NOW_SEC,
+}
+
 const okAccount: AccountSummary = {
   id: 1,
   name: 'sean@example.com',
@@ -79,6 +86,9 @@ const okAccount: AccountSummary = {
   last_polled_at: NOW_SEC - 120,
   poll_interval_seconds: 120,
   status: 'ok',
+  capabilities: ALL_CAPABILITIES,
+  paused_reason: null,
+  imap: null,
 }
 
 const noPipelineAccount: AccountSummary = {
@@ -92,6 +102,9 @@ const noPipelineAccount: AccountSummary = {
   last_polled_at: NOW_SEC - 840,
   poll_interval_seconds: 300,
   status: 'no_pipeline',
+  capabilities: ALL_CAPABILITIES,
+  paused_reason: null,
+  imap: null,
 }
 
 const needsAuthAccount: AccountSummary = {
@@ -105,6 +118,9 @@ const needsAuthAccount: AccountSummary = {
   last_polled_at: null,
   poll_interval_seconds: 120,
   status: 'needs_auth',
+  capabilities: null,
+  paused_reason: null,
+  imap: null,
 }
 
 function queryStub<T>(data: T | undefined, overrides = {}) {
@@ -156,7 +172,7 @@ describe('AccountsListPage', () => {
 
     // Status labels from the dot+label indicator.
     expect(screen.getByText('OK')).toBeInTheDocument()
-    expect(screen.getByText('Needs re-auth')).toBeInTheDocument()
+    expect(screen.getByText('Needs authorization')).toBeInTheDocument()
     // The no_pipeline row shows both the indicator label and the warning chip.
     expect(screen.getByText('No Pipeline assigned')).toBeInTheDocument()
     expect(screen.getByText('no Pipeline assigned')).toBeInTheDocument()

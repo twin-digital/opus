@@ -1,5 +1,15 @@
 import type { OperatorTypeKey } from '@grinbox/shared'
-import { Archive, Bell, CalendarClock, Filter, type LucideIcon, Sparkles, Tag } from 'lucide-react'
+import {
+  Archive,
+  Bell,
+  BookmarkPlus,
+  CalendarClock,
+  Filter,
+  FolderInput,
+  type LucideIcon,
+  Sparkles,
+  Tag,
+} from 'lucide-react'
 
 /**
  * Presentation + default-config metadata for each registered Operator type,
@@ -57,6 +67,22 @@ export const OPERATOR_TYPES: readonly OperatorTypeMeta[] = [
     icon: Archive,
   },
   {
+    typeKey: 'file',
+    label: 'File',
+    kind: 'Action',
+    description:
+      'Moves the Message into a folder of the Account, named literally here. Grinbox creates no folder — where the Account has none of that name, the Operator fails on that Account.',
+    icon: FolderInput,
+  },
+  {
+    typeKey: 'set_aside',
+    label: 'Set aside',
+    kind: 'Action',
+    description:
+      'One way to mark a Message for later on every Account. Where the Account can apply a Category it applies one; where it cannot but can file, it files into the folder.',
+    icon: BookmarkPlus,
+  },
+  {
     typeKey: 'digest_delivery',
     label: 'Digest delivery',
     kind: 'Action',
@@ -108,6 +134,10 @@ export function blankConfigFor(typeKey: OperatorTypeKey): unknown {
       return { message_template: '', credentials_id: 0 }
     case 'apply_category':
       return { category_template: '' }
+    case 'file':
+      return { folder: '' }
+    case 'set_aside':
+      return { category_template: '', folder: '' }
     case 'archive':
       // Valid as-is: an Archive with no `when` gate archives every Message.
       return {}

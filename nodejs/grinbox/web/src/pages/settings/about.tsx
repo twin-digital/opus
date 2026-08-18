@@ -56,12 +56,12 @@ export function SettingsAboutPage() {
             </span>
             <span className='text-xs text-muted-foreground'>supported</span>
           </li>
-          <li className='flex items-center justify-between text-muted-foreground'>
+          <li className='flex items-center justify-between'>
             <span className='flex items-center gap-2'>
-              <Server className='h-4 w-4' />
+              <Server className='h-4 w-4 text-muted-foreground' />
               IMAP
             </span>
-            <span className='text-xs'>post-MVP</span>
+            <span className='text-xs text-muted-foreground'>supported · cannot send</span>
           </li>
           <li className='flex items-center justify-between'>
             <span className='flex items-center gap-2'>

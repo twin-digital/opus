@@ -7,8 +7,14 @@ import { cn } from '@/lib/utils'
  * Maps an Account's derived status onto a semantic color + human label:
  *
  *  - `ok`         → emerald "OK"
- *  - `needs_auth` → amber "Needs re-auth"
+ *  - `needs_auth` → amber "Needs authorization"
  *  - `no_pipeline`→ amber "No Pipeline assigned"
+ *  - `paused`     → amber "Paused — needs attention"
+ *
+ * `paused` is polling stopped until the user acts: an IMAP server refused the
+ * stored password and said the credential is what it refused (d-v4mejzw5).
+ * `needs_auth` is the Account holding no live credential of its backend's own
+ * kind (d-hinqfmdf) — the two are different repairs, so they read differently.
  *
  * The dot color uses the semantic status CSS tokens (`--success` / `--warning`),
  * distinct from the violet accent.
@@ -29,7 +35,12 @@ const STATUS_META: Record<AccountStatus, StatusMeta> = {
     text: '[color:var(--success)]',
   },
   needs_auth: {
-    label: 'Needs re-auth',
+    label: 'Needs authorization',
+    color: 'var(--warning)',
+    text: '[color:var(--warning)]',
+  },
+  paused: {
+    label: 'Paused — needs attention',
     color: 'var(--warning)',
     text: '[color:var(--warning)]',
   },

@@ -60,7 +60,10 @@ export const MATCH_MESSAGE_FIELDS: readonly MatchMessageField[] = [
     hint: 'Raw To header (e.g. "Foo Bar <foo@bar.com>"). Use `contains` to match an address.',
   },
   { name: 'subject', hint: 'Message subject line.' },
-  { name: 'snippet', hint: 'Short provider-supplied preview snippet.' },
+  {
+    name: 'snippet',
+    hint: 'Short backend-supplied preview snippet; "" where the backend supplies none (IMAP accounts) — it is never derived from the body.',
+  },
   { name: 'body', hint: 'Plain-text message body.' },
   {
     name: 'from_email',
@@ -92,7 +95,7 @@ export const MATCH_FIELD_PREFIXES: readonly MatchFieldPrefix[] = [
       },
       {
         name: 'message_count',
-        hint: 'Number of Messages in the Thread as a string (e.g. "3"); "0" when not in a Thread.',
+        hint: 'How many Messages of the Thread grinbox holds for the Account, as a string (e.g. "3"); "0" when not in a Thread.',
       },
     ],
   },

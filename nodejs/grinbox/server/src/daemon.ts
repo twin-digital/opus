@@ -14,13 +14,13 @@ import { type DigestScheduler, createDigestScheduler, recoverInterruptedDigestRu
 import { type ExecutionLoop, createExecutionLoop, recoverInterruptedRuns } from './execution/index.js'
 import { type Heartbeat, createHeartbeat } from './heartbeat.js'
 import { createApp } from './http/app.js'
+import { createImapWiring } from './providers/imap/imap-wiring.js'
 import { type GoogleOAuthClient, createPendingAuthStore, makeGoogleOAuthClient } from './oauth/index.js'
 import {
   type PollScheduler,
   type ProviderFactory,
   createLiveProviderFactory,
   createPollScheduler,
-  productionProviderFactory,
 } from './poll/index.js'
 import { buildMakeUnderlyingClients } from './resources/index.js'
 import { version } from './version.js'
@@ -143,11 +143,17 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
   // Pushover credential) throws only if an Operator actually invokes it — a
   // per-Operator failure that settles its Triage `partial`, not a daemon crash.
   // Rule-based pipelines declare no Resources and never touch any of them.
+  // The IMAP backend: one wiring shared by the poll loop, the resource
+  // backends, and the API's add/repair/folder routes, so an Account is worked
+  // one connection at a time whichever path asked (d-v55lpt3t).
+  const imap = createImapWiring({ db, encryptor })
+
   const makeClients = buildMakeUnderlyingClients({
     db,
     encryptor,
     config,
     googleClient,
+    imap: { openSession: imap.openSession, store: imap.store },
   })
   const executionLoop = createExecutionLoop({
     db,
@@ -173,8 +179,12 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
   // client to resolve tokens, so the factory stays the null factory — the loop
   // ticks and finds nothing pollable (unchanged). The loop enqueues Triages; the
   // execution loop picks up their pending runs.
-  const providerFactory: ProviderFactory =
-    googleClient !== null ? createLiveProviderFactory({ db, encryptor, googleClient }) : productionProviderFactory()
+  const providerFactory: ProviderFactory = createLiveProviderFactory({
+    db,
+    encryptor,
+    googleClient,
+    imapProvider: imap.provider,
+  })
   const pollScheduler = createPollScheduler({
     db,
     config,
@@ -200,6 +210,8 @@ export async function startDaemon(env: NodeJS.ProcessEnv = process.env): Promise
     version,
     pendingAuthStore,
     googleClient,
+    imapProbe: imap.probe,
+    accountFolders: imap.accountFolders,
     // The Inbox "sync" button: full resync of every eligible Account (re-fetch
     // all in-inbox mail, backfilling missing + refreshing existing), summarised
     // to a count of accounts synced + new Messages found.

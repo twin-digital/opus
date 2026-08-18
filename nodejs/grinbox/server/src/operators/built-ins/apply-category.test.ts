@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { runOperator } from '../run.js'
 import { createFakeResourceClients } from '../testing.js'
 import type { MessageView } from '../types.js'
-import { ApplyCategoryError } from './apply-category.js'
+import { ApplyCategoryError, EmptyCategoryError } from './apply-category.js'
 
 function message(over: Partial<MessageView> = {}): MessageView {
   return {
@@ -104,5 +104,23 @@ describe('apply-category run', () => {
     }
     const { runArgs } = args(failed, { topic: 'Finance' })
     await expect(runOperator(snapshot(), runArgs)).rejects.toBeInstanceOf(ApplyCategoryError)
+  })
+})
+
+describe('what a rendered category becomes (d-mbh2pthe, d-i1cae43j)', () => {
+  it('replaces each character a category cannot carry with an underscore', async () => {
+    const { fake, runArgs } = args(categoryApplied(), { topic: 'ACME Corp (2026)' })
+    await runOperator(snapshot({ category_template: '{{tag.topic}}' }), runArgs)
+
+    const sent = fake.calls.find((c) => c.operation === 'apply_category')?.args as { category: string }
+    expect(sent.category).toBe('ACME_Corp__2026_')
+  })
+
+  it('applies nothing and fails the run where the rendering came out empty', async () => {
+    const { fake, runArgs } = args(categoryApplied(), {})
+    await expect(runOperator(snapshot({ category_template: '{{tag.topic}}' }), runArgs)).rejects.toBeInstanceOf(
+      EmptyCategoryError,
+    )
+    expect(fake.calls.find((c) => c.operation === 'apply_category')).toBeUndefined()
   })
 })
