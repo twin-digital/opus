@@ -145,6 +145,27 @@ describe('spawnActor', () => {
     stampOwnFamily()
     expect(() => spawnActor('wizard', place, { id: 'a:b' })).toThrow(TypeError)
   })
+
+  it('refuses a durable name where the build turned namespacing off', () => {
+    stampOwnFamily()
+    delete host.__MC_PACK_RUNTIME__
+    expect(() => spawnActor('wizard', place, { id: 'tower-wizard' })).toThrow(/namespacing off/)
+  })
+
+  it('treats a record naming a preset the catalogue no longer holds as stale', () => {
+    stampOwnFamily()
+    const first = spawnActor('wizard', place, { id: 'tower-wizard' })
+    world.setDynamicProperty(
+      actorPropertyKey('tower-wizard'),
+      JSON.stringify({ preset: 'sorcerer', entity: first.entity.id }),
+    )
+    const second = spawnActor('wizard', place, { id: 'tower-wizard' })
+    expect(second.entity.id).not.toBe(first.entity.id)
+    expect(JSON.parse(world.getDynamicProperty(actorPropertyKey('tower-wizard')) as string)).toMatchObject({
+      preset: 'wizard',
+      entity: second.entity.id,
+    })
+  })
 })
 
 describe('findActor', () => {
