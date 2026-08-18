@@ -1,48 +1,47 @@
 /**
- * What one Account can carry, as its backend last declared it (d-bzw8qoiy,
- * d-f9tj4wnr).
+ * Storing what one Account can carry, as its backend last declared it
+ * (d-bzw8qoiy, d-f9tj4wnr).
  *
- * The vocabulary — which operations are Account-dependent at all — is
- * `@grinbox/shared`'s {@link ACCOUNT_CAPABILITIES}. What this module adds is the
- * stored form: the supported set, a reason for each gap so the interface can say
- * why an Account cannot send or file (d-5h66e3zl, d-qzxvoph1), and when it was
- * read.
+ * The declaration itself is `@grinbox/shared`'s {@link AccountCapabilities} —
+ * the supported set, a reason for each gap, and when it was read — together with
+ * {@link accountSupports} and {@link capabilityAbsenceReason} for reading one.
+ * What this module adds is the daemon's half: building a declaration from what a
+ * backend reported, and putting it in and out of `accounts.capabilities_json`.
  *
  * The declaration is per Account, not per backend: two IMAP accounts of one
  * server differ by what their arrival folder admits and what the server
  * advertises. The poll loop reads it from the backend each poll
- * (`Provider.declareCapabilities`) and stores it on the Account; every other
- * path — the resource dispatch, the pipeline save warning, the interface —
- * reads what was stored.
+ * (`Provider.declareCapabilities`) and stores it; every other path — the resource
+ * dispatch, the pipeline save warning, the interface — reads what was stored.
  */
 
-import { ACCOUNT_CAPABILITIES, type AccountCapability } from '@grinbox/shared'
+import {
+  ACCOUNT_CAPABILITIES,
+  type AccountCapabilities,
+  type AccountCapability,
+  accountCapabilitiesSchema,
+  accountSupports,
+  capabilityAbsenceReason,
+} from '@grinbox/shared'
 
-export { ACCOUNT_CAPABILITIES }
-export type { AccountCapability }
-
-/**
- * The stored declaration. `supported` is what the Account can carry;
- * `unsupported` explains each gap in the user's terms.
- */
-export interface AccountCapabilityDeclaration {
-  readonly supported: readonly AccountCapability[]
-  readonly unsupported: Readonly<Partial<Record<AccountCapability, string>>>
-  /** Unix seconds the declaration was last read from the backend. */
-  readonly readAt: number
-}
+export { ACCOUNT_CAPABILITIES, accountSupports, capabilityAbsenceReason }
+export type { AccountCapabilities, AccountCapability }
 
 /** Every capability supported, with nothing to explain — the Gmail case. */
-export function allCapabilities(readAt: number): AccountCapabilityDeclaration {
-  return { supported: [...ACCOUNT_CAPABILITIES], unsupported: {}, readAt }
+export function allCapabilities(readAt: number): AccountCapabilities {
+  return { supported: [...ACCOUNT_CAPABILITIES], unsupported: {}, read_at: readAt }
 }
 
-/** Build a declaration from the supported set, explaining every other capability. */
+/**
+ * Build a declaration from the supported set, explaining every other capability.
+ * A capability appears in exactly one of the two members, which is what shared's
+ * schema requires.
+ */
 export function capabilitiesFrom(
   supported: readonly AccountCapability[],
   reasons: Readonly<Partial<Record<AccountCapability, string>>>,
   readAt: number,
-): AccountCapabilityDeclaration {
+): AccountCapabilities {
   const kept = ACCOUNT_CAPABILITIES.filter((c) => supported.includes(c))
   const unsupported: Partial<Record<AccountCapability, string>> = {}
   for (const capability of ACCOUNT_CAPABILITIES) {
@@ -50,58 +49,29 @@ export function capabilitiesFrom(
       unsupported[capability] = reasons[capability] ?? 'the account does not support this operation'
     }
   }
-  return { supported: kept, unsupported, readAt }
-}
-
-/** Does the stored declaration admit `capability`? */
-export function supports(capabilities: AccountCapabilityDeclaration | null, capability: AccountCapability): boolean {
-  return capabilities?.supported.includes(capability) === true
-}
-
-/** Why `capability` is not carried; null when it is, or when nothing is stored. */
-export function unsupportedReason(
-  capabilities: AccountCapabilityDeclaration | null,
-  capability: AccountCapability,
-): string | null {
-  if (capabilities?.supported.includes(capability) !== false) {
-    return null
-  }
-  return capabilities.unsupported[capability] ?? 'the account does not support this operation'
+  return { supported: kept, unsupported, read_at: readAt }
 }
 
 /** Serialize for `accounts.capabilities_json`. */
-export function serializeCapabilities(capabilities: AccountCapabilityDeclaration): string {
+export function serializeCapabilities(capabilities: AccountCapabilities): string {
   return JSON.stringify(capabilities)
 }
 
 /**
- * Parse `accounts.capabilities_json`. A null column (never polled) or a
- * malformed blob reads as no declaration — the caller decides what an Account
- * whose capabilities have not been read yet may do.
+ * Parse `accounts.capabilities_json`. A null column (never polled), a malformed
+ * blob, or a declaration that no longer satisfies the shared schema all read as
+ * no declaration — the caller decides what an Account whose capabilities have
+ * not been read may do, and a stored blob a later release cannot make sense of
+ * is replaced at the next poll rather than failing the read.
  */
-export function parseCapabilities(json: string | null): AccountCapabilityDeclaration | null {
+export function parseCapabilities(json: string | null): AccountCapabilities | null {
   if (!json) {
     return null
   }
-  let parsed: unknown
   try {
-    parsed = JSON.parse(json)
+    const parsed = accountCapabilitiesSchema.safeParse(JSON.parse(json))
+    return parsed.success ? parsed.data : null
   } catch {
     return null
   }
-  if (!parsed || typeof parsed !== 'object') {
-    return null
-  }
-  const raw = parsed as { supported?: unknown; unsupported?: unknown; readAt?: unknown }
-  const supported =
-    Array.isArray(raw.supported) ? ACCOUNT_CAPABILITIES.filter((c) => (raw.supported as unknown[]).includes(c)) : []
-  const unsupported: Partial<Record<AccountCapability, string>> = {}
-  if (raw.unsupported && typeof raw.unsupported === 'object') {
-    for (const [key, value] of Object.entries(raw.unsupported as Record<string, unknown>)) {
-      if (typeof value === 'string' && (ACCOUNT_CAPABILITIES as readonly string[]).includes(key)) {
-        unsupported[key as AccountCapability] = value
-      }
-    }
-  }
-  return { supported, unsupported, readAt: typeof raw.readAt === 'number' ? raw.readAt : 0 }
 }

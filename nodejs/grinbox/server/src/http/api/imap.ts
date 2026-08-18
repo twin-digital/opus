@@ -43,9 +43,13 @@ import { type ApiDeps, resolveActingUserId } from './deps.js'
 
 const idParam = z.object({ id: z.coerce.number().int().positive() })
 
+/**
+ * Adding takes what an IMAP Account is configured with (d-ioso3voc), the four
+ * folders the user accepted (d-8jc4taom), and a display name — a property every
+ * Account has, whatever its backend, rather than part of the connection.
+ */
 const createAccountBody = imapAccountSetupSchema.extend({
   name: z.string().min(1),
-  address: z.string().min(1),
 })
 
 const repointFoldersBody = z.object({ folders: accountFoldersSchema })
@@ -104,7 +108,7 @@ export function createImapRoutes(deps: ApiDeps) {
         return c.json(refusal('not_found', 'no user is installed'), 400)
       }
 
-      const { password, name, address, folders, ...connection } = c.req.valid('json')
+      const { password, name, folders, ...connection } = c.req.valid('json')
 
       // Prove the login and the folders before anything is stored: an Account
       // exists once its folders are accepted, and not before (d-8jc4taom).
@@ -131,7 +135,7 @@ export function createImapRoutes(deps: ApiDeps) {
         userId,
         actorUserId: userId,
         name,
-        settings: { ...connection, address, folders },
+        settings: { ...connection, folders },
         password,
       })
       return c.json({ account_id: id }, 201)

@@ -15,7 +15,6 @@ const SETTINGS = {
   port: 993,
   security: 'tls',
   username: 'u',
-  address: 'u@example.com',
   folders: { arrival: 'INBOX', archived: 'Archive', trashed: 'Trash', spam: 'Junk' },
 }
 

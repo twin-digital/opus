@@ -14,7 +14,7 @@ import {
   accountFoldersSchema,
   imapAccountSettingsSchema,
 } from '@grinbox/shared'
-import { z } from 'zod'
+import type { z } from 'zod'
 
 /** The IMAP `provider_type` an Account carries for its whole life (d-oevikmal). */
 export const IMAP_PROVIDER_TYPE = 'imap'
@@ -23,12 +23,12 @@ export const IMAP_PROVIDER_TYPE = 'imap'
 export const IMAP_PASSWORD_KIND = 'imap_password'
 
 /**
- * An IMAP Account's `settings_json`: its connection, its own mail address, and
- * the four folders the user accepted.
+ * An IMAP Account's `settings_json`: its connection and the four folders the
+ * user accepted. Nothing else — d-ioso3voc enumerates what adding an IMAP
+ * account takes, and where the account's own address is wanted the username
+ * stands for it (d-um0gejyz).
  */
 export const imapSettingsSchema = imapAccountSettingsSchema.extend({
-  /** The Account's own mail address, which the interface shows it by. */
-  address: z.string().min(1),
   folders: accountFoldersSchema,
 })
 export type ImapSettings = z.infer<typeof imapSettingsSchema>

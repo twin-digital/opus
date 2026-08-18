@@ -24,7 +24,7 @@ import {
   operatorTypeRegistry,
 } from '@grinbox/shared'
 import type { DB } from '../db/schema.js'
-import { parseCapabilities, supports } from '../providers/account-capabilities.js'
+import { accountSupports, parseCapabilities } from '../providers/account-capabilities.js'
 
 /** The capabilities each enabled Operator of the Pipeline needs of an Account. */
 async function requiredByOperator(db: DB, pipelineId: number): Promise<Map<AccountCapability, number[]>> {
@@ -92,7 +92,7 @@ export async function capabilityWarnings(
 
   const warnings: AccountCapabilityWarning[] = []
   for (const [capability, operatorIds] of required) {
-    const lacking = accounts.filter((account) => !supports(account.capabilities, capability)).map((a) => a.id)
+    const lacking = accounts.filter((account) => !accountSupports(account.capabilities, capability)).map((a) => a.id)
     if (lacking.length > 0) {
       warnings.push({ capability, operator_ids: operatorIds, account_ids: lacking })
     }

@@ -137,7 +137,7 @@ export async function pollAccount(
     const capabilities = await provider.declareCapabilities(providerAccount)
     await db
       .updateTable('accounts')
-      .set({ capabilities_json: serializeCapabilities({ ...capabilities, readAt: now }) })
+      .set({ capabilities_json: serializeCapabilities({ ...capabilities, read_at: now }) })
       .where('id', '=', account.id)
       .execute()
     capabilitiesRead = true

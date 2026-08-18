@@ -34,8 +34,8 @@ import type {
   MailboxFetchArgs,
   MailboxFileArgs,
 } from '../operators/types.js'
-import type { AccountCapabilityDeclaration, AccountCapability } from '../providers/account-capabilities.js'
-import { parseCapabilities, unsupportedReason } from '../providers/account-capabilities.js'
+import type { AccountCapabilities, AccountCapability } from '../providers/account-capabilities.js'
+import { parseCapabilities, capabilityAbsenceReason } from '../providers/account-capabilities.js'
 import type { ImapMessageStore } from '../providers/imap/imap-message-store.js'
 import { IMAP_PROVIDER_TYPE } from '../providers/imap/imap-settings.js'
 import { gmailMailSenderBackend, gmailMailboxBackend } from './gmail-backend.js'
@@ -137,7 +137,7 @@ export class UnsupportedAccountOperationError extends Error {
 async function accountFor(
   db: DB,
   accountId: number,
-): Promise<{ providerType: string; capabilities: AccountCapabilityDeclaration | null }> {
+): Promise<{ providerType: string; capabilities: AccountCapabilities | null }> {
   const row = await db
     .selectFrom('accounts')
     .select(['provider_type', 'capabilities_json'])
@@ -155,11 +155,11 @@ async function accountFor(
  * attempted and the backend's own refusal is what fails it, so a first poll is
  * not a prerequisite for acting.
  */
-function requireCapability(capabilities: AccountCapabilityDeclaration | null, capability: AccountCapability): void {
+function requireCapability(capabilities: AccountCapabilities | null, capability: AccountCapability): void {
   if (capabilities === null) {
     return
   }
-  const reason = unsupportedReason(capabilities, capability)
+  const reason = capabilityAbsenceReason(capabilities, capability)
   if (reason !== null) {
     throw new UnsupportedAccountOperationError(capability, reason)
   }

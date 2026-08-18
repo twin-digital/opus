@@ -88,7 +88,7 @@ describe('/api/imap', () => {
   })
 
   describe('POST /api/imap/accounts (d-8jc4taom)', () => {
-    const body = { ...CONNECTION, password: 'p', name: 'work', address: 'u@example.com', folders: FOLDERS }
+    const body = { ...CONNECTION, password: 'p', name: 'work', folders: FOLDERS }
 
     it('creates the account once the folders are accepted', async () => {
       const res = await routes(db, () => Promise.resolve(PROBED)).request(post('/api/imap/accounts', body))
@@ -143,7 +143,7 @@ describe('/api/imap', () => {
         userId: 1,
         actorUserId: 1,
         name: 'work',
-        settings: { ...CONNECTION, address: 'u@example.com', folders: FOLDERS },
+        settings: { ...CONNECTION, folders: FOLDERS },
         password: 'old',
       })
     }
@@ -189,7 +189,7 @@ describe('/api/imap', () => {
         userId: 1,
         actorUserId: 1,
         name: 'work',
-        settings: { ...CONNECTION, address: 'u@example.com', folders: FOLDERS },
+        settings: { ...CONNECTION, folders: FOLDERS },
         password: 'p',
       })
 

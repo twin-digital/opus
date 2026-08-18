@@ -31,7 +31,7 @@
 import type { SourceState } from '@grinbox/shared'
 import type { DB } from '../db/schema.js'
 import { parseGmailMessage } from './gmail-shapes.js'
-import type { AccountCapabilityDeclaration } from './account-capabilities.js'
+import type { AccountCapabilities } from './account-capabilities.js'
 import { allCapabilities } from './account-capabilities.js'
 import type {
   CandidateListing,
@@ -399,7 +399,7 @@ export class GmailProvider implements Provider {
    * Account sends its own mail. The declaration is still made per Account
    * (d-bzw8qoiy) — it is the same for all of them here.
    */
-  declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilityDeclaration> {
+  declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilities> {
     return Promise.resolve(allCapabilities(Math.floor(Date.now() / 1000)))
   }
 }

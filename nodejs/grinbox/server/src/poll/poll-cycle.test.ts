@@ -8,7 +8,7 @@ import {
   capabilitiesFrom,
   parseCapabilities,
   serializeCapabilities,
-  unsupportedReason,
+  capabilityAbsenceReason,
 } from '../providers/account-capabilities.js'
 import type { CandidateListing, FetchedMessage, Provider, ProviderAccount } from '../providers/provider.js'
 import { type PollableAccount, pollAccount, reconcileAccount, resyncAccount } from './poll-cycle.js'
@@ -63,8 +63,8 @@ describe('pollAccount', () => {
       .executeTakeFirstOrThrow()
     const stored = parseCapabilities(row.capabilities_json)
     expect(stored?.supported).toEqual(['apply_category'])
-    expect(stored?.readAt).toBe(7000)
-    expect(unsupportedReason(stored, 'archive')).toBe('no safe move')
+    expect(stored?.read_at).toBe(7000)
+    expect(capabilityAbsenceReason(stored, 'archive')).toBe('no safe move')
   })
 
   it('keeps the stored declaration when the capability read fails', async () => {
@@ -85,7 +85,7 @@ describe('pollAccount', () => {
       .select('capabilities_json')
       .where('id', '=', accountId)
       .executeTakeFirstOrThrow()
-    expect(parseCapabilities(row.capabilities_json)?.readAt).toBe(1000)
+    expect(parseCapabilities(row.capabilities_json)?.read_at).toBe(1000)
   })
 
   it('upserts messages, enqueues a Triage per new message, advances cursor + last_polled_at atomically', async () => {

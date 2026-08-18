@@ -39,7 +39,7 @@ describe('the IMAP account store', () => {
         userId: 1,
         actorUserId: 1,
         name: 'work',
-        settings: { ...CONNECTION, address: 'u@example.com', folders: FOLDERS },
+        settings: { ...CONNECTION, folders: FOLDERS },
         password: 'the-password',
       },
       100,

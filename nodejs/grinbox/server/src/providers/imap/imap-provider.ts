@@ -23,7 +23,7 @@
  * poll takes (f-4i4xtwwj).
  */
 
-import type { AccountCapabilityDeclaration } from '../account-capabilities.js'
+import type { AccountCapabilities } from '../account-capabilities.js'
 import type {
   CandidateListing,
   Category,
@@ -113,7 +113,7 @@ export class ImapProvider implements Provider {
    * arrival folder's permanent flags (d-bzw8qoiy). The poll loop stores the
    * result; everything else reads what was stored.
    */
-  async declareCapabilities(account: ProviderAccount): Promise<AccountCapabilityDeclaration> {
+  async declareCapabilities(account: ProviderAccount): Promise<AccountCapabilities> {
     const folders = foldersOf(account)
     const session = await this.deps.openSession(account)
     try {

@@ -26,7 +26,7 @@ import type { Config } from '../config.js'
 import type { DB, MessagesTable } from '../db/schema.js'
 import { createNotificationGate } from '../notifications/cooldown-gate.js'
 import { runOperator } from '../operators/run.js'
-import type { AccountCapabilityDeclaration } from '../providers/account-capabilities.js'
+import type { AccountCapabilities } from '../providers/account-capabilities.js'
 import { parseCapabilities } from '../providers/account-capabilities.js'
 import { messageViewFromRow } from '../operators/types.js'
 import { type OutputTag, type RunRef, type TriageEventInput, persistOperatorResult } from '../pipeline/persist.js'
@@ -180,7 +180,7 @@ interface WorkerContext {
   /** The Message's Account id — keys the per-run gmail credential resolution. */
   readonly accountId: number
   /** What the Account's backend last declared it can carry (d-bzw8qoiy). */
-  readonly capabilities: AccountCapabilityDeclaration | null
+  readonly capabilities: AccountCapabilities | null
   readonly pipelineId: number
 }
 

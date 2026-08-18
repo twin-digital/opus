@@ -15,7 +15,7 @@
  *    (d-5h66e3zl).
  */
 
-import type { AccountCapability, AccountCapabilityDeclaration } from '../account-capabilities.js'
+import type { AccountCapability, AccountCapabilities } from '../account-capabilities.js'
 import { capabilitiesFrom } from '../account-capabilities.js'
 
 /** PERMANENTFLAGS' `\*`: the mailbox admits client-defined keywords. */
@@ -37,7 +37,7 @@ export function imapCapabilities(
   serverCapabilities: readonly string[],
   arrivalPermanentFlags: readonly string[],
   readAt: number,
-): AccountCapabilityDeclaration {
+): AccountCapabilities {
   const supported: AccountCapability[] = []
   if (admitsKeywords(arrivalPermanentFlags)) {
     supported.push('apply_category')

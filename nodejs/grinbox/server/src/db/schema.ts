@@ -55,7 +55,7 @@ export interface AccountsTable {
   /**
    * What this Account's backend declared it can carry, read at each poll and
    * read back by every other path (d-bzw8qoiy). Serialized
-   * {@link AccountCapabilityDeclaration}; null until the first successful poll.
+   * {@link AccountCapabilities}; null until the first successful poll.
    */
   capabilities_json: string | null
   /**
