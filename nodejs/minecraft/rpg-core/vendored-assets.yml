@@ -1,0 +1,19 @@
+# Provenance of the assets vendored into this package. Names are committed bare; the
+# consuming adventure's build composes them. Re-vendoring is a change to this record.
+repository: https://github.com/Mojang/bedrock-samples
+revision: v1.21.130.3
+files:
+  - source: resource_pack/models/entity/evoker.geo.json
+    committed: resource_pack/models/entity/wizard.geo.json
+  - source: resource_pack/textures/entity/illager/evoker.png
+    committed: resource_pack/textures/entity/wizard.png
+  - source: resource_pack/animations/evoker.animation.json
+    committed: resource_pack/animations/wizard.animation.json
+  - source: resource_pack/animations/look_at_target.animation.json
+    committed: resource_pack/animations/wizard.animation.json
+  - source: resource_pack/animations/humanoid.animation.json
+    committed: resource_pack/animations/wizard.animation.json
+  - source: resource_pack/animation_controllers/evoker.animation_controllers.json
+    committed: resource_pack/animation_controllers/wizard.animation_controllers.json
+  - source: resource_pack/animation_controllers/villager.animation_controllers.json
+    committed: resource_pack/animation_controllers/wizard.animation_controllers.json

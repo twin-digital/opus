@@ -8,8 +8,8 @@ spawn: [465, 70, -64]
 
 eula: true
 
-# Only this adventure and the packs it depends on; the workspace's other packs stay out of the world.
+# Only this adventure: its actors are content of its own packs, so there is no second pack to install.
 defaultProfile: example
 profiles:
   example:
-    packs: ['@twin-digital/rpg-core-example', '@twin-digital/rpg-core-pack']
+    packs: ['@twin-digital/rpg-core-example']

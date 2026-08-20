@@ -19,6 +19,9 @@
     "typecheck": "tsc --noEmit",
     "watch": "watch"
   },
+  "dependencies": {
+    "@twin-digital/rpg-core": "workspace:*"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@minecraft/server": "catalog:",
@@ -27,7 +30,6 @@
     "@twin-digital/mc-dev-server": "workspace:*",
     "@twin-digital/minecraft-test-lib": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
-    "@twin-digital/rpg-core": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/tsdown-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",

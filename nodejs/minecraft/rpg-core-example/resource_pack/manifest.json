@@ -1,0 +1,16 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "The example adventure's resource half: the appearance of every actor it vendors from rpg-core.",
+    "uuid": "fbf03d8f-400d-46af-a265-00cd207a651b",
+    "min_engine_version": [1, 26, 0]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "description": "The example adventure's appearance content.",
+      "uuid": "bc603d72-1d0a-4594-940f-26915331d04f",
+      "version": [1, 0, 0]
+    }
+  ]
+}

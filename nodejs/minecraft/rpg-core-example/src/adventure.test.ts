@@ -12,7 +12,7 @@ import {
   withVanillaDimensions,
   type FakeServer,
 } from '@twin-digital/minecraft-test-lib'
-import { ActorDefinitionsMissingError, PRESET_NAMES, PRESETS } from '@twin-digital/rpg-core'
+import { ForeignEntityError, PRESET_NAMES } from '@twin-digital/rpg-core'
 import type { ActorHandle, ActorPlace, PresetName, SpawnActorOptions } from '@twin-digital/rpg-core'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -39,9 +39,10 @@ let calls: SpawnCall[]
 const messagesOf = (target: FakeServer): string[] =>
   getOutput(target.world).flatMap((record) => (typeof record.value === 'string' ? [record.value] : []))
 
+/** The identifier the build composes is the library's to spell; a stand-in serves the seam. */
 const handleFor = (preset: PresetName, options?: SpawnActorOptions): ActorHandle => ({
   preset,
-  entityId: PRESETS[preset].entityId,
+  entityId: `example:rpg.${preset}`,
   id: options?.id,
   entity: { nameTag: options?.name ?? 'default' } as ActorHandle['entity'],
   remove: () => undefined,
@@ -86,10 +87,10 @@ describe('installAdventure', () => {
 
     const named = calls.filter((call) => call.options?.name !== undefined)
     expect(named).toHaveLength(1)
-    expect(named[0]?.options).toEqual({ id: 'example:greeter', name: 'Eldrin the Greeter' })
+    expect(named[0]?.options).toEqual({ id: 'greeter', name: 'Eldrin the Greeter' })
   })
 
-  it('places each actor under a durable id of its own', () => {
+  it('places each actor under a durable id of its own, and none holds a colon', () => {
     runStory()
 
     const ids = calls.map((call) => call.options?.id)
@@ -97,6 +98,8 @@ describe('installAdventure', () => {
     for (const preset of PRESET_NAMES) {
       expect(ids).toContain(durableId(preset))
     }
+    // the library keys its world record on the adventure's namespace, and rejects an id carrying one
+    expect(ids.filter((id) => id?.includes(':'))).toEqual([])
   })
 
   it('asks for the same durable ids after a restart, so nothing is placed twice', () => {
@@ -129,13 +132,13 @@ describe('installAdventure', () => {
     })
   })
 
-  it('reports an actor whose definitions are missing, once, and places the rest', () => {
-    // the greeter's spawn finds no definitions; every other placement succeeds
+  it('reports an actor another pack answers for, once, and places the rest', () => {
+    // the greeter's identifier answers with a foreign entity; every other placement succeeds
     let failures = 0
     const failingSpawn = (preset: PresetName, place: ActorPlace, options?: SpawnActorOptions): ActorHandle => {
       if (options?.name !== undefined) {
         failures += 1
-        throw new ActorDefinitionsMissingError(preset, PRESETS[preset].entityId, 'RPG Core Actors')
+        throw new ForeignEntityError(`example:rpg.${preset}`, 'mcdk_pack_example', true)
       }
       return recordingSpawn(preset, place, options)
     }
@@ -147,7 +150,7 @@ describe('installAdventure', () => {
     expect(calls.map((call) => call.preset)).toEqual([...PRESET_NAMES])
     const report = messagesOf(server).filter((message) => message.includes("could not place 'greeter'"))
     expect(report).toHaveLength(1)
-    expect(report[0]).toContain('RPG Core Actors')
+    expect(report[0]).toContain('example:rpg.wizard')
   })
 
   it('retries a placement the world was not ready for, and it lands without a complaint', () => {
