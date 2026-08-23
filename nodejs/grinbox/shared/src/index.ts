@@ -55,6 +55,7 @@ export {
   actionWhenSchema,
   applyCategoryConfigSchema,
   archiveConfigSchema,
+  categoryTemplateSchema,
   digestColumnSchema,
   digestDeliveryConfigSchema,
   digestHighlightSchema,
@@ -63,6 +64,7 @@ export {
   DIGEST_CATEGORY_TAG_KEY,
   extractedValueTypeSchema,
   fallbackSchema,
+  fileConfigSchema,
   isScheduledOperatorType,
   llmTaggerConfigSchema,
   llmTaggerOutputSchema,
@@ -72,6 +74,7 @@ export {
   OPERATOR_TYPE_TRIGGERS,
   ruleBasedTaggerConfigSchema,
   ruleSchema,
+  setAsideConfigSchema,
   tagKeySchema,
   valueEnumSchema,
 } from './operators.js'
@@ -86,6 +89,7 @@ export type {
   DigestSection,
   ExtractedValueType,
   Fallback,
+  FileConfig,
   LlmTaggerConfig,
   LlmTaggerOutput,
   NotifyConfig,
@@ -93,6 +97,7 @@ export type {
   OperatorTypeKey,
   Rule,
   RuleBasedTaggerConfig,
+  SetAsideConfig,
   TagKey,
   ValueEnum,
 } from './operators.js'
@@ -128,6 +133,46 @@ export {
 } from './template-placeholder.js'
 
 export { operatorConsumesBody } from './body-usage.js'
+
+export {
+  CATEGORY_FORBIDDEN_CHARS,
+  CATEGORY_REPLACEMENT_CHAR,
+  forbiddenCategoryChars,
+  forbiddenCategoryTemplateChars,
+  isValidCategoryName,
+  sanitizeCategoryName,
+} from './category-name.js'
+
+export { accountFoldersSchema, folderNameSchema, folderRoleSchema, folderSchema, FOLDER_ROLES } from './folders.js'
+export type { AccountFolders, Folder, FolderName, FolderRole } from './folders.js'
+
+export {
+  imapAccountCredentialsSchema,
+  imapAccountSettingsSchema,
+  imapAccountSetupSchema,
+  imapConnectionSecuritySchema,
+  imapPortSchema,
+  IMAP_CONNECTION_SECURITIES,
+} from './imap-account.js'
+export type {
+  ImapAccountCredentials,
+  ImapAccountSettings,
+  ImapAccountSetup,
+  ImapConnectionSecurity,
+} from './imap-account.js'
+
+export {
+  accountCapabilitiesSchema,
+  accountCapabilitySchema,
+  accountCapabilityWarningSchema,
+  accountSupports,
+  ACCOUNT_CAPABILITIES,
+  capabilitiesRequiredBy,
+  capabilityAbsenceReason,
+  mailBackendKindSchema,
+  MAIL_BACKEND_KINDS,
+} from './backends.js'
+export type { AccountCapabilities, AccountCapability, AccountCapabilityWarning, MailBackendKind } from './backends.js'
 
 export { cooldownIntervalSecondsSchema, cooldownSettingSchema, notificationKindSchema } from './notifications.js'
 export type { CooldownIntervalSeconds, CooldownSetting, NotificationKind } from './notifications.js'

@@ -11,11 +11,14 @@ import type {
   CandidateListing,
   Category,
   FetchedMessage,
+  MailboxSnapshot,
   Provider,
   ProviderAccount,
-  ReconcileSnapshot,
+  SnapshotEntry,
   ThreadMembership,
 } from '../providers/provider.js'
+import type { AccountCapabilities } from '../providers/account-capabilities.js'
+import { allCapabilities } from '../providers/account-capabilities.js'
 
 /** A fixture backend Message the stub Provider serves. */
 export interface FixtureMessage {
@@ -37,9 +40,18 @@ export class StubProvider implements Provider {
   private pageIndex = 0
   listCandidatesCalls = 0
   fetchMetadataCalls: string[] = []
-  /** Present-id snapshot returned by `reconcile` (settable per test). */
-  reconcilePresentIds: string[] = []
+  /** Standings returned by `snapshot` (settable per test). Bare ids may also be
+   * set through {@link reconcilePresentIds}, which reports each as `present`. */
+  snapshotEntries: SnapshotEntry[] = []
   reconcileCalls = 0
+  declareCapabilitiesCalls = 0
+  /** What `declareCapabilities` reports; every capability by default. */
+  capabilities: AccountCapabilities = allCapabilities(0)
+
+  /** Convenience for tests that only care which ids are present. */
+  set reconcilePresentIds(ids: string[]) {
+    this.snapshotEntries = ids.map((backendMessageId) => ({ backendMessageId, state: 'present' }))
+  }
 
   constructor(pages: CandidateListing[], fixtures: FixtureMessage[]) {
     this.pages = pages
@@ -79,9 +91,14 @@ export class StubProvider implements Provider {
     return { backendThreadId: null, isReply: false, messageCount: 0 }
   }
 
-  async reconcile(_account: ProviderAccount): Promise<ReconcileSnapshot> {
+  async snapshot(_account: ProviderAccount): Promise<MailboxSnapshot> {
     this.reconcileCalls++
-    return { presentBackendIds: this.reconcilePresentIds }
+    return { entries: this.snapshotEntries }
+  }
+
+  async declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilities> {
+    this.declareCapabilitiesCalls++
+    return this.capabilities
   }
 }
 

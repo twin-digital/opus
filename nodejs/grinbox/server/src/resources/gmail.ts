@@ -231,6 +231,49 @@ export async function applyLabel(
 }
 
 /**
+ * Thrown when a folder the user named does not exist on the Account. Grinbox
+ * creates none (r-g1iwlbzs, d-jj2mymbi), so the operation fails and the run
+ * with it.
+ */
+export class UnknownFolderError extends Error {
+  override readonly name = 'UnknownFolderError'
+
+  constructor(folder: string) {
+    super(`the account has no folder named '${folder}'`)
+  }
+}
+
+/**
+ * File a Message into a folder of the Account: on Gmail, add the label of that
+ * name and drop `INBOX`, so the Message leaves the inbox and lands where the
+ * user named (d-93swk5rr). The label is matched by name character for character
+ * (d-k8va629q) and never created — a name the Account does not have raises
+ * {@link UnknownFolderError}.
+ *
+ * Idempotent: re-filing an already-filed Message re-adds a label it carries and
+ * re-drops one it does not, both no-ops on Gmail's side.
+ */
+export async function fileMessage(
+  deps: GmailDeps,
+  args: { backendMessageId: string; folder: string },
+): Promise<{ filed: boolean }> {
+  const gmail = google.gmail({ version: 'v1', auth: await deps.auth() })
+  const labelId = await findLabelId(gmail, args.folder, deps.signal)
+  if (labelId === null) {
+    throw new UnknownFolderError(args.folder)
+  }
+  await gmail.users.messages.modify(
+    {
+      userId: 'me',
+      id: args.backendMessageId,
+      requestBody: { addLabelIds: [labelId], removeLabelIds: ['INBOX'] },
+    },
+    { signal: deps.signal },
+  )
+  return { filed: true }
+}
+
+/**
  * Archive a Message: remove it from the inbox (`users.messages.modify` with
  * `removeLabelIds: ['INBOX']`). The Message itself is untouched — it keeps its
  * other labels and stays in "All Mail"; only the inbox membership changes.
@@ -263,12 +306,21 @@ type GmailService = ReturnType<typeof google.gmail>
  * is absent. Returns the id of the existing or newly-created label. A label
  * name compares case-sensitively as Gmail stores it.
  */
-async function resolveLabelId(gmail: GmailService, name: string, signal: AbortSignal): Promise<string> {
+/** The id of the label named `name`, or null where the Account has none. */
+async function findLabelId(gmail: GmailService, name: string, signal: AbortSignal): Promise<string | null> {
   const list = await gmail.users.labels.list({ userId: 'me' }, { signal })
   for (const label of list.data.labels ?? []) {
     if (label.name === name && typeof label.id === 'string') {
       return label.id
     }
+  }
+  return null
+}
+
+async function resolveLabelId(gmail: GmailService, name: string, signal: AbortSignal): Promise<string> {
+  const existing = await findLabelId(gmail, name, signal)
+  if (existing !== null) {
+    return existing
   }
   const created = await gmail.users.labels.create(
     {

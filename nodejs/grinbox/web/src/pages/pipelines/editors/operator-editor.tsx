@@ -16,8 +16,12 @@ import {
   type ArchiveDraft,
   DigestDeliveryEditor,
   type DigestDeliveryDraft,
+  FileEditor,
+  type FileDraft,
   NotifyEditor,
   type NotifyDraft,
+  SetAsideEditor,
+  type SetAsideDraft,
 } from './action-editors'
 import { LlmEditor, type LlmDraft } from './llm-editor'
 import { type RuleBasedDraft, RuleBasedEditor, RuleBasedPreview } from './rule-based-editor'
@@ -241,6 +245,10 @@ function TypeEditor({
       return <ApplyCategoryEditor value={config as ApplyCategoryDraft} onChange={onChange} />
     case 'archive':
       return <ArchiveEditor value={config as ArchiveDraft} onChange={onChange} />
+    case 'file':
+      return <FileEditor value={config as FileDraft} onChange={onChange} />
+    case 'set_aside':
+      return <SetAsideEditor value={config as SetAsideDraft} onChange={onChange} />
     case 'digest_delivery':
       return <DigestDeliveryEditor value={config as DigestDeliveryDraft} onChange={onChange} />
   }

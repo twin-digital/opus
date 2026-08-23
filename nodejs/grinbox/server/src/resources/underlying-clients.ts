@@ -7,7 +7,7 @@
  * The mail and Action clients resolve **per-run** credentials, so they cannot
  * be built once at startup like the stateless `llm_bedrock` transport:
  *
- *  - The `mailbox` operations (`apply_category`, `archive`, `fetch_body`)
+ *  - The `mailbox` operations (`apply_category`, `archive`, `file`, `fetch_body`)
  *    authenticate as the **Message's Account**: each call resolves the
  *    Account's `provider_type` and dispatches to that provider's registered
  *    backend (see `provider-backends.ts`), which resolves the Account's
@@ -46,6 +46,7 @@ import type { DB } from '../db/schema.js'
 import type { GoogleOAuthClient } from '../oauth/google-client.js'
 import { type BedrockSend, invokeModel, makeBedrockSend } from './bedrock.js'
 import type { UnderlyingClients } from './make-resource-client.js'
+import type { MailProviderRegistryDeps } from './provider-backends.js'
 import { buildMailProviderRegistry, mailSenderBackendFor, mailboxBackendFor } from './provider-backends.js'
 import { sendNotification } from './pushover.js'
 
@@ -90,6 +91,7 @@ export function buildUnderlyingClients(config: Config): UnderlyingClients {
     mailbox: {
       apply_category: () => notConfigured('mailbox.apply_category'),
       archive: () => notConfigured('mailbox.archive'),
+      file: () => notConfigured('mailbox.file'),
       fetch_body: () => notConfigured('mailbox.fetch_body'),
       ...deferredMailboxOps(),
     },
@@ -139,6 +141,12 @@ export interface MakeUnderlyingClientsDeps {
    * resolve / refresh an Account's access token).
    */
   readonly googleClient: GoogleOAuthClient | null
+  /**
+   * The IMAP session opener and message store, present when the IMAP backend is
+   * wired. Absent leaves an IMAP Account's `mailbox` operations unimplemented —
+   * the graceful per-op failure, never a crash.
+   */
+  readonly imap?: MailProviderRegistryDeps['imap']
 }
 
 /**
@@ -162,18 +170,23 @@ export function buildMakeUnderlyingClients(deps: MakeUnderlyingClientsDeps): Mak
     db: deps.db,
     encryptor: deps.encryptor,
     googleClient: deps.googleClient,
+    imap: deps.imap,
   })
 
   return (ctx) => ({
     llm_bedrock: llm,
     mailbox: {
       apply_category: async (args, signal) => {
-        const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId)
+        const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId, 'apply_category')
         return backend.apply_category(ctx.accountId, args, signal)
       },
       archive: async (args, signal) => {
-        const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId)
+        const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId, 'archive')
         return backend.archive(ctx.accountId, args, signal)
+      },
+      file: async (args, signal) => {
+        const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId, 'file')
+        return backend.file(ctx.accountId, args, signal)
       },
       fetch_body: async (args, signal) => {
         const backend = await mailboxBackendFor(deps.db, registry, ctx.accountId)

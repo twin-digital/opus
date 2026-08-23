@@ -230,7 +230,7 @@ describe('InboxPage', () => {
     useMessages.mockReturnValue(listStub([taggedMessage]))
     renderPage(<InboxPage />)
 
-    fireEvent.click(screen.getByLabelText('Sync with Gmail'))
+    fireEvent.click(screen.getByLabelText('Poll every Account now'))
     expect(syncMutate).toHaveBeenCalledTimes(1)
   })
 

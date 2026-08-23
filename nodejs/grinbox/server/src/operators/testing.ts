@@ -127,6 +127,7 @@ function makeMailbox(record: Recorder): MailboxClient {
   return {
     apply_category: async (args) => record('mailbox', 'apply_category', args),
     archive: async (args) => record('mailbox', 'archive', args),
+    file: async (args) => record('mailbox', 'file', args),
     fetch_metadata: async (args) => record('mailbox', 'fetch_metadata', args),
     fetch_body: async (args) => record('mailbox', 'fetch_body', args),
     list_messages: async (args) => record('mailbox', 'list_messages', args),

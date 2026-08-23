@@ -21,6 +21,7 @@ import { createActivityRoutes } from './activity.js'
 import { createCooldownsRoutes } from './cooldowns.js'
 import { createCredentialsRoutes } from './credentials.js'
 import { createDashboardRoutes } from './dashboard.js'
+import { createImapRoutes } from './imap.js'
 import { type ApiDeps, type NowSeconds, systemNowSeconds } from './deps.js'
 import { createLimitsRoutes } from './limits.js'
 import { createMessagesRoutes } from './messages.js'
@@ -30,7 +31,7 @@ import { createPipelinesRoutes } from './pipelines.js'
 import { createSyncRoutes } from './sync.js'
 import { createWriteRoutes } from './writes.js'
 
-export type { ApiDeps, NowSeconds, SyncNow, SyncResult } from './deps.js'
+export type { AccountFolders, ApiDeps, ImapProbe, ImapProbeResult, NowSeconds, SyncNow, SyncResult } from './deps.js'
 export { systemNowSeconds, resolveActingUserId } from './deps.js'
 
 /**
@@ -53,6 +54,7 @@ export function createApiRoutes(deps: ApiDeps) {
     .route('/api/activity', createActivityRoutes(deps))
     .route('/api/dashboard', createDashboardRoutes(deps))
     .route('/api/sync', createSyncRoutes(deps))
+    .route('/', createImapRoutes(deps))
     .route('/', createWriteRoutes(deps))
 }
 

@@ -38,8 +38,9 @@ import type {
   MailboxArchiveArgs,
   MailboxBodyResult,
   MailboxFetchArgs,
+  MailboxFileArgs,
 } from '../operators/types.js'
-import { type GmailOAuth2Client, applyLabel, archiveMessage, fetchBody, sendMessage } from './gmail.js'
+import { type GmailOAuth2Client, applyLabel, archiveMessage, fetchBody, fileMessage, sendMessage } from './gmail.js'
 import type { MailSenderBackend, MailboxBackend } from './provider-backends.js'
 
 /** Daemon-level deps the Gmail backends close over. */
@@ -102,6 +103,14 @@ export function gmailMailboxBackend(deps: GmailBackendDeps): MailboxBackend {
       }
       const auth = accountAuth(deps, googleClient, accountId)
       return archiveMessage({ auth, signal }, args)
+    },
+    async file(accountId: number, args: MailboxFileArgs, signal: AbortSignal): Promise<{ filed: boolean }> {
+      const { googleClient } = deps
+      if (!googleClient) {
+        return notConfigured('mailbox.file')
+      }
+      const auth = accountAuth(deps, googleClient, accountId)
+      return fileMessage({ auth, signal }, args)
     },
     async fetch_body(accountId: number, args: MailboxFetchArgs, signal: AbortSignal): Promise<MailboxBodyResult> {
       const { googleClient } = deps

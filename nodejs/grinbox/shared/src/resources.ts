@@ -10,9 +10,13 @@ import { z } from 'zod'
  * these Resources (d-v5zamgjn). The Daemon injects a metered client per declared
  * Resource that exposes only the declared operations, so an Operator cannot
  * invoke an operation it did not declare — confinement by construction.
+ *
+ * `mailbox.file` moves the Message into a folder the user named (d-jj2mymbi);
+ * it is one of the operations the resource backends carry, beside archiving,
+ * fetching a body, and sending mail (d-x3aqw6up).
  */
 export const RESOURCE_OPERATIONS = {
-  mailbox: ['fetch_metadata', 'fetch_body', 'list_messages', 'apply_category', 'archive'],
+  mailbox: ['fetch_metadata', 'fetch_body', 'list_messages', 'apply_category', 'archive', 'file'],
   mail_sender: ['send_message'],
   pushover_api: ['send_notification'],
   llm_bedrock: ['invoke_model'],

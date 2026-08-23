@@ -7,17 +7,22 @@
  * sender only `mail_sender`).
  *
  * Adding a provider is additive: write its backend module (see
- * `gmail-backend.ts`) and register it in {@link buildMailProviderRegistry} +
- * {@link MAIL_PROVIDER_CAPABILITIES}. No call site changes — dispatch resolves
- * the Account's `provider_type` per operation and looks the backend up in the
- * registry.
+ * `gmail-backend.ts`) and register it in {@link buildMailProviderRegistry}. No
+ * call site changes — dispatch resolves the Account's `provider_type` per
+ * operation and looks the backend up in the registry.
+ *
+ * Whether a given Account can carry an operation is a second question, answered
+ * by the declaration that Account's backend made at its last poll (d-bzw8qoiy):
+ * two IMAP accounts of one server differ. A configuration is never refused for
+ * naming an operation some account cannot carry (d-qzxvoph1) — the gap is met
+ * here, as a failed run naming what the account cannot do and why.
  *
  * A backend implements only the operations an execution path invokes as the
- * Account (`apply_category`, `archive`, `fetch_body`, `send_message`). The
- * remaining declared `mailbox` operations (`fetch_metadata`, `list_messages`)
- * have no Operator that invokes them through this seam — the poll path talks to
- * its Provider directly — so they stay "not configured" stubs in
- * `underlying-clients.ts` and are not part of the backend interface.
+ * Account (`apply_category`, `archive`, `file`, `fetch_body`, `send_message`).
+ * The remaining declared `mailbox` operations (`fetch_metadata`,
+ * `list_messages`) have no Operator that invokes them through this seam — the
+ * poll path talks to its Provider directly — so they stay "not configured" stubs
+ * in `underlying-clients.ts` and are not part of the backend interface.
  */
 
 import type { DB } from '../db/schema.js'
@@ -27,8 +32,15 @@ import type {
   MailboxArchiveArgs,
   MailboxBodyResult,
   MailboxFetchArgs,
+  MailboxFileArgs,
 } from '../operators/types.js'
+import type { AccountCapabilities, AccountCapability } from '../providers/account-capabilities.js'
+import { parseCapabilities, capabilityAbsenceReason } from '../providers/account-capabilities.js'
+import type { ImapMessageStore } from '../providers/imap/imap-message-store.js'
+import { IMAP_PROVIDER_TYPE } from '../providers/imap/imap-settings.js'
 import { gmailMailSenderBackend, gmailMailboxBackend } from './gmail-backend.js'
+import type { OpenAccountSession } from './imap-backend.js'
+import { imapMailboxBackend } from './imap-backend.js'
 import type { GmailBackendDeps } from './gmail-backend.js'
 
 /**
@@ -40,6 +52,13 @@ import type { GmailBackendDeps } from './gmail-backend.js'
 export interface MailboxBackend {
   apply_category(accountId: number, args: MailboxApplyCategoryArgs, signal: AbortSignal): Promise<{ applied: boolean }>
   archive(accountId: number, args: MailboxArchiveArgs, signal: AbortSignal): Promise<{ archived: boolean }>
+  /**
+   * Move the Message into the named folder of the Account (d-jj2mymbi). The
+   * folder is matched against the names the backend lists, character for
+   * character (d-k8va629q); where the Account has no folder of that name the
+   * operation fails, and grinbox creates none (r-g1iwlbzs).
+   */
+  file(accountId: number, args: MailboxFileArgs, signal: AbortSignal): Promise<{ filed: boolean }>
   fetch_body(accountId: number, args: MailboxFetchArgs, signal: AbortSignal): Promise<MailboxBodyResult>
 }
 
@@ -58,23 +77,28 @@ export interface MailProviderRegistry {
   readonly mail_sender: Readonly<Partial<Record<string, MailSenderBackend>>>
 }
 
-/**
- * Which mail Resources each known `provider_type` implements. The declarative
- * companion to {@link buildMailProviderRegistry} — the seam for validating a
- * configuration up front (e.g. rejecting an Operator whose Resource no Account
- * provider implements) rather than failing at dispatch time.
- */
-export const MAIL_PROVIDER_CAPABILITIES: Readonly<Record<string, readonly ('mailbox' | 'mail_sender')[]>> = {
-  gmail: ['mailbox', 'mail_sender'],
+/** Deps the provider backends close over (superset of every backend's needs). */
+export interface MailProviderRegistryDeps extends GmailBackendDeps {
+  /**
+   * Opens a logged-in IMAP session for an Account, and the reads the backend
+   * makes against grinbox's own record. Absent until the IMAP transport is
+   * wired, which leaves an IMAP Account's `mailbox` operations unimplemented —
+   * the graceful per-op failure, never a crash.
+   */
+  readonly imap?: { openSession: OpenAccountSession; store: ImapMessageStore }
 }
 
-/** Deps the provider backends close over (superset of every backend's needs). */
-export type MailProviderRegistryDeps = GmailBackendDeps
-
-/** Build the registry of live mail-Resource backends. */
+/**
+ * Build the registry of live mail-Resource backends. An IMAP Account implements
+ * `mailbox` alone: it does not send (d-5h66e3zl).
+ */
 export function buildMailProviderRegistry(deps: MailProviderRegistryDeps): MailProviderRegistry {
+  const mailbox: Record<string, MailboxBackend> = { gmail: gmailMailboxBackend(deps) }
+  if (deps.imap) {
+    mailbox[IMAP_PROVIDER_TYPE] = imapMailboxBackend({ db: deps.db, ...deps.imap })
+  }
   return {
-    mailbox: { gmail: gmailMailboxBackend(deps) },
+    mailbox,
     mail_sender: { gmail: gmailMailSenderBackend(deps) },
   }
 }
@@ -92,39 +116,87 @@ export class UnsupportedMailProviderError extends Error {
   }
 }
 
-/** Resolve the Account's `provider_type`; unknown Account ids throw. */
-async function providerTypeOf(db: DB, accountId: number): Promise<string> {
-  const row = await db.selectFrom('accounts').select(['provider_type']).where('id', '=', accountId).executeTakeFirst()
+/**
+ * Thrown when the Account's stored declaration says it cannot carry the
+ * operation (d-bzw8qoiy). The configuration was never refused for naming it
+ * (d-qzxvoph1), so the gap is met here: the Operator's run fails on this
+ * Account, naming what the Account cannot do and why.
+ */
+export class UnsupportedAccountOperationError extends Error {
+  override readonly name = 'UnsupportedAccountOperationError'
+
+  constructor(
+    readonly capability: AccountCapability,
+    reason: string,
+  ) {
+    super(`this account cannot ${capability}: ${reason}`)
+  }
+}
+
+/** The Account row fields the mail-Resource dispatch reads. */
+async function accountFor(
+  db: DB,
+  accountId: number,
+): Promise<{ providerType: string; capabilities: AccountCapabilities | null }> {
+  const row = await db
+    .selectFrom('accounts')
+    .select(['provider_type', 'capabilities_json'])
+    .where('id', '=', accountId)
+    .executeTakeFirst()
   if (!row) {
     throw new Error(`account ${accountId} not found for mail-Resource dispatch`)
   }
-  return row.provider_type
+  return { providerType: row.provider_type, capabilities: parseCapabilities(row.capabilities_json) }
 }
 
-/** Look up the Account's `mailbox` backend by its `provider_type`. */
+/**
+ * Fail the run where the Account's stored declaration does not admit
+ * `capability`. An Account never polled has no declaration; the operation is
+ * attempted and the backend's own refusal is what fails it, so a first poll is
+ * not a prerequisite for acting.
+ */
+function requireCapability(capabilities: AccountCapabilities | null, capability: AccountCapability): void {
+  if (capabilities === null) {
+    return
+  }
+  const reason = capabilityAbsenceReason(capabilities, capability)
+  if (reason !== null) {
+    throw new UnsupportedAccountOperationError(capability, reason)
+  }
+}
+
+/**
+ * Look up the Account's `mailbox` backend, checking the Account's own
+ * declaration for the operation about to be dispatched.
+ */
 export async function mailboxBackendFor(
   db: DB,
   registry: MailProviderRegistry,
   accountId: number,
+  capability?: AccountCapability,
 ): Promise<MailboxBackend> {
-  const providerType = await providerTypeOf(db, accountId)
+  const { providerType, capabilities } = await accountFor(db, accountId)
   const backend = registry.mailbox[providerType]
   if (!backend) {
     throw new UnsupportedMailProviderError('mailbox', providerType)
   }
+  if (capability) {
+    requireCapability(capabilities, capability)
+  }
   return backend
 }
 
-/** Look up the Account's `mail_sender` backend by its `provider_type`. */
+/** Look up the Account's `mail_sender` backend, checking its declaration. */
 export async function mailSenderBackendFor(
   db: DB,
   registry: MailProviderRegistry,
   accountId: number,
 ): Promise<MailSenderBackend> {
-  const providerType = await providerTypeOf(db, accountId)
+  const { providerType, capabilities } = await accountFor(db, accountId)
   const backend = registry.mail_sender[providerType]
   if (!backend) {
     throw new UnsupportedMailProviderError('mail_sender', providerType)
   }
+  requireCapability(capabilities, 'send_message')
   return backend
 }

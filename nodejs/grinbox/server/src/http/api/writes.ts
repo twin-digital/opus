@@ -17,6 +17,11 @@
  * a structured `{ error: { code, message, details? } }` body via
  * {@link mapWriteError}; not-found maps to 404. This is the contract the UI reads.
  *
+ * A successful save carries `warnings`: the capabilities some Account cannot
+ * carry, the Operators needing them, and the Accounts lacking them. A
+ * configuration is never refused for naming an operation an Account cannot carry
+ * (d-qzxvoph1) — the write succeeds and the warning is what the user meets.
+ *
  * Single-User MVP (no auth): the acting/owning `user_id` and `actor_user_id` are
  * resolved from the single seeded User via {@link resolveActingUserId}, the same
  * way the read routes assume one User.
@@ -50,8 +55,15 @@ import {
 } from '../../pipeline/operator-save.js'
 import { createPipeline, editPipeline } from '../../pipeline/pipeline-config.js'
 import { enqueueTriage } from '../../pipeline/triage-enqueue.js'
+import { capabilityWarnings, pipelineOfOperator } from '../../pipeline/capability-warnings.js'
 import { type ApiDeps, resolveActingUserId } from './deps.js'
 import { mapWriteError } from './write-errors.js'
+
+/** The capability warnings for the Pipeline an Operator belongs to. */
+async function warningsForOperator(deps: ApiDeps, operatorId: number) {
+  const pipelineId = await pipelineOfOperator(deps.db, operatorId)
+  return pipelineId === null ? [] : capabilityWarnings(deps.db, pipelineId)
+}
 
 const idParam = z.object({ id: z.coerce.number().int().positive() })
 
@@ -221,7 +233,7 @@ export function createWriteRoutes(deps: ApiDeps) {
               enabled: body.enabled,
               actorUserId: userId,
             })
-            return c.json({ id: operatorId }, 201)
+            return c.json({ id: operatorId, warnings: await capabilityWarnings(deps.db, id) }, 201)
           } catch (err) {
             return handle(c, err)
           }
@@ -246,7 +258,7 @@ export function createWriteRoutes(deps: ApiDeps) {
             configJson,
             actorUserId: userId,
           })
-          return c.json({ ok: true })
+          return c.json({ ok: true, warnings: await warningsForOperator(deps, id) })
         } catch (err) {
           return handle(c, err)
         }
@@ -259,7 +271,7 @@ export function createWriteRoutes(deps: ApiDeps) {
         const { id } = c.req.valid('param')
         try {
           await setOperatorEnabled(deps.db, id, true, userId)
-          return c.json({ ok: true })
+          return c.json({ ok: true, warnings: await warningsForOperator(deps, id) })
         } catch (err) {
           return handle(c, err)
         }
@@ -309,7 +321,11 @@ export function createWriteRoutes(deps: ApiDeps) {
             color: body.color,
             actorUserId: userId,
           })
-          return c.json({ ok: true })
+          // Activating a Pipeline on an Account warns about what that Account
+          // cannot carry; it never refuses the write (d-qzxvoph1).
+          const warnings =
+            body.active_pipeline_id == null ? [] : await capabilityWarnings(deps.db, body.active_pipeline_id, [id])
+          return c.json({ ok: true, warnings })
         } catch (err) {
           return handle(c, err)
         }
