@@ -28,7 +28,9 @@ jobs:
     timeout-minutes: 15
     env:
       # An API commit's author is the App-token identity (skleinjung-agent[bot]); it MUST equal
-      # renovate.json's gitIgnoredAuthors or Renovate freezes the PR (§6.2). Asserted below.
+      # renovate.json's gitIgnoredAuthors or Renovate freezes the PR (§6.2). Asserted below: the
+      # commit is already pushed by then, so the assertion fails the job to surface the drift
+      # rather than leaving a frozen PR to be noticed later.
       EXPECTED_AUTHOR_EMAIL: '290907000+skleinjung-agent[bot]@users.noreply.github.com'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -161,7 +163,8 @@ jobs:
             fi
             if author=$(commit_via_api); then
               if [[ "$author" != "$EXPECTED_AUTHOR_EMAIL" ]]; then
-                echo "::warning::commit author '$author' != gitIgnoredAuthors '$EXPECTED_AUTHOR_EMAIL'; Renovate may now treat this PR as user-edited (§6.2)."
+                echo "::error::commit author '$author' != gitIgnoredAuthors '$EXPECTED_AUTHOR_EMAIL'. Renovate now treats this PR as user-edited and stops rebasing it (§6.2). Set gitIgnoredAuthors in renovate.json and EXPECTED_AUTHOR_EMAIL here to '$author', then tick the PR's rebase-branch box on the Dependency Dashboard."
+                exit 1
               fi
               echo "Committed signed changeset as ${author}."
               exit 0
