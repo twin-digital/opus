@@ -21,6 +21,13 @@ actor's two halves cannot arrive separately.
 The adventure's behavior manifest should name its own resource half in `dependencies`, so activating
 the one activates both and the appearance cannot be left behind.
 
+That settles the world's pack stack, not what a player's client draws. A Bedrock server offers its
+resource packs to a joining client, and where `texturepack-required` is `false` the client may
+decline in one click and enter the world anyway — seeing nothing where the actors stand, while the
+library reports them present and, per its own contract, cannot tell the difference. An adventure
+that wants its actors seen tells its operators to set `texturepack-required=true`, which replaces
+the client's decline option with "Leave".
+
 ## Spawning an actor
 
 ```ts
