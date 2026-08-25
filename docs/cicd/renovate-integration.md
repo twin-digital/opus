@@ -131,6 +131,10 @@ Configured by `renovate.json` (PR #91):
   pulled out of the batch into their own per-package PRs (distinct title + `build-scripts` label) and
   never auto-merge, so a script-running bump is reviewed in isolation. Keep that `matchPackageNames`
   list in sync with `pnpm-workspace.yaml`.
+  **Exception:** peer-locked package sets move the other way — they are forced into one group so a
+  bump can't land half-applied. `mobx` + `mobx-react-lite` + `mobx-react` peer-pin each other across
+  majors, so they share `groupName: "mobx"` with `separateMajorMinor: false`, which also keeps them
+  together when only one side has a major.
 - **Catalog-routed updates.** Most shared deps are referenced as `catalog:` in each `package.json`,
   with versions centralized in `pnpm-workspace.yaml`. A catalog bump changes `pnpm-workspace.yaml`
   but **not** the consuming `package.json` files — detection must resolve `catalog:` to compare
