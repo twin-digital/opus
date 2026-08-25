@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useAccounts } from '@/lib/accounts'
+import { describeWarnings, warningsFromResponse } from '@/lib/capabilities'
 import { useCreateOperator } from '@/lib/pipelines'
 import { OperatorEditor } from './editors/operator-editor'
 import { OPERATOR_TYPES } from './operator-types'
@@ -19,6 +21,7 @@ export function AddOperatorButton({ pipelineId }: { pipelineId: number }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [chosen, setChosen] = useState<OperatorTypeKey | null>(null)
   const create = useCreateOperator(pipelineId)
+  const { data: accounts } = useAccounts()
 
   return (
     <>
@@ -77,7 +80,16 @@ export function AddOperatorButton({ pipelineId }: { pipelineId: number }) {
           pipelineId={pipelineId}
           initialName=''
           onSave={async ({ name, config }) => {
-            await create.mutateAsync({ name, type_key: chosen, config })
+            const saved = await create.mutateAsync({ name, type_key: chosen, config })
+            // The save stands whatever it warned about; the warning names the
+            // Accounts this Operator will fail on (d-qzxvoph1).
+            const warnings = warningsFromResponse(saved)
+            if (warnings.length > 0) {
+              toast('Operator added, with a warning', {
+                description: describeWarnings(warnings, accounts ?? []),
+              })
+              return
+            }
             toast.success('Operator added')
           }}
         />

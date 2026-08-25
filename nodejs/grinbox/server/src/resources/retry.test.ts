@@ -84,3 +84,31 @@ describe('withRetry', () => {
     expect(op).not.toHaveBeenCalled()
   })
 })
+
+describe('the three retry classes (d-b4yifc70)', () => {
+  it('gives every mailbox write two further attempts at a fixed wait', () => {
+    for (const operation of ['apply_category', 'archive', 'file']) {
+      expect(policyFor('mailbox', operation)).toEqual({ maxRetries: 2, baseDelayMs: 200, exponential: false })
+    }
+  })
+
+  it('gives every read three further attempts with a doubling wait', () => {
+    for (const [resource, operation] of [
+      ['mailbox', 'fetch_metadata'],
+      ['mailbox', 'fetch_body'],
+      ['mailbox', 'list_messages'],
+      ['llm_bedrock', 'invoke_model'],
+    ] as const) {
+      expect(policyFor(resource, operation)).toMatchObject({ maxRetries: 3, exponential: true })
+    }
+  })
+
+  it('never retries a notification or a send', () => {
+    expect(policyFor('pushover_api', 'send_notification').maxRetries).toBe(0)
+    expect(policyFor('mail_sender', 'send_message').maxRetries).toBe(0)
+  })
+
+  it('never retries an operation with no policy of its own', () => {
+    expect(policyFor('mailbox', 'something_new').maxRetries).toBe(0)
+  })
+})

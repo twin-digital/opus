@@ -64,7 +64,8 @@ import type { SourceState } from '@grinbox/shared'
 import type { Database } from '../db/schema.js'
 import { enqueueTriage } from '../pipeline/triage-enqueue.js'
 import { upsertMessage } from '../providers/message-upsert.js'
-import type { CandidateListing, Provider, ProviderAccount } from '../providers/provider.js'
+import { serializeCapabilities } from '../providers/account-capabilities.js'
+import type { CandidateListing, Provider, ProviderAccount, SnapshotEntry } from '../providers/provider.js'
 
 /**
  * The `accounts` projection a poll cycle needs. A subset of the row the
@@ -103,6 +104,8 @@ export interface PollCycleSummary {
   readonly failedMessages: number
   /** Existing Message rows whose `source_state` changed from an applied delta. */
   readonly stateUpdated: number
+  /** Whether the Account's capability declaration was re-read this poll (d-bzw8qoiy). */
+  readonly capabilitiesRead: boolean
 }
 
 /**
@@ -123,6 +126,23 @@ export async function pollAccount(
     id: account.id,
     settingsJson: account.settingsJson,
     lastPolledAt: account.lastPolledAt,
+  }
+
+  // 0. Re-read what this Account supports and store it (d-bzw8qoiy). The poll
+  //    is already logged in, so the read is free; every other path reads what
+  //    was stored. A failure here does not abort the poll — the stored
+  //    declaration stands until a later poll replaces it.
+  let capabilitiesRead = false
+  try {
+    const capabilities = await provider.declareCapabilities(providerAccount)
+    await db
+      .updateTable('accounts')
+      .set({ capabilities_json: serializeCapabilities({ ...capabilities, read_at: now }) })
+      .where('id', '=', account.id)
+      .execute()
+    capabilitiesRead = true
+  } catch (err) {
+    console.error(`[grinbox][poll] account=${account.id} capability read failed; keeping the stored declaration`, err)
   }
 
   // 1. Discover candidates. A failure here aborts the cycle without advancing
@@ -186,6 +206,7 @@ export async function pollAccount(
     enqueued,
     failedMessages,
     stateUpdated,
+    capabilitiesRead,
   }
 }
 
@@ -222,21 +243,23 @@ async function applyStateDeltas(
 /** Per-cycle outcome of a reconcile pass. */
 export interface ReconcileSummary {
   readonly accountId: number
-  /** Rows flipped present → archived (left the inbox, missed by the feed). */
-  readonly archived: number
-  /** Rows flipped non-present → present (re-entered the inbox). */
-  readonly restored: number
+  /** Rows the snapshot named whose stored standing was stale. */
+  readonly realigned: number
+  /** Rows the snapshot did not name that were still recorded `present`. */
+  readonly unfound: number
 }
 
 /**
- * Reconcile a single Account's source-state against a full inbox snapshot from
- * the Provider (the backstop for drift the incremental History feed missed). For
- * the rows Grinbox already knows: any `present` row absent from the snapshot is
- * flipped to `archived` (the snapshot can't distinguish archived/trashed/deleted
- * — the fine-grained value comes from the History feed), and any non-`present`
- * row that reappears in the snapshot is flipped back to `present`. Rows for
- * inbox Messages Grinbox never ingested are left to the discovery path; reconcile
- * does not insert.
+ * Reconcile a single Account's source-state against the Provider's whole-mailbox
+ * snapshot (the backstop for drift the incremental feed missed, d-gj8j4np0).
+ *
+ * The snapshot reports each Message it found with the standing it has
+ * (d-cd0jnrdj), so a known row simply takes the standing the snapshot names —
+ * archived, trashed, spam, or present alike. A known row the snapshot does not
+ * name is one the backend did not find; a row still recorded `present` is
+ * recorded `archived`, the conservative reading that keeps the Message findable
+ * and never claims a deletion. Rows for Messages Grinbox never ingested are left
+ * to the discovery path; reconcile does not insert.
  */
 export async function reconcileAccount(
   db: Kysely<Database>,
@@ -249,38 +272,57 @@ export async function reconcileAccount(
     settingsJson: account.settingsJson,
     lastPolledAt: account.lastPolledAt,
   }
-  const { presentBackendIds } = await provider.reconcile(providerAccount)
-  return alignSourceState(db, account.id, new Set(presentBackendIds), now)
+  const { entries } = await provider.snapshot(providerAccount)
+  return alignSourceState(db, account.id, entries, now)
 }
 
 /**
- * Align known rows' `source_state` to an inbox `present` set: any `present` row
- * absent from the set → `archived`; any non-`present` row in the set → `present`.
- * Shared by {@link reconcileAccount} (state-only) and {@link resyncAccount}.
+ * Align known rows' `source_state` to the standings a snapshot reported. Shared
+ * by {@link reconcileAccount} (state-only) and {@link resyncAccount}.
  */
 async function alignSourceState(
   db: Kysely<Database>,
   accountId: number,
-  present: Set<string>,
+  entries: readonly SnapshotEntry[],
   now: number,
 ): Promise<ReconcileSummary> {
+  const standing = new Map<string, SourceState>()
+  for (const entry of entries) {
+    standing.set(entry.backendMessageId, entry.state)
+  }
+
   const rows = await db
     .selectFrom('messages')
     .select(['backend_message_id', 'source_state'])
     .where('account_id', '=', accountId)
     .execute()
 
-  const departed = rows
-    .filter((r) => r.source_state === 'present' && !present.has(r.backend_message_id))
-    .map((r) => r.backend_message_id)
-  const restored = rows
-    .filter((r) => r.source_state !== 'present' && present.has(r.backend_message_id))
-    .map((r) => r.backend_message_id)
+  const byState = new Map<SourceState, string[]>()
+  const unfoundIds: string[] = []
+  for (const row of rows) {
+    const found = standing.get(row.backend_message_id)
+    if (found === undefined) {
+      if (row.source_state === 'present') {
+        unfoundIds.push(row.backend_message_id)
+      }
+      continue
+    }
+    if (found === row.source_state) {
+      continue
+    }
+    const ids = byState.get(found) ?? []
+    ids.push(row.backend_message_id)
+    byState.set(found, ids)
+  }
 
+  let realigned = 0
+  for (const [state, ids] of byState) {
+    realigned += await setSourceState(db, accountId, ids, state, now)
+  }
   return {
     accountId,
-    archived: await setSourceState(db, accountId, departed, 'archived', now),
-    restored: await setSourceState(db, accountId, restored, 'present', now),
+    realigned,
+    unfound: await setSourceState(db, accountId, unfoundIds, 'archived', now),
   }
 }
 
@@ -295,10 +337,10 @@ export interface ResyncSummary {
   readonly enqueued: number
   /** Present ids whose fetch/upsert failed and were skipped. */
   readonly failedMessages: number
-  /** Rows flipped present → archived (left the inbox). */
-  readonly archived: number
-  /** Rows flipped non-present → present (back in the inbox). */
-  readonly restored: number
+  /** Rows the snapshot named whose stored standing was stale. */
+  readonly realigned: number
+  /** Rows the snapshot did not name that were still recorded `present`. */
+  readonly unfound: number
 }
 
 /**
@@ -322,13 +364,13 @@ export async function resyncAccount(
     settingsJson: account.settingsJson,
     lastPolledAt: account.lastPolledAt,
   }
-  const { presentBackendIds } = await provider.reconcile(providerAccount)
+  const { entries } = await provider.snapshot(providerAccount)
 
   let refetched = 0
   let newMessages = 0
   let enqueued = 0
   let failedMessages = 0
-  for (const backendMessageId of presentBackendIds) {
+  for (const { backendMessageId } of entries) {
     try {
       const fetched = await provider.fetchMetadata(providerAccount, backendMessageId)
       const { messageId, isNew } = await upsertMessage(db, account.id, fetched, now)
@@ -352,15 +394,15 @@ export async function resyncAccount(
     }
   }
 
-  const align = await alignSourceState(db, account.id, new Set(presentBackendIds), now)
+  const align = await alignSourceState(db, account.id, entries, now)
   return {
     accountId: account.id,
     refetched,
     newMessages,
     enqueued,
     failedMessages,
-    archived: align.archived,
-    restored: align.restored,
+    realigned: align.realigned,
+    unfound: align.unfound,
   }
 }
 

@@ -31,13 +31,15 @@
 import type { SourceState } from '@grinbox/shared'
 import type { DB } from '../db/schema.js'
 import { parseGmailMessage } from './gmail-shapes.js'
+import type { AccountCapabilities } from './account-capabilities.js'
+import { allCapabilities } from './account-capabilities.js'
 import type {
   CandidateListing,
   Category,
   FetchedMessage,
+  MailboxSnapshot,
   Provider,
   ProviderAccount,
-  ReconcileSnapshot,
   SourceStateDelta,
   ThreadMembership,
 } from './provider.js'
@@ -379,9 +381,25 @@ export class GmailProvider implements Provider {
     }
   }
 
-  async reconcile(account: ProviderAccount): Promise<ReconcileSnapshot> {
+  /**
+   * The whole-mailbox snapshot (d-cd0jnrdj). Gmail reports its inbox, each
+   * Message standing `present`; a known Message the snapshot does not name is
+   * one this pass did not find, and the reconcile records it as departed rather
+   * than claiming which way it went.
+   */
+  async snapshot(account: ProviderAccount): Promise<MailboxSnapshot> {
     const client = this.makeClient(account)
-    const presentBackendIds = await client.listAllMessageIds(reconcileQuery())
-    return { presentBackendIds }
+    const ids = await client.listAllMessageIds(reconcileQuery())
+    return { entries: ids.map((backendMessageId) => ({ backendMessageId, state: 'present' as const })) }
+  }
+
+  /**
+   * Gmail carries every operation on every Account: labels are its durable
+   * metadata, archiving and filing are label changes that lose nothing, and the
+   * Account sends its own mail. The declaration is still made per Account
+   * (d-bzw8qoiy) — it is the same for all of them here.
+   */
+  declareCapabilities(_account: ProviderAccount): Promise<AccountCapabilities> {
+    return Promise.resolve(allCapabilities(Math.floor(Date.now() / 1000)))
   }
 }

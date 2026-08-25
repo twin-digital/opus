@@ -38,6 +38,7 @@ import type {
   MailboxBodyResult,
   MailboxClient,
   MailboxFetchArgs,
+  MailboxFileArgs,
   MailboxListArgs,
   MakeResourceClient,
   PushoverClient,
@@ -101,6 +102,7 @@ export interface UnderlyingClients {
   readonly mailbox: {
     apply_category(args: MailboxApplyCategoryArgs, signal: AbortSignal): Promise<{ applied: boolean }>
     archive(args: MailboxArchiveArgs, signal: AbortSignal): Promise<{ archived: boolean }>
+    file(args: MailboxFileArgs, signal: AbortSignal): Promise<{ filed: boolean }>
     fetch_metadata(args: MailboxFetchArgs, signal: AbortSignal): Promise<{ headers: Record<string, string> }>
     fetch_body(args: MailboxFetchArgs, signal: AbortSignal): Promise<MailboxBodyResult>
     list_messages(args: MailboxListArgs, signal: AbortSignal): Promise<{ ids: string[] }>
@@ -268,7 +270,10 @@ function makeMailboxClient(deps: ResourceClientFactoryDeps): MailboxClient {
         'apply_category',
         () => deps.clients.mailbox.apply_category(args, deps.signal),
         () => ({}),
-        (v) => ({ applied: v.applied }),
+        // The run records the Category actually applied, which is what the
+        // mailbox now carries rather than what the template composed
+        // (d-mbh2pthe).
+        (v) => ({ category: args.category, applied: v.applied }),
       ),
     archive: (args) =>
       meter(
@@ -278,6 +283,15 @@ function makeMailboxClient(deps: ResourceClientFactoryDeps): MailboxClient {
         () => deps.clients.mailbox.archive(args, deps.signal),
         () => ({}),
         (v) => ({ archived: v.archived }),
+      ),
+    file: (args) =>
+      meter(
+        deps,
+        'mailbox',
+        'file',
+        () => deps.clients.mailbox.file(args, deps.signal),
+        () => ({}),
+        (v) => ({ folder: args.folder, filed: v.filed }),
       ),
     fetch_metadata: (args) =>
       meter(

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@grinbox/web",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "The grinbox browser application: a client of the daemon's API with no privileged path.",
   "type": "module",
   "scripts": {
@@ -47,7 +47,7 @@
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.1.0",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",

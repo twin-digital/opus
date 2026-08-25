@@ -42,7 +42,16 @@ describe('operator registry', () => {
     // this?" gate. Other suites derive membership from
     // `operatorTypeKeySchema.options`.
     const keys = listOperatorTypes().map((t) => t.type_key)
-    expect(keys).toEqual(['llm_tagger', 'rule_based_tagger', 'notify', 'apply_category', 'archive', 'digest_delivery'])
+    expect(keys).toEqual([
+      'llm_tagger',
+      'rule_based_tagger',
+      'notify',
+      'apply_category',
+      'archive',
+      'file',
+      'set_aside',
+      'digest_delivery',
+    ])
   })
 
   it('exposes the current code_version per implemented type', () => {

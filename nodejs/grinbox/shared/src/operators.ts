@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { forbiddenCategoryTemplateChars } from './category-name.js'
+import { folderNameSchema } from './folders.js'
 import { modelIdSchema } from './models.js'
 import { notificationKindSchema } from './notifications.js'
 import { archiveDelaySecondsSchema } from './pending-archive.js'
@@ -28,6 +30,8 @@ export const operatorTypeKeySchema = z.enum([
   'notify',
   'apply_category',
   'archive',
+  'file',
+  'set_aside',
   'digest_delivery',
 ])
 export type OperatorTypeKey = z.infer<typeof operatorTypeKeySchema>
@@ -248,6 +252,26 @@ export type NotifyConfig = z.infer<typeof notifyConfigSchema>
 // --- Apply Category ---
 
 /**
+ * A Category template: the text a Category name is composed from. What the
+ * user saves is checked for the characters the template's own text carries,
+ * and a barred one refuses the save naming it (d-mbh2pthe). What a placeholder
+ * renders is unknown until a Triage runs and is made carriable then, by
+ * {@link sanitizeCategoryName}.
+ */
+export const categoryTemplateSchema = z
+  .string()
+  .min(1)
+  .superRefine((template, ctx) => {
+    const forbidden = forbiddenCategoryTemplateChars(template)
+    if (forbidden.length > 0) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `a category cannot carry ${forbidden.map((c) => `'${c}'`).join(', ')}`,
+      })
+    }
+  })
+
+/**
  * Apply Category config. Adds a Grinbox-owned Category to the Message on its
  * backend; `category_template` is the (possibly templated) Category name. The
  * optional `when` gate restricts firing to Triages whose `tag_key` Tag is in
@@ -255,7 +279,7 @@ export type NotifyConfig = z.infer<typeof notifyConfigSchema>
  * every Message, so it is usually absent.
  */
 export const applyCategoryConfigSchema = z.object({
-  category_template: z.string().min(1),
+  category_template: categoryTemplateSchema,
   when: actionWhenSchema.optional(),
 })
 export type ApplyCategoryConfig = z.infer<typeof applyCategoryConfigSchema>
@@ -282,6 +306,45 @@ export const archiveConfigSchema = z.object({
   when: actionWhenSchema.optional(),
 })
 export type ArchiveConfig = z.infer<typeof archiveConfigSchema>
+
+// --- File ---
+
+/**
+ * File config (d-jj2mymbi). Moves the Message into a folder of the user's
+ * Account, named literally here rather than composed from the Message — a
+ * folder is the user's to name, and grinbox creates none. Where the Account
+ * has no folder of that name the operation fails, and the Operator's dependents
+ * skip as they do on any failure.
+ *
+ * The name is matched against the names the server lists character for
+ * character (d-k8va629q). The optional `when` gate restricts firing to Triages
+ * whose `tag_key` Tag is in `equals` (see {@link actionWhenSchema}).
+ */
+export const fileConfigSchema = z.object({
+  folder: folderNameSchema,
+  when: actionWhenSchema.optional(),
+})
+export type FileConfig = z.infer<typeof fileConfigSchema>
+
+// --- Set aside ---
+
+/**
+ * Set Aside config (d-hj9nac5f). One thing the user configures to mark a
+ * Message for later on every Account they have, carried out the best way each
+ * Account's backend allows: on an Account that can apply Categories it applies
+ * `category_template`; on one that cannot but can file, it files into
+ * `folder`; on an Account that can do neither it fails.
+ *
+ * Both members are required — the point of the type is that one configuration
+ * covers both kinds of Account, so an Account carrying only the other half is
+ * still served.
+ */
+export const setAsideConfigSchema = z.object({
+  category_template: categoryTemplateSchema,
+  folder: folderNameSchema,
+  when: actionWhenSchema.optional(),
+})
+export type SetAsideConfig = z.infer<typeof setAsideConfigSchema>
 
 // --- Digest delivery ---
 
@@ -441,6 +504,8 @@ export const OPERATOR_TYPE_TRIGGERS = {
   notify: 'message',
   apply_category: 'message',
   archive: 'message',
+  file: 'message',
+  set_aside: 'message',
   digest_delivery: 'schedule',
 } as const satisfies Record<OperatorTypeKey, 'message' | 'schedule'>
 
@@ -460,6 +525,8 @@ export const operatorConfigSchemas = {
   notify: notifyConfigSchema,
   apply_category: applyCategoryConfigSchema,
   archive: archiveConfigSchema,
+  file: fileConfigSchema,
+  set_aside: setAsideConfigSchema,
   digest_delivery: digestDeliveryConfigSchema,
 } as const satisfies Record<OperatorTypeKey, z.ZodType>
 

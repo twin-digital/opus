@@ -20,6 +20,7 @@ import type {
   OperatorRunResult,
   OperatorType,
   ResourceClients,
+  RunAccount,
 } from './types.js'
 
 /** The snapshot a `triage_operator_runs` row carries (the worker passes it in). */
@@ -45,6 +46,12 @@ export interface RunOperatorArgs {
    * for Notify runs; absent for every other type.
    */
   readonly notifications?: NotificationGate
+  /**
+   * The Message's Account and what its backend last declared it can carry
+   * (d-bzw8qoiy). The worker loads it per run; an Operator that behaves
+   * differently by Account reads it.
+   */
+  readonly account?: RunAccount
   /**
    * Snapshot → behavioral type resolver. Defaults to the production
    * {@link resolveSnapshot} over the code-resident registry. Injectable only so
@@ -96,6 +103,7 @@ export async function runOperator(snapshot: OperatorSnapshot, args: RunOperatorA
     resources,
     signal: args.signal,
     notifications: args.notifications,
+    account: args.account,
   })
 
   validateOutputTags(type, contract, result)

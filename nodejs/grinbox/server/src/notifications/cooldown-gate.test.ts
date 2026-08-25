@@ -158,6 +158,7 @@ describe('notify with a kind (d-vn2jdxbs, d-5amonj40, d-6ptxams7)', () => {
       mailbox: {
         apply_category: unused,
         archive: unused,
+        file: unused,
         fetch_metadata: unused,
         fetch_body: unused,
         list_messages: unused,

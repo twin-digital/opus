@@ -12,6 +12,10 @@
  *    (`fetched.receivedAt === null`), store `created_at` so the
  *    `idx_messages_account_received` index covers every row.
  *  - `headers_json`: the normalized header map, serialized.
+ *  - `imap_*`: where the backend currently holds the Message, for a backend
+ *    whose identity does not follow it between folders (d-k4nt8zbu). Rewritten
+ *    on every fetch that reports one; a backend reporting none leaves the
+ *    columns alone.
  *  - body semantics: the read path fetches metadata only, so on insert the body
  *    fields stay NULL and `body_fetched_at` stays NULL ("never attempted").
  *    `body_fetched_at` is set only when `fetched.bodyFetched` is true — i.e.,
@@ -77,6 +81,9 @@ export async function upsertMessage(
       created_at: now,
       body_fetched_at: bodyFetchedAt,
       headers_json: headersJson,
+      imap_folder: fetched.imapLocation?.folder ?? null,
+      imap_uidvalidity: fetched.imapLocation?.uidValidity ?? null,
+      imap_uid: fetched.imapLocation?.uid ?? null,
     })
     .onConflict((oc) =>
       oc.columns(['account_id', 'backend_message_id']).doUpdateSet((eb) => ({
@@ -94,6 +101,13 @@ export async function upsertMessage(
         body_text: fetched.bodyFetched ? eb.ref('excluded.body_text') : eb.ref('messages.body_text'),
         body_html: fetched.bodyFetched ? eb.ref('excluded.body_html') : eb.ref('messages.body_html'),
         body_fetched_at: fetched.bodyFetched ? eb.ref('excluded.body_fetched_at') : eb.ref('messages.body_fetched_at'),
+        // Where the backend holds the Message now, rewritten on every fetch: a
+        // moved message is identified afresh by its destination (f-1hjkefq3).
+        // A backend supplying no location leaves what was there.
+        imap_folder: fetched.imapLocation ? eb.ref('excluded.imap_folder') : eb.ref('messages.imap_folder'),
+        imap_uidvalidity:
+          fetched.imapLocation ? eb.ref('excluded.imap_uidvalidity') : eb.ref('messages.imap_uidvalidity'),
+        imap_uid: fetched.imapLocation ? eb.ref('excluded.imap_uid') : eb.ref('messages.imap_uid'),
       })),
     )
     .returning('id')

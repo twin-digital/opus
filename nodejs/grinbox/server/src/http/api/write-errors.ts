@@ -14,13 +14,35 @@
  *  - anything else rethrows (a real 500 — not a user-correctable condition).
  */
 
-import type { ApiErrorBody } from '@grinbox/shared'
+import { type ApiErrorBody, FOLDER_ROLES, type FolderRole } from '@grinbox/shared'
 import { z } from 'zod'
 import { PipelineNotAssignableError, PollIntervalOutOfRangeError } from '../../config/account-config.js'
 import { CooldownConflictError, InvalidKindNameError } from '../../config/cooldown-config.js'
 import { LimitConflictError, SeededLimitError } from '../../config/limit-config.js'
 import { CredentialInUseError, NotFoundError, PipelineValidationError } from '../../pipeline/operator-save.js'
 import { PipelineNameConflictError } from '../../pipeline/pipeline-config.js'
+
+/**
+ * The refusal code for a schema rejection. Two cases carry their own code so
+ * the interface can put the message where the user is looking (d-oaaz2fwk):
+ * a Category template whose own text carries a character a Category may not
+ * (d-mbh2pthe), and two folder roles naming one folder (d-zxvkt95o).
+ * Everything else is the generic `invalid_config`.
+ */
+function zodRefusalCode(err: z.ZodError): 'invalid_category_name' | 'duplicate_folder_role' | 'invalid_config' {
+  const paths = err.issues.map((issue) => issue.path.map(String))
+  if (paths.some((path) => path.includes('category_template'))) {
+    return 'invalid_category_name'
+  }
+  if (
+    err.issues.some(
+      (issue, index) => issue.code === 'custom' && FOLDER_ROLES.includes((paths[index]?.at(-1) ?? '') as FolderRole),
+    )
+  ) {
+    return 'duplicate_folder_role'
+  }
+  return 'invalid_config'
+}
 
 /** A status + the structured refusal body produced from a helper exception. */
 export interface MappedError {
@@ -51,7 +73,7 @@ export function mapWriteError(err: unknown): MappedError | null {
       status: 400,
       body: {
         error: {
-          code: 'invalid_config',
+          code: zodRefusalCode(err),
           message: 'The submitted configuration is invalid.',
           details: err.issues,
         },

@@ -1,21 +1,16 @@
 /**
- * Per-Resource-operation retry policy (d-eqwrgoyv). The retry happens *inside*
+ * Per-Resource-operation retry policy (d-b4yifc70). The retry happens *inside*
  * the client wrapper, transparent to the Operator, and is entirely separate from the Limit check:
  * the Limit is consumed once before the retry loop, so all attempts of one
  * operation count once against the Limit.
  *
- * Policy table (resource.operation → behavior):
+ * Three classes, and every operation falls in one:
  *
- * | Operation                       | Policy                          |
- * |---------------------------------|---------------------------------|
- * | `pushover_api.send_notification`| no retry (non-idempotent)       |
- * | `mail_sender.send_message`      | no retry (double-send is bad)   |
- * | `mailbox.apply_category`        | retry 2× with backoff           |
- * | `mailbox.archive`               | retry 2× with backoff           |
- * | `mailbox.fetch_metadata`        | retry 3× with exponential backoff |
- * | `mailbox.fetch_body`            | retry 3× with exponential backoff |
- * | `mailbox.list_messages`         | retry 3× with exponential backoff |
- * | `llm_bedrock.invoke_model`      | retry 3× with exponential backoff |
+ * | Class                                  | Operations                                                        | Policy                              |
+ * |----------------------------------------|-------------------------------------------------------------------|-------------------------------------|
+ * | a read — a mailbox listing, a message's metadata or body, a model | `mailbox.fetch_metadata`, `mailbox.fetch_body`, `mailbox.list_messages`, `llm_bedrock.invoke_model` | 3 further attempts, doubling wait |
+ * | a write to the mailbox                 | `mailbox.apply_category`, `mailbox.archive`, `mailbox.file`        | 2 further attempts, fixed wait      |
+ * | a notification, a send, or no policy of its own | `pushover_api.send_notification`, `mail_sender.send_message` | never retried                       |
  *
  * The `AbortSignal` is honored: if it aborts (the Operator timeout), the wrapper
  * stops retrying and rejects immediately. The underlying op is also expected to
@@ -55,6 +50,13 @@ export const RETRY_POLICIES: Readonly<Record<string, RetryPolicy>> = {
     exponential: false,
   },
   'mailbox.archive': {
+    maxRetries: 2,
+    baseDelayMs: 200,
+    exponential: false,
+  },
+  // Every write to the mailbox takes the same two further attempts at a fixed
+  // wait (d-b4yifc70), filing included.
+  'mailbox.file': {
     maxRetries: 2,
     baseDelayMs: 200,
     exponential: false,

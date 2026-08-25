@@ -24,6 +24,7 @@
  */
 
 import type { SourceState } from '@grinbox/shared'
+import type { AccountCapabilities } from './account-capabilities.js'
 
 /**
  * The minimal Account context a Provider needs. A projection of the `accounts`
@@ -66,13 +67,24 @@ export interface CandidateListing {
 }
 
 /**
- * A point-in-time snapshot of which Messages are currently in the inbox, for the
- * reconcile backstop. `presentBackendIds` is the full set of in-inbox backend
- * ids (the Provider paginates the backend's list). The poll loop diffs it against
- * stored rows to heal source-state drift the incremental feed missed.
+ * One message the whole-mailbox snapshot found, with the standing it has
+ * (d-cd0jnrdj). Every backend produces it: Gmail from the labels the message
+ * carries, IMAP from which of the Account's four folders it is in.
  */
-export interface ReconcileSnapshot {
-  readonly presentBackendIds: readonly string[]
+export interface SnapshotEntry {
+  readonly backendMessageId: string
+  readonly state: SourceState
+}
+
+/**
+ * A point-in-time whole-mailbox snapshot, for the reconcile backstop
+ * (d-gj8j4np0). Each entry reports a Message with the standing it has, not
+ * merely its presence (d-cd0jnrdj); a Message the snapshot does not name is one
+ * the backend did not find. The poll loop diffs it against stored rows to heal
+ * source-state drift the incremental feed missed.
+ */
+export interface MailboxSnapshot {
+  readonly entries: readonly SnapshotEntry[]
 }
 
 /**
@@ -101,6 +113,12 @@ export interface FetchedMessage {
   readonly bodyFetched: boolean
   readonly bodyText?: string | null
   readonly bodyHtml?: string | null
+  /**
+   * Where the backend currently holds the Message, for backends whose message
+   * identity does not follow it between folders (d-k4nt8zbu). The upsert stores
+   * it; a backend whose ids follow the Message on their own supplies none.
+   */
+  readonly imapLocation?: { folder: string; uidValidity: number; uid: number }
 }
 
 /**
@@ -125,8 +143,15 @@ export interface Category {
 }
 
 /**
- * The seam every mail backend implements. The poll loop and the rest of the
- * Daemon depend only on this interface, never on a concrete Provider.
+ * The poll seam every mail backend implements (d-x3aqw6up): enumerating
+ * candidates, fetching metadata, applying a category, reporting thread
+ * placement, taking the whole-mailbox snapshot the reconcile reads, and
+ * declaring what the Account supports. The resource backends — archiving,
+ * filing, fetching a body, sending — are the other seam, in
+ * `resources/provider-backends.ts`.
+ *
+ * The poll loop and the rest of the Daemon depend only on this interface, never
+ * on a concrete Provider.
  */
 export interface Provider {
   /**
@@ -149,10 +174,21 @@ export interface Provider {
   threadMembership(account: ProviderAccount, backendMessageId: string): Promise<ThreadMembership>
 
   /**
-   * Snapshot the Account's current inbox membership for the reconcile backstop
-   * (see {@link ReconcileSnapshot}). Heavier than `listCandidates` (a full
-   * paginated list, not an incremental delta), so the poll loop runs it on a
-   * coarse cadence, not every poll.
+   * Snapshot the whole mailbox with each Message's standing, for the reconcile
+   * backstop (see {@link MailboxSnapshot}). Heavier than `listCandidates` (a
+   * full paginated list, not an incremental delta), so the poll loop runs it on
+   * a coarse cadence, not every poll.
    */
-  reconcile(account: ProviderAccount): Promise<ReconcileSnapshot>
+  snapshot(account: ProviderAccount): Promise<MailboxSnapshot>
+
+  /**
+   * Read what this Account supports, straight from the backend (d-bzw8qoiy).
+   * The poll loop calls it each poll and stores the result on the Account; every
+   * other path reads what was stored. This is the declaration a backend owes
+   * (d-f9tj4wnr), made per Account rather than once per backend, because two
+   * accounts of one backend can differ — an IMAP server without MOVE or UIDPLUS
+   * cannot archive or file, and an arrival folder that does not admit
+   * client-defined keywords cannot carry a category.
+   */
+  declareCapabilities(account: ProviderAccount): Promise<AccountCapabilities>
 }
