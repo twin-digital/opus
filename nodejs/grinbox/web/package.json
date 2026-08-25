@@ -63,7 +63,7 @@
     "eslint-config-prettier": "catalog:",
     "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "catalog:",
-    "jsdom": "^29.0.0",
+    "jsdom": "^30.0.0",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "tailwindcss": "^4.3.3",
