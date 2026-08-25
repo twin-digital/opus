@@ -47,6 +47,12 @@
       "commitMessageTopic": "derived-surface source {{depName}}"
     },
     {
+      "description": "MobX and its React bindings peer-pin each other and are released in lockstep: `mobx-react-lite@4` requires `mobx ^6.9.0`, `mobx-react-lite@5` requires `mobx ^7.0.0` (same for `mobx-react` 9/10). Split across separate PRs, whichever lands first leaves the pair mismatched — and CI does not catch it, because `mobx-react-lite` is imported only by refbash's `observer` components while its suite covers hooks alone: `mobx-react-lite@5` on `mobx@6` throws `mobx-react-lite requires mobx at least version 7` at module load, yet build, typecheck, and every test still pass on a TUI that cannot start (#381/#382). Grouping keeps the peer-locked bump in one reviewable PR. `separateMajorMinor: false` holds them together when only one side has a major, which is the case that split them; the group also pulls their non-majors out of the `group:allNonMajor` batch, where they still ride the auto-merge rule above.",
+      "matchPackageNames": ["mobx", "mobx-react-lite", "mobx-react"],
+      "groupName": "mobx",
+      "separateMajorMinor": false
+    },
+    {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
       "matchManagers": ["nvm"],
       "enabled": false
