@@ -54,6 +54,8 @@ export interface LynxClientOptions {
   readonly baseUrl?: string
   /** Durable token store; defaults to in-memory (see `TokenCache`). */
   readonly cache?: TokenCache
+  /** Invoked on every auth-endpoint call (successful or not) — feeds the token-churn metric. */
+  readonly onLogin?: () => void
 }
 
 export class LynxApiError extends Error {
@@ -72,6 +74,7 @@ export class LynxClient {
   private readonly userId: string
   private readonly baseUrl: string
   private readonly cache: TokenCache
+  private readonly onLogin: (() => void) | undefined
   /** Coalesces concurrent logins so parallel calls mint at most one token. */
   private inflightLogin: Promise<string> | undefined
 
@@ -81,6 +84,7 @@ export class LynxClient {
     this.userId = options.userId
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '')
     this.cache = options.cache ?? inMemoryTokenCache()
+    this.onLogin = options.onLogin
   }
 
   /** All reservations for a property in a poll bucket (paginated under the hood). */
@@ -185,6 +189,7 @@ export class LynxClient {
    * the same string — Lynx accounts use email addresses as their login handle).
    */
   private async login(): Promise<string> {
+    this.onLogin?.()
     const res = await fetch(`${this.baseUrl}${PREFIX}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

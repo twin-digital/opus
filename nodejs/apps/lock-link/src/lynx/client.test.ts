@@ -86,6 +86,35 @@ describe('lynx client', () => {
     expect(stored).toBe(world.token)
   })
 
+  it('reports each auth-endpoint call through onLogin, including failed mints', async () => {
+    let mints = 0
+    const counting = new LynxClient({
+      baseUrl: fake.baseUrl,
+      username: world.credentials.username,
+      password: world.credentials.password,
+      userId: '232753',
+      onLogin: () => {
+        mints += 1
+      },
+    })
+    await counting.listProperties()
+    await counting.listSmartLocks(72230) // token cached — must not count a second mint
+    expect(mints).toBe(1)
+
+    let failedMints = 0
+    const bad = new LynxClient({
+      baseUrl: fake.baseUrl,
+      username: 'nope',
+      password: 'wrong',
+      userId: '232753',
+      onLogin: () => {
+        failedMints += 1
+      },
+    })
+    await expect(bad.listProperties()).rejects.toBeInstanceOf(LynxApiError)
+    expect(failedMints).toBe(1)
+  })
+
   it('coalesces concurrent first-calls into a single login', async () => {
     // Both calls start with an empty cache; the in-flight login promise must be shared.
     await Promise.all([client.listProperties(), client.listSmartLocks(72230)])
