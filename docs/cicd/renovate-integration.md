@@ -283,7 +283,7 @@ Reusable steps:
 5. **Commit via `createCommitOnBranch`** (signed): `expectedHeadOid` pins the write to the tip we saw —
    a stale tip (Renovate force-pushed) fails the mutation and we re-sync + regenerate + retry (§6.4).
    The commit author is the App identity, which **must equal** `gitIgnoredAuthors`; the step asserts it
-   and warns on drift (§6.2).
+   and fails the job on drift (§6.2).
 
 Trigger rationale (`pull_request`, not `pull_request_target`) and the minting trust model are in §7.
 
@@ -302,9 +302,9 @@ checks, which re-runs the auto-merge gate (§6.8).
 
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
 **stop updating it** (maintainer-confirmed, #24882). **Mitigation:** `gitIgnoredAuthors:
-["290907000+twin-digital-agent[bot]@users.noreply.github.com"]` (the App identity that mints/commits)
+["290907000+skleinjung-agent[bot]@users.noreply.github.com"]` (the App identity that mints/commits)
 — and it **must equal** the commit author the API produces exactly (§10). The reusable step asserts
-this on every run and warns on drift.
+this on every run and fails the job on drift.
 
 ### 6.3 PR grows / Renovate rebases _(self-healing)_
 
@@ -332,7 +332,7 @@ overlapping entry is harmless.
 
 The App-token commit **does** re-trigger workflows (intentionally — it re-runs the §6.8 gate on the
 commit that carries the changeset). The loop is still bounded: (a) that re-trigger's `synchronize`
-has `actor == twin-digital-agent[bot]`, not `renovate[bot]`, so the **caller's gate skips** it — no
+has `actor == skleinjung-agent[bot]`, not `renovate[bot]`, so the **caller's gate skips** it — no
 second mint/commit; (b) the tool is idempotent — an unchanged state writes an identical file and
 commits nothing. Either alone breaks the loop.
 
@@ -354,19 +354,19 @@ token rather than `GITHUB_TOKEN` — the latter wouldn't re-run the gate on the 
 
 ### 6.9 Hazard summary
 
-| Hazard                                         | Mitigation                                                        |
-| ---------------------------------------------- | ----------------------------------------------------------------- |
-| Foreign commit freezes Renovate                | `gitIgnoredAuthors` (exact App-identity email)                    |
-| Renovate drops changeset on rebase             | self-heal via `synchronize`                                       |
-| Stale tip / concurrent force-push              | `expectedHeadOid` + regenerate-retry; `cancel-in-progress: false` |
-| Clobbering human changesets                    | manage only `renovate-<PR>.md`                                    |
-| Stale per-commit changeset files               | stable PR-keyed name (`renovate-<PR>.md`), full regenerate        |
-| Workflow self-loop                             | caller actor-gate skips the App commit + idempotent content       |
-| Unsigned commit rejected (signed-commits rule) | commit via GitHub API → "Verified" (§6.7)                         |
-| Auto-merge merges before changeset             | required `renovate-changeset-present` check (§6.8)                |
-| Privileged mint redirected by a tampered PR    | OIDC trust pinned to reusable `@main` + `actor` (§7)              |
-| Parse failure → spurious changeset             | errored path: annotate + write nothing (§4.4)                     |
-| Fork PR mints/pushes                           | forks get no `id-token` and can't push (§7)                       |
+| Hazard                                         | Mitigation                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| Foreign commit freezes Renovate                | `gitIgnoredAuthors` (exact App-identity email); mint job fails on drift |
+| Renovate drops changeset on rebase             | self-heal via `synchronize`                                             |
+| Stale tip / concurrent force-push              | `expectedHeadOid` + regenerate-retry; `cancel-in-progress: false`       |
+| Clobbering human changesets                    | manage only `renovate-<PR>.md`                                          |
+| Stale per-commit changeset files               | stable PR-keyed name (`renovate-<PR>.md`), full regenerate              |
+| Workflow self-loop                             | caller actor-gate skips the App commit + idempotent content             |
+| Unsigned commit rejected (signed-commits rule) | commit via GitHub API → "Verified" (§6.7)                               |
+| Auto-merge merges before changeset             | required `renovate-changeset-present` check (§6.8)                      |
+| Privileged mint redirected by a tampered PR    | OIDC trust pinned to reusable `@main` + `actor` (§7)                    |
+| Parse failure → spurious changeset             | errored path: annotate + write nothing (§4.4)                           |
+| Fork PR mints/pushes                           | forks get no `id-token` and can't push (§7)                             |
 
 ---
 
@@ -440,9 +440,9 @@ auto-merge** has an ordered rollout, because the AWS trust must match the reusab
 2. **Create the AWS role + secret:** a `kms:Sign`-only role with trust pinned to that
    `job_workflow_ref@refs/heads/main` + `actor == renovate[bot]` + `repository`; add it as
    `GH_APP_MINTER_ROLE_ARN_RENOVATE` (§7).
-3. **Set `gitIgnoredAuthors`** to `290907000+twin-digital-agent[bot]@users.noreply.github.com` (the
+3. **Set `gitIgnoredAuthors`** to `290907000+skleinjung-agent[bot]@users.noreply.github.com` (the
    App identity that now authors the commit) — it **must equal** the API commit author exactly or the
-   freeze hazard returns (§6.2). The reusable step asserts this and warns on drift.
+   freeze hazard returns (§6.2). The reusable step asserts this and fails the job on drift.
 4. **Make `renovate-changeset-present` a required status check**, then set `automerge: true` in
    `renovate.json` (§6.8). Order matters: enabling auto-merge before the gate is required would let a
    PR merge without its changeset.
