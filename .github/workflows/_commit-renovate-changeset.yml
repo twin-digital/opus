@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # An API commit's author is the App-token identity (twin-digital-agent[bot]); it MUST equal
+      # An API commit's author is the App-token identity (skleinjung-agent[bot]); it MUST equal
       # renovate.json's gitIgnoredAuthors or Renovate freezes the PR (§6.2). Asserted below.
-      EXPECTED_AUTHOR_EMAIL: '290907000+twin-digital-agent[bot]@users.noreply.github.com'
+      EXPECTED_AUTHOR_EMAIL: '290907000+skleinjung-agent[bot]@users.noreply.github.com'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

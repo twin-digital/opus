@@ -302,7 +302,7 @@ checks, which re-runs the auto-merge gate (§6.8).
 
 A non-Renovate commit on a Renovate branch normally makes Renovate treat the PR as user-edited and
 **stop updating it** (maintainer-confirmed, #24882). **Mitigation:** `gitIgnoredAuthors:
-["290907000+twin-digital-agent[bot]@users.noreply.github.com"]` (the App identity that mints/commits)
+["290907000+skleinjung-agent[bot]@users.noreply.github.com"]` (the App identity that mints/commits)
 — and it **must equal** the commit author the API produces exactly (§10). The reusable step asserts
 this on every run and warns on drift.
 
@@ -332,7 +332,7 @@ overlapping entry is harmless.
 
 The App-token commit **does** re-trigger workflows (intentionally — it re-runs the §6.8 gate on the
 commit that carries the changeset). The loop is still bounded: (a) that re-trigger's `synchronize`
-has `actor == twin-digital-agent[bot]`, not `renovate[bot]`, so the **caller's gate skips** it — no
+has `actor == skleinjung-agent[bot]`, not `renovate[bot]`, so the **caller's gate skips** it — no
 second mint/commit; (b) the tool is idempotent — an unchanged state writes an identical file and
 commits nothing. Either alone breaks the loop.
 
@@ -440,7 +440,7 @@ auto-merge** has an ordered rollout, because the AWS trust must match the reusab
 2. **Create the AWS role + secret:** a `kms:Sign`-only role with trust pinned to that
    `job_workflow_ref@refs/heads/main` + `actor == renovate[bot]` + `repository`; add it as
    `GH_APP_MINTER_ROLE_ARN_RENOVATE` (§7).
-3. **Set `gitIgnoredAuthors`** to `290907000+twin-digital-agent[bot]@users.noreply.github.com` (the
+3. **Set `gitIgnoredAuthors`** to `290907000+skleinjung-agent[bot]@users.noreply.github.com` (the
    App identity that now authors the commit) — it **must equal** the API commit author exactly or the
    freeze hazard returns (§6.2). The reusable step asserts this and warns on drift.
 4. **Make `renovate-changeset-present` a required status check**, then set `automerge: true` in
