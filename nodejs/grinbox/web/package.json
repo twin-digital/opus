@@ -47,7 +47,7 @@
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.1.0",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
