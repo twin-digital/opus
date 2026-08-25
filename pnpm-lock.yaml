@@ -2842,7 +2842,7 @@ importers:
     dependencies:
       '@julusian/midi':
         specifier: ^3.6.1
-        version: 3.7.2
+        version: 3.8.0
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -4153,8 +4153,8 @@ packages:
     resolution: {integrity: sha512-sC6tTMAMZsHOQILAv/R0On5tKKhzBQUjdyYWzh9l0UQeNry12CFIyRWK1Mep5xCHWCTUB0w4gxngpciA5PgN/Q==}
     engines: {node: '>=14.15'}
 
-  '@julusian/midi@3.7.2':
-    resolution: {integrity: sha512-dKYCVrnjnHII2YtVAQJLMakQe66SfBFlcX1eMmHEb4hAzI6gflOmHLqNX66DwXnOgnbdoGyPaOCTHHHE/vrGkg==}
+  '@julusian/midi@3.8.0':
+    resolution: {integrity: sha512-zlOEsgDry/Wj1df1U6SfR2Z2RDHAZjXl9vFdV84DaaxmkA/7p6l1qX6yvCRAhKl9EnIpiAy+MrNrisKv+0N8Vw==}
     engines: {node: '>=14.15'}
 
   '@langchain/classic@1.0.34':
@@ -12690,7 +12690,7 @@ snapshots:
       node-addon-api: 6.1.0
       pkg-prebuilds: 1.1.0
 
-  '@julusian/midi@3.7.2':
+  '@julusian/midi@3.8.0':
     dependencies:
       node-addon-api: 6.1.0
       pkg-prebuilds: 1.1.0
