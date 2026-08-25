@@ -1,27 +1,32 @@
 # @twin-digital/rpg-core
 
 Actor presets for Minecraft Bedrock adventures. An adventure spawns a named, durable NPC by naming
-one preset — the library carries the preset's identity and default name, and the companion assets
-pack (`RPG Core Actors`, from `@twin-digital/rpg-core-pack`) carries the entity definitions, models,
-textures and animations. The adventure carries neither: only its own story, triggers, and logic.
+one preset. This package carries both halves of an actor: `src/` holds the presets, the spawn call,
+and the handle it returns; `vendored_pack/` holds the entity definitions and the models, textures,
+and animations they render from. The adventure's author writes none of it — only their own story,
+triggers, and logic.
 
 ## Install
 
 ```sh
-npm install --save-dev @twin-digital/rpg-core
+pnpm add @twin-digital/rpg-core
 ```
 
-ESM only, TypeScript declarations included. The library is a development dependency, bundled into the
-adventure's own script at build time. Two more things make an actor appear:
+One `dependencies` entry, and nothing else. The adventure names this product in no pack manifest and
+declares no uuid: `@twin-digital/mc-dev-kit`'s build merges `vendored_pack/` into the adventure's own
+behavior and resource packs, under the adventure's namespace and header uuids. The adventure's
+release archive then carries everything an operator installs — there is no second archive, and an
+actor's two halves cannot arrive separately.
 
-- the adventure's behavior-pack manifest declares the assets pack's uuid and version in
-  `dependencies`
-- the adventure's release archive bundles the assets pack alongside its own, so an operator installs
-  one archive
+The adventure's behavior manifest should name its own resource half in `dependencies`, so activating
+the one activates both and the appearance cannot be left behind.
 
-Several installed adventures each carrying a copy of the assets pack is the expected state: a server
-deduplicates identical packs, and packs from different majors share no uuid and no name, so they
-coexist.
+That settles the world's pack stack, not what a player's client draws. A Bedrock server offers its
+resource packs to a joining client, and where `texturepack-required` is `false` the client may
+decline in one click and enter the world anyway — seeing nothing where the actors stand, while the
+library reports them present and, per its own contract, cannot tell the difference. An adventure
+that wants its actors seen tells its operators to set `texturepack-required=true`, which replaces
+the client's decline option with "Leave".
 
 ## Spawning an actor
 
@@ -38,16 +43,13 @@ world.afterEvents.worldLoad.subscribe(() => {
 })
 ```
 
-Call after `worldLoad`: the definitions check reads the entity-type catalog, which the engine
-refuses during early execution.
-
 - `name` overrides the preset's default display name (`Wizard`); omit it to keep the default.
-- `id` is a durable name of the adventure's own. Spawning again under a durable name already in the
-  world returns the actor already there — nothing about it, its name included, is changed — so a
-  spawn call at world load is idempotent across restarts. Pick names unlikely to collide with
-  another adventure's; the durable-name space is per world, not per adventure.
+- `id` is a durable name of the adventure's own, holding no `:`. Spawning again under a durable name
+  already in the world returns the actor already there — nothing about it, a display-name override
+  included, is changed — so a spawn call at world load is idempotent across restarts. The durable-name
+  space is keyed on the adventure's namespace, so two adventures cannot collide.
 
-The returned handle carries `preset`, `entityId`, the durable `id` if one was given, the underlying
+The handle carries `preset`, `entityId`, the durable `id` where one was given, the underlying
 `entity` for anything beyond this surface, and `remove()`, which also releases the durable name.
 
 ## Finding an actor later
@@ -59,30 +61,46 @@ const wizard = findActor('tower-wizard') // ActorHandle | undefined
 ```
 
 Resolves in a later session too: the durable name is carried in world state, not in the script's
-memory.
+memory. A name no record holds returns `undefined` with no lookup made; a record whose actor is gone
+returns `undefined` and is left in place until a spawn under the name overwrites it.
 
-## The definitions check
+## Identifiers are the adventure's
 
-Every call acting on an actor first checks that the entity type its preset names is registered in
-the world. When it is not — the assets pack missing or inactive — the call throws
-`ActorDefinitionsMissingError` before doing anything, naming the preset, the identifier, and the
-pack that supplies it. No call half-succeeds.
+There is no exported entity identifier, namespace, or pack name. An actor's identifier is
+`<adventure-namespace>:<prefix>.<preset>`, composed at call time — this package declares no
+namespace, mints no uuid, and puts no version in any name, so two adventures share no identifier
+whatever versions they were built against, and both work in one world.
 
-The check covers the definitions only. A call that passes it says nothing about the resource half:
-the library performs no runtime check of the resource pack and no path implies an actor will render.
-An archive shipping both halves together is what keeps the two in step.
+The prefix is the adventure's `minecraft.vendor` entry where it sets one, and otherwise `rpg`, this
+package's `minecraft.defaultAlias`. An adventure vendoring another library that also wants `rpg`
+resolves the collision by overriding it.
+
+Every call goes through `@twin-digital/mc-pack-runtime`'s checked calls, so an entity answering one
+of these identifiers without the adventure pack's own type family raises `ForeignEntityError` rather
+than being acted on. `ForeignEntityError` is re-exported here, so a consumer catches it without a
+second dependency.
+
+## What a successful call is evidence of
+
+Nothing beyond itself. This package makes no runtime check of an actor's definitions and none of its
+appearance: no lookup before acting, no counting of the world's pack stack, no path that implies an
+actor will render. What keeps the two halves in step is that they are content of packs the
+adventure's own build emitted from one source tree.
 
 ## Presets
 
-| preset   | identifier   | default name |
-| -------- | ------------ | ------------ |
-| `wizard` | `rpg:wizard` | `Wizard`     |
+| preset   | default name |
+| -------- | ------------ |
+| `wizard` | `Wizard`     |
 
-The registry (`PRESETS`, `PRESET_NAMES`, `NAMESPACE`, `PACK_NAME`) is exported: the assets pack
-builds its entity definitions from it at build time, so the identifiers the library names and the
-definitions the pack holds cannot come to disagree. At the first major the namespace is the bare
-token `rpg`; later majors carry the major in the token, and library and assets pack advance majors
-together.
+`PRESETS` and `PRESET_NAMES` are exported; a preset describes itself with its name and its default
+name, and holds no identifier.
+
+The wizard's appearance is vendored from the game's evoker at a pinned revision and re-identified
+under bare names — geometry, texture, and animations — so a Minecraft version change does not alter
+how it looks. The one vanilla name the resource half carries is the stock `evoker` material.
+`vendored-assets.yml` records the repository, the exact revision, and the path every file was taken
+from; re-vendoring is a change to that record.
 
 Actors do not speak: this release spawns, places, names, and removes them. Conversation is a later
 increment.

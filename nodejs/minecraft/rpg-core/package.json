@@ -1,8 +1,9 @@
 {
+  "private": true,
   "name": "@twin-digital/rpg-core",
   "version": "1.0.0",
   "description": "Actor presets for Minecraft Bedrock adventures: spawn a named, durable NPC by preset name.",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "module",
   "exports": {
     ".": {
@@ -15,6 +16,7 @@
   },
   "files": [
     "dist",
+    "vendored_pack",
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {
@@ -25,6 +27,9 @@
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@twin-digital/mc-pack-runtime": "workspace:*"
   },
   "peerDependencies": {
     "@minecraft/server": "catalog:"
@@ -51,5 +56,8 @@
   "engines": {
     "node": "24.x",
     "pnpm": "11.x"
+  },
+  "minecraft": {
+    "defaultAlias": "rpg"
   }
 }
