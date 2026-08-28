@@ -80,6 +80,8 @@ interface FixtureOptions {
   /** noiseBand carried on /api/evaluate (MC evaluator's model-error band). */
   noiseBand?: number
   extraCandidates?: Record<string, unknown>[]
+  /** Serve the candidate list even off my turn (WAITING falls strip, stale SIMULATING rows). */
+  withCandidates?: boolean
 }
 
 const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> => {
@@ -173,7 +175,7 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
       ...(options.noiseBand === undefined ? {} : { noiseBand: options.noiseBand }),
       computing: options.computing === true,
       candidates:
-        options.myTurn === true ?
+        options.myTurn === true || options.withCandidates === true ?
           [
             {
               playerId: 'p-bowers',
@@ -327,10 +329,86 @@ describe('page rendering with fixture data', () => {
       expect(pbest?.textContent).toBe('62%')
       expect((pbest as HTMLElement).title).toBe('wins 62% of sampled drafts')
       expect(row?.querySelector('.delta .best-tag')?.textContent).toBe('BEST')
-      expect(document.getElementById('clockPick')?.textContent).toContain('simulating…')
+      // My-turn + computing: SIMULATING visuals with the my-turn ring, stale rows still live.
+      expect(document.getElementById('clockState')?.textContent).toBe('SIMULATING')
+      expect(document.getElementById('clockPanel')?.className).toContain('myturn')
+      expect(document.getElementById('clockPanel')?.className).toContain('stale')
+      expect((document.getElementById('clockStale') as HTMLElement).style.display).not.toBe('none')
+      expect(row?.querySelector('button.act[data-act="mine"]')).not.toBeNull()
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  describe('the always-visible clock panel states', () => {
+    const panel = (): HTMLElement => document.getElementById('clockPanel') as HTMLElement
+    const chip = (): HTMLElement => document.getElementById('clockState') as HTMLElement
+    const table = (): HTMLElement => document.getElementById('clockTable') as HTMLElement
+    const waitBody = (): HTMLElement => document.getElementById('clockWait') as HTMLElement
+
+    it('ON THE CLOCK: violet ring, fresh table, no stale note or wait body', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: true, myPickCount: 2 }))
+        expect(panel().style.display).not.toBe('none')
+        expect(chip().textContent).toBe('YOU ARE ON THE CLOCK')
+        expect(chip().className).toContain('on')
+        expect(panel().className).toContain('myturn')
+        expect(panel().className).not.toContain('stale')
+        expect(table().style.display).not.toBe('none')
+        expect((document.getElementById('clockStale') as HTMLElement).style.display).toBe('none')
+        expect(waitBody().style.display).toBe('none')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('WAITING: muted chip, no ring, table down, pick-away line plus the falls strip', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: false, myPickCount: 2, withCandidates: true }))
+        expect(panel().style.display).not.toBe('none')
+        expect(chip().textContent).toBe('WAITING')
+        expect(chip().className).toContain('wait')
+        expect(panel().className).not.toContain('myturn')
+        expect(table().style.display).toBe('none')
+        expect((document.getElementById('clockDot') as HTMLElement).style.display).toBe('none')
+        expect(waitBody().style.display).not.toBe('none')
+        expect(waitBody().textContent).toContain('You pick at #35 — 32 picks away')
+        expect(waitBody().textContent).toContain('IF HE FALLS TO YOU @35')
+        expect(waitBody().textContent).toContain('Brock Bowers')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('SIMULATING fresh: chip and progress hint only, no rows to show', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: false, computing: true }))
+        expect(panel().style.display).not.toBe('none')
+        expect(chip().textContent).toBe('SIMULATING')
+        expect(chip().className).toContain('sim')
+        expect(panel().className).not.toContain('myturn')
+        expect(panel().className).not.toContain('stale')
+        expect(table().style.display).toBe('none')
+        expect(waitBody().textContent).toContain('simulating draft outcomes')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('SIMULATING with stale rows off my turn: dimmed table, stale note, no ring', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: false, computing: true, withCandidates: true }))
+        expect(chip().textContent).toBe('SIMULATING')
+        expect(panel().className).toContain('stale')
+        expect(panel().className).not.toContain('myturn')
+        expect(table().style.display).not.toBe('none')
+        expect((document.getElementById('clockStale') as HTMLElement).style.display).not.toBe('none')
+        expect(document.getElementById('clockStale')?.textContent).toContain('numbers from before the last pick')
+        expect(document.querySelectorAll('#clockRows tr').length).toBeGreaterThan(0)
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
   })
 
   it('shows the panel ECR column on my turn, with room ADP one hover away', async () => {

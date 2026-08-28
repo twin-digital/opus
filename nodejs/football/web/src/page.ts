@@ -144,21 +144,30 @@ export const PAGE = `<!doctype html>
   .wait-pos { width: 28px; color: var(--muted-fg); flex-shrink: 0; }
   .wait-cell { cursor: help; }
 
-  #clockPanel { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary),
-    0 0 24px color-mix(in oklab, var(--primary) 25%, transparent); margin-bottom: 12px; }
+  /* The on-clock panel is always visible in-draft; the loud violet ring marks my turn only. */
+  #clockPanel { margin-bottom: 12px; border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); }
+  #clockPanel.myturn { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary),
+    0 0 24px color-mix(in oklab, var(--primary) 25%, transparent); }
   .clock-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .clock-title { font-size: 16px; font-weight: 700; letter-spacing: 0.06em; color: var(--primary); }
+  .clock-state { font-size: 18px; font-weight: 800; letter-spacing: 0.06em; line-height: 24px; padding: 0 12px; }
+  .clock-state.on { background: var(--primary); color: var(--primary-fg); }
+  .clock-state.sim { background: color-mix(in oklab, var(--primary) 22%, transparent); color: var(--primary); }
+  .clock-state.wait { background: var(--muted); color: var(--muted-fg); }
   .dot-pulse { width: 10px; height: 10px; border-radius: 999px; background: var(--primary);
     animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  /* Stale (mid-compute) numbers dim but stay clickable — drafting on one-pick-stale numbers is legal. */
+  #clockPanel.stale table, #clockPanel.stale #clockThreats { opacity: 0.55; }
+  .stale-note { color: var(--warning); font-size: 13px; margin: 0 0 6px; }
+  #clockWait { font-size: 14px; color: var(--muted-fg); padding: 2px 0; }
+  #clockWait b { color: var(--foreground); font-weight: 600; }
+  #clockWait .wait-line { font-size: 16px; color: var(--foreground); font-weight: 600; margin-bottom: 4px; }
   #clockPanel table { border: none; border-radius: 0; }
   #clockPanel thead th { position: static; }
   #clockPanel td.est { font-family: var(--font-mono); font-weight: 600; }
   #clockPanel td.delta { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
   tr.best td { background: color-mix(in oklab, var(--primary) 10%, transparent); }
   .best-tag { color: var(--success); font-weight: 700; }
-  #fallsPanel { margin-bottom: 12px; padding: 6px 12px; font-size: 14px; color: var(--muted-fg); }
-  #fallsPanel b { color: var(--foreground); font-weight: 600; }
 
   .btn-violet { background: transparent; border-color: var(--primary); color: var(--primary); }
   #mockBanner { display: none; position: sticky; top: 0; z-index: 30; align-items: center; gap: 12px;
@@ -265,11 +274,12 @@ export const PAGE = `<!doctype html>
     <div id="recapPanel" class="card" style="display:none"></div>
     <div id="clockPanel" class="card" style="display:none">
       <div class="clock-head">
-        <span class="dot-pulse"></span>
-        <span class="clock-title">YOU ARE ON THE CLOCK</span>
+        <span class="dot-pulse" id="clockDot"></span>
+        <span class="chip clock-state" id="clockState"></span>
         <span class="muted" id="clockPick"></span>
       </div>
-      <table>
+      <div id="clockStale" class="stale-note" style="display:none">numbers from before the last pick — refreshing</div>
+      <table id="clockTable">
         <thead>
           <tr>
             <th class="l">Player</th><th class="l">Pos</th>
@@ -284,10 +294,10 @@ export const PAGE = `<!doctype html>
         </thead>
         <tbody id="clockRows"></tbody>
       </table>
+      <div id="clockWait" style="display:none"></div>
       <div id="clockThreats"></div>
       <div id="kdNudge" style="display:none"></div>
     </div>
-    <div id="fallsPanel" class="card" style="display:none"></div>
     <div id="controls">
       <span id="tabs"></span>
       <input type="text" id="search" placeholder="search player / team">
@@ -639,76 +649,112 @@ function renderRecap() {
   panel.innerHTML = html.join('');
 }
 
+// The panel is always visible in-draft, in one of three states:
+//   SIMULATING (computing: true) — violet chip, pulsing dot; stale rows dim but stay live.
+//   WAITING — muted chip; body says when I pick and what falls to me.
+//   ON THE CLOCK — violet chip + ring, fresh candidate table.
+// My-turn + computing keeps the ring with the SIMULATING visuals.
 function renderClock() {
-  var clock = el('clockPanel'), falls = el('fallsPanel');
-  if (!S || !E || S.draft.complete || !E.candidates.length) {
-    clock.style.display = 'none'; falls.style.display = 'none';
+  var clock = el('clockPanel');
+  if (!S || !E || S.draft.complete) {
+    clock.style.display = 'none';
     return;
   }
-  if (E.myTurn) {
-    falls.style.display = 'none';
-    clock.style.display = '';
-    var band = noiseBand(), costly = costlyBand();
-    el('deltaH').title = 'Est team minus BEST: green = within ' + band +
-      ' pts (evaluation noise — effectively tied, break the tie on Back@), amber = real but modest cost (' +
-      band + '–' + costly + ' pts), muted = expensive (>' + costly + ' pts).' +
-      ' The small % is P(best): the share of sampled drafts where this pick finishes with the highest-scoring team';
-    // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
-    var nextTurn = E.myNextPicks[0];
-    el('clockPick').textContent = 'pick ' + E.currentOverall +
-      ' (R' + Math.ceil(E.currentOverall / S.league.size) + ')' +
-      (nextTurn ? ' — your next turn is ' + nextTurn : '') +
-      (E.computing ? ' · simulating…' : '');
-    el('backH').textContent = 'Back@' + (nextTurn || '—');
-    var html = [];
-    var top = E.candidates.slice(0, 10);
-    for (var i = 0; i < top.length; i++) {
-      var c = top[i];
-      var best = c.deltaVsBest === 0;
-      var bench = c.landsOn === 'BENCH';
-      var tied = c.exactTies > 1;
-      var pbest = (c.pBest === null || c.pBest === undefined) ? '' :
-        ' <span class="pbest" title="wins ' + Math.round(c.pBest * 100) + '% of sampled drafts' +
-        (tied ? '; exactly tied with ' + (c.exactTies - 1) + ' other candidate' + (c.exactTies > 2 ? 's' : '') : '') +
-        '">' + Math.round(c.pBest * 100) + '%' + (tied ? '≡' : '') + '</span>';
-      html.push('<tr class="' + (best ? 'best' : '') + '">' +
-        '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
-        '<td class="l">' + c.position + '</td>' +
-        '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
-        '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + pbest + '</td>' +
-        '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
-        '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
-          (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
-        '<td class="' + (bench ? 'ups-bench' : '') + '"' + (bench ? ' title="lands on bench — upside is the ranking key"' : '') + '>' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
-        '<td class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + threatMark(c) + '</td>' +
-        '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
-        '</tr>');
-    }
-    el('clockRows').innerHTML = html.join('');
-    var threatened = E.candidates.filter(function (c) { return c.threat && c.threat.threatLevel >= 1; })
-      .sort(function (a, b) { return b.threat.pTakenBeforeMyPick - a.threat.pTakenBeforeMyPick; })
-      .slice(0, 3);
-    el('clockThreats').innerHTML = !threatened.length ? '' :
-      '<b>THREATS</b> (if you pass): ' + threatened.map(function (c) {
-        var t = c.threat, a = t.attribution;
-        return '<b>' + esc(c.name) + '</b> ' + threatMark(c) + ' ' + pct(t.pTakenBeforeMyPick) +
-          ' gone by ' + (B ? B.threatPick : '?') +
-          (a ? ' (' + esc(a.ownerName || 'T' + a.teamId) + ' @' + a.atPick + ')' : '');
-      }).join(' &nbsp;·&nbsp; ');
-    renderKdNudge();
-  } else {
-    clock.style.display = 'none';
-    falls.style.display = '';
-    var entries = E.candidates.slice(0, 3).map(function (c) {
-      return '<b>' + esc(c.name) + '</b> <span class="muted" title="' +
-        esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' + c.position +
-        ' ecr ' + (c.ecrRank === null ? '—' : c.ecrRank) + '</span> ' +
-        'est <span class="mono">' + num(c.estTeamScore, 1) + '</span> ' +
-        '<span class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + ' back</span>';
-    });
-    falls.innerHTML = 'IF HE FALLS TO YOU @' + (E.myNextPicks[0] || '?') + ' — ' + entries.join(' &nbsp;·&nbsp; ') +
-      (E.computing ? ' <span class="muted">· simulating…</span>' : '');
+  clock.style.display = '';
+  var computing = !!E.computing;
+  var state = computing ? 'sim' : (E.myTurn ? 'on' : 'wait');
+  var hasRows = E.candidates.length > 0;
+  var showTable = state === 'on' || (state === 'sim' && hasRows);
+  var chip = el('clockState');
+  chip.className = 'chip clock-state ' + state;
+  chip.textContent = state === 'sim' ? 'SIMULATING' : state === 'on' ? 'YOU ARE ON THE CLOCK' : 'WAITING';
+  clock.className = 'card' + (E.myTurn ? ' myturn' : '') + (state === 'sim' && hasRows ? ' stale' : '');
+  el('clockDot').style.display = state === 'wait' ? 'none' : '';
+  el('clockStale').style.display = state === 'sim' && hasRows ? '' : 'none';
+  el('clockTable').style.display = showTable ? '' : 'none';
+  // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
+  var nextTurn = E.myNextPicks[0];
+  el('clockPick').textContent = 'pick ' + E.currentOverall +
+    ' (R' + Math.ceil(E.currentOverall / S.league.size) + ')' +
+    (E.myTurn && nextTurn ? ' — your next turn is ' + nextTurn : '');
+  renderClockWait(state, hasRows, nextTurn);
+  if (!showTable) {
+    el('clockRows').innerHTML = '';
+    el('clockThreats').innerHTML = '';
+    el('kdNudge').style.display = 'none';
+    return;
   }
+  var band = noiseBand(), costly = costlyBand();
+  el('deltaH').title = 'Est team minus BEST: green = within ' + band +
+    ' pts (evaluation noise — effectively tied, break the tie on Back@), amber = real but modest cost (' +
+    band + '–' + costly + ' pts), muted = expensive (>' + costly + ' pts).' +
+    ' The small % is P(best): the share of sampled drafts where this pick finishes with the highest-scoring team';
+  el('backH').textContent = 'Back@' + (nextTurn || '—');
+  var html = [];
+  var top = E.candidates.slice(0, 10);
+  for (var i = 0; i < top.length; i++) {
+    var c = top[i];
+    var best = c.deltaVsBest === 0;
+    var bench = c.landsOn === 'BENCH';
+    var tied = c.exactTies > 1;
+    var pbest = (c.pBest === null || c.pBest === undefined) ? '' :
+      ' <span class="pbest" title="wins ' + Math.round(c.pBest * 100) + '% of sampled drafts' +
+      (tied ? '; exactly tied with ' + (c.exactTies - 1) + ' other candidate' + (c.exactTies > 2 ? 's' : '') : '') +
+      '">' + Math.round(c.pBest * 100) + '%' + (tied ? '≡' : '') + '</span>';
+    html.push('<tr class="' + (best ? 'best' : '') + '">' +
+      '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
+      '<td class="l">' + c.position + '</td>' +
+      '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
+      '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + pbest + '</td>' +
+      '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
+      '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
+        (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
+      '<td class="' + (bench ? 'ups-bench' : '') + '"' + (bench ? ' title="lands on bench — upside is the ranking key"' : '') + '>' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
+      '<td class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + threatMark(c) + '</td>' +
+      '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
+      '</tr>');
+  }
+  el('clockRows').innerHTML = html.join('');
+  var threatened = E.candidates.filter(function (c) { return c.threat && c.threat.threatLevel >= 1; })
+    .sort(function (a, b) { return b.threat.pTakenBeforeMyPick - a.threat.pTakenBeforeMyPick; })
+    .slice(0, 3);
+  el('clockThreats').innerHTML = !threatened.length ? '' :
+    '<b>THREATS</b> (if you pass): ' + threatened.map(function (c) {
+      var t = c.threat, a = t.attribution;
+      return '<b>' + esc(c.name) + '</b> ' + threatMark(c) + ' ' + pct(t.pTakenBeforeMyPick) +
+        ' gone by ' + (B ? B.threatPick : '?') +
+        (a ? ' (' + esc(a.ownerName || 'T' + a.teamId) + ' @' + a.atPick + ')' : '');
+    }).join(' &nbsp;·&nbsp; ');
+  renderKdNudge();
+}
+
+// The panel body under the chip when the candidate table is down: where my pick is and what
+// might fall to it (WAITING), or the first-numbers hint (SIMULATING on a fresh server).
+function renderClockWait(state, hasRows, nextTurn) {
+  var wait = el('clockWait');
+  if (state === 'sim' && !hasRows) {
+    wait.style.display = '';
+    wait.innerHTML = '<span class="muted">simulating draft outcomes — first numbers in ~15s…</span>';
+    return;
+  }
+  if (state !== 'wait') {
+    wait.style.display = 'none';
+    wait.innerHTML = '';
+    return;
+  }
+  wait.style.display = '';
+  var away = nextTurn ? nextTurn - E.currentOverall : null;
+  var line = '<div class="wait-line">You pick at #' + (nextTurn || '?') +
+    (away === null ? '' : ' — ' + away + (away === 1 ? ' pick' : ' picks') + ' away') + '</div>';
+  var entries = E.candidates.slice(0, 3).map(function (c) {
+    return '<b>' + esc(c.name) + '</b> <span class="muted" title="' +
+      esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' + c.position +
+      ' ecr ' + (c.ecrRank === null ? '—' : c.ecrRank) + '</span> ' +
+      'est <span class="mono">' + num(c.estTeamScore, 1) + '</span> ' +
+      '<span class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + ' back</span>';
+  });
+  wait.innerHTML = line + (!entries.length ? '' :
+    'IF HE FALLS TO YOU @' + (nextTurn || '?') + ' — ' + entries.join(' &nbsp;·&nbsp; '));
 }
 
 // Endgame K/DST nudge: the engine never recommends them (no stat lines), so the panel must.
