@@ -5,7 +5,7 @@ import { buildConsensusV2 } from './consensus.js'
 import { overallPicksForSlot } from './draft-math.js'
 import { applyOverrides, type PlayerOverride } from './overrides.js'
 import { buildLeagueScorer } from './rescore.js'
-import { argmaxTake, teamAtPick, type RoomProfiles } from './room-profiles.js'
+import { argmaxTake, countTeamPositions, teamAtPick, type PositionCounts, type RoomProfiles } from './room-profiles.js'
 import { roomAdp } from './room.js'
 import { bestLineup, lineupTotalWithReplacement } from './roster.js'
 import { computeUpsideScores } from './upside.js'
@@ -48,11 +48,11 @@ export interface RoomSegmentModel {
   /** Round-1 teamId order of the snake draft (LeagueSettings.draft.pickOrder). */
   pickOrder: number[]
   /**
-   * Per-simulation positional memory (teamId → positions taken on this path): a team's
-   * pos-boost stops firing once it took the position — an owner reaches for his first TE, not
-   * his third. Rollouts seed one per simulated draft; absent = boosts always active.
+   * Per-simulation positional memory (teamId → position → takes on this path): spends each
+   * team's pos-boosts and drives the ROOM_NEED multipliers. Rollouts seed one per simulated
+   * draft from the live picks; absent = boosts always active, no need shaping.
    */
-  taken?: Map<number, Set<Position>>
+  positionCounts?: Map<number, PositionCounts>
 }
 
 export interface RosterState {
@@ -312,14 +312,14 @@ export const simulateRoomSegment = (
     let pool = available.filter((player) => !heldIds.has(player.playerId))
     for (let pick = fromPick; pick < toPick; pick += 1) {
       const teamId = teamAtPick(model.pickOrder, pick)
-      const choice = argmaxTake(model.profiles, model.pickOrder, pick, pool, model.taken?.get(teamId))
+      const choice = argmaxTake(model.profiles, model.pickOrder, pick, pool, model.positionCounts?.get(teamId))
       if (choice !== null) {
         taken.add(choice.playerId)
         pool = pool.filter((player) => player.playerId !== choice.playerId)
-        if (model.taken !== undefined) {
-          const positions = model.taken.get(teamId) ?? new Set<Position>()
-          positions.add(choice.position)
-          model.taken.set(teamId, positions)
+        if (model.positionCounts !== undefined) {
+          const counts = model.positionCounts.get(teamId) ?? new Map<Position, number>()
+          counts.set(choice.position, (counts.get(choice.position) ?? 0) + 1)
+          model.positionCounts.set(teamId, counts)
         }
       }
     }
@@ -362,8 +362,20 @@ const rolloutOnPool = (
   const myPicks = overallPicksForSlot(myDraftSlot, settings.size, pool.totalRounds).filter(
     (pick) => pick >= fromOverallPick,
   )
-  // Fresh positional memory per simulated draft; candidate rollouts must not share it.
-  const liveModel = model === undefined ? undefined : { ...model, taken: new Map<number, Set<Position>>() }
+  // Fresh positional memory per simulated draft (live-pick seed cloned): candidate rollouts
+  // must not share or mutate each other's counts.
+  const liveModel =
+    model === undefined ? undefined : (
+      {
+        ...model,
+        positionCounts: new Map(
+          [...(model.positionCounts ?? new Map<number, PositionCounts>())].map(([teamId, counts]) => [
+            teamId,
+            new Map(counts),
+          ]),
+        ),
+      }
+    )
   let cursor = fromOverallPick
   for (const pick of myPicks) {
     if (roster.filter((player) => SKILL_SET.has(player.position)).length >= pool.skillRounds) {
@@ -396,8 +408,22 @@ const rolloutOnPool = (
  * (overallPicksForSlot) until the last round or my roster's skill seats fill. Absolutes carry
  * false confidence — deltas between rollouts are the trustworthy part.
  */
-const segmentModel = (state: BoardState, options: RolloutOptions): RoomSegmentModel | undefined =>
-  options.profiles === undefined ? undefined : { profiles: options.profiles, pickOrder: state.settings.draft.pickOrder }
+const segmentModel = (state: BoardState, options: RolloutOptions): RoomSegmentModel | undefined => {
+  if (options.profiles === undefined) {
+    return undefined
+  }
+  const positionById = new Map(state.players.map((player) => [player.id, player.position]))
+  // Live picks seed the per-team position counts; unknown teams (manual marks) count for no one.
+  const livePicks = (state.teamPicks ?? []).flatMap((pick) => {
+    const position = positionById.get(pick.playerId)
+    return pick.teamId === null || position === undefined ? [] : [{ teamId: pick.teamId, position }]
+  })
+  return {
+    profiles: options.profiles,
+    pickOrder: state.settings.draft.pickOrder,
+    positionCounts: countTeamPositions(livePicks),
+  }
+}
 
 export const rolloutFrom = (
   state: BoardState,

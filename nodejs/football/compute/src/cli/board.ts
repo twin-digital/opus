@@ -167,6 +167,11 @@ const main = (): void => {
     values.drafted !== undefined ?
       (values.drafted.split(',').filter((id) => id.length > 0) as PlayerId[])
     : storePicks.map((pick) => pick.playerId)
+  // Team attribution only exists for store picks; a --drafted override carries bare ids.
+  const teamPicks =
+    values.drafted !== undefined ?
+      undefined
+    : storePicks.map((pick) => ({ teamId: pick.teamId, playerId: pick.playerId }))
   const myDraftedPlayerIds =
     values.mine !== undefined ?
       (values.mine.split(',').filter((id) => id.length > 0) as PlayerId[])
@@ -199,6 +204,7 @@ const main = (): void => {
     projections: store.getProjections(season),
     market: store.getMarketData(),
     draftedPlayerIds,
+    ...(teamPicks !== undefined && { teamPicks }),
     myDraftedPlayerIds,
     myDraftSlot: slot,
     season,
@@ -236,6 +242,11 @@ const main = (): void => {
 
   let threats: Map<PlayerId, PlayerThreat> | undefined
   if (values.threats && profiles !== undefined && result.myNextPicks[0] !== undefined) {
+    const positionById = new Map(players.map((player) => [player.id, player.position]))
+    const livePicks = (teamPicks ?? []).flatMap((pick) => {
+      const position = positionById.get(pick.playerId)
+      return position === undefined ? [] : [{ teamId: pick.teamId, position }]
+    })
     threats = pickThreats(
       profiles,
       settings.draft.pickOrder,
@@ -244,6 +255,7 @@ const main = (): void => {
       result.rows,
       {
         myTeamId,
+        ...(livePicks.length > 0 && { livePicks }),
       },
     )
   }

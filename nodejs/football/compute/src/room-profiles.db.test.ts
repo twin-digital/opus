@@ -61,6 +61,14 @@ describe.skipIf(!existsSync(DB_FILE) || !existsSync(RULES_FILE))(
       expect(Math.abs((profiled[0]?.estTeamScore ?? 0) - (pure[0]?.estTeamScore ?? 0))).toBeLessThan(60)
     })
 
+    it('pre-draft, live-pick seeding is a no-op: empty teamPicks matches the absent field', { timeout: 30_000 }, () => {
+      const profiled = evaluateCandidates(state, { profiles }).slice(0, 12)
+      const seeded = evaluateCandidates({ ...state, teamPicks: [] }, { profiles }).slice(0, 12)
+      expect(seeded.map((entry) => [entry.playerId, entry.estTeamScore])).toEqual(
+        profiled.map((entry) => [entry.playerId, entry.estTeamScore]),
+      )
+    })
+
     it('threats: the room takes the top of the board before pick 11 with near certainty', () => {
       const marketById = new Map(state.market.map((row) => [row.playerId, row]))
       const available = state.players.flatMap((player) => {

@@ -28,6 +28,12 @@ export interface BoardState {
   market: MarketData[]
   /** Already off the board, in pick order where known. */
   draftedPlayerIds: PlayerId[]
+  /**
+   * Drafted picks with their teams (draft_pick / the web layer's effective picks). Optional,
+   * additive: feeds roster-need awareness in profiled rollouts; teamId null = manual mark
+   * with unknown team, counted for no one.
+   */
+  teamPicks?: { teamId: number | null; playerId: PlayerId }[]
   /** My picks among the drafted — feeds the capture-so-far grade and rollouts. */
   myDraftedPlayerIds?: PlayerId[]
   /** The owner's 1-based draft slot. */

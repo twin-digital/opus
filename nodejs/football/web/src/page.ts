@@ -55,7 +55,7 @@ export const PAGE = `<!doctype html>
   * { box-sizing: border-box; border-color: var(--border); }
   html, body { height: 100%; }
   body { margin: 0; background: var(--background); color: var(--foreground);
-    font: 13px/1.4 var(--font-sans); -webkit-font-smoothing: antialiased;
+    font: 15px/1.4 var(--font-sans); -webkit-font-smoothing: antialiased;
     display: flex; flex-direction: column; overflow: hidden; }
   button { font: inherit; font-weight: 500; cursor: pointer; background: var(--muted); color: var(--foreground);
     border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); padding: 2px 10px; }
@@ -70,8 +70,8 @@ export const PAGE = `<!doctype html>
 
   #status { flex-shrink: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
     background: var(--card); border-bottom: 1px solid var(--border); padding: 8px 14px; }
-  #status .big { font-size: 15px; font-weight: 600; }
-  #status .lbl { color: var(--muted-fg); margin-right: 5px; font-size: 12px; }
+  #status .big { font-size: 17px; font-weight: 600; }
+  #status .lbl { color: var(--muted-fg); margin-right: 5px; font-size: 14px; }
   .me { color: var(--primary); font-weight: 600; }
   .spacer { flex: 1; }
 
@@ -80,7 +80,7 @@ export const PAGE = `<!doctype html>
   .cap-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--primary);
     transition: width 300ms; }
 
-  .ind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+  .ind { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; }
   .ind .dot { width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; background: var(--muted-fg); }
   .ind.ok .dot { background: var(--success); } .ind.ok { color: var(--success); }
   .ind.warn .dot { background: var(--warning); } .ind.warn { color: var(--warning); }
@@ -96,10 +96,10 @@ export const PAGE = `<!doctype html>
     border: 1px solid var(--border); border-radius: var(--radius); }
   #tscroll table { border: none; border-radius: 0; overflow: visible; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
-  .card h3 { margin: 0 0 6px; font-size: 11px; font-weight: 500; text-transform: uppercase;
+  .card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 500; text-transform: uppercase;
     letter-spacing: 0.08em; color: var(--muted-fg); }
 
-  .chip { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  .chip { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 13px; font-weight: 600;
     line-height: 17px; }
 
   #controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 8px; }
@@ -110,7 +110,7 @@ export const PAGE = `<!doctype html>
     border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   /* Sticky inside #tscroll: top 0, opaque card surface, above row content at every scroll offset. */
   thead th { position: sticky; top: 0; z-index: 5; background: var(--card); color: var(--muted-fg);
-    font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+    font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
     padding: 6px; text-align: right; cursor: pointer; user-select: none; white-space: nowrap;
     border-bottom: 1px solid var(--border); }
   thead th.l { text-align: left; }
@@ -126,6 +126,11 @@ export const PAGE = `<!doctype html>
   .inj { color: var(--danger); font-weight: 600; }
   .odds-hi { color: var(--success); } .odds-mid { color: var(--warning); } .odds-lo { color: var(--danger); }
   .delta-pos { color: var(--success); } .delta-neg { color: var(--danger); }
+  /* Rm Δ bands: how the room's board prices him vs the wider market. */
+  td.rm { cursor: help; text-align: center; letter-spacing: -1px; }
+  .rm0 { color: var(--muted-fg); }
+  .rm1up { color: var(--success); } .rm2up { color: var(--success); font-weight: 700; }
+  .rm1dn { color: var(--warning); } .rm2dn { color: var(--danger); font-weight: 700; }
   .ups-hi { color: var(--primary); font-weight: 600; }
   .mark-boost { color: var(--primary); font-weight: 700; cursor: help; }
   .mark-contested { color: var(--warning); font-weight: 700; cursor: help; padding: 0 2px; }
@@ -141,17 +146,17 @@ export const PAGE = `<!doctype html>
   #clockPanel { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary),
     0 0 24px color-mix(in oklab, var(--primary) 25%, transparent); margin-bottom: 12px; }
   .clock-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .clock-title { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; color: var(--primary); }
+  .clock-title { font-size: 16px; font-weight: 700; letter-spacing: 0.06em; color: var(--primary); }
   .dot-pulse { width: 10px; height: 10px; border-radius: 999px; background: var(--primary);
     animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   #clockPanel table { border: none; border-radius: 0; }
   #clockPanel thead th { position: static; }
   #clockPanel td.est { font-family: var(--font-mono); font-weight: 600; }
-  #clockPanel td.delta { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+  #clockPanel td.delta { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
   tr.best td { background: color-mix(in oklab, var(--primary) 10%, transparent); }
   .best-tag { color: var(--success); font-weight: 700; }
-  #fallsPanel { margin-bottom: 12px; padding: 6px 12px; font-size: 12px; color: var(--muted-fg); }
+  #fallsPanel { margin-bottom: 12px; padding: 6px 12px; font-size: 14px; color: var(--muted-fg); }
   #fallsPanel b { color: var(--foreground); font-weight: 600; }
 
   .btn-violet { background: transparent; border-color: var(--primary); color: var(--primary); }
@@ -164,7 +169,7 @@ export const PAGE = `<!doctype html>
   #mockCountdown.cd-expired { color: var(--danger); }
   #mockBanner { flex-shrink: 0; }
   #recapPanel { border-color: var(--warning); margin-bottom: 12px; }
-  #recapPanel .recap-cap { font-size: 14px; margin-bottom: 6px; }
+  #recapPanel .recap-cap { font-size: 16px; margin-bottom: 6px; }
 
   /* News dots: direction = color, impact = weight (low subtle, med ringed, high larger + saturated). */
   .ndot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 5px;
@@ -186,7 +191,7 @@ export const PAGE = `<!doctype html>
   .thr1 { color: var(--warning); }
   .thr2 { color: color-mix(in oklab, var(--warning) 45%, var(--danger)); }
   .thr3 { color: var(--danger); }
-  #clockThreats { margin-top: 6px; font-size: 12px; color: var(--muted-fg); }
+  #clockThreats { margin-top: 6px; font-size: 14px; color: var(--muted-fg); }
   #clockThreats b { color: var(--foreground); }
 
   /* News drawer */
@@ -198,18 +203,18 @@ export const PAGE = `<!doctype html>
   body.drawer-open #drawerBack { display: block; }
   .drawer-head { padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .drawer-title { display: flex; align-items: center; gap: 8px; }
-  .drawer-title b { font-size: 15px; }
+  .drawer-title b { font-size: 17px; }
   .drawer-body { flex: 1; overflow-y: auto; padding: 10px 14px; }
   .drawer-foot { padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
     display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .news-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
     margin-bottom: 8px; }
-  .news-sum { font-size: 13px; font-weight: 600; margin: 6px 0 4px; }
-  .news-hl { font-size: 12px; color: var(--muted-fg); }
+  .news-sum { font-size: 15px; font-weight: 600; margin: 6px 0 4px; }
+  .news-hl { font-size: 14px; color: var(--muted-fg); }
   .news-item details { margin-top: 6px; }
-  .news-item summary { cursor: pointer; color: var(--muted-fg); font-size: 12px; }
-  .news-item details p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; }
-  .news-unassessed { padding: 3px 0; font-size: 12px; color: var(--muted-fg); }
+  .news-item summary { cursor: pointer; color: var(--muted-fg); font-size: 14px; }
+  .news-item details p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; }
+  .news-unassessed { padding: 3px 0; font-size: 14px; color: var(--muted-fg); }
   .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
@@ -276,6 +281,7 @@ export const PAGE = `<!doctype html>
       <thead>
         <tr>
           <th data-k="rank">#</th>
+          <th data-k="newsSev" title="Assessed news — worst direction × impact (sorts harms/high first); click a dot for the stories">N</th>
           <th data-k="name" class="l">Player</th>
           <th data-k="position" class="l">Pos</th>
           <th data-k="team" class="l">Team</th>
@@ -284,7 +290,7 @@ export const PAGE = `<!doctype html>
           <th data-k="vor">VOR</th>
           <th data-k="ecrRank">ECR</th>
           <th data-k="adp">ADP</th>
-          <th data-k="roomDelta" title="Room delta: ESPN room ADP minus market ADP; positive = the room lets him fall">Rm Δ</th>
+          <th data-k="roomDelta" title="How the room's board (ESPN) prices him vs the wider market — ▲ = likely still there past his market price, ▼ = the room reaches for him early">Rm Δ</th>
           <th data-k="upsideScore" title="Upside score 0–100">UPS</th>
           <th data-k="injuryStatus" class="l">Inj</th>
           <th data-k="pNextPick" id="p1h">P@?</th>
@@ -292,7 +298,7 @@ export const PAGE = `<!doctype html>
           <th></th>
         </tr>
       </thead>
-      <tbody id="rows"><tr><td colspan="15" class="l muted">loading…</td></tr></tbody>
+      <tbody id="rows"><tr><td colspan="16" class="l muted">loading…</td></tr></tbody>
     </table>
     </div>
   </div>
@@ -376,10 +382,36 @@ function newsDot(nw) {
     nw.direction + '/' + (nw.impact || '?') + ' · ' + nw.itemCount +
     ' item' + (nw.itemCount === 1 ? '' : 's') + '"></span>';
 }
-// Clickable player name (opens the news drawer) with its news dot inside the hit area.
+// Clickable player name — opens the news drawer.
 function nameCell(r) {
-  return '<span class="pname" data-pid="' + r.playerId + '" title="news & overrides">' +
-    newsDot(r.news) + esc(r.name) + '</span>';
+  return '<span class="pname" data-pid="' + r.playerId + '" title="news & overrides">' + esc(r.name) + '</span>';
+}
+// Sortable severity for the N column: worst direction × impact, harms/high (11) first, none 0.
+function newsSeverity(nw) {
+  if (!nw || !nw.direction || !nw.assessedCount) return 0;
+  var dir = { improves: 1, unclear: 2, harms: 3 }[nw.direction] || 0;
+  var imp = { low: 0, med: 1, high: 2 }[nw.impact] || 0;
+  return dir * 3 + imp;
+}
+// The N cell: the dot alone, clickable into the drawer like the name.
+function newsCell(r) {
+  var dot = newsDot(r.news);
+  if (!dot) return '<td></td>';
+  return '<td><span class="pname" data-pid="' + r.playerId + '">' + dot + '</span></td>';
+}
+// Rm Δ as banded arrows; the tooltip carries the real numbers with units.
+function roomDeltaCell(r) {
+  var d = r.roomDelta;
+  if (d === null || d === undefined) return '<td class="muted">—</td>';
+  var glyph, cls;
+  if (d >= 24) { glyph = '▲▲'; cls = 'rm2up'; }
+  else if (d >= 12) { glyph = '▲'; cls = 'rm1up'; }
+  else if (d > -12) { glyph = '—'; cls = 'rm0'; }
+  else if (d > -24) { glyph = '▼'; cls = 'rm1dn'; }
+  else { glyph = '▼▼'; cls = 'rm2dn'; }
+  var title = 'ESPN ' + num(r.roomAdp, 0) + ' · market ' + num(r.adp, 0) + ' — room takes him ~' +
+    Math.abs(Math.round(d)) + ' picks ' + (d >= 0 ? 'later' : 'earlier') + ' than market';
+  return '<td class="rm ' + cls + '" title="' + esc(title) + '">' + glyph + '</td>';
 }
 function threatTitle(r) {
   var t = r.threat;
@@ -602,13 +634,16 @@ function renderClock() {
 
 function viewRows() {
   if (!B) return [];
-  var rows = B.rows.map(function (r) { var o = Object.assign({ drafted: false }, r); return o; });
+  var rows = B.rows.map(function (r) {
+    var o = Object.assign({ drafted: false, newsSev: newsSeverity(r.news) }, r);
+    return o;
+  });
   if (ui.showDrafted) {
     rows = rows.concat(B.drafted.map(function (r) {
       return Object.assign({
         drafted: true, rank: null, pNextPick: null, pPickAfter: null,
         roomDelta: null, upsideScore: null, residualSpread: null, contested: false, banned: false,
-        news: null, threat: null,
+        news: null, threat: null, newsSev: 0,
       }, r);
     }));
   }
@@ -673,8 +708,6 @@ function renderTable() {
     if (r.banned) cls += ' ban';
     var injHtml = (r.injuryStatus && r.injuryStatus !== 'ACTIVE' && r.injuryStatus !== 'UNKNOWN') ?
       '<span class="inj">' + esc(r.injuryStatus.slice(0, 4)) + '</span>' : '';
-    var roomTitle = r.roomAdp !== null && r.adp !== null ?
-      'room ADP ' + num(r.roomAdp, 1) + ' vs market ' + num(r.adp, 1) : '';
     var action;
     if (r.drafted) {
       var by = '<span class="' + (r.teamId === S.league.myTeamId ? 'me' : 'muted') + '">' +
@@ -691,6 +724,7 @@ function renderTable() {
     }
     html.push('<tr class="' + cls + '">' +
       '<td>' + (r.rank === null ? '—' : r.rank) + '</td>' +
+      newsCell(r) +
       '<td class="l">' + nameCell(r) + nameMarkers(r, boosted[r.playerId]) + '</td>' +
       '<td class="l">' + r.position + '</td>' +
       '<td class="l">' + (r.team || 'FA') + '</td>' +
@@ -699,7 +733,7 @@ function renderTable() {
       '<td><b>' + num(r.vor, 1) + '</b></td>' +
       '<td>' + (r.ecrRank === null ? '—' : r.ecrRank) + '</td>' +
       '<td>' + num(r.adp, 1) + '</td>' +
-      '<td class="' + deltaClass(r.roomDelta) + '" title="' + roomTitle + '">' + signed(r.roomDelta, 1) + '</td>' +
+      roomDeltaCell(r) +
       '<td class="' + (r.upsideScore !== null && r.upsideScore >= 80 ? 'ups-hi' : '') + '">' +
         (r.upsideScore === null ? '—' : Math.round(r.upsideScore)) + '</td>' +
       '<td class="l">' + injHtml + '</td>' +
@@ -708,7 +742,7 @@ function renderTable() {
       '<td class="l">' + action + '</td>' +
       '</tr>');
   }
-  el('rows').innerHTML = html.length ? html.join('') : '<tr><td colspan="15" class="l muted">no rows</td></tr>';
+  el('rows').innerHTML = html.length ? html.join('') : '<tr><td colspan="16" class="l muted">no rows</td></tr>';
 }
 
 function renderSide() {
@@ -812,7 +846,7 @@ function renderDrawer(d) {
   if (!d.items.length) html.push('<div class="muted">no stored news for this player</div>');
   html = html.concat(assessed.map(newsItemHtml));
   if (rest.length) {
-    html.push('<h3 style="margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em" class="muted">Unassessed (' + rest.length + ')</h3>');
+    html.push('<h3 style="margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:0.08em" class="muted">Unassessed (' + rest.length + ')</h3>');
     rest.forEach(function (it) {
       html.push('<div class="news-unassessed">' + esc(it.headline) +
         (it.published ? ' <span>· ' + dateShort(it.published) + '</span>' : '') + '</div>');

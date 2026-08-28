@@ -50,6 +50,7 @@ export {
 } from './rollout.js'
 export {
   argmaxTake,
+  countTeamPositions,
   loadRoomRulesFile,
   pickThreats,
   resolveRoomRules,
@@ -59,12 +60,15 @@ export {
   ATTRIBUTION_MIN_PROB,
   ATTRIBUTION_RATIO,
   LEAGUE_FLAT_SIGMA,
+  ROOM_NEED,
   type LoyaltyRule,
   type PickThreatsOptions,
   type PlayerThreat,
+  type PositionCounts,
   type PosRule,
   type RoomProfiles,
   type TakeCandidate,
+  type TeamPositionPick,
   type TeamProfile,
   type ThreatAttribution,
 } from './room-profiles.js'

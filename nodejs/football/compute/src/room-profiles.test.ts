@@ -407,12 +407,146 @@ describe('simulateRoomSegment with a room model', () => {
     const withMemory = simulateRoomSegment(tePool, 1, 3, new Set(), {
       profiles,
       pickOrder: [1],
-      taken: new Map(),
+      positionCounts: new Map(),
     })
     // first pick reaches for the TE; the second falls back to the board (boost spent)
     expect(withMemory.map((p) => p.playerId)).toEqual(['p-te2', 'p-rb2'])
     // without memory the boost keeps firing and both TEs leave
     const without = simulateRoomSegment(tePool, 1, 3, new Set(), { profiles, pickOrder: [1] })
     expect(without.map((p) => p.playerId)).toEqual(['p-rb1', 'p-rb2'])
+  })
+})
+
+describe('roster need', () => {
+  const emptyProfiles = (): RoomProfiles => profilesFrom({ teams: {} })
+  const counts = (entries: [Position, number][]): Map<Position, number> => new Map(entries)
+
+  it('a filled position block is strongly suppressed; K/DST at 1 go to zero', () => {
+    const profiles = emptyProfiles()
+    const pool = [candidate('p-q', 'QB', 3), candidate('p-r', 'RB', 3.5), candidate('p-k', 'K', 4)]
+    const qb = pool[0] as TakeCandidate
+    const kicker = pool[2] as TakeCandidate
+    const open = takeProbability(profiles, [1, 2], 1, qb, pool)
+    const filled = takeProbability(profiles, [1, 2], 1, qb, pool, counts([['QB', 2]]))
+    expect(filled).toBeLessThan(open * 0.2)
+    expect(takeProbability(profiles, [1, 2], 1, kicker, pool, counts([['K', 1]]))).toBe(0)
+    // a distribution with counts still sums to 1
+    const distribution = takeDistribution(
+      profiles,
+      [1, 2],
+      1,
+      pool,
+      counts([
+        ['QB', 2],
+        ['K', 1],
+      ]),
+    )
+    expect([...distribution.values()].reduce((sum, p) => sum + p, 0)).toBeCloseTo(1, 9)
+  })
+
+  it('a late starter gap boosts the missing position; no boost before LATE_GAP_ROUND', () => {
+    const profiles = emptyProfiles()
+    const qb = candidate('p-q', 'QB', 19)
+    const rb = candidate('p-r', 'RB', 19.5)
+    const pool = [qb, rb]
+    const gap = counts([
+      ['RB', 2],
+      ['WR', 2],
+    ])
+    const noGap = counts([
+      ['QB', 1],
+      ['RB', 2],
+      ['WR', 2],
+    ])
+    // pick 19 = round 10 of a 2-team draft: the QB-less team reaches
+    expect(takeProbability(profiles, [1, 2], 19, qb, pool, gap)).toBeGreaterThan(
+      takeProbability(profiles, [1, 2], 19, qb, pool, noGap) * 1.4,
+    )
+    // pick 5 = round 3: same counts, no late-gap boost yet
+    expect(takeProbability(profiles, [1, 2], 5, qb, pool, gap)).toBeCloseTo(
+      takeProbability(profiles, [1, 2], 5, qb, pool, noGap),
+      9,
+    )
+  })
+
+  it('live counts spend a pos-boost outside the sim too', () => {
+    const profiles = profilesFrom({
+      teams: {
+        '1': { teamId: 1, sigma: null, rules: [{ kind: 'pos-boost', position: 'TE', rounds: [1, 14], strength: 5 }] },
+      },
+    })
+    const te = candidate('p-t', 'TE', 4)
+    const rb = candidate('p-r', 'RB', 3)
+    const pool = [te, rb]
+    const boosted = takeProbability(profiles, [1, 2], 1, te, pool)
+    const spent = takeProbability(profiles, [1, 2], 1, te, pool, counts([['TE', 1]]))
+    expect(spent).toBeLessThan(boosted)
+    // spent boost falls back to the plain hazard, not to suppression (TE cap is 2)
+    expect(spent).toBeCloseTo(takeProbability(null, [1, 2], 1, te, pool), 9)
+  })
+
+  it('sim-forward counts accumulate: a second QB is suppressed, a held K seat never refills', () => {
+    const profiles = emptyProfiles()
+    const pool = [
+      rolloutPlayer('p-q1', 'QB', 1),
+      rolloutPlayer('p-q2', 'QB', 2),
+      rolloutPlayer('p-r', 'RB', 3),
+      rolloutPlayer('p-w', 'WR', 4),
+    ]
+    // seeded with one live QB: the sim's first pick (best hazard) is still a QB — now at 2 —
+    // so the second sim pick must diversify.
+    const seeded = simulateRoomSegment(pool, 1, 3, new Set(), {
+      profiles,
+      pickOrder: [1],
+      positionCounts: new Map([[1, counts([['QB', 1]])]]),
+    })
+    expect(seeded.map((p) => p.playerId)).toEqual(['p-q2', 'p-w'])
+    // without counts the model happily double-taps QB
+    const unseeded = simulateRoomSegment(pool, 1, 3, new Set(), { profiles, pickOrder: [1] })
+    expect(unseeded.map((p) => p.playerId)).toEqual(['p-r', 'p-w'])
+
+    const kPool = [rolloutPlayer('p-k', 'K', 1), rolloutPlayer('p-r2', 'RB', 5)]
+    const withK = simulateRoomSegment(kPool, 1, 2, new Set(), {
+      profiles,
+      pickOrder: [1],
+      positionCounts: new Map([[1, counts([['K', 1]])]]),
+    })
+    expect(withK.map((p) => p.playerId)).toEqual(['p-k'])
+  })
+
+  it('a QB-holding team stops being attributed for QB threats', () => {
+    const profiles = profilesFrom({
+      teams: {
+        '1': { teamId: 1, owner: 'Alpha', sigma: null, rules: [] },
+        '2': {
+          teamId: 2,
+          owner: 'Bravo',
+          sigma: null,
+          rules: [{ kind: 'pos-boost', position: 'QB', rounds: [1, 14], strength: 8 }],
+          evidence: { '0': 'QB early both years' },
+        },
+        '3': { teamId: 3, owner: 'Me', sigma: null, rules: [] },
+      },
+    })
+    const pool = [
+      candidate('p-q', 'QB', 6),
+      candidate('p-r', 'RB', 1),
+      candidate('p-s', 'WR', 2),
+      candidate('p-t', 'RB', 12),
+    ]
+    const before = pickThreats(profiles, [1, 2, 3], 1, 3, pool, { myTeamId: 3 })
+    const qbBefore = before.get('p-q')
+    expect(qbBefore?.attribution?.teamId).toBe(2)
+    expect(qbBefore?.attribution?.evidence).toEqual(['QB early both years'])
+    expect(qbBefore?.threatLevel).toBe(1)
+
+    const after = pickThreats(profiles, [1, 2, 3], 1, 3, pool, {
+      myTeamId: 3,
+      livePicks: [{ teamId: 2, position: 'QB' }],
+    })
+    const qbAfter = after.get('p-q')
+    expect(qbAfter?.attribution).toBeNull()
+    expect(qbAfter?.pTakenBeforeMyPick ?? 1).toBeLessThan(qbBefore?.pTakenBeforeMyPick ?? 0)
+    expect(qbAfter?.threatLevel).toBe(0)
   })
 })

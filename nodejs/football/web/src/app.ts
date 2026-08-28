@@ -188,11 +188,17 @@ export interface OverrideInput {
 /** estTeamScore gaps at or under this are rollout noise — the Δ-band the UI paints green. */
 export const DELTA_NOISE = 3
 
+/** estTeamScore gaps at or under this are an effective tie the secondary sort may reorder. */
+export const TIE_EPSILON = 0.5
+
 /**
- * Recommendation order for the on-clock panel. estTeamScore descending, but candidates within
- * DELTA_NOISE of a band's top are tied (deep in a draft whole slates tie exactly): within a
- * band, a candidate filling a starting seat outranks bench-landers — a real seat at equal cost
- * beats a lottery ticket — then upside, then points, so ties are never arbitrary.
+ * Recommendation order for the on-clock panel: strictly estTeamScore descending — the panel
+ * order never contradicts the Δ column. Secondary keys apply only to effective ties (within
+ * TIE_EPSILON of a run's top, anchored — no transitive chaining), the genuine late-draft case
+ * where whole slates tie: a candidate filling a starting seat outranks bench-landers — a real
+ * seat at equal cost beats a lottery ticket — then upside, then points. Within a tie run the
+ * run's exact-top est stays first, so the BEST row is always row 1. The 3-pt green Δ band is
+ * purely visual and never reorders rows.
  */
 export const orderCandidates = <
   T extends { estTeamScore: number; landsOn: string; upsideScore: number | null; points: number | null },
@@ -201,24 +207,26 @@ export const orderCandidates = <
 ): T[] => {
   const sorted = [...candidates].sort((a, b) => b.estTeamScore - a.estTeamScore)
   const ordered: T[] = []
-  let band: T[] = []
+  let run: T[] = []
   let anchor: number | null = null
   const flush = (): void => {
-    band.sort(
+    const top = anchor ?? 0
+    run.sort(
       (a, b) =>
+        Number(b.estTeamScore === top) - Number(a.estTeamScore === top) ||
         Number(b.landsOn !== 'BENCH') - Number(a.landsOn !== 'BENCH') ||
         (b.upsideScore ?? -1) - (a.upsideScore ?? -1) ||
         (b.points ?? -1) - (a.points ?? -1),
     )
-    ordered.push(...band)
-    band = []
+    ordered.push(...run)
+    run = []
   }
   for (const candidate of sorted) {
-    if (anchor === null || anchor - candidate.estTeamScore > DELTA_NOISE) {
+    if (anchor === null || anchor - candidate.estTeamScore > TIE_EPSILON) {
       flush()
       anchor = candidate.estTeamScore
     }
-    band.push(candidate)
+    run.push(candidate)
   }
   flush()
   return ordered

@@ -57,6 +57,145 @@ describe('page structure', () => {
     }
   })
 
+  it('renders fixture data: news column dot, Rm Δ arrow band, and the full threat attribution tooltip', async () => {
+    const row = {
+      playerId: 'p-bowers',
+      name: 'Brock Bowers',
+      position: 'TE',
+      team: 'LV',
+      byeWeek: 8,
+      points: 200.4,
+      vor: 50.2,
+      tier: 1,
+      ecrRank: 10,
+      adp: 61,
+      roomAdp: 94,
+      roomDelta: 33,
+      upsideScore: 55,
+      residualSpread: null,
+      contested: false,
+      sourceCount: 2,
+      banned: false,
+      injuryStatus: 'ACTIVE',
+      pNextPick: 0.14,
+      pPickAfter: 0.05,
+      news: { playerId: 'p-bowers', direction: 'harms', impact: 'high', itemCount: 3, assessedCount: 2 },
+      threat: {
+        survivalToMyPick: 0.14,
+        pTakenBeforeMyPick: 0.86,
+        threatLevel: 3,
+        attribution: {
+          teamId: 11,
+          slot: 4,
+          ownerName: 'James Johnson',
+          atPick: 21,
+          probability: 0.25,
+          evidence: ["TE early both years — Bowers R2 '25, Kelce R4 '24"],
+        },
+      },
+    }
+    const payloads: Record<string, unknown> = {
+      '/api/state': {
+        version: 1,
+        league: { name: 'Fixture', size: 12, myTeamId: 13, mySlot: 11, totalRounds: 14, totalPicks: 168 },
+        draft: {
+          pickCount: 20,
+          polledCount: 0,
+          manualCount: 0,
+          currentOverall: 21,
+          complete: false,
+          onClockTeamId: 11,
+          myNextPicks: [35, 38],
+          picksUntilMyTurn: 14,
+        },
+        picks: [],
+        myRoster: { slots: [], byeCollisions: [], openStarters: 0, totalOpen: 0 },
+        capture: { ratio: 0.1, teamTotal: 1300, benchmarks: { ceiling: 2000, replacement: 1200 } },
+        overrides: { file: null, count: 0, boosted: 0, banned: 0, error: null },
+        ingest: { running: false, startedAt: null, finishedAt: null, lastError: null, lastSummary: null },
+        mock: {
+          active: false,
+          seed: null,
+          pace: null,
+          pickCount: 0,
+          myTurn: false,
+          countdownStartedAt: null,
+          recap: null,
+        },
+        asOf: { player: null, seasonProjection: null, marketData: null, leagueSettings: null, draftPick: null },
+        poll: {
+          enabled: false,
+          inFlight: false,
+          intervalMs: 5000,
+          lastAttemptAt: null,
+          lastSuccessAt: null,
+          lastError: null,
+          consecutiveFailures: 0,
+          nextDelayMs: 5000,
+        },
+      },
+      '/api/board': {
+        version: 1,
+        currentOverall: 21,
+        myNextPicks: [35, 38],
+        threatPick: 35,
+        replacement: { rank: {}, points: {} },
+        benchmarks: { ceiling: 2000, replacement: 1200 },
+        captureRatio: 0.1,
+        boostedIds: [],
+        scarcity: [],
+        costOfWaiting: [],
+        rows: [row],
+        drafted: [],
+      },
+      '/api/evaluate': {
+        version: 1,
+        currentOverall: 21,
+        onClockTeamId: 11,
+        myTurn: false,
+        myNextPicks: [35, 38],
+        candidates: [],
+      },
+    }
+    loadMarkup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string) =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? { error: 'no fixture: ' + path }) }),
+      ),
+    )
+    vi.stubGlobal(
+      'setInterval',
+      vi.fn(() => 0),
+    )
+    try {
+      // Deliberate: the page's inline script must run as-is against the served markup.
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+      new Function(script)()
+      await new Promise((resolve) => setTimeout(resolve, 25))
+
+      const cells = document.querySelectorAll('#rows tr td')
+      expect(cells.length).toBe(document.querySelectorAll('#tscroll thead th').length)
+      // N column: its own cell (second), dot clickable into the drawer
+      const newsCell = cells[1] as HTMLElement
+      expect(newsCell.querySelector('.pname .ndot.nd-harms.nd-high')).not.toBeNull()
+      expect(cells[2]?.textContent).toContain('Brock Bowers')
+      // Rm Δ: banded arrows with the real numbers in the tooltip
+      const rm = document.querySelector('#rows td.rm') as HTMLElement
+      expect(rm.textContent).toBe('▲▲')
+      expect(rm.className).toContain('rm2up')
+      expect(rm.title).toBe('ESPN 94 · market 61 — room takes him ~33 picks later than market')
+      // Threat marker: the ACTUAL tooltip carries the full attribution line
+      const thr = document.querySelector('#rows .thr') as HTMLElement
+      expect(thr.textContent).toBe('!!!')
+      expect(thr.title).toBe(
+        "86% gone before your pick 35 — James Johnson (T11, slot 4) @ pick 21: 25% — TE early both years — Bowers R2 '25, Kelce R4 '24",
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('the inline script executes against its own markup and starts polling', () => {
     loadMarkup()
     const fetchStub = vi.fn(() => new Promise<never>(() => undefined)) // pending forever — wiring only

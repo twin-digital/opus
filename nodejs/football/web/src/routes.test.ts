@@ -1091,22 +1091,33 @@ describe('candidate ordering', () => {
     expect(names(tied)).toEqual(['starter', 'bench-ups-tie-more-pts', 'bench-high-ups', 'bench-low-ups'])
   })
 
-  it('treats candidates within the DELTA_NOISE band as tied, beyond it as ranked', () => {
+  it('stays strictly monotonic on estTeamScore outside the tie epsilon — the Δ column order is the row order', () => {
+    // The live regression: −0.6 / −8.3 / −10.0 must render in est order, whatever the seats/upside say.
     const rows = [
-      row('top-bench', 100, 'BENCH', 30, 200),
-      row('near-starter', 98, 'QB', 10, 190), // within 3 of the band top: tied, starter wins
-      row('far-starter', 96, 'RB', 99, 300), // beyond the band: stays below it
+      row('delta-10', 1490.0, 'QB', 99, 300),
+      row('best', 1500.0, 'BENCH', 5, 100),
+      row('delta-8.3', 1491.7, 'WR', 80, 250),
+      row('delta-0.6', 1499.4, 'BENCH', 90, 200),
     ]
-    expect(names(rows)).toEqual(['near-starter', 'top-bench', 'far-starter'])
+    expect(names(rows)).toEqual(['best', 'delta-0.6', 'delta-8.3', 'delta-10'])
   })
 
-  it('keeps genuinely better est on top and orders null upside and points last within a band', () => {
+  it('keeps the BEST row first even when a starter sits within the tie epsilon below it', () => {
     const rows = [
-      row('null-ups', 100, 'BENCH', null, 100),
-      row('clear-best', 110, 'BENCH', null, null),
-      row('some-ups', 99, 'BENCH', 5, null),
+      row('near-starter', 99.8, 'QB', 90, 250), // an effective tie, but never above the exact best
+      row('best-bench', 100, 'BENCH', 5, 100),
     ]
-    expect(names(rows)).toEqual(['clear-best', 'some-ups', 'null-ups'])
+    expect(names(rows)).toEqual(['best-bench', 'near-starter'])
+  })
+
+  it('reorders only effective ties (within 0.5): starter over bench among the tied non-best rows', () => {
+    const rows = [
+      row('best', 100, 'BENCH', 5, 100),
+      row('tied-bench', 99.8, 'BENCH', 10, 100),
+      row('tied-starter', 99.7, 'QB', 1, 90),
+      row('clearly-below', 99.0, 'QB', 99, 300), // 1.0 under the run top: est order resumes
+    ]
+    expect(names(rows)).toEqual(['best', 'tied-starter', 'tied-bench', 'clearly-below'])
   })
 
   it('a high-upside band-tied candidate is not dropped below arbitrary peers (top-of-list stability)', () => {

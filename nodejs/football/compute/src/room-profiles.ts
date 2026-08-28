@@ -11,8 +11,12 @@ import { normalCdf, sigmaForPick } from './draft-math.js'
  *
  * Take weight for player i at pick p by team t:
  *
- *     w_i = hazard_i(p) × posMult(t, round(p), pos_i) × loyalty(t, i)
+ *     w_i = hazard_i(p) × posMult(t, round(p), pos_i) × loyalty(t, i) × need(t, pos_i)
  *     takeProbability_i = w_i / Σ_available w_j
+ *
+ * need comes from the team's actual takes so far (live picks, plus simulated ones inside a
+ * rollout): filled position blocks suppress, late starter gaps boost, and a pos-boost spends
+ * on the team's first take of the position (ROOM_NEED). Without count data need is 1.
  *
  * hazard is the Normal(roomAdp_i, σ) pick density conditioned on the player still being
  * available — φ((p − adp)/σ)/σ divided by survival to p — so a player who has outlived his ADP
@@ -262,23 +266,82 @@ const roundOfPick = (overall: number, teams: number): number => Math.ceil(overal
 /** Keeps weights positive so normalization and argmax stay defined deep in the pool. */
 const WEIGHT_FLOOR = 1e-12
 
+// -- roster need ------------------------------------------------------------
+
+/** A pick attributed to a team; positions drive the roster-need shaping. */
+export interface TeamPositionPick {
+  teamId: number
+  position: Position
+}
+
+/** Per-position take counts for one team. */
+export type PositionCounts = Map<Position, number>
+
+/**
+ * Roster-need knobs. FILLED is [count at which the seat block is realistically full, weight
+ * multiplier once it is]: nobody carries a third QB/TE or a second K/DST, and a seventh RB/WR
+ * is rare. From LATE_GAP_ROUND on, a team still missing a starter (STARTERS, the league's
+ * lineup) reaches for it. Counts also spend pos-boosts: a boost fires for the team's first
+ * take of the position only.
+ */
+export const ROOM_NEED = {
+  FILLED: {
+    QB: [2, 0.05],
+    TE: [2, 0.05],
+    K: [1, 0],
+    DST: [1, 0],
+    RB: [6, 0.3],
+    WR: [6, 0.3],
+  } as Record<Position, readonly [number, number]>,
+  LATE_GAP_ROUND: 10,
+  LATE_GAP_BOOST: 3,
+  STARTERS: { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DST: 1 } as Record<Position, number>,
+} as const
+
+/** Fold picks-with-teamId into per-team position counts (the seed for need-aware models). */
+export const countTeamPositions = (picks: TeamPositionPick[]): Map<number, PositionCounts> => {
+  const counts = new Map<number, PositionCounts>()
+  for (const pick of picks) {
+    const team = counts.get(pick.teamId) ?? new Map<Position, number>()
+    team.set(pick.position, (team.get(pick.position) ?? 0) + 1)
+    counts.set(pick.teamId, team)
+  }
+  return counts
+}
+
+/** Need multiplier for one position given the team's take counts; 1 without count data. */
+const needMult = (position: Position, round: number, counts: PositionCounts | undefined): number => {
+  if (counts === undefined) {
+    return 1
+  }
+  const count = counts.get(position) ?? 0
+  const [cap, filledMult] = ROOM_NEED.FILLED[position]
+  if (count >= cap) {
+    return filledMult
+  }
+  if (round >= ROOM_NEED.LATE_GAP_ROUND && count < ROOM_NEED.STARTERS[position]) {
+    return ROOM_NEED.LATE_GAP_BOOST
+  }
+  return 1
+}
+
 /**
  * Product of team rules matching (position, round); defaults fill positions no team rule covers
- * there. `spentBoosts` inhibits pos-boost rules for positions the team already took on a
- * simulated path — an owner reaches for his first TE, not his third.
+ * there. `counts` (the team's takes so far — live picks and/or simulated ones) spends pos-boost
+ * rules: an owner reaches for his first TE, not his third.
  */
 const posMult = (
   profile: TeamProfile | undefined,
   defaults: PosRule[],
   round: number,
   position: Position,
-  spentBoosts?: ReadonlySet<Position>,
+  counts?: PositionCounts,
 ): number => {
   let mult = 1
   let covered = false
   for (const rule of profile?.posRules ?? []) {
     if (rule.position === position) {
-      if (rule.kind === 'pos-boost' && spentBoosts?.has(position) === true) {
+      if (rule.kind === 'pos-boost' && (counts?.get(position) ?? 0) > 0) {
         continue
       }
       if (rule.rounds[0] <= round && round <= rule.rounds[1]) {
@@ -311,7 +374,7 @@ const takeWeight = (
   overall: number,
   round: number,
   player: TakeCandidate,
-  spentBoosts?: ReadonlySet<Position>,
+  counts?: PositionCounts,
 ): number => {
   let hazard = 0
   if (player.roomAdp !== null) {
@@ -322,8 +385,9 @@ const takeWeight = (
   }
   const mult =
     profiles === null ? 1 : (
-      posMult(profile, profiles.defaults, round, player.position, spentBoosts) *
-      (profile?.loyalty.get(player.playerId)?.strength ?? 1)
+      posMult(profile, profiles.defaults, round, player.position, counts) *
+      (profile?.loyalty.get(player.playerId)?.strength ?? 1) *
+      needMult(player.position, round, counts)
     )
   return (hazard + WEIGHT_FLOOR) * mult
 }
@@ -331,17 +395,19 @@ const takeWeight = (
 /**
  * The take distribution for the team on the clock at `overall`: takeProbability per available
  * player, summing to 1. `profiles: null` is the base model — pure Normal(roomAdp, σ) hazard,
- * no positional or loyalty shaping.
+ * no positional, loyalty, or need shaping. `counts` = the on-clock team's takes so far; it
+ * spends that team's pos-boosts and applies the ROOM_NEED multipliers.
  */
 export const takeDistribution = (
   profiles: RoomProfiles | null,
   pickOrder: number[],
   overall: number,
   available: TakeCandidate[],
+  counts?: PositionCounts,
 ): Map<PlayerId, number> => {
   const profile = profiles?.teams.get(teamAtPick(pickOrder, overall))
   const round = roundOfPick(overall, pickOrder.length)
-  const weights = available.map((player) => takeWeight(profiles, profile, overall, round, player))
+  const weights = available.map((player) => takeWeight(profiles, profile, overall, round, player, counts))
   const total = weights.reduce((sum, weight) => sum + weight, 0)
   const distribution = new Map<PlayerId, number>()
   available.forEach((player, index) => {
@@ -357,26 +423,27 @@ export const takeProbability = (
   overall: number,
   player: TakeCandidate,
   available: TakeCandidate[],
-): number => takeDistribution(profiles, pickOrder, overall, available).get(player.playerId) ?? 0
+  counts?: PositionCounts,
+): number => takeDistribution(profiles, pickOrder, overall, available, counts).get(player.playerId) ?? 0
 
 /**
  * The team's mean-path pick: argmax take weight over the available pool (normalization cannot
  * change the argmax). Ties break toward lower roomAdp, then playerId, for determinism.
- * `spentBoosts` = positions this team already took on the simulated path (inhibits pos-boosts).
+ * `counts` = this team's takes so far (live and/or simulated); spends boosts and applies need.
  */
 export const argmaxTake = <T extends TakeCandidate>(
   profiles: RoomProfiles | null,
   pickOrder: number[],
   overall: number,
   available: T[],
-  spentBoosts?: ReadonlySet<Position>,
+  counts?: PositionCounts,
 ): T | null => {
   const profile = profiles?.teams.get(teamAtPick(pickOrder, overall))
   const round = roundOfPick(overall, pickOrder.length)
   let best: T | null = null
   let bestWeight = -1
   for (const player of available) {
-    const weight = takeWeight(profiles, profile, overall, round, player, spentBoosts)
+    const weight = takeWeight(profiles, profile, overall, round, player, counts)
     if (
       best === null ||
       weight > bestWeight ||
@@ -425,6 +492,13 @@ export interface PlayerThreat {
 export interface PickThreatsOptions {
   /** Picks by this teamId are skipped (my own turns are not threats). */
   myTeamId?: number
+  /**
+   * The draft's actual picks with their teams. Makes the profiled model roster-need-aware:
+   * a team's filled positions are suppressed (ROOM_NEED), its pos-boosts spend on the first
+   * take, and late starter gaps boost — so a QB-holding team stops threatening QBs. The base
+   * model used for attribution gating stays need-free.
+   */
+  livePicks?: TeamPositionPick[]
 }
 
 /**
@@ -468,13 +542,14 @@ export const pickThreats = (
   for (const player of available) {
     survival.set(player.playerId, 1)
   }
+  const teamCounts = options.livePicks === undefined ? undefined : countTeamPositions(options.livePicks)
 
   for (let pick = currentOverall; pick < myNextPick; pick += 1) {
     const teamId = teamAtPick(pickOrder, pick)
     if (options.myTeamId !== undefined && teamId === options.myTeamId) {
       continue
     }
-    const profiled = takeDistribution(profiles, pickOrder, pick, available)
+    const profiled = takeDistribution(profiles, pickOrder, pick, available, teamCounts?.get(teamId))
     const base = takeDistribution(null, pickOrder, pick, available)
     for (const player of available) {
       const probability = profiled.get(player.playerId) ?? 0
