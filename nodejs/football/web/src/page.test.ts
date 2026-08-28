@@ -7,8 +7,9 @@ import { PAGE } from './page.js'
 /**
  * Structural guard for the embedded page: the markup and the inline script ship as one string,
  * so a DOM reshuffle can silently orphan the script's selectors. These tests load the real
- * markup into jsdom and check every id/selector the script uses — and execute the script once —
- * so "markup moved, script not updated" fails here instead of in the browser on draft day.
+ * markup into jsdom and check every id/selector the script uses — and execute the script against
+ * fixture API payloads — so "markup moved, script not updated" fails here instead of in the
+ * browser on draft day.
  */
 
 const scriptMatch = /<script>([\s\S]*)<\/script>/.exec(PAGE)
@@ -18,6 +19,195 @@ const loadMarkup = (): void => {
   const html = PAGE.replace(/^<!doctype html>\s*/i, '').replace(/<script>[\s\S]*<\/script>/, '')
   document.documentElement.innerHTML = html
 }
+
+// -- fixture payloads ---------------------------------------------------------
+
+const BOWERS_ROW = {
+  playerId: 'p-bowers',
+  name: 'Brock Bowers',
+  position: 'TE',
+  team: 'LV',
+  byeWeek: 8,
+  points: 200.4,
+  vor: 50.2,
+  tier: 1,
+  ecrRank: 10,
+  adp: 61,
+  roomAdp: 94,
+  roomDelta: 33,
+  upsideScore: 55,
+  residualSpread: null,
+  contested: false,
+  sourceCount: 2,
+  banned: false,
+  injuryStatus: 'ACTIVE',
+  pNextPick: 0.14,
+  pPickAfter: 0.05,
+  news: { playerId: 'p-bowers', direction: 'harms', impact: 'high', itemCount: 3, assessedCount: 2 },
+  threat: {
+    survivalToMyPick: 0.14,
+    pTakenBeforeMyPick: 0.86,
+    threatLevel: 3,
+    attribution: {
+      teamId: 11,
+      slot: 4,
+      ownerName: 'James Johnson',
+      atPick: 21,
+      probability: 0.25,
+      evidence: ["TE early both years — Bowers R2 '25, Kelce R4 '24"],
+    },
+  },
+}
+
+const boardRow = (overrides: Record<string, unknown>): Record<string, unknown> => ({
+  ...BOWERS_ROW,
+  news: null,
+  threat: null,
+  ...overrides,
+})
+
+interface FixtureOptions {
+  /** My picks already made (drives the K/DST nudge's remaining count); totalRounds is 14. */
+  myPickCount?: number
+  /** Open K/DST seats on my roster (capacity 1 each; filled seats get a player). */
+  openK?: number
+  openDst?: number
+  myTurn?: boolean
+  extraRows?: Record<string, unknown>[]
+}
+
+const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> => {
+  const myPickCount = options.myPickCount ?? 0
+  const myPicks = Array.from({ length: myPickCount }, (unused, i) => ({
+    playerId: `p-mine-${String(i)}`,
+    teamId: 13,
+    overall: i * 12 + 11,
+    round: i + 1,
+    source: 'manual',
+    name: `Mine ${String(i)}`,
+    position: 'RB',
+    team: 'DET',
+  }))
+  const seat = (open: number): { name: string }[] => (open === 0 ? [{ name: 'Filled Guy' }] : [])
+  const rows = [BOWERS_ROW, ...(options.extraRows ?? [])]
+  return {
+    '/api/state': {
+      version: 1,
+      league: { name: 'Fixture', size: 12, myTeamId: 13, mySlot: 11, totalRounds: 14, totalPicks: 168 },
+      draft: {
+        pickCount: myPickCount,
+        polledCount: 0,
+        manualCount: myPickCount,
+        currentOverall: myPickCount + 1,
+        complete: false,
+        onClockTeamId: options.myTurn === true ? 13 : 11,
+        myNextPicks: [35, 38],
+        picksUntilMyTurn: options.myTurn === true ? 0 : 14,
+      },
+      picks: myPicks,
+      myRoster: {
+        slots: [
+          { slot: 'RB', capacity: 2, players: [] },
+          { slot: 'K', capacity: 1, players: seat(options.openK ?? 1) },
+          { slot: 'DST', capacity: 1, players: seat(options.openDst ?? 1) },
+        ],
+        byeCollisions: [],
+        openStarters: 2,
+        totalOpen: 5,
+      },
+      capture: { ratio: 0.1, teamTotal: 1300, benchmarks: { ceiling: 2000, replacement: 1200 } },
+      overrides: { file: null, count: 0, boosted: 0, banned: 0, error: null },
+      ingest: { running: false, startedAt: null, finishedAt: null, lastError: null, lastSummary: null },
+      mock: {
+        active: false,
+        seed: null,
+        pace: null,
+        pickCount: 0,
+        myTurn: false,
+        countdownStartedAt: null,
+        recap: null,
+      },
+      asOf: { player: null, seasonProjection: null, marketData: null, leagueSettings: null, draftPick: null },
+      poll: {
+        enabled: false,
+        inFlight: false,
+        intervalMs: 5000,
+        lastAttemptAt: null,
+        lastSuccessAt: null,
+        lastError: null,
+        consecutiveFailures: 0,
+        nextDelayMs: 5000,
+      },
+    },
+    '/api/board': {
+      version: 1,
+      currentOverall: myPickCount + 1,
+      myNextPicks: [35, 38],
+      threatPick: 35,
+      replacement: { rank: {}, points: {} },
+      benchmarks: { ceiling: 2000, replacement: 1200 },
+      captureRatio: 0.1,
+      boostedIds: [],
+      scarcity: [],
+      costOfWaiting: [],
+      rows,
+      drafted: [],
+    },
+    '/api/evaluate': {
+      version: 1,
+      currentOverall: myPickCount + 1,
+      onClockTeamId: options.myTurn === true ? 13 : 11,
+      myTurn: options.myTurn === true,
+      myNextPicks: [35, 38],
+      candidates:
+        options.myTurn === true ?
+          [
+            {
+              playerId: 'p-bowers',
+              name: 'Brock Bowers',
+              position: 'TE',
+              points: 200.4,
+              vor: 50.2,
+              estTeamScore: 1500,
+              captureRatio: 0.4,
+              deltaVsBest: 0,
+              landsOn: 'TE',
+              upsideScore: 55,
+              tier: 1,
+              ecrRank: 10,
+              roomAdp: 94,
+              pNextPick: 0.14,
+              pPickAfter: 0.05,
+              boosted: false,
+              news: null,
+              threat: null,
+            },
+          ]
+        : [],
+    },
+  }
+}
+
+/** Execute the page script against stubbed API payloads; caller asserts on the DOM after. */
+const runPage = async (payloads: Record<string, unknown>): Promise<void> => {
+  loadMarkup()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((path: string) =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? { error: 'no fixture: ' + path }) }),
+    ),
+  )
+  vi.stubGlobal(
+    'setInterval',
+    vi.fn(() => 0),
+  )
+  // Deliberate: the page's inline script must run as-is against the served markup.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+  new Function(script)()
+  await new Promise((resolve) => setTimeout(resolve, 25))
+}
+
+// -- tests --------------------------------------------------------------------
 
 describe('page structure', () => {
   it('embeds exactly one script', () => {
@@ -57,145 +247,6 @@ describe('page structure', () => {
     }
   })
 
-  it('renders fixture data: news column dot, Rm Δ arrow band, and the full threat attribution tooltip', async () => {
-    const row = {
-      playerId: 'p-bowers',
-      name: 'Brock Bowers',
-      position: 'TE',
-      team: 'LV',
-      byeWeek: 8,
-      points: 200.4,
-      vor: 50.2,
-      tier: 1,
-      ecrRank: 10,
-      adp: 61,
-      roomAdp: 94,
-      roomDelta: 33,
-      upsideScore: 55,
-      residualSpread: null,
-      contested: false,
-      sourceCount: 2,
-      banned: false,
-      injuryStatus: 'ACTIVE',
-      pNextPick: 0.14,
-      pPickAfter: 0.05,
-      news: { playerId: 'p-bowers', direction: 'harms', impact: 'high', itemCount: 3, assessedCount: 2 },
-      threat: {
-        survivalToMyPick: 0.14,
-        pTakenBeforeMyPick: 0.86,
-        threatLevel: 3,
-        attribution: {
-          teamId: 11,
-          slot: 4,
-          ownerName: 'James Johnson',
-          atPick: 21,
-          probability: 0.25,
-          evidence: ["TE early both years — Bowers R2 '25, Kelce R4 '24"],
-        },
-      },
-    }
-    const payloads: Record<string, unknown> = {
-      '/api/state': {
-        version: 1,
-        league: { name: 'Fixture', size: 12, myTeamId: 13, mySlot: 11, totalRounds: 14, totalPicks: 168 },
-        draft: {
-          pickCount: 20,
-          polledCount: 0,
-          manualCount: 0,
-          currentOverall: 21,
-          complete: false,
-          onClockTeamId: 11,
-          myNextPicks: [35, 38],
-          picksUntilMyTurn: 14,
-        },
-        picks: [],
-        myRoster: { slots: [], byeCollisions: [], openStarters: 0, totalOpen: 0 },
-        capture: { ratio: 0.1, teamTotal: 1300, benchmarks: { ceiling: 2000, replacement: 1200 } },
-        overrides: { file: null, count: 0, boosted: 0, banned: 0, error: null },
-        ingest: { running: false, startedAt: null, finishedAt: null, lastError: null, lastSummary: null },
-        mock: {
-          active: false,
-          seed: null,
-          pace: null,
-          pickCount: 0,
-          myTurn: false,
-          countdownStartedAt: null,
-          recap: null,
-        },
-        asOf: { player: null, seasonProjection: null, marketData: null, leagueSettings: null, draftPick: null },
-        poll: {
-          enabled: false,
-          inFlight: false,
-          intervalMs: 5000,
-          lastAttemptAt: null,
-          lastSuccessAt: null,
-          lastError: null,
-          consecutiveFailures: 0,
-          nextDelayMs: 5000,
-        },
-      },
-      '/api/board': {
-        version: 1,
-        currentOverall: 21,
-        myNextPicks: [35, 38],
-        threatPick: 35,
-        replacement: { rank: {}, points: {} },
-        benchmarks: { ceiling: 2000, replacement: 1200 },
-        captureRatio: 0.1,
-        boostedIds: [],
-        scarcity: [],
-        costOfWaiting: [],
-        rows: [row],
-        drafted: [],
-      },
-      '/api/evaluate': {
-        version: 1,
-        currentOverall: 21,
-        onClockTeamId: 11,
-        myTurn: false,
-        myNextPicks: [35, 38],
-        candidates: [],
-      },
-    }
-    loadMarkup()
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((path: string) =>
-        Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? { error: 'no fixture: ' + path }) }),
-      ),
-    )
-    vi.stubGlobal(
-      'setInterval',
-      vi.fn(() => 0),
-    )
-    try {
-      // Deliberate: the page's inline script must run as-is against the served markup.
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
-      new Function(script)()
-      await new Promise((resolve) => setTimeout(resolve, 25))
-
-      const cells = document.querySelectorAll('#rows tr td')
-      expect(cells.length).toBe(document.querySelectorAll('#tscroll thead th').length)
-      // N column: its own cell (second), dot clickable into the drawer
-      const newsCell = cells[1] as HTMLElement
-      expect(newsCell.querySelector('.pname .ndot.nd-harms.nd-high')).not.toBeNull()
-      expect(cells[2]?.textContent).toContain('Brock Bowers')
-      // Rm Δ: banded arrows with the real numbers in the tooltip
-      const rm = document.querySelector('#rows td.rm') as HTMLElement
-      expect(rm.textContent).toBe('▲▲')
-      expect(rm.className).toContain('rm2up')
-      expect(rm.title).toBe('ESPN 94 · market 61 — room takes him ~33 picks later than market')
-      // Threat marker: the ACTUAL tooltip carries the full attribution line
-      const thr = document.querySelector('#rows .thr') as HTMLElement
-      expect(thr.textContent).toBe('!!!')
-      expect(thr.title).toBe(
-        "86% gone before your pick 35 — James Johnson (T11, slot 4) @ pick 21: 25% — TE early both years — Bowers R2 '25, Kelce R4 '24",
-      )
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
-
   it('the inline script executes against its own markup and starts polling', () => {
     loadMarkup()
     const fetchStub = vi.fn(() => new Promise<never>(() => undefined)) // pending forever — wiring only
@@ -218,6 +269,100 @@ describe('page structure', () => {
       document.querySelector('#tabs .tab')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       const search = document.getElementById('search')
       search?.dispatchEvent(new Event('input', { bubbles: true }))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
+describe('page rendering with fixture data', () => {
+  it('renders the news column dot, Rm Δ arrow band, and the full threat attribution tooltip', async () => {
+    try {
+      await runPage(buildPayloads())
+      const cells = document.querySelectorAll('#rows tr')[0]?.querySelectorAll('td') ?? []
+      expect(cells.length).toBe(document.querySelectorAll('#tscroll thead th').length)
+      // N column: its own cell (second), dot clickable into the drawer
+      const newsCell = cells[1] as HTMLElement
+      expect(newsCell.querySelector('.pname .ndot.nd-harms.nd-high')).not.toBeNull()
+      expect(cells[2]?.textContent).toContain('Brock Bowers')
+      // Rm Δ: banded arrows with the real numbers in the tooltip
+      const rm = document.querySelector('#rows td.rm') as HTMLElement
+      expect(rm.textContent).toBe('▲▲')
+      expect(rm.className).toContain('rm2up')
+      expect(rm.title).toBe('ESPN 94 · market 61 — room takes him ~33 picks later than market')
+      // Threat marker: the ACTUAL tooltip carries the full attribution line
+      const thr = document.querySelector('#rows .thr') as HTMLElement
+      expect(thr.textContent).toBe('!!!')
+      expect(thr.title).toBe(
+        "86% gone before your pick 35 — James Johnson (T11, slot 4) @ pick 21: 25% — TE early both years — Bowers R2 '25, Kelce R4 '24",
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('shows the panel ECR column on my turn, with room ADP one hover away', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 2 }))
+      const headers = [...document.querySelectorAll('#clockPanel thead th')].map((th) => th.textContent)
+      const ecrIndex = headers.indexOf('ECR')
+      expect(ecrIndex).toBeGreaterThan(headers.indexOf('Lands'))
+      expect(ecrIndex).toBeLessThan(headers.indexOf('UPS'))
+      const cells = document.querySelectorAll('#clockRows tr')[0]?.querySelectorAll('td') ?? []
+      expect(cells[ecrIndex]?.textContent).toBe('10')
+      expect((cells[ecrIndex] as HTMLElement).title).toBe('ECR 10 · ADP 94.0')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  const kdRows = [
+    boardRow({ playerId: 'p-k1', name: 'Best Kicker', position: 'K', adp: 120, points: null }),
+    boardRow({ playerId: 'p-k2', name: 'Next Kicker', position: 'K', adp: 130, points: null }),
+    boardRow({ playerId: 'p-d1', name: 'Best Defense', position: 'DST', adp: 118, points: null }),
+  ]
+
+  it('K/DST nudge stays hidden with slack: 6 picks left, 2 seats open', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 8, openK: 1, openDst: 1, extraRows: kdRows }))
+      expect((document.getElementById('kdNudge') as HTMLElement).style.display).toBe('none')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('K/DST nudge goes amber at one pick of slack: 3 left, 2 open', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 11, openK: 1, openDst: 1, extraRows: kdRows }))
+      const nudge = document.getElementById('kdNudge') as HTMLElement
+      expect(nudge.style.display).not.toBe('none')
+      expect(nudge.className).toContain('kd-amber')
+      expect(nudge.textContent).toContain('3 picks left, K/DST still open')
+      expect(nudge.querySelector('button')).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('K/DST nudge goes red with one-click rows when every pick is needed: 2 left, 2 open', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 12, openK: 1, openDst: 1, extraRows: kdRows }))
+      const nudge = document.getElementById('kdNudge') as HTMLElement
+      expect(nudge.className).toContain('kd-red')
+      expect(nudge.textContent).toContain('2 picks left, K/DST still open')
+      expect(nudge.textContent).toContain('Best Kicker')
+      expect(nudge.textContent).toContain('Best Defense')
+      expect(nudge.querySelector('button[data-act="mine"][data-id="p-k1"]')).not.toBeNull()
+      expect(nudge.querySelector('button[data-act="mine"][data-id="p-d1"]')).not.toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('no nudge once both seats are filled, even on the last pick', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 13, openK: 0, openDst: 0, extraRows: kdRows }))
+      expect((document.getElementById('kdNudge') as HTMLElement).style.display).toBe('none')
     } finally {
       vi.unstubAllGlobals()
     }

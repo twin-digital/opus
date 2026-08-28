@@ -193,6 +193,10 @@ export const PAGE = `<!doctype html>
   .thr3 { color: var(--danger); }
   #clockThreats { margin-top: 6px; font-size: 14px; color: var(--muted-fg); }
   #clockThreats b { color: var(--foreground); }
+  .kd-nudge { margin-top: 8px; padding: 6px 10px; border-radius: calc(var(--radius) - 2px); font-weight: 600; }
+  .kd-amber { background: color-mix(in oklab, var(--warning) 15%, transparent); color: var(--warning); }
+  .kd-red { background: color-mix(in oklab, var(--danger) 15%, transparent); color: var(--danger); }
+  .kd-nudge .kd-row { font-weight: 400; color: var(--foreground); margin-top: 4px; }
 
   /* News drawer */
   #drawerBack { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.35); }
@@ -261,6 +265,7 @@ export const PAGE = `<!doctype html>
             <th title="Projected final starter total if you take him now">Est team</th>
             <th title="Est team minus the best candidate's: green = within 3 pts (rollout noise — effectively tied, break the tie on Back@), amber = real but modest cost (3–15 pts), muted = expensive (>15 pts)">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
+            <th title="FantasyPros expert consensus rank — the independent audit signal; hover a value for room ADP">ECR</th>
             <th title="Upside score 0–100">UPS</th>
             <th id="backH" title="Odds he is still there at your next turn if you pass">Back@—</th>
             <th></th>
@@ -269,6 +274,7 @@ export const PAGE = `<!doctype html>
         <tbody id="clockRows"></tbody>
       </table>
       <div id="clockThreats"></div>
+      <div id="kdNudge" style="display:none"></div>
     </div>
     <div id="fallsPanel" class="card" style="display:none"></div>
     <div id="controls">
@@ -604,6 +610,8 @@ function renderClock() {
         '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
         '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
+        '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
+          (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
         '<td class="' + (bench ? 'ups-hi' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
         '<td class="' + oddsClass(c.pPickAfter) + '">' + pct(c.pPickAfter) + threatMark(c) + '</td>' +
         '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
@@ -620,16 +628,58 @@ function renderClock() {
           ' gone by ' + (B ? B.threatPick : '?') +
           (a ? ' (' + esc(a.ownerName || 'T' + a.teamId) + ' @' + a.atPick + ')' : '');
       }).join(' &nbsp;·&nbsp; ');
+    renderKdNudge();
   } else {
     clock.style.display = 'none';
     falls.style.display = '';
     var entries = E.candidates.slice(0, 3).map(function (c) {
-      return '<b>' + esc(c.name) + '</b> <span class="muted">' + c.position + '</span> ' +
+      return '<b>' + esc(c.name) + '</b> <span class="muted" title="' +
+        esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' + c.position +
+        ' ecr ' + (c.ecrRank === null ? '—' : c.ecrRank) + '</span> ' +
         'est <span class="mono">' + num(c.estTeamScore, 1) + '</span> ' +
         '<span class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + ' back</span>';
     });
     falls.innerHTML = 'IF HE FALLS TO YOU @' + (E.myNextPicks[0] || '?') + ' — ' + entries.join(' &nbsp;·&nbsp; ');
   }
+}
+
+// Endgame K/DST nudge: the engine never recommends them (no stat lines), so the panel must.
+// Shows when my remaining picks leave at most one pick of slack over the open K/DST seats;
+// red (with one-click rows) when every remaining pick is needed for them.
+function renderKdNudge() {
+  var box = el('kdNudge');
+  if (!S || !B) { box.style.display = 'none'; return; }
+  var open = { K: 0, DST: 0 };
+  S.myRoster.slots.forEach(function (s) {
+    if (s.slot === 'K' || s.slot === 'DST') open[s.slot] += Math.max(0, s.capacity - s.players.length);
+  });
+  var openTotal = open.K + open.DST;
+  var myPicks = S.picks.filter(function (p) { return p.teamId === S.league.myTeamId; }).length;
+  var remaining = S.league.totalRounds - myPicks;
+  if (openTotal === 0 || remaining - openTotal > 1) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  var red = remaining <= openTotal;
+  box.style.display = '';
+  box.className = 'kd-nudge ' + (red ? 'kd-red' : 'kd-amber');
+  var html = ['⚠ ' + remaining + ' pick' + (remaining === 1 ? '' : 's') +
+    ' left, K/DST still open — draft them with your last two picks'];
+  if (red) {
+    ['K', 'DST'].forEach(function (pos) {
+      if (!open[pos]) return;
+      var cand = B.rows.filter(function (r) { return r.position === pos && !r.banned; })
+        .sort(function (a, b) { return (a.adp === null ? 1e9 : a.adp) - (b.adp === null ? 1e9 : b.adp); })
+        .slice(0, 3);
+      if (!cand.length) return;
+      html.push('<div class="kd-row">' + pos + ': ' + cand.map(function (r) {
+        return esc(r.name) + ' <span class="muted">' + (r.team || 'FA') + ' adp ' + num(r.adp, 0) + '</span> ' +
+          '<button class="act" data-act="mine" data-id="' + r.playerId + '" title="draft him">ME</button>';
+      }).join(' &nbsp;·&nbsp; ') + '</div>');
+    });
+  }
+  box.innerHTML = html.join('');
 }
 
 function viewRows() {
@@ -915,7 +965,7 @@ function actClick(e) {
   req.then(loadState);
 }
 el('rows').addEventListener('click', actClick);
-el('clockRows').addEventListener('click', actClick);
+el('clockPanel').addEventListener('click', actClick); // covers the candidate rows and the K/DST nudge
 el('pollToggle').addEventListener('change', function (e) {
   api('/api/poll', { enabled: e.target.checked }).then(loadState);
 });

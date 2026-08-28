@@ -1126,3 +1126,49 @@ describe('candidate ordering', () => {
     expect(names([...tied.slice(0, 6), gem, ...tied.slice(6)])[0]).toBe('gem')
   })
 })
+
+describe('roster-need awareness from team-attributed marks', () => {
+  const RULES = {
+    teams: {
+      '9': {
+        teamId: 9,
+        owner: 'QB Guy',
+        sigma: null,
+        rules: [{ kind: 'pos-boost', position: 'QB', rounds: [1, 3], strength: 6 }],
+        evidence: { '0': 'QB early both years' },
+      },
+    },
+  }
+  /** Fifteen picks in; QB1+QB2 either attributed to team 9 or marked team-unknown. */
+  const qb3Row = (qbTeam: number | 'unknown') => {
+    const { context } = makeApp({ roomRulesFile: writeRoomRules(RULES) })
+    const gone = [1, 2, 3, 4, 5, 6, 7, 8]
+      .map((i) => `p-RB${String(i)}`)
+      .concat([1, 2, 3, 4, 5].map((i) => `p-WR${String(i)}`))
+    for (const playerId of gone) {
+      expect(call(context, 'POST', '/api/mark', { playerId, teamId: 'unknown' }).status).toBe(200)
+    }
+    for (const playerId of ['p-QB1', 'p-QB2']) {
+      expect(call(context, 'POST', '/api/mark', { playerId, teamId: qbTeam }).status).toBe(200)
+    }
+    const board = call(context, 'GET', '/api/board').json as {
+      rows: {
+        playerId: string
+        threat: { pTakenBeforeMyPick: number; attribution: { teamId: number } | null } | null
+      }[]
+    }
+    return board.rows.find((row) => row.playerId === 'p-QB3')
+  }
+
+  it('a team already holding two QBs stops threatening the remaining QBs', () => {
+    const unknown = qb3Row('unknown')
+    const stocked = qb3Row(9)
+    const pTaken = (row: ReturnType<typeof qb3Row>): number => row?.threat?.pTakenBeforeMyPick ?? 0
+    // with unknown teams the QB-hungry profile still fires; attributed to team 9
+    expect(pTaken(unknown)).toBeGreaterThan(0)
+    expect(unknown?.threat?.attribution?.teamId).toBe(9)
+    // with the QBs attributed to team 9, its QB seat block is full: the threat collapses
+    expect(pTaken(stocked)).toBeLessThan(pTaken(unknown))
+    expect(stocked?.threat?.attribution?.teamId).not.toBe(9)
+  })
+})

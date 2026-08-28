@@ -4,6 +4,7 @@ import {
   board,
   evaluateCandidates,
   loadOverridesFile,
+  countTeamPositions,
   loadRoomRulesFile,
   pickThreats,
   takeDistribution,
@@ -17,6 +18,7 @@ import {
   type PlayerOverride,
   type PlayerThreat,
   type RoomProfiles,
+  type TeamPositionPick,
   type ThreatAttribution,
 } from '@twin-digital/football-compute'
 import {
@@ -146,6 +148,10 @@ export interface OverridesStatus {
 
 export interface EvaluateRow extends CandidateEvaluation {
   tier: number | null
+  /** Expert consensus rank — the panel's independent audit signal, joined from the board. */
+  ecrRank: number | null
+  /** The room's price (ESPN ADP, Sleeper fallback), joined from the board for the ECR tooltip. */
+  roomAdp: number | null
   /** Make-it-back odds joined from the board: my next pick / the pick after. */
   pNextPick: number | null
   pPickAfter: number | null
@@ -919,6 +925,7 @@ export class App {
     if (this.profiles !== null && threatPick !== null) {
       threats = pickThreats(this.profiles, this.settings.draft.pickOrder, live.currentOverall, threatPick, live.rows, {
         myTeamId: this.options.myTeamId,
+        livePicks: this.livePositionPicks(picks),
       })
     }
     const signals = new Map(this.store.getNewsSignals().map((signal) => [signal.playerId, signal]))
@@ -949,7 +956,7 @@ export class App {
       captureRatio: live.captureRatio,
       boostedIds: [...new Set(this.overrides.filter((override) => override.action === 'boost').map((o) => o.playerId))],
       scarcity: tierScarcity(live.rows),
-      costOfWaiting: this.costOfWaiting(live.currentOverall, myNextPicks, live.rows),
+      costOfWaiting: this.costOfWaiting(live.currentOverall, myNextPicks, live.rows, this.livePositionPicks(picks)),
       rows,
       drafted,
     }
@@ -979,6 +986,8 @@ export class App {
           return {
             ...candidate,
             tier: row?.tier ?? null,
+            ecrRank: row?.ecrRank ?? null,
+            roomAdp: row?.roomAdp ?? null,
             pNextPick: row?.pNextPick ?? null,
             pPickAfter: row?.pPickAfter ?? null,
             boosted: boosted.has(candidate.playerId),
@@ -1005,9 +1014,15 @@ export class App {
    * take-distribution walk as the threat display (skipping my own turns), so the two agree;
    * the expectation over a position is first-available over its top availables by points.
    */
-  private costOfWaiting(currentOverall: number, myNextPicks: number[], rows: BoardRow[]): CostOfWaitingRow[] {
+  private costOfWaiting(
+    currentOverall: number,
+    myNextPicks: number[],
+    rows: BoardRow[],
+    livePicks: TeamPositionPick[],
+  ): CostOfWaitingRow[] {
     const targets = myNextPicks.slice(0, 2)
     const { pickOrder } = this.settings.draft
+    const teamCounts = countTeamPositions(livePicks)
     const survival = new Map<PlayerId, number>(rows.map((row) => [row.playerId, 1]))
     const survivalAt = new Map<number, Map<PlayerId, number>>()
     const maxTarget = targets.length > 0 ? Math.max(...targets) : currentOverall
@@ -1018,10 +1033,11 @@ export class App {
       if (pick === maxTarget) {
         break
       }
-      if (teamAtPick(pickOrder, pick) === this.options.myTeamId) {
+      const teamId = teamAtPick(pickOrder, pick)
+      if (teamId === this.options.myTeamId) {
         continue
       }
-      const distribution = takeDistribution(this.profiles, pickOrder, pick, rows)
+      const distribution = takeDistribution(this.profiles, pickOrder, pick, rows, teamCounts.get(teamId))
       for (const row of rows) {
         const taken = distribution.get(row.playerId) ?? 0
         survival.set(row.playerId, (survival.get(row.playerId) ?? 1) * (1 - taken))
@@ -1049,10 +1065,19 @@ export class App {
       projections: this.snapshot.projections,
       market: this.snapshot.market,
       draftedPlayerIds: picks.map((pick) => pick.playerId),
+      teamPicks: picks.map((pick) => ({ teamId: pick.teamId, playerId: pick.playerId })),
       myDraftedPlayerIds: picks.filter((pick) => pick.teamId === this.options.myTeamId).map((pick) => pick.playerId),
       myDraftSlot: this.mySlot,
       season: this.options.season,
     }
+  }
+
+  /** Effective picks as team-attributed positions; unknown-team manual marks count for no one. */
+  private livePositionPicks(picks: EffectivePick[]): TeamPositionPick[] {
+    return picks.flatMap((pick) => {
+      const position = this.playerById.get(pick.playerId)?.position
+      return pick.teamId === null || position === undefined ? [] : [{ teamId: pick.teamId, position }]
+    })
   }
 
   statePayload(): StatePayload {

@@ -53,8 +53,9 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 - Turn **live poll** on. Picks land on the board within ~5s of ESPN registering them.
 - **When you are on the clock** a violet panel appears above the board: candidates ranked
   by projected final starter total (EST TEAM), with **Δ best** (the decision column),
-  the lineup slot each lands on, upside score, and the odds each makes it back to your
-  next turn if you pass. **Δ best is color-banded** on the same tokens as Back@: green =
+  the lineup slot each lands on, **ECR** (the independent expert-consensus audit — "is
+  this a real player"; hover for room ADP), upside score, and the odds each makes it back
+  to your next turn if you pass. **Δ best is color-banded** on the same tokens as Back@: green =
   within 3 pts of BEST (rollout noise — effectively tied, break the tie on Back@: green Δ
   with low Back@ means take him now, green Δ with high Back@ means safe to pass), amber =
   real but modest cost, muted = expensive. The row order is always EST TEAM descending —
@@ -67,14 +68,17 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
   one-line strip shows the top-3 "if he falls to you".
 - **capture** in the status bar is the live draft grade: (your starters − replacement) /
   (ceiling − replacement); hover for the numbers.
-- Board columns **Rm Δ** (positive green = the room lets him fall, negative red = the room
-  reaches) and **UPS** (upside 0–100) come from room pricing; a **!** by a name means the
-  projection sources genuinely disagree (hover for the spread).
-- **News dots** sit by player names: red = harms, green = improves, gray = unclear; bigger
-  and more saturated = higher impact (hover for "harms/high · N items"). No dot means no
-  assessed news. **Click any player name** (board or on-clock panel) to open the news
-  drawer: injury status, each assessed story's 1–2 sentence summary with a
-  direction/impact chip, the expandable full story, and unassessed headlines below.
+- The **Rm Δ** column shows how the room's board (ESPN) prices a player vs the wider
+  market as banded arrows: **▲▲** likely falls 2+ rounds past his market price, **▲** ≥12
+  picks, **—** priced about right, **▼** the room reaches ≥12 picks early, **▼▼** ≥24
+  (hover for the real numbers). **UPS** (upside 0–100) comes from expert disagreement; a
+  **!** by a name means the projection sources genuinely disagree (hover for the spread).
+- The narrow **N** column holds the news dots: red = harms, green = improves, gray =
+  unclear; bigger and more saturated = higher impact (hover for "harms/high · N items").
+  Sort it to float harms/high to the top. No dot means no assessed news. **Click the dot
+  or any player name** (board or on-clock panel) to open the news drawer: injury status,
+  each assessed story's 1–2 sentence summary with a direction/impact chip, the expandable
+  full story, and unassessed headlines below.
 - The drawer's footer is the override lane: **Ban** (note defaults to the latest harms
   summary), **Boost ±points**, **Un-ban / clear**. These rewrite `overrides.json` in place
   and reload it immediately — no restart. They work during a mock too (overrides are
@@ -90,6 +94,13 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
   free, amber = it costs, red = cliff). Hover a cell for the player most likely to be the
   best one left at that pick. It runs on the same profiled room model as the threat
   markers.
+- **K/DST endgame nudge**: the engine never recommends K/DST (no stat lines), so the
+  on-clock panel reminds you — amber when your remaining picks leave only one pick of
+  slack over the open K/DST seats, red when every remaining pick is needed, with the
+  top-3 available at each by ADP and one-click **ME** buttons.
+- Threat markers, threats, and the room model are **roster-need aware** when picks carry
+  teams (polled picks always do): a team already holding two QBs stops being predicted to
+  take a third, so keep marks team-attributed when marking manually if you can.
 - **Reset manual** in the status bar deletes ALL manual marks (one confirm, count shown).
   It refuses while live poll is on or a mock is running, so it cannot fire mid-draft by
   accident.
