@@ -74,6 +74,11 @@ interface FixtureOptions {
   openDst?: number
   myTurn?: boolean
   extraRows?: Record<string, unknown>[]
+  /** Unresolved-pick ESPN ids surfaced by /api/state (amber chip). */
+  unresolvedEspnIds?: number[]
+  /** noiseBand carried on /api/evaluate (MC evaluator's model-error band). */
+  noiseBand?: number
+  extraCandidates?: Record<string, unknown>[]
 }
 
 const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> => {
@@ -103,6 +108,10 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
         onClockTeamId: options.myTurn === true ? 13 : 11,
         myNextPicks: [35, 38],
         picksUntilMyTurn: options.myTurn === true ? 0 : 14,
+        unresolved: {
+          count: (options.unresolvedEspnIds ?? []).length,
+          espnIds: options.unresolvedEspnIds ?? [],
+        },
       },
       picks: myPicks,
       myRoster: {
@@ -159,6 +168,7 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
       onClockTeamId: options.myTurn === true ? 13 : 11,
       myTurn: options.myTurn === true,
       myNextPicks: [35, 38],
+      ...(options.noiseBand === undefined ? {} : { noiseBand: options.noiseBand }),
       candidates:
         options.myTurn === true ?
           [
@@ -182,6 +192,7 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
               news: null,
               threat: null,
             },
+            ...(options.extraCandidates ?? []),
           ]
         : [],
     },
@@ -363,6 +374,210 @@ describe('page rendering with fixture data', () => {
     try {
       await runPage(buildPayloads({ myTurn: true, myPickCount: 13, openK: 0, openDst: 0, extraRows: kdRows }))
       expect((document.getElementById('kdNudge') as HTMLElement).style.display).toBe('none')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('marks a missing room price as faint n/a — distinct from the in-band dash — and counts assessed in the dot tooltip', async () => {
+    try {
+      await runPage(
+        buildPayloads({
+          extraRows: [
+            boardRow({ playerId: 'p-inband', name: 'In Band', roomDelta: 0 }),
+            boardRow({ playerId: 'p-nodata', name: 'No Data', roomDelta: null, roomAdp: null }),
+          ],
+        }),
+      )
+      const rmCells = [...document.querySelectorAll('#rows td.rm')] as HTMLElement[]
+      expect(rmCells.map((cell) => cell.textContent)).toEqual(['▲▲', '—', 'n/a'])
+      expect(rmCells[2]?.title).toBe('no ESPN price for this player')
+      const dot = document.querySelector('#rows .ndot') as HTMLElement
+      expect(dot.title).toBe('harms/high · 2 assessed · 3 stories')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('shows the amber UNRESOLVED chip with the ESPN ids one hover away', async () => {
+    try {
+      await runPage(buildPayloads({ unresolvedEspnIds: [4362628] }))
+      const pill = document.getElementById('unresolvedPill') as HTMLElement
+      expect(pill.style.display).not.toBe('none')
+      expect(pill.className).toContain('warn')
+      expect(document.getElementById('unresolvedLabel')?.textContent).toBe('UNRESOLVED x1')
+      expect(pill.title).toContain('#4362628')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('hides the UNRESOLVED chip when every pick resolves', async () => {
+    try {
+      await runPage(buildPayloads())
+      expect((document.getElementById('unresolvedPill') as HTMLElement).style.display).toBe('none')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('styles the panel bench-lander UPS distinctly from the board ups-hi', async () => {
+    try {
+      await runPage(
+        buildPayloads({
+          myTurn: true,
+          extraCandidates: [
+            {
+              playerId: 'p-lottery',
+              name: 'Lottery Ticket',
+              position: 'WR',
+              points: 150,
+              vor: 10,
+              estTeamScore: 1490,
+              captureRatio: 0.35,
+              deltaVsBest: -10,
+              landsOn: 'BENCH',
+              upsideScore: 92,
+              tier: 3,
+              ecrRank: 40,
+              roomAdp: 60,
+              pNextPick: 0.5,
+              pPickAfter: 0.3,
+              boosted: false,
+              news: null,
+              threat: null,
+            },
+          ],
+        }),
+      )
+      const benchRow = [...document.querySelectorAll('#clockRows tr')][1] as HTMLElement
+      expect(benchRow.querySelector('td.ups-bench')?.textContent).toBe('92')
+      expect(benchRow.querySelector('td.ups-hi')).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
+describe('Δ-best bands from the evaluate payload', () => {
+  const lottery = (deltaVsBest: number): Record<string, unknown> => ({
+    playerId: 'p-two',
+    name: 'Second Pick',
+    position: 'WR',
+    points: 150,
+    vor: 10,
+    estTeamScore: 1500 + deltaVsBest,
+    captureRatio: 0.35,
+    deltaVsBest,
+    landsOn: 'WR',
+    upsideScore: 60,
+    tier: 2,
+    ecrRank: 20,
+    roomAdp: 30,
+    pNextPick: 0.5,
+    pPickAfter: 0.3,
+    boosted: false,
+    news: null,
+    threat: null,
+  })
+
+  it('renders a −10 delta green under noiseBand=15 and widens the tooltip band', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, noiseBand: 15, extraCandidates: [lottery(-10)] }))
+      const delta = [...document.querySelectorAll('#clockRows tr')][1]?.querySelector('td.delta') as HTMLElement
+      expect(delta.className).toContain('odds-hi')
+      expect((document.getElementById('deltaH') as HTMLElement).title).toContain('within 15 pts')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('keeps the default band without noiseBand: a −10 delta is amber, tooltip says 3', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, extraCandidates: [lottery(-10)] }))
+      const delta = [...document.querySelectorAll('#clockRows tr')][1]?.querySelector('td.delta') as HTMLElement
+      expect(delta.className).toContain('odds-mid')
+      expect((document.getElementById('deltaH') as HTMLElement).title).toContain('within 3 pts')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
+describe('API failure handling', () => {
+  const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+  it('a 500 on /api/board shows the error pill and recovers on the next poll', async () => {
+    loadMarkup()
+    const payloads = buildPayloads()
+    let boardFails = true
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string) => {
+        if (path === '/api/board' && boardFails) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'boom' }) })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? {}) })
+      }),
+    )
+    const intervals: { fn: () => void; ms: number }[] = []
+    vi.stubGlobal(
+      'setInterval',
+      vi.fn((fn: () => void, ms: number) => {
+        intervals.push({ fn, ms })
+        return 0
+      }),
+    )
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+      new Function(script)()
+      await sleep(25)
+      // the failed fetch surfaced instead of freezing silently, and no version was committed
+      expect(document.getElementById('pollLabel')?.textContent).toBe('API ERROR')
+      expect(document.getElementById('pollPill')?.className).toContain('err')
+      expect(document.querySelector('#rows')?.textContent).toContain('loading')
+
+      boardFails = false
+      intervals.find((interval) => interval.ms === 2000)?.fn()
+      await sleep(25)
+      expect(document.querySelector('#rows')?.textContent).toContain('Brock Bowers')
+      expect(document.getElementById('pollLabel')?.textContent).not.toBe('API ERROR')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('a 409 on ME shows a visible toast', async () => {
+    const payloads = buildPayloads()
+    loadMarkup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string, opts?: { method?: string }) => {
+        if (opts?.method === 'POST') {
+          return Promise.resolve({
+            ok: false,
+            status: 409,
+            json: () => Promise.resolve({ error: 'mock draft active — the room picks for itself' }),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? {}) })
+      }),
+    )
+    vi.stubGlobal(
+      'setInterval',
+      vi.fn(() => 0),
+    )
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+      new Function(script)()
+      await sleep(25)
+      const me = document.querySelector('#rows button[data-act="mine"]')
+      expect(me).not.toBeNull()
+      me?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await sleep(25)
+      const toast = document.getElementById('toast') as HTMLElement
+      expect(toast.style.display).toBe('block')
+      expect(toast.textContent).toContain('mock draft active')
     } finally {
       vi.unstubAllGlobals()
     }

@@ -1034,6 +1034,9 @@ export class App {
           const row = boardRows.get(candidate.playerId)
           return {
             ...candidate,
+            // One UPS number everywhere: the panel displays the board's 3-component score.
+            // The rollout's internal bench scoring keeps its own (spread-free) upside inputs.
+            upsideScore: row?.upsideScore ?? candidate.upsideScore,
             tier: row?.tier ?? null,
             ecrRank: row?.ecrRank ?? null,
             roomAdp: row?.roomAdp ?? null,

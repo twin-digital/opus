@@ -220,6 +220,15 @@ export const PAGE = `<!doctype html>
   .news-item details p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; }
   .news-unassessed { padding: 3px 0; font-size: 14px; color: var(--muted-fg); }
   .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+
+  /* Board UPS ≥ 80 vs panel bench-lander (where UPS is the ranking key) — distinct styles. */
+  .ups-bench { color: var(--warning); font-weight: 600; }
+
+  /* Action-failure toast: brief, visible, self-dismissing. */
+  #toast { display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 50; max-width: 70vw; padding: 8px 14px; border-radius: var(--radius);
+    background: color-mix(in oklab, var(--danger) 18%, var(--card)); color: var(--danger);
+    border: 1px solid var(--danger); font-weight: 600; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); }
 </style>
 </head>
 <body>
@@ -264,7 +273,7 @@ export const PAGE = `<!doctype html>
           <tr>
             <th class="l">Player</th><th class="l">Pos</th>
             <th title="Projected final starter total if you take him now">Est team</th>
-            <th title="Est team minus the best candidate's: green = within 3 pts (rollout noise — effectively tied, break the tie on Back@), amber = real but modest cost (3–15 pts), muted = expensive (>15 pts)">Δ best</th>
+            <th id="deltaH" title="">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
             <th title="FantasyPros expert consensus rank — the independent audit signal; hover a value for room ADP">ECR</th>
             <th title="Upside score 0–100">UPS</th>
@@ -316,6 +325,7 @@ export const PAGE = `<!doctype html>
   </div>
 </div>
 
+<div id="toast"></div>
 <div id="drawerBack"></div>
 <div id="drawer">
   <div class="drawer-head">
@@ -333,12 +343,17 @@ export const PAGE = `<!doctype html>
 
 <script>
 'use strict';
-var S = null, B = null, E = null, lastVersion = -1, serverOk = true;
-var rowById = {}, drawerPid = null;
+var S = null, B = null, E = null, lastVersion = -1, serverOk = true, lastApiError = '';
+var rowById = {}, drawerPid = null, toastTimer = null;
 var THREAT_MARKS = ['', '!', '!!', '!!!'];
-// Δ-best bands: within DELTA_NOISE of BEST the rollout cannot tell candidates apart
-// (break the tie on Back@); past DELTA_COSTLY the alternative is genuinely expensive.
+// Δ-best bands: within the noise band of BEST the evaluator cannot tell candidates apart
+// (break the tie on Back@); past the costly band the alternative is genuinely expensive.
+// The evaluate payload may carry its own noiseBand (e.g. MC model error); default 3.
 var DELTA_NOISE = 3, DELTA_COSTLY = 15;
+function noiseBand() {
+  return (E && typeof E.noiseBand === 'number' && E.noiseBand > 0) ? E.noiseBand : DELTA_NOISE;
+}
+function costlyBand() { return Math.max(DELTA_COSTLY, 3 * noiseBand()); }
 var ui = { pos: 'ALL', search: '', sortKey: 'vor', sortDir: -1, showDrafted: false };
 var POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 var ASC_DEFAULT = { rank: 1, name: 1, position: 1, team: 1, byeWeek: 1, ecrRank: 1, adp: 1, injuryStatus: 1 };
@@ -383,11 +398,12 @@ function nameMarkers(r, boosted) {
   return m;
 }
 // Assessed-news dot: direction = color, impact = intensity. No dot without an assessment.
+// Tooltip counts what the dot is built from: assessed items, then total stories.
 function newsDot(nw) {
   if (!nw || !nw.direction || !nw.assessedCount) return '';
   return '<span class="ndot nd-' + nw.direction + ' nd-' + (nw.impact || 'low') + '" title="' +
-    nw.direction + '/' + (nw.impact || '?') + ' · ' + nw.itemCount +
-    ' item' + (nw.itemCount === 1 ? '' : 's') + '"></span>';
+    nw.direction + '/' + (nw.impact || '?') + ' · ' + nw.assessedCount + ' assessed · ' +
+    nw.itemCount + (nw.itemCount === 1 ? ' story' : ' stories') + '"></span>';
 }
 // Clickable player name — opens the news drawer.
 function nameCell(r) {
@@ -407,9 +423,10 @@ function newsCell(r) {
   return '<td><span class="pname" data-pid="' + r.playerId + '">' + dot + '</span></td>';
 }
 // Rm Δ as banded arrows; the tooltip carries the real numbers with units.
+// No ESPN price is NO DATA — a faint n/a, never the in-band '—' glyph.
 function roomDeltaCell(r) {
   var d = r.roomDelta;
-  if (d === null || d === undefined) return '<td class="muted">—</td>';
+  if (d === null || d === undefined) return '<td class="rm muted" style="opacity:0.5" title="no ESPN price for this player">n/a</td>';
   var glyph, cls;
   if (d >= 24) { glyph = '▲▲'; cls = 'rm2up'; }
   else if (d >= 12) { glyph = '▲'; cls = 'rm1up'; }
@@ -439,15 +456,33 @@ function threatMark(r) {
     THREAT_MARKS[t.threatLevel] + '</span>';
 }
 
+// Non-2xx rejects: an error body must never be rendered as data.
 function api(path, body) {
   var opts = body === undefined ? {} :
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
   return fetch(path, opts).then(function (res) {
-    return res.json().then(function (data) {
-      if (!res.ok && data && data.error) console.warn(path, data.error);
+    return res.json().catch(function () { return {}; }).then(function (data) {
+      if (!res.ok) {
+        var err = new Error(path + ': ' + (data && data.error ? data.error : 'HTTP ' + res.status));
+        err.status = res.status;
+        throw err;
+      }
       return data;
     });
   });
+}
+
+// Brief visible failure feedback for actions (marks, mock controls, toggles).
+function toast(message) {
+  var t = el('toast');
+  t.textContent = message;
+  t.style.display = 'block';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.style.display = 'none'; }, 3000);
+}
+function actionFailed(err) {
+  toast(err && err.message ? err.message : 'action failed');
+  return loadState();
 }
 
 function loadState() {
@@ -456,14 +491,20 @@ function loadState() {
     S = s;
     var p = (s.version !== lastVersion) ?
       Promise.all([api('/api/board'), api('/api/evaluate')]).then(function (res) {
-        B = res[0]; E = res[1]; lastVersion = s.version;
+        B = res[0]; E = res[1];
         rowById = {};
         (B.rows || []).forEach(function (r) { rowById[r.playerId] = r; });
         renderTable(); renderSide(); renderClock();
+        // Committed only after a successful render: a failed poll or render retries next tick.
+        lastVersion = s.version;
       }) :
       Promise.resolve();
     return p.then(function () { renderStatus(); renderMock(); });
-  }).catch(function () { serverOk = false; renderStatus(); });
+  }).catch(function (err) {
+    serverOk = false;
+    lastApiError = err && err.message ? err.message : 'no response from local server';
+    renderStatus();
+  });
 }
 
 function mockActive() { return !!(S && S.mock && S.mock.active); }
@@ -476,7 +517,7 @@ function setInd(cls, text, title) {
 }
 
 function renderStatus() {
-  if (!serverOk) { setInd('err', 'SERVER DOWN', 'no response from local server'); return; }
+  if (!serverOk) { setInd('err', 'API ERROR', lastApiError || 'no response from local server'); return; }
   if (!S) return;
   el('leagueName').textContent = S.league.name;
   var d = S.draft;
@@ -603,6 +644,10 @@ function renderClock() {
   if (E.myTurn) {
     falls.style.display = 'none';
     clock.style.display = '';
+    var band = noiseBand(), costly = costlyBand();
+    el('deltaH').title = 'Est team minus BEST: green = within ' + band +
+      ' pts (evaluation noise — effectively tied, break the tie on Back@), amber = real but modest cost (' +
+      band + '–' + costly + ' pts), muted = expensive (>' + costly + ' pts)';
     // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
     var nextTurn = E.myNextPicks[0];
     el('clockPick').textContent = 'pick ' + E.currentOverall +
@@ -623,7 +668,7 @@ function renderClock() {
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
         '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
           (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
-        '<td class="' + (bench ? 'ups-hi' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
+        '<td class="' + (bench ? 'ups-bench' : '') + '"' + (bench ? ' title="lands on bench — upside is the ranking key"' : '') + '>' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
         '<td class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + threatMark(c) + '</td>' +
         '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
         '</tr>');
@@ -735,9 +780,10 @@ function deltaClass(v) {
   return v > 0 ? 'delta-pos' : 'delta-neg';
 }
 // Same semantic tokens as the Back@ odds so the two columns read as one system.
+// Bands are live: the evaluate payload's noiseBand (when present) widens them.
 function deltaBestClass(v) {
-  if (v >= -DELTA_NOISE) return 'odds-hi';
-  if (v >= -DELTA_COSTLY) return 'odds-mid';
+  if (v >= -noiseBand()) return 'odds-hi';
+  if (v >= -costlyBand()) return 'odds-mid';
   return 'muted';
 }
 // Cost-of-waiting bands: same thresholds; the far band shouts (a cliff) instead of fading.
@@ -864,8 +910,10 @@ function openDrawer(pid) {
   el('drawerFoot').innerHTML = '';
   api('/api/news/' + pid).then(function (d) {
     if (drawerPid !== pid) return;
-    if (d && d.error) { el('drawerBody').innerHTML = '<div class="muted">' + esc(d.error) + '</div>'; return; }
     renderDrawer(d);
+  }).catch(function (err) {
+    if (drawerPid !== pid) return;
+    el('drawerBody').innerHTML = '<div class="muted">' + esc(err && err.message ? err.message : 'failed to load') + '</div>';
   });
 }
 function closeDrawer() {
@@ -935,8 +983,10 @@ function renderDrawer(d) {
   });
 }
 function sendOverride(body) {
-  api('/api/override', body).then(function (res) {
-    if (res && res.error) window.alert('override failed: ' + res.error);
+  api('/api/override', body).then(function () {
+    return loadState();
+  }, function (err) {
+    toast('override failed: ' + (err && err.message ? err.message : 'unknown error'));
     return loadState();
   }).then(function () {
     if (drawerPid) openDrawer(drawerPid);
@@ -973,35 +1023,35 @@ function actClick(e) {
   if (t.dataset.act === 'mine') req = api('/api/mark', { playerId: id, teamId: S.league.myTeamId });
   else if (t.dataset.act === 'gone') req = api('/api/mark', { playerId: id, teamId: 'unknown' });
   else req = api('/api/unmark', { playerId: id });
-  req.then(loadState);
+  req.then(loadState, actionFailed);
 }
 el('rows').addEventListener('click', actClick);
 el('clockPanel').addEventListener('click', actClick); // covers the candidate rows and the K/DST nudge
 el('pollToggle').addEventListener('change', function (e) {
-  api('/api/poll', { enabled: e.target.checked }).then(loadState);
+  api('/api/poll', { enabled: e.target.checked }).then(loadState, actionFailed);
 });
 el('refreshBtn').addEventListener('click', function () {
   el('refreshBtn').disabled = true;
-  api('/api/refresh', {}).then(loadState);
+  api('/api/refresh', {}).then(loadState, actionFailed);
 });
 el('mockBtn').addEventListener('click', function () {
   var pace = window.prompt('Mock draft — opponent pace in seconds (0 = advance manually)', '4');
   if (pace === null) return;
   var n = Number(pace);
   if (!isFinite(n) || n < 0) n = 4;
-  api('/api/mock', { action: 'start', pace: n }).then(loadState);
+  api('/api/mock', { action: 'start', pace: n }).then(loadState, actionFailed);
 });
 el('mockStop').addEventListener('click', function () {
   if (!window.confirm('End the mock draft? Every mock pick is discarded.')) return;
-  api('/api/mock', { action: 'stop' }).then(loadState);
+  api('/api/mock', { action: 'stop' }).then(loadState, actionFailed);
 });
 el('mockAdvance').addEventListener('click', function () {
-  api('/api/mock', { action: 'advance' }).then(loadState);
+  api('/api/mock', { action: 'advance' }).then(loadState, actionFailed);
 });
 el('resetManualBtn').addEventListener('click', function () {
   var n = S && S.draft ? S.draft.manualCount : 0;
   if (!window.confirm('Delete ' + n + ' manual mark' + (n === 1 ? '' : 's') + '? Polled picks are untouched.')) return;
-  api('/api/manual/reset', {}).then(loadState);
+  api('/api/manual/reset', {}).then(loadState, actionFailed);
 });
 el('drawerClose').addEventListener('click', closeDrawer);
 el('drawerBack').addEventListener('click', closeDrawer);
