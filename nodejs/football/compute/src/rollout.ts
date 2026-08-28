@@ -8,15 +8,17 @@ import { buildLeagueScorer } from './rescore.js'
 import { argmaxTake, countTeamPositions, teamAtPick, type PositionCounts, type RoomProfiles } from './room-profiles.js'
 import { roomAdp } from './room.js'
 import { bestLineup, lineupTotalWithReplacement } from './roster.js'
+import { chooseForRoster, type RosterState } from './sim/marginal.js'
+import { compareByRoomAdp, makeSimPool, SKILL_POSITIONS, SKILL_SET, type SimPool } from './sim/state.js'
 import { computeUpsideScores } from './upside.js'
 import { computeReplacementLevels, type ReplacementLevel } from './vor.js'
 
-const SKILL_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const
+// The marginal chooser and its roster shape live in the strategy layer; these exports
+// are the frozen API's original names for them.
+export { chooseForRoster, type RosterState }
 
 /** The upside slate lane only seats players with a real room price inside the draft horizon. */
 const UPSIDE_LANE_MAX_ADP = 175
-type SkillPosition = (typeof SKILL_POSITIONS)[number]
-const SKILL_SET = new Set<Position>(SKILL_POSITIONS)
 
 export interface RolloutPlayer {
   playerId: PlayerId
@@ -58,13 +60,6 @@ export interface RoomSegmentModel {
   positionCounts?: Map<number, PositionCounts>
 }
 
-export interface RosterState {
-  players: RolloutPlayer[]
-  lineupSlots: LeagueSettings['lineupSlots']
-  /** Baseline an open starting seat is worth; defaults to 0 per position when absent. */
-  replacementPoints?: Partial<Record<Position, number>>
-}
-
 export interface RolloutResult {
   finalRoster: (RolloutPlayer & { slot: LineupSlot })[]
   starterTotal: number
@@ -97,7 +92,7 @@ export interface EvaluateOptions extends RolloutOptions {
 
 // -- pool -------------------------------------------------------------------
 
-interface Pool {
+export interface Pool {
   settings: LeagueSettings
   /** Every projected-or-priced player, drafted included — valuations stay stable over it. */
   all: RolloutPlayer[]
@@ -117,7 +112,7 @@ const roundCounts = (lineupSlots: LeagueSettings['lineupSlots']): { total: numbe
   return { total, skill: total - lineupSlots.K - lineupSlots.DST }
 }
 
-const buildPool = (state: BoardState, options: RolloutOptions = {}): Pool => {
+export const buildPool = (state: BoardState, options: RolloutOptions = {}): Pool => {
   const { settings } = state
   const scorer = buildLeagueScorer(settings.scoringRules, () => undefined)
   const playerById = new Map(state.players.map((player) => [player.id, player]))
@@ -189,6 +184,24 @@ const buildPool = (state: BoardState, options: RolloutOptions = {}): Pool => {
   }
 }
 
+/** The board pool as a strategy-layer SimPool (drafted and banned players unavailable). */
+export const simPoolFromPool = (pool: Pool): SimPool => {
+  const unavailable = new Set(pool.drafted)
+  for (const id of pool.bannedIds) {
+    unavailable.add(id)
+  }
+  return makeSimPool({
+    players: pool.all,
+    teams: pool.settings.size,
+    rounds: pool.totalRounds,
+    lineupSlots: pool.settings.lineupSlots,
+    replacementPoints: pool.replacement.points,
+    benchmarks: pool.benchmarks,
+    upsideScores: pool.upsideScores,
+    unavailable,
+  })
+}
+
 // -- benchmarks -------------------------------------------------------------
 
 /** Ceiling = best lineup over the whole pool; replacement = every skill seat at replacement level. */
@@ -211,93 +224,15 @@ export const captureRatio = (starterTotal: number, benchmarks: Benchmarks): numb
   return range <= 0 ? 0 : (starterTotal - benchmarks.replacement) / range
 }
 
-// -- my picks ---------------------------------------------------------------
-
-/** RB/WR absorb FLEX and real depth; QB/TE stop at one backup. Structural anti-hoarding. */
-const positionCaps = (lineupSlots: LeagueSettings['lineupSlots']): Record<SkillPosition, number> => ({
-  QB: lineupSlots.QB + 1,
-  RB: lineupSlots.RB + lineupSlots.FLEX + 3,
-  WR: lineupSlots.WR + lineupSlots.FLEX + 3,
-  TE: lineupSlots.TE + 1,
-})
-
-/**
- * Need-aware pick for my simulated turns. Starting seats are chosen by marginal starter points
- * over a replacement-filled baseline — an open seat is already worth a freely available player,
- * so a 180-pt QB over a 170-pt replacement loses to a 150-pt RB over a 60-pt one. When no seat
- * improves on replacement (bench territory), bench seats are lottery tickets: choose by upside
- * score, points as tiebreak. Position caps stop hoarding structurally.
- */
-export const chooseForRoster = (
-  available: RolloutPlayer[],
-  roster: RosterState,
-  upsideScores: Map<PlayerId, number>,
-): RolloutPlayer | null => {
-  const caps = positionCaps(roster.lineupSlots)
-  const counts: Partial<Record<Position, number>> = {}
-  for (const player of roster.players) {
-    counts[player.position] = (counts[player.position] ?? 0) + 1
-  }
-  const replacementPoints = roster.replacementPoints ?? {}
-  const openPositions = SKILL_POSITIONS.filter((position) => (counts[position] ?? 0) < caps[position])
-  const skill = available.filter((player) => player.points !== null && SKILL_SET.has(player.position))
-
-  const baseTotal = lineupTotalWithReplacement(roster.players, roster.lineupSlots, replacementPoints)
-  let bestStarter: RolloutPlayer | null = null
-  let bestMarginal = 1e-6
-  for (const position of openPositions) {
-    // Within a position the top-points player maximizes marginal, so only he needs checking.
-    let top: RolloutPlayer | null = null
-    for (const player of skill) {
-      if (player.position === position && (top === null || (player.points as number) > (top.points as number))) {
-        top = player
-      }
-    }
-    if (top === null) {
-      continue
-    }
-    const marginal =
-      lineupTotalWithReplacement([...roster.players, top], roster.lineupSlots, replacementPoints) - baseTotal
-    if (marginal > bestMarginal) {
-      bestMarginal = marginal
-      bestStarter = top
-    }
-  }
-  if (bestStarter !== null) {
-    return bestStarter
-  }
-
-  // Caps only bind while a cap-legal player exists; a draft pick can't be passed.
-  const capped = skill.filter((player) => openPositions.includes(player.position as SkillPosition))
-  const benchPool = capped.length > 0 ? capped : skill
-  let bestBench: RolloutPlayer | null = null
-  for (const player of benchPool) {
-    if (bestBench === null) {
-      bestBench = player
-      continue
-    }
-    const score = upsideScores.get(player.playerId) ?? player.upsideScore ?? 0
-    const bestScore = upsideScores.get(bestBench.playerId) ?? bestBench.upsideScore ?? 0
-    if (score > bestScore || (score === bestScore && (player.points ?? 0) > (bestBench.points ?? 0))) {
-      bestBench = player
-    }
-  }
-  return bestBench
-}
-
 // -- the room ---------------------------------------------------------------
-
-const byRoomAdp = (a: RolloutPlayer, b: RolloutPlayer): number =>
-  (a.roomAdp ?? Number.POSITIVE_INFINITY) - (b.roomAdp ?? Number.POSITIVE_INFINITY) ||
-  (b.points ?? 0) - (a.points ?? 0) ||
-  a.playerId.localeCompare(b.playerId)
 
 /**
  * Mean-path room behavior: picks fromPick..toPick−1 remove players, skipping players I hold,
  * and return the remaining pool. Without a model, the top toPick−fromPick players come off in
- * roomAdp order (nulls last). With a model, each pick removes the on-clock team's argmax
- * takeProbability player — per-team σ, positional timing, and loyalty included — so the mean
- * path is per-team, still deterministic.
+ * `compareByRoomAdp` order (nulls last) — the same comparator `adpPolicy` walks, so a segment
+ * removal equals that many sequential ADP-policy picks. With a model, each pick removes the
+ * on-clock team's argmax takeProbability player — per-team σ, positional timing, and loyalty
+ * included — so the mean path is per-team, still deterministic.
  */
 export const simulateRoomSegment = (
   available: RolloutPlayer[],
@@ -328,7 +263,7 @@ export const simulateRoomSegment = (
     }
     return available.filter((player) => !taken.has(player.playerId))
   }
-  for (const player of [...available].sort(byRoomAdp)) {
+  for (const player of [...available].sort(compareByRoomAdp)) {
     if (taken.size >= count) {
       break
     }
