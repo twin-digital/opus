@@ -408,13 +408,13 @@ describe('page rendering with fixture data', () => {
       }
     })
 
-    it('my turn while computing: SIMULATING visuals with the my-turn ring', async () => {
+    it('my turn wins while computing: table shown, computing demoted to the chip', async () => {
       try {
         await runPage(buildPayloads({ myTurn: true, myPickCount: 2, computing: true, withCandidates: true }))
-        expect(chip().textContent).toMatch(/^SIMULATING · \d+s$/)
+        expect(chip().textContent).toMatch(/^ON THE CLOCK — SIMULATING · \d+s$/)
         expect(panel().className).toContain('myturn')
-        expect(table().style.display).toBe('none')
-        expect(waitBody().style.display).not.toBe('none')
+        expect(table().style.display).not.toBe('none')
+        expect(document.querySelectorAll('#clockRows tr').length).toBeGreaterThan(0)
       } finally {
         vi.unstubAllGlobals()
       }

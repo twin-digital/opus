@@ -69,7 +69,7 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
   the lineup slot each lands on, **ECR** (the independent expert-consensus audit — "is
   this a real player"; hover for room ADP), upside score, and the odds each makes it back
   to your next turn if you pass. **Δ best is color-banded** on the same tokens as Back@: green =
-  within 3 pts of BEST (rollout noise — effectively tied, break the tie on Back@: green Δ
+  within 15 pts of BEST (model noise — effectively tied, break the tie on Back@: green Δ
   with low Back@ means take him now, green Δ with high Back@ means safe to pass), amber =
   real but modest cost, muted = expensive. The row order is always EST TEAM descending —
   the green band is a visual "equivalent, decide by Back@/UPS", it never reorders rows.

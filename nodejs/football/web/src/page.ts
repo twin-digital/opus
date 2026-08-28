@@ -708,11 +708,15 @@ function renderClock() {
   } else {
     simSince = null; simVersion = -1;
   }
-  var state = computing ? 'sim' : (E.myTurn ? 'on' : 'wait');
+  // myTurn wins the state: the stale payload is honest (live turn fields, drafted filtered),
+  // so on the clock we show it and demote "computing" to the chip badge.
+  var state = E.myTurn ? 'on' : computing ? 'sim' : 'wait';
   var showTable = state === 'on';
   var chip = el('clockState');
-  chip.className = 'chip clock-state ' + state;
-  chip.textContent = state === 'sim' ? simChipText() : state === 'on' ? 'YOU ARE ON THE CLOCK' : 'WAITING';
+  chip.className = 'chip clock-state ' + (state === 'on' && computing ? 'sim' : state);
+  chip.textContent =
+    state === 'on' ? (computing ? 'ON THE CLOCK — ' + simChipText() : 'YOU ARE ON THE CLOCK')
+    : state === 'sim' ? simChipText() : 'WAITING';
   clock.className = 'card' + (E.myTurn ? ' myturn' : '');
   el('clockDot').style.display = state === 'wait' ? 'none' : '';
   el('clockTable').style.display = showTable ? '' : 'none';
