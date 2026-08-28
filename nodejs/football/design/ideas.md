@@ -107,6 +107,23 @@ feeds human-facing signals (CONTESTED flag, upside blend), never the rollout's r
 ESPN is ingested for the room model regardless of estimator quality; Sleeper is the only
 truly independent voice and the only deep-coverage one (~3,100 players vs a few hundred).
 
+## Shadow team (flagship of the in-season build)
+
+The most honest referee of draft style: alongside the real roster, track the counterfactual
+greedy-path roster — at every owner pick, the VOR-top choice instead of the taken one, with
+downstream picks re-derived from what was actually available (chains reconstructed by the
+post-draft replay: CMC/Montgomery/Fannin/J.Warren line vs the real JSN/McLaurin/Pitts/Evans
+line). Score both weekly on realized nflverse stats under league rules; publish the running
+gap. One number answers "did the barbell style pay?" all season.
+
+Companion signals, same weekly job (all resolve fast): flagged-player games missed vs the
+EV discounts that priced them (grades the research wave by ~week 6); bench-ticket hit rate
+(Lloyd rides the Jacobs ruling — weeks); starts lost to injury/suspension, owner core vs
+league median; override pairs (McLaurin/Montgomery, Pitts/Fannin, Evans/J.Warren) season
+totals; realized capture 2026 vs the 10–35% historical band. Prereq: the deferred nflverse
+weekly ingest. Calibration note carried from draft night: MC threat survivals were sober,
+ADP pNextPick ran hot — recalibrate or retire pNext before next August.
+
 ## Parking lot
 
 - Boost/ban list: manual override lane (late-breaking injury news, "my guys", never-draft).
