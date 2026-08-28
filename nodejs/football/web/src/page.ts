@@ -156,9 +156,6 @@ export const PAGE = `<!doctype html>
   .dot-pulse { width: 10px; height: 10px; border-radius: 999px; background: var(--primary);
     animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-  /* Stale (mid-compute) numbers dim but stay clickable — drafting on one-pick-stale numbers is legal. */
-  #clockPanel.stale table, #clockPanel.stale #clockThreats { opacity: 0.55; }
-  .stale-note { color: var(--warning); font-size: 13px; margin: 0 0 6px; }
   #clockWait { font-size: 14px; color: var(--muted-fg); padding: 2px 0; }
   #clockWait b { color: var(--foreground); font-weight: 600; }
   #clockWait .wait-line { font-size: 16px; color: var(--foreground); font-weight: 600; margin-bottom: 4px; }
@@ -278,7 +275,6 @@ export const PAGE = `<!doctype html>
         <span class="chip clock-state" id="clockState"></span>
         <span class="muted" id="clockPick"></span>
       </div>
-      <div id="clockStale" class="stale-note" style="display:none">numbers from before the last pick — refreshing</div>
       <table id="clockTable">
         <thead>
           <tr>
@@ -308,7 +304,7 @@ export const PAGE = `<!doctype html>
       <thead>
         <tr>
           <th data-k="rank">#</th>
-          <th data-k="newsSev" title="Assessed news — worst direction × impact (sorts harms/high first); click a dot for the stories">N</th>
+          <th data-k="newsSev" title="Assessed news — newest directional item sets the dot, at the worst impact it reached in the last 14 days (sorts harms/high first); click a dot for the stories">N</th>
           <th data-k="name" class="l">Player</th>
           <th data-k="position" class="l">Pos</th>
           <th data-k="team" class="l">Team</th>
@@ -420,7 +416,7 @@ function newsDot(nw) {
 function nameCell(r) {
   return '<span class="pname" data-pid="' + r.playerId + '" title="news & overrides">' + esc(r.name) + '</span>';
 }
-// Sortable severity for the N column: worst direction × impact, harms/high (11) first, none 0.
+// Sortable severity for the N column: rolled-up direction × impact, harms/high (11) first, none 0.
 function newsSeverity(nw) {
   if (!nw || !nw.direction || !nw.assessedCount) return 0;
   var dir = { improves: 1, unclear: 2, harms: 3 }[nw.direction] || 0;
@@ -650,10 +646,21 @@ function renderRecap() {
 }
 
 // The panel is always visible in-draft, in one of three states:
-//   SIMULATING (computing: true) — violet chip, pulsing dot; stale rows dim but stay live.
+//   SIMULATING (computing: true) — violet chip with an elapsed-seconds timer, pulsing dot,
+//     and the waiting-style body; fresh numbers land when the compute does.
 //   WAITING — muted chip; body says when I pick and what falls to me.
 //   ON THE CLOCK — violet chip + ring, fresh candidate table.
 // My-turn + computing keeps the ring with the SIMULATING visuals.
+var simSince = null;
+function simChipText() {
+  return 'SIMULATING · ' + Math.max(0, Math.floor((Date.now() - simSince) / 1000)) + 's';
+}
+// Client-side approximation: counts from when this client first saw computing: true.
+function tickSimTimer() {
+  if (simSince !== null && E && E.computing && S && !S.draft.complete) {
+    el('clockState').textContent = simChipText();
+  }
+}
 function renderClock() {
   var clock = el('clockPanel');
   if (!S || !E || S.draft.complete) {
@@ -662,22 +669,22 @@ function renderClock() {
   }
   clock.style.display = '';
   var computing = !!E.computing;
+  if (computing && simSince === null) simSince = Date.now();
+  if (!computing) simSince = null;
   var state = computing ? 'sim' : (E.myTurn ? 'on' : 'wait');
-  var hasRows = E.candidates.length > 0;
-  var showTable = state === 'on' || (state === 'sim' && hasRows);
+  var showTable = state === 'on';
   var chip = el('clockState');
   chip.className = 'chip clock-state ' + state;
-  chip.textContent = state === 'sim' ? 'SIMULATING' : state === 'on' ? 'YOU ARE ON THE CLOCK' : 'WAITING';
-  clock.className = 'card' + (E.myTurn ? ' myturn' : '') + (state === 'sim' && hasRows ? ' stale' : '');
+  chip.textContent = state === 'sim' ? simChipText() : state === 'on' ? 'YOU ARE ON THE CLOCK' : 'WAITING';
+  clock.className = 'card' + (E.myTurn ? ' myturn' : '');
   el('clockDot').style.display = state === 'wait' ? 'none' : '';
-  el('clockStale').style.display = state === 'sim' && hasRows ? '' : 'none';
   el('clockTable').style.display = showTable ? '' : 'none';
   // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
   var nextTurn = E.myNextPicks[0];
   el('clockPick').textContent = 'pick ' + E.currentOverall +
     ' (R' + Math.ceil(E.currentOverall / S.league.size) + ')' +
     (E.myTurn && nextTurn ? ' — your next turn is ' + nextTurn : '');
-  renderClockWait(state, hasRows, nextTurn);
+  renderClockWait(state, nextTurn);
   if (!showTable) {
     el('clockRows').innerHTML = '';
     el('clockThreats').innerHTML = '';
@@ -709,7 +716,7 @@ function renderClock() {
       '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
       '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
         (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
-      '<td class="' + (bench ? 'ups-bench' : '') + '"' + (bench ? ' title="lands on bench — upside is the ranking key"' : '') + '>' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
+      '<td class="' + (bench ? 'ups-bench' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
       '<td class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + threatMark(c) + '</td>' +
       '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
       '</tr>');
@@ -728,16 +735,11 @@ function renderClock() {
   renderKdNudge();
 }
 
-// The panel body under the chip when the candidate table is down: where my pick is and what
-// might fall to it (WAITING), or the first-numbers hint (SIMULATING on a fresh server).
-function renderClockWait(state, hasRows, nextTurn) {
+// The panel body under the chip when the candidate table is down (WAITING and SIMULATING):
+// where my pick is and, when candidates exist, what might fall to it.
+function renderClockWait(state, nextTurn) {
   var wait = el('clockWait');
-  if (state === 'sim' && !hasRows) {
-    wait.style.display = '';
-    wait.innerHTML = '<span class="muted">simulating draft outcomes — first numbers in ~15s…</span>';
-    return;
-  }
-  if (state !== 'wait') {
+  if (state === 'on') {
     wait.style.display = 'none';
     wait.innerHTML = '';
     return;
@@ -847,8 +849,8 @@ function deltaBestClass(v) {
 // Cost-of-waiting bands: same thresholds; the far band shouts (a cliff) instead of fading.
 function waitClass(v) {
   if (v === null || v === undefined) return 'muted';
-  if (v >= -DELTA_NOISE) return 'odds-hi';
-  if (v >= -DELTA_COSTLY) return 'odds-mid';
+  if (v >= -noiseBand()) return 'odds-hi';
+  if (v >= -costlyBand()) return 'odds-mid';
   return 'odds-lo';
 }
 
@@ -1115,6 +1117,7 @@ el('drawerClose').addEventListener('click', closeDrawer);
 el('drawerBack').addEventListener('click', closeDrawer);
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
 setInterval(updateCountdown, 500);
+setInterval(tickSimTimer, 1000);
 
 setInterval(loadState, 2000);
 loadState();

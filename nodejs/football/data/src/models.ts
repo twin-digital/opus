@@ -123,7 +123,7 @@ export interface NewsAssessment {
   assessedBy: string
 }
 
-/** Per-player rollup for board dots: worst direction, highest impact within that direction. */
+/** Per-player rollup for board dots: newest directional item; worst recent impact that direction reached. */
 export interface PlayerNewsSignal {
   playerId: PlayerId
   /** null until at least one of the player's items is assessed. */

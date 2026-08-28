@@ -103,7 +103,8 @@ is a spread difference concentrated at the top of each position, not a location 
 Limits: rank_std is rank-level dispersion applied to points (proxy), weights are priors not
 estimates; calibrating k against outcomes is the post-draft historical layer's job.
 The debiased residual spread
-feeds human-facing signals (CONTESTED flag, upside blend), never the rollout's rankings.
+feeds the CONTESTED flag and the upside blend — one 3-component upside score that both the
+display and the rollout's own decisions (bench picks, the slate's upside lane) use.
 ESPN is ingested for the room model regardless of estimator quality; Sleeper is the only
 truly independent voice and the only deep-coverage one (~3,100 players vs a few hundred).
 

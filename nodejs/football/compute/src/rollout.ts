@@ -124,7 +124,7 @@ export const buildPool = (state: BoardState, options: RolloutOptions = {}): Pool
   const scorer = buildLeagueScorer(settings.scoringRules, () => undefined)
   const playerById = new Map(state.players.map((player) => [player.id, player]))
   const marketById = new Map(state.market.map((row) => [row.playerId, row]))
-  const { rows: consensus } = buildConsensusV2(state.projections, state.season, {
+  const { rows: consensus, signals } = buildConsensusV2(state.projections, state.season, {
     score: scorer.score,
     positionById: new Map(state.players.map((player) => [player.id, player.position])),
     ecrById: new Map(
@@ -158,8 +158,15 @@ export const buildPool = (state: BoardState, options: RolloutOptions = {}): Pool
     (row): row is { playerId: PlayerId; position: Position; points: number } => row.points !== null,
   )
   const replacement = computeReplacementLevels(projected, settings.lineupSlots, settings.size)
-  // No residual spreads here: source disagreement feeds human-facing signals, never rollout rankings.
-  const upsideScores = computeUpsideScores(state.market)
+  // The same 3-component upside score the board displays: residual source spread included,
+  // so what a pick decides on is the number the panel shows.
+  const residualSpreads = new Map<PlayerId, number>()
+  for (const [playerId, signal] of signals) {
+    if (signal.residualSpread !== null) {
+      residualSpreads.set(playerId, signal.residualSpread)
+    }
+  }
+  const upsideScores = computeUpsideScores(state.market, residualSpreads)
 
   const all: RolloutPlayer[] = boosted.map((row) => {
     const player = playerById.get(row.playerId) as { name: string }

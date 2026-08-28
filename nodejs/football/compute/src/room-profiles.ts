@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { isPosition, type Player, type PlayerId, type Position } from '@twin-digital/football-data'
 
 import { normalCdf, sigmaForPick } from './draft-math.js'
+import { TUNING } from './tuning.js'
 
 /**
  * Per-team opponent profiles mined from league draft history (design/room-rules.json). The
@@ -372,8 +373,13 @@ const hazardWeight = (profile: TeamProfile | undefined, overall: number, player:
   let hazard = 0
   if (player.roomAdp !== null) {
     const base = sigmaForPick(player.roomAdp, null)
-    const sigma =
-      (profile?.sigma != null ? base * (profile.sigma / LEAGUE_FLAT_SIGMA) : base) * (profile?.sigmaScale ?? 1)
+    // The floor holds after per-team shaping too: a tight owner ratio must not model an exit
+    // sharper than the room's measured minimum (the 4.5 is a pooled measurement that already
+    // includes every owner's behavior).
+    const sigma = Math.max(
+      TUNING.SIGMA_FLOOR,
+      (profile?.sigma != null ? base * (profile.sigma / LEAGUE_FLAT_SIGMA) : base) * (profile?.sigmaScale ?? 1),
+    )
     hazard = availabilityHazard(overall, player.roomAdp, sigma)
   }
   return hazard + WEIGHT_FLOOR

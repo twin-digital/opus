@@ -202,6 +202,7 @@ const makeApp = (
     /** Tests default to the instant deterministic engine; MC tests opt in. */
     evalMode?: 'mc' | 'det'
     mcSamples?: number
+    log?: (message: string) => void
   } = {},
 ): TestContext => {
   const database = openDatabase(':memory:')
@@ -219,6 +220,7 @@ const makeApp = (
     scheduleTimer: timers.scheduleTimer,
     evalMode: options.evalMode ?? 'det',
     mcSamples: options.mcSamples,
+    log: options.log,
   })
   const poller = makePoller()
   return { app, poller, context: { app, poller }, timers }
@@ -573,6 +575,49 @@ describe('routes', () => {
     expect(fresh.computing).toBe(false)
     expect(fresh.version).toBeGreaterThan(settled.version)
     expect(fresh.candidates.some((candidate) => candidate.playerId === 'p-RB1')).toBe(false)
+  })
+
+  it('the stale computing payload carries live turn fields and drops drafted candidates', async () => {
+    const { app, context } = makeApp({ evalMode: 'mc', mcSamples: 12 })
+    call(context, 'GET', '/api/evaluate')
+    await app.settleEvaluation()
+    // Ten picks land: it becomes my turn while the MC refresh is still in flight.
+    const gone = ['p-RB1', 'p-RB2', 'p-RB3', 'p-RB4', 'p-WR1', 'p-WR2', 'p-WR3', 'p-QB1', 'p-QB2', 'p-TE1']
+    for (const playerId of gone) {
+      expect(call(context, 'POST', '/api/mark', { playerId, teamId: 'unknown' }).status).toBe(200)
+    }
+    const stale = call(context, 'GET', '/api/evaluate').json as {
+      computing: boolean
+      myTurn: boolean
+      currentOverall: number
+      onClockTeamId: number | null
+      candidates: { playerId: string }[]
+    }
+    expect(stale.computing).toBe(true)
+    expect(stale.myTurn).toBe(true)
+    expect(stale.currentOverall).toBe(11)
+    expect(stale.onClockTeamId).toBe(13)
+    expect(stale.candidates.length).toBeGreaterThan(0)
+    expect(stale.candidates.some((candidate) => gone.includes(candidate.playerId))).toBe(false)
+    await app.settleEvaluation()
+  })
+
+  it('a version bump mid-eval aborts the stale compute and recomputes for the live board', async () => {
+    const logs: string[] = []
+    const { app, context } = makeApp({ evalMode: 'mc', mcSamples: 12, log: (message) => logs.push(message) })
+    call(context, 'GET', '/api/evaluate')
+    expect(app.evaluating).toBe(true)
+    // The board moves one candidate into the flight: the stale eval must not finish.
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' }).status).toBe(200)
+    await app.settleEvaluation()
+    expect(logs.filter((message) => message.includes('superseded — aborted'))).toHaveLength(1)
+    const settled = call(context, 'GET', '/api/evaluate').json as {
+      computing: boolean
+      candidates: { playerId: string }[]
+    }
+    expect(settled.computing).toBe(false)
+    expect(settled.candidates.length).toBeGreaterThan(0)
+    expect(settled.candidates.some((candidate) => candidate.playerId === 'p-RB1')).toBe(false)
   })
 
   it('flags my turn once ten picks are in, excluding drafted players from the slate', () => {

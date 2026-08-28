@@ -1080,7 +1080,20 @@ export class App {
     }
     this.kickEvaluation()
     if (this.evaluateCache !== null) {
-      return { ...this.evaluateCache.payload, computing: true }
+      // The stale slate keeps serving numbers, but turn fields must be the live pick's and
+      // just-drafted players must not be offered with live ME buttons.
+      const picks = this.effectivePicks()
+      const drafted = new Set(picks.map((pick) => pick.playerId))
+      const fresh = this.assembleEvaluatePayload(this.version, picks, [], true)
+      return {
+        ...this.evaluateCache.payload,
+        myTurn: fresh.myTurn,
+        currentOverall: fresh.currentOverall,
+        onClockTeamId: fresh.onClockTeamId,
+        myNextPicks: fresh.myNextPicks,
+        candidates: this.evaluateCache.payload.candidates.filter((c) => !drafted.has(c.playerId)),
+        computing: true,
+      }
     }
     // Nothing computed yet (fresh server): an empty slate the UI reads as "computing".
     return this.assembleEvaluatePayload(this.version, this.effectivePicks(), [], true)
@@ -1133,7 +1146,12 @@ export class App {
           profiles: this.profiles ?? undefined,
           samples: this.options.mcSamples,
           seed: this.options.mcSeed,
+          shouldAbort: () => this.version !== version,
         })
+    if (candidates === null) {
+      this.log(`evaluate: MC v${String(version)} superseded — aborted`)
+      return // the finally re-kick recomputes for the live version
+    }
     this.evaluateCache = { version, payload: this.assembleEvaluatePayload(version, picks, candidates, false) }
     this.log(
       `evaluate: MC v${String(version)} — ${String(candidates.length)} candidates in ${((Date.now() - started) / 1000).toFixed(1)}s`,
@@ -1157,8 +1175,8 @@ export class App {
         const row = boardRows.get(candidate.playerId)
         return {
           ...candidate,
-          // One UPS number everywhere: the panel displays the board's 3-component score.
-          // The rollout's internal bench scoring keeps its own (spread-free) upside inputs.
+          // One UPS number everywhere: board, panel, and the rollout's own decisions all
+          // use the 3-component score (residual source spread included).
           upsideScore: row?.upsideScore ?? candidate.upsideScore,
           se: 'se' in candidate ? candidate.se : null,
           pBest: 'pBest' in candidate ? candidate.pBest : null,

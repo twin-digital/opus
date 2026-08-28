@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 import {
   argmaxTake,
   loadRoomRulesFile,
+  pickHazardWeight,
   pickThreats,
   resolveRoomRules,
   takeDistribution,
@@ -251,6 +252,14 @@ describe('takeProbability', () => {
     const defaulted = takeProbability(profiles, [1, 2], 3, kicker, pool)
     expect(boosted).toBeGreaterThan(0.5)
     expect(defaulted).toBeLessThan(0.1)
+  })
+
+  it('a tight per-team sigma cannot beat the floor: team 10-style ratios keep σ ≥ 4.5', () => {
+    // sigma 5.1 gives a <1 ratio against the league-flat 8; where the floor binds (early
+    // ADP), the profiled hazard must equal the base model's, not a sharper one.
+    const tight = profilesFrom({ teams: { '1': { teamId: 1, sigma: 5.1, rules: [] } } })
+    const early = candidate('p-early', 'RB', 5)
+    expect(pickHazardWeight(tight, [1, 2], 5, early)).toBeCloseTo(pickHazardWeight(null, [1, 2], 5, early), 12)
   })
 
   it('sigmaScale spreads a team’s take distribution flatter', () => {

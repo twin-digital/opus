@@ -131,6 +131,12 @@ export interface EvaluateMCOptions extends EvaluateOptions {
    * simulated room removed (the winning branch's path under 'one-ply').
    */
   instrument?: (candidateId: PlayerId, scenario: number, roomPicks: readonly PlayerId[]) => void
+  /**
+   * Checked at each per-candidate yield of the async driver; returning true abandons the
+   * evaluation (the driver resolves null). Lets a superseded board version stop paying for
+   * an answer nobody will read.
+   */
+  shouldAbort?: () => boolean
 }
 
 /** Skill + K/DST position indexes for the per-pick multiplier array. */
@@ -1037,12 +1043,15 @@ export const evaluateCandidatesMC = (state: BoardState, options: EvaluateMCOptio
 export const evaluateCandidatesMCAsync = async (
   state: BoardState,
   options: EvaluateMCOptions = {},
-): Promise<McCandidateEvaluation[]> => {
+): Promise<McCandidateEvaluation[] | null> => {
   const steps = mcSteps(state, options)
   // Yield before the first step too: setup + first candidate must not run on the caller's path.
   let step: IteratorResult<void, McCandidateEvaluation[]>
   do {
     await new Promise((resolve) => setImmediate(resolve))
+    if (options.shouldAbort?.() === true) {
+      return null // superseded — drop the work
+    }
     step = steps.next()
   } while (step.done !== true)
   return step.value
