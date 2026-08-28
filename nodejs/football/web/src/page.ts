@@ -53,8 +53,10 @@ export const PAGE = `<!doctype html>
   }
 
   * { box-sizing: border-box; border-color: var(--border); }
+  html, body { height: 100%; }
   body { margin: 0; background: var(--background); color: var(--foreground);
-    font: 13px/1.4 var(--font-sans); -webkit-font-smoothing: antialiased; }
+    font: 13px/1.4 var(--font-sans); -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; overflow: hidden; }
   button { font: inherit; font-weight: 500; cursor: pointer; background: var(--muted); color: var(--foreground);
     border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px); padding: 2px 10px; }
   button:hover { border-color: var(--primary); }
@@ -66,7 +68,7 @@ export const PAGE = `<!doctype html>
   .mono { font-family: var(--font-mono); }
   .muted { color: var(--muted-fg); }
 
-  #status { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+  #status { flex-shrink: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
     background: var(--card); border-bottom: 1px solid var(--border); padding: 8px 14px; }
   #status .big { font-size: 15px; font-weight: 600; }
   #status .lbl { color: var(--muted-fg); margin-right: 5px; font-size: 12px; }
@@ -85,9 +87,14 @@ export const PAGE = `<!doctype html>
   .ind.err .dot { background: var(--danger); } .ind.err { color: var(--danger); }
   .ind.off { color: var(--muted-fg); }
 
-  #layout { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
-  #main { flex: 1; min-width: 0; }
-  #side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+  /* Viewport-locked layout: the chrome stays put, the board table scrolls inside #tscroll. */
+  #layout { display: flex; gap: 12px; padding: 12px 14px; flex: 1; min-height: 0; }
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+  #side { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; max-height: 100%; }
+  #tscroll { flex: 1; min-height: 0; overflow-y: auto; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius); }
+  #tscroll table { border: none; border-radius: 0; overflow: visible; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
   .card h3 { margin: 0 0 6px; font-size: 11px; font-weight: 500; text-transform: uppercase;
     letter-spacing: 0.08em; color: var(--muted-fg); }
@@ -102,7 +109,8 @@ export const PAGE = `<!doctype html>
 
   table { border-collapse: separate; border-spacing: 0; width: 100%; background: var(--card);
     border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  thead th { position: sticky; top: 48px; z-index: 5; background: var(--card); color: var(--muted-fg);
+  /* Sticky inside #tscroll: top 0, opaque card surface, above row content at every scroll offset. */
+  thead th { position: sticky; top: 0; z-index: 5; background: var(--card); color: var(--muted-fg);
     font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
     padding: 6px; text-align: right; cursor: pointer; user-select: none; white-space: nowrap;
     border-bottom: 1px solid var(--border); }
@@ -152,10 +160,55 @@ export const PAGE = `<!doctype html>
   #mockBanner .mock-title { color: var(--warning); letter-spacing: 0.08em; font-weight: 800; }
   #mockCountdown { font-weight: 700; }
   #mockCountdown.cd-expired { color: var(--danger); }
-  body.mock #status { top: 36px; }
-  body.mock thead th { top: 84px; }
+  #mockBanner { flex-shrink: 0; }
   #recapPanel { border-color: var(--warning); margin-bottom: 12px; }
   #recapPanel .recap-cap { font-size: 14px; margin-bottom: 6px; }
+
+  /* News dots: direction = color, impact = weight (low subtle, med ringed, high larger + saturated). */
+  .ndot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 5px;
+    flex-shrink: 0; }
+  .nd-harms { background: var(--danger); }
+  .nd-improves { background: var(--success); }
+  .nd-unclear { background: var(--muted-fg); }
+  .nd-low { opacity: 0.4; }
+  .nd-med { opacity: 0.85; }
+  .nd-med.nd-harms { box-shadow: 0 0 0 2px color-mix(in oklab, var(--danger) 30%, transparent); }
+  .nd-med.nd-improves { box-shadow: 0 0 0 2px color-mix(in oklab, var(--success) 30%, transparent); }
+  .nd-med.nd-unclear { box-shadow: 0 0 0 2px color-mix(in oklab, var(--muted-fg) 30%, transparent); }
+  .nd-high { width: 10px; height: 10px; }
+  .pname { cursor: pointer; }
+  .pname:hover { color: var(--primary); text-decoration: underline; }
+
+  /* Threat markers: amber → red escalation on the P@ columns. */
+  .thr { font-weight: 700; cursor: help; margin-left: 3px; }
+  .thr1 { color: var(--warning); }
+  .thr2 { color: color-mix(in oklab, var(--warning) 45%, var(--danger)); }
+  .thr3 { color: var(--danger); }
+  #clockThreats { margin-top: 6px; font-size: 12px; color: var(--muted-fg); }
+  #clockThreats b { color: var(--foreground); }
+
+  /* News drawer */
+  #drawerBack { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.35); }
+  #drawer { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 440px; max-width: 92vw;
+    z-index: 41; background: var(--card); border-left: 1px solid var(--border);
+    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.25); flex-direction: column; }
+  body.drawer-open #drawer { display: flex; }
+  body.drawer-open #drawerBack { display: block; }
+  .drawer-head { padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-title { display: flex; align-items: center; gap: 8px; }
+  .drawer-title b { font-size: 15px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 10px 14px; }
+  .drawer-foot { padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .news-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
+    margin-bottom: 8px; }
+  .news-sum { font-size: 13px; font-weight: 600; margin: 6px 0 4px; }
+  .news-hl { font-size: 12px; color: var(--muted-fg); }
+  .news-item details { margin-top: 6px; }
+  .news-item summary { cursor: pointer; color: var(--muted-fg); font-size: 12px; }
+  .news-item details p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; }
+  .news-unassessed { padding: 3px 0; font-size: 12px; color: var(--muted-fg); }
+  .btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -179,6 +232,7 @@ export const PAGE = `<!doctype html>
   <span class="ind off" id="pollPill" title=""><span class="dot"></span><span id="pollLabel">POLL</span></span>
   <label><input type="checkbox" id="pollToggle"> live poll</label>
   <button id="mockBtn" class="btn-violet" title="Practice against a simulated room — nothing is saved">Mock draft</button>
+  <button id="resetManualBtn" title="Delete every manual mark">Reset manual</button>
   <button id="refreshBtn" title="Re-run full data ingest">Refresh data</button>
   <label><input type="checkbox" id="showDrafted"> show drafted</label>
   <span class="muted" id="asOf" title="">data: —</span>
@@ -207,6 +261,7 @@ export const PAGE = `<!doctype html>
         </thead>
         <tbody id="clockRows"></tbody>
       </table>
+      <div id="clockThreats"></div>
     </div>
     <div id="fallsPanel" class="card" style="display:none"></div>
     <div id="controls">
@@ -214,6 +269,7 @@ export const PAGE = `<!doctype html>
       <input type="text" id="search" placeholder="search player / team">
       <span class="muted" id="rowCount"></span>
     </div>
+    <div id="tscroll">
     <table>
       <thead>
         <tr>
@@ -237,6 +293,7 @@ export const PAGE = `<!doctype html>
       </thead>
       <tbody id="rows"><tr><td colspan="16" class="l muted">loading…</td></tr></tbody>
     </table>
+    </div>
   </div>
   <div id="side">
     <div class="card"><h3 id="rosterTitle">My roster</h3><div id="roster"></div><div id="byes"></div></div>
@@ -245,9 +302,26 @@ export const PAGE = `<!doctype html>
   </div>
 </div>
 
+<div id="drawerBack"></div>
+<div id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-title">
+      <b id="drawerName">—</b>
+      <span class="muted" id="drawerMeta"></span>
+      <span class="spacer"></span>
+      <button id="drawerClose" title="close">✕</button>
+    </div>
+    <div id="drawerInjury" class="muted" style="margin-top:4px"></div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</div>
+
 <script>
 'use strict';
 var S = null, B = null, E = null, lastVersion = -1, serverOk = true;
+var rowById = {}, drawerPid = null;
+var THREAT_MARKS = ['', '!', '!!', '!!!'];
 var ui = { pos: 'ALL', search: '', sortKey: 'vor', sortDir: -1, showDrafted: false };
 var POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 var ASC_DEFAULT = { rank: 1, name: 1, position: 1, team: 1, byeWeek: 1, tier: 1, ecrRank: 1, adp: 1, injuryStatus: 1 };
@@ -297,6 +371,36 @@ function nameMarkers(r, boosted) {
   if (r.banned) m += ' ' + chip('BAN', '--c-rose', '', 'banned via overrides.json — excluded from recommendations');
   return m;
 }
+// Assessed-news dot: direction = color, impact = intensity. No dot without an assessment.
+function newsDot(nw) {
+  if (!nw || !nw.direction || !nw.assessedCount) return '';
+  return '<span class="ndot nd-' + nw.direction + ' nd-' + (nw.impact || 'low') + '" title="' +
+    nw.direction + '/' + (nw.impact || '?') + ' · ' + nw.itemCount +
+    ' item' + (nw.itemCount === 1 ? '' : 's') + '"></span>';
+}
+// Clickable player name (opens the news drawer) with its news dot inside the hit area.
+function nameCell(r) {
+  return '<span class="pname" data-pid="' + r.playerId + '" title="news & overrides">' +
+    newsDot(r.news) + esc(r.name) + '</span>';
+}
+function threatTitle(r) {
+  var t = r.threat;
+  if (!t) return '';
+  var s = pct(t.pTakenBeforeMyPick) + ' gone before your pick ' + (B && B.threatPick ? B.threatPick : '?');
+  var a = t.attribution;
+  if (a) {
+    s += ' — ' + (a.ownerName || 'team ' + a.teamId) + ' (T' + a.teamId + ', slot ' + (a.slot || '?') +
+      ') @ pick ' + a.atPick + ': ' + pct(a.probability);
+    if (a.evidence && a.evidence.length) s += ' — ' + a.evidence.join('; ');
+  }
+  return s;
+}
+function threatMark(r) {
+  var t = r.threat;
+  if (!t || !t.threatLevel) return '';
+  return '<span class="thr thr' + t.threatLevel + '" title="' + esc(threatTitle(r)) + '">' +
+    THREAT_MARKS[t.threatLevel] + '</span>';
+}
 
 function api(path, body) {
   var opts = body === undefined ? {} :
@@ -316,6 +420,8 @@ function loadState() {
     var p = (s.version !== lastVersion) ?
       Promise.all([api('/api/board'), api('/api/evaluate')]).then(function (res) {
         B = res[0]; E = res[1]; lastVersion = s.version;
+        rowById = {};
+        (B.rows || []).forEach(function (r) { rowById[r.playerId] = r; });
         renderTable(); renderSide(); renderClock();
       }) :
       Promise.resolve();
@@ -373,6 +479,10 @@ function renderStatus() {
   btn.disabled = S.ingest.running || mockActive();
   btn.textContent = S.ingest.running ? 'Refreshing…' : 'Refresh data';
   el('pollToggle').disabled = mockActive();
+  var rm = el('resetManualBtn');
+  rm.disabled = mockActive() || S.poll.enabled || S.draft.manualCount === 0;
+  rm.title = S.poll.enabled ? 'turn live poll off first' :
+    'Delete every manual mark (' + S.draft.manualCount + ' now)';
   btn.title = S.ingest.lastError ? ('last refresh FAILED: ' + S.ingest.lastError) :
     (S.ingest.finishedAt ? 'last refresh ' + timeShort(S.ingest.finishedAt) : 'Re-run full data ingest');
 
@@ -387,7 +497,7 @@ function renderStatus() {
 
 function renderMock() {
   var active = mockActive();
-  document.body.className = active ? 'mock' : '';
+  document.body.classList.toggle('mock', active);
   el('mockBanner').style.display = active ? 'flex' : 'none';
   el('mockBtn').style.display = active ? 'none' : '';
   if (!active) { el('recapPanel').style.display = 'none'; updateCountdown(); return; }
@@ -459,18 +569,28 @@ function renderClock() {
       var best = c.deltaVsBest === 0;
       var bench = c.landsOn === 'BENCH';
       html.push('<tr class="' + (best ? 'best' : '') + '">' +
-        '<td class="l"><b>' + esc(c.name) + '</b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
+        '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
         '<td class="l">' + c.position + '</td>' +
         '<td>' + tierChip(c.tier) + '</td>' +
         '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
         '<td class="delta">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
         '<td class="' + (bench ? 'ups-hi' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
-        '<td class="' + oddsClass(c.pPickAfter) + '">' + pct(c.pPickAfter) + '</td>' +
+        '<td class="' + oddsClass(c.pPickAfter) + '">' + pct(c.pPickAfter) + threatMark(c) + '</td>' +
         '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
         '</tr>');
     }
     el('clockRows').innerHTML = html.join('');
+    var threatened = E.candidates.filter(function (c) { return c.threat && c.threat.threatLevel >= 1; })
+      .sort(function (a, b) { return b.threat.pTakenBeforeMyPick - a.threat.pTakenBeforeMyPick; })
+      .slice(0, 3);
+    el('clockThreats').innerHTML = !threatened.length ? '' :
+      '<b>THREATS</b> (if you pass): ' + threatened.map(function (c) {
+        var t = c.threat, a = t.attribution;
+        return '<b>' + esc(c.name) + '</b> ' + threatMark(c) + ' ' + pct(t.pTakenBeforeMyPick) +
+          ' gone by ' + (B ? B.threatPick : '?') +
+          (a ? ' (' + esc(a.ownerName || 'T' + a.teamId) + ' @' + a.atPick + ')' : '');
+      }).join(' &nbsp;·&nbsp; ');
   } else {
     clock.style.display = 'none';
     falls.style.display = '';
@@ -491,6 +611,7 @@ function viewRows() {
       return Object.assign({
         drafted: true, rank: null, pNextPick: null, pPickAfter: null,
         roomDelta: null, upsideScore: null, residualSpread: null, contested: false, banned: false,
+        news: null, threat: null,
       }, r);
     }));
   }
@@ -530,6 +651,8 @@ function renderTable() {
 
   var boosted = {};
   (B.boostedIds || []).forEach(function (id) { boosted[id] = true; });
+  // The threat runs to B.threatPick — mark whichever P@ column shows that pick.
+  var thrCol = B.threatPick !== null && B.myNextPicks[1] === B.threatPick ? 1 : 0;
   var rows = viewRows();
   var shown = rows.slice(0, 300);
   el('rowCount').textContent = shown.length < rows.length ? ('showing 300 of ' + rows.length) : (rows.length + ' rows');
@@ -558,7 +681,7 @@ function renderTable() {
     }
     html.push('<tr class="' + cls + '">' +
       '<td>' + (r.rank === null ? '—' : r.rank) + '</td>' +
-      '<td class="l">' + esc(r.name) + nameMarkers(r, boosted[r.playerId]) + '</td>' +
+      '<td class="l">' + nameCell(r) + nameMarkers(r, boosted[r.playerId]) + '</td>' +
       '<td class="l">' + r.position + '</td>' +
       '<td class="l">' + (r.team || 'FA') + '</td>' +
       '<td>' + (r.byeWeek === null ? '—' : r.byeWeek) + '</td>' +
@@ -571,8 +694,8 @@ function renderTable() {
       '<td class="' + (r.upsideScore !== null && r.upsideScore >= 80 ? 'ups-hi' : '') + '">' +
         (r.upsideScore === null ? '—' : Math.round(r.upsideScore)) + '</td>' +
       '<td class="l">' + injHtml + '</td>' +
-      '<td class="' + oddsClass(r.pNextPick) + '">' + pct(r.pNextPick) + '</td>' +
-      '<td class="' + oddsClass(r.pPickAfter) + '">' + pct(r.pPickAfter) + '</td>' +
+      '<td class="' + oddsClass(r.pNextPick) + '">' + pct(r.pNextPick) + (thrCol === 0 ? threatMark(r) : '') + '</td>' +
+      '<td class="' + oddsClass(r.pPickAfter) + '">' + pct(r.pPickAfter) + (thrCol === 1 ? threatMark(r) : '') + '</td>' +
       '<td class="l">' + action + '</td>' +
       '</tr>');
   }
@@ -613,6 +736,98 @@ function renderSide() {
   el('recent').innerHTML = recent.length ? recent.join('') : 'none yet';
 }
 
+// -- news drawer ------------------------------------------------------------
+var DIR_COLORS = { harms: '--c-rose', improves: '--c-emerald', unclear: '--c-zinc' };
+
+function openDrawer(pid) {
+  drawerPid = pid;
+  document.body.classList.add('drawer-open');
+  el('drawerName').textContent = '…';
+  el('drawerMeta').textContent = '';
+  el('drawerInjury').textContent = '';
+  el('drawerBody').innerHTML = '<div class="muted">loading…</div>';
+  el('drawerFoot').innerHTML = '';
+  api('/api/news/' + pid).then(function (d) {
+    if (drawerPid !== pid) return;
+    if (d && d.error) { el('drawerBody').innerHTML = '<div class="muted">' + esc(d.error) + '</div>'; return; }
+    renderDrawer(d);
+  });
+}
+function closeDrawer() {
+  drawerPid = null;
+  document.body.classList.remove('drawer-open');
+}
+function dateShort(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function newsItemHtml(it) {
+  var a = it.assessment;
+  var html = ['<div class="news-item">'];
+  html.push(chip(a.direction + '/' + a.impact, DIR_COLORS[a.direction] || '--c-zinc'));
+  html.push('<div class="news-sum">' + esc(a.summary) + '</div>');
+  html.push('<div class="news-hl">' + esc(it.headline) +
+    (it.published ? ' <span>· ' + dateShort(it.published) + '</span>' : '') + '</div>');
+  if (it.paragraphs && it.paragraphs.length) {
+    html.push('<details><summary>full story</summary>' + it.paragraphs.map(function (p) {
+      return '<p>' + esc(p) + '</p>';
+    }).join('') + '</details>');
+  }
+  html.push('</div>');
+  return html.join('');
+}
+function renderDrawer(d) {
+  var p = d.player;
+  el('drawerName').textContent = p.name;
+  el('drawerMeta').textContent = p.position + ' · ' + (p.team || 'FA') + (p.byeWeek ? ' · bye ' + p.byeWeek : '');
+  var inj = (p.injuryStatus && p.injuryStatus !== 'ACTIVE' && p.injuryStatus !== 'UNKNOWN') ?
+    '<span class="inj">' + esc(p.injuryStatus) + '</span>' : '';
+  if (d.injuryNote) inj += (inj ? ' — ' : '') + esc(d.injuryNote);
+  el('drawerInjury').innerHTML = inj;
+
+  var assessed = d.items.filter(function (it) { return it.assessment; });
+  var rest = d.items.filter(function (it) { return !it.assessment; });
+  var html = [];
+  if (!d.items.length) html.push('<div class="muted">no stored news for this player</div>');
+  html = html.concat(assessed.map(newsItemHtml));
+  if (rest.length) {
+    html.push('<h3 style="margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em" class="muted">Unassessed (' + rest.length + ')</h3>');
+    rest.forEach(function (it) {
+      html.push('<div class="news-unassessed">' + esc(it.headline) +
+        (it.published ? ' <span>· ' + dateShort(it.published) + '</span>' : '') + '</div>');
+    });
+  }
+  el('drawerBody').innerHTML = html.join('');
+
+  var row = rowById[p.playerId];
+  var status = '';
+  if (row && row.banned) status = chip('BAN', '--c-rose', '', 'banned via overrides.json');
+  else if (B && (B.boostedIds || []).indexOf(p.playerId) >= 0) status = '<span class="mark-boost">▲ boosted</span>';
+  el('drawerFoot').innerHTML =
+    '<button id="ovrBan" class="btn-danger">Ban</button>' +
+    '<button id="ovrBoost">Boost ±points</button>' +
+    '<button id="ovrClear">Un-ban / clear</button>' +
+    '<span class="spacer"></span><span>' + status + '</span>';
+  el('ovrBan').addEventListener('click', function () { sendOverride({ playerId: p.playerId, action: 'ban' }); });
+  el('ovrClear').addEventListener('click', function () { sendOverride({ playerId: p.playerId, action: 'clear' }); });
+  el('ovrBoost').addEventListener('click', function () {
+    var raw = window.prompt('Boost points (±, e.g. 25 or -15)', '25');
+    if (raw === null) return;
+    var n = Number(raw);
+    if (!isFinite(n) || n === 0) { window.alert('need a non-zero number'); return; }
+    sendOverride({ playerId: p.playerId, action: 'boost', points: n });
+  });
+}
+function sendOverride(body) {
+  api('/api/override', body).then(function (res) {
+    if (res && res.error) window.alert('override failed: ' + res.error);
+    return loadState();
+  }).then(function () {
+    if (drawerPid) openDrawer(drawerPid);
+  });
+}
+
 // -- wiring -----------------------------------------------------------------
 el('tabs').innerHTML = POSITIONS.map(function (p) {
   return '<button class="tab' + (p === ui.pos ? ' active' : '') + '" data-pos="' + p + '">' + p + '</button>';
@@ -626,7 +841,7 @@ el('tabs').addEventListener('click', function (e) {
 });
 el('search').addEventListener('input', function (e) { ui.search = e.target.value; renderTable(); });
 el('showDrafted').addEventListener('change', function (e) { ui.showDrafted = e.target.checked; renderTable(); });
-document.querySelector('#main > table thead').addEventListener('click', function (e) {
+document.querySelector('#tscroll table thead').addEventListener('click', function (e) {
   var k = e.target.dataset && e.target.dataset.k;
   if (!k) return;
   if (ui.sortKey === k) ui.sortDir = -ui.sortDir;
@@ -634,6 +849,8 @@ document.querySelector('#main > table thead').addEventListener('click', function
   renderTable();
 });
 function actClick(e) {
+  var name = e.target.closest ? e.target.closest('.pname') : null;
+  if (name && name.dataset.pid) { openDrawer(name.dataset.pid); return; }
   var t = e.target;
   if (!t.dataset || !t.dataset.act) return;
   var id = t.dataset.id;
@@ -666,6 +883,14 @@ el('mockStop').addEventListener('click', function () {
 el('mockAdvance').addEventListener('click', function () {
   api('/api/mock', { action: 'advance' }).then(loadState);
 });
+el('resetManualBtn').addEventListener('click', function () {
+  var n = S && S.draft ? S.draft.manualCount : 0;
+  if (!window.confirm('Delete ' + n + ' manual mark' + (n === 1 ? '' : 's') + '? Polled picks are untouched.')) return;
+  api('/api/manual/reset', {}).then(loadState);
+});
+el('drawerClose').addEventListener('click', closeDrawer);
+el('drawerBack').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
 setInterval(updateCountdown, 500);
 
 setInterval(loadState, 2000);

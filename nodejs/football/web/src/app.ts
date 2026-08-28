@@ -1,15 +1,21 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 import {
   board,
   evaluateCandidates,
   loadOverridesFile,
+  loadRoomRulesFile,
+  pickThreats,
   upcomingPicksForSlot,
   type Benchmarks,
   type BoardResult,
   type BoardRow,
   type CandidateEvaluation,
+  type OverrideSpec,
   type PlayerOverride,
+  type PlayerThreat,
+  type RoomProfiles,
+  type ThreatAttribution,
 } from '@twin-digital/football-compute'
 import {
   openDatabase,
@@ -19,8 +25,10 @@ import {
   type IngestSummary,
   type LeagueSettings,
   type MarketData,
+  type NewsSource,
   type Player,
   type PlayerId,
+  type PlayerNewsSignal,
   type Position,
   type SeasonProjection,
 } from '@twin-digital/football-data'
@@ -28,6 +36,7 @@ import type { Database } from '@twin-digital/football-data/db/connection'
 import type { EspnDraftDetailResponse, EspnLeagueCredentials } from '@twin-digital/football-data/fetchers/espn'
 
 import { mulberry32, pickForOpponent } from './mock.js'
+import { newsBodyParagraphs } from './news.js'
 import { mapEspnPicks, mergePicks, slotForTeam, teamOnClock, type EffectivePick } from './picks.js'
 import { buildRoster, type RosterPlayer, type RosterSummary } from './roster.js'
 import { tierScarcity, type TierScarcity } from './scarcity.js'
@@ -41,6 +50,8 @@ export interface AppOptions {
   fpProjectionsMode?: IngestOptions['fpProjectionsMode']
   /** Optional overrides.json path; missing file = no overrides, bad file = error surfaced in state. */
   overridesFile?: string | null
+  /** Optional room-rules.json path; missing or broken file = base room model, error logged. */
+  roomRulesFile?: string | null
   /** Injectable for tests; defaults to the shared connection on `dbFile`. */
   database?: Database
   runIngestFn?: (options: IngestOptions) => Promise<IngestSummary>
@@ -75,18 +86,34 @@ export interface DraftedRow {
   source: 'espn' | 'manual' | 'mock'
 }
 
+/** Room-model threat joined onto a board row; present only when threatLevel ≥ 1. */
+export interface RowThreat {
+  survivalToMyPick: number
+  pTakenBeforeMyPick: number
+  threatLevel: 1 | 2 | 3
+  attribution: ThreatAttribution | null
+}
+
+export interface WebBoardRow extends BoardRow {
+  /** Per-player news rollup; null when the player has no stored news. */
+  news: PlayerNewsSignal | null
+  threat: RowThreat | null
+}
+
 export interface BoardPayload {
   version: number
   computedAt: string
   currentOverall: number
   myNextPicks: number[]
+  /** The pick threat survival runs to (my next turn — or the one after when I am on the clock). */
+  threatPick: number | null
   replacement: BoardResult['replacement']
   benchmarks: Benchmarks
   captureRatio: number
   /** Players carrying a points boost from the overrides file. */
   boostedIds: PlayerId[]
   scarcity: TierScarcity[]
-  rows: BoardRow[]
+  rows: WebBoardRow[]
   drafted: DraftedRow[]
 }
 
@@ -104,6 +131,39 @@ export interface EvaluateRow extends CandidateEvaluation {
   pNextPick: number | null
   pPickAfter: number | null
   boosted: boolean
+  news: PlayerNewsSignal | null
+  threat: RowThreat | null
+}
+
+export interface NewsItemPayload {
+  id: string
+  source: NewsSource
+  published: string | null
+  headline: string
+  /** Sanitized plain-text paragraphs of the raw story body. */
+  paragraphs: string[]
+  assessment: { direction: string; impact: string; summary: string; assessedAt: string } | null
+}
+
+export interface PlayerNewsPayload {
+  player: {
+    playerId: PlayerId
+    name: string
+    position: Position
+    team: Player['team']
+    byeWeek: number | null
+    injuryStatus: Player['injuryStatus']
+  }
+  /** Latest Sleeper injury-report headline (carries the body part); null without one. */
+  injuryNote: string | null
+  items: NewsItemPayload[]
+}
+
+export interface OverrideInput {
+  playerId: PlayerId
+  action: 'ban' | 'boost' | 'clear'
+  points?: number
+  note?: string
 }
 
 export interface EvaluatePayload {
@@ -214,6 +274,7 @@ export class App {
   private snapshotGeneration = 0
   private overrides: PlayerOverride[] = []
   private overridesStatus: OverridesStatus = { file: null, count: 0, boosted: 0, banned: 0, error: null }
+  private profiles: RoomProfiles | null = null
   private boardCache: { version: number; payload: BoardPayload } | null = null
   private evaluateCache: { version: number; payload: EvaluatePayload } | null = null
   private fullRowsCache: { generation: number; rowsById: Map<PlayerId, BoardRow> } | null = null
@@ -259,7 +320,28 @@ export class App {
     )
     this.snapshotGeneration += 1
     this.reloadOverrides()
+    this.reloadRoomRules()
     this.bumpVersion()
+  }
+
+  /** A broken room-rules file must not take the board down: fall back to the base room model. */
+  private reloadRoomRules(): void {
+    const file = this.options.roomRulesFile ?? null
+    this.profiles = null
+    if (file === null || !existsSync(file)) {
+      return
+    }
+    try {
+      this.profiles = loadRoomRulesFile(file, this.snapshot.players, (message) => {
+        this.log(`room-rules: ${message}`)
+      })
+    } catch (error) {
+      this.log(`room-rules: FAILED to load ${file}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  get roomProfiles(): RoomProfiles | null {
+    return this.profiles
   }
 
   /** A broken overrides file must not take the board down on draft day: record and serve without. */
@@ -350,6 +432,129 @@ export class App {
       this.bumpVersion()
     }
     return removed
+  }
+
+  /** Delete every manual mark (the "Reset manual" button); returns how many were removed. */
+  resetManualPicks(): number {
+    const picks = this.store.getManualPicks()
+    for (const pick of picks) {
+      this.store.removeManualPick(pick.playerId)
+    }
+    if (picks.length > 0) {
+      this.bumpVersion()
+    }
+    return picks.length
+  }
+
+  // -- news -------------------------------------------------------------------
+
+  /** One player's news for the drawer: header data plus items (newest first) with sanitized bodies. */
+  newsForPlayer(playerId: PlayerId): PlayerNewsPayload {
+    const player = this.playerById.get(playerId)
+    if (player === undefined) {
+      throw new UnknownPlayerError(playerId)
+    }
+    const entries = this.store.getNewsForPlayer(playerId)
+    return {
+      player: {
+        playerId,
+        name: player.name,
+        position: player.position,
+        team: player.team,
+        byeWeek: player.byeWeek,
+        injuryStatus: player.injuryStatus,
+      },
+      injuryNote: entries.find((entry) => entry.item.source === 'sleeper-injury')?.item.headline ?? null,
+      items: entries.map(({ item, assessment }) => ({
+        id: item.id,
+        source: item.source,
+        published: item.published,
+        headline: item.headline,
+        paragraphs: newsBodyParagraphs(item.body),
+        assessment:
+          assessment === null ? null : (
+            {
+              direction: assessment.direction,
+              impact: assessment.impact,
+              summary: assessment.summary,
+              assessedAt: assessment.assessedAt,
+            }
+          ),
+      })),
+    }
+  }
+
+  // -- overrides --------------------------------------------------------------
+
+  /**
+   * Rewrite overrides.json for one player and hot-reload. Existing entries for other players are
+   * preserved byte-for-value (including unresolvable ones); the player's own entries are replaced
+   * by the new action, or just removed on `clear`. Allowed during a mock — overrides are config,
+   * not draft state.
+   */
+  applyOverride(input: OverrideInput): void {
+    const file = this.options.overridesFile ?? null
+    if (file === null) {
+      throw new OverrideFileError('no overrides file configured')
+    }
+    if (!this.playerById.has(input.playerId)) {
+      throw new UnknownPlayerError(input.playerId)
+    }
+    let specs: OverrideSpec[] = []
+    if (existsSync(file)) {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(readFileSync(file, 'utf8'))
+      } catch (error) {
+        throw new OverrideFileError(
+          `overrides file is not valid JSON — fix it by hand: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      }
+      if (!Array.isArray(parsed)) {
+        throw new OverrideFileError('overrides file must be a JSON array')
+      }
+      specs = parsed as OverrideSpec[]
+    }
+    const kept = specs.filter((spec) => this.specPlayerId(spec) !== input.playerId)
+    if (input.action === 'ban') {
+      const note = input.note ?? this.latestHarmsSummary(input.playerId)
+      kept.push({ player: input.playerId, action: 'ban', ...(note === undefined ? {} : { note }) })
+    } else if (input.action === 'boost') {
+      if (typeof input.points !== 'number' || !Number.isFinite(input.points) || input.points === 0) {
+        throw new OverrideFileError('boost needs a finite non-zero points number')
+      }
+      kept.push({
+        player: input.playerId,
+        action: 'boost',
+        points: input.points,
+        ...(input.note === undefined ? {} : { note: input.note }),
+      })
+    }
+    writeFileSync(file, `${JSON.stringify(kept, null, 2)}\n`)
+    this.reloadOverrides()
+    this.bumpVersion()
+  }
+
+  /** Resolve a stored spec's player to an id the way the loader does; null when it cannot. */
+  private specPlayerId(spec: OverrideSpec): PlayerId | null {
+    if (typeof spec.player !== 'string') {
+      return null
+    }
+    if (spec.player.startsWith('p-')) {
+      return spec.player as PlayerId
+    }
+    const matches = this.snapshot.players.filter((player) => player.name.toLowerCase() === spec.player.toLowerCase())
+    return matches.length === 1 ? (matches[0] as Player).id : null
+  }
+
+  /** Default ban note: the newest assessed harms summary, when one exists. */
+  private latestHarmsSummary(playerId: PlayerId): string | undefined {
+    for (const { assessment } of this.store.getNewsForPlayer(playerId)) {
+      if (assessment?.direction === 'harms') {
+        return assessment.summary
+      }
+    }
+    return undefined
   }
 
   // -- mock draft -----------------------------------------------------------
@@ -641,17 +846,44 @@ export class App {
         source: pick.source,
       }
     })
+    const myNextPicks = live.myNextPicks.filter((pick) => pick <= this.totalPicks)
+    // Threat survival runs to my next turn; on my own turn, to the turn after (the pass question).
+    const threatPick = myNextPicks.find((pick) => pick > live.currentOverall) ?? null
+    let threats: Map<PlayerId, PlayerThreat> | null = null
+    if (this.profiles !== null && threatPick !== null) {
+      threats = pickThreats(this.profiles, this.settings.draft.pickOrder, live.currentOverall, threatPick, live.rows, {
+        myTeamId: this.options.myTeamId,
+      })
+    }
+    const signals = new Map(this.store.getNewsSignals().map((signal) => [signal.playerId, signal]))
+    const rows: WebBoardRow[] = live.rows.map((row) => {
+      const threat = threats?.get(row.playerId)
+      return {
+        ...row,
+        news: signals.get(row.playerId) ?? null,
+        threat:
+          threat === undefined || threat.threatLevel === 0 ?
+            null
+          : {
+              survivalToMyPick: threat.survivalToMyPick,
+              pTakenBeforeMyPick: threat.pTakenBeforeMyPick,
+              threatLevel: threat.threatLevel,
+              attribution: threat.attribution,
+            },
+      }
+    })
     const payload: BoardPayload = {
       version: this.version,
       computedAt: this.now().toISOString(),
       currentOverall: live.currentOverall,
-      myNextPicks: live.myNextPicks.filter((pick) => pick <= this.totalPicks),
+      myNextPicks,
+      threatPick,
       replacement: live.replacement,
       benchmarks: live.benchmarks,
       captureRatio: live.captureRatio,
       boostedIds: [...new Set(this.overrides.filter((override) => override.action === 'boost').map((o) => o.playerId))],
       scarcity: tierScarcity(live.rows),
-      rows: live.rows,
+      rows,
       drafted,
     }
     this.boardCache = { version: this.version, payload }
@@ -672,7 +904,10 @@ export class App {
     const candidates =
       complete ?
         []
-      : evaluateCandidates(this.boardState(picks), { overrides: this.overrides }).map((candidate) => {
+      : evaluateCandidates(this.boardState(picks), {
+          overrides: this.overrides,
+          profiles: this.profiles ?? undefined,
+        }).map((candidate) => {
           const row = boardRows.get(candidate.playerId)
           return {
             ...candidate,
@@ -680,6 +915,8 @@ export class App {
             pNextPick: row?.pNextPick ?? null,
             pPickAfter: row?.pPickAfter ?? null,
             boosted: boosted.has(candidate.playerId),
+            news: row?.news ?? null,
+            threat: row?.threat ?? null,
           }
         })
     const payload: EvaluatePayload = {
@@ -824,5 +1061,13 @@ export class MockStateError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'MockStateError'
+  }
+}
+
+/** An override write that cannot proceed (no file configured, or the file is broken); routes answer 409. */
+export class OverrideFileError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'OverrideFileError'
   }
 }

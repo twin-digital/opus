@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -197,6 +197,7 @@ const makeApp = (
   options: {
     runIngestFn?: (o: unknown) => Promise<IngestSummary>
     overridesFile?: string
+    roomRulesFile?: string
     pool?: FixturePlayer[]
   } = {},
 ): TestContext => {
@@ -211,6 +212,7 @@ const makeApp = (
     database,
     runIngestFn: options.runIngestFn,
     overridesFile: options.overridesFile,
+    roomRulesFile: options.roomRulesFile,
     scheduleTimer: timers.scheduleTimer,
   })
   const poller = makePoller()
@@ -221,6 +223,58 @@ const writeOverrides = (specs: unknown[]): string => {
   const file = path.join(mkdtempSync(path.join(tmpdir(), 'football-overrides-')), 'overrides.json')
   writeFileSync(file, JSON.stringify(specs))
   return file
+}
+
+const writeRoomRules = (spec: unknown): string => {
+  const file = path.join(mkdtempSync(path.join(tmpdir(), 'football-rules-')), 'room-rules.json')
+  writeFileSync(file, JSON.stringify(spec))
+  return file
+}
+
+/** Seed one player's news: an assessed item and, optionally, an unassessed one. */
+const seedNews = (
+  store: Store,
+  playerId: PlayerId,
+  assessed: { direction: 'improves' | 'harms' | 'unclear'; impact: 'low' | 'med' | 'high'; summary: string },
+  options: { body?: string; unassessed?: boolean } = {},
+): void => {
+  store.upsertNewsItems(
+    [
+      {
+        playerId,
+        source: 'espn-news',
+        externalId: `assessed-${playerId}`,
+        published: '2026-08-27T12:00:00Z',
+        headline: `Assessed headline for ${playerId}`,
+        body: options.body ?? null,
+      },
+      ...(options.unassessed === true ?
+        [
+          {
+            playerId,
+            source: 'espn-news' as const,
+            externalId: `raw-${playerId}`,
+            published: '2026-08-26T12:00:00Z',
+            headline: `Unassessed headline for ${playerId}`,
+            body: null,
+          },
+        ]
+      : []),
+    ],
+    '2026-08-27T13:00:00Z',
+  )
+  const item = store.getNewsItems().find((row) => row.externalId === `assessed-${playerId}`)
+  if (item === undefined) {
+    throw new Error('seedNews: item not stored')
+  }
+  store.upsertAssessment({
+    newsId: item.id,
+    direction: assessed.direction,
+    impact: assessed.impact,
+    summary: assessed.summary,
+    assessedAt: '2026-08-27T14:00:00Z',
+    assessedBy: 'test',
+  })
 }
 
 const call = (context: RouteContext, method: string, path: string, body?: unknown): { status: number; json: never } => {
@@ -715,5 +769,242 @@ describe('mock draft', () => {
     // the regression that matters: a full mocked draft leaves the real tables untouched
     expect(app.store.getDraftPicks()).toEqual([])
     expect(app.store.getManualPicks()).toEqual([])
+  })
+})
+
+// -- news, threats, overrides, manual reset -----------------------------------
+
+describe('news on the board', () => {
+  it('joins per-player signals onto board and evaluate rows', () => {
+    const { app, context } = makeApp()
+    seedNews(
+      app.store,
+      'p-RB1',
+      { direction: 'harms', impact: 'high', summary: 'Out for the season.' },
+      {
+        unassessed: true,
+      },
+    )
+    const board = call(context, 'GET', '/api/board').json as {
+      rows: {
+        playerId: string
+        news: { direction: string; impact: string; itemCount: number; assessedCount: number } | null
+      }[]
+    }
+    const hit = board.rows.find((row) => row.playerId === 'p-RB1')
+    expect(hit?.news).toMatchObject({ direction: 'harms', impact: 'high', itemCount: 2, assessedCount: 1 })
+    expect(board.rows.find((row) => row.playerId === 'p-WR1')?.news).toBeNull()
+
+    const evaluate = call(context, 'GET', '/api/evaluate').json as {
+      candidates: { playerId: string; news: { direction: string } | null }[]
+    }
+    expect(evaluate.candidates.find((candidate) => candidate.playerId === 'p-RB1')?.news).toMatchObject({
+      direction: 'harms',
+    })
+  })
+
+  it('serves the drawer payload: items newest-first with sanitized bodies; unknown player 404', () => {
+    const { app, context } = makeApp()
+    seedNews(
+      app.store,
+      'p-RB1',
+      { direction: 'harms', impact: 'high', summary: 'Tore his ACL; out for the season.' },
+      { body: '<p>He is <b>out</b> &amp; done.</p><script>alert("x")</script>', unassessed: true },
+    )
+    const { status, json } = call(context, 'GET', '/api/news/p-RB1')
+    expect(status).toBe(200)
+    const payload = json as {
+      player: { name: string; position: string; injuryStatus: string }
+      injuryNote: string | null
+      items: { headline: string; paragraphs: string[]; assessment: { summary: string } | null }[]
+    }
+    expect(payload.player).toMatchObject({ name: 'RB Player 1', position: 'RB', injuryStatus: 'ACTIVE' })
+    expect(payload.items).toHaveLength(2)
+    expect(payload.items[0]?.assessment?.summary).toBe('Tore his ACL; out for the season.')
+    expect(payload.items[0]?.paragraphs).toEqual(['He is out & done.'])
+    expect(payload.items[1]?.assessment).toBeNull()
+    expect(call(context, 'GET', '/api/news/p-nobody').status).toBe(404)
+  })
+})
+
+describe('threats on the board', () => {
+  const RULES = {
+    teams: {
+      '8': {
+        teamId: 8,
+        owner: 'Loyal Larry',
+        sigma: null,
+        rules: [{ kind: 'loyalty', playerName: 'RB Player 2', strength: 10 }],
+        evidence: { '0': 'took him both years' },
+      },
+    },
+  }
+
+  it('marks threatened rows with level and attribution under a profiled room', () => {
+    const { context } = makeApp({ roomRulesFile: writeRoomRules(RULES) })
+    const board = call(context, 'GET', '/api/board').json as {
+      threatPick: number | null
+      rows: {
+        playerId: string
+        threat: {
+          threatLevel: number
+          pTakenBeforeMyPick: number
+          attribution: { teamId: number; ownerName: string | null; atPick: number; evidence: string[] } | null
+        } | null
+      }[]
+    }
+    expect(board.threatPick).toBe(11)
+    const threat = board.rows.find((row) => row.playerId === 'p-RB2')?.threat
+    expect(threat).not.toBeNull()
+    expect(threat).not.toBeUndefined()
+    expect(threat?.threatLevel).toBeGreaterThanOrEqual(1)
+    expect(threat?.pTakenBeforeMyPick).toBeGreaterThan(0.25)
+    expect(threat?.attribution).toMatchObject({ teamId: 8, ownerName: 'Loyal Larry', atPick: 1 })
+    expect(threat?.attribution?.evidence).toContain('took him both years')
+
+    const evaluate = call(context, 'GET', '/api/evaluate').json as {
+      candidates: { playerId: string; threat: { threatLevel: number } | null }[]
+    }
+    const candidateThreat = evaluate.candidates.find((candidate) => candidate.playerId === 'p-RB2')?.threat
+    expect(candidateThreat?.threatLevel).toBeGreaterThanOrEqual(1)
+  })
+
+  it('serves the base model (no threat fields) without a rules file, and survives a broken one', () => {
+    const plain = call(makeApp().context, 'GET', '/api/board').json as {
+      threatPick: number | null
+      rows: { threat: unknown }[]
+    }
+    expect(plain.rows.every((row) => row.threat === null)).toBe(true)
+
+    const brokenFile = writeRoomRules({ teams: { '8': { teamId: 8, sigma: 'bad' } } })
+    const broken = makeApp({ roomRulesFile: brokenFile })
+    expect(call(broken.context, 'GET', '/api/board').status).toBe(200)
+    expect(call(broken.context, 'GET', '/api/evaluate').status).toBe(200)
+  })
+})
+
+describe('override endpoint', () => {
+  it('validates input', () => {
+    const { context } = makeApp({ overridesFile: writeOverrides([]) })
+    expect(call(context, 'POST', '/api/override', { action: 'ban' }).status).toBe(400)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'zap' }).status).toBe(400)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'boost' }).status).toBe(400)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'boost', points: 0 }).status).toBe(400)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'boost', points: 'x' }).status).toBe(400)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-nobody', action: 'ban' }).status).toBe(404)
+  })
+
+  it('refuses without a configured file and on a broken file', () => {
+    const none = makeApp()
+    expect(call(none.context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'ban' }).status).toBe(409)
+
+    const file = path.join(mkdtempSync(path.join(tmpdir(), 'football-overrides-')), 'overrides.json')
+    writeFileSync(file, 'not json {')
+    const broken = makeApp({ overridesFile: file })
+    expect(call(broken.context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'ban' }).status).toBe(409)
+    expect(readFileSync(file, 'utf8')).toBe('not json {') // never clobbered
+  })
+
+  it('round-trips ban/boost/clear: file rewritten, entries preserved, overrides hot-reloaded', () => {
+    const file = writeOverrides([{ player: 'RB Player 2', action: 'ban', note: 'pre-existing' }])
+    const { app, context } = makeApp({ overridesFile: file })
+    seedNews(app.store, 'p-RB1', { direction: 'harms', impact: 'high', summary: 'MCL sprain; out a month.' })
+
+    // ban: appended with the latest harms summary as the default note
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'ban' }).status).toBe(200)
+    let specs = JSON.parse(readFileSync(file, 'utf8')) as {
+      player: string
+      action: string
+      note?: string
+      points?: number
+    }[]
+    expect(specs).toEqual([
+      { player: 'RB Player 2', action: 'ban', note: 'pre-existing' },
+      { player: 'p-RB1', action: 'ban', note: 'MCL sprain; out a month.' },
+    ])
+    let board = call(context, 'GET', '/api/board').json as {
+      rows: { playerId: string; banned: boolean }[]
+      boostedIds: string[]
+    }
+    expect(board.rows.find((row) => row.playerId === 'p-RB1')?.banned).toBe(true)
+    expect(board.rows.find((row) => row.playerId === 'p-RB2')?.banned).toBe(true)
+
+    // boost another player, with an explicit note
+    expect(
+      call(context, 'POST', '/api/override', { playerId: 'p-WR1', action: 'boost', points: -15, note: 'fade' }).status,
+    ).toBe(200)
+    specs = JSON.parse(readFileSync(file, 'utf8')) as never
+    expect(specs).toHaveLength(3)
+    expect(specs[2]).toEqual({ player: 'p-WR1', action: 'boost', points: -15, note: 'fade' })
+    board = call(context, 'GET', '/api/board').json
+    expect(board.boostedIds).toEqual(['p-WR1'])
+
+    // clear the ban; the other entries survive, and re-clearing is a no-op rewrite
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'clear' }).status).toBe(200)
+    specs = JSON.parse(readFileSync(file, 'utf8')) as never
+    expect(specs.map((spec) => spec.player)).toEqual(['RB Player 2', 'p-WR1'])
+    board = call(context, 'GET', '/api/board').json
+    expect(board.rows.find((row) => row.playerId === 'p-RB1')?.banned).toBe(false)
+    const state = call(context, 'GET', '/api/state').json as {
+      overrides: { count: number; banned: number; boosted: number }
+    }
+    expect(state.overrides).toMatchObject({ count: 2, banned: 1, boosted: 1 })
+  })
+
+  it('replaces a name-keyed entry for the same player instead of duplicating it', () => {
+    const file = writeOverrides([{ player: 'RB Player 1', action: 'ban', note: 'by name' }])
+    const { context } = makeApp({ overridesFile: file })
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'boost', points: 20 }).status).toBe(200)
+    const specs = JSON.parse(readFileSync(file, 'utf8')) as { player: string; action: string }[]
+    expect(specs).toEqual([{ player: 'p-RB1', action: 'boost', points: 20 }])
+  })
+
+  it('still applies during a mock — overrides are config, not draft state', () => {
+    const file = writeOverrides([])
+    const { context } = makeApp({ overridesFile: file })
+    expect(call(context, 'POST', '/api/mock', { action: 'start', pace: 0, seed: 1 }).status).toBe(200)
+    expect(call(context, 'POST', '/api/override', { playerId: 'p-RB1', action: 'ban' }).status).toBe(200)
+    const board = call(context, 'GET', '/api/board').json as { rows: { playerId: string; banned: boolean }[] }
+    expect(board.rows.find((row) => row.playerId === 'p-RB1')?.banned).toBe(true)
+  })
+})
+
+describe('manual reset', () => {
+  it('deletes all manual marks, leaves polled picks, and recomputes the board', () => {
+    const { app, context } = makeApp()
+    app.applyDraftDetail({
+      draftDetail: {
+        inProgress: true,
+        picks: [{ overallPickNumber: 1, roundId: 1, roundPickNumber: 1, teamId: 8, playerId: 101 }], // p-RB1
+      },
+    })
+    call(context, 'POST', '/api/mark', { playerId: 'p-WR1', teamId: 13 })
+    call(context, 'POST', '/api/mark', { playerId: 'p-WR2', teamId: 'unknown' })
+    const { status, json } = call(context, 'POST', '/api/manual/reset')
+    expect(status).toBe(200)
+    const payload = json as {
+      removed: number
+      state: { draft: { pickCount: number; manualCount: number; polledCount: number } }
+    }
+    expect(payload.removed).toBe(2)
+    expect(payload.state.draft).toMatchObject({ pickCount: 1, manualCount: 0, polledCount: 1 })
+    const board = call(context, 'GET', '/api/board').json as { rows: { playerId: string }[] }
+    expect(board.rows.some((row) => row.playerId === 'p-WR1')).toBe(true)
+    expect(board.rows.some((row) => row.playerId === 'p-RB1')).toBe(false)
+    // idempotent on an empty table
+    expect((call(context, 'POST', '/api/manual/reset').json as { removed: number }).removed).toBe(0)
+  })
+
+  it('refuses while live poll is enabled or a mock is active', () => {
+    const polling = makeApp()
+    call(polling.context, 'POST', '/api/mark', { playerId: 'p-WR1', teamId: 13 })
+    call(polling.context, 'POST', '/api/poll', { enabled: true })
+    expect(call(polling.context, 'POST', '/api/manual/reset').status).toBe(409)
+    call(polling.context, 'POST', '/api/poll', { enabled: false })
+    expect(call(polling.context, 'POST', '/api/manual/reset').status).toBe(200)
+
+    const mocked = makeApp()
+    expect(call(mocked.context, 'POST', '/api/mock', { action: 'start', pace: 0, seed: 1 }).status).toBe(200)
+    expect(call(mocked.context, 'POST', '/api/manual/reset').status).toBe(409)
   })
 })

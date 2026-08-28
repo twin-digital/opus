@@ -1,6 +1,6 @@
 import type { PlayerId } from '@twin-digital/football-data'
 
-import { MockStateError, UnknownPlayerError, type App } from './app.js'
+import { MockStateError, OverrideFileError, UnknownPlayerError, type App } from './app.js'
 import { PAGE } from './page.js'
 import type { PollStatus } from './poller.js'
 
@@ -53,6 +53,61 @@ export const handleRoute = (context: RouteContext, method: string, path: string,
   }
   if (method === 'GET' && path === '/api/evaluate') {
     return json(200, app.evaluatePayload())
+  }
+  if (method === 'GET' && path.startsWith('/api/news/')) {
+    const playerId = decodeURIComponent(path.slice('/api/news/'.length))
+    try {
+      return json(200, app.newsForPlayer(playerId as PlayerId))
+    } catch (error) {
+      if (error instanceof UnknownPlayerError) {
+        return json(404, { error: error.message })
+      }
+      throw error
+    }
+  }
+  if (method === 'POST' && path === '/api/override') {
+    if (
+      !isRecord(body) ||
+      typeof body.playerId !== 'string' ||
+      (body.action !== 'ban' && body.action !== 'boost' && body.action !== 'clear') ||
+      (body.points !== undefined && typeof body.points !== 'number') ||
+      (body.note !== undefined && typeof body.note !== 'string')
+    ) {
+      return json(400, { error: "body must be { playerId, action: 'ban' | 'boost' | 'clear', points?, note? }" })
+    }
+    if (
+      body.action === 'boost' &&
+      (typeof body.points !== 'number' || !Number.isFinite(body.points) || body.points === 0)
+    ) {
+      return json(400, { error: 'boost requires a finite non-zero points number' })
+    }
+    try {
+      app.applyOverride({
+        playerId: body.playerId as PlayerId,
+        action: body.action,
+        points: body.points,
+        note: body.note,
+      })
+    } catch (error) {
+      if (error instanceof UnknownPlayerError) {
+        return json(404, { error: error.message })
+      }
+      if (error instanceof OverrideFileError) {
+        return json(409, { error: error.message })
+      }
+      throw error
+    }
+    return json(200, statePayload(context))
+  }
+  if (method === 'POST' && path === '/api/manual/reset') {
+    if (app.mockActive) {
+      return json(409, { error: 'mock draft active — there are no manual marks in play' })
+    }
+    if (poller.status.enabled) {
+      return json(409, { error: 'live poll is enabled — turn it off before resetting manual marks' })
+    }
+    const removed = app.resetManualPicks()
+    return json(200, { removed, state: statePayload(context) })
   }
   if (method === 'POST' && path === '/api/poll') {
     if (!isRecord(body) || typeof body.enabled !== 'boolean') {

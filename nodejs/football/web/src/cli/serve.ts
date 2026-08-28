@@ -56,6 +56,7 @@ const main = async (): Promise<void> => {
   const myTeamId = Number(process.env.FOOTBALL_TEAM_ID ?? '13')
   const port = Number(process.env.PORT ?? '8020')
   const overridesFile = process.env.FOOTBALL_OVERRIDES ?? path.join(packageDir, '..', 'overrides.json')
+  const roomRulesFile = process.env.FOOTBALL_ROOM_RULES ?? path.join(packageDir, '..', 'design', 'room-rules.json')
   const creds = espnCreds()
 
   const app = new App({
@@ -66,6 +67,7 @@ const main = async (): Promise<void> => {
     fpApiKey: process.env.FP_API_KEY ?? null,
     fpProjectionsMode: fpProjectionsMode(),
     overridesFile,
+    roomRulesFile,
     log,
   })
   const poller = new DraftPoller({
@@ -94,6 +96,12 @@ const main = async (): Promise<void> => {
     : overrides.count > 0 ?
       `overrides: ${String(overrides.boosted)} boosted, ${String(overrides.banned)} banned (${overridesFile})`
     : 'overrides: none',
+  )
+  const profiles = app.roomProfiles
+  log(
+    profiles === null ?
+      `room profiles: none (base room model) — expected ${roomRulesFile}`
+    : `room profiles: ${String(profiles.teams.size)} teams from ${roomRulesFile}`,
   )
   log(`board: http://127.0.0.1:${String(port)}/`)
 }

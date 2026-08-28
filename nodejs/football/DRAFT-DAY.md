@@ -40,6 +40,14 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
    the end-to-end creds check. Leave it off until the draft starts if you like; it only
    polls while the toggle is on.
 
+4. **When ESPN posts the real draft order** (~1h before the draft), click **Refresh data**
+   once — pick numbers, threat markers, and the slot labels in threat tooltips all
+   recompute from the live order.
+
+5. **Clear any rehearsal marks**: if the drafted count is not 0, hit **Reset manual** in
+   the status bar — it deletes every manual mark in one confirmed click (polled picks are
+   never touched).
+
 ## During the draft
 
 - Turn **live poll** on. Picks land on the board within ~5s of ESPN registering them.
@@ -53,6 +61,23 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 - Board columns **Rm Δ** (positive green = the room lets him fall, negative red = the room
   reaches) and **UPS** (upside 0–100) come from room pricing; a **!** by a name means the
   projection sources genuinely disagree (hover for the spread).
+- **News dots** sit by player names: red = harms, green = improves, gray = unclear; bigger
+  and more saturated = higher impact (hover for "harms/high · N items"). No dot means no
+  assessed news. **Click any player name** (board or on-clock panel) to open the news
+  drawer: injury status, each assessed story's 1–2 sentence summary with a
+  direction/impact chip, the expandable full story, and unassessed headlines below.
+- The drawer's footer is the override lane: **Ban** (note defaults to the latest harms
+  summary), **Boost ±points**, **Un-ban / clear**. These rewrite `overrides.json` in place
+  and reload it immediately — no restart. They work during a mock too (overrides are
+  config, not draft state).
+- **Threat markers** `!` / `!!` / `!!!` (amber → red) in the P@ columns flag players the
+  room model expects to be gone before your pick — 25–50% / 50–75% / >75% taken. Hover for
+  the attribution: which owner, at which pick, on what historical evidence. On your turn
+  the on-clock panel adds a **THREATS** line: the top-3 candidates likely to be sniped
+  before your next turn if you pass.
+- **Reset manual** in the status bar deletes ALL manual marks (one confirm, count shown).
+  It refuses while live poll is on or a mock is running, so it cannot fire mid-draft by
+  accident.
 - The **Refresh data** button re-runs the ingest (several minutes) — use it only
   before the draft, not during; the poll keeps picks current on its own. It keeps the
   stored FantasyPros projections (skip mode) unless the server was started with
@@ -103,19 +128,22 @@ instantly and the real pre-draft board comes back.
 - **Server up but page weird**: hard-reload the browser; the page holds no state worth
   keeping.
 - **API by hand** (all on 127.0.0.1:8020): `GET /api/state`, `GET /api/board`,
-  `GET /api/evaluate`, `POST /api/poll {"enabled":true|false}`,
+  `GET /api/evaluate`, `GET /api/news/p-…`, `POST /api/poll {"enabled":true|false}`,
   `POST /api/mark {"playerId":"p-…","teamId":13|"unknown"}`,
-  `POST /api/unmark {"playerId":"p-…"}`, `POST /api/refresh`.
+  `POST /api/unmark {"playerId":"p-…"}`,
+  `POST /api/override {"playerId":"p-…","action":"ban"|"boost"|"clear","points":25,"note":"…"}`,
+  `POST /api/manual/reset`, `POST /api/refresh`.
 
 ## Environment knobs (all optional)
 
-| Var                  | Default                                  |
-| -------------------- | ---------------------------------------- |
-| `PORT`               | 8020                                     |
-| `FOOTBALL_DB`        | `nodejs/football/data/.data/football.db` |
-| `FOOTBALL_SEASON`    | 2026                                     |
-| `FOOTBALL_TEAM_ID`   | 13                                       |
-| `FOOTBALL_OVERRIDES` | `nodejs/football/overrides.json`         |
+| Var                   | Default                                  |
+| --------------------- | ---------------------------------------- |
+| `PORT`                | 8020                                     |
+| `FOOTBALL_DB`         | `nodejs/football/data/.data/football.db` |
+| `FOOTBALL_SEASON`     | 2026                                     |
+| `FOOTBALL_TEAM_ID`    | 13                                       |
+| `FOOTBALL_OVERRIDES`  | `nodejs/football/overrides.json`         |
+| `FOOTBALL_ROOM_RULES` | `nodejs/football/design/room-rules.json` |
 
 ## Overrides (optional)
 
@@ -125,3 +153,7 @@ on every **Refresh data**. Boosts shift a player's projected points before VOR/t
 rollouts (▲ marker on the board); bans keep him visible but out of every recommendation
 (muted row, BAN chip). A broken file never blocks the board: the server serves without
 overrides and surfaces the error in the status bar's data tooltip.
+
+The news drawer's **Ban / Boost / Un-ban** buttons edit this same file and hot-reload it,
+so hand edits and button edits coexist; hand edits still need a **Refresh data** (or
+restart) to load.

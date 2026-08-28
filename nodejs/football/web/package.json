@@ -53,6 +53,7 @@
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
+    "jsdom": "^30.0.0",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
     "tsx": "^4.19.2",
