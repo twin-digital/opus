@@ -240,6 +240,7 @@ export const PAGE = `<!doctype html>
   <span><span class="lbl">your picks</span><span id="myPicks">—</span></span>
   <span id="captureWrap" title=""><span class="lbl">capture</span><span class="big mono" id="captureVal">—</span><span class="cap-bar"><span class="cap-fill" id="captureFill"></span></span></span>
   <span class="spacer"></span>
+  <span class="ind warn" id="unresolvedPill" style="display:none" title=""><span class="dot"></span><span id="unresolvedLabel">UNRESOLVED</span></span>
   <span class="ind off" id="pollPill" title=""><span class="dot"></span><span id="pollLabel">POLL</span></span>
   <label><input type="checkbox" id="pollToggle"> live poll</label>
   <button id="mockBtn" class="btn-violet" title="Practice against a simulated room — nothing is saved">Mock draft</button>
@@ -487,6 +488,15 @@ function renderStatus() {
   el('untilMe').textContent = d.picksUntilMyTurn === null ? '—' :
     (d.picksUntilMyTurn === 0 ? 'NOW' : d.picksUntilMyTurn + '');
   el('myPicks').textContent = d.myNextPicks.length ? d.myNextPicks.join(', ') : '—';
+
+  var un = d.unresolved;
+  var upill = el('unresolvedPill');
+  if (un && un.count) {
+    upill.style.display = '';
+    el('unresolvedLabel').textContent = 'UNRESOLVED x' + un.count;
+    upill.title = 'polled picks with unmapped ESPN player ids: #' + un.espnIds.join(', #') +
+      ' — counted as placeholders so the turn stays right; mark the real player manually to name them';
+  } else upill.style.display = 'none';
 
   var cap = S.capture;
   if (cap) {

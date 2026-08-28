@@ -382,7 +382,7 @@ describe('routes', () => {
     expect(restored.rows.some((row) => row.playerId === 'p-RB1')).toBe(true)
   })
 
-  it('merges polled picks over manual marks by player', () => {
+  it('merges polled picks over manual marks by player; unresolved picks stay as placeholders', () => {
     const { app, context } = makeApp()
     call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' })
     app.applyDraftDetail({
@@ -397,10 +397,57 @@ describe('routes', () => {
     })
     const state = call(context, 'GET', '/api/state').json as {
       draft: { pickCount: number; polledCount: number; manualCount: number }
-      picks: { playerId: string; source: string; overall: number | null }[]
+      picks: { playerId: string; name: string; source: string; overall: number | null }[]
     }
-    expect(state.draft).toMatchObject({ pickCount: 1, polledCount: 1, manualCount: 0 })
+    // The unresolved pick 2 counts (placeholder row) — only the pre-draft -1 slot is skipped.
+    expect(state.draft).toMatchObject({ pickCount: 2, polledCount: 2, manualCount: 0 })
     expect(state.picks[0]).toMatchObject({ playerId: 'p-RB1', source: 'espn', overall: 1 })
+    expect(state.picks[1]).toMatchObject({ name: 'Unresolved ESPN #999999', source: 'espn', overall: 2 })
+  })
+
+  it('one unresolved ESPN id never shifts the turn: math identical to fully-resolved, warning surfaced', () => {
+    const espnIdsInPickOrder = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]
+    const detailWith = (espnIds: number[]) => ({
+      draftDetail: {
+        inProgress: true,
+        picks: espnIds.map((playerId, i) => ({
+          overallPickNumber: i + 1,
+          roundId: 1,
+          roundPickNumber: i + 1,
+          teamId: PICK_ORDER[i] as number,
+          playerId,
+        })),
+      },
+    })
+    const stateFor = (espnIds: number[]) => {
+      const { app, context } = makeApp()
+      app.applyDraftDetail(detailWith(espnIds))
+      return {
+        state: call(context, 'GET', '/api/state').json as {
+          draft: {
+            pickCount: number
+            currentOverall: number
+            onClockTeamId: number | null
+            myNextPicks: number[]
+            picksUntilMyTurn: number | null
+            unresolved: { count: number; espnIds: number[] }
+          }
+        },
+        evaluate: call(context, 'GET', '/api/evaluate').json as { currentOverall: number; myTurn: boolean },
+      }
+    }
+    const resolved = stateFor(espnIdsInPickOrder)
+    const gapped = stateFor(espnIdsInPickOrder.map((id, i) => (i === 4 ? 999999 : id)))
+
+    expect(resolved.state.draft.unresolved).toEqual({ count: 0, espnIds: [] })
+    expect(gapped.state.draft.unresolved).toEqual({ count: 1, espnIds: [999999] })
+    // Turn math is identical: currentOverall, on-clock team, my picks, my countdown.
+    for (const key of ['pickCount', 'currentOverall', 'onClockTeamId', 'myNextPicks', 'picksUntilMyTurn'] as const) {
+      expect(gapped.state.draft[key]).toEqual(resolved.state.draft[key])
+    }
+    expect(gapped.state.draft.currentOverall).toBe(12)
+    expect(gapped.evaluate.currentOverall).toBe(resolved.evaluate.currentOverall)
+    expect(gapped.evaluate.myTurn).toBe(resolved.evaluate.myTurn)
   })
 
   it('toggles polling', () => {

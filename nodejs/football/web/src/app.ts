@@ -23,6 +23,7 @@ import {
   openDatabase,
   Store,
   runIngest,
+  type DraftPick,
   type IngestOptions,
   type IngestSummary,
   type LeagueSettings,
@@ -40,7 +41,16 @@ import type { EspnDraftDetailResponse, EspnLeagueCredentials } from '@twin-digit
 import { mulberry32, pickForOpponent } from './mock.js'
 import { newsBodyParagraphs } from './news.js'
 import { expectedBestAvailable } from './waiting.js'
-import { mapEspnPicks, mergePicks, slotForTeam, teamOnClock, type EffectivePick } from './picks.js'
+import {
+  currentOverallFromPicks,
+  mapEspnPicks,
+  mergePicks,
+  slotForTeam,
+  teamOnClock,
+  unresolvedEspnIdOf,
+  unresolvedPickName,
+  type EffectivePick,
+} from './picks.js'
 import { buildRoster, type RosterPlayer, type RosterSummary } from './roster.js'
 import { tierScarcity, type TierScarcity } from './scarcity.js'
 
@@ -292,6 +302,8 @@ export interface StatePayload {
     onClockTeamId: number | null
     myNextPicks: number[]
     picksUntilMyTurn: number | null
+    /** Polled picks whose ESPN player id has no mapping — counted as placeholders, flagged in the UI. */
+    unresolved: { count: number; espnIds: number[] }
   }
   picks: (EffectivePick & { name: string; position: string; team: string | null })[]
   myRoster: RosterSummary
@@ -349,6 +361,9 @@ export class App {
   private evaluateCache: { version: number; payload: EvaluatePayload } | null = null
   private fullRowsCache: { generation: number; rowsById: Map<PlayerId, BoardRow> } | null = null
   private warnedUnresolvedEspnIds = new Set<number>()
+  /** Polled picks with unmapped ESPN ids, as placeholder rows. Memory-only (draft_pick FK);
+   *  re-established by every poll, so a restart mid-draft recovers them within seconds. */
+  private unresolvedPicks: DraftPick[] = []
   private mock: MockSession | null = null
   private cancelMockTimer: (() => void) | null = null
   private readonly scheduleTimer: (fn: () => void, ms: number) => () => void
@@ -464,10 +479,39 @@ export class App {
     if (this.mock !== null) {
       return [...this.mock.picks]
     }
-    return mergePicks(this.store.getDraftPicks(), this.store.getManualPicks())
+    const merged = mergePicks(this.store.getDraftPicks(), this.store.getManualPicks())
+    if (this.unresolvedPicks.length === 0) {
+      return merged
+    }
+    // Each manual-only mark is assumed to stand in for one unresolved polled pick (the fix the
+    // status warning asks for), oldest first — otherwise that pick would count twice.
+    const manualCount = merged.filter((pick) => pick.source === 'manual').length
+    const placeholders: EffectivePick[] = this.unresolvedPicks.slice(manualCount).map((pick) => ({
+      playerId: pick.playerId,
+      teamId: pick.teamId,
+      overall: pick.overall,
+      round: pick.round,
+      source: 'espn' as const,
+    }))
+    if (placeholders.length === 0) {
+      return merged
+    }
+    const polled = merged
+      .filter((pick) => pick.source === 'espn')
+      .concat(placeholders)
+      .sort((a, b) => (a.overall ?? Number.MAX_SAFE_INTEGER) - (b.overall ?? Number.MAX_SAFE_INTEGER))
+    return polled.concat(merged.filter((pick) => pick.source === 'manual'))
   }
 
-  /** Poll-loop sink: persist mapped picks when they changed, bumping the board version. */
+  get unresolvedPickInfo(): { count: number; espnIds: number[] } {
+    return {
+      count: this.unresolvedPicks.length,
+      espnIds: this.unresolvedPicks.map((pick) => unresolvedEspnIdOf(pick.playerId) ?? 0),
+    }
+  }
+
+  /** Poll-loop sink: persist mapped picks when they changed, bumping the board version.
+   *  Unresolved picks stay in memory as placeholders so the pick count and turn never shift. */
   applyDraftDetail(detail: EspnDraftDetailResponse): { total: number; changed: boolean } {
     const mapped = mapEspnPicks(detail, (espnId) => this.espnIdToPlayer.get(espnId))
     for (const espnId of mapped.unresolvedEspnIds) {
@@ -479,13 +523,16 @@ export class App {
     const stored = this.store.getDraftPicks()
     const key = (picks: { overall: number; playerId: PlayerId }[]): string =>
       picks.map((pick) => `${String(pick.overall)}:${pick.playerId}`).join(',')
-    const changed = key(stored) !== key(mapped.picks)
+    const changed = key(stored) !== key(mapped.picks) || key(this.unresolvedPicks) !== key(mapped.unresolvedPicks)
     if (changed) {
       this.store.replaceDraftPicks(mapped.picks, this.now().toISOString())
-      this.log(`poll: ${String(mapped.picks.length)} picks (was ${String(stored.length)})`)
+      this.unresolvedPicks = mapped.unresolvedPicks
+      const unresolvedNote =
+        mapped.unresolvedPicks.length > 0 ? ` (${String(mapped.unresolvedPicks.length)} unresolved)` : ''
+      this.log(`poll: ${String(mapped.picks.length + mapped.unresolvedPicks.length)} picks${unresolvedNote}`)
       this.bumpVersion()
     }
-    return { total: mapped.picks.length, changed }
+    return { total: mapped.picks.length + mapped.unresolvedPicks.length, changed }
   }
 
   markPick(playerId: PlayerId, teamId: number | null): void {
@@ -645,7 +692,11 @@ export class App {
     if (this.mock !== null) {
       throw new MockStateError('a mock draft is already active')
     }
-    if (this.store.getDraftPicks().length > 0 || this.store.getManualPicks().length > 0) {
+    if (
+      this.store.getDraftPicks().length > 0 ||
+      this.store.getManualPicks().length > 0 ||
+      this.unresolvedPicks.length > 0
+    ) {
       throw new MockStateError('real draft picks exist — a mock only runs on a clean pre-draft board')
     }
     const seed = Math.floor(options.seed ?? Math.random() * 2 ** 31)
@@ -901,7 +952,7 @@ export class App {
       const player = this.playerById.get(pick.playerId)
       return {
         playerId: pick.playerId,
-        name: row?.name ?? player?.name ?? pick.playerId,
+        name: row?.name ?? player?.name ?? unresolvedPickName(pick.playerId) ?? pick.playerId,
         position: row?.position ?? player?.position ?? 'RB',
         team: row?.team ?? player?.team ?? null,
         byeWeek: row?.byeWeek ?? player?.byeWeek ?? null,
@@ -969,8 +1020,8 @@ export class App {
     }
     const picks = this.effectivePicks()
     const complete = picks.length >= this.totalPicks
-    const onClockTeamId =
-      complete ? null : teamOnClock(this.settings.draft.pickOrder, picks.length + 1, this.totalRounds)
+    const currentOverall = currentOverallFromPicks(picks, this.totalPicks)
+    const onClockTeamId = complete ? null : teamOnClock(this.settings.draft.pickOrder, currentOverall, this.totalRounds)
     const boardRows = new Map(this.boardPayload().rows.map((row) => [row.playerId, row]))
     const boosted = new Set(this.boardPayload().boostedIds)
     const candidates = orderCandidates(
@@ -997,7 +1048,7 @@ export class App {
     const payload: EvaluatePayload = {
       version: this.version,
       computedAt: this.now().toISOString(),
-      currentOverall: Math.min(picks.length + 1, this.totalPicks),
+      currentOverall,
       onClockTeamId,
       myTurn: onClockTeamId === this.options.myTeamId,
       myNextPicks: this.boardPayload().myNextPicks,
@@ -1071,17 +1122,24 @@ export class App {
     const totalPicks = this.totalPicks
     const pickCount = picks.length
     const complete = pickCount >= totalPicks
-    const currentOverall = Math.min(pickCount + 1, totalPicks)
+    // ESPN's own pick numbers drive the turn: an unresolved pick must never shift it.
+    const currentOverall = currentOverallFromPicks(picks, totalPicks)
     const myNextPicks =
       complete ?
         []
-      : upcomingPicksForSlot(this.mySlot, settings.size, pickCount + 1, 2).filter((pick) => pick <= totalPicks)
+      : upcomingPicksForSlot(this.mySlot, settings.size, currentOverall, 2).filter((pick) => pick <= totalPicks)
     const myPlayers: RosterPlayer[] = picks
       .filter((pick) => pick.teamId === this.options.myTeamId)
       .map((pick) => {
         const player = this.playerById.get(pick.playerId)
         return player === undefined ?
-            { playerId: pick.playerId, name: pick.playerId, position: 'RB' as const, team: null, byeWeek: null }
+            {
+              playerId: pick.playerId,
+              name: unresolvedPickName(pick.playerId) ?? pick.playerId,
+              position: 'RB' as const,
+              team: null,
+              byeWeek: null,
+            }
           : {
               playerId: player.id,
               name: player.name,
@@ -1108,15 +1166,16 @@ export class App {
         manualCount: picks.filter((pick) => pick.source === 'manual').length,
         currentOverall,
         complete,
-        onClockTeamId: complete ? null : teamOnClock(settings.draft.pickOrder, pickCount + 1, this.totalRounds),
+        onClockTeamId: complete ? null : teamOnClock(settings.draft.pickOrder, currentOverall, this.totalRounds),
         myNextPicks,
-        picksUntilMyTurn: myNextPicks[0] !== undefined ? myNextPicks[0] - (pickCount + 1) : null,
+        picksUntilMyTurn: myNextPicks[0] !== undefined ? myNextPicks[0] - currentOverall : null,
+        unresolved: this.unresolvedPickInfo,
       },
       picks: picks.map((pick) => {
         const player = this.playerById.get(pick.playerId)
         return {
           ...pick,
-          name: player?.name ?? pick.playerId,
+          name: player?.name ?? unresolvedPickName(pick.playerId) ?? pick.playerId,
           position: player?.position ?? '?',
           team: player?.team ?? null,
         }

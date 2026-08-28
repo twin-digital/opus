@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest'
 import type { DraftPick, ManualPick, PlayerId } from '@twin-digital/football-data'
 import type { EspnDraftDetailResponse } from '@twin-digital/football-data/fetchers/espn'
 
-import { mapEspnPicks, mergePicks, slotForTeam, teamOnClock } from './picks.js'
+import {
+  currentOverallFromPicks,
+  mapEspnPicks,
+  mergePicks,
+  slotForTeam,
+  teamOnClock,
+  unresolvedPickName,
+  unresolvedPlayerId,
+} from './picks.js'
 
 const p = (n: number): PlayerId => `p-${String(n).padStart(4, '0')}`
 
@@ -33,7 +41,7 @@ describe('mapEspnPicks', () => {
     },
   })
 
-  it('skips playerId -1 placeholders and collects unresolved ids', () => {
+  it('skips playerId -1 placeholders; unresolved ids become placeholder pick rows', () => {
     const resolve = (espnId: string): PlayerId | undefined => (espnId === '100' ? p(1) : undefined)
     const mapped = mapEspnPicks(
       detail([
@@ -45,16 +53,41 @@ describe('mapEspnPicks', () => {
     )
     expect(mapped.picks).toEqual([polledPick(1, p(1))])
     expect(mapped.unresolvedEspnIds).toEqual([999])
+    expect(mapped.unresolvedPicks).toEqual([{ ...polledPick(2, unresolvedPlayerId(999), 1), roundPick: 2 }])
+    expect(unresolvedPickName(unresolvedPlayerId(999))).toBe('Unresolved ESPN #999')
+    expect(unresolvedPickName(p(1))).toBeNull()
     expect(mapped.inProgress).toBe(true)
   })
 
   it('handles an empty or missing draftDetail', () => {
     expect(mapEspnPicks({}, () => undefined)).toEqual({
       picks: [],
+      unresolvedPicks: [],
       unresolvedEspnIds: [],
       inProgress: false,
       drafted: false,
     })
+  })
+})
+
+describe('currentOverallFromPicks', () => {
+  const espn = (
+    overall: number,
+  ): { playerId: PlayerId; teamId: number; overall: number; round: number } & {
+    source: 'espn'
+  } => ({ playerId: p(overall), teamId: 8, overall, round: 1, source: 'espn' })
+
+  it('derives the clock from the highest pick number, not the count', () => {
+    // A dropped pick 3 of 4 must not pull the clock back to 4.
+    expect(currentOverallFromPicks([espn(1), espn(2), espn(4)], 168)).toBe(5)
+    expect(currentOverallFromPicks([espn(1), espn(2), espn(3), espn(4)], 168)).toBe(5)
+  })
+
+  it('falls back to the count for unnumbered (manual/mock) marks and clamps at totalPicks', () => {
+    const manual = { playerId: p(99), teamId: null, overall: null, round: null, source: 'manual' as const }
+    expect(currentOverallFromPicks([espn(1), manual], 168)).toBe(3)
+    expect(currentOverallFromPicks([], 168)).toBe(1)
+    expect(currentOverallFromPicks([espn(168)], 168)).toBe(168)
   })
 })
 
