@@ -42,12 +42,15 @@ describe('normalCdf', () => {
 })
 
 describe('sigmaForPick', () => {
-  it('uses rank_std where present (floored at 2), else the ADP-scaled default', () => {
+  it("uses rank_std where present, else the ADP-scaled default — both floored at the room's measured σ", () => {
     expect(sigmaForPick(10, 5)).toBe(5)
-    expect(sigmaForPick(10, 0.5)).toBe(2)
-    expect(sigmaForPick(10, null)).toBeCloseTo(3.5, 6)
+    // The floor is TUNING.SIGMA_FLOOR = 4.5: the room study measured σ ≈ 4.5 for ranks 1–30.
+    expect(sigmaForPick(10, 0.5)).toBe(4.5)
+    expect(sigmaForPick(10, null)).toBeCloseTo(4.5, 6)
     expect(sigmaForPick(100, undefined)).toBeCloseTo(17, 6)
-    expect(sigmaForPick(10, 0)).toBeCloseTo(3.5, 6)
+    expect(sigmaForPick(10, 0)).toBeCloseTo(4.5, 6)
+    // Beyond adp ≈ 16.7 the 0.15·adp + 2 scaling exceeds the floor and takes over.
+    expect(sigmaForPick(30, null)).toBeCloseTo(6.5, 6)
   })
 })
 

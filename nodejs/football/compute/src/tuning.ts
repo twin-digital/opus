@@ -29,4 +29,13 @@ export const TUNING = {
   STD_NORM_REF: 1.5,
   /** Debiased cross-source residual spread (league pts) at or above this flags CONTESTED. */
   CONTESTED_THRESHOLD: 30,
+  /**
+   * σ floor for sigmaForPick: the room study (design/room-profile.md) measured σ ≈ 4.5 over
+   * board ranks 1–30, so no player's exit is modeled tighter than that — expert rank_std
+   * routinely reads 1–3 early, which the room's actual behavior contradicts.
+   */
+  SIGMA_FLOOR: 4.5,
+  /** Fallback σ curve without usable rank_std: SIGMA_ADP_SLOPE · adp + SIGMA_ADP_BASE. */
+  SIGMA_ADP_SLOPE: 0.15,
+  SIGMA_ADP_BASE: 2,
 } as const

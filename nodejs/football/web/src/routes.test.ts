@@ -449,7 +449,8 @@ describe('routes', () => {
     expect(payload.myTurn).toBe(true)
     expect(payload.onClockTeamId).toBe(13)
     expect(payload.currentOverall).toBe(11)
-    expect(payload.myNextPicks[0]).toBe(11)
+    // myNextPicks is strictly future: on the clock at 11 (slot 11), the next turn is 14.
+    expect(payload.myNextPicks[0]).toBe(14)
     expect(payload.candidates.length).toBeGreaterThan(0)
     expect(payload.candidates.some((candidate) => gone.includes(candidate.playerId))).toBe(false)
     expect(payload.candidates[0]?.estTeamScore).toBeGreaterThan(0)
@@ -1040,7 +1041,7 @@ describe('cost of waiting', () => {
     expect(board.costOfWaiting.find((row) => row.position === 'RB')?.now?.name).toBe('RB Player 2')
   })
 
-  it('collapses to best-now when no picks intervene (my turn, next pick is now)', () => {
+  it('targets strictly-future picks on my turn — the pick on the clock is now, not waiting', () => {
     const { context } = makeApp()
     const gone = ['p-RB1', 'p-RB2', 'p-RB3', 'p-RB4', 'p-WR1', 'p-WR2', 'p-WR3', 'p-QB1', 'p-QB2', 'p-TE1']
     for (const playerId of gone) {
@@ -1056,11 +1057,12 @@ describe('cost of waiting', () => {
       }[]
     }
     expect(board.currentOverall).toBe(11)
-    expect(board.myNextPicks[0]).toBe(11)
+    // On the clock at 11 the waiting question is picks 14 and 35 — never the trivial P@now.
+    expect(board.myNextPicks).toEqual([14, 35])
     const wr = board.costOfWaiting.find((row) => row.position === 'WR')
-    // zero intervening picks to 11: certain survival, so the expectation IS the best now
-    expect(wr?.atPicks[0]?.pick).toBe(11)
-    expect(wr?.atPicks[0]?.expectedBest).toBeCloseTo(wr?.now?.points ?? -1, 6)
+    expect(wr?.atPicks.map((entry) => entry.pick)).toEqual([14, 35])
+    // Opponent picks 12–13 intervene: waiting has a real expected cost.
+    expect(wr?.atPicks[0]?.expectedBest).toBeLessThan(wr?.now?.points ?? -1)
   })
 })
 
@@ -1139,9 +1141,25 @@ describe('roster-need awareness from team-attributed marks', () => {
       },
     },
   }
+  /** Deep enough that the depletion walk to my distant next pick cannot saturate everyone,
+   *  with the QBs priced right at team 9's round-2 pick so the pos-boost is what matters. */
+  const NEED_POOL: FixturePlayer[] = (() => {
+    const pool = makePool((add) => {
+      add('RB', 24, (i) => ({ rushYd: 1600 - 40 * i, rushTd: 12 - 0.3 * i, rec: 60 - 2 * i, recYd: 400 - 10 * i }))
+      add('WR', 24, (i) => ({ rec: 110 - 3 * i, recYd: 1500 - 40 * i, recTd: 10 - 0.3 * i }))
+      add('QB', 4, (i) => ({ passYd: 4800 - 200 * i, passTd: 38 - 3 * i, rushYd: 300 - 50 * i }))
+      add('TE', 6, (i) => ({ rec: 90 - 8 * i, recYd: 1000 - 80 * i, recTd: 8 - 0.7 * i }))
+    })
+    for (const fixture of pool) {
+      if (fixture.position === 'QB') {
+        fixture.adp = 18 + Number(fixture.id.slice('p-QB'.length))
+      }
+    }
+    return pool
+  })()
   /** Fifteen picks in; QB1+QB2 either attributed to team 9 or marked team-unknown. */
   const qb3Row = (qbTeam: number | 'unknown') => {
-    const { context } = makeApp({ roomRulesFile: writeRoomRules(RULES) })
+    const { context } = makeApp({ roomRulesFile: writeRoomRules(RULES), pool: NEED_POOL })
     const gone = [1, 2, 3, 4, 5, 6, 7, 8]
       .map((i) => `p-RB${String(i)}`)
       .concat([1, 2, 3, 4, 5].map((i) => `p-WR${String(i)}`))

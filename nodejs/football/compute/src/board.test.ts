@@ -127,8 +127,8 @@ describe('board', () => {
     const result = board(fixture.state, { position: 'RB' })
     expect(result.rows.map((row) => row.name)).toEqual(['Good RB', 'Flex RB', 'Replacement RB'])
     expect(result.currentOverall).toBe(2)
-    // Slot 2 of 2: picks 2 and 3 are both mine (the turn).
-    expect(result.myNextPicks).toEqual([2, 3])
+    // Slot 2 of 2 on the clock at 2: myNextPicks is strictly future — the back-to-back 3, then 6.
+    expect(result.myNextPicks).toEqual([3, 6])
     // Valuations unchanged by the removal: replacement is still read off the full pool.
     expect(result.replacement.points.RB).toBe(60)
   })

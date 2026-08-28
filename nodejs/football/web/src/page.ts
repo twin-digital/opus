@@ -593,7 +593,8 @@ function renderClock() {
   if (E.myTurn) {
     falls.style.display = 'none';
     clock.style.display = '';
-    var nextTurn = E.myNextPicks[1];
+    // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
+    var nextTurn = E.myNextPicks[0];
     el('clockPick').textContent = 'pick ' + E.currentOverall +
       ' (R' + Math.ceil(E.currentOverall / S.league.size) + ')' +
       (nextTurn ? ' — your next turn is ' + nextTurn : '');
@@ -613,7 +614,7 @@ function renderClock() {
         '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
           (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
         '<td class="' + (bench ? 'ups-hi' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
-        '<td class="' + oddsClass(c.pPickAfter) + '">' + pct(c.pPickAfter) + threatMark(c) + '</td>' +
+        '<td class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + threatMark(c) + '</td>' +
         '<td class="l"><button class="act" data-act="mine" data-id="' + c.playerId + '" title="draft him">ME</button></td>' +
         '</tr>');
     }

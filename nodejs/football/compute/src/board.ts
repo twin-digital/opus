@@ -188,7 +188,9 @@ export const board = (state: BoardState, options: BoardOptions = {}): BoardResul
 
   const drafted = new Set(state.draftedPlayerIds)
   const currentOverall = state.draftedPlayerIds.length + 1
-  const myNextPicks = upcomingPicksForSlot(state.myDraftSlot, settings.size, currentOverall, 2)
+  // Strictly-future picks: on my own turn the availability question is my NEXT turn, not the
+  // pick on the clock (P@now is trivially 100%).
+  const myNextPicks = upcomingPicksForSlot(state.myDraftSlot, settings.size, currentOverall + 1, 2)
 
   const myPlayers = (state.myDraftedPlayerIds ?? []).flatMap((id) => {
     const player = playerById.get(id)

@@ -301,8 +301,7 @@ describe('pickThreats', () => {
     // p-3: only hot because of Bravo's loyalty — named attribution with evidence
     const loyal = threats.get('p-3')
     expect(loyal?.pTakenBeforeMyPick).toBeGreaterThanOrEqual(0.25)
-    expect(loyal?.pTakenBeforeMyPick).toBeLessThan(0.5)
-    expect(loyal?.threatLevel).toBe(1)
+    expect(loyal?.threatLevel).toBeGreaterThanOrEqual(1)
     expect(loyal?.attribution?.teamId).toBe(2)
     expect(loyal?.attribution?.ownerName).toBe('Bravo')
     expect(loyal?.attribution?.atPick).toBe(2)
@@ -320,7 +319,7 @@ describe('pickThreats', () => {
     }
   })
 
-  it('25–50% taken without a dominant named team stays level 0', () => {
+  it('25–50% taken without a dominant named team is level 1 with a bare marker (no attribution)', () => {
     const profiles = profilesFrom({ teams: { '1': { teamId: 1, sigma: null, rules: [] } } })
     const smallPool = [candidate('p-1', 'RB', 1), candidate('p-2', 'WR', 2.2)]
     const threats = pickThreats(profiles, [1, 2], 1, 2, smallPool)
@@ -328,7 +327,16 @@ describe('pickThreats', () => {
     expect(second?.pTakenBeforeMyPick).toBeGreaterThanOrEqual(0.25)
     expect(second?.pTakenBeforeMyPick).toBeLessThan(0.5)
     expect(second?.attribution).toBeNull()
-    expect(second?.threatLevel).toBe(0)
+    expect(second?.threatLevel).toBe(1)
+  })
+
+  it('expected removals over N opponent picks total exactly N', () => {
+    const profiles = profilesFrom({ teams: {} })
+    const bigPool = Array.from({ length: 16 }, (_, i) => candidate(`p-${String(i + 1)}`, 'RB', i + 1))
+    // Picks 1–8 in a 4-team snake ([1,2,3,4] then [4,3,2,1]); team 4 (me) holds picks 4 and 5.
+    const threats = pickThreats(profiles, [1, 2, 3, 4], 1, 9, bigPool, { myTeamId: 4 })
+    const total = [...threats.values()].reduce((sum, threat) => sum + threat.pTakenBeforeMyPick, 0)
+    expect(total).toBeCloseTo(6, 6)
   })
 
   it('attributions follow teams when the pick order reshuffles', () => {
@@ -538,7 +546,7 @@ describe('roster need', () => {
     const qbBefore = before.get('p-q')
     expect(qbBefore?.attribution?.teamId).toBe(2)
     expect(qbBefore?.attribution?.evidence).toEqual(['QB early both years'])
-    expect(qbBefore?.threatLevel).toBe(1)
+    expect(qbBefore?.threatLevel).toBeGreaterThanOrEqual(1)
 
     const after = pickThreats(profiles, [1, 2, 3], 1, 3, pool, {
       myTeamId: 3,
@@ -547,6 +555,6 @@ describe('roster need', () => {
     const qbAfter = after.get('p-q')
     expect(qbAfter?.attribution).toBeNull()
     expect(qbAfter?.pTakenBeforeMyPick ?? 1).toBeLessThan(qbBefore?.pTakenBeforeMyPick ?? 0)
-    expect(qbAfter?.threatLevel).toBe(0)
+    expect(qbAfter?.threatLevel).toBeLessThan(qbBefore?.threatLevel ?? 0)
   })
 })

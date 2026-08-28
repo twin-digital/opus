@@ -152,6 +152,65 @@ describe('evaluateCandidates — the cliff', () => {
   })
 })
 
+describe('evaluateCandidates — roster caps gate the slate', () => {
+  const capSettings: LeagueSettings = {
+    leagueId: 'test',
+    name: 'Cap League',
+    size: 2,
+    scoringRules: [{ stat: 'rushYd', points: 0.1 }],
+    lineupSlots: { QB: 0, RB: 1, WR: 1, TE: 1, FLEX: 0, DST: 0, K: 0, BENCH: 2, IR: 0 },
+    draft: { type: 'snake', date: null, pickOrder: [1, 2] },
+  }
+
+  it('drops a position at cap from the default slate (2 TEs held → no TE candidates)', () => {
+    const te1 = player('TE', 'TE Held One')
+    const te2 = player('TE', 'TE Held Two')
+    const te3 = player('TE', 'TE Best Available')
+    const rb = player('RB', 'RB Open')
+    const wr = player('WR', 'WR Open')
+    const state: BoardState = {
+      settings: capSettings,
+      players: [te1, te2, te3, rb, wr],
+      projections: [
+        projection(te1.id, 900),
+        projection(te2.id, 880),
+        projection(te3.id, 1000), // the best remaining player is a third TE
+        projection(rb.id, 600),
+        projection(wr.id, 500),
+      ],
+      market: [market(te3.id, 1), market(rb.id, 2), market(wr.id, 3)],
+      draftedPlayerIds: [te1.id, te2.id],
+      myDraftedPlayerIds: [te1.id, te2.id],
+      myDraftSlot: 1,
+      season: 2026,
+    }
+    const slate = evaluateCandidates(state)
+    expect(slate.length).toBeGreaterThan(0)
+    expect(slate.some((entry) => entry.position === 'TE')).toBe(false)
+    // Explicit slates are the caller's call — never cap-filtered.
+    const explicit = evaluateCandidates(state, { candidates: [te3.id] })
+    expect(explicit.map((entry) => entry.playerId)).toEqual([te3.id])
+  })
+
+  it('keeps a capped position when nothing else is legal — a pick cannot be passed', () => {
+    const te1 = player('TE', 'TE Held One')
+    const te2 = player('TE', 'TE Held Two')
+    const te3 = player('TE', 'TE Only Option')
+    const state: BoardState = {
+      settings: capSettings,
+      players: [te1, te2, te3],
+      projections: [projection(te1.id, 900), projection(te2.id, 880), projection(te3.id, 1000)],
+      market: [market(te3.id, 1)],
+      draftedPlayerIds: [te1.id, te2.id],
+      myDraftedPlayerIds: [te1.id, te2.id],
+      myDraftSlot: 1,
+      season: 2026,
+    }
+    const slate = evaluateCandidates(state)
+    expect(slate.some((entry) => entry.playerId === te3.id)).toBe(true)
+  })
+})
+
 describe('evaluateCandidates — the upside lane', () => {
   it('adds a low-VOR top-upside priced player the VOR cut drops; upsideCount 0 restores the old slate', () => {
     const mk = (playerId: PlayerId, half: number, ecr: MarketData['ecr']): MarketData => ({

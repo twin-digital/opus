@@ -397,6 +397,11 @@ const takeWeight = (
  * player, summing to 1. `profiles: null` is the base model — pure Normal(roomAdp, σ) hazard,
  * no positional, loyalty, or need shaping. `counts` = the on-clock team's takes so far; it
  * spends that team's pos-boosts and applies the ROOM_NEED multipliers.
+ *
+ * `survival` (per-player P(still in the pool), from a depletion walk) scales each weight, so
+ * the distribution is over the *expected* surviving pool: probability mass already spent at
+ * earlier picks cannot be spent again. The returned probabilities are then unconditional take
+ * masses at this pick, still summing to 1.
  */
 export const takeDistribution = (
   profiles: RoomProfiles | null,
@@ -404,16 +409,86 @@ export const takeDistribution = (
   overall: number,
   available: TakeCandidate[],
   counts?: PositionCounts,
+  survival?: Map<PlayerId, number>,
 ): Map<PlayerId, number> => {
   const profile = profiles?.teams.get(teamAtPick(pickOrder, overall))
   const round = roundOfPick(overall, pickOrder.length)
-  const weights = available.map((player) => takeWeight(profiles, profile, overall, round, player, counts))
+  const weights = available.map(
+    (player) => takeWeight(profiles, profile, overall, round, player, counts) * (survival?.get(player.playerId) ?? 1),
+  )
   const total = weights.reduce((sum, weight) => sum + weight, 0)
   const distribution = new Map<PlayerId, number>()
   available.forEach((player, index) => {
     distribution.set(player.playerId, total > 0 ? (weights[index] as number) / total : 0)
   })
   return distribution
+}
+
+// -- expected-depletion walk ------------------------------------------------
+
+export interface SurvivalWalkOptions {
+  /** Picks by this teamId neither deplete nor count (my own turns are not opponent picks). */
+  myTeamId?: number
+  /** The draft's actual picks with teams; drives ROOM_NEED / pos-boost spending per team. */
+  livePicks?: TeamPositionPick[]
+  /** Picks to snapshot the survival map at (state *before* that pick is made). */
+  snapshotAt?: number[]
+  /**
+   * Called per depleting pick with the take distribution (unconditional masses) and the
+   * survival map as it stood before the pick. Read-only views — do not mutate.
+   */
+  onTake?: (pick: number, teamId: number, takes: Map<PlayerId, number>, survivalBefore: Map<PlayerId, number>) => void
+}
+
+export interface SurvivalWalkResult {
+  /** P(still in the pool) per player after every walked pick (= at `toPick`). */
+  survival: Map<PlayerId, number>
+  /** Survival maps captured before each requested pick. */
+  snapshots: Map<number, Map<PlayerId, number>>
+}
+
+/**
+ * Sequential expected-depletion walk over picks `fromPick`..`toPick − 1`: per-player survival
+ * s_i starts at 1; each opponent pick's take distribution is computed over the surviving pool
+ * (weights × s_i, renormalized), its mass t_i accumulates as taken probability, and
+ * s_i ← s_i − t_i. Each pick's distribution sums to 1, so total expected removals over N
+ * opponent picks is exactly N — the walk cannot "take" the same player twice.
+ */
+export const walkPoolSurvival = (
+  profiles: RoomProfiles | null,
+  pickOrder: number[],
+  fromPick: number,
+  toPick: number,
+  available: TakeCandidate[],
+  options: SurvivalWalkOptions = {},
+): SurvivalWalkResult => {
+  const survival = new Map<PlayerId, number>()
+  for (const player of available) {
+    survival.set(player.playerId, 1)
+  }
+  const snapshots = new Map<number, Map<PlayerId, number>>()
+  const snapshotAt = new Set(options.snapshotAt ?? [])
+  const teamCounts = options.livePicks === undefined ? undefined : countTeamPositions(options.livePicks)
+
+  for (let pick = fromPick; pick < toPick; pick += 1) {
+    if (snapshotAt.has(pick)) {
+      snapshots.set(pick, new Map(survival))
+    }
+    const teamId = teamAtPick(pickOrder, pick)
+    if (options.myTeamId !== undefined && teamId === options.myTeamId) {
+      continue
+    }
+    const takes = takeDistribution(profiles, pickOrder, pick, available, teamCounts?.get(teamId), survival)
+    options.onTake?.(pick, teamId, takes, survival)
+    for (const player of available) {
+      const mass = takes.get(player.playerId) ?? 0
+      survival.set(player.playerId, Math.max(0, (survival.get(player.playerId) ?? 1) - mass))
+    }
+  }
+  if (snapshotAt.has(toPick)) {
+    snapshots.set(toPick, new Map(survival))
+  }
+  return { survival, snapshots }
 }
 
 /** takeProbability for one player — the normalized weight over the available pool. */
@@ -482,8 +557,8 @@ export interface PlayerThreat {
   survivalToMyPick: number
   pTakenBeforeMyPick: number
   /**
-   * 0 = none; 1 = 25–50% taken AND a dominant named team (attribution present); 2 = 50–75%;
-   * 3 = >75%. Levels 2–3 are probability alone — attribution may still be null there.
+   * 0 = under 25% taken; 1 = 25–50%; 2 = 50–75%; 3 = >75%. Probability alone sets the level —
+   * attribution, when a named rule materially drives the threat, rides along at any level.
    */
   threatLevel: 0 | 1 | 2 | 3
   attribution: ThreatAttribution | null
@@ -503,22 +578,23 @@ export interface PickThreatsOptions {
 
 /**
  * "Materially driven by a named rule": the profiled take probability at the attributed pick is
- * at least this multiple of the base model's, and at least ATTRIBUTION_MIN_PROB in absolute
- * terms. Below either bar the base model explains the threat and no team is named, however high
- * the aggregate probability.
+ * at least this multiple of the base model's, and at least ATTRIBUTION_MIN_FRACTION of the
+ * round's hottest per-pick take probability. Below either bar the base model explains the
+ * threat and no team is named, however high the aggregate probability. The absolute bar is
+ * round-relative because per-pick take probabilities fall steeply with round: a fixed floor
+ * tuned on round 1 silences every mid-round attribution.
  */
 export const ATTRIBUTION_RATIO = 1.5
-export const ATTRIBUTION_MIN_PROB = 0.05
+export const ATTRIBUTION_MIN_FRACTION = 0.15
 
 /**
  * Survival odds for every available player from `currentOverall` (exclusive of my own picks)
  * to `myNextPick`, under the profiled room model, with attribution when a named rule materially
  * drives the threat.
  *
- * Each intervening pick's distribution is computed against the current pool without depletion —
- * picks are treated as independent, which keeps the product form honest and comparable across
- * players (documented bias: players shadowed by bigger names read slightly hotter than a
- * depleting simulation would say).
+ * Runs on the expected-depletion walk (walkPoolSurvival): each intervening pick's distribution
+ * is over the surviving pool, so N opponent picks remove exactly N players' worth of
+ * probability mass and threat products stay honest across players.
  */
 export const pickThreats = (
   profiles: RoomProfiles,
@@ -531,45 +607,43 @@ export const pickThreats = (
   interface Contribution {
     pick: number
     teamId: number
-    /** Conditional takeProbability at the pick. */
+    /** Conditional takeProbability at the pick, given the player survived to it. */
     probability: number
     baseProbability: number
-    /** Unconditional mass: P(survives to the pick) × takeProbability — what ranks contributions. */
+    /** Unconditional mass: the pick's share of P(taken before my pick) — ranks contributions. */
     mass: number
   }
-  const survival = new Map<PlayerId, number>()
   const maxContribution = new Map<PlayerId, Contribution>()
-  for (const player of available) {
-    survival.set(player.playerId, 1)
-  }
-  const teamCounts = options.livePicks === undefined ? undefined : countTeamPositions(options.livePicks)
+  /** Hottest conditional take probability seen per round — the attribution floor's yardstick. */
+  const roundMaxProbability = new Map<number, number>()
 
-  for (let pick = currentOverall; pick < myNextPick; pick += 1) {
-    const teamId = teamAtPick(pickOrder, pick)
-    if (options.myTeamId !== undefined && teamId === options.myTeamId) {
-      continue
-    }
-    const profiled = takeDistribution(profiles, pickOrder, pick, available, teamCounts?.get(teamId))
-    const base = takeDistribution(null, pickOrder, pick, available)
-    for (const player of available) {
-      const probability = profiled.get(player.playerId) ?? 0
-      const survivedTo = survival.get(player.playerId) ?? 1
-      // The pick's share of P(taken before my pick), so a team "taking" an already-gone player
-      // in the static pool cannot out-rank the pick that actually removes him.
-      const mass = survivedTo * probability
-      survival.set(player.playerId, survivedTo * (1 - probability))
-      const current = maxContribution.get(player.playerId)
-      if (current === undefined || mass > current.mass) {
-        maxContribution.set(player.playerId, {
-          pick,
-          teamId,
-          probability,
-          baseProbability: base.get(player.playerId) ?? 0,
-          mass,
-        })
+  const { survival } = walkPoolSurvival(profiles, pickOrder, currentOverall, myNextPick, available, {
+    myTeamId: options.myTeamId,
+    livePicks: options.livePicks,
+    onTake: (pick, teamId, takes, survivalBefore) => {
+      const base = takeDistribution(null, pickOrder, pick, available, undefined, survivalBefore)
+      const round = roundOfPick(pick, pickOrder.length)
+      for (const player of available) {
+        const mass = takes.get(player.playerId) ?? 0
+        const survivedTo = survivalBefore.get(player.playerId) ?? 1
+        const probability = survivedTo > 0 ? Math.min(1, mass / survivedTo) : 0
+        if (probability > (roundMaxProbability.get(round) ?? 0)) {
+          roundMaxProbability.set(round, probability)
+        }
+        const current = maxContribution.get(player.playerId)
+        if (current === undefined || mass > current.mass) {
+          const baseMass = base.get(player.playerId) ?? 0
+          maxContribution.set(player.playerId, {
+            pick,
+            teamId,
+            probability,
+            baseProbability: survivedTo > 0 ? Math.min(1, baseMass / survivedTo) : 0,
+            mass,
+          })
+        }
       }
-    }
-  }
+    },
+  })
 
   const threats = new Map<PlayerId, PlayerThreat>()
   for (const player of available) {
@@ -595,7 +669,7 @@ export const pickThreats = (
       }
       const material =
         evidence.length > 0 &&
-        contribution.probability >= ATTRIBUTION_MIN_PROB &&
+        contribution.probability >= ATTRIBUTION_MIN_FRACTION * (roundMaxProbability.get(round) ?? 0) &&
         contribution.probability >= ATTRIBUTION_RATIO * contribution.baseProbability
       if (material) {
         const slotIndex = pickOrder.indexOf(contribution.teamId)
@@ -615,7 +689,7 @@ export const pickThreats = (
       threatLevel = 3
     } else if (taken > 0.5) {
       threatLevel = 2
-    } else if (taken >= 0.25 && attribution !== null) {
+    } else if (taken >= 0.25) {
       threatLevel = 1
     }
 

@@ -8,8 +8,15 @@ import { buildLeagueScorer } from './rescore.js'
 import { argmaxTake, countTeamPositions, teamAtPick, type PositionCounts, type RoomProfiles } from './room-profiles.js'
 import { roomAdp } from './room.js'
 import { bestLineup, lineupTotalWithReplacement } from './roster.js'
-import { chooseForRoster, type RosterState } from './sim/marginal.js'
-import { compareByRoomAdp, makeSimPool, SKILL_POSITIONS, SKILL_SET, type SimPool } from './sim/state.js'
+import { chooseForRoster, positionCaps, type RosterState } from './sim/marginal.js'
+import {
+  compareByRoomAdp,
+  makeSimPool,
+  SKILL_POSITIONS,
+  SKILL_SET,
+  type SimPool,
+  type SkillPosition,
+} from './sim/state.js'
 import { computeUpsideScores } from './upside.js'
 import { computeReplacementLevels, type ReplacementLevel } from './vor.js'
 
@@ -388,7 +395,7 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
   if (options.candidates !== undefined) {
     candidateIds = options.candidates.filter((id) => pool.byId.has(id) && !pool.bannedIds.has(id))
   } else {
-    const eligible = pool.all
+    const unfiltered = pool.all
       .filter(
         (player) =>
           player.points !== null &&
@@ -398,6 +405,21 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
           !pool.bannedIds.has(player.playerId),
       )
       .sort((a, b) => (b.vor ?? Number.NEGATIVE_INFINITY) - (a.vor ?? Number.NEGATIVE_INFINITY))
+    // The same roster caps the rollout enforces (positionCaps) gate the slate: a position my
+    // roster has filled cannot be the recommendation — unless no legal candidate remains
+    // (a pick can never be passed).
+    const caps = positionCaps(pool.settings.lineupSlots)
+    const myCounts: Partial<Record<Position, number>> = {}
+    for (const id of myIds) {
+      const heldPlayer = pool.byId.get(id)
+      if (heldPlayer !== undefined) {
+        myCounts[heldPlayer.position] = (myCounts[heldPlayer.position] ?? 0) + 1
+      }
+    }
+    const capLegal = unfiltered.filter(
+      (player) => (myCounts[player.position] ?? 0) < caps[player.position as SkillPosition],
+    )
+    const eligible = capLegal.length > 0 ? capLegal : unfiltered
     const slate = eligible.slice(0, options.count ?? 40)
     const included = new Set(slate.map((player) => player.playerId))
     for (const position of SKILL_POSITIONS) {

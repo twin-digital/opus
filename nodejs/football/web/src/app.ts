@@ -4,12 +4,10 @@ import {
   board,
   evaluateCandidates,
   loadOverridesFile,
-  countTeamPositions,
   loadRoomRulesFile,
   pickThreats,
-  takeDistribution,
-  teamAtPick,
   upcomingPicksForSlot,
+  walkPoolSurvival,
   type Benchmarks,
   type BoardResult,
   type BoardRow,
@@ -1010,9 +1008,11 @@ export class App {
   }
 
   /**
-   * Per-position cost of waiting. Survival to each of my next picks uses the same profiled
-   * take-distribution walk as the threat display (skipping my own turns), so the two agree;
-   * the expectation over a position is first-available over its top availables by points.
+   * Per-position cost of waiting. Survival to each of my next picks runs on the same
+   * expected-depletion walk as the threat display (walkPoolSurvival, skipping my own turns),
+   * so the two agree; the expectation over a position is first-available over its top
+   * availables by points. Targets are strictly-future picks — the pick on the clock is now,
+   * not waiting.
    */
   private costOfWaiting(
     currentOverall: number,
@@ -1020,29 +1020,14 @@ export class App {
     rows: BoardRow[],
     livePicks: TeamPositionPick[],
   ): CostOfWaitingRow[] {
-    const targets = myNextPicks.slice(0, 2)
+    const targets = myNextPicks.filter((pick) => pick > currentOverall).slice(0, 2)
     const { pickOrder } = this.settings.draft
-    const teamCounts = countTeamPositions(livePicks)
-    const survival = new Map<PlayerId, number>(rows.map((row) => [row.playerId, 1]))
-    const survivalAt = new Map<number, Map<PlayerId, number>>()
     const maxTarget = targets.length > 0 ? Math.max(...targets) : currentOverall
-    for (let pick = currentOverall; pick <= maxTarget; pick += 1) {
-      if (targets.includes(pick)) {
-        survivalAt.set(pick, new Map(survival))
-      }
-      if (pick === maxTarget) {
-        break
-      }
-      const teamId = teamAtPick(pickOrder, pick)
-      if (teamId === this.options.myTeamId) {
-        continue
-      }
-      const distribution = takeDistribution(this.profiles, pickOrder, pick, rows, teamCounts.get(teamId))
-      for (const row of rows) {
-        const taken = distribution.get(row.playerId) ?? 0
-        survival.set(row.playerId, (survival.get(row.playerId) ?? 1) * (1 - taken))
-      }
-    }
+    const { snapshots: survivalAt } = walkPoolSurvival(this.profiles, pickOrder, currentOverall, maxTarget, rows, {
+      myTeamId: this.options.myTeamId,
+      livePicks,
+      snapshotAt: targets,
+    })
     return (['QB', 'RB', 'WR', 'TE'] as const).map((position) => {
       const candidates = rows
         .filter((row) => row.position === position && !row.banned && row.points !== null)

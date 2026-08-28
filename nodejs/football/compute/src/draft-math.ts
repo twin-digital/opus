@@ -5,6 +5,7 @@
 import type { MarketData } from '@twin-digital/football-data'
 
 import { marketAdp, roomAdp } from './room.js'
+import { TUNING } from './tuning.js'
 
 /** Overall pick numbers for a draft slot (1-based) in a snake draft. Slot 11 of 12 → 11, 14, 35, 38, … */
 export const overallPicksForSlot = (slot: number, teams: number, rounds: number): number[] => {
@@ -35,10 +36,14 @@ export const normalCdf = (x: number, mean: number, sigma: number): number => {
 
 /**
  * σ of the pick a player goes at: FantasyPros rank_std where the experts disagree measurably,
- * else a crude position-in-draft scaling (later picks are less certain).
+ * else a position-in-draft scaling (later picks are less certain). Both are floored at the
+ * room's measured early σ (TUNING.SIGMA_FLOOR — design/room-profile.md); the fallback's
+ * 0.15·adp scaling takes over once it exceeds the floor.
  */
 export const sigmaForPick = (adp: number, rankStd: number | null | undefined): number =>
-  rankStd !== null && rankStd !== undefined && rankStd > 0 ? Math.max(rankStd, 2) : 0.15 * adp + 2
+  rankStd !== null && rankStd !== undefined && rankStd > 0 ?
+    Math.max(rankStd, TUNING.SIGMA_FLOOR)
+  : Math.max(TUNING.SIGMA_FLOOR, TUNING.SIGMA_ADP_SLOPE * adp + TUNING.SIGMA_ADP_BASE)
 
 /** P(still on the board when pick `overall` starts), modeling pick-taken as Normal(adp, σ). */
 export const availabilityAtPick = (adp: number, sigma: number, overall: number): number =>
