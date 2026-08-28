@@ -52,31 +52,49 @@ interface FixturePlayer {
   espnId: string
 }
 
-const FIXTURE_PLAYERS: FixturePlayer[] = []
-let n = 0
-const add = (position: Position, count: number, stats: (i: number) => Partial<Record<StatKey, number>>): void => {
-  for (let i = 0; i < count; i += 1) {
-    n += 1
-    FIXTURE_PLAYERS.push({
-      id: `p-${position}${String(i + 1)}` as PlayerId,
-      name: `${position} Player ${String(i + 1)}`,
-      position,
-      byeWeek: (i % 3) + 7,
-      stats: stats(i),
-      adp: n,
-      espnId: String(100 + n),
-    })
-  }
-}
-add('RB', 8, (i) => ({ rushYd: 1600 - 150 * i, rushTd: 12 - i, rec: 60 - 5 * i, recYd: 400 - 20 * i }))
-add('WR', 8, (i) => ({ rec: 110 - 7 * i, recYd: 1500 - 100 * i, recTd: 10 - i }))
-add('QB', 4, (i) => ({ passYd: 4800 - 200 * i, passTd: 38 - 3 * i, rushYd: 300 - 50 * i }))
-add('TE', 4, (i) => ({ rec: 90 - 10 * i, recYd: 1000 - 100 * i, recTd: 8 - i }))
-add('K', 2, () => ({}))
-add('DST', 2, () => ({}))
+type AddPlayers = (position: Position, count: number, stats: (i: number) => Partial<Record<StatKey, number>>) => void
 
-const seed = (store: Store): void => {
-  const players: Player[] = FIXTURE_PLAYERS.map((fixture) => ({
+const makePool = (build: (add: AddPlayers) => void): FixturePlayer[] => {
+  const pool: FixturePlayer[] = []
+  let n = 0
+  build((position, count, stats) => {
+    for (let i = 0; i < count; i += 1) {
+      n += 1
+      pool.push({
+        id: `p-${position}${String(i + 1)}` as PlayerId,
+        name: `${position} Player ${String(i + 1)}`,
+        position,
+        byeWeek: (i % 3) + 7,
+        stats: stats(i),
+        adp: n,
+        espnId: String(100 + n),
+      })
+    }
+  })
+  return pool
+}
+
+const FIXTURE_PLAYERS: FixturePlayer[] = makePool((add) => {
+  add('RB', 8, (i) => ({ rushYd: 1600 - 150 * i, rushTd: 12 - i, rec: 60 - 5 * i, recYd: 400 - 20 * i }))
+  add('WR', 8, (i) => ({ rec: 110 - 7 * i, recYd: 1500 - 100 * i, recTd: 10 - i }))
+  add('QB', 4, (i) => ({ passYd: 4800 - 200 * i, passTd: 38 - 3 * i, rushYd: 300 - 50 * i }))
+  add('TE', 4, (i) => ({ rec: 90 - 10 * i, recYd: 1000 - 100 * i, recTd: 8 - i }))
+  add('K', 2, () => ({}))
+  add('DST', 2, () => ({}))
+})
+
+/** 188 players — enough for a full 168-pick mocked draft, values declining but positive. */
+const DEEP_PLAYERS: FixturePlayer[] = makePool((add) => {
+  add('RB', 60, (i) => ({ rushYd: 1600 - 20 * i, rushTd: 12 - 0.15 * i, rec: 60 - 0.8 * i, recYd: 400 - 5 * i }))
+  add('WR', 60, (i) => ({ rec: 110 - 1.5 * i, recYd: 1500 - 20 * i, recTd: 10 - 0.15 * i }))
+  add('QB', 20, (i) => ({ passYd: 4800 - 150 * i, passTd: 38 - 1.5 * i, rushYd: 300 - 15 * i }))
+  add('TE', 20, (i) => ({ rec: 90 - 4 * i, recYd: 1000 - 45 * i, recTd: 8 - 0.35 * i }))
+  add('K', 14, () => ({}))
+  add('DST', 14, () => ({}))
+})
+
+const seed = (store: Store, pool: FixturePlayer[] = FIXTURE_PLAYERS): void => {
+  const players: Player[] = pool.map((fixture) => ({
     id: fixture.id,
     name: fixture.name,
     position: fixture.position,
@@ -87,18 +105,18 @@ const seed = (store: Store): void => {
     injuryStatus: 'ACTIVE',
   }))
   store.replacePlayers(players, '2026-08-27T00:00:00Z')
-  const projections: SeasonProjection[] = FIXTURE_PLAYERS.filter((f) => f.position !== 'K' && f.position !== 'DST').map(
-    (fixture) => ({
+  const projections: SeasonProjection[] = pool
+    .filter((f) => f.position !== 'K' && f.position !== 'DST')
+    .map((fixture) => ({
       playerId: fixture.id,
       source: 'sleeper' as const,
       season: 2026,
       gamesPlayed: 17,
       stats: fixture.stats,
       prescored: {},
-    }),
-  )
+    }))
   store.replaceProjections('sleeper', 2026, projections, '2026-08-27T00:00:00Z')
-  const market: MarketData[] = FIXTURE_PLAYERS.map((fixture) => ({
+  const market: MarketData[] = pool.map((fixture) => ({
     playerId: fixture.id,
     adp: { sleeper: { half: fixture.adp } },
     ecr: { rank: fixture.adp, posRank: `${fixture.position}1`, tier: 1, best: 1, worst: 40, stdDev: 3 },
@@ -107,7 +125,7 @@ const seed = (store: Store): void => {
   }))
   store.replaceMarketData(market)
   store.replaceLeagueSettings(SETTINGS, '2026-08-27T00:00:00Z')
-  for (const fixture of FIXTURE_PLAYERS) {
+  for (const fixture of pool) {
     store.upsertMapping({ playerId: fixture.id, source: 'espn', externalId: fixture.espnId, matchedBy: 'crosswalk' })
   }
 }
@@ -135,13 +153,56 @@ interface TestContext {
   app: App
   poller: PollerLike
   context: RouteContext
+  timers: FakeTimers
+}
+
+/** Injectable stand-in for setTimeout: tests fire pending callbacks by hand — no real sleeps. */
+interface FakeTimers {
+  scheduleTimer: (fn: () => void, ms: number) => () => void
+  /** Run the next pending callback; false when none are queued. */
+  fire: () => boolean
+  pending: () => number
+  lastMs: () => number | null
+}
+
+const makeFakeTimers = (): FakeTimers => {
+  const queue: { fn: () => void }[] = []
+  let last: number | null = null
+  return {
+    scheduleTimer: (fn, ms) => {
+      const entry = { fn }
+      queue.push(entry)
+      last = ms
+      return () => {
+        const index = queue.indexOf(entry)
+        if (index >= 0) {
+          queue.splice(index, 1)
+        }
+      }
+    },
+    fire: () => {
+      const entry = queue.shift()
+      if (entry === undefined) {
+        return false
+      }
+      entry.fn()
+      return true
+    },
+    pending: () => queue.length,
+    lastMs: () => last,
+  }
 }
 
 const makeApp = (
-  options: { runIngestFn?: (o: unknown) => Promise<IngestSummary>; overridesFile?: string } = {},
+  options: {
+    runIngestFn?: (o: unknown) => Promise<IngestSummary>
+    overridesFile?: string
+    pool?: FixturePlayer[]
+  } = {},
 ): TestContext => {
   const database = openDatabase(':memory:')
-  seed(new Store(database))
+  seed(new Store(database), options.pool)
+  const timers = makeFakeTimers()
   const app = new App({
     dbFile: ':memory:',
     season: 2026,
@@ -150,9 +211,10 @@ const makeApp = (
     database,
     runIngestFn: options.runIngestFn,
     overridesFile: options.overridesFile,
+    scheduleTimer: timers.scheduleTimer,
   })
   const poller = makePoller()
-  return { app, poller, context: { app, poller } }
+  return { app, poller, context: { app, poller }, timers }
 }
 
 const writeOverrides = (specs: unknown[]): string => {
@@ -443,5 +505,215 @@ describe('routes', () => {
       expect(app.ingest.running).toBe(false)
     })
     expect(app.ingest.lastError).toBe('fantasypros 503')
+  })
+})
+
+// -- mock draft ---------------------------------------------------------------
+
+interface MockStateJson {
+  draft: { pickCount: number; complete: boolean; onClockTeamId: number | null }
+  picks: { playerId: string; teamId: number | null; overall: number | null; round: number | null; source: string }[]
+  capture: { ratio: number }
+  mock: {
+    active: boolean
+    seed: number | null
+    pace: number | null
+    pickCount: number
+    myTurn: boolean
+    countdownStartedAt: string | null
+    recap: { bestValues: { playerId: string; overall: number; roomAdp: number; delta: number }[] } | null
+  }
+}
+
+describe('mock draft', () => {
+  const mock = (context: RouteContext, body: Record<string, unknown>): { status: number; json: never } =>
+    call(context, 'POST', '/api/mock', body)
+  const asState = (json: never): MockStateJson => json
+  const topCandidate = (context: RouteContext): string => {
+    const evaluate = call(context, 'GET', '/api/evaluate').json as { candidates: { playerId: string }[] }
+    const playerId = evaluate.candidates[0]?.playerId
+    expect(playerId).toBeDefined()
+    return playerId ?? ''
+  }
+
+  it('starts only on a clean pre-draft board with the poll off', () => {
+    const manual = makeApp()
+    call(manual.context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' })
+    expect(mock(manual.context, { action: 'start' }).status).toBe(409)
+
+    const polled = makeApp()
+    polled.app.applyDraftDetail({
+      draftDetail: {
+        inProgress: true,
+        picks: [{ overallPickNumber: 1, roundId: 1, roundPickNumber: 1, teamId: 8, playerId: 101 }],
+      },
+    })
+    expect(mock(polled.context, { action: 'start' }).status).toBe(409)
+
+    const polling = makeApp()
+    call(polling.context, 'POST', '/api/poll', { enabled: true })
+    expect(mock(polling.context, { action: 'start' }).status).toBe(409)
+
+    const clean = makeApp()
+    const started = mock(clean.context, { action: 'start', pace: 0, seed: 1 })
+    expect(started.status).toBe(200)
+    expect(asState(started.json).mock).toMatchObject({ active: true, seed: 1, pace: 0, pickCount: 0, myTurn: false })
+    expect(mock(clean.context, { action: 'start' }).status).toBe(409) // already active
+  })
+
+  it('validates mock input and refuses actions without an active mock', () => {
+    const { context } = makeApp()
+    expect(mock(context, {}).status).toBe(400)
+    expect(mock(context, { action: 'nope' }).status).toBe(400)
+    expect(mock(context, { action: 'start', pace: -1 }).status).toBe(400)
+    expect(mock(context, { action: 'start', seed: 'x' }).status).toBe(400)
+    expect(mock(context, { action: 'pick' }).status).toBe(400)
+    expect(mock(context, { action: 'advance' }).status).toBe(409)
+    expect(mock(context, { action: 'pick', playerId: 'p-RB1' }).status).toBe(409)
+    expect(mock(context, { action: 'stop' }).status).toBe(200) // stop is idempotent
+  })
+
+  it('blocks poll, marks, unmark, and refresh while a mock is active', () => {
+    const { context, poller } = makeApp()
+    expect(mock(context, { action: 'start', pace: 0, seed: 1 }).status).toBe(200)
+    expect(call(context, 'POST', '/api/poll', { enabled: true }).status).toBe(409)
+    expect(poller.status.enabled).toBe(false)
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' }).status).toBe(409)
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 5 }).status).toBe(409)
+    expect(call(context, 'POST', '/api/unmark', { playerId: 'p-RB1' }).status).toBe(409)
+    expect(call(context, 'POST', '/api/refresh').status).toBe(409)
+    expect(call(context, 'POST', '/api/poll', { enabled: false }).status).toBe(200)
+  })
+
+  it('advances the room to my turn, takes my pick via /api/mock or /api/mark, and stop discards it all', () => {
+    const { app, context } = makeApp()
+    mock(context, { action: 'start', pace: 0, seed: 2 })
+    const advanced = asState(mock(context, { action: 'advance' }).json)
+    expect(advanced.mock).toMatchObject({ pickCount: 10, myTurn: true })
+    expect(advanced.draft.onClockTeamId).toBe(13)
+    expect(advanced.mock.countdownStartedAt).not.toBeNull()
+
+    // a player the room already took is refused
+    expect(mock(context, { action: 'pick', playerId: advanced.picks[0]?.playerId ?? '' }).status).toBe(409)
+
+    const choice = topCandidate(context)
+    const picked = asState(mock(context, { action: 'pick', playerId: choice }).json)
+    expect(picked.mock).toMatchObject({ pickCount: 11, myTurn: false })
+    expect(picked.picks[10]).toMatchObject({ playerId: choice, teamId: 13, overall: 11, source: 'mock' })
+
+    // the ME button path: /api/mark with my team routes into the mock — refused off-turn
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-K1', teamId: 13 }).status).toBe(409)
+    const advanced2 = asState(mock(context, { action: 'advance' }).json)
+    expect(advanced2.mock).toMatchObject({ pickCount: 13, myTurn: true })
+    const viaMark = call(context, 'POST', '/api/mark', { playerId: 'p-K1', teamId: 13 })
+    expect(viaMark.status).toBe(200)
+    expect(asState(viaMark.json).mock.pickCount).toBe(14)
+
+    // nothing reached the real tables
+    expect(app.store.getDraftPicks()).toEqual([])
+    expect(app.store.getManualPicks()).toEqual([])
+
+    // stop discards everything instantly
+    const stopped = asState(mock(context, { action: 'stop' }).json)
+    expect(stopped.mock.active).toBe(false)
+    expect(stopped.draft.pickCount).toBe(0)
+    const board = call(context, 'GET', '/api/board').json as { drafted: unknown[] }
+    expect(board.drafted).toEqual([])
+  })
+
+  it('replays identically under a seed and differs under another', () => {
+    const run = (seedValue: number): string[] => {
+      const { context } = makeApp()
+      mock(context, { action: 'start', pace: 0, seed: seedValue })
+      mock(context, { action: 'advance' })
+      mock(context, { action: 'pick', playerId: topCandidate(context) })
+      const state = asState(mock(context, { action: 'advance' }).json)
+      return state.picks.map((pick) => pick.playerId)
+    }
+    expect(run(1234)).toEqual(run(1234))
+    expect(run(1234)).not.toEqual(run(99))
+  })
+
+  it('paces opponents on the injected timer, pausing on my turn and resuming after my pick', () => {
+    const { app, context, timers } = makeApp()
+    mock(context, { action: 'start', pace: 4, seed: 3 })
+    expect(timers.pending()).toBe(1)
+    expect(timers.lastMs()).toBe(4000)
+    for (let i = 1; i <= 10; i += 1) {
+      expect(timers.fire()).toBe(true)
+    }
+    let state = asState(call(context, 'GET', '/api/state').json)
+    expect(state.mock).toMatchObject({ pickCount: 10, myTurn: true })
+    expect(state.mock.countdownStartedAt).not.toBeNull()
+    expect(timers.pending()).toBe(0) // paused for me — nothing auto-picks
+
+    state = asState(mock(context, { action: 'pick', playerId: topCandidate(context) }).json)
+    expect(state.mock.countdownStartedAt).toBeNull()
+    expect(timers.pending()).toBe(1) // the room resumes
+    timers.fire() // pick 12
+    timers.fire() // pick 13 → my turn at 14, timer pauses again
+    expect(timers.pending()).toBe(0)
+    state = asState(call(context, 'GET', '/api/state').json)
+    expect(state.mock).toMatchObject({ pickCount: 13, myTurn: true })
+
+    mock(context, { action: 'stop' })
+    expect(timers.pending()).toBe(0)
+    expect(app.mockActive).toBe(false)
+  })
+
+  it('plays a full 168-pick draft: caps and K/DST timing hold, recap appears, tables stay empty', () => {
+    const { app, context } = makeApp({ pool: DEEP_PLAYERS })
+    mock(context, { action: 'start', pace: 0, seed: 7 })
+    let state = asState(call(context, 'GET', '/api/state').json)
+    for (let guard = 0; guard < 400 && !state.draft.complete; guard += 1) {
+      if (state.mock.myTurn) {
+        const board = call(context, 'GET', '/api/board').json as { rows: { playerId: string }[] }
+        state = asState(mock(context, { action: 'pick', playerId: board.rows[0]?.playerId ?? '' }).json)
+      } else {
+        state = asState(mock(context, { action: 'advance' }).json)
+      }
+    }
+    expect(state.draft).toMatchObject({ pickCount: 168, complete: true })
+    expect(state.mock.pickCount).toBe(168)
+    expect(mock(context, { action: 'pick', playerId: 'p-K14' }).status).toBe(409)
+
+    // positional sanity per opponent: QB/TE ≤ 2, one K and one DST, both landing in the last two rounds
+    const position = (playerId: string): string => /^p-([A-Z]+)/.exec(playerId)?.[1] ?? '?'
+    const byTeam = new Map<number, { playerId: string; round: number | null }[]>()
+    for (const pick of state.picks) {
+      if (pick.teamId === null) {
+        continue
+      }
+      const picks = byTeam.get(pick.teamId) ?? []
+      picks.push({ playerId: pick.playerId, round: pick.round })
+      byTeam.set(pick.teamId, picks)
+    }
+    expect(byTeam.size).toBe(12)
+    for (const [teamId, picks] of byTeam) {
+      expect(picks).toHaveLength(14)
+      if (teamId === 13) {
+        continue
+      }
+      const kdst = picks.filter((pick) => position(pick.playerId) === 'K' || position(pick.playerId) === 'DST')
+      expect(kdst).toHaveLength(2)
+      expect(new Set(kdst.map((pick) => position(pick.playerId))).size).toBe(2)
+      expect(kdst.every((pick) => (pick.round ?? 0) >= 13)).toBe(true)
+      expect(picks.filter((pick) => position(pick.playerId) === 'QB').length).toBeLessThanOrEqual(2)
+      expect(picks.filter((pick) => position(pick.playerId) === 'TE').length).toBeLessThanOrEqual(2)
+    }
+
+    // recap: my five best values vs room ADP, sorted by delta
+    const best = state.mock.recap?.bestValues ?? []
+    expect(best).toHaveLength(5)
+    for (const value of best) {
+      expect(value.delta).toBeCloseTo(value.roomAdp - value.overall, 5)
+    }
+    const deltas = best.map((value) => value.delta)
+    expect(deltas).toEqual([...deltas].sort((a, b) => b - a))
+    expect(state.capture.ratio).toBeGreaterThan(0)
+
+    // the regression that matters: a full mocked draft leaves the real tables untouched
+    expect(app.store.getDraftPicks()).toEqual([])
+    expect(app.store.getManualPicks()).toEqual([])
   })
 })

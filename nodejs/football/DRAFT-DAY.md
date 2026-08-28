@@ -73,6 +73,29 @@ The board works fully by hand; polling is an optimization.
 - The pick counter treats manual marks like picks, so "on clock" / "you in N" stay right as
   long as you mark every pick.
 
+## Mock draft (rehearsal)
+
+Practice the real flow against a simulated room. Nothing is saved: mock picks live only in
+server memory, never in the database — **Stop** (or a server restart) discards them
+instantly and the real pre-draft board comes back.
+
+- **Start**: the violet **Mock draft** button in the status bar. It asks for a pace:
+  opponents pick every N seconds (default 4); `0` means opponents wait for the
+  **Advance** button, which runs them up to your turn.
+- The amber **MOCK DRAFT** banner stays up the whole time; **Stop** ends it.
+- Opponents draft by room ADP with per-session random jitter (rerun for a different
+  room), hold K/DST until their last two rounds, and cap QB/TE at 2.
+- On your turn the usual violet panel appears and a display-only 90s countdown runs in
+  the banner — it goes red when it expires, nothing auto-picks. **ME** buttons draft
+  into the mock.
+- After pick 168 a recap card shows final capture, your roster, and your top-5 value
+  picks vs room ADP.
+- Guards: a mock refuses to start if any real picks exist or live poll is on; live poll,
+  **Refresh data**, and manual marks are refused while a mock is active.
+- API: `POST /api/mock` with `{"action":"start","pace":0,"seed":42}` /
+  `{"action":"advance"}` / `{"action":"pick","playerId":"p-…"}` / `{"action":"stop"}`;
+  `GET /api/state` carries a `mock` block.
+
 ## If something else breaks
 
 - **Server crashed / laptop rebooted**: rerun `cd nodejs/football/web && pnpm serve`. All

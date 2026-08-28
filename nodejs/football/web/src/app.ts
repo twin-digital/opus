@@ -21,11 +21,13 @@ import {
   type MarketData,
   type Player,
   type PlayerId,
+  type Position,
   type SeasonProjection,
 } from '@twin-digital/football-data'
 import type { Database } from '@twin-digital/football-data/db/connection'
 import type { EspnDraftDetailResponse, EspnLeagueCredentials } from '@twin-digital/football-data/fetchers/espn'
 
+import { mulberry32, pickForOpponent } from './mock.js'
 import { mapEspnPicks, mergePicks, slotForTeam, teamOnClock, type EffectivePick } from './picks.js'
 import { buildRoster, type RosterPlayer, type RosterSummary } from './roster.js'
 import { tierScarcity, type TierScarcity } from './scarcity.js'
@@ -44,6 +46,8 @@ export interface AppOptions {
   runIngestFn?: (options: IngestOptions) => Promise<IngestSummary>
   log?: (message: string) => void
   now?: () => Date
+  /** Injectable mock-pacing timer (tests fake it); defaults to an unref'd setTimeout. Returns a cancel. */
+  scheduleTimer?: (fn: () => void, ms: number) => () => void
 }
 
 export interface IngestStatus {
@@ -68,7 +72,7 @@ export interface DraftedRow {
   injuryStatus: Player['injuryStatus']
   overall: number | null
   teamId: number | null
-  source: 'espn' | 'manual'
+  source: 'espn' | 'manual' | 'mock'
 }
 
 export interface BoardPayload {
@@ -113,6 +117,30 @@ export interface EvaluatePayload {
   candidates: EvaluateRow[]
 }
 
+export interface MockRecapPick {
+  playerId: PlayerId
+  name: string
+  position: string
+  overall: number
+  roomAdp: number
+  points: number | null
+  /** roomAdp − overall: how far past the room's price the pick waited. */
+  delta: number
+}
+
+export interface MockPublicState {
+  active: boolean
+  seed: number | null
+  /** Seconds between opponent picks; 0 = advance manually. */
+  pace: number | null
+  pickCount: number
+  myTurn: boolean
+  /** Set when the mock reaches my turn; the client renders a display-only countdown from it. */
+  countdownStartedAt: string | null
+  /** Present only once all picks are made: my top value picks vs room ADP. */
+  recap: { bestValues: MockRecapPick[] } | null
+}
+
 export interface StatePayload {
   version: number
   league: {
@@ -141,6 +169,7 @@ export interface StatePayload {
   capture: { ratio: number; teamTotal: number; benchmarks: Benchmarks }
   overrides: OverridesStatus
   ingest: IngestStatus
+  mock: MockPublicState
   asOf: ReturnType<Store['getAsOfStamps']>
 }
 
@@ -149,6 +178,15 @@ interface Snapshot {
   players: Player[]
   projections: SeasonProjection[]
   market: MarketData[]
+}
+
+/** A running mock session. Memory only, by design: nothing here ever reaches the database. */
+interface MockSession {
+  seed: number
+  pace: number
+  picks: EffectivePick[]
+  rng: () => number
+  countdownStartedAt: string | null
 }
 
 /**
@@ -180,11 +218,23 @@ export class App {
   private evaluateCache: { version: number; payload: EvaluatePayload } | null = null
   private fullRowsCache: { generation: number; rowsById: Map<PlayerId, BoardRow> } | null = null
   private warnedUnresolvedEspnIds = new Set<number>()
+  private mock: MockSession | null = null
+  private cancelMockTimer: (() => void) | null = null
+  private readonly scheduleTimer: (fn: () => void, ms: number) => () => void
 
   constructor(options: AppOptions) {
     this.options = options
     this.log = options.log ?? (() => undefined)
     this.now = options.now ?? (() => new Date())
+    this.scheduleTimer =
+      options.scheduleTimer ??
+      ((fn, ms) => {
+        const timer = setTimeout(fn, ms)
+        timer.unref()
+        return () => {
+          clearTimeout(timer)
+        }
+      })
     this.store = new Store(options.database ?? openDatabase(options.dbFile))
     this.reloadSnapshot()
   }
@@ -257,7 +307,11 @@ export class App {
     return this.playerById.has(playerId as PlayerId)
   }
 
+  /** While a mock is active the mock picks ARE the drafted set; real picks stay stored, unread. */
   effectivePicks(): EffectivePick[] {
+    if (this.mock !== null) {
+      return [...this.mock.picks]
+    }
     return mergePicks(this.store.getDraftPicks(), this.store.getManualPicks())
   }
 
@@ -296,6 +350,230 @@ export class App {
       this.bumpVersion()
     }
     return removed
+  }
+
+  // -- mock draft -----------------------------------------------------------
+
+  get myTeamId(): number {
+    return this.options.myTeamId
+  }
+
+  get mockActive(): boolean {
+    return this.mock !== null
+  }
+
+  /**
+   * Start a rehearsal against a simulated room. Mock picks live only in this session's memory;
+   * refused whenever real picks exist so the two states can never mix.
+   */
+  startMock(options: { pace?: number; seed?: number } = {}): void {
+    if (this.mock !== null) {
+      throw new MockStateError('a mock draft is already active')
+    }
+    if (this.store.getDraftPicks().length > 0 || this.store.getManualPicks().length > 0) {
+      throw new MockStateError('real draft picks exist — a mock only runs on a clean pre-draft board')
+    }
+    const seed = Math.floor(options.seed ?? Math.random() * 2 ** 31)
+    const pace = options.pace ?? 4
+    this.mock = { seed, pace, picks: [], rng: mulberry32(seed), countdownStartedAt: null }
+    this.log(`mock: started (seed ${String(seed)}, pace ${String(pace)}s) — nothing is saved`)
+    this.bumpVersion()
+    this.continueMock()
+  }
+
+  /** Discard the whole rehearsal instantly; the real (stored) state was never touched. */
+  stopMock(): void {
+    if (this.mock === null) {
+      return
+    }
+    this.clearMockTimer()
+    this.mock = null
+    this.log('mock: stopped — all mock picks discarded')
+    this.bumpVersion()
+  }
+
+  /** Run opponent picks until my turn or the end of the draft (the pace-0 "Advance" button). */
+  advanceMock(): void {
+    const mock = this.requireMock()
+    this.clearMockTimer()
+    let made = 0
+    while (mock.picks.length < this.totalPicks && this.mockOnClockTeam() !== this.options.myTeamId) {
+      if (!this.mockOpponentPick()) {
+        break
+      }
+      made += 1
+    }
+    if (made > 0) {
+      this.bumpVersion()
+    }
+    this.continueMock()
+  }
+
+  /** My pick, routed here (not markPick) while the mock is active. */
+  mockUserPick(playerId: PlayerId): void {
+    const mock = this.requireMock()
+    if (!this.playerById.has(playerId)) {
+      throw new UnknownPlayerError(playerId)
+    }
+    if (mock.picks.length >= this.totalPicks) {
+      throw new MockStateError('the mock draft is complete — stop it to reset')
+    }
+    if (this.mockOnClockTeam() !== this.options.myTeamId) {
+      throw new MockStateError('not your pick — advance the mock (or wait for the room)')
+    }
+    if (mock.picks.some((pick) => pick.playerId === playerId)) {
+      throw new MockStateError(`already drafted in this mock: ${playerId}`)
+    }
+    this.pushMockPick(playerId, this.options.myTeamId)
+    mock.countdownStartedAt = null
+    this.bumpVersion()
+    this.continueMock()
+  }
+
+  mockState(): MockPublicState {
+    const mock = this.mock
+    if (mock === null) {
+      return {
+        active: false,
+        seed: null,
+        pace: null,
+        pickCount: 0,
+        myTurn: false,
+        countdownStartedAt: null,
+        recap: null,
+      }
+    }
+    const complete = mock.picks.length >= this.totalPicks
+    return {
+      active: true,
+      seed: mock.seed,
+      pace: mock.pace,
+      pickCount: mock.picks.length,
+      myTurn: !complete && this.mockOnClockTeam() === this.options.myTeamId,
+      countdownStartedAt: mock.countdownStartedAt,
+      recap: complete ? this.mockRecap(mock.picks) : null,
+    }
+  }
+
+  /** After any mock pick: pause on my turn (countdown), else keep the room moving on the pace timer. */
+  private continueMock(): void {
+    const mock = this.mock
+    if (mock === null || mock.picks.length >= this.totalPicks) {
+      return
+    }
+    if (this.mockOnClockTeam() === this.options.myTeamId) {
+      mock.countdownStartedAt ??= this.now().toISOString()
+      return
+    }
+    if (mock.pace > 0) {
+      this.clearMockTimer()
+      this.cancelMockTimer = this.scheduleTimer(() => {
+        this.mockTick()
+      }, mock.pace * 1000)
+    }
+  }
+
+  /** One pace-timer beat: one opponent pick, then decide what happens next. */
+  private mockTick(): void {
+    this.cancelMockTimer = null
+    const mock = this.mock
+    if (mock === null || mock.picks.length >= this.totalPicks) {
+      return
+    }
+    if (this.mockOnClockTeam() === this.options.myTeamId) {
+      mock.countdownStartedAt ??= this.now().toISOString()
+      return
+    }
+    if (this.mockOpponentPick()) {
+      this.bumpVersion()
+    }
+    this.continueMock()
+  }
+
+  private mockOpponentPick(): boolean {
+    const mock = this.requireMock()
+    const teamId = this.mockOnClockTeam()
+    if (teamId === null) {
+      return false
+    }
+    const drafted = new Set(mock.picks.map((pick) => pick.playerId))
+    const counts: Partial<Record<Position, number>> = {}
+    for (const pick of mock.picks) {
+      if (pick.teamId !== teamId) {
+        continue
+      }
+      const position = this.playerById.get(pick.playerId)?.position
+      if (position !== undefined) {
+        counts[position] = (counts[position] ?? 0) + 1
+      }
+    }
+    const available = [...this.fullRows().values()]
+      .filter((row) => !drafted.has(row.playerId))
+      .map((row) => ({ playerId: row.playerId, position: row.position, roomAdp: row.roomAdp, adp: row.adp }))
+    const overall = mock.picks.length + 1
+    const choice = pickForOpponent({
+      available,
+      counts,
+      round: Math.ceil(overall / this.settings.size),
+      totalRounds: this.totalRounds,
+      rng: mock.rng,
+    })
+    if (choice === null) {
+      return false
+    }
+    this.pushMockPick(choice, teamId)
+    return true
+  }
+
+  private pushMockPick(playerId: PlayerId, teamId: number): void {
+    const mock = this.requireMock()
+    const overall = mock.picks.length + 1
+    mock.picks.push({ playerId, teamId, overall, round: Math.ceil(overall / this.settings.size), source: 'mock' })
+  }
+
+  private mockOnClockTeam(): number | null {
+    const mock = this.requireMock()
+    return teamOnClock(this.settings.draft.pickOrder, mock.picks.length + 1, this.totalRounds)
+  }
+
+  private mockRecap(picks: EffectivePick[]): { bestValues: MockRecapPick[] } {
+    const rows = this.fullRows()
+    const bestValues: MockRecapPick[] = []
+    for (const pick of picks) {
+      if (pick.teamId !== this.options.myTeamId || pick.overall === null) {
+        continue
+      }
+      const row = rows.get(pick.playerId)
+      const roomAdp = row?.roomAdp ?? null
+      if (roomAdp === null) {
+        continue
+      }
+      bestValues.push({
+        playerId: pick.playerId,
+        name: row?.name ?? pick.playerId,
+        position: row?.position ?? '?',
+        overall: pick.overall,
+        roomAdp,
+        points: row?.points ?? null,
+        delta: roomAdp - pick.overall,
+      })
+    }
+    bestValues.sort((a, b) => b.delta - a.delta)
+    return { bestValues: bestValues.slice(0, 5) }
+  }
+
+  private requireMock(): MockSession {
+    if (this.mock === null) {
+      throw new MockStateError('no mock draft is active')
+    }
+    return this.mock
+  }
+
+  private clearMockTimer(): void {
+    if (this.cancelMockTimer !== null) {
+      this.cancelMockTimer()
+      this.cancelMockTimer = null
+    }
   }
 
   /** Re-run the full ingest (draft-morning refresh), then reload the snapshot. */
@@ -490,6 +768,7 @@ export class App {
       capture: this.capture(),
       overrides: this.overridesStatus,
       ingest: this.ingest,
+      mock: this.mockState(),
       asOf: this.store.getAsOfStamps(),
     }
   }
@@ -537,5 +816,13 @@ export class UnknownPlayerError extends Error {
   constructor(playerId: string) {
     super(`unknown player id: ${playerId}`)
     this.name = 'UnknownPlayerError'
+  }
+}
+
+/** A mock request that conflicts with the current draft/mock state; routes answer it with 409. */
+export class MockStateError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'MockStateError'
   }
 }

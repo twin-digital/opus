@@ -7,7 +7,7 @@ export interface EffectivePick {
   teamId: number | null
   overall: number | null
   round: number | null
-  source: 'espn' | 'manual'
+  source: 'espn' | 'manual' | 'mock'
 }
 
 export interface MappedPicks {

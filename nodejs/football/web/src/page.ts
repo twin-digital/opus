@@ -143,9 +143,31 @@ export const PAGE = `<!doctype html>
   .best-tag { color: var(--primary); font-weight: 700; }
   #fallsPanel { margin-bottom: 12px; padding: 6px 12px; font-size: 12px; color: var(--muted-fg); }
   #fallsPanel b { color: var(--foreground); font-weight: 600; }
+
+  .btn-violet { background: transparent; border-color: var(--primary); color: var(--primary); }
+  #mockBanner { display: none; position: sticky; top: 0; z-index: 30; align-items: center; gap: 12px;
+    height: 36px; padding: 0 14px; font-weight: 600;
+    background: color-mix(in oklab, var(--warning) 20%, var(--background));
+    border-bottom: 2px solid var(--warning); }
+  #mockBanner .mock-title { color: var(--warning); letter-spacing: 0.08em; font-weight: 800; }
+  #mockCountdown { font-weight: 700; }
+  #mockCountdown.cd-expired { color: var(--danger); }
+  body.mock #status { top: 36px; }
+  body.mock thead th { top: 84px; }
+  #recapPanel { border-color: var(--warning); margin-bottom: 12px; }
+  #recapPanel .recap-cap { font-size: 14px; margin-bottom: 6px; }
 </style>
 </head>
 <body>
+<div id="mockBanner">
+  <span class="mock-title">MOCK DRAFT</span>
+  <span>nothing is saved — stopping (or a server restart) discards it</span>
+  <span class="mono muted" id="mockInfo"></span>
+  <span id="mockCountdown" class="mono"></span>
+  <span class="spacer"></span>
+  <button id="mockAdvance" style="display:none" title="Run opponent picks up to your turn">Advance</button>
+  <button id="mockStop" title="End the mock and discard every mock pick">Stop</button>
+</div>
 <div id="status">
   <span class="big" id="leagueName">…</span>
   <span><span class="lbl">pick</span><span class="big" id="pickNow">—</span></span>
@@ -156,6 +178,7 @@ export const PAGE = `<!doctype html>
   <span class="spacer"></span>
   <span class="ind off" id="pollPill" title=""><span class="dot"></span><span id="pollLabel">POLL</span></span>
   <label><input type="checkbox" id="pollToggle"> live poll</label>
+  <button id="mockBtn" class="btn-violet" title="Practice against a simulated room — nothing is saved">Mock draft</button>
   <button id="refreshBtn" title="Re-run full data ingest">Refresh data</button>
   <label><input type="checkbox" id="showDrafted"> show drafted</label>
   <span class="muted" id="asOf" title="">data: —</span>
@@ -163,6 +186,7 @@ export const PAGE = `<!doctype html>
 
 <div id="layout">
   <div id="main">
+    <div id="recapPanel" class="card" style="display:none"></div>
     <div id="clockPanel" class="card" style="display:none">
       <div class="clock-head">
         <span class="dot-pulse"></span>
@@ -295,9 +319,11 @@ function loadState() {
         renderTable(); renderSide(); renderClock();
       }) :
       Promise.resolve();
-    return p.then(renderStatus);
+    return p.then(function () { renderStatus(); renderMock(); });
   }).catch(function () { serverOk = false; renderStatus(); });
 }
+
+function mockActive() { return !!(S && S.mock && S.mock.active); }
 
 function setInd(cls, text, title) {
   var pill = el('pollPill');
@@ -344,8 +370,9 @@ function renderStatus() {
   el('pollToggle').checked = poll.enabled;
 
   var btn = el('refreshBtn');
-  btn.disabled = S.ingest.running;
+  btn.disabled = S.ingest.running || mockActive();
   btn.textContent = S.ingest.running ? 'Refreshing…' : 'Refresh data';
+  el('pollToggle').disabled = mockActive();
   btn.title = S.ingest.lastError ? ('last refresh FAILED: ' + S.ingest.lastError) :
     (S.ingest.finishedAt ? 'last refresh ' + timeShort(S.ingest.finishedAt) : 'Re-run full data ingest');
 
@@ -356,6 +383,59 @@ function renderStatus() {
   el('asOf').textContent = 'data: ' + timeShort(S.asOf.player) + (ovr && ovr.error ? ' ⚠' : '');
   el('asOf').title = 'players ' + (S.asOf.player || '—') + ' | market ' + (S.asOf.marketData || '—') +
     ' | projections ' + (S.asOf.seasonProjection || '—') + ' | polled picks ' + (S.asOf.draftPick || '—') + ovrText;
+}
+
+function renderMock() {
+  var active = mockActive();
+  document.body.className = active ? 'mock' : '';
+  el('mockBanner').style.display = active ? 'flex' : 'none';
+  el('mockBtn').style.display = active ? 'none' : '';
+  if (!active) { el('recapPanel').style.display = 'none'; updateCountdown(); return; }
+  var m = S.mock;
+  el('mockInfo').textContent = 'seed ' + m.seed + ' · ' +
+    (m.pace === 0 ? 'manual advance' : 'pace ' + m.pace + 's') +
+    ' · ' + m.pickCount + '/' + S.league.totalPicks;
+  el('mockAdvance').style.display = (!S.draft.complete && !m.myTurn && m.pace === 0) ? '' : 'none';
+  updateCountdown();
+  renderRecap();
+}
+
+// Display-only: when it hits zero it just goes red — nothing auto-picks.
+function updateCountdown() {
+  var cd = el('mockCountdown');
+  if (!mockActive() || !S.mock.myTurn || !S.mock.countdownStartedAt) {
+    cd.textContent = ''; cd.className = 'mono'; return;
+  }
+  var left = 90 - Math.floor((Date.now() - new Date(S.mock.countdownStartedAt).getTime()) / 1000);
+  var over = left < 0;
+  var v = Math.abs(left);
+  cd.textContent = 'YOUR PICK — ' + (over ? '-' : '') + Math.floor(v / 60) + ':' + ('0' + (v % 60)).slice(-2);
+  cd.className = 'mono' + (over ? ' cd-expired' : '');
+}
+
+function renderRecap() {
+  var panel = el('recapPanel');
+  if (!mockActive() || !S.draft.complete || !S.mock.recap) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  var html = ['<h3>Mock draft complete</h3>'];
+  html.push('<div class="recap-cap">final capture <b class="mono">' + pct(S.capture.ratio) + '</b></div>');
+  S.myRoster.slots.forEach(function (slot) {
+    var names = slot.players.map(function (p) {
+      return esc(p.name) + ' <span class="muted">' + (p.team || 'FA') + '</span>';
+    }).join(', ');
+    html.push('<div class="slot-row"><span class="slot-name">' + slot.slot + '</span><span>' +
+      (names || '<span class="muted">—</span>') + '</span></div>');
+  });
+  var best = S.mock.recap.bestValues;
+  if (best.length) {
+    html.push('<div style="margin-top:8px" class="muted">best value picks (room ADP − pick taken):</div>');
+    best.forEach(function (v) {
+      html.push('<div>' + esc(v.name) + ' <span class="muted">' + v.position + '</span> — pick ' + v.overall +
+        ', room ADP ' + num(v.roomAdp, 1) + ' <span class="' + deltaClass(v.delta) + '">' + signed(v.delta, 1) + '</span>' +
+        (v.points !== null ? ' <span class="muted">· ' + num(v.points, 1) + ' pts</span>' : '') + '</div>');
+    });
+  }
+  panel.innerHTML = html.join('');
 }
 
 function renderClock() {
@@ -471,8 +551,10 @@ function renderTable() {
         by;
       if (r.teamId === S.league.myTeamId) cls += ' mine-row';
     } else {
-      action = '<button class="act" data-act="mine" data-id="' + r.playerId + '" title="drafted by me">ME</button> ' +
-        '<button class="act" data-act="gone" data-id="' + r.playerId + '" title="drafted by someone else">✕</button>';
+      // In a mock the room drafts for itself, so the "someone else took him" button goes away.
+      action = '<button class="act" data-act="mine" data-id="' + r.playerId + '" title="drafted by me">ME</button>' +
+        (mockActive() ? '' :
+          ' <button class="act" data-act="gone" data-id="' + r.playerId + '" title="drafted by someone else">✕</button>');
     }
     html.push('<tr class="' + cls + '">' +
       '<td>' + (r.rank === null ? '—' : r.rank) + '</td>' +
@@ -570,6 +652,21 @@ el('refreshBtn').addEventListener('click', function () {
   el('refreshBtn').disabled = true;
   api('/api/refresh', {}).then(loadState);
 });
+el('mockBtn').addEventListener('click', function () {
+  var pace = window.prompt('Mock draft — opponent pace in seconds (0 = advance manually)', '4');
+  if (pace === null) return;
+  var n = Number(pace);
+  if (!isFinite(n) || n < 0) n = 4;
+  api('/api/mock', { action: 'start', pace: n }).then(loadState);
+});
+el('mockStop').addEventListener('click', function () {
+  if (!window.confirm('End the mock draft? Every mock pick is discarded.')) return;
+  api('/api/mock', { action: 'stop' }).then(loadState);
+});
+el('mockAdvance').addEventListener('click', function () {
+  api('/api/mock', { action: 'advance' }).then(loadState);
+});
+setInterval(updateCountdown, 500);
 
 setInterval(loadState, 2000);
 loadState();
