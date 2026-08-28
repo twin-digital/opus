@@ -350,17 +350,21 @@ const segmentModel = (state: BoardState, options: RolloutOptions): RoomSegmentMo
   if (options.profiles === undefined) {
     return undefined
   }
+  return {
+    profiles: options.profiles,
+    pickOrder: state.settings.draft.pickOrder,
+    positionCounts: livePositionCounts(state),
+  }
+}
+
+/** Per-team position counts seeded from the live picks; unknown teams (manual marks) count for no one. */
+export const livePositionCounts = (state: BoardState): Map<number, PositionCounts> => {
   const positionById = new Map(state.players.map((player) => [player.id, player.position]))
-  // Live picks seed the per-team position counts; unknown teams (manual marks) count for no one.
   const livePicks = (state.teamPicks ?? []).flatMap((pick) => {
     const position = positionById.get(pick.playerId)
     return pick.teamId === null || position === undefined ? [] : [{ teamId: pick.teamId, position }]
   })
-  return {
-    profiles: options.profiles,
-    pickOrder: state.settings.draft.pickOrder,
-    positionCounts: countTeamPositions(livePicks),
-  }
+  return countTeamPositions(livePicks)
 }
 
 export const rolloutFrom = (
@@ -372,10 +376,55 @@ export const rolloutFrom = (
   rolloutOnPool(buildPool(state, options), myRoster, fromOverallPick, state.myDraftSlot, segmentModel(state, options))
 
 /**
- * One rollout per candidate, each assuming the candidate is taken with the pick on the clock.
- * Sorted by estTeamScore descending; banned players never enter, boosts are already in the
- * points. Default slate: top `count` (40) by VOR, top-3 at each skill position, and the top
- * `upsideCount` (10) by upsideScore among priced availables.
+ * The candidate slate both evaluators share: the explicit `candidates` option filtered to the
+ * pool, or the default slate — top `count` (40) by VOR, top-3 at each skill position, and the
+ * top `upsideCount` (10) by upsideScore among priced availables.
+ */
+export const candidateSlate = (pool: Pool, held: Set<PlayerId>, options: EvaluateOptions): PlayerId[] => {
+  if (options.candidates !== undefined) {
+    return options.candidates.filter((id) => pool.byId.has(id) && !pool.bannedIds.has(id))
+  }
+  const eligible = pool.all
+    .filter(
+      (player) =>
+        player.points !== null &&
+        SKILL_SET.has(player.position) &&
+        !pool.drafted.has(player.playerId) &&
+        !held.has(player.playerId) &&
+        !pool.bannedIds.has(player.playerId),
+    )
+    .sort((a, b) => (b.vor ?? Number.NEGATIVE_INFINITY) - (a.vor ?? Number.NEGATIVE_INFINITY))
+  const slate = eligible.slice(0, options.count ?? 40)
+  const included = new Set(slate.map((player) => player.playerId))
+  for (const position of SKILL_POSITIONS) {
+    for (const player of eligible.filter((p) => p.position === position).slice(0, 3)) {
+      if (!included.has(player.playerId)) {
+        included.add(player.playerId)
+        slate.push(player)
+      }
+    }
+  }
+  // Upside lane: the VOR cut is mean-biased and can drop lottery tickets late in a draft,
+  // exactly when upside becomes the ranking key; priced high-upside availables get a rollout.
+  // The lane needs a price this room could actually pay: a real room ADP inside the draft
+  // horizon (roomAdp already nulls ESPN's 169.5 undrafted sentinel). Upside scores already
+  // require a real price at the pool level (UPSIDE.MAX_REAL_ADP); this is the lane's own belt.
+  const byUpside = eligible
+    .filter((player) => player.upsideScore !== null && player.roomAdp !== null && player.roomAdp <= UPSIDE_LANE_MAX_ADP)
+    .sort((a, b) => (b.upsideScore ?? 0) - (a.upsideScore ?? 0))
+  for (const player of byUpside.slice(0, options.upsideCount ?? 10)) {
+    if (!included.has(player.playerId)) {
+      included.add(player.playerId)
+      slate.push(player)
+    }
+  }
+  return slate.map((player) => player.playerId)
+}
+
+/**
+ * One deterministic mean-path rollout per candidate, each assuming the candidate is taken with
+ * the pick on the clock. Sorted by estTeamScore descending; banned players never enter, boosts
+ * are already in the points.
  */
 export const evaluateCandidates = (state: BoardState, options: EvaluateOptions = {}): CandidateEvaluation[] => {
   const pool = buildPool(state, options)
@@ -383,49 +432,7 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
   const currentOverall = state.draftedPlayerIds.length + 1
   const myIds = state.myDraftedPlayerIds ?? []
   const held = new Set(myIds)
-
-  let candidateIds: PlayerId[]
-  if (options.candidates !== undefined) {
-    candidateIds = options.candidates.filter((id) => pool.byId.has(id) && !pool.bannedIds.has(id))
-  } else {
-    const eligible = pool.all
-      .filter(
-        (player) =>
-          player.points !== null &&
-          SKILL_SET.has(player.position) &&
-          !pool.drafted.has(player.playerId) &&
-          !held.has(player.playerId) &&
-          !pool.bannedIds.has(player.playerId),
-      )
-      .sort((a, b) => (b.vor ?? Number.NEGATIVE_INFINITY) - (a.vor ?? Number.NEGATIVE_INFINITY))
-    const slate = eligible.slice(0, options.count ?? 40)
-    const included = new Set(slate.map((player) => player.playerId))
-    for (const position of SKILL_POSITIONS) {
-      for (const player of eligible.filter((p) => p.position === position).slice(0, 3)) {
-        if (!included.has(player.playerId)) {
-          included.add(player.playerId)
-          slate.push(player)
-        }
-      }
-    }
-    // Upside lane: the VOR cut is mean-biased and can drop lottery tickets late in a draft,
-    // exactly when upside becomes the ranking key; priced high-upside availables get a rollout.
-    // The lane needs a price this room could actually pay: a real room ADP inside the draft
-    // horizon (roomAdp already nulls ESPN's 169.5 undrafted sentinel). Upside scores already
-    // require a real price at the pool level (UPSIDE.MAX_REAL_ADP); this is the lane's own belt.
-    const byUpside = eligible
-      .filter(
-        (player) => player.upsideScore !== null && player.roomAdp !== null && player.roomAdp <= UPSIDE_LANE_MAX_ADP,
-      )
-      .sort((a, b) => (b.upsideScore ?? 0) - (a.upsideScore ?? 0))
-    for (const player of byUpside.slice(0, options.upsideCount ?? 10)) {
-      if (!included.has(player.playerId)) {
-        included.add(player.playerId)
-        slate.push(player)
-      }
-    }
-    candidateIds = slate.map((player) => player.playerId)
-  }
+  const candidateIds = candidateSlate(pool, held, options)
 
   const evaluations = candidateIds.flatMap((id) => {
     const candidate = pool.byId.get(id)

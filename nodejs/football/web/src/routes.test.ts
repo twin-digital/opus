@@ -17,7 +17,7 @@ import {
   type StatKey,
 } from '@twin-digital/football-data'
 
-import { App, orderCandidates } from './app.js'
+import { App, evalModeFromEnv, orderCandidates } from './app.js'
 import type { PollStatus } from './poller.js'
 import { handleRoute, type PollerLike, type RouteContext } from './routes.js'
 
@@ -199,6 +199,9 @@ const makeApp = (
     overridesFile?: string
     roomRulesFile?: string
     pool?: FixturePlayer[]
+    /** Tests default to the instant deterministic engine; MC tests opt in. */
+    evalMode?: 'mc' | 'det'
+    mcSamples?: number
   } = {},
 ): TestContext => {
   const database = openDatabase(':memory:')
@@ -214,6 +217,8 @@ const makeApp = (
     overridesFile: options.overridesFile,
     roomRulesFile: options.roomRulesFile,
     scheduleTimer: timers.scheduleTimer,
+    evalMode: options.evalMode ?? 'det',
+    mcSamples: options.mcSamples,
   })
   const poller = makePoller()
   return { app, poller, context: { app, poller }, timers }
@@ -431,6 +436,96 @@ describe('routes', () => {
     expect(payload.candidates.every((candidate) => candidate.deltaVsBest <= 0)).toBe(true)
     // make-it-back odds are joined from the board rows
     expect(payload.candidates[0]?.pNextPick).not.toBeNull()
+  })
+
+  it('FOOTBALL_EVAL maps to the engine: mc unless explicitly det', () => {
+    expect(evalModeFromEnv(undefined)).toBe('mc')
+    expect(evalModeFromEnv('mc')).toBe('mc')
+    expect(evalModeFromEnv('det')).toBe('det')
+    expect(evalModeFromEnv('typo')).toBe('mc')
+  })
+
+  it('det engine answers inline: computing false, no MC columns', () => {
+    const { app, context } = makeApp({ evalMode: 'det' })
+    const payload = call(context, 'GET', '/api/evaluate').json as {
+      evalMode: string
+      computing: boolean
+      noiseBand: number
+      candidates: { se: number | null; pBest: number | null }[]
+    }
+    expect(payload.evalMode).toBe('det')
+    expect(payload.computing).toBe(false)
+    expect(payload.noiseBand).toBe(3)
+    expect(payload.candidates.length).toBeGreaterThan(5)
+    expect(payload.candidates.every((candidate) => candidate.se === null && candidate.pBest === null)).toBe(true)
+    expect(app.evaluating).toBe(false)
+  })
+
+  it('mc engine never blocks the route: stale-then-fresh with a computing flag', async () => {
+    const { app, context } = makeApp({ evalMode: 'mc', mcSamples: 12 })
+    // First request returns immediately with an empty computing slate; board/state still serve.
+    const first = call(context, 'GET', '/api/evaluate').json as {
+      version: number
+      evalMode: string
+      computing: boolean
+      candidates: unknown[]
+    }
+    expect(first.evalMode).toBe('mc')
+    expect(first.computing).toBe(true)
+    expect(first.candidates).toEqual([])
+    expect(app.evaluating).toBe(true)
+    expect(call(context, 'GET', '/api/board').status).toBe(200)
+    expect(call(context, 'GET', '/api/state').status).toBe(200)
+
+    await app.settleEvaluation()
+    const settled = call(context, 'GET', '/api/evaluate').json as {
+      version: number
+      computing: boolean
+      noiseBand: number
+      candidates: {
+        estTeamScore: number
+        deltaVsBest: number
+        deltaVsRef: number | null
+        exactTies: number | null
+        se: number | null
+        pBest: number | null
+      }[]
+    }
+    expect(settled.computing).toBe(false)
+    expect(settled.noiseBand).toBe(15)
+    expect(settled.candidates.length).toBeGreaterThan(5)
+    expect(settled.candidates[0]?.deltaVsBest).toBe(0)
+    expect(settled.candidates.some((candidate) => candidate.deltaVsRef === 0)).toBe(true)
+    for (const candidate of settled.candidates) {
+      expect(candidate.se).not.toBeNull()
+      expect(candidate.pBest).not.toBeNull()
+      expect(candidate.pBest as number).toBeGreaterThanOrEqual(0)
+      expect(candidate.pBest as number).toBeLessThanOrEqual(1)
+      expect(candidate.exactTies as number).toBeGreaterThanOrEqual(1)
+    }
+    const winnerMass = settled.candidates.reduce((sum, candidate) => sum + (candidate.pBest ?? 0), 0)
+    expect(winnerMass).toBeCloseTo(1, 6)
+
+    // A pick lands: the route serves the LAST computed payload (its version) marked computing.
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' }).status).toBe(200)
+    const stale = call(context, 'GET', '/api/evaluate').json as {
+      version: number
+      computing: boolean
+      candidates: unknown[]
+    }
+    expect(stale.computing).toBe(true)
+    expect(stale.version).toBe(settled.version)
+    expect(stale.candidates.length).toBeGreaterThan(5)
+
+    await app.settleEvaluation()
+    const fresh = call(context, 'GET', '/api/evaluate').json as {
+      version: number
+      computing: boolean
+      candidates: { playerId: string }[]
+    }
+    expect(fresh.computing).toBe(false)
+    expect(fresh.version).toBeGreaterThan(settled.version)
+    expect(fresh.candidates.some((candidate) => candidate.playerId === 'p-RB1')).toBe(false)
   })
 
   it('flags my turn once ten picks are in, excluding drafted players from the slate', () => {

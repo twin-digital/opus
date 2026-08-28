@@ -368,6 +368,17 @@ const availabilityHazard = (overall: number, adp: number, sigma: number): number
   return density / survival
 }
 
+const hazardWeight = (profile: TeamProfile | undefined, overall: number, player: TakeCandidate): number => {
+  let hazard = 0
+  if (player.roomAdp !== null) {
+    const base = sigmaForPick(player.roomAdp, null)
+    const sigma =
+      (profile?.sigma != null ? base * (profile.sigma / LEAGUE_FLAT_SIGMA) : base) * (profile?.sigmaScale ?? 1)
+    hazard = availabilityHazard(overall, player.roomAdp, sigma)
+  }
+  return hazard + WEIGHT_FLOOR
+}
+
 const takeWeight = (
   profiles: RoomProfiles | null,
   profile: TeamProfile | undefined,
@@ -376,20 +387,59 @@ const takeWeight = (
   player: TakeCandidate,
   counts?: PositionCounts,
 ): number => {
-  let hazard = 0
-  if (player.roomAdp !== null) {
-    const base = sigmaForPick(player.roomAdp, null)
-    const sigma =
-      (profile?.sigma != null ? base * (profile.sigma / LEAGUE_FLAT_SIGMA) : base) * (profile?.sigmaScale ?? 1)
-    hazard = availabilityHazard(overall, player.roomAdp, sigma)
-  }
   const mult =
     profiles === null ? 1 : (
       posMult(profile, profiles.defaults, round, player.position, counts) *
       (profile?.loyalty.get(player.playerId)?.strength ?? 1) *
       needMult(player.position, round, counts)
     )
-  return (hazard + WEIGHT_FLOOR) * mult
+  return hazardWeight(profile, overall, player) * mult
+}
+
+/**
+ * The take weight's availability factor for the team on the clock at `overall` (per-team σ
+ * scaling included). Depends only on (overall, player) — never on the pool or counts — so MC
+ * rollouts precompute it once per pick and share it across scenarios and candidates.
+ */
+export const pickHazardWeight = (
+  profiles: RoomProfiles | null,
+  pickOrder: number[],
+  overall: number,
+  player: TakeCandidate,
+): number => hazardWeight(profiles?.teams.get(teamAtPick(pickOrder, overall)), overall, player)
+
+/** The take weight's shaping factor, split by position plus the team's loyalty rules. */
+export interface PickMultipliers {
+  byPosition: Record<Position, number>
+  loyalty: ReadonlyMap<PlayerId, LoyaltyRule> | null
+}
+
+/**
+ * Positional × need multipliers (and loyalty rules) for the team on the clock at `overall`.
+ * takeWeight(player) === pickHazardWeight(player) × byPosition[player.position] ×
+ * (loyalty strength ?? 1); with `profiles: null` every multiplier is 1.
+ */
+export const pickPositionMultipliers = (
+  profiles: RoomProfiles | null,
+  pickOrder: number[],
+  overall: number,
+  counts?: PositionCounts,
+): PickMultipliers => {
+  const positions = Object.keys(ROOM_NEED.FILLED) as Position[]
+  const byPosition = {} as Record<Position, number>
+  if (profiles === null) {
+    for (const position of positions) {
+      byPosition[position] = 1
+    }
+    return { byPosition, loyalty: null }
+  }
+  const profile = profiles.teams.get(teamAtPick(pickOrder, overall))
+  const round = roundOfPick(overall, pickOrder.length)
+  for (const position of positions) {
+    byPosition[position] =
+      posMult(profile, profiles.defaults, round, position, counts) * needMult(position, round, counts)
+  }
+  return { byPosition, loyalty: profile?.loyalty ?? null }
 }
 
 /**

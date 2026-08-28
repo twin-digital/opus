@@ -73,6 +73,7 @@ interface FixtureOptions {
   openK?: number
   openDst?: number
   myTurn?: boolean
+  computing?: boolean
   extraRows?: Record<string, unknown>[]
 }
 
@@ -159,6 +160,9 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
       onClockTeamId: options.myTurn === true ? 13 : 11,
       myTurn: options.myTurn === true,
       myNextPicks: [35, 38],
+      evalMode: 'mc',
+      noiseBand: 15,
+      computing: options.computing === true,
       candidates:
         options.myTurn === true ?
           [
@@ -173,6 +177,10 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
               deltaVsBest: 0,
               landsOn: 'TE',
               upsideScore: 55,
+              se: 0.8,
+              pBest: 0.62,
+              deltaVsRef: 0,
+              exactTies: 1,
               tier: 1,
               ecrRank: 10,
               roomAdp: 94,
@@ -296,6 +304,20 @@ describe('page rendering with fixture data', () => {
       expect(thr.title).toBe(
         "86% gone before your pick 35 — James Johnson (T11, slot 4) @ pick 21: 25% — TE early both years — Bowers R2 '25, Kelce R4 '24",
       )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('shows pBest next to Δ best and the computing hint while the MC eval refreshes', async () => {
+    try {
+      await runPage(buildPayloads({ myTurn: true, myPickCount: 2, computing: true }))
+      const row = document.querySelectorAll('#clockRows tr')[0]
+      const pbest = row?.querySelector('.delta .pbest')
+      expect(pbest?.textContent).toBe('62%')
+      expect((pbest as HTMLElement).title).toBe('wins 62% of sampled drafts')
+      expect(row?.querySelector('.delta .best-tag')?.textContent).toBe('BEST')
+      expect(document.getElementById('clockPick')?.textContent).toContain('simulating…')
     } finally {
       vi.unstubAllGlobals()
     }

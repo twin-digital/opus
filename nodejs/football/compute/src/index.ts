@@ -32,11 +32,20 @@ export {
 } from './overrides.js'
 export { buildLeagueScorer, type LeagueScorer } from './rescore.js'
 export {
+  evaluateCandidatesMC,
+  evaluateCandidatesMCAsync,
+  MC_DEFAULT_SAMPLES,
+  MC_DEFAULT_SEED,
+  type EvaluateMCOptions,
+  type McCandidateEvaluation,
+} from './mc-rollout.js'
+export {
   benchmarksForPool,
   captureRatio,
   chooseForRoster,
   computeBenchmarks,
   evaluateCandidates,
+  livePositionCounts,
   rolloutFrom,
   simulateRoomSegment,
   type Benchmarks,
