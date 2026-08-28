@@ -54,8 +54,12 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 - **When you are on the clock** a violet panel appears above the board: candidates ranked
   by projected final starter total (EST TEAM), with **Δ best** (the decision column),
   the lineup slot each lands on, upside score, and the odds each makes it back to your
-  next turn if you pass. The **ME** button in the panel drafts straight from it. When it
-  is not your turn, a one-line strip shows the top-3 "if he falls to you".
+  next turn if you pass. **Δ best is color-banded** on the same tokens as Back@: green =
+  within 3 pts of BEST (rollout noise — effectively tied, break the tie on Back@: green Δ
+  with low Back@ means take him now, green Δ with high Back@ means safe to pass), amber =
+  real but modest cost, muted = expensive. The **ME** button in the panel drafts straight
+  from it. When it is not your turn, a one-line strip shows the top-3 "if he falls to
+  you".
 - **capture** in the status bar is the live draft grade: (your starters − replacement) /
   (ceiling − replacement); hover for the numbers.
 - Board columns **Rm Δ** (positive green = the room lets him fall, negative red = the room

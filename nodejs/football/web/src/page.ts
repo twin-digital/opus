@@ -148,7 +148,7 @@ export const PAGE = `<!doctype html>
   #clockPanel td.est { font-family: var(--font-mono); font-weight: 600; }
   #clockPanel td.delta { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
   tr.best td { background: color-mix(in oklab, var(--primary) 10%, transparent); }
-  .best-tag { color: var(--primary); font-weight: 700; }
+  .best-tag { color: var(--success); font-weight: 700; }
   #fallsPanel { margin-bottom: 12px; padding: 6px 12px; font-size: 12px; color: var(--muted-fg); }
   #fallsPanel b { color: var(--foreground); font-weight: 600; }
 
@@ -252,7 +252,7 @@ export const PAGE = `<!doctype html>
           <tr>
             <th class="l">Player</th><th class="l">Pos</th><th>Tier</th>
             <th title="Projected final starter total if you take him now">Est team</th>
-            <th title="Est team minus the best candidate's — the decision column">Δ best</th>
+            <th title="Est team minus the best candidate's: green = within 3 pts (rollout noise — effectively tied, break the tie on Back@), amber = real but modest cost (3–15 pts), muted = expensive (>15 pts)">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
             <th title="Upside score 0–100">UPS</th>
             <th id="backH" title="Odds he is still there at your next turn if you pass">Back@—</th>
@@ -322,6 +322,9 @@ export const PAGE = `<!doctype html>
 var S = null, B = null, E = null, lastVersion = -1, serverOk = true;
 var rowById = {}, drawerPid = null;
 var THREAT_MARKS = ['', '!', '!!', '!!!'];
+// Δ-best bands: within DELTA_NOISE of BEST the rollout cannot tell candidates apart
+// (break the tie on Back@); past DELTA_COSTLY the alternative is genuinely expensive.
+var DELTA_NOISE = 3, DELTA_COSTLY = 15;
 var ui = { pos: 'ALL', search: '', sortKey: 'vor', sortDir: -1, showDrafted: false };
 var POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'];
 var ASC_DEFAULT = { rank: 1, name: 1, position: 1, team: 1, byeWeek: 1, tier: 1, ecrRank: 1, adp: 1, injuryStatus: 1 };
@@ -573,7 +576,7 @@ function renderClock() {
         '<td class="l">' + c.position + '</td>' +
         '<td>' + tierChip(c.tier) + '</td>' +
         '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
-        '<td class="delta">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
+        '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
         '<td class="' + (bench ? 'ups-hi' : '') + '">' + (c.upsideScore === null ? '—' : Math.round(c.upsideScore)) + '</td>' +
         '<td class="' + oddsClass(c.pPickAfter) + '">' + pct(c.pPickAfter) + threatMark(c) + '</td>' +
@@ -640,6 +643,12 @@ function oddsClass(v) {
 function deltaClass(v) {
   if (v === null || v === undefined || Math.abs(v) < 1) return 'muted';
   return v > 0 ? 'delta-pos' : 'delta-neg';
+}
+// Same semantic tokens as the Back@ odds so the two columns read as one system.
+function deltaBestClass(v) {
+  if (v >= -DELTA_NOISE) return 'odds-hi';
+  if (v >= -DELTA_COSTLY) return 'odds-mid';
+  return 'muted';
 }
 
 function renderTable() {
