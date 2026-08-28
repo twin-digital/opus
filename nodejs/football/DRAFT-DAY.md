@@ -79,6 +79,12 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
   the attribution: which owner, at which pick, on what historical evidence. On your turn
   the on-clock panel adds a **THREATS** line: the top-3 candidates likely to be sniped
   before your next turn if you pass.
+- The sidebar's **Cost of waiting** card answers "can this position wait?": per position
+  (QB/RB/WR/TE), the best available consensus points now and the expected best still there
+  at your next two picks, with the drop colored on the Δ-best bands (green = waiting is
+  free, amber = it costs, red = cliff). Hover a cell for the player most likely to be the
+  best one left at that pick. It runs on the same profiled room model as the threat
+  markers.
 - **Reset manual** in the status bar deletes ALL manual marks (one confirm, count shown).
   It refuses while live poll is on or a mock is running, so it cannot fire mid-draft by
   accident.

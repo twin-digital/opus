@@ -1008,3 +1008,58 @@ describe('manual reset', () => {
     expect(call(mocked.context, 'POST', '/api/manual/reset').status).toBe(409)
   })
 })
+
+describe('cost of waiting', () => {
+  it('serves per-position first-available expectations for my next two picks', () => {
+    const { context } = makeApp()
+    const board = call(context, 'GET', '/api/board').json as {
+      costOfWaiting: {
+        position: string
+        now: { name: string; points: number } | null
+        atPicks: { pick: number; expectedBest: number; likely: { name: string; probFirst: number } | null }[]
+      }[]
+    }
+    expect(board.costOfWaiting.map((row) => row.position)).toEqual(['QB', 'RB', 'WR', 'TE'])
+    const rb = board.costOfWaiting.find((row) => row.position === 'RB')
+    expect(rb?.now?.name).toBe('RB Player 1')
+    expect(rb?.atPicks.map((entry) => entry.pick)).toEqual([11, 14])
+    const [atNext, atAfter] = rb?.atPicks ?? []
+    // ten picks intervene before 11: the expected best RB then is worse than the best now
+    expect(atNext?.expectedBest).toBeLessThan(rb?.now?.points ?? 0)
+    expect(atAfter?.expectedBest).toBeLessThanOrEqual((atNext?.expectedBest ?? 0) + 1e-9)
+    expect(atNext?.likely).not.toBeNull()
+    expect(atNext?.likely?.probFirst).toBeGreaterThan(0)
+  })
+
+  it('excludes banned players from the best-available pool', () => {
+    const file = writeOverrides([{ player: 'RB Player 1', action: 'ban' }])
+    const { context } = makeApp({ overridesFile: file })
+    const board = call(context, 'GET', '/api/board').json as {
+      costOfWaiting: { position: string; now: { name: string } | null }[]
+    }
+    expect(board.costOfWaiting.find((row) => row.position === 'RB')?.now?.name).toBe('RB Player 2')
+  })
+
+  it('collapses to best-now when no picks intervene (my turn, next pick is now)', () => {
+    const { context } = makeApp()
+    const gone = ['p-RB1', 'p-RB2', 'p-RB3', 'p-RB4', 'p-WR1', 'p-WR2', 'p-WR3', 'p-QB1', 'p-QB2', 'p-TE1']
+    for (const playerId of gone) {
+      call(context, 'POST', '/api/mark', { playerId, teamId: 'unknown' })
+    }
+    const board = call(context, 'GET', '/api/board').json as {
+      currentOverall: number
+      myNextPicks: number[]
+      costOfWaiting: {
+        position: string
+        now: { points: number } | null
+        atPicks: { pick: number; expectedBest: number }[]
+      }[]
+    }
+    expect(board.currentOverall).toBe(11)
+    expect(board.myNextPicks[0]).toBe(11)
+    const wr = board.costOfWaiting.find((row) => row.position === 'WR')
+    // zero intervening picks to 11: certain survival, so the expectation IS the best now
+    expect(wr?.atPicks[0]?.pick).toBe(11)
+    expect(wr?.atPicks[0]?.expectedBest).toBeCloseTo(wr?.now?.points ?? -1, 6)
+  })
+})

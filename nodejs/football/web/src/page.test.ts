@@ -29,6 +29,14 @@ describe('page structure', () => {
     expect(PAGE.includes('${')).toBe(false)
   })
 
+  it('ships the cost-of-waiting card and no Tier column', () => {
+    expect(PAGE).toContain('Cost of waiting')
+    expect(PAGE).toContain('id="waiting"')
+    expect(PAGE).not.toContain('data-k="tier"')
+    expect(PAGE).not.toContain('>Tier<')
+    expect(PAGE).not.toContain('Tier scarcity')
+  })
+
   it('every el() id the script references exists in the markup or in script-built markup', () => {
     const ids = new Set([...PAGE.matchAll(/id="([A-Za-z][\w-]*)"/g)].map((match) => match[1]))
     const referenced = [...script.matchAll(/\bel\('([^']+)'\)/g)].map((match) => match[1] as string)

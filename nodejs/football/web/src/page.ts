@@ -101,7 +101,6 @@ export const PAGE = `<!doctype html>
 
   .chip { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600;
     line-height: 17px; }
-  .tier-chip { min-width: 22px; text-align: center; }
 
   #controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 8px; }
   .tab { padding: 2px 10px; border-radius: 999px; background: transparent; }
@@ -135,6 +134,9 @@ export const PAGE = `<!doctype html>
   .slot-row { display: flex; gap: 6px; padding: 1px 0; }
   .slot-name { width: 56px; color: var(--muted-fg); flex-shrink: 0; }
   #recent div { padding: 1px 0; }
+  .wait-row { display: flex; gap: 8px; padding: 1px 0; align-items: baseline; font-variant-numeric: tabular-nums; }
+  .wait-pos { width: 28px; color: var(--muted-fg); flex-shrink: 0; }
+  .wait-cell { cursor: help; }
 
   #clockPanel { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary),
     0 0 24px color-mix(in oklab, var(--primary) 25%, transparent); margin-bottom: 12px; }
@@ -250,7 +252,7 @@ export const PAGE = `<!doctype html>
       <table>
         <thead>
           <tr>
-            <th class="l">Player</th><th class="l">Pos</th><th>Tier</th>
+            <th class="l">Player</th><th class="l">Pos</th>
             <th title="Projected final starter total if you take him now">Est team</th>
             <th title="Est team minus the best candidate's: green = within 3 pts (rollout noise — effectively tied, break the tie on Back@), amber = real but modest cost (3–15 pts), muted = expensive (>15 pts)">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
@@ -280,7 +282,6 @@ export const PAGE = `<!doctype html>
           <th data-k="byeWeek">Bye</th>
           <th data-k="points">Pts</th>
           <th data-k="vor">VOR</th>
-          <th data-k="tier">Tier</th>
           <th data-k="ecrRank">ECR</th>
           <th data-k="adp">ADP</th>
           <th data-k="roomDelta" title="Room delta: ESPN room ADP minus market ADP; positive = the room lets him fall">Rm Δ</th>
@@ -291,13 +292,13 @@ export const PAGE = `<!doctype html>
           <th></th>
         </tr>
       </thead>
-      <tbody id="rows"><tr><td colspan="16" class="l muted">loading…</td></tr></tbody>
+      <tbody id="rows"><tr><td colspan="15" class="l muted">loading…</td></tr></tbody>
     </table>
     </div>
   </div>
   <div id="side">
     <div class="card"><h3 id="rosterTitle">My roster</h3><div id="roster"></div><div id="byes"></div></div>
-    <div class="card"><h3>Tier scarcity</h3><div id="scarcity" class="muted"></div></div>
+    <div class="card"><h3 title="Best available consensus points now vs the expected best still there at your next two picks (profiled room model)">Cost of waiting</h3><div id="waiting" class="muted"></div></div>
     <div class="card"><h3>Recent picks</h3><div id="recent" class="muted"></div></div>
   </div>
 </div>
@@ -327,8 +328,7 @@ var THREAT_MARKS = ['', '!', '!!', '!!!'];
 var DELTA_NOISE = 3, DELTA_COSTLY = 15;
 var ui = { pos: 'ALL', search: '', sortKey: 'vor', sortDir: -1, showDrafted: false };
 var POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DST'];
-var ASC_DEFAULT = { rank: 1, name: 1, position: 1, team: 1, byeWeek: 1, tier: 1, ecrRank: 1, adp: 1, injuryStatus: 1 };
-var TIER_COLORS = ['--c-emerald', '--c-teal', '--c-sky', '--c-indigo', '--c-violet', '--c-amber', '--c-rose'];
+var ASC_DEFAULT = { rank: 1, name: 1, position: 1, team: 1, byeWeek: 1, ecrRank: 1, adp: 1, injuryStatus: 1 };
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, function (c) {
@@ -360,11 +360,6 @@ function chip(text, colorVar, extraClass, title) {
   return '<span class="chip ' + (extraClass || '') + '" ' + (title ? 'title="' + esc(title) + '" ' : '') +
     'style="background: color-mix(in oklab, ' + c + ' 15%, transparent); ' +
     'color: color-mix(in oklab, ' + c + ' 65%, var(--chip-text-mix));">' + text + '</span>';
-}
-function tierChip(tier) {
-  if (tier === null || tier === undefined) return '<span class="muted">—</span>';
-  var colorVar = TIER_COLORS[(tier - 1) % 7] || '--c-zinc';
-  return chip(String(tier), colorVar, 'tier-chip');
 }
 function nameMarkers(r, boosted) {
   var m = '';
@@ -574,7 +569,6 @@ function renderClock() {
       html.push('<tr class="' + (best ? 'best' : '') + '">' +
         '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
         '<td class="l">' + c.position + '</td>' +
-        '<td>' + tierChip(c.tier) + '</td>' +
         '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
         '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
@@ -650,6 +644,13 @@ function deltaBestClass(v) {
   if (v >= -DELTA_COSTLY) return 'odds-mid';
   return 'muted';
 }
+// Cost-of-waiting bands: same thresholds; the far band shouts (a cliff) instead of fading.
+function waitClass(v) {
+  if (v === null || v === undefined) return 'muted';
+  if (v >= -DELTA_NOISE) return 'odds-hi';
+  if (v >= -DELTA_COSTLY) return 'odds-mid';
+  return 'odds-lo';
+}
 
 function renderTable() {
   if (!B || !S) return;
@@ -696,7 +697,6 @@ function renderTable() {
       '<td>' + (r.byeWeek === null ? '—' : r.byeWeek) + '</td>' +
       '<td>' + num(r.points, 1) + '</td>' +
       '<td><b>' + num(r.vor, 1) + '</b></td>' +
-      '<td>' + tierChip(r.tier) + '</td>' +
       '<td>' + (r.ecrRank === null ? '—' : r.ecrRank) + '</td>' +
       '<td>' + num(r.adp, 1) + '</td>' +
       '<td class="' + deltaClass(r.roomDelta) + '" title="' + roomTitle + '">' + signed(r.roomDelta, 1) + '</td>' +
@@ -708,7 +708,7 @@ function renderTable() {
       '<td class="l">' + action + '</td>' +
       '</tr>');
   }
-  el('rows').innerHTML = html.length ? html.join('') : '<tr><td colspan="16" class="l muted">no rows</td></tr>';
+  el('rows').innerHTML = html.length ? html.join('') : '<tr><td colspan="15" class="l muted">no rows</td></tr>';
 }
 
 function renderSide() {
@@ -731,9 +731,20 @@ function renderSide() {
   });
   el('byes').innerHTML = byes.join('');
 
-  el('scarcity').innerHTML = (B ? B.scarcity : []).map(function (s) {
-    var tone = s.remaining <= 2 ? ' class="warn-text"' : '';
-    return '<div' + tone + '>' + s.position + ' T' + s.tier + ': ' + s.remaining + ' left</div>';
+  el('waiting').innerHTML = (B && B.costOfWaiting ? B.costOfWaiting : []).map(function (w) {
+    var nowPts = w.now ? w.now.points : null;
+    var cells = ['<span class="wait-pos">' + w.position + '</span>',
+      '<span class="mono wait-cell" title="' + (w.now ? 'best now: ' + esc(w.now.name) : 'nobody projected') + '">' +
+        num(nowPts, 0) + '</span>'];
+    (w.atPicks || []).forEach(function (a) {
+      var d = nowPts === null ? null : a.expectedBest - nowPts;
+      var title = '@' + a.pick + ' expected best ' + num(a.expectedBest, 1) +
+        (a.likely ? ' — likely ' + a.likely.name + ' (' + num(a.likely.points, 1) + ' pts, ' +
+          pct(a.likely.probFirst) + ' first)' : '');
+      cells.push('<span class="wait-cell" title="' + esc(title) + '">@' + a.pick +
+        ' <span class="' + waitClass(d) + '">' + signed(d, 0) + '</span></span>');
+    });
+    return '<div class="wait-row">' + cells.join('') + '</div>';
   }).join('') || '—';
 
   var recent = S.picks.slice(-8).reverse().map(function (p) {

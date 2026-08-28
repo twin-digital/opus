@@ -6,6 +6,8 @@ import {
   loadOverridesFile,
   loadRoomRulesFile,
   pickThreats,
+  takeDistribution,
+  teamAtPick,
   upcomingPicksForSlot,
   type Benchmarks,
   type BoardResult,
@@ -37,6 +39,7 @@ import type { EspnDraftDetailResponse, EspnLeagueCredentials } from '@twin-digit
 
 import { mulberry32, pickForOpponent } from './mock.js'
 import { newsBodyParagraphs } from './news.js'
+import { expectedBestAvailable } from './waiting.js'
 import { mapEspnPicks, mergePicks, slotForTeam, teamOnClock, type EffectivePick } from './picks.js'
 import { buildRoster, type RosterPlayer, type RosterSummary } from './roster.js'
 import { tierScarcity, type TierScarcity } from './scarcity.js'
@@ -100,6 +103,21 @@ export interface WebBoardRow extends BoardRow {
   threat: RowThreat | null
 }
 
+export interface WaitingPickOutlook {
+  pick: number
+  /** First-available expectation of best points at the pick (see expectedBestAvailable). */
+  expectedBest: number
+  /** The candidate likeliest to be the best one still available then. */
+  likely: { playerId: PlayerId; name: string; points: number; probFirst: number } | null
+}
+
+/** Per-position cost of waiting: best now vs the expectation at my next two picks. */
+export interface CostOfWaitingRow {
+  position: Position
+  now: { playerId: PlayerId; name: string; points: number } | null
+  atPicks: WaitingPickOutlook[]
+}
+
 export interface BoardPayload {
   version: number
   computedAt: string
@@ -113,6 +131,7 @@ export interface BoardPayload {
   /** Players carrying a points boost from the overrides file. */
   boostedIds: PlayerId[]
   scarcity: TierScarcity[]
+  costOfWaiting: CostOfWaitingRow[]
   rows: WebBoardRow[]
   drafted: DraftedRow[]
 }
@@ -883,6 +902,7 @@ export class App {
       captureRatio: live.captureRatio,
       boostedIds: [...new Set(this.overrides.filter((override) => override.action === 'boost').map((o) => o.playerId))],
       scarcity: tierScarcity(live.rows),
+      costOfWaiting: this.costOfWaiting(live.currentOverall, myNextPicks, live.rows),
       rows,
       drafted,
     }
@@ -930,6 +950,48 @@ export class App {
     }
     this.evaluateCache = { version: this.version, payload }
     return payload
+  }
+
+  /**
+   * Per-position cost of waiting. Survival to each of my next picks uses the same profiled
+   * take-distribution walk as the threat display (skipping my own turns), so the two agree;
+   * the expectation over a position is first-available over its top availables by points.
+   */
+  private costOfWaiting(currentOverall: number, myNextPicks: number[], rows: BoardRow[]): CostOfWaitingRow[] {
+    const targets = myNextPicks.slice(0, 2)
+    const { pickOrder } = this.settings.draft
+    const survival = new Map<PlayerId, number>(rows.map((row) => [row.playerId, 1]))
+    const survivalAt = new Map<number, Map<PlayerId, number>>()
+    const maxTarget = targets.length > 0 ? Math.max(...targets) : currentOverall
+    for (let pick = currentOverall; pick <= maxTarget; pick += 1) {
+      if (targets.includes(pick)) {
+        survivalAt.set(pick, new Map(survival))
+      }
+      if (pick === maxTarget) {
+        break
+      }
+      if (teamAtPick(pickOrder, pick) === this.options.myTeamId) {
+        continue
+      }
+      const distribution = takeDistribution(this.profiles, pickOrder, pick, rows)
+      for (const row of rows) {
+        const taken = distribution.get(row.playerId) ?? 0
+        survival.set(row.playerId, (survival.get(row.playerId) ?? 1) * (1 - taken))
+      }
+    }
+    return (['QB', 'RB', 'WR', 'TE'] as const).map((position) => {
+      const candidates = rows
+        .filter((row) => row.position === position && !row.banned && row.points !== null)
+        .map((row) => ({ playerId: row.playerId, name: row.name, points: row.points ?? 0 }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 30)
+      const atPicks = targets.map((pick) => {
+        const snapshot = survivalAt.get(pick)
+        const { expected, likely } = expectedBestAvailable(candidates, (id) => snapshot?.get(id) ?? 1)
+        return { pick, expectedBest: expected, likely }
+      })
+      return { position, now: candidates[0] ?? null, atPicks }
+    })
   }
 
   private boardState(picks: EffectivePick[]) {
