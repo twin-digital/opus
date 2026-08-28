@@ -6,6 +6,7 @@ import {
   fetchEspnLeagueSettings,
   fetchEspnProjections,
   summarizeEspnProjection,
+  type EspnDraftDetailResponse,
   type EspnLeagueCredentials,
 } from '../fetchers/espn.js'
 import { fetchFantasyProsEcr } from '../fetchers/fantasypros.js'
@@ -425,8 +426,9 @@ export const runIngest = async (options: IngestOptions): Promise<IngestSummary> 
 
     // -- League (creds-gated) ----------------------------------------------
     let leagueMessage: string | null = null
-    let draftPicks: DraftPick[] = []
     let leagueStored = false
+    /** Raw ESPN pick rows; resolved and written only AFTER the player-table refresh below. */
+    let espnPicks: NonNullable<NonNullable<EspnDraftDetailResponse['draftDetail']>['picks']> = []
     if (options.espnCreds) {
       log('Fetching ESPN league settings + draft detail...')
       const settingsResponse = await fetchEspnLeagueSettings(season, options.espnCreds)
@@ -436,16 +438,37 @@ export const runIngest = async (options: IngestOptions): Promise<IngestSummary> 
       log(
         `  league "${leagueSettings.name}" (${leagueSettings.size} teams, draft ${leagueSettings.draft.date ?? 'unscheduled'})`,
       )
-
       const draftDetail = await fetchEspnDraftDetail(season, options.espnCreds)
-      const picks = draftDetail.draftDetail?.picks ?? []
-      draftPicks = []
-      for (const pick of picks) {
+      espnPicks = draftDetail.draftDetail?.picks ?? []
+    } else {
+      leagueMessage =
+        'ESPN league credentials absent (set ESPN_LEAGUE_ID, ESPN_S2, ESPN_SWID) — ' +
+        'skipping LeagueSettings and DraftPick; all public sources were still ingested.'
+      log(leagueMessage)
+    }
+
+    // -- Store ---------------------------------------------------------------
+    log('Writing store...')
+    // The snapshot refresh clears draft_pick for FK integrity; picks are rewritten below,
+    // against the NEW player table. Without creds the stored picks are carried across.
+    const keptPicks = store.getDraftPicks()
+    const keptPicksAsOf = store.getAsOfStamps().draftPick
+    const players: Player[] = [...drafts.values()].map(
+      ({ adp: _adp, ecr: _ecr, percentRosteredEspn: _pe, percentRosteredFp: _pf, ...player }) => player,
+    )
+    store.replacePlayers(players, asOf)
+    for (const mapping of resolver.newMappings) {
+      store.upsertMapping(mapping)
+    }
+
+    let draftPicks: DraftPick[] = []
+    if (options.espnCreds) {
+      for (const pick of espnPicks) {
         if (pick.playerId <= 0) {
           continue // pre-draft placeholder slot (playerId -1 until the pick is made)
         }
         const ref = resolver.resolveExact('espn', String(pick.playerId))
-        if (!ref) {
+        if (!ref || !drafts.has(ref.playerId)) {
           log(`  WARNING: draft pick ${pick.overallPickNumber} references unresolved ESPN player ${pick.playerId}`)
           continue
         }
@@ -460,21 +483,13 @@ export const runIngest = async (options: IngestOptions): Promise<IngestSummary> 
       }
       store.replaceDraftPicks(draftPicks, asOf)
       log(`  ${draftPicks.length} draft picks stored`)
-    } else {
-      leagueMessage =
-        'ESPN league credentials absent (set ESPN_LEAGUE_ID, ESPN_S2, ESPN_SWID) — ' +
-        'skipping LeagueSettings and DraftPick; all public sources were still ingested.'
-      log(leagueMessage)
-    }
-
-    // -- Store ---------------------------------------------------------------
-    log('Writing store...')
-    const players: Player[] = [...drafts.values()].map(
-      ({ adp: _adp, ecr: _ecr, percentRosteredEspn: _pe, percentRosteredFp: _pf, ...player }) => player,
-    )
-    store.replacePlayers(players, asOf)
-    for (const mapping of resolver.newMappings) {
-      store.upsertMapping(mapping)
+    } else if (keptPicks.length > 0) {
+      draftPicks = keptPicks.filter((pick) => drafts.has(pick.playerId))
+      store.replaceDraftPicks(draftPicks, keptPicksAsOf ?? asOf)
+      if (draftPicks.length < keptPicks.length) {
+        log(`  WARNING: dropped ${keptPicks.length - draftPicks.length} stored draft picks — players left the snapshot`)
+      }
+      log(`  ${draftPicks.length} stored draft picks carried across the refresh (no ESPN creds)`)
     }
     for (const source of ['sleeper', 'espn', 'fantasypros'] as const) {
       if (source === 'fantasypros' && fpKept !== null) {

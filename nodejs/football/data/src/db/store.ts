@@ -425,23 +425,24 @@ export class Store {
     return (this.db.prepare('SELECT COUNT(*) AS n FROM news_assessment').get() as { n: number }).n
   }
 
-  /** Worst-of rollup per player with any stored news, for board dots. */
+  /** Newest-assessed rollup per player with any stored news, for board dots. */
   getNewsSignals(): PlayerNewsSignal[] {
     interface Row {
       player_id: PlayerId
+      published: string | null
       direction: NewsDirection | null
       impact: NewsImpact | null
     }
     const rows = this.db
       .prepare(
-        `SELECT n.player_id, a.direction, a.impact
+        `SELECT n.player_id, n.published, a.direction, a.impact
          FROM player_news n
          LEFT JOIN news_assessment a ON a.news_id = n.id`,
       )
       .all() as Row[]
     const byPlayer = new Map<
       PlayerId,
-      { assessed: { direction: NewsDirection; impact: NewsImpact }[]; items: number }
+      { assessed: { direction: NewsDirection; impact: NewsImpact; published: string | null }[]; items: number }
     >()
     for (const row of rows) {
       let entry = byPlayer.get(row.player_id)
@@ -451,7 +452,7 @@ export class Store {
       }
       entry.items += 1
       if (row.direction !== null && row.impact !== null) {
-        entry.assessed.push({ direction: row.direction, impact: row.impact })
+        entry.assessed.push({ direction: row.direction, impact: row.impact, published: row.published })
       }
     }
     return [...byPlayer.entries()].map(([playerId, entry]) => {

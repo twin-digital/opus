@@ -1,29 +1,34 @@
 import type { NewsDirection, NewsImpact } from '../reference/news.js'
 
-const DIRECTION_SEVERITY: Record<NewsDirection, number> = { improves: 0, unclear: 1, harms: 2 }
-const IMPACT_RANK: Record<NewsImpact, number> = { low: 0, med: 1, high: 2 }
-
-/**
- * Worst-of rollup for a player's assessed items: the worst direction present, and the highest
- * impact among assessments carrying that direction. Null when nothing is assessed.
- */
-export const rollupAssessments = (
-  assessments: { direction: NewsDirection; impact: NewsImpact }[],
-): { direction: NewsDirection; impact: NewsImpact } | null => {
-  if (assessments.length === 0) {
+const timestamp = (published: string | null): number | null => {
+  if (published === null) {
     return null
   }
-  let direction: NewsDirection = 'improves'
-  for (const a of assessments) {
-    if (DIRECTION_SEVERITY[a.direction] > DIRECTION_SEVERITY[direction]) {
-      direction = a.direction
+  const parsed = Date.parse(published)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+/**
+ * Recency rollup for a player's assessed items: the most recently published assessment's
+ * direction and impact — a resolved injury must not stay red because an older item said
+ * harms. Dated items outrank undated ones; among undated (or tied) items the first given
+ * wins. Null when nothing is assessed.
+ */
+export const rollupAssessments = (
+  assessments: { direction: NewsDirection; impact: NewsImpact; published: string | null }[],
+): { direction: NewsDirection; impact: NewsImpact } | null => {
+  const first = assessments[0]
+  if (first === undefined) {
+    return null
+  }
+  let newest = first
+  let newestAt = timestamp(first.published)
+  for (const assessment of assessments.slice(1)) {
+    const at = timestamp(assessment.published)
+    if (at !== null && (newestAt === null || at > newestAt)) {
+      newest = assessment
+      newestAt = at
     }
   }
-  let impact: NewsImpact = 'low'
-  for (const a of assessments) {
-    if (a.direction === direction && IMPACT_RANK[a.impact] > IMPACT_RANK[impact]) {
-      impact = a.impact
-    }
-  }
-  return { direction, impact }
+  return { direction: newest.direction, impact: newest.impact }
 }

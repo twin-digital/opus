@@ -101,17 +101,18 @@ describe('Store news', () => {
     }).toThrow(/FOREIGN KEY/)
   })
 
-  it('rolls signals up worst-direction first, then highest impact within that direction', () => {
+  it('rolls signals up by recency: the newest assessed item is the dot', () => {
     const store = new Store(openDatabase(':memory:'))
-    const mixed = mintPlayerId()
-    const good = mintPlayerId()
+    const resolved = mintPlayerId() // exited practice (harms), then returned (improves)
+    const stillHurt = mintPlayerId() // practiced (improves), then ruled out (harms)
     const unassessed = mintPlayerId()
     store.upsertNewsItems(
       [
-        draft(mixed, { externalId: 'm1' }),
-        draft(mixed, { externalId: 'm2' }),
-        draft(mixed, { externalId: 'm3' }),
-        draft(good, { externalId: 'g1' }),
+        draft(resolved, { externalId: 'r1', published: '2026-08-20T00:00:00Z' }),
+        draft(resolved, { externalId: 'r2', published: '2026-08-25T00:00:00Z' }),
+        draft(resolved, { externalId: 'r3', published: null }),
+        draft(stillHurt, { externalId: 's1', published: '2026-08-20T00:00:00Z' }),
+        draft(stillHurt, { externalId: 's2', published: '2026-08-25T00:00:00Z' }),
         draft(unassessed, { externalId: 'u1' }),
       ],
       't1',
@@ -119,14 +120,20 @@ describe('Store news', () => {
     const idFor = (externalId: string): never =>
       store.getNewsItems().find((item) => item.externalId === externalId)?.id as never
     const stamp = { summary: 'x', assessedAt: 't1', assessedBy: 'agent' }
-    store.upsertAssessment({ newsId: idFor('m1'), direction: 'improves', impact: 'high', ...stamp })
-    store.upsertAssessment({ newsId: idFor('m2'), direction: 'harms', impact: 'med', ...stamp })
-    store.upsertAssessment({ newsId: idFor('m3'), direction: 'unclear', impact: 'high', ...stamp })
-    store.upsertAssessment({ newsId: idFor('g1'), direction: 'improves', impact: 'med', ...stamp })
+    store.upsertAssessment({ newsId: idFor('r1'), direction: 'harms', impact: 'high', ...stamp })
+    store.upsertAssessment({ newsId: idFor('r2'), direction: 'improves', impact: 'med', ...stamp })
+    store.upsertAssessment({ newsId: idFor('r3'), direction: 'harms', impact: 'high', ...stamp }) // undated loses to dated
+    store.upsertAssessment({ newsId: idFor('s1'), direction: 'improves', impact: 'low', ...stamp })
+    store.upsertAssessment({ newsId: idFor('s2'), direction: 'harms', impact: 'med', ...stamp })
 
     const signals = new Map(store.getNewsSignals().map((signal) => [signal.playerId, signal]))
-    expect(signals.get(mixed)).toMatchObject({ direction: 'harms', impact: 'med', itemCount: 3, assessedCount: 3 })
-    expect(signals.get(good)).toMatchObject({ direction: 'improves', impact: 'med', itemCount: 1, assessedCount: 1 })
+    expect(signals.get(resolved)).toMatchObject({
+      direction: 'improves',
+      impact: 'med',
+      itemCount: 3,
+      assessedCount: 3,
+    })
+    expect(signals.get(stillHurt)).toMatchObject({ direction: 'harms', impact: 'med', itemCount: 2, assessedCount: 2 })
     expect(signals.get(unassessed)).toMatchObject({ direction: null, impact: null, itemCount: 1, assessedCount: 0 })
   })
 })
