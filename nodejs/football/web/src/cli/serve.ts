@@ -25,10 +25,12 @@ const espnCreds = (): EspnLeagueCredentials | null => {
   return { leagueId, espnS2, swid }
 }
 
-const fpProjectionsMode = (): FpProjectionsMode | undefined => {
+// The UI refresh exists for ADP/injury/roster churn; FP projections are quota-bound (50
+// API calls/day) and don't move intraday, so the button defaults to keeping them.
+const fpProjectionsMode = (): FpProjectionsMode => {
   const mode = process.env.FP_PROJECTIONS_MODE
   if (mode === undefined) {
-    return undefined
+    return 'skip'
   }
   if (!(FP_PROJECTIONS_MODES as readonly string[]).includes(mode)) {
     throw new Error(`invalid FP_PROJECTIONS_MODE: ${mode} (expected ${FP_PROJECTIONS_MODES.join('|')})`)

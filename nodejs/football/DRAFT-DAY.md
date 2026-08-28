@@ -11,8 +11,13 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 1. **Verify ESPN creds still work** (they expire if you re-log-in to ESPN):
 
    ```sh
-   cd nodejs/football/data && pnpm ingest
+   cd nodejs/football/data && FP_PROJECTIONS_MODE=skip pnpm ingest
    ```
+
+   `skip` keeps the stored FantasyPros projections: the FP API allows 50 calls/day and a
+   full FP fetch costs 32, so plain `pnpm ingest` can exhaust the quota and downgrade FP
+   coverage to the 40-row page scrape. Only drop the flag when you deliberately want a
+   fresh FP pull and know the quota is available.
 
    A working run prints `league "Choo choo choo" (12 teams, draft 2026-08-28T20:00:00.000Z)`
    and a summary with `league_settings: 1`. If the ESPN step fails with 401/403: log in to
@@ -38,8 +43,10 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 ## During the draft
 
 - Turn **live poll** on. Picks land on the board within ~5s of ESPN registering them.
-- The **Refresh data** button re-runs the full ingest (several minutes) — use it only
-  before the draft, not during; the poll keeps picks current on its own.
+- The **Refresh data** button re-runs the ingest (several minutes) — use it only
+  before the draft, not during; the poll keeps picks current on its own. It keeps the
+  stored FantasyPros projections (skip mode) unless the server was started with
+  `FP_PROJECTIONS_MODE` set otherwise.
 - Watch the pill: `POLL OK Ns` (green, N = seconds since last success) is healthy.
   `POLL STALE` / `POLL ERR xN` means ESPN calls are failing; the server keeps retrying with
   backoff (5s → 60s) and keeps serving the last-known state — nothing crashes.
