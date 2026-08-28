@@ -1930,6 +1930,9 @@ importers:
       '@twin-digital/football-data':
         specifier: workspace:*
         version: link:../data
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.4.2
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'

@@ -1,0 +1,3360 @@
+{
+  "season": 2024,
+  "source": "nflverse player_stats_2024.csv (REG rows summed per player, scored under the league's 2024 rules)",
+  "players": [
+    {
+      "gsisId": "00-0034796",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "points": 434.38
+    },
+    {
+      "gsisId": "00-0036442",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "points": 381.82
+    },
+    {
+      "gsisId": "00-0034855",
+      "name": "Baker Mayfield",
+      "position": "QB",
+      "points": 381.8
+    },
+    {
+      "gsisId": "00-0034857",
+      "name": "Josh Allen",
+      "position": "QB",
+      "points": 378.34000000000003
+    },
+    {
+      "gsisId": "00-0039910",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "points": 364.82000000000005
+    },
+    {
+      "gsisId": "00-0036900",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "points": 339.5
+    },
+    {
+      "gsisId": "00-0034844",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "points": 338.8
+    },
+    {
+      "gsisId": "00-0033106",
+      "name": "Jared Goff",
+      "position": "QB",
+      "points": 335.96
+    },
+    {
+      "gsisId": "00-0039139",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "points": 328.90000000000003
+    },
+    {
+      "gsisId": "00-0039732",
+      "name": "Bo Nix",
+      "position": "QB",
+      "points": 328.7
+    },
+    {
+      "gsisId": "00-0032764",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "points": 326.90000000000003
+    },
+    {
+      "gsisId": "00-0036389",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "points": 320.12
+    },
+    {
+      "gsisId": "00-0034869",
+      "name": "Sam Darnold",
+      "position": "QB",
+      "points": 319.96
+    },
+    {
+      "gsisId": "00-0038542",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "points": 311.20000000000005
+    },
+    {
+      "gsisId": "00-0035228",
+      "name": "Kyler Murray",
+      "position": "QB",
+      "points": 308.24
+    },
+    {
+      "gsisId": "00-0033873",
+      "name": "Patrick Mahomes",
+      "position": "QB",
+      "points": 293.52
+    },
+    {
+      "gsisId": "00-0036355",
+      "name": "Justin Herbert",
+      "position": "QB",
+      "points": 288.4
+    },
+    {
+      "gsisId": "00-0030565",
+      "name": "Geno Smith",
+      "position": "QB",
+      "points": 281
+    },
+    {
+      "gsisId": "00-0037834",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "points": 278.86
+    },
+    {
+      "gsisId": "00-0035700",
+      "name": "Josh Jacobs",
+      "position": "RB",
+      "points": 275.1
+    },
+    {
+      "gsisId": "00-0023459",
+      "name": "Aaron Rodgers",
+      "position": "QB",
+      "points": 267.58
+    },
+    {
+      "gsisId": "00-0036322",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "points": 265.98
+    },
+    {
+      "gsisId": "00-0039040",
+      "name": "Devon Achane",
+      "position": "RB",
+      "points": 260.9
+    },
+    {
+      "gsisId": "00-0039918",
+      "name": "Caleb Williams",
+      "position": "QB",
+      "points": 260.54
+    },
+    {
+      "gsisId": "00-0036963",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "points": 258.68
+    },
+    {
+      "gsisId": "00-0037840",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "points": 255.1
+    },
+    {
+      "gsisId": "00-0037248",
+      "name": "James Cook",
+      "position": "RB",
+      "points": 250.70000000000002
+    },
+    {
+      "gsisId": "00-0036264",
+      "name": "Jordan Love",
+      "position": "QB",
+      "points": 244.86
+    },
+    {
+      "gsisId": "00-0039893",
+      "name": "Brian Thomas",
+      "position": "WR",
+      "points": 240.5
+    },
+    {
+      "gsisId": "00-0036223",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "points": 237.7
+    },
+    {
+      "gsisId": "00-0039163",
+      "name": "C.J. Stroud",
+      "position": "QB",
+      "points": 232.38
+    },
+    {
+      "gsisId": "00-0033906",
+      "name": "Alvin Kamara",
+      "position": "RB",
+      "points": 231.3
+    },
+    {
+      "gsisId": "00-0037238",
+      "name": "Drake London",
+      "position": "WR",
+      "points": 230.8
+    },
+    {
+      "gsisId": "00-0033553",
+      "name": "James Conner",
+      "position": "RB",
+      "points": 230.3
+    },
+    {
+      "gsisId": "00-0038597",
+      "name": "Chase Brown",
+      "position": "RB",
+      "points": 228
+    },
+    {
+      "gsisId": "00-0035659",
+      "name": "Terry McLaurin",
+      "position": "WR",
+      "points": 226.8
+    },
+    {
+      "gsisId": "00-0026498",
+      "name": "Matthew Stafford",
+      "position": "QB",
+      "points": 222.57999999999998
+    },
+    {
+      "gsisId": "00-0033897",
+      "name": "Joe Mixon",
+      "position": "RB",
+      "points": 222.50000000000003
+    },
+    {
+      "gsisId": "00-0039361",
+      "name": "Bucky Irving",
+      "position": "RB",
+      "points": 220.89999999999998
+    },
+    {
+      "gsisId": "00-0036555",
+      "name": "Chuba Hubbard",
+      "position": "RB",
+      "points": 220.1
+    },
+    {
+      "gsisId": "00-0039337",
+      "name": "Malik Nabers",
+      "position": "WR",
+      "points": 219.10000000000002
+    },
+    {
+      "gsisId": "00-0033293",
+      "name": "Aaron Jones",
+      "position": "RB",
+      "points": 216.10000000000002
+    },
+    {
+      "gsisId": "00-0036358",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "points": 212.9
+    },
+    {
+      "gsisId": "00-0038120",
+      "name": "Breece Hall",
+      "position": "RB",
+      "points": 212.40000000000003
+    },
+    {
+      "gsisId": "00-0039338",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "points": 206.7
+    },
+    {
+      "gsisId": "00-0039150",
+      "name": "Bryce Young",
+      "position": "QB",
+      "points": 204.02
+    },
+    {
+      "gsisId": "00-0035685",
+      "name": "David Montgomery",
+      "position": "RB",
+      "points": 203.72
+    },
+    {
+      "gsisId": "00-0031408",
+      "name": "Mike Evans",
+      "position": "WR",
+      "points": 203.4
+    },
+    {
+      "gsisId": "00-0038543",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "points": 203
+    },
+    {
+      "gsisId": "00-0037740",
+      "name": "Garrett Wilson",
+      "position": "WR",
+      "points": 201.4
+    },
+    {
+      "gsisId": "00-0039915",
+      "name": "Ladd McConkey",
+      "position": "WR",
+      "points": 199.9
+    },
+    {
+      "gsisId": "00-0034348",
+      "name": "Courtland Sutton",
+      "position": "WR",
+      "points": 199.8
+    },
+    {
+      "gsisId": "00-0031381",
+      "name": "Davante Adams",
+      "position": "WR",
+      "points": 198.8
+    },
+    {
+      "gsisId": "00-0033288",
+      "name": "George Kittle",
+      "position": "TE",
+      "points": 197.60000000000002
+    },
+    {
+      "gsisId": "00-0036407",
+      "name": "Jerry Jeudy",
+      "position": "WR",
+      "points": 195.9
+    },
+    {
+      "gsisId": "00-0036275",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "points": 193.5
+    },
+    {
+      "gsisId": "00-0029604",
+      "name": "Kirk Cousins",
+      "position": "QB",
+      "points": 192.32
+    },
+    {
+      "gsisId": "00-0034827",
+      "name": "D.J. Moore",
+      "position": "WR",
+      "points": 189.10000000000002
+    },
+    {
+      "gsisId": "00-0036212",
+      "name": "Tua Tagovailoa",
+      "position": "QB",
+      "points": 188.58
+    },
+    {
+      "gsisId": "00-0037744",
+      "name": "Trey McBride",
+      "position": "TE",
+      "points": 188.3
+    },
+    {
+      "gsisId": "00-0039851",
+      "name": "Drake Maye",
+      "position": "QB",
+      "points": 187.14
+    },
+    {
+      "gsisId": "00-0036893",
+      "name": "Najee Harris",
+      "position": "RB",
+      "points": 186.60000000000002
+    },
+    {
+      "gsisId": "00-0036410",
+      "name": "Tee Higgins",
+      "position": "WR",
+      "points": 185.60000000000002
+    },
+    {
+      "gsisId": "00-0035676",
+      "name": "A.J. Brown",
+      "position": "WR",
+      "points": 183.4
+    },
+    {
+      "gsisId": "00-0037240",
+      "name": "Jameson Williams",
+      "position": "WR",
+      "points": 183.2
+    },
+    {
+      "gsisId": "00-0038994",
+      "name": "Jordan Addison",
+      "position": "WR",
+      "points": 181
+    },
+    {
+      "gsisId": "00-0035261",
+      "name": "Tony Pollard",
+      "position": "RB",
+      "points": 180.20000000000002
+    },
+    {
+      "gsisId": "00-0033858",
+      "name": "Jonnu Smith",
+      "position": "TE",
+      "points": 178.3
+    },
+    {
+      "gsisId": "00-0036139",
+      "name": "Rico Dowdle",
+      "position": "RB",
+      "points": 178.3
+    },
+    {
+      "gsisId": "00-0029263",
+      "name": "Russell Wilson",
+      "position": "QB",
+      "points": 177.78
+    },
+    {
+      "gsisId": "00-0033040",
+      "name": "Tyreek Hill",
+      "position": "WR",
+      "points": 177.7
+    },
+    {
+      "gsisId": "00-0036554",
+      "name": "Nico Collins",
+      "position": "WR",
+      "points": 176.60000000000002
+    },
+    {
+      "gsisId": "00-0036158",
+      "name": "J.K. Dobbins",
+      "position": "RB",
+      "points": 175.8
+    },
+    {
+      "gsisId": "00-0039164",
+      "name": "Anthony Richardson",
+      "position": "QB",
+      "points": 174.86
+    },
+    {
+      "gsisId": "00-0034960",
+      "name": "Jakobi Meyers",
+      "position": "WR",
+      "points": 174.5
+    },
+    {
+      "gsisId": "00-0037256",
+      "name": "Rachaad White",
+      "position": "RB",
+      "points": 174.10000000000002
+    },
+    {
+      "gsisId": "00-0039064",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "points": 172.5
+    },
+    {
+      "gsisId": "00-0036259",
+      "name": "Jauan Jennings",
+      "position": "WR",
+      "points": 172
+    },
+    {
+      "gsisId": "00-0039146",
+      "name": "Jayden Reed",
+      "position": "WR",
+      "points": 169.5
+    },
+    {
+      "gsisId": "00-0034837",
+      "name": "Calvin Ridley",
+      "position": "WR",
+      "points": 167.2
+    },
+    {
+      "gsisId": "00-0039075",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "points": 167.1
+    },
+    {
+      "gsisId": "00-0039849",
+      "name": "Marvin Harrison",
+      "position": "WR",
+      "points": 165.5
+    },
+    {
+      "gsisId": "00-0036912",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "points": 165.4
+    },
+    {
+      "gsisId": "00-0039384",
+      "name": "Tyrone Tracy",
+      "position": "RB",
+      "points": 163.3
+    },
+    {
+      "gsisId": "00-0039165",
+      "name": "Zach Charbonnet",
+      "position": "RB",
+      "points": 162.70000000000002
+    },
+    {
+      "gsisId": "00-0034753",
+      "name": "Mark Andrews",
+      "position": "TE",
+      "points": 161.3
+    },
+    {
+      "gsisId": "00-0036309",
+      "name": "Darnell Mooney",
+      "position": "WR",
+      "points": 161.2
+    },
+    {
+      "gsisId": "00-0036875",
+      "name": "Rhamondre Stevenson",
+      "position": "RB",
+      "points": 159.40000000000003
+    },
+    {
+      "gsisId": "00-0038134",
+      "name": "Kenneth Walker",
+      "position": "RB",
+      "points": 158.20000000000002
+    },
+    {
+      "gsisId": "00-0035640",
+      "name": "DK Metcalf",
+      "position": "WR",
+      "points": 158.2
+    },
+    {
+      "gsisId": "00-0039894",
+      "name": "Xavier Worthy",
+      "position": "WR",
+      "points": 157.70000000000002
+    },
+    {
+      "gsisId": "00-0031280",
+      "name": "Derek Carr",
+      "position": "QB",
+      "points": 155.89999999999998
+    },
+    {
+      "gsisId": "00-0036971",
+      "name": "Trevor Lawrence",
+      "position": "QB",
+      "points": 152.7
+    },
+    {
+      "gsisId": "00-0036550",
+      "name": "Rashod Bateman",
+      "position": "WR",
+      "points": 152.10000000000002
+    },
+    {
+      "gsisId": "00-0030279",
+      "name": "Keenan Allen",
+      "position": "WR",
+      "points": 150.4
+    },
+    {
+      "gsisId": "00-0037746",
+      "name": "Brian Robinson",
+      "position": "RB",
+      "points": 149.8
+    },
+    {
+      "gsisId": "00-0038544",
+      "name": "Quentin Johnston",
+      "position": "WR",
+      "points": 147.2
+    },
+    {
+      "gsisId": "00-0030506",
+      "name": "Travis Kelce",
+      "position": "TE",
+      "points": 146.9
+    },
+    {
+      "gsisId": "00-0038997",
+      "name": "Josh Downs",
+      "position": "WR",
+      "points": 146.20000000000002
+    },
+    {
+      "gsisId": "00-0039065",
+      "name": "Sam LaPorta",
+      "position": "TE",
+      "points": 144.60000000000002
+    },
+    {
+      "gsisId": "00-0037261",
+      "name": "Khalil Shakir",
+      "position": "WR",
+      "points": 144.5
+    },
+    {
+      "gsisId": "00-0030061",
+      "name": "Zach Ertz",
+      "position": "TE",
+      "points": 144.4
+    },
+    {
+      "gsisId": "00-0033923",
+      "name": "Kareem Hunt",
+      "position": "RB",
+      "points": 143.9
+    },
+    {
+      "gsisId": "00-0031503",
+      "name": "Jameis Winston",
+      "position": "QB",
+      "points": 143.14
+    },
+    {
+      "gsisId": "00-0037664",
+      "name": "Alec Pierce",
+      "position": "WR",
+      "points": 142.9
+    },
+    {
+      "gsisId": "00-0035710",
+      "name": "Daniel Jones",
+      "position": "QB",
+      "points": 142.3
+    },
+    {
+      "gsisId": "00-0033908",
+      "name": "Cooper Kupp",
+      "position": "WR",
+      "points": 141.5
+    },
+    {
+      "gsisId": "00-0038996",
+      "name": "Tucker Kraft",
+      "position": "TE",
+      "points": 138.3
+    },
+    {
+      "gsisId": "00-0038117",
+      "name": "Wan'Dale Robinson",
+      "position": "WR",
+      "points": 136.2
+    },
+    {
+      "gsisId": "00-0036894",
+      "name": "Pat Freiermuth",
+      "position": "TE",
+      "points": 135.8
+    },
+    {
+      "gsisId": "00-0037247",
+      "name": "George Pickens",
+      "position": "WR",
+      "points": 134.9
+    },
+    {
+      "gsisId": "00-0039152",
+      "name": "Will Levis",
+      "position": "QB",
+      "points": 131.94
+    },
+    {
+      "gsisId": "00-0036997",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "points": 131.9
+    },
+    {
+      "gsisId": "00-0036252",
+      "name": "Michael Pittman",
+      "position": "WR",
+      "points": 131.3
+    },
+    {
+      "gsisId": "00-0035719",
+      "name": "Deebo Samuel",
+      "position": "WR",
+      "points": 130.1
+    },
+    {
+      "gsisId": "00-0037666",
+      "name": "Jalen Tolbert",
+      "position": "WR",
+      "points": 127.5
+    },
+    {
+      "gsisId": "00-0038555",
+      "name": "Tank Bigsby",
+      "position": "RB",
+      "points": 125.50000000000001
+    },
+    {
+      "gsisId": "00-0033077",
+      "name": "Dak Prescott",
+      "position": "QB",
+      "points": 124.52000000000001
+    },
+    {
+      "gsisId": "00-0036613",
+      "name": "Jaylen Waddle",
+      "position": "WR",
+      "points": 120.60000000000001
+    },
+    {
+      "gsisId": "00-0036945",
+      "name": "Justin Fields",
+      "position": "QB",
+      "points": 120.14000000000001
+    },
+    {
+      "gsisId": "00-0036182",
+      "name": "Nick Westbrook-Ikhine",
+      "position": "WR",
+      "points": 119.7
+    },
+    {
+      "gsisId": "00-0034972",
+      "name": "Alexander Mattison",
+      "position": "RB",
+      "points": 119.4
+    },
+    {
+      "gsisId": "00-0030564",
+      "name": "DeAndre Hopkins",
+      "position": "WR",
+      "points": 119
+    },
+    {
+      "gsisId": "00-0039919",
+      "name": "Rome Odunze",
+      "position": "WR",
+      "points": 117.9
+    },
+    {
+      "gsisId": "00-0039855",
+      "name": "Jalen McMillan",
+      "position": "WR",
+      "points": 116.9
+    },
+    {
+      "gsisId": "00-0033885",
+      "name": "David Njoku",
+      "position": "TE",
+      "points": 116.5
+    },
+    {
+      "gsisId": "00-0030035",
+      "name": "Adam Thielen",
+      "position": "WR",
+      "points": 115.5
+    },
+    {
+      "gsisId": "00-0037267",
+      "name": "Jerome Ford",
+      "position": "RB",
+      "points": 115.5
+    },
+    {
+      "gsisId": "00-0033699",
+      "name": "Austin Ekeler",
+      "position": "RB",
+      "points": 114.80000000000001
+    },
+    {
+      "gsisId": "00-0038621",
+      "name": "Demario Douglas",
+      "position": "WR",
+      "points": 114.7
+    },
+    {
+      "gsisId": "00-0033662",
+      "name": "Cooper Rush",
+      "position": "QB",
+      "points": 114.56
+    },
+    {
+      "gsisId": "00-0038977",
+      "name": "Tank Dell",
+      "position": "WR",
+      "points": 114.5
+    },
+    {
+      "gsisId": "00-0033921",
+      "name": "Chris Godwin",
+      "position": "WR",
+      "points": 112.80000000000001
+    },
+    {
+      "gsisId": "00-0033090",
+      "name": "Hunter Henry",
+      "position": "TE",
+      "points": 112.4
+    },
+    {
+      "gsisId": "00-0034407",
+      "name": "Ray-Ray McCloud",
+      "position": "WR",
+      "points": 111.5
+    },
+    {
+      "gsisId": "00-0038129",
+      "name": "Cade Otton",
+      "position": "TE",
+      "points": 111.1
+    },
+    {
+      "gsisId": "00-0036973",
+      "name": "Travis Etienne",
+      "position": "RB",
+      "points": 110.70000000000002
+    },
+    {
+      "gsisId": "00-0038976",
+      "name": "Marvin Mims",
+      "position": "WR",
+      "points": 110
+    },
+    {
+      "gsisId": "00-0037525",
+      "name": "Jordan Mason",
+      "position": "RB",
+      "points": 109.5
+    },
+    {
+      "gsisId": "00-0037816",
+      "name": "Romeo Doubs",
+      "position": "WR",
+      "points": 109.1
+    },
+    {
+      "gsisId": "00-0034829",
+      "name": "Mike Gesicki",
+      "position": "TE",
+      "points": 109
+    },
+    {
+      "gsisId": "00-0032775",
+      "name": "Demarcus Robinson",
+      "position": "WR",
+      "points": 108
+    },
+    {
+      "gsisId": "00-0036970",
+      "name": "Kyle Pitts",
+      "position": "TE",
+      "points": 107.7
+    },
+    {
+      "gsisId": "00-0039875",
+      "name": "Ray Davis",
+      "position": "RB",
+      "points": 107.60000000000001
+    },
+    {
+      "gsisId": "00-0034521",
+      "name": "Allen Lazard",
+      "position": "WR",
+      "points": 107.5
+    },
+    {
+      "gsisId": "00-0035289",
+      "name": "Gardner Minshew",
+      "position": "QB",
+      "points": 106.32
+    },
+    {
+      "gsisId": "00-0034975",
+      "name": "Justice Hill",
+      "position": "RB",
+      "points": 106.1
+    },
+    {
+      "gsisId": "00-0026158",
+      "name": "Joe Flacco",
+      "position": "QB",
+      "points": 106.03999999999999
+    },
+    {
+      "gsisId": "00-0038563",
+      "name": "Tre Tucker",
+      "position": "WR",
+      "points": 105.80000000000001
+    },
+    {
+      "gsisId": "00-0032104",
+      "name": "Ameer Abdullah",
+      "position": "RB",
+      "points": 105.19999999999999
+    },
+    {
+      "gsisId": "00-0037228",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "points": 105.1
+    },
+    {
+      "gsisId": "00-0034771",
+      "name": "Mason Rudolph",
+      "position": "QB",
+      "points": 104.80000000000001
+    },
+    {
+      "gsisId": "00-0036972",
+      "name": "Mac Jones",
+      "position": "QB",
+      "points": 104.08
+    },
+    {
+      "gsisId": "00-0037838",
+      "name": "Isaiah Likely",
+      "position": "TE",
+      "points": 102.7
+    },
+    {
+      "gsisId": "00-0038619",
+      "name": "Andrei Iosivas",
+      "position": "WR",
+      "points": 101.9
+    },
+    {
+      "gsisId": "00-0038559",
+      "name": "Michael Wilson",
+      "position": "WR",
+      "points": 101
+    },
+    {
+      "gsisId": "00-0031544",
+      "name": "Amari Cooper",
+      "position": "WR",
+      "points": 100.7
+    },
+    {
+      "gsisId": "00-0039342",
+      "name": "Xavier Legette",
+      "position": "WR",
+      "points": 100.6
+    },
+    {
+      "gsisId": "00-0038608",
+      "name": "Kayshon Boutte",
+      "position": "WR",
+      "points": 100.4
+    },
+    {
+      "gsisId": "00-0037263",
+      "name": "Tyler Allgeier",
+      "position": "RB",
+      "points": 99.7
+    },
+    {
+      "gsisId": "00-0039032",
+      "name": "Tyjae Spears",
+      "position": "RB",
+      "points": 98.60000000000001
+    },
+    {
+      "gsisId": "00-0031588",
+      "name": "Stefon Diggs",
+      "position": "WR",
+      "points": 98.42
+    },
+    {
+      "gsisId": "00-0036040",
+      "name": "Juwan Johnson",
+      "position": "TE",
+      "points": 97.80000000000001
+    },
+    {
+      "gsisId": "00-0038579",
+      "name": "Aidan O'Connell",
+      "position": "QB",
+      "points": 97.48
+    },
+    {
+      "gsisId": "00-0039901",
+      "name": "Keon Coleman",
+      "position": "WR",
+      "points": 97
+    },
+    {
+      "gsisId": "00-0036290",
+      "name": "Cole Kmet",
+      "position": "TE",
+      "points": 96.9
+    },
+    {
+      "gsisId": "00-0037837",
+      "name": "Calvin Austin",
+      "position": "WR",
+      "points": 96.80000000000001
+    },
+    {
+      "gsisId": "00-0032211",
+      "name": "Tyler Lockett",
+      "position": "WR",
+      "points": 96.5
+    },
+    {
+      "gsisId": "00-0034270",
+      "name": "Tyler Conklin",
+      "position": "TE",
+      "points": 96.4
+    },
+    {
+      "gsisId": "00-0036637",
+      "name": "Noah Gray",
+      "position": "TE",
+      "points": 93.30000000000001
+    },
+    {
+      "gsisId": "00-0035208",
+      "name": "Olamide Zaccheaus",
+      "position": "WR",
+      "points": 91.9
+    },
+    {
+      "gsisId": "00-0036328",
+      "name": "Antonio Gibson",
+      "position": "RB",
+      "points": 91.9
+    },
+    {
+      "gsisId": "00-0033357",
+      "name": "Taysom Hill",
+      "position": "TE",
+      "points": 91.84
+    },
+    {
+      "gsisId": "00-0034383",
+      "name": "Dalton Schultz",
+      "position": "TE",
+      "points": 91.7
+    },
+    {
+      "gsisId": "00-0037291",
+      "name": "Jalen Nailor",
+      "position": "WR",
+      "points": 91
+    },
+    {
+      "gsisId": "00-0038393",
+      "name": "Dontayvion Wicks",
+      "position": "WR",
+      "points": 91
+    },
+    {
+      "gsisId": "00-0038124",
+      "name": "Christian Watson",
+      "position": "WR",
+      "points": 90.8
+    },
+    {
+      "gsisId": "00-0035535",
+      "name": "Darius Slayton",
+      "position": "WR",
+      "points": 90.5
+    },
+    {
+      "gsisId": "00-0038797",
+      "name": "Emanuel Wilson",
+      "position": "RB",
+      "points": 90.5
+    },
+    {
+      "gsisId": "00-0036980",
+      "name": "Elijah Moore",
+      "position": "WR",
+      "points": 90.4
+    },
+    {
+      "gsisId": "00-0039363",
+      "name": "Isaac Guerendo",
+      "position": "RB",
+      "points": 88.7
+    },
+    {
+      "gsisId": "00-0036988",
+      "name": "Josh Palmer",
+      "position": "WR",
+      "points": 87.9
+    },
+    {
+      "gsisId": "00-0037809",
+      "name": "Chigoziem Okonkwo",
+      "position": "TE",
+      "points": 87.60000000000001
+    },
+    {
+      "gsisId": "00-0034981",
+      "name": "Foster Moreau",
+      "position": "TE",
+      "points": 87.30000000000001
+    },
+    {
+      "gsisId": "00-0036414",
+      "name": "Cam Akers",
+      "position": "RB",
+      "points": 86.2
+    },
+    {
+      "gsisId": "00-0035250",
+      "name": "Devin Singletary",
+      "position": "RB",
+      "points": 86.10000000000001
+    },
+    {
+      "gsisId": "00-0032392",
+      "name": "Austin Hooper",
+      "position": "TE",
+      "points": 86.1
+    },
+    {
+      "gsisId": "00-0039424",
+      "name": "Devaughn Vele",
+      "position": "WR",
+      "points": 86
+    },
+    {
+      "gsisId": "00-0038794",
+      "name": "Jaleel McLaughlin",
+      "position": "RB",
+      "points": 85.19999999999999
+    },
+    {
+      "gsisId": "00-0035704",
+      "name": "Drew Lock",
+      "position": "QB",
+      "points": 85.14
+    },
+    {
+      "gsisId": "00-0034159",
+      "name": "Will Dissly",
+      "position": "TE",
+      "points": 85.1
+    },
+    {
+      "gsisId": "00-0033555",
+      "name": "Mack Hollins",
+      "position": "WR",
+      "points": 83.30000000000001
+    },
+    {
+      "gsisId": "00-0035537",
+      "name": "Ty Johnson",
+      "position": "RB",
+      "points": 82.7
+    },
+    {
+      "gsisId": "00-0034351",
+      "name": "Dallas Goedert",
+      "position": "TE",
+      "points": 82.6
+    },
+    {
+      "gsisId": "00-0035644",
+      "name": "Noah Fant",
+      "position": "TE",
+      "points": 80
+    },
+    {
+      "gsisId": "00-0033537",
+      "name": "Deshaun Watson",
+      "position": "QB",
+      "points": 79.72
+    },
+    {
+      "gsisId": "00-0038933",
+      "name": "Dalton Kincaid",
+      "position": "TE",
+      "points": 78.80000000000001
+    },
+    {
+      "gsisId": "00-0039916",
+      "name": "Ricky Pearsall",
+      "position": "WR",
+      "points": 78
+    },
+    {
+      "gsisId": "00-0036849",
+      "name": "Tutu Atwell",
+      "position": "WR",
+      "points": 77.9
+    },
+    {
+      "gsisId": "00-0037801",
+      "name": "Kavontae Turpin",
+      "position": "WR",
+      "points": 76.7
+    },
+    {
+      "gsisId": "00-0039491",
+      "name": "Jalen Coker",
+      "position": "WR",
+      "points": 76.56
+    },
+    {
+      "gsisId": "00-0033375",
+      "name": "Tim Patrick",
+      "position": "WR",
+      "points": 75.9
+    },
+    {
+      "gsisId": "00-0039794",
+      "name": "Braelon Allen",
+      "position": "RB",
+      "points": 75.7
+    },
+    {
+      "gsisId": "00-0034272",
+      "name": "Marquez Valdes-Scantling",
+      "position": "WR",
+      "points": 75
+    },
+    {
+      "gsisId": "00-0038606",
+      "name": "Parker Washington",
+      "position": "WR",
+      "points": 75
+    },
+    {
+      "gsisId": "00-0038041",
+      "name": "Jake Ferguson",
+      "position": "TE",
+      "points": 74.9
+    },
+    {
+      "gsisId": "00-0035216",
+      "name": "Diontae Johnson",
+      "position": "WR",
+      "points": 72.6
+    },
+    {
+      "gsisId": "00-0039376",
+      "name": "Spencer Rattler",
+      "position": "QB",
+      "points": 72.28
+    },
+    {
+      "gsisId": "00-0035500",
+      "name": "Greg Dortch",
+      "position": "WR",
+      "points": 71.80000000000001
+    },
+    {
+      "gsisId": "00-0038935",
+      "name": "Brenton Strange",
+      "position": "TE",
+      "points": 71.1
+    },
+    {
+      "gsisId": "00-0034364",
+      "name": "Jordan Akins",
+      "position": "TE",
+      "points": 71
+    },
+    {
+      "gsisId": "00-0036251",
+      "name": "Zack Moss",
+      "position": "RB",
+      "points": 70.4
+    },
+    {
+      "gsisId": "00-0039021",
+      "name": "Roschon Johnson",
+      "position": "RB",
+      "points": 69.4
+    },
+    {
+      "gsisId": "00-0033589",
+      "name": "David Moore",
+      "position": "WR",
+      "points": 69.1
+    },
+    {
+      "gsisId": "00-0033591",
+      "name": "Noah Brown",
+      "position": "WR",
+      "points": 68.80000000000001
+    },
+    {
+      "gsisId": "00-0033526",
+      "name": "Samaje Perine",
+      "position": "RB",
+      "points": 67.4
+    },
+    {
+      "gsisId": "00-0033881",
+      "name": "Evan Engram",
+      "position": "TE",
+      "points": 66
+    },
+    {
+      "gsisId": "00-0035229",
+      "name": "T.J. Hockenson",
+      "position": "TE",
+      "points": 66
+    },
+    {
+      "gsisId": "00-0038979",
+      "name": "Cedric Tillman",
+      "position": "WR",
+      "points": 65.9
+    },
+    {
+      "gsisId": "00-0037545",
+      "name": "Rashid Shaheed",
+      "position": "WR",
+      "points": 65.8
+    },
+    {
+      "gsisId": "00-0035243",
+      "name": "Miles Sanders",
+      "position": "RB",
+      "points": 65.3
+    },
+    {
+      "gsisId": "00-0027973",
+      "name": "Andy Dalton",
+      "position": "QB",
+      "points": 64.96000000000001
+    },
+    {
+      "gsisId": "00-0032385",
+      "name": "Sterling Shepard",
+      "position": "WR",
+      "points": 64.3
+    },
+    {
+      "gsisId": "00-0038951",
+      "name": "Sean Tucker",
+      "position": "RB",
+      "points": 64.2
+    },
+    {
+      "gsisId": "00-0035993",
+      "name": "Tyler Huntley",
+      "position": "QB",
+      "points": 63.660000000000004
+    },
+    {
+      "gsisId": "00-0039793",
+      "name": "A.J. Barner",
+      "position": "TE",
+      "points": 63.5
+    },
+    {
+      "gsisId": "00-0034184",
+      "name": "Gus Edwards",
+      "position": "RB",
+      "points": 62.6
+    },
+    {
+      "gsisId": "00-0031687",
+      "name": "Raheem Mostert",
+      "position": "RB",
+      "points": 61.4
+    },
+    {
+      "gsisId": "00-0034791",
+      "name": "Nick Chubb",
+      "position": "RB",
+      "points": 60.800000000000004
+    },
+    {
+      "gsisId": "00-0037239",
+      "name": "Chris Olave",
+      "position": "WR",
+      "points": 60.7
+    },
+    {
+      "gsisId": "00-0033955",
+      "name": "Jeremy McNichols",
+      "position": "RB",
+      "points": 59.300000000000004
+    },
+    {
+      "gsisId": "00-0033009",
+      "name": "Tyler Boyd",
+      "position": "WR",
+      "points": 58.8
+    },
+    {
+      "gsisId": "00-0034775",
+      "name": "Christian Kirk",
+      "position": "WR",
+      "points": 57.4
+    },
+    {
+      "gsisId": "00-0039356",
+      "name": "Ja'Tavion Sanders",
+      "position": "TE",
+      "points": 56.7
+    },
+    {
+      "gsisId": "00-0031236",
+      "name": "Brandin Cooks",
+      "position": "WR",
+      "points": 56.6
+    },
+    {
+      "gsisId": "00-0035249",
+      "name": "Josh Oliver",
+      "position": "TE",
+      "points": 54.8
+    },
+    {
+      "gsisId": "00-0036919",
+      "name": "Kenneth Gainwell",
+      "position": "RB",
+      "points": 54.6
+    },
+    {
+      "gsisId": "00-0039847",
+      "name": "Theo Johnson",
+      "position": "TE",
+      "points": 53.6
+    },
+    {
+      "gsisId": "00-0039868",
+      "name": "Troy Franklin",
+      "position": "WR",
+      "points": 53.1
+    },
+    {
+      "gsisId": "00-0039067",
+      "name": "Rashee Rice",
+      "position": "WR",
+      "points": 52.900000000000006
+    },
+    {
+      "gsisId": "00-0036626",
+      "name": "Dyami Brown",
+      "position": "WR",
+      "points": 52.400000000000006
+    },
+    {
+      "gsisId": "00-0034386",
+      "name": "Justin Watson",
+      "position": "WR",
+      "points": 51.900000000000006
+    },
+    {
+      "gsisId": "00-0038128",
+      "name": "Malik Willis",
+      "position": "QB",
+      "points": 51.8
+    },
+    {
+      "gsisId": "00-0036415",
+      "name": "Van Jefferson",
+      "position": "WR",
+      "points": 51.6
+    },
+    {
+      "gsisId": "00-0033045",
+      "name": "Ezekiel Elliott",
+      "position": "RB",
+      "points": 51.5
+    },
+    {
+      "gsisId": "00-0033307",
+      "name": "Kendrick Bourne",
+      "position": "WR",
+      "points": 51.1
+    },
+    {
+      "gsisId": "00-0037197",
+      "name": "Isiah Pacheco",
+      "position": "RB",
+      "points": 50.9
+    },
+    {
+      "gsisId": "00-0036244",
+      "name": "Colby Parkinson",
+      "position": "TE",
+      "points": 50.400000000000006
+    },
+    {
+      "gsisId": "00-0036261",
+      "name": "Brandon Aiyuk",
+      "position": "WR",
+      "points": 49.9
+    },
+    {
+      "gsisId": "00-0035406",
+      "name": "Lil'Jordan Humphrey",
+      "position": "WR",
+      "points": 48.8
+    },
+    {
+      "gsisId": "00-0033282",
+      "name": "Curtis Samuel",
+      "position": "WR",
+      "points": 48.2
+    },
+    {
+      "gsisId": "00-0035689",
+      "name": "Dawson Knox",
+      "position": "TE",
+      "points": 48.1
+    },
+    {
+      "gsisId": "00-0036427",
+      "name": "Tyler Johnson",
+      "position": "WR",
+      "points": 48.1
+    },
+    {
+      "gsisId": "00-0037086",
+      "name": "Grant Calcaterra",
+      "position": "TE",
+      "points": 47.8
+    },
+    {
+      "gsisId": "00-0039917",
+      "name": "Michael Penix",
+      "position": "QB",
+      "points": 47.1
+    },
+    {
+      "gsisId": "00-0038589",
+      "name": "Josh Whyle",
+      "position": "TE",
+      "points": 46.8
+    },
+    {
+      "gsisId": "00-0038705",
+      "name": "Emari Demercado",
+      "position": "RB",
+      "points": 46.699999999999996
+    },
+    {
+      "gsisId": "00-0033854",
+      "name": "Dare Ogunbowale",
+      "position": "RB",
+      "points": 46.5
+    },
+    {
+      "gsisId": "00-0033536",
+      "name": "Mike Williams",
+      "position": "WR",
+      "points": 46.3
+    },
+    {
+      "gsisId": "00-0033119",
+      "name": "Jacoby Brissett",
+      "position": "QB",
+      "points": 46.239999999999995
+    },
+    {
+      "gsisId": "00-0039373",
+      "name": "Audric Estime",
+      "position": "RB",
+      "points": 46.2
+    },
+    {
+      "gsisId": "00-0036984",
+      "name": "Trey Sermon",
+      "position": "RB",
+      "points": 45.8
+    },
+    {
+      "gsisId": "00-0032268",
+      "name": "Marcus Mariota",
+      "position": "QB",
+      "points": 45.760000000000005
+    },
+    {
+      "gsisId": "00-0037005",
+      "name": "Tommy Tremble",
+      "position": "TE",
+      "points": 44.900000000000006
+    },
+    {
+      "gsisId": "00-0033857",
+      "name": "JuJu Smith-Schuster",
+      "position": "WR",
+      "points": 44.1
+    },
+    {
+      "gsisId": "00-0039921",
+      "name": "Trey Benson",
+      "position": "RB",
+      "points": 44
+    },
+    {
+      "gsisId": "00-0036196",
+      "name": "Gabe Davis",
+      "position": "WR",
+      "points": 43.900000000000006
+    },
+    {
+      "gsisId": "00-0039880",
+      "name": "Malik Washington",
+      "position": "WR",
+      "points": 43.8
+    },
+    {
+      "gsisId": "00-0038547",
+      "name": "Luke Schoonmaker",
+      "position": "TE",
+      "points": 43.6
+    },
+    {
+      "gsisId": "00-0037614",
+      "name": "John Metchie",
+      "position": "WR",
+      "points": 43.400000000000006
+    },
+    {
+      "gsisId": "00-0037258",
+      "name": "Dameon Pierce",
+      "position": "RB",
+      "points": 42.5
+    },
+    {
+      "gsisId": "00-0039890",
+      "name": "Adonai Mitchell",
+      "position": "WR",
+      "points": 42.260000000000005
+    },
+    {
+      "gsisId": "00-0031549",
+      "name": "Nelson Agholor",
+      "position": "WR",
+      "points": 42.1
+    },
+    {
+      "gsisId": "00-0032464",
+      "name": "Kalif Raymond",
+      "position": "WR",
+      "points": 42
+    },
+    {
+      "gsisId": "00-0034418",
+      "name": "Cedrick Wilson",
+      "position": "WR",
+      "points": 41.94
+    },
+    {
+      "gsisId": "00-0039751",
+      "name": "Jordan Whittington",
+      "position": "WR",
+      "points": 41.5
+    },
+    {
+      "gsisId": "00-0039798",
+      "name": "Isaiah Davis",
+      "position": "RB",
+      "points": 41.400000000000006
+    },
+    {
+      "gsisId": "00-0033280",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "points": 40.300000000000004
+    },
+    {
+      "gsisId": "00-0032394",
+      "name": "Nick Vannett",
+      "position": "TE",
+      "points": 40
+    },
+    {
+      "gsisId": "00-0039041",
+      "name": "Elijah Higgins",
+      "position": "TE",
+      "points": 39.2
+    },
+    {
+      "gsisId": "00-0036527",
+      "name": "D.J. Turner",
+      "position": "WR",
+      "points": 39.1
+    },
+    {
+      "gsisId": "00-0037120",
+      "name": "Tyler Goodson",
+      "position": "RB",
+      "points": 38.9
+    },
+    {
+      "gsisId": "00-0036422",
+      "name": "Adam Trautman",
+      "position": "TE",
+      "points": 37.3
+    },
+    {
+      "gsisId": "00-0038685",
+      "name": "Christopher Brooks",
+      "position": "RB",
+      "points": 36.7
+    },
+    {
+      "gsisId": "00-0038783",
+      "name": "Nate Adkins",
+      "position": "TE",
+      "points": 36.5
+    },
+    {
+      "gsisId": "00-0033246",
+      "name": "Johnny Mundt",
+      "position": "TE",
+      "points": 35.7
+    },
+    {
+      "gsisId": "00-0038558",
+      "name": "Darnell Washington",
+      "position": "TE",
+      "points": 35.5
+    },
+    {
+      "gsisId": "00-0038573",
+      "name": "Derius Davis",
+      "position": "WR",
+      "points": 33.6
+    },
+    {
+      "gsisId": "00-0033949",
+      "name": "Joshua Dobbs",
+      "position": "QB",
+      "points": 32.839999999999996
+    },
+    {
+      "gsisId": "00-0033948",
+      "name": "Jamaal Williams",
+      "position": "RB",
+      "points": 32.6
+    },
+    {
+      "gsisId": "00-0037741",
+      "name": "Jahan Dotson",
+      "position": "WR",
+      "points": 32.400000000000006
+    },
+    {
+      "gsisId": "00-0033943",
+      "name": "Josh Reynolds",
+      "position": "WR",
+      "points": 31.900000000000002
+    },
+    {
+      "gsisId": "00-0030578",
+      "name": "Cordarrelle Patterson",
+      "position": "RB",
+      "points": 31.5
+    },
+    {
+      "gsisId": "00-0037617",
+      "name": "Hassan Haskins",
+      "position": "RB",
+      "points": 31.299999999999997
+    },
+    {
+      "gsisId": "00-0038611",
+      "name": "Chris Rodriguez",
+      "position": "RB",
+      "points": 31
+    },
+    {
+      "gsisId": "00-0036630",
+      "name": "Tylan Wallace",
+      "position": "WR",
+      "points": 30.8
+    },
+    {
+      "gsisId": "00-0038824",
+      "name": "Ryan Miller",
+      "position": "WR",
+      "points": 30.8
+    },
+    {
+      "gsisId": "00-0036924",
+      "name": "Michael Carter",
+      "position": "RB",
+      "points": 30.3
+    },
+    {
+      "gsisId": "00-0039391",
+      "name": "Kimani Vidal",
+      "position": "RB",
+      "points": 30.2
+    },
+    {
+      "gsisId": "00-0039738",
+      "name": "Blake Corum",
+      "position": "RB",
+      "points": 30.000000000000004
+    },
+    {
+      "gsisId": "00-0035628",
+      "name": "D'Ernest Johnson",
+      "position": "RB",
+      "points": 29.900000000000002
+    },
+    {
+      "gsisId": "00-0038640",
+      "name": "Jalen Brooks",
+      "position": "WR",
+      "points": 29.7
+    },
+    {
+      "gsisId": "00-0033925",
+      "name": "D'Onta Foreman",
+      "position": "RB",
+      "points": 29.6
+    },
+    {
+      "gsisId": "00-0039052",
+      "name": "Trey Palmer",
+      "position": "WR",
+      "points": 29.2
+    },
+    {
+      "gsisId": "00-0034613",
+      "name": "Tanner Hudson",
+      "position": "TE",
+      "points": 29
+    },
+    {
+      "gsisId": "00-0039050",
+      "name": "Payne Durham",
+      "position": "TE",
+      "points": 29
+    },
+    {
+      "gsisId": "00-0038400",
+      "name": "Tanner McKee",
+      "position": "QB",
+      "points": 28.82
+    },
+    {
+      "gsisId": "00-0036754",
+      "name": "Brock Wright",
+      "position": "TE",
+      "points": 28.5
+    },
+    {
+      "gsisId": "00-0030431",
+      "name": "Robert Woods",
+      "position": "WR",
+      "points": 28.3
+    },
+    {
+      "gsisId": "00-0035973",
+      "name": "Patrick Taylor",
+      "position": "RB",
+      "points": 28.3
+    },
+    {
+      "gsisId": "00-0038098",
+      "name": "Pierre Strong",
+      "position": "RB",
+      "points": 28.200000000000003
+    },
+    {
+      "gsisId": "00-0035140",
+      "name": "Mecole Hardman",
+      "position": "WR",
+      "points": 27.2
+    },
+    {
+      "gsisId": "00-0037475",
+      "name": "Stone Smartt",
+      "position": "TE",
+      "points": 26.8
+    },
+    {
+      "gsisId": "00-0039359",
+      "name": "Cade Stover",
+      "position": "TE",
+      "points": 26.8
+    },
+    {
+      "gsisId": "00-0033217",
+      "name": "Mo Alie-Cox",
+      "position": "TE",
+      "points": 26.700000000000003
+    },
+    {
+      "gsisId": "00-0038465",
+      "name": "Malik Heath",
+      "position": "WR",
+      "points": 26.700000000000003
+    },
+    {
+      "gsisId": "00-0039907",
+      "name": "Ja'Lynn Polk",
+      "position": "WR",
+      "points": 26.700000000000003
+    },
+    {
+      "gsisId": "00-0038551",
+      "name": "Kendre Miller",
+      "position": "RB",
+      "points": 26.6
+    },
+    {
+      "gsisId": "00-0035631",
+      "name": "Drew Sample",
+      "position": "TE",
+      "points": 26.5
+    },
+    {
+      "gsisId": "00-0036906",
+      "name": "Khalil Herbert",
+      "position": "RB",
+      "points": 26.5
+    },
+    {
+      "gsisId": "00-0038040",
+      "name": "Zamir White",
+      "position": "RB",
+      "points": 26.3
+    },
+    {
+      "gsisId": "00-0038102",
+      "name": "Kenny Pickett",
+      "position": "QB",
+      "points": 26.14
+    },
+    {
+      "gsisId": "00-0039066",
+      "name": "Michael Mayer",
+      "position": "TE",
+      "points": 26.1
+    },
+    {
+      "gsisId": "00-0034860",
+      "name": "Dante Pettis",
+      "position": "WR",
+      "points": 26
+    },
+    {
+      "gsisId": "00-0039355",
+      "name": "Luke McCaffrey",
+      "position": "WR",
+      "points": 25.8
+    },
+    {
+      "gsisId": "00-0039814",
+      "name": "Erick All",
+      "position": "TE",
+      "points": 25.8
+    },
+    {
+      "gsisId": "00-0037276",
+      "name": "Ty Chandler",
+      "position": "RB",
+      "points": 25.4
+    },
+    {
+      "gsisId": "00-0039874",
+      "name": "Jaylen Wright",
+      "position": "RB",
+      "points": 25.200000000000003
+    },
+    {
+      "gsisId": "00-0036876",
+      "name": "Kylen Granson",
+      "position": "TE",
+      "points": 25.2
+    },
+    {
+      "gsisId": "00-0037539",
+      "name": "Lucas Krull",
+      "position": "TE",
+      "points": 24.700000000000003
+    },
+    {
+      "gsisId": "00-0037509",
+      "name": "Sincere McCormick",
+      "position": "RB",
+      "points": 24.200000000000003
+    },
+    {
+      "gsisId": "00-0038122",
+      "name": "Desmond Ridder",
+      "position": "QB",
+      "points": 23.92
+    },
+    {
+      "gsisId": "00-0038046",
+      "name": "Charlie Kolar",
+      "position": "TE",
+      "points": 23.8
+    },
+    {
+      "gsisId": "00-0035806",
+      "name": "Jamycal Hasty",
+      "position": "RB",
+      "points": 23.799999999999997
+    },
+    {
+      "gsisId": "00-0031941",
+      "name": "Jamison Crowder",
+      "position": "WR",
+      "points": 23.7
+    },
+    {
+      "gsisId": "00-0039062",
+      "name": "Jonathan Mingo",
+      "position": "WR",
+      "points": 23.7
+    },
+    {
+      "gsisId": "00-0038752",
+      "name": "Jake Bobo",
+      "position": "WR",
+      "points": 23.200000000000003
+    },
+    {
+      "gsisId": "00-0033110",
+      "name": "Tyler Higbee",
+      "position": "TE",
+      "points": 22.6
+    },
+    {
+      "gsisId": "00-0034854",
+      "name": "KhaDarel Hodge",
+      "position": "WR",
+      "points": 22.6
+    },
+    {
+      "gsisId": "00-0039386",
+      "name": "Bub Means",
+      "position": "WR",
+      "points": 22.3
+    },
+    {
+      "gsisId": "00-0038583",
+      "name": "Dorian Thompson-Robinson",
+      "position": "QB",
+      "points": 21.800000000000004
+    },
+    {
+      "gsisId": "00-0037231",
+      "name": "Kevin Austin",
+      "position": "WR",
+      "points": 21.5
+    },
+    {
+      "gsisId": "00-0037292",
+      "name": "Andrew Ogletree",
+      "position": "TE",
+      "points": 21.4
+    },
+    {
+      "gsisId": "00-0033576",
+      "name": "Eric Saubert",
+      "position": "TE",
+      "points": 21.200000000000003
+    },
+    {
+      "gsisId": "00-0038636",
+      "name": "Kenny McIntosh",
+      "position": "RB",
+      "points": 20.9
+    },
+    {
+      "gsisId": "00-0031345",
+      "name": "Jimmy Garoppolo",
+      "position": "QB",
+      "points": 20.86
+    },
+    {
+      "gsisId": "00-0039325",
+      "name": "Carson Steele",
+      "position": "RB",
+      "points": 20.400000000000002
+    },
+    {
+      "gsisId": "00-0038678",
+      "name": "Jordan Mims",
+      "position": "RB",
+      "points": 20.1
+    },
+    {
+      "gsisId": "00-0028118",
+      "name": "Tyrod Taylor",
+      "position": "QB",
+      "points": 20.060000000000002
+    },
+    {
+      "gsisId": "00-0037805",
+      "name": "Jeremy Ruckert",
+      "position": "TE",
+      "points": 19.5
+    },
+    {
+      "gsisId": "00-0038115",
+      "name": "Daniel Bellinger",
+      "position": "TE",
+      "points": 19.5
+    },
+    {
+      "gsisId": "00-0035567",
+      "name": "Craig Reynolds",
+      "position": "RB",
+      "points": 19.4
+    },
+    {
+      "gsisId": "00-0039398",
+      "name": "Joe Milton",
+      "position": "QB",
+      "points": 19.240000000000002
+    },
+    {
+      "gsisId": "00-0037091",
+      "name": "Bo Melton",
+      "position": "WR",
+      "points": 18.5
+    },
+    {
+      "gsisId": "00-0034487",
+      "name": "Trent Sherfield",
+      "position": "WR",
+      "points": 18.3
+    },
+    {
+      "gsisId": "00-0035021",
+      "name": "Ashton Dulin",
+      "position": "WR",
+      "points": 18.2
+    },
+    {
+      "gsisId": "00-0038618",
+      "name": "Xavier Hutchinson",
+      "position": "WR",
+      "points": 17.700000000000003
+    },
+    {
+      "gsisId": "00-0038821",
+      "name": "Rakim Jarrett",
+      "position": "WR",
+      "points": 16.9
+    },
+    {
+      "gsisId": "00-0039623",
+      "name": "Mason Tipton",
+      "position": "WR",
+      "points": 16.9
+    },
+    {
+      "gsisId": "00-0038720",
+      "name": "Julian Hill",
+      "position": "TE",
+      "points": 16
+    },
+    {
+      "gsisId": "00-0037557",
+      "name": "Ronnie Rivers",
+      "position": "RB",
+      "points": 15.8
+    },
+    {
+      "gsisId": "00-0033869",
+      "name": "Mitchell Trubisky",
+      "position": "QB",
+      "points": 15.26
+    },
+    {
+      "gsisId": "00-0036345",
+      "name": "K.J. Osborn",
+      "position": "WR",
+      "points": 15.2
+    },
+    {
+      "gsisId": "00-0034177",
+      "name": "Tim Boyle",
+      "position": "QB",
+      "points": 14.940000000000001
+    },
+    {
+      "gsisId": "00-0038396",
+      "name": "Eric Gray",
+      "position": "RB",
+      "points": 14.3
+    },
+    {
+      "gsisId": "00-0038998",
+      "name": "Jake Haener",
+      "position": "QB",
+      "points": 14.240000000000002
+    },
+    {
+      "gsisId": "00-0039747",
+      "name": "Ainias Smith",
+      "position": "WR",
+      "points": 14.2
+    },
+    {
+      "gsisId": "00-0038710",
+      "name": "Blake Whiteheart",
+      "position": "TE",
+      "points": 14.100000000000001
+    },
+    {
+      "gsisId": "00-0037012",
+      "name": "Trey Lance",
+      "position": "QB",
+      "points": 13.740000000000002
+    },
+    {
+      "gsisId": "00-0039746",
+      "name": "Will Shipley",
+      "position": "RB",
+      "points": 13.700000000000001
+    },
+    {
+      "gsisId": "00-0036331",
+      "name": "Devin Duvernay",
+      "position": "WR",
+      "points": 13.7
+    },
+    {
+      "gsisId": "00-0036646",
+      "name": "Simi Fehoko",
+      "position": "WR",
+      "points": 13.600000000000001
+    },
+    {
+      "gsisId": "00-0035662",
+      "name": "Marquise Brown",
+      "position": "WR",
+      "points": 13.6
+    },
+    {
+      "gsisId": "00-0036425",
+      "name": "DeeJay Dallas",
+      "position": "RB",
+      "points": 13.5
+    },
+    {
+      "gsisId": "00-0038476",
+      "name": "Tommy DeVito",
+      "position": "QB",
+      "points": 13.48
+    },
+    {
+      "gsisId": "00-0038496",
+      "name": "Xavier Gipson",
+      "position": "WR",
+      "points": 13.4
+    },
+    {
+      "gsisId": "00-0038679",
+      "name": "Tyrell Shavers",
+      "position": "WR",
+      "points": 13.4
+    },
+    {
+      "gsisId": "00-0039530",
+      "name": "Brevyn Spann-Ford",
+      "position": "TE",
+      "points": 13.3
+    },
+    {
+      "gsisId": "00-0039410",
+      "name": "Ryan Flournoy",
+      "position": "WR",
+      "points": 13.200000000000001
+    },
+    {
+      "gsisId": "00-0036510",
+      "name": "Kenny Yeboah",
+      "position": "TE",
+      "points": 13.2
+    },
+    {
+      "gsisId": "00-0036232",
+      "name": "Harrison Bryant",
+      "position": "TE",
+      "points": 13.1
+    },
+    {
+      "gsisId": "00-0031585",
+      "name": "MyCole Pruitt",
+      "position": "TE",
+      "points": 13
+    },
+    {
+      "gsisId": "00-0037304",
+      "name": "Connor Heyward",
+      "position": "TE",
+      "points": 13
+    },
+    {
+      "gsisId": "00-0039810",
+      "name": "Jermaine Burton",
+      "position": "WR",
+      "points": 12.700000000000001
+    },
+    {
+      "gsisId": "00-0036887",
+      "name": "Luke Farrell",
+      "position": "TE",
+      "points": 12.7
+    },
+    {
+      "gsisId": "00-0039650",
+      "name": "Bryce Oliver",
+      "position": "WR",
+      "points": 12.5
+    },
+    {
+      "gsisId": "00-0033891",
+      "name": "Zay Jones",
+      "position": "WR",
+      "points": 12.4
+    },
+    {
+      "gsisId": "00-0037594",
+      "name": "Julius Chestnut",
+      "position": "RB",
+      "points": 12.3
+    },
+    {
+      "gsisId": "00-0039236",
+      "name": "Johnny Wilson",
+      "position": "WR",
+      "points": 12.3
+    },
+    {
+      "gsisId": "00-0036590",
+      "name": "Quintin Morris",
+      "position": "TE",
+      "points": 12.1
+    },
+    {
+      "gsisId": "00-0035639",
+      "name": "Parris Campbell",
+      "position": "WR",
+      "points": 12
+    },
+    {
+      "gsisId": "00-0031763",
+      "name": "DeAndre Carter",
+      "position": "WR",
+      "points": 11.7
+    },
+    {
+      "gsisId": "00-0035860",
+      "name": "Tony Jones",
+      "position": "RB",
+      "points": 11.5
+    },
+    {
+      "gsisId": "00-0037524",
+      "name": "Tay Martin",
+      "position": "WR",
+      "points": 11.4
+    },
+    {
+      "gsisId": "00-0034830",
+      "name": "Hayden Hurst",
+      "position": "TE",
+      "points": 11.3
+    },
+    {
+      "gsisId": "00-0039754",
+      "name": "Devin Culp",
+      "position": "TE",
+      "points": 11.3
+    },
+    {
+      "gsisId": "00-0039912",
+      "name": "Ben Sinnott",
+      "position": "TE",
+      "points": 11.3
+    },
+    {
+      "gsisId": "00-0036387",
+      "name": "Jalen Reagor",
+      "position": "WR",
+      "points": 11.2
+    },
+    {
+      "gsisId": "00-0034777",
+      "name": "D.J. Chark",
+      "position": "WR",
+      "points": 11.1
+    },
+    {
+      "gsisId": "00-0039365",
+      "name": "Jacob Cowing",
+      "position": "WR",
+      "points": 10.7
+    },
+    {
+      "gsisId": "00-0032128",
+      "name": "Chris Conley",
+      "position": "WR",
+      "points": 10.600000000000001
+    },
+    {
+      "gsisId": "00-0034646",
+      "name": "Brandon Powell",
+      "position": "WR",
+      "points": 10.600000000000001
+    },
+    {
+      "gsisId": "00-0031484",
+      "name": "Chris Manhertz",
+      "position": "TE",
+      "points": 10.5
+    },
+    {
+      "gsisId": "00-0036628",
+      "name": "John Bates",
+      "position": "TE",
+      "points": 10.4
+    },
+    {
+      "gsisId": "00-0038622",
+      "name": "Deuce Vaughn",
+      "position": "RB",
+      "points": 10.3
+    },
+    {
+      "gsisId": "00-0038938",
+      "name": "Jalin Hyatt",
+      "position": "WR",
+      "points": 10.2
+    },
+    {
+      "gsisId": "00-0034054",
+      "name": "River Cracraft",
+      "position": "WR",
+      "points": 10.100000000000001
+    },
+    {
+      "gsisId": "00-0031235",
+      "name": "Odell Beckham",
+      "position": "WR",
+      "points": 10
+    },
+    {
+      "gsisId": "00-0037300",
+      "name": "Mike Woods",
+      "position": "WR",
+      "points": 10
+    },
+    {
+      "gsisId": "00-0034798",
+      "name": "Durham Smythe",
+      "position": "TE",
+      "points": 9.8
+    },
+    {
+      "gsisId": "00-0036898",
+      "name": "Davis Mills",
+      "position": "QB",
+      "points": 9.58
+    },
+    {
+      "gsisId": "00-0037004",
+      "name": "Hunter Long",
+      "position": "TE",
+      "points": 9.5
+    },
+    {
+      "gsisId": "00-0035298",
+      "name": "Scott Miller",
+      "position": "WR",
+      "points": 9.4
+    },
+    {
+      "gsisId": "00-0036862",
+      "name": "Ben Skowronek",
+      "position": "WR",
+      "points": 9.4
+    },
+    {
+      "gsisId": "00-0034115",
+      "name": "Jeffery Wilson",
+      "position": "RB",
+      "points": 9.1
+    },
+    {
+      "gsisId": "00-0038108",
+      "name": "Bailey Zappe",
+      "position": "QB",
+      "points": 9
+    },
+    {
+      "gsisId": "00-0036183",
+      "name": "Kristian Wilkerson",
+      "position": "WR",
+      "points": 8.8
+    },
+    {
+      "gsisId": "00-0039792",
+      "name": "Devontez Walker",
+      "position": "WR",
+      "points": 8.6
+    },
+    {
+      "gsisId": "00-0033439",
+      "name": "Pharaoh Brown",
+      "position": "TE",
+      "points": 8.5
+    },
+    {
+      "gsisId": "00-0036360",
+      "name": "Clyde Edwards-Helaire",
+      "position": "RB",
+      "points": 8.5
+    },
+    {
+      "gsisId": "00-0032434",
+      "name": "Brandon Allen",
+      "position": "QB",
+      "points": 8.36
+    },
+    {
+      "gsisId": "00-0036429",
+      "name": "Charlie Woerner",
+      "position": "TE",
+      "points": 8.100000000000001
+    },
+    {
+      "gsisId": "00-0037429",
+      "name": "Raheem Blackshear",
+      "position": "RB",
+      "points": 8
+    },
+    {
+      "gsisId": "00-0039144",
+      "name": "Luke Musgrave",
+      "position": "TE",
+      "points": 8
+    },
+    {
+      "gsisId": "00-0037085",
+      "name": "Tyler Badie",
+      "position": "RB",
+      "points": 7.8999999999999995
+    },
+    {
+      "gsisId": "00-0037327",
+      "name": "Skylar Thompson",
+      "position": "QB",
+      "points": 7.880000000000001
+    },
+    {
+      "gsisId": "00-0037569",
+      "name": "Peyton Hendershot",
+      "position": "TE",
+      "points": 7.6000000000000005
+    },
+    {
+      "gsisId": "00-0033895",
+      "name": "Gerald Everett",
+      "position": "TE",
+      "points": 7.6
+    },
+    {
+      "gsisId": "00-0037654",
+      "name": "Tucker Fisk",
+      "position": "TE",
+      "points": 7.4
+    },
+    {
+      "gsisId": "00-0038498",
+      "name": "E.J. Jenkins",
+      "position": "TE",
+      "points": 7.2
+    },
+    {
+      "gsisId": "00-0037132",
+      "name": "Britain Covey",
+      "position": "WR",
+      "points": 6.9
+    },
+    {
+      "gsisId": "00-0039074",
+      "name": "Davis Allen",
+      "position": "TE",
+      "points": 6.9
+    },
+    {
+      "gsisId": "00-0038104",
+      "name": "Tyquan Thornton",
+      "position": "WR",
+      "points": 6.7
+    },
+    {
+      "gsisId": "00-0039737",
+      "name": "Tip Reiman",
+      "position": "TE",
+      "points": 6.7
+    },
+    {
+      "gsisId": "00-0039364",
+      "name": "Sione Vaki",
+      "position": "RB",
+      "points": 6.6000000000000005
+    },
+    {
+      "gsisId": "00-0038454",
+      "name": "Keaton Mitchell",
+      "position": "RB",
+      "points": 6.300000000000001
+    },
+    {
+      "gsisId": "00-0036268",
+      "name": "Laviska Shenault Jr.",
+      "position": "WR",
+      "points": 6.2
+    },
+    {
+      "gsisId": "00-0038809",
+      "name": "Ben Sims",
+      "position": "TE",
+      "points": 6.2
+    },
+    {
+      "gsisId": "00-0039344",
+      "name": "Jonathon Brooks",
+      "position": "RB",
+      "points": 6
+    },
+    {
+      "gsisId": "00-0036620",
+      "name": "D'Wayne Eskridge",
+      "position": "WR",
+      "points": 5.9
+    },
+    {
+      "gsisId": "00-0038519",
+      "name": "Nikko Remigio",
+      "position": "WR",
+      "points": 5.800000000000001
+    },
+    {
+      "gsisId": "00-0039920",
+      "name": "Malachi Corley",
+      "position": "WR",
+      "points": 5.699999999999999
+    },
+    {
+      "gsisId": "00-0036497",
+      "name": "Tim Jones",
+      "position": "WR",
+      "points": 5.6000000000000005
+    },
+    {
+      "gsisId": "00-0036955",
+      "name": "Terrace Marshall",
+      "position": "WR",
+      "points": 5.6000000000000005
+    },
+    {
+      "gsisId": "00-0037742",
+      "name": "Treylon Burks",
+      "position": "WR",
+      "points": 5.5
+    },
+    {
+      "gsisId": "00-0034208",
+      "name": "Mike Boone",
+      "position": "RB",
+      "points": 5.4
+    },
+    {
+      "gsisId": "00-0035891",
+      "name": "Cody White",
+      "position": "WR",
+      "points": 5.4
+    },
+    {
+      "gsisId": "00-0036096",
+      "name": "J.J. Taylor",
+      "position": "RB",
+      "points": 5.4
+    },
+    {
+      "gsisId": "00-0037252",
+      "name": "Greg Dulcich",
+      "position": "TE",
+      "points": 5.300000000000001
+    },
+    {
+      "gsisId": "00-0039631",
+      "name": "Cam Grandy",
+      "position": "TE",
+      "points": 5.300000000000001
+    },
+    {
+      "gsisId": "00-0035976",
+      "name": "Dan Chisena",
+      "position": "WR",
+      "points": 5.2
+    },
+    {
+      "gsisId": "00-0038359",
+      "name": "Xavier Smith",
+      "position": "WR",
+      "points": 5.199999999999999
+    },
+    {
+      "gsisId": "00-0036841",
+      "name": "Austin Trammell",
+      "position": "WR",
+      "points": 5
+    },
+    {
+      "gsisId": "00-0035594",
+      "name": "Travis Homer",
+      "position": "RB",
+      "points": 4.9
+    },
+    {
+      "gsisId": "00-0038394",
+      "name": "Will Mallory",
+      "position": "TE",
+      "points": 4.9
+    },
+    {
+      "gsisId": "00-0032950",
+      "name": "Carson Wentz",
+      "position": "QB",
+      "points": 4.72
+    },
+    {
+      "gsisId": "00-0037487",
+      "name": "Deven Thompkins",
+      "position": "WR",
+      "points": 4.7
+    },
+    {
+      "gsisId": "00-0035602",
+      "name": "Alex Bachman",
+      "position": "WR",
+      "points": 4.6
+    },
+    {
+      "gsisId": "00-0031428",
+      "name": "Allen Robinson",
+      "position": "WR",
+      "points": 4.5
+    },
+    {
+      "gsisId": "00-0039617",
+      "name": "Jacob Kibodi",
+      "position": "RB",
+      "points": 4.4
+    },
+    {
+      "gsisId": "00-0037257",
+      "name": "David Bell",
+      "position": "WR",
+      "points": 4.2
+    },
+    {
+      "gsisId": "00-0036670",
+      "name": "Jermar Jefferson",
+      "position": "RB",
+      "points": 3.7
+    },
+    {
+      "gsisId": "00-0039379",
+      "name": "Jamari Thrash",
+      "position": "WR",
+      "points": 3.7
+    },
+    {
+      "gsisId": "00-0036133",
+      "name": "James Proche",
+      "position": "WR",
+      "points": 3.6
+    },
+    {
+      "gsisId": "00-0039613",
+      "name": "Dallin Holker",
+      "position": "TE",
+      "points": 3.6
+    },
+    {
+      "gsisId": "00-0033893",
+      "name": "Dalvin Cook",
+      "position": "RB",
+      "points": 3.5
+    },
+    {
+      "gsisId": "00-0039757",
+      "name": "Terrell Jennings",
+      "position": "RB",
+      "points": 3.3000000000000003
+    },
+    {
+      "gsisId": "00-0038647",
+      "name": "Ronnie Bell",
+      "position": "WR",
+      "points": 3.2
+    },
+    {
+      "gsisId": "00-0039393",
+      "name": "Jase McClellan",
+      "position": "RB",
+      "points": 3.2
+    },
+    {
+      "gsisId": "00-0031800",
+      "name": "Taylor Heinicke",
+      "position": "QB",
+      "points": 3.12
+    },
+    {
+      "gsisId": "00-0037348",
+      "name": "Tanner Conner",
+      "position": "WR",
+      "points": 3.1
+    },
+    {
+      "gsisId": "00-0039796",
+      "name": "Rasheen Ali",
+      "position": "RB",
+      "points": 3.1
+    },
+    {
+      "gsisId": "00-0035341",
+      "name": "Trenton Irwin",
+      "position": "WR",
+      "points": 3
+    },
+    {
+      "gsisId": "00-0039420",
+      "name": "Jaheim Bell",
+      "position": "TE",
+      "points": 3
+    },
+    {
+      "gsisId": "00-0036332",
+      "name": "Josiah Deguara",
+      "position": "TE",
+      "points": 2.9000000000000004
+    },
+    {
+      "gsisId": "00-0039816",
+      "name": "Anthony Gould",
+      "position": "WR",
+      "points": 2.8000000000000003
+    },
+    {
+      "gsisId": "00-0039573",
+      "name": "Blake Watson",
+      "position": "RB",
+      "points": 2.8
+    },
+    {
+      "gsisId": "00-0036176",
+      "name": "Mason Kinsey",
+      "position": "WR",
+      "points": 2.7
+    },
+    {
+      "gsisId": "00-0036534",
+      "name": "Shane Zylstra",
+      "position": "TE",
+      "points": 2.7
+    },
+    {
+      "gsisId": "00-0038550",
+      "name": "Hendon Hooker",
+      "position": "QB",
+      "points": 2.68
+    },
+    {
+      "gsisId": "00-0037745",
+      "name": "Velus Jones",
+      "position": "RB",
+      "points": 2.4000000000000004
+    },
+    {
+      "gsisId": "00-0039811",
+      "name": "MarShawn Lloyd",
+      "position": "RB",
+      "points": 2.3
+    },
+    {
+      "gsisId": "00-0034365",
+      "name": "Ian Thomas",
+      "position": "TE",
+      "points": 2.2
+    },
+    {
+      "gsisId": "00-0035924",
+      "name": "Jonathan Ward",
+      "position": "RB",
+      "points": 2.2
+    },
+    {
+      "gsisId": "00-0036165",
+      "name": "Isaiah Hodgins",
+      "position": "WR",
+      "points": 2.2
+    },
+    {
+      "gsisId": "00-0036463",
+      "name": "Chris Blair",
+      "position": "WR",
+      "points": 2.2
+    },
+    {
+      "gsisId": "00-0034353",
+      "name": "Anthony Miller",
+      "position": "WR",
+      "points": 2.1
+    },
+    {
+      "gsisId": "00-0038507",
+      "name": "Grant DuBose",
+      "position": "WR",
+      "points": 2.1
+    },
+    {
+      "gsisId": "00-0036741",
+      "name": "Jack Stoll",
+      "position": "TE",
+      "points": 2
+    },
+    {
+      "gsisId": "00-0039394",
+      "name": "Casey Washington",
+      "position": "WR",
+      "points": 1.9000000000000001
+    },
+    {
+      "gsisId": "00-0031690",
+      "name": "Eric Tomlinson",
+      "position": "TE",
+      "points": 1.9
+    },
+    {
+      "gsisId": "00-0036556",
+      "name": "Brevin Jordan",
+      "position": "TE",
+      "points": 1.7000000000000002
+    },
+    {
+      "gsisId": "00-0036825",
+      "name": "Feleipe Franks",
+      "position": "TE",
+      "points": 1.7000000000000002
+    },
+    {
+      "gsisId": "00-0037609",
+      "name": "Aaron Shampklin",
+      "position": "RB",
+      "points": 1.7000000000000002
+    },
+    {
+      "gsisId": "00-0039853",
+      "name": "Javon Baker",
+      "position": "WR",
+      "points": 1.7000000000000002
+    },
+    {
+      "gsisId": "00-0033292",
+      "name": "Trent Taylor",
+      "position": "WR",
+      "points": 1.6
+    },
+    {
+      "gsisId": "00-0039451",
+      "name": "Isaiah Williams",
+      "position": "WR",
+      "points": 1.6
+    },
+    {
+      "gsisId": "00-0035311",
+      "name": "Myles Gaskin",
+      "position": "RB",
+      "points": 1.5
+    },
+    {
+      "gsisId": "00-0039703",
+      "name": "Cody Schrader",
+      "position": "RB",
+      "points": 1.4000000000000001
+    },
+    {
+      "gsisId": "00-0037382",
+      "name": "Brandon Johnson",
+      "position": "WR",
+      "points": 1.4
+    },
+    {
+      "gsisId": "00-0037422",
+      "name": "Kendric Pryor",
+      "position": "WR",
+      "points": 1.4
+    },
+    {
+      "gsisId": "00-0039299",
+      "name": "George Holani",
+      "position": "RB",
+      "points": 1.4
+    },
+    {
+      "gsisId": "00-0033319",
+      "name": "Nick Mullens",
+      "position": "QB",
+      "points": 1.32
+    },
+    {
+      "gsisId": "00-0039244",
+      "name": "Chris Collier",
+      "position": "RB",
+      "points": 1.3000000000000003
+    },
+    {
+      "gsisId": "00-0032141",
+      "name": "Geoff Swaim",
+      "position": "TE",
+      "points": 1.2000000000000002
+    },
+    {
+      "gsisId": "00-0038920",
+      "name": "John Samuel Shenker",
+      "position": "TE",
+      "points": 1.2000000000000002
+    },
+    {
+      "gsisId": "00-0039543",
+      "name": "Ramel Keyton",
+      "position": "WR",
+      "points": 1.2000000000000002
+    },
+    {
+      "gsisId": "00-0039824",
+      "name": "Jared Wiley",
+      "position": "TE",
+      "points": 1.2000000000000002
+    },
+    {
+      "gsisId": "00-0034401",
+      "name": "Mike White",
+      "position": "QB",
+      "points": 1.12
+    },
+    {
+      "gsisId": "00-0033460",
+      "name": "John Ross",
+      "position": "WR",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0036254",
+      "name": "Collin Johnson",
+      "position": "WR",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0036877",
+      "name": "Jaelon Darden",
+      "position": "WR",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0037450",
+      "name": "Tyreik McAllister",
+      "position": "RB",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0039589",
+      "name": "Kameron Johnson",
+      "position": "WR",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0039648",
+      "name": "David Martin-Robinson",
+      "position": "TE",
+      "points": 1.1
+    },
+    {
+      "gsisId": "00-0032688",
+      "name": "Robbie Chosen",
+      "position": "WR",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0034073",
+      "name": "Ross Dwelley",
+      "position": "TE",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0035547",
+      "name": "Joseph Fortson",
+      "position": "TE",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0036640",
+      "name": "Zach Davidson",
+      "position": "TE",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0038576",
+      "name": "Charlie Jones",
+      "position": "WR",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0038941",
+      "name": "Tyler Scott",
+      "position": "WR",
+      "points": 1
+    },
+    {
+      "gsisId": "00-0039392",
+      "name": "Jha'Quan Jackson",
+      "position": "WR",
+      "points": 0.8
+    },
+    {
+      "gsisId": "00-0026300",
+      "name": "Josh Johnson",
+      "position": "QB",
+      "points": 0.78
+    },
+    {
+      "gsisId": "00-0034577",
+      "name": "Kyle Allen",
+      "position": "QB",
+      "points": 0.76
+    },
+    {
+      "gsisId": "00-0037827",
+      "name": "Tyrion Davis-Price",
+      "position": "RB",
+      "points": 0.7000000000000001
+    },
+    {
+      "gsisId": "00-0024243",
+      "name": "Marcedes Lewis",
+      "position": "TE",
+      "points": 0.7
+    },
+    {
+      "gsisId": "00-0037306",
+      "name": "John FitzPatrick",
+      "position": "TE",
+      "points": 0.7
+    },
+    {
+      "gsisId": "00-0035264",
+      "name": "Jarrett Stidham",
+      "position": "QB",
+      "points": 0.5
+    },
+    {
+      "gsisId": "00-0037324",
+      "name": "Chris Oladokun",
+      "position": "QB",
+      "points": 0.5
+    },
+    {
+      "gsisId": "00-0036450",
+      "name": "Ke'Shawn Vaughn",
+      "position": "RB",
+      "points": 0.4
+    },
+    {
+      "gsisId": "00-0036297",
+      "name": "Darrynton Evans",
+      "position": "RB",
+      "points": 0.30000000000000004
+    },
+    {
+      "gsisId": "00-0038840",
+      "name": "Brycen Tremayne",
+      "position": "WR",
+      "points": 0.3
+    },
+    {
+      "gsisId": "00-0036370",
+      "name": "Joshua Kelley",
+      "position": "RB",
+      "points": 0.2
+    },
+    {
+      "gsisId": "00-0039603",
+      "name": "British Brooks",
+      "position": "RB",
+      "points": 0.2
+    },
+    {
+      "gsisId": "00-0037077",
+      "name": "Sam Howell",
+      "position": "QB",
+      "points": 0.15999999999999992
+    },
+    {
+      "gsisId": "00-0031299",
+      "name": "Jordan Matthews",
+      "position": "TE",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0034419",
+      "name": "Braxton Berrios",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0034928",
+      "name": "Steven Sims",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0035544",
+      "name": "Tom Kennedy",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0036438",
+      "name": "Stephen Sullivan",
+      "position": "TE",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0036635",
+      "name": "Ihmir Smith-Marsette",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0036842",
+      "name": "Kene Nwangwu",
+      "position": "RB",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0037093",
+      "name": "Dareke Young",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0037156",
+      "name": "Irvin Charles",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0037216",
+      "name": "Justyn Ross",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0038090",
+      "name": "Skyy Moore",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0038092",
+      "name": "Erik Ezukanma",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0038477",
+      "name": "Bryce Ford-Wheaton",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0038643",
+      "name": "Brayden Willis",
+      "position": "TE",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0039316",
+      "name": "Baylor Cupp",
+      "position": "TE",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0039458",
+      "name": "Brenden Bates",
+      "position": "TE",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0039521",
+      "name": "Xavier Weaver",
+      "position": "WR",
+      "points": 0
+    },
+    {
+      "gsisId": "00-0039614",
+      "name": "Jermaine Jackson",
+      "position": "WR",
+      "points": -0.1
+    },
+    {
+      "gsisId": "00-0035100",
+      "name": "Jake Browning",
+      "position": "QB",
+      "points": -0.2
+    },
+    {
+      "gsisId": "00-0036928",
+      "name": "Kyle Trask",
+      "position": "QB",
+      "points": -0.2
+    },
+    {
+      "gsisId": "00-0038416",
+      "name": "Tyson Bagent",
+      "position": "QB",
+      "points": -0.26000000000000006
+    },
+    {
+      "gsisId": "00-0036913",
+      "name": "Kadarius Toney",
+      "position": "WR",
+      "points": -0.4
+    },
+    {
+      "gsisId": "00-0039407",
+      "name": "Dylan Laube",
+      "position": "RB",
+      "points": -2
+    },
+    {
+      "gsisId": "00-0038582",
+      "name": "Clayton Tune",
+      "position": "QB",
+      "points": -2.08
+    }
+  ]
+}

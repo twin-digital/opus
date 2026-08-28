@@ -33,12 +33,14 @@
     "clean": "clean",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "realized-capture": "tsx src/cli/realized-capture.ts",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@twin-digital/football-data": "workspace:*"
+    "@twin-digital/football-data": "workspace:*",
+    "dotenv": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
