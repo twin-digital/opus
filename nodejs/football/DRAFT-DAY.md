@@ -57,9 +57,12 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
   next turn if you pass. **Δ best is color-banded** on the same tokens as Back@: green =
   within 3 pts of BEST (rollout noise — effectively tied, break the tie on Back@: green Δ
   with low Back@ means take him now, green Δ with high Back@ means safe to pass), amber =
-  real but modest cost, muted = expensive. The **ME** button in the panel drafts straight
-  from it. When it is not your turn, a one-line strip shows the top-3 "if he falls to
-  you".
+  real but modest cost, muted = expensive. Candidates inside the same green band are
+  treated as tied and ordered: starting-seat fillers first, then upside, then points — so
+  late in the draft, when whole slates tie on EST TEAM, the order itself is the
+  recommendation (the slate always includes the top-10 upside plays, not just top-VOR).
+  The **ME** button in the panel drafts straight from it. When it is not your turn, a
+  one-line strip shows the top-3 "if he falls to you".
 - **capture** in the status bar is the live draft grade: (your starters − replacement) /
   (ceiling − replacement); hover for the numbers.
 - Board columns **Rm Δ** (positive green = the room lets him fall, negative red = the room

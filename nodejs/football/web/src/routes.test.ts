@@ -17,7 +17,7 @@ import {
   type StatKey,
 } from '@twin-digital/football-data'
 
-import { App } from './app.js'
+import { App, orderCandidates } from './app.js'
 import type { PollStatus } from './poller.js'
 import { handleRoute, type PollerLike, type RouteContext } from './routes.js'
 
@@ -1061,5 +1061,57 @@ describe('cost of waiting', () => {
     // zero intervening picks to 11: certain survival, so the expectation IS the best now
     expect(wr?.atPicks[0]?.pick).toBe(11)
     expect(wr?.atPicks[0]?.expectedBest).toBeCloseTo(wr?.now?.points ?? -1, 6)
+  })
+})
+
+describe('candidate ordering', () => {
+  interface Row {
+    name: string
+    estTeamScore: number
+    landsOn: string
+    upsideScore: number | null
+    points: number | null
+  }
+  const row = (name: string, est: number, landsOn: string, upside: number | null, points: number | null): Row => ({
+    name,
+    estTeamScore: est,
+    landsOn,
+    upsideScore: upside,
+    points,
+  })
+  const names = (rows: Row[]): string[] => orderCandidates(rows).map((r) => r.name)
+
+  it('breaks exact estTeamScore ties: starting seat first, then upside, then points', () => {
+    const tied = [
+      row('bench-low-ups', 1566, 'BENCH', 20, 180),
+      row('bench-high-ups', 1566, 'BENCH', 90, 150),
+      row('starter', 1566, 'QB', 10, 250),
+      row('bench-ups-tie-more-pts', 1566, 'BENCH', 90, 170),
+    ]
+    expect(names(tied)).toEqual(['starter', 'bench-ups-tie-more-pts', 'bench-high-ups', 'bench-low-ups'])
+  })
+
+  it('treats candidates within the DELTA_NOISE band as tied, beyond it as ranked', () => {
+    const rows = [
+      row('top-bench', 100, 'BENCH', 30, 200),
+      row('near-starter', 98, 'QB', 10, 190), // within 3 of the band top: tied, starter wins
+      row('far-starter', 96, 'RB', 99, 300), // beyond the band: stays below it
+    ]
+    expect(names(rows)).toEqual(['near-starter', 'top-bench', 'far-starter'])
+  })
+
+  it('keeps genuinely better est on top and orders null upside and points last within a band', () => {
+    const rows = [
+      row('null-ups', 100, 'BENCH', null, 100),
+      row('clear-best', 110, 'BENCH', null, null),
+      row('some-ups', 99, 'BENCH', 5, null),
+    ]
+    expect(names(rows)).toEqual(['clear-best', 'some-ups', 'null-ups'])
+  })
+
+  it('a high-upside band-tied candidate is not dropped below arbitrary peers (top-of-list stability)', () => {
+    const tied = Array.from({ length: 12 }, (unused, i) => row('filler-' + String(i), 1500, 'BENCH', 10, 100))
+    const gem = row('gem', 1500, 'BENCH', 95, 90)
+    expect(names([...tied.slice(0, 6), gem, ...tied.slice(6)])[0]).toBe('gem')
   })
 })

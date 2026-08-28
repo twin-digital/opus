@@ -85,9 +85,11 @@ export interface CandidateEvaluation {
 }
 
 export interface EvaluateOptions extends RolloutOptions {
-  /** Explicit candidate slate; default = top `count` by VOR plus top-3 per position. */
+  /** Explicit candidate slate; default = top `count` by VOR + top-3 per position + the upside lane. */
   candidates?: PlayerId[]
   count?: number
+  /** Upside lane of the default slate: top-N by upsideScore among priced availables (default 10). */
+  upsideCount?: number
 }
 
 // -- pool -------------------------------------------------------------------
@@ -408,7 +410,8 @@ export const rolloutFrom = (
 /**
  * One rollout per candidate, each assuming the candidate is taken with the pick on the clock.
  * Sorted by estTeamScore descending; banned players never enter, boosts are already in the
- * points. Default slate: top `count` (40) by VOR plus top-3 at each skill position.
+ * points. Default slate: top `count` (40) by VOR, top-3 at each skill position, and the top
+ * `upsideCount` (10) by upsideScore among priced availables.
  */
 export const evaluateCandidates = (state: BoardState, options: EvaluateOptions = {}): CandidateEvaluation[] => {
   const pool = buildPool(state, options)
@@ -439,6 +442,17 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
           included.add(player.playerId)
           slate.push(player)
         }
+      }
+    }
+    // Upside lane: the VOR cut is mean-biased and can drop lottery tickets late in a draft,
+    // exactly when upside becomes the ranking key; priced high-upside availables get a rollout.
+    const byUpside = eligible
+      .filter((player) => player.upsideScore !== null && player.roomAdp !== null)
+      .sort((a, b) => (b.upsideScore ?? 0) - (a.upsideScore ?? 0))
+    for (const player of byUpside.slice(0, options.upsideCount ?? 10)) {
+      if (!included.has(player.playerId)) {
+        included.add(player.playerId)
+        slate.push(player)
       }
     }
     candidateIds = slate.map((player) => player.playerId)

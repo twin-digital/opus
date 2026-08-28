@@ -185,6 +185,45 @@ export interface OverrideInput {
   note?: string
 }
 
+/** estTeamScore gaps at or under this are rollout noise — the Δ-band the UI paints green. */
+export const DELTA_NOISE = 3
+
+/**
+ * Recommendation order for the on-clock panel. estTeamScore descending, but candidates within
+ * DELTA_NOISE of a band's top are tied (deep in a draft whole slates tie exactly): within a
+ * band, a candidate filling a starting seat outranks bench-landers — a real seat at equal cost
+ * beats a lottery ticket — then upside, then points, so ties are never arbitrary.
+ */
+export const orderCandidates = <
+  T extends { estTeamScore: number; landsOn: string; upsideScore: number | null; points: number | null },
+>(
+  candidates: T[],
+): T[] => {
+  const sorted = [...candidates].sort((a, b) => b.estTeamScore - a.estTeamScore)
+  const ordered: T[] = []
+  let band: T[] = []
+  let anchor: number | null = null
+  const flush = (): void => {
+    band.sort(
+      (a, b) =>
+        Number(b.landsOn !== 'BENCH') - Number(a.landsOn !== 'BENCH') ||
+        (b.upsideScore ?? -1) - (a.upsideScore ?? -1) ||
+        (b.points ?? -1) - (a.points ?? -1),
+    )
+    ordered.push(...band)
+    band = []
+  }
+  for (const candidate of sorted) {
+    if (anchor === null || anchor - candidate.estTeamScore > DELTA_NOISE) {
+      flush()
+      anchor = candidate.estTeamScore
+    }
+    band.push(candidate)
+  }
+  flush()
+  return ordered
+}
+
 export interface EvaluatePayload {
   version: number
   computedAt: string
@@ -921,7 +960,7 @@ export class App {
       complete ? null : teamOnClock(this.settings.draft.pickOrder, picks.length + 1, this.totalRounds)
     const boardRows = new Map(this.boardPayload().rows.map((row) => [row.playerId, row]))
     const boosted = new Set(this.boardPayload().boostedIds)
-    const candidates =
+    const candidates = orderCandidates(
       complete ?
         []
       : evaluateCandidates(this.boardState(picks), {
@@ -938,7 +977,8 @@ export class App {
             news: row?.news ?? null,
             threat: row?.threat ?? null,
           }
-        })
+        }),
+    )
     const payload: EvaluatePayload = {
       version: this.version,
       computedAt: this.now().toISOString(),

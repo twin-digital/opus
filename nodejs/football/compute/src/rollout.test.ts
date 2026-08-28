@@ -152,6 +152,60 @@ describe('evaluateCandidates — the cliff', () => {
   })
 })
 
+describe('evaluateCandidates — the upside lane', () => {
+  it('adds a low-VOR top-upside priced player the VOR cut drops; upsideCount 0 restores the old slate', () => {
+    const mk = (playerId: PlayerId, half: number, ecr: MarketData['ecr']): MarketData => ({
+      playerId,
+      adp: { sleeper: { half } },
+      ecr,
+      percentRostered: null,
+      asOf: 'now',
+    })
+    const rbs = Array.from({ length: 46 }, (unused, i) => player('RB', `RB ${String(i + 1)}`))
+    const wrs = Array.from({ length: 3 }, (unused, i) => player('WR', `WR ${String(i + 1)}`))
+    const gem = player('RB', 'Lottery Ticket')
+    const settings: LeagueSettings = {
+      leagueId: 'test',
+      name: 'Upside League',
+      size: 2,
+      scoringRules: [{ stat: 'rushYd', points: 0.1 }],
+      lineupSlots: { QB: 0, RB: 2, WR: 1, TE: 0, FLEX: 0, DST: 0, K: 0, BENCH: 2, IR: 0 },
+      draft: { type: 'snake', date: null, pickOrder: [1, 2] },
+    }
+    const mildEcr = (rank: number): MarketData['ecr'] => ({
+      rank,
+      posRank: `RB${String(rank)}`,
+      tier: 1,
+      best: rank,
+      worst: rank + 2,
+      stdDev: 1,
+    })
+    const state: BoardState = {
+      settings,
+      players: [...rbs, ...wrs, gem],
+      projections: [
+        ...rbs.map((p, i) => projection(p.id, 1500 - 15 * i)),
+        ...wrs.map((p, i) => projection(p.id, 900 - 50 * i)),
+        projection(gem.id, 400), // 40 pts — the worst VOR in the pool
+      ],
+      market: [
+        ...rbs.map((p, i) => mk(p.id, i + 1, mildEcr(i + 1))),
+        ...wrs.map((p, i) => mk(p.id, 47 + i, mildEcr(47 + i))),
+        // Extreme ceiling signals: one expert ranks him 47 spots above consensus, huge σ.
+        mk(gem.id, 55, { rank: 50, posRank: 'RB47', tier: 9, best: 3, worst: 60, stdDev: 12 }),
+      ],
+      draftedPlayerIds: [],
+      myDraftSlot: 1,
+      season: 2026,
+    }
+    const slate = evaluateCandidates(state).map((entry) => entry.playerId)
+    expect(slate).toContain(gem.id)
+    const withoutLane = evaluateCandidates(state, { upsideCount: 0 }).map((entry) => entry.playerId)
+    expect(withoutLane).not.toContain(gem.id)
+    expect(slate.length).toBeGreaterThan(withoutLane.length)
+  })
+})
+
 describe('benchmarks and captureRatio', () => {
   it('computes ceiling and all-replacement totals from the pool', () => {
     const { state } = cliffState()

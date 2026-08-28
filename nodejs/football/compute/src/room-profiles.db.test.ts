@@ -42,7 +42,8 @@ describe.skipIf(!existsSync(DB_FILE) || !existsSync(RULES_FILE))(
       expect(profiles.warnings).toEqual([])
     })
 
-    it('profiled evaluate stays in the plausible band and near the pure-ADP ordering', () => {
+    // Two full evaluations against the real snapshot (~50 rollouts each) outrun the default 5s.
+    it('profiled evaluate stays in the plausible band and near the pure-ADP ordering', { timeout: 30_000 }, () => {
       const benchmarks = computeBenchmarks(state)
       const profiled = evaluateCandidates(state, { profiles })
       const pure = evaluateCandidates(state)
