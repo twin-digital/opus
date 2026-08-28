@@ -43,6 +43,16 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 ## During the draft
 
 - Turn **live poll** on. Picks land on the board within ~5s of ESPN registering them.
+- **When you are on the clock** a violet panel appears above the board: candidates ranked
+  by projected final starter total (EST TEAM), with **Δ best** (the decision column),
+  the lineup slot each lands on, upside score, and the odds each makes it back to your
+  next turn if you pass. The **ME** button in the panel drafts straight from it. When it
+  is not your turn, a one-line strip shows the top-3 "if he falls to you".
+- **capture** in the status bar is the live draft grade: (your starters − replacement) /
+  (ceiling − replacement); hover for the numbers.
+- Board columns **Rm Δ** (positive green = the room lets him fall, negative red = the room
+  reaches) and **UPS** (upside 0–100) come from room pricing; a **!** by a name means the
+  projection sources genuinely disagree (hover for the spread).
 - The **Refresh data** button re-runs the ingest (several minutes) — use it only
   before the draft, not during; the poll keeps picks current on its own. It keeps the
   stored FantasyPros projections (skip mode) unless the server was started with
@@ -70,15 +80,25 @@ The board works fully by hand; polling is an optimization.
 - **Server up but page weird**: hard-reload the browser; the page holds no state worth
   keeping.
 - **API by hand** (all on 127.0.0.1:8020): `GET /api/state`, `GET /api/board`,
-  `POST /api/poll {"enabled":true|false}`,
+  `GET /api/evaluate`, `POST /api/poll {"enabled":true|false}`,
   `POST /api/mark {"playerId":"p-…","teamId":13|"unknown"}`,
   `POST /api/unmark {"playerId":"p-…"}`, `POST /api/refresh`.
 
 ## Environment knobs (all optional)
 
-| Var                | Default                                  |
-| ------------------ | ---------------------------------------- |
-| `PORT`             | 8020                                     |
-| `FOOTBALL_DB`      | `nodejs/football/data/.data/football.db` |
-| `FOOTBALL_SEASON`  | 2026                                     |
-| `FOOTBALL_TEAM_ID` | 13                                       |
+| Var                  | Default                                  |
+| -------------------- | ---------------------------------------- |
+| `PORT`               | 8020                                     |
+| `FOOTBALL_DB`        | `nodejs/football/data/.data/football.db` |
+| `FOOTBALL_SEASON`    | 2026                                     |
+| `FOOTBALL_TEAM_ID`   | 13                                       |
+| `FOOTBALL_OVERRIDES` | `nodejs/football/overrides.json`         |
+
+## Overrides (optional)
+
+`nodejs/football/overrides.json` — a JSON array of `{"player": "Name or p-id", "action":
+"ban"}` or `{"player": "...", "action": "boost", "points": 25}` — loads at server start and
+on every **Refresh data**. Boosts shift a player's projected points before VOR/tiers/
+rollouts (▲ marker on the board); bans keep him visible but out of every recommendation
+(muted row, BAN chip). A broken file never blocks the board: the server serves without
+overrides and surfaces the error in the status bar's data tooltip.

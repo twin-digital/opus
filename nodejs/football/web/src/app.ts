@@ -1,4 +1,16 @@
-import { board, upcomingPicksForSlot, type BoardResult, type BoardRow } from '@twin-digital/football-compute'
+import { existsSync } from 'node:fs'
+
+import {
+  board,
+  evaluateCandidates,
+  loadOverridesFile,
+  upcomingPicksForSlot,
+  type Benchmarks,
+  type BoardResult,
+  type BoardRow,
+  type CandidateEvaluation,
+  type PlayerOverride,
+} from '@twin-digital/football-compute'
 import {
   openDatabase,
   Store,
@@ -25,6 +37,8 @@ export interface AppOptions {
   espnCreds: EspnLeagueCredentials | null
   fpApiKey?: string | null
   fpProjectionsMode?: IngestOptions['fpProjectionsMode']
+  /** Optional overrides.json path; missing file = no overrides, bad file = error surfaced in state. */
+  overridesFile?: string | null
   /** Injectable for tests; defaults to the shared connection on `dbFile`. */
   database?: Database
   runIngestFn?: (options: IngestOptions) => Promise<IngestSummary>
@@ -63,9 +77,40 @@ export interface BoardPayload {
   currentOverall: number
   myNextPicks: number[]
   replacement: BoardResult['replacement']
+  benchmarks: Benchmarks
+  captureRatio: number
+  /** Players carrying a points boost from the overrides file. */
+  boostedIds: PlayerId[]
   scarcity: TierScarcity[]
   rows: BoardRow[]
   drafted: DraftedRow[]
+}
+
+export interface OverridesStatus {
+  file: string | null
+  count: number
+  boosted: number
+  banned: number
+  error: string | null
+}
+
+export interface EvaluateRow extends CandidateEvaluation {
+  tier: number | null
+  /** Make-it-back odds joined from the board: my next pick / the pick after. */
+  pNextPick: number | null
+  pPickAfter: number | null
+  boosted: boolean
+}
+
+export interface EvaluatePayload {
+  version: number
+  computedAt: string
+  currentOverall: number
+  onClockTeamId: number | null
+  /** True when the pick on the clock is mine. */
+  myTurn: boolean
+  myNextPicks: number[]
+  candidates: EvaluateRow[]
 }
 
 export interface StatePayload {
@@ -92,6 +137,9 @@ export interface StatePayload {
   }
   picks: (EffectivePick & { name: string; position: string; team: string | null })[]
   myRoster: RosterSummary
+  /** Live draft grade: (my starters − replacement) / (ceiling − replacement). */
+  capture: { ratio: number; teamTotal: number; benchmarks: Benchmarks }
+  overrides: OverridesStatus
   ingest: IngestStatus
   asOf: ReturnType<Store['getAsOfStamps']>
 }
@@ -126,7 +174,10 @@ export class App {
   private espnIdToPlayer = new Map<string, PlayerId>()
   private version = 0
   private snapshotGeneration = 0
+  private overrides: PlayerOverride[] = []
+  private overridesStatus: OverridesStatus = { file: null, count: 0, boosted: 0, banned: 0, error: null }
   private boardCache: { version: number; payload: BoardPayload } | null = null
+  private evaluateCache: { version: number; payload: EvaluatePayload } | null = null
   private fullRowsCache: { generation: number; rowsById: Map<PlayerId, BoardRow> } | null = null
   private warnedUnresolvedEspnIds = new Set<number>()
 
@@ -157,11 +208,36 @@ export class App {
         .map((mapping) => [mapping.externalId, mapping.playerId]),
     )
     this.snapshotGeneration += 1
+    this.reloadOverrides()
     this.bumpVersion()
+  }
+
+  /** A broken overrides file must not take the board down on draft day: record and serve without. */
+  private reloadOverrides(): void {
+    const file = this.options.overridesFile ?? null
+    this.overrides = []
+    this.overridesStatus = { file, count: 0, boosted: 0, banned: 0, error: null }
+    if (file === null || !existsSync(file)) {
+      return
+    }
+    try {
+      this.overrides = loadOverridesFile(file, this.snapshot.players)
+      this.overridesStatus.count = this.overrides.length
+      this.overridesStatus.boosted = this.overrides.filter((override) => override.action === 'boost').length
+      this.overridesStatus.banned = this.overrides.filter((override) => override.action === 'ban').length
+    } catch (error) {
+      this.overrides = []
+      this.overridesStatus.error = error instanceof Error ? error.message : String(error)
+      this.log(`overrides: FAILED to load ${file}: ${this.overridesStatus.error}`)
+    }
   }
 
   get settings(): LeagueSettings {
     return this.snapshot.settings
+  }
+
+  get overridesInfo(): OverridesStatus {
+    return this.overridesStatus
   }
 
   get mySlot(): number {
@@ -265,18 +341,7 @@ export class App {
       return this.boardCache.payload
     }
     const picks = this.effectivePicks()
-    const live = board(
-      {
-        settings: this.settings,
-        players: this.snapshot.players,
-        projections: this.snapshot.projections,
-        market: this.snapshot.market,
-        draftedPlayerIds: picks.map((pick) => pick.playerId),
-        myDraftSlot: this.mySlot,
-        season: this.options.season,
-      },
-      { log: this.log },
-    )
+    const live = board(this.boardState(picks), { overrides: this.overrides, log: this.log })
     const fullRows = this.fullRows()
     const drafted: DraftedRow[] = picks.map((pick) => {
       const row = fullRows.get(pick.playerId)
@@ -304,12 +369,65 @@ export class App {
       currentOverall: live.currentOverall,
       myNextPicks: live.myNextPicks.filter((pick) => pick <= this.totalPicks),
       replacement: live.replacement,
+      benchmarks: live.benchmarks,
+      captureRatio: live.captureRatio,
+      boostedIds: [...new Set(this.overrides.filter((override) => override.action === 'boost').map((o) => o.playerId))],
       scarcity: tierScarcity(live.rows),
       rows: live.rows,
       drafted,
     }
     this.boardCache = { version: this.version, payload }
     return payload
+  }
+
+  /** Candidate rollouts for the pick on the clock, cached on the same version as the board. */
+  evaluatePayload(): EvaluatePayload {
+    if (this.evaluateCache?.version === this.version) {
+      return this.evaluateCache.payload
+    }
+    const picks = this.effectivePicks()
+    const complete = picks.length >= this.totalPicks
+    const onClockTeamId =
+      complete ? null : teamOnClock(this.settings.draft.pickOrder, picks.length + 1, this.totalRounds)
+    const boardRows = new Map(this.boardPayload().rows.map((row) => [row.playerId, row]))
+    const boosted = new Set(this.boardPayload().boostedIds)
+    const candidates =
+      complete ?
+        []
+      : evaluateCandidates(this.boardState(picks), { overrides: this.overrides }).map((candidate) => {
+          const row = boardRows.get(candidate.playerId)
+          return {
+            ...candidate,
+            tier: row?.tier ?? null,
+            pNextPick: row?.pNextPick ?? null,
+            pPickAfter: row?.pPickAfter ?? null,
+            boosted: boosted.has(candidate.playerId),
+          }
+        })
+    const payload: EvaluatePayload = {
+      version: this.version,
+      computedAt: this.now().toISOString(),
+      currentOverall: Math.min(picks.length + 1, this.totalPicks),
+      onClockTeamId,
+      myTurn: onClockTeamId === this.options.myTeamId,
+      myNextPicks: this.boardPayload().myNextPicks,
+      candidates,
+    }
+    this.evaluateCache = { version: this.version, payload }
+    return payload
+  }
+
+  private boardState(picks: EffectivePick[]) {
+    return {
+      settings: this.settings,
+      players: this.snapshot.players,
+      projections: this.snapshot.projections,
+      market: this.snapshot.market,
+      draftedPlayerIds: picks.map((pick) => pick.playerId),
+      myDraftedPlayerIds: picks.filter((pick) => pick.teamId === this.options.myTeamId).map((pick) => pick.playerId),
+      myDraftSlot: this.mySlot,
+      season: this.options.season,
+    }
   }
 
   statePayload(): StatePayload {
@@ -369,9 +487,17 @@ export class App {
         }
       }),
       myRoster: buildRoster(myPlayers, settings.lineupSlots),
+      capture: this.capture(),
+      overrides: this.overridesStatus,
       ingest: this.ingest,
       asOf: this.store.getAsOfStamps(),
     }
+  }
+
+  private capture(): StatePayload['capture'] {
+    const { captureRatio, benchmarks } = this.boardPayload()
+    const range = benchmarks.ceiling - benchmarks.replacement
+    return { ratio: captureRatio, teamTotal: benchmarks.replacement + captureRatio * range, benchmarks }
   }
 
   get totalPicks(): number {
@@ -381,6 +507,7 @@ export class App {
   private bumpVersion(): void {
     this.version += 1
     this.boardCache = null
+    this.evaluateCache = null
   }
 
   /** Board rows over the full pool (nobody drafted), for displaying drafted players' values. */
@@ -398,7 +525,7 @@ export class App {
         myDraftSlot: this.mySlot,
         season: this.options.season,
       },
-      { log: () => undefined },
+      { overrides: this.overrides, log: () => undefined },
     )
     const rowsById = new Map(full.rows.map((row) => [row.playerId, row]))
     this.fullRowsCache = { generation: this.snapshotGeneration, rowsById }

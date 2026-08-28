@@ -1,3 +1,7 @@
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -133,7 +137,9 @@ interface TestContext {
   context: RouteContext
 }
 
-const makeApp = (options: { runIngestFn?: (o: unknown) => Promise<IngestSummary> } = {}): TestContext => {
+const makeApp = (
+  options: { runIngestFn?: (o: unknown) => Promise<IngestSummary>; overridesFile?: string } = {},
+): TestContext => {
   const database = openDatabase(':memory:')
   seed(new Store(database))
   const app = new App({
@@ -143,9 +149,16 @@ const makeApp = (options: { runIngestFn?: (o: unknown) => Promise<IngestSummary>
     espnCreds: null,
     database,
     runIngestFn: options.runIngestFn,
+    overridesFile: options.overridesFile,
   })
   const poller = makePoller()
   return { app, poller, context: { app, poller } }
+}
+
+const writeOverrides = (specs: unknown[]): string => {
+  const file = path.join(mkdtempSync(path.join(tmpdir(), 'football-overrides-')), 'overrides.json')
+  writeFileSync(file, JSON.stringify(specs))
+  return file
 }
 
 const call = (context: RouteContext, method: string, path: string, body?: unknown): { status: number; json: never } => {
@@ -280,6 +293,106 @@ describe('routes', () => {
     expect(status).toBe(200)
     expect(poller.status.enabled).toBe(true)
     expect((json as { poll: { enabled: boolean } }).poll.enabled).toBe(true)
+  })
+
+  it('evaluates candidates when it is not my turn: ranked, deltas anchored at best', () => {
+    const { context } = makeApp()
+    const { status, json } = call(context, 'GET', '/api/evaluate')
+    const payload = json as {
+      myTurn: boolean
+      onClockTeamId: number | null
+      currentOverall: number
+      candidates: { estTeamScore: number; deltaVsBest: number; landsOn: string; pNextPick: number | null }[]
+    }
+    expect(status).toBe(200)
+    expect(payload.myTurn).toBe(false)
+    expect(payload.onClockTeamId).toBe(8)
+    expect(payload.currentOverall).toBe(1)
+    expect(payload.candidates.length).toBeGreaterThan(5)
+    const scores = payload.candidates.map((candidate) => candidate.estTeamScore)
+    expect(scores).toEqual([...scores].sort((a, b) => b - a))
+    expect(payload.candidates[0]?.deltaVsBest).toBe(0)
+    expect(payload.candidates.every((candidate) => candidate.deltaVsBest <= 0)).toBe(true)
+    // make-it-back odds are joined from the board rows
+    expect(payload.candidates[0]?.pNextPick).not.toBeNull()
+  })
+
+  it('flags my turn once ten picks are in, excluding drafted players from the slate', () => {
+    const { context } = makeApp()
+    const gone = ['p-RB1', 'p-RB2', 'p-RB3', 'p-RB4', 'p-WR1', 'p-WR2', 'p-WR3', 'p-QB1', 'p-QB2', 'p-TE1']
+    for (const playerId of gone) {
+      expect(call(context, 'POST', '/api/mark', { playerId, teamId: 'unknown' }).status).toBe(200)
+    }
+    const payload = call(context, 'GET', '/api/evaluate').json as {
+      myTurn: boolean
+      onClockTeamId: number | null
+      currentOverall: number
+      myNextPicks: number[]
+      candidates: { playerId: string; estTeamScore: number; landsOn: string }[]
+    }
+    expect(payload.myTurn).toBe(true)
+    expect(payload.onClockTeamId).toBe(13)
+    expect(payload.currentOverall).toBe(11)
+    expect(payload.myNextPicks[0]).toBe(11)
+    expect(payload.candidates.length).toBeGreaterThan(0)
+    expect(payload.candidates.some((candidate) => gone.includes(candidate.playerId))).toBe(false)
+    expect(payload.candidates[0]?.estTeamScore).toBeGreaterThan(0)
+  })
+
+  it('reports capture: zero pre-draft, rising with my picks', () => {
+    const { context } = makeApp()
+    const before = call(context, 'GET', '/api/state').json as {
+      capture: { ratio: number; teamTotal: number; benchmarks: { ceiling: number; replacement: number } }
+    }
+    expect(before.capture.benchmarks.ceiling).toBeGreaterThan(before.capture.benchmarks.replacement)
+    expect(before.capture.ratio).toBe(0)
+    call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 13 })
+    const after = call(context, 'GET', '/api/state').json as { capture: { ratio: number; teamTotal: number } }
+    expect(after.capture.ratio).toBeGreaterThan(0)
+    expect(after.capture.teamTotal).toBeGreaterThan(before.capture.teamTotal)
+  })
+
+  it('applies overrides: bans leave the board as data, boosts shift points and are flagged', () => {
+    const file = writeOverrides([
+      { player: 'RB Player 1', action: 'ban' },
+      { player: 'WR Player 1', action: 'boost', points: 50 },
+    ])
+    const plain = makeApp()
+    const { context } = makeApp({ overridesFile: file })
+
+    const board = call(context, 'GET', '/api/board').json as {
+      boostedIds: string[]
+      rows: { playerId: string; points: number | null; banned: boolean }[]
+    }
+    const plainBoard = call(plain.context, 'GET', '/api/board').json as {
+      rows: { playerId: string; points: number | null }[]
+    }
+    expect(board.boostedIds).toEqual(['p-WR1'])
+    expect(board.rows.find((row) => row.playerId === 'p-RB1')?.banned).toBe(true)
+    const boosted = board.rows.find((row) => row.playerId === 'p-WR1')?.points
+    const unboosted = plainBoard.rows.find((row) => row.playerId === 'p-WR1')?.points
+    expect(boosted).toBeCloseTo((unboosted ?? 0) + 50, 5)
+
+    const evaluate = call(context, 'GET', '/api/evaluate').json as {
+      candidates: { playerId: string; boosted: boolean }[]
+    }
+    expect(evaluate.candidates.some((candidate) => candidate.playerId === 'p-RB1')).toBe(false)
+    expect(evaluate.candidates.find((candidate) => candidate.playerId === 'p-WR1')?.boosted).toBe(true)
+
+    const state = call(context, 'GET', '/api/state').json as {
+      overrides: { count: number; boosted: number; banned: number; error: string | null }
+    }
+    expect(state.overrides).toMatchObject({ count: 2, boosted: 1, banned: 1, error: null })
+  })
+
+  it('serves without overrides when the file is broken, surfacing the error', () => {
+    const file = writeOverrides([{ player: 'Nobody Real', action: 'ban' }])
+    const { context } = makeApp({ overridesFile: file })
+    const state = call(context, 'GET', '/api/state').json as { overrides: { count: number; error: string | null } }
+    expect(state.overrides.count).toBe(0)
+    expect(state.overrides.error).toContain('Nobody Real')
+    expect(call(context, 'GET', '/api/board').status).toBe(200)
+    expect(call(context, 'GET', '/api/evaluate').status).toBe(200)
   })
 
   it('runs the ingest refresh once at a time', async () => {

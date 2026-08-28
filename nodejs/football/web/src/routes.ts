@@ -51,6 +51,9 @@ export const handleRoute = (context: RouteContext, method: string, path: string,
   if (method === 'GET' && path === '/api/board') {
     return json(200, app.boardPayload())
   }
+  if (method === 'GET' && path === '/api/evaluate') {
+    return json(200, app.evaluatePayload())
+  }
   if (method === 'POST' && path === '/api/poll') {
     if (!isRecord(body) || typeof body.enabled !== 'boolean') {
       return json(400, { error: 'body must be { enabled: boolean }' })

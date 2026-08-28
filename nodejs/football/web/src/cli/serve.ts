@@ -55,6 +55,7 @@ const main = async (): Promise<void> => {
   const dbFile = process.env.FOOTBALL_DB ?? path.join(packageDir, '..', 'data', '.data', 'football.db')
   const myTeamId = Number(process.env.FOOTBALL_TEAM_ID ?? '13')
   const port = Number(process.env.PORT ?? '8020')
+  const overridesFile = process.env.FOOTBALL_OVERRIDES ?? path.join(packageDir, '..', 'overrides.json')
   const creds = espnCreds()
 
   const app = new App({
@@ -64,6 +65,7 @@ const main = async (): Promise<void> => {
     espnCreds: creds,
     fpApiKey: process.env.FP_API_KEY ?? null,
     fpProjectionsMode: fpProjectionsMode(),
+    overridesFile,
     log,
   })
   const poller = new DraftPoller({
@@ -86,6 +88,13 @@ const main = async (): Promise<void> => {
     `league: ${app.settings.name} (${String(app.settings.size)} teams) — my team ${String(myTeamId)}, slot ${String(app.mySlot)}`,
   )
   log(`espn creds: ${creds === null ? 'MISSING — polling unavailable, manual marks only' : 'present'}`)
+  const overrides = app.overridesInfo
+  log(
+    overrides.error !== null ? `overrides: FAILED — ${overrides.error}`
+    : overrides.count > 0 ?
+      `overrides: ${String(overrides.boosted)} boosted, ${String(overrides.banned)} banned (${overridesFile})`
+    : 'overrides: none',
+  )
   log(`board: http://127.0.0.1:${String(port)}/`)
 }
 
