@@ -1,11 +1,31 @@
 import type { MarketData, PlayerId } from '@twin-digital/football-data'
 
-import { marketAdp, roomAdp, ESPN_UNDRAFTED_SENTINEL } from './room.js'
+import { marketAdp, roomAdp } from './room.js'
+
+/**
+ * Upside knobs, in one place.
+ *
+ * RANK_SCALE_EXP — ceilingJump and sigma both grow mechanically with rank depth (one optimist
+ * plus plain noise puts ecr.best 150 spots above an ECR-300 name), so each is divided by
+ * rank^RANK_SCALE_EXP before percentiling: √rank, the same std/√rank convention the consensus
+ * k-scaler uses (TUNING.STD_NORM_REF). The residual-spread component is points-based and needs
+ * no rank normalization.
+ *
+ * MAX_REAL_ADP — a score also requires a real price. ESPN prices its entire undrafted tail in
+ * a thin band just under the 169.5 sentinel (measured 2026-08-28: the tail cohort sits at
+ * 167–169.4), so a player enters the upside pool only when some source prices him at or under
+ * MAX_REAL_ADP, clear of that shoulder. Deep-tail names without a real market (a rookie
+ * college QB at ECR 235, market ADP 188) get no score rather than an inflated one.
+ */
+export const UPSIDE = {
+  RANK_SCALE_EXP: 0.5,
+  MAX_REAL_ADP: 165,
+} as const
 
 export interface UpsideSignals {
-  /** How far above consensus the most optimistic expert ranks him: ecr.rank − ecr.best. */
+  /** Optimist gap (ecr.rank − ecr.best), normalized by rank^RANK_SCALE_EXP. */
   ceilingJump: number | null
-  /** Expert disagreement (ecr.stdDev) — a wide outcome distribution. */
+  /** Expert disagreement (ecr.stdDev), normalized by rank^RANK_SCALE_EXP. */
   sigma: number | null
   /** Debiased cross-source residual spread in league points — projection-shop disagreement. */
   spread: number | null
@@ -13,18 +33,23 @@ export interface UpsideSignals {
 
 /** Cheap ceiling proxies from FantasyPros ECR plus source spread; null when none exist. */
 export const upsideSignals = (market: MarketData, spread: number | null = null): UpsideSignals | null => {
+  const scale = market.ecr === null ? 1 : Math.pow(market.ecr.rank, UPSIDE.RANK_SCALE_EXP)
   const signals: UpsideSignals = {
-    ceilingJump: market.ecr === null ? null : market.ecr.rank - market.ecr.best,
-    sigma: market.ecr === null ? null : market.ecr.stdDev,
+    ceilingJump: market.ecr === null ? null : (market.ecr.rank - market.ecr.best) / scale,
+    sigma: market.ecr === null ? null : market.ecr.stdDev / scale,
     spread,
   }
   return signals.ceilingJump === null && signals.spread === null ? null : signals
 }
 
-/** Draftable: some ADP under the draft horizon (roomAdp already nulls ESPN's undrafted sentinel). */
+/**
+ * Draftable for upside purposes: somebody actually prices him inside the draft's real range —
+ * best available price (room or market) at or under UPSIDE.MAX_REAL_ADP. roomAdp already nulls
+ * ESPN's undrafted sentinel; the threshold keeps the sentinel's 167–169.4 shoulder out too.
+ */
 export const isDraftable = (market: MarketData): boolean => {
-  const adp = roomAdp(market) ?? marketAdp(market)
-  return adp !== null && adp < ESPN_UNDRAFTED_SENTINEL
+  const best = Math.min(roomAdp(market) ?? Number.POSITIVE_INFINITY, marketAdp(market) ?? Number.POSITIVE_INFINITY)
+  return best <= UPSIDE.MAX_REAL_ADP
 }
 
 /** Average sorted-rank percentile of `values` (ties share their mean rank), scaled 0–100. */

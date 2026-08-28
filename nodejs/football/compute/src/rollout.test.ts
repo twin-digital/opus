@@ -204,6 +204,61 @@ describe('evaluateCandidates — the upside lane', () => {
     expect(withoutLane).not.toContain(gem.id)
     expect(slate.length).toBeGreaterThan(withoutLane.length)
   })
+
+  it('the lane excludes a top-upside name without a real room price', () => {
+    const mk = (playerId: PlayerId, adp: MarketData['adp'], ecr: MarketData['ecr']): MarketData => ({
+      playerId,
+      adp,
+      ecr,
+      percentRostered: null,
+      asOf: 'now',
+    })
+    const rbs = Array.from({ length: 46 }, (unused, i) => player('RB', `RB ${String(i + 1)}`))
+    const wrs = Array.from({ length: 3 }, (unused, i) => player('WR', `WR ${String(i + 1)}`))
+    const priced = player('RB', 'Priced Ticket')
+    const unpriced = player('RB', 'FP-Only Ghost')
+    const settings: LeagueSettings = {
+      leagueId: 'test',
+      name: 'Upside League',
+      size: 2,
+      scoringRules: [{ stat: 'rushYd', points: 0.1 }],
+      lineupSlots: { QB: 0, RB: 2, WR: 1, TE: 0, FLEX: 0, DST: 0, K: 0, BENCH: 2, IR: 0 },
+      draft: { type: 'snake', date: null, pickOrder: [1, 2] },
+    }
+    const mildEcr = (rank: number): MarketData['ecr'] => ({
+      rank,
+      posRank: `RB${String(rank)}`,
+      tier: 1,
+      best: rank,
+      worst: rank + 2,
+      stdDev: 1,
+    })
+    const hotEcr: MarketData['ecr'] = { rank: 50, posRank: 'RB47', tier: 9, best: 3, worst: 60, stdDev: 12 }
+    const state: BoardState = {
+      settings,
+      players: [...rbs, ...wrs, priced, unpriced],
+      projections: [
+        ...rbs.map((p, i) => projection(p.id, 1500 - 15 * i)),
+        ...wrs.map((p, i) => projection(p.id, 900 - 50 * i)),
+        projection(priced.id, 400),
+        projection(unpriced.id, 401),
+      ],
+      market: [
+        ...rbs.map((p, i) => mk(p.id, { sleeper: { half: i + 1 } }, mildEcr(i + 1))),
+        ...wrs.map((p, i) => mk(p.id, { sleeper: { half: 47 + i } }, mildEcr(47 + i))),
+        // Same extreme ceiling signals; only the pricing differs. FantasyPros-only pricing
+        // yields no room ADP, so the lane has no price the room would pay.
+        mk(priced.id, { sleeper: { half: 160 } }, hotEcr),
+        mk(unpriced.id, { fantasypros: { half: 150 } }, hotEcr),
+      ],
+      draftedPlayerIds: [],
+      myDraftSlot: 1,
+      season: 2026,
+    }
+    const slate = evaluateCandidates(state).map((entry) => entry.playerId)
+    expect(slate).toContain(priced.id)
+    expect(slate).not.toContain(unpriced.id)
+  })
 })
 
 describe('benchmarks and captureRatio', () => {

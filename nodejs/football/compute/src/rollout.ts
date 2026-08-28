@@ -12,6 +12,9 @@ import { computeUpsideScores } from './upside.js'
 import { computeReplacementLevels, type ReplacementLevel } from './vor.js'
 
 const SKILL_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const
+
+/** The upside slate lane only seats players with a real room price inside the draft horizon. */
+const UPSIDE_LANE_MAX_ADP = 175
 type SkillPosition = (typeof SKILL_POSITIONS)[number]
 const SKILL_SET = new Set<Position>(SKILL_POSITIONS)
 
@@ -472,8 +475,13 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
     }
     // Upside lane: the VOR cut is mean-biased and can drop lottery tickets late in a draft,
     // exactly when upside becomes the ranking key; priced high-upside availables get a rollout.
+    // The lane needs a price this room could actually pay: a real room ADP inside the draft
+    // horizon (roomAdp already nulls ESPN's 169.5 undrafted sentinel). Upside scores already
+    // require a real price at the pool level (UPSIDE.MAX_REAL_ADP); this is the lane's own belt.
     const byUpside = eligible
-      .filter((player) => player.upsideScore !== null && player.roomAdp !== null)
+      .filter(
+        (player) => player.upsideScore !== null && player.roomAdp !== null && player.roomAdp <= UPSIDE_LANE_MAX_ADP,
+      )
       .sort((a, b) => (b.upsideScore ?? 0) - (a.upsideScore ?? 0))
     for (const player of byUpside.slice(0, options.upsideCount ?? 10)) {
       if (!included.has(player.playerId)) {

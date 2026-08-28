@@ -17,12 +17,11 @@ const market = (
 })
 
 describe('upsideSignals', () => {
-  it('reads ceilingJump and sigma off ECR', () => {
-    expect(upsideSignals(market({ rank: 60, best: 35, stdDev: 11 }))).toEqual({
-      ceilingJump: 25,
-      sigma: 11,
-      spread: null,
-    })
+  it('reads ceilingJump and sigma off ECR, normalized by √rank', () => {
+    const signals = upsideSignals(market({ rank: 60, best: 35, stdDev: 11 }))
+    expect(signals?.ceilingJump).toBeCloseTo(25 / Math.sqrt(60), 9)
+    expect(signals?.sigma).toBeCloseTo(11 / Math.sqrt(60), 9)
+    expect(signals?.spread).toBeNull()
     expect(upsideSignals(market(null))).toBeNull()
   })
 
@@ -32,11 +31,15 @@ describe('upsideSignals', () => {
 })
 
 describe('isDraftable', () => {
-  it('requires some ADP under the draft horizon', () => {
+  it('requires a real price at or under MAX_REAL_ADP from some source', () => {
     expect(isDraftable(market(null, { sleeper: { half: 50 } }))).toBe(true)
     expect(isDraftable(market(null, {}))).toBe(false)
     expect(isDraftable(market(null, { espn: { ppr: 170 } }))).toBe(false)
     expect(isDraftable(market(null, { sleeper: { half: 200 } }))).toBe(false)
+    // ESPN's sentinel shoulder (167–169.4) is not a real price…
+    expect(isDraftable(market(null, { espn: { half: 168 } }))).toBe(false)
+    // …unless another source prices him inside the horizon.
+    expect(isDraftable(market(null, { espn: { half: 168 }, sleeper: { half: 120 } }))).toBe(true)
   })
 })
 
@@ -59,6 +62,29 @@ describe('computeUpsideScores', () => {
     expect(scores.has(draftable.playerId)).toBe(true)
     expect(scores.has(noEcr.playerId)).toBe(false)
     expect(scores.has(undraftable.playerId)).toBe(false)
+  })
+
+  it('a deep-tail name with a huge raw spread but no real price scores below a genuine ticket', () => {
+    // The Mendoza case: ECR 300, enormous raw ceilingJump/stdDev, but ESPN prices him on the
+    // sentinel shoulder and the market past the horizon — no score at all.
+    const deepTail = market({ rank: 300, best: 120, stdDev: 55 }, { espn: { half: 168 }, sleeper: { half: 188 } })
+    // A draftable-range genuine ticket: moderate spread, real price.
+    const genuine = market({ rank: 120, best: 55, stdDev: 20 }, { sleeper: { half: 150 } })
+    const baseline = market({ rank: 40, best: 38, stdDev: 4 }, { sleeper: { half: 40 } })
+    const scores = computeUpsideScores([deepTail, genuine, baseline])
+    expect(scores.has(deepTail.playerId)).toBe(false)
+    const genuineScore = scores.get(genuine.playerId) as number
+    expect(genuineScore).toBeGreaterThan(50)
+    expect(scores.get(deepTail.playerId) ?? -1).toBeLessThan(genuineScore)
+  })
+
+  it('√rank normalization: a deeper player no longer wins on a bigger raw jump alone', () => {
+    // Raw jumps 90 > 68, but 90/√300 = 5.2 < 68/√120 = 6.2 — depth stops paying rent.
+    const deep = market({ rank: 300, best: 210, stdDev: 30 }, { sleeper: { half: 150 } })
+    const shallow = market({ rank: 120, best: 52, stdDev: 20 }, { sleeper: { half: 150 } })
+    const baseline = market({ rank: 40, best: 38, stdDev: 4 }, { sleeper: { half: 40 } })
+    const scores = computeUpsideScores([deep, shallow, baseline])
+    expect(scores.get(shallow.playerId) as number).toBeGreaterThan(scores.get(deep.playerId) as number)
   })
 
   it('blends the residual spread as a third component', () => {
@@ -98,9 +124,9 @@ describe('computeUpsideScores', () => {
 
   it('averages tied ranks', () => {
     const a = market({ rank: 50, best: 40, stdDev: 6 })
-    const b = market({ rank: 60, best: 50, stdDev: 6 })
+    const b = market({ rank: 50, best: 40, stdDev: 6 })
     const scores = computeUpsideScores([a, b])
-    // identical signals → identical mid scores
+    // identical (normalized) signals → identical mid scores
     expect(scores.get(a.playerId)).toBe(scores.get(b.playerId))
   })
 })
