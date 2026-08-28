@@ -181,6 +181,8 @@ export interface EvaluateRow extends CandidateEvaluation {
   /** Candidates (self included) with bit-identical scenario outcomes; null under det. */
   exactTies: number | null
   tier: number | null
+  /** Bye week joined from the board; drives the panel's display-only bye tie-breaker. */
+  byeWeek: number | null
   /** Expert consensus rank — the panel's independent audit signal, joined from the board. */
   ecrRank: number | null
   /** The room's price (ESPN ADP, Sleeper fallback), joined from the board for the ECR tooltip. */
@@ -1183,6 +1185,7 @@ export class App {
           deltaVsRef: 'deltaVsRef' in candidate ? candidate.deltaVsRef : null,
           exactTies: 'exactTies' in candidate ? candidate.exactTies : null,
           tier: row?.tier ?? null,
+          byeWeek: row?.byeWeek ?? null,
           ecrRank: row?.ecrRank ?? null,
           roomAdp: row?.roomAdp ?? null,
           pNextPick: row?.pNextPick ?? null,

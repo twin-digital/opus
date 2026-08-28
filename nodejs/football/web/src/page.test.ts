@@ -82,6 +82,8 @@ interface FixtureOptions {
   extraCandidates?: Record<string, unknown>[]
   /** Serve the candidate list even off my turn (WAITING falls strip, stale SIMULATING rows). */
   withCandidates?: boolean
+  /** Players already seated in my starting lineup (drives the panel's bye highlights). */
+  myStarters?: { name: string; position: string; byeWeek: number | null }[]
 }
 
 const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> => {
@@ -120,6 +122,9 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
       myRoster: {
         slots: [
           { slot: 'RB', capacity: 2, players: [] },
+          ...(options.myStarters === undefined ?
+            []
+          : [{ slot: 'FLEX', capacity: options.myStarters.length, players: options.myStarters }]),
           { slot: 'K', capacity: 1, players: seat(options.openK ?? 1) },
           { slot: 'DST', capacity: 1, players: seat(options.openDst ?? 1) },
         ],
@@ -188,6 +193,7 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
               deltaVsBest: 0,
               landsOn: 'TE',
               upsideScore: 55,
+              byeWeek: 8,
               se: 0.8,
               pBest: 0.62,
               deltaVsRef: 0,
@@ -409,6 +415,99 @@ describe('page rendering with fixture data', () => {
         expect(panel().className).toContain('myturn')
         expect(table().style.display).toBe('none')
         expect(waitBody().style.display).not.toBe('none')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('the timer restarts when the version moves while still computing', async () => {
+      const payloads = buildPayloads({ myTurn: false, computing: true }) as Record<string, { version?: number }>
+      loadMarkup()
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(1_000_000)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((path: string) => Promise.resolve({ ok: true, json: () => Promise.resolve(payloads[path] ?? {}) })),
+      )
+      const intervals: { fn: () => void; ms: number }[] = []
+      vi.stubGlobal(
+        'setInterval',
+        vi.fn((fn: () => void, ms: number) => {
+          intervals.push({ fn, ms })
+          return 0
+        }),
+      )
+      const poll = (): void => {
+        intervals.find((interval) => interval.ms === 2000)?.fn()
+      }
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+        new Function(script)()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        expect(chip().textContent).toBe('SIMULATING · 0s')
+        // Same simulation seven seconds on: the counter holds its origin.
+        vi.setSystemTime(1_007_000)
+        poll()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        expect(chip().textContent).toBe('SIMULATING · 7s')
+        // A pick lands mid-compute (version bump, still computing): the counter restarts.
+        ;(payloads['/api/state'] as { version: number }).version = 2
+        ;(payloads['/api/evaluate'] as { version: number }).version = 2
+        vi.setSystemTime(1_009_000)
+        poll()
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        expect(chip().textContent).toBe('SIMULATING · 0s')
+      } finally {
+        vi.useRealTimers()
+        vi.unstubAllGlobals()
+      }
+    })
+  })
+
+  describe('the panel bye column', () => {
+    const byeCells = (): HTMLElement[] =>
+      [...document.querySelectorAll('#clockRows tr')].map((tr) => tr.querySelectorAll('td')[2] as HTMLElement)
+
+    it('sits after Pos and amber-tints a pick that stacks a third skill starter on one bye', async () => {
+      try {
+        await runPage(
+          buildPayloads({
+            myTurn: true,
+            myStarters: [
+              { name: 'Stacked RB', position: 'RB', byeWeek: 8 },
+              { name: 'Stacked WR', position: 'WR', byeWeek: 8 },
+            ],
+          }),
+        )
+        const headers = [...document.querySelectorAll('#clockPanel thead th')].map((th) => th.textContent)
+        expect(headers.indexOf('Bye')).toBe(headers.indexOf('Pos') + 1)
+        const cell = byeCells()[0] as HTMLElement
+        expect(cell.textContent).toBe('8')
+        expect(cell.className).toContain('bye-stack')
+        expect(cell.title).toBe('would stack 3rd skill starter on bye week 8')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('red-tints a TE sharing his own starter TE bye — the backup that covers nothing', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: true, myStarters: [{ name: 'Starter TE', position: 'TE', byeWeek: 8 }] }))
+        const cell = byeCells()[0] as HTMLElement
+        expect(cell.className).toContain('bye-samepos')
+        expect(cell.title).toContain('same bye (week 8) as your TE starter Starter TE')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('stays plain when byes do not collide', async () => {
+      try {
+        await runPage(buildPayloads({ myTurn: true, myStarters: [{ name: 'Other RB', position: 'RB', byeWeek: 9 }] }))
+        const cell = byeCells()[0] as HTMLElement
+        expect(cell.textContent).toBe('8')
+        expect(cell.className).toBe('')
+        expect(cell.title).toBe('')
       } finally {
         vi.unstubAllGlobals()
       }

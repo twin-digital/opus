@@ -162,6 +162,8 @@ export const PAGE = `<!doctype html>
   #clockPanel table { border: none; border-radius: 0; }
   #clockPanel thead th { position: static; }
   #clockPanel td.est { font-family: var(--font-mono); font-weight: 600; }
+  td.bye-stack { background: color-mix(in oklab, var(--warning) 22%, transparent); color: var(--warning); cursor: help; }
+  td.bye-samepos { background: color-mix(in oklab, var(--danger) 22%, transparent); color: var(--danger); cursor: help; }
   #clockPanel td.delta { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
   tr.best td { background: color-mix(in oklab, var(--primary) 10%, transparent); }
   .best-tag { color: var(--success); font-weight: 700; }
@@ -279,6 +281,7 @@ export const PAGE = `<!doctype html>
         <thead>
           <tr>
             <th class="l">Player</th><th class="l">Pos</th>
+            <th title="Bye week — amber when drafting him stacks 3+ of your skill starters on one bye, red when a QB/TE backup shares his starter's bye">Bye</th>
             <th title="Projected final starter total if you take him now (Monte Carlo mean over sampled drafts)">Est team</th>
             <th id="deltaH" title="">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
@@ -645,13 +648,42 @@ function renderRecap() {
   panel.innerHTML = html.join('');
 }
 
+function ordinal(n) {
+  var tail = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th';
+  return n + tail;
+}
+// Display-only bye tie-breaker (byes stay out of the MC objective by ruling): amber when the
+// pick stacks a 3rd+ skill starter on one bye; red when a QB/TE shares his own starter's bye.
+function byeCell(c, starters) {
+  var bye = c.byeWeek;
+  if (bye === null || bye === undefined) return '<td class="muted">—</td>';
+  if (c.position === 'QB' || c.position === 'TE') {
+    var clash = starters.filter(function (p) { return p.position === c.position && p.byeWeek === bye; });
+    if (clash.length) {
+      return '<td class="bye-samepos" title="' +
+        esc('same bye (week ' + bye + ') as your ' + c.position + ' starter ' + clash[0].name +
+          ' — a backup that covers nothing') + '">' + bye + '</td>';
+    }
+  }
+  if (c.position === 'RB' || c.position === 'WR' || c.position === 'TE') {
+    var n = starters.filter(function (p) {
+      return (p.position === 'RB' || p.position === 'WR' || p.position === 'TE') && p.byeWeek === bye;
+    }).length;
+    if (n >= 2) {
+      return '<td class="bye-stack" title="would stack ' + ordinal(n + 1) + ' skill starter on bye week ' +
+        bye + '">' + bye + '</td>';
+    }
+  }
+  return '<td>' + bye + '</td>';
+}
+
 // The panel is always visible in-draft, in one of three states:
 //   SIMULATING (computing: true) — violet chip with an elapsed-seconds timer, pulsing dot,
 //     and the waiting-style body; fresh numbers land when the compute does.
 //   WAITING — muted chip; body says when I pick and what falls to me.
 //   ON THE CLOCK — violet chip + ring, fresh candidate table.
 // My-turn + computing keeps the ring with the SIMULATING visuals.
-var simSince = null;
+var simSince = null, simVersion = -1;
 function simChipText() {
   return 'SIMULATING · ' + Math.max(0, Math.floor((Date.now() - simSince) / 1000)) + 's';
 }
@@ -669,8 +701,13 @@ function renderClock() {
   }
   clock.style.display = '';
   var computing = !!E.computing;
-  if (computing && simSince === null) simSince = Date.now();
-  if (!computing) simSince = null;
+  // The counter means "seconds since the CURRENT simulation started": a pick landing
+  // mid-compute bumps the live version (abort + re-kick), so the count restarts with it.
+  if (computing) {
+    if (simSince === null || simVersion !== S.version) { simSince = Date.now(); simVersion = S.version; }
+  } else {
+    simSince = null; simVersion = -1;
+  }
   var state = computing ? 'sim' : (E.myTurn ? 'on' : 'wait');
   var showTable = state === 'on';
   var chip = el('clockState');
@@ -699,6 +736,13 @@ function renderClock() {
   el('backH').textContent = 'Back@' + (nextTurn || '—');
   var html = [];
   var top = E.candidates.slice(0, 10);
+  var starters = [];
+  if (S.myRoster) {
+    S.myRoster.slots.forEach(function (s) {
+      if (s.slot === 'BENCH' || s.slot === 'IR') return;
+      s.players.forEach(function (p) { starters.push(p); });
+    });
+  }
   for (var i = 0; i < top.length; i++) {
     var c = top[i];
     var best = c.deltaVsBest === 0;
@@ -711,6 +755,7 @@ function renderClock() {
     html.push('<tr class="' + (best ? 'best' : '') + '">' +
       '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
       '<td class="l">' + c.position + '</td>' +
+      byeCell(c, starters) +
       '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
       '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + pbest + '</td>' +
       '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
