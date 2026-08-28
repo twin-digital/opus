@@ -5,6 +5,7 @@ import { buildConsensusV2 } from './consensus.js'
 import { overallPicksForSlot } from './draft-math.js'
 import { applyOverrides, type PlayerOverride } from './overrides.js'
 import { buildLeagueScorer } from './rescore.js'
+import { argmaxTake, teamAtPick, type RoomProfiles } from './room-profiles.js'
 import { roomAdp } from './room.js'
 import { bestLineup, lineupTotalWithReplacement } from './roster.js'
 import { computeUpsideScores } from './upside.js'
@@ -34,6 +35,24 @@ export interface Benchmarks {
 
 export interface RolloutOptions {
   overrides?: PlayerOverride[]
+  /**
+   * Per-team opponent profiles: room segments become per-team argmax takeProbability instead of
+   * global roomAdp order. Omit for the pure-ADP room model.
+   */
+  profiles?: RoomProfiles
+}
+
+/** Everything a profile-aware segment needs to know who picks at each overall pick. */
+export interface RoomSegmentModel {
+  profiles: RoomProfiles
+  /** Round-1 teamId order of the snake draft (LeagueSettings.draft.pickOrder). */
+  pickOrder: number[]
+  /**
+   * Per-simulation positional memory (teamId → positions taken on this path): a team's
+   * pos-boost stops firing once it took the position — an owner reaches for his first TE, not
+   * his third. Rollouts seed one per simulated draft; absent = boosts always active.
+   */
+  taken?: Map<number, Set<Position>>
 }
 
 export interface RosterState {
@@ -269,20 +288,41 @@ const byRoomAdp = (a: RolloutPlayer, b: RolloutPlayer): number =>
   a.playerId.localeCompare(b.playerId)
 
 /**
- * Mean-path room behavior: picks fromPick..toPick−1 remove the top toPick−fromPick players in
- * roomAdp order (nulls last), skipping players I hold. Returns the remaining pool.
+ * Mean-path room behavior: picks fromPick..toPick−1 remove players, skipping players I hold,
+ * and return the remaining pool. Without a model, the top toPick−fromPick players come off in
+ * roomAdp order (nulls last). With a model, each pick removes the on-clock team's argmax
+ * takeProbability player — per-team σ, positional timing, and loyalty included — so the mean
+ * path is per-team, still deterministic.
  */
 export const simulateRoomSegment = (
   available: RolloutPlayer[],
   fromPick: number,
   toPick: number,
   heldIds: Set<PlayerId> = new Set(),
+  model?: RoomSegmentModel,
 ): RolloutPlayer[] => {
   const count = Math.max(0, toPick - fromPick)
   if (count === 0) {
     return available
   }
   const taken = new Set<PlayerId>()
+  if (model !== undefined) {
+    let pool = available.filter((player) => !heldIds.has(player.playerId))
+    for (let pick = fromPick; pick < toPick; pick += 1) {
+      const teamId = teamAtPick(model.pickOrder, pick)
+      const choice = argmaxTake(model.profiles, model.pickOrder, pick, pool, model.taken?.get(teamId))
+      if (choice !== null) {
+        taken.add(choice.playerId)
+        pool = pool.filter((player) => player.playerId !== choice.playerId)
+        if (model.taken !== undefined) {
+          const positions = model.taken.get(teamId) ?? new Set<Position>()
+          positions.add(choice.position)
+          model.taken.set(teamId, positions)
+        }
+      }
+    }
+    return available.filter((player) => !taken.has(player.playerId))
+  }
   for (const player of [...available].sort(byRoomAdp)) {
     if (taken.size >= count) {
       break
@@ -301,6 +341,7 @@ const rolloutOnPool = (
   myRosterIds: PlayerId[],
   fromOverallPick: number,
   myDraftSlot: number,
+  model?: RoomSegmentModel,
 ): RolloutResult => {
   const { settings } = pool
   const held = new Set(myRosterIds)
@@ -319,12 +360,14 @@ const rolloutOnPool = (
   const myPicks = overallPicksForSlot(myDraftSlot, settings.size, pool.totalRounds).filter(
     (pick) => pick >= fromOverallPick,
   )
+  // Fresh positional memory per simulated draft; candidate rollouts must not share it.
+  const liveModel = model === undefined ? undefined : { ...model, taken: new Map<number, Set<Position>>() }
   let cursor = fromOverallPick
   for (const pick of myPicks) {
     if (roster.filter((player) => SKILL_SET.has(player.position)).length >= pool.skillRounds) {
       break
     }
-    available = simulateRoomSegment(available, cursor, pick)
+    available = simulateRoomSegment(available, cursor, pick, undefined, liveModel)
     const choice = chooseForRoster(
       available,
       { players: roster, lineupSlots: settings.lineupSlots, replacementPoints: pool.replacement.points },
@@ -351,12 +394,16 @@ const rolloutOnPool = (
  * (overallPicksForSlot) until the last round or my roster's skill seats fill. Absolutes carry
  * false confidence — deltas between rollouts are the trustworthy part.
  */
+const segmentModel = (state: BoardState, options: RolloutOptions): RoomSegmentModel | undefined =>
+  options.profiles === undefined ? undefined : { profiles: options.profiles, pickOrder: state.settings.draft.pickOrder }
+
 export const rolloutFrom = (
   state: BoardState,
   myRoster: PlayerId[],
   fromOverallPick: number,
   options: RolloutOptions = {},
-): RolloutResult => rolloutOnPool(buildPool(state, options), myRoster, fromOverallPick, state.myDraftSlot)
+): RolloutResult =>
+  rolloutOnPool(buildPool(state, options), myRoster, fromOverallPick, state.myDraftSlot, segmentModel(state, options))
 
 /**
  * One rollout per candidate, each assuming the candidate is taken with the pick on the clock.
@@ -365,6 +412,7 @@ export const rolloutFrom = (
  */
 export const evaluateCandidates = (state: BoardState, options: EvaluateOptions = {}): CandidateEvaluation[] => {
   const pool = buildPool(state, options)
+  const model = segmentModel(state, options)
   const currentOverall = state.draftedPlayerIds.length + 1
   const myIds = state.myDraftedPlayerIds ?? []
   const held = new Set(myIds)
@@ -401,7 +449,7 @@ export const evaluateCandidates = (state: BoardState, options: EvaluateOptions =
     if (candidate === undefined) {
       return []
     }
-    const result = rolloutOnPool(pool, [...myIds, id], currentOverall + 1, state.myDraftSlot)
+    const result = rolloutOnPool(pool, [...myIds, id], currentOverall + 1, state.myDraftSlot, model)
     return [
       {
         playerId: id,

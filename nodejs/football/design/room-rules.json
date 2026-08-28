@@ -1,0 +1,191 @@
+{
+  "league": "1838733150",
+  "generated": "2026-08-28",
+  "source": "room-profile.md / room-profile.json — mined from the 2024-2025 league drafts",
+  "semantics": {
+    "keying": "teams are keyed by ESPN teamId (stable across seasons). Draft slots are assigned by ESPN ~1h before the draft; slot labels are display-time data derived from the live pickOrder, never stored here.",
+    "sigma": "team's measured early-round pick σ (board rank ≤ 100); null = base model (sigmaForPick). The model scales the base σ curve by sigma/8, the league's measured flat early σ.",
+    "sigmaScale": "confidence multiplier on the team's σ curve (default 1.0). > 1 = flatter, less predictable — used where standings suggest an elevated chance of deliberate behavior change, never to invent taste. `sigmaScaleEvidence` carries the finishes behind it.",
+    "pos-boost": "multiply the position's take weight by `strength` (> 1) in rounds [from, to] inclusive",
+    "pos-suppress": "multiply the position's take weight by `strength` (< 1) in rounds [from, to] inclusive",
+    "loyalty": "multiply the named player's take weight by `strength` at this team's picks, every round",
+    "precedence": "a team rule for a position replaces any default rule for that position in the rounds it covers; defaults apply to every team otherwise",
+    "evidence": "keys are rule indexes into `rules`; values are the historical picks behind the rule, for tooltips"
+  },
+  "notes": [
+    "Standings context: the room watched ESPN's default board win the 2025 title (Lehmer's full-autodraft season) — further support for ESPN-faithful room behavior.",
+    "Standings feed confidence (sigmaScale) only; taste rules come from observed picks. Finishes are luck-heavy: 7-7 won 2024."
+  ],
+  "defaults": {
+    "rules": [
+      { "kind": "pos-suppress", "position": "K", "rounds": [1, 11], "strength": 0.02 },
+      { "kind": "pos-suppress", "position": "DST", "rounds": [1, 10], "strength": 0.02 }
+    ],
+    "evidence": {
+      "0": "Kickers went R12-14 in every human draft '24-'25 except Johnson's R10 Fairbairn (his own boost rule)",
+      "1": "Defenses went R11-14 in all 22 DST picks '24-'25; nobody burns a mid-round pick on one"
+    }
+  },
+  "teams": {
+    "1": {
+      "teamId": 1,
+      "owner": "Chris Wollman",
+      "teamName": "Purple Reign",
+      "sigma": null,
+      "sigmaScale": 1.25,
+      "sigmaScaleEvidence": "Wollman (team 1): 2024 champ to #7 in 2025 — elevated chance of deliberate behavior change",
+      "rules": [
+        { "kind": "pos-boost", "position": "TE", "rounds": [4, 5], "strength": 2.5 },
+        { "kind": "loyalty", "playerName": "DeVonta Smith", "strength": 3 }
+      ],
+      "evidence": {
+        "0": "Wollman (team 1): early TE both years — Andrews R5 '24, Kittle R4 '25",
+        "1": "Wollman (team 1): drafted DeVonta Smith both '24 and '25"
+      }
+    },
+    "3": {
+      "teamId": 3,
+      "owner": "S s",
+      "teamName": "Scottie Pickens JR",
+      "sigma": null,
+      "rules": [{ "kind": "pos-boost", "position": "QB", "rounds": [4, 5], "strength": 2.5 }],
+      "evidence": {
+        "0": "S s (team 3): QB R4-5 both years — Mahomes R5 '24, Burrow R4 '25"
+      }
+    },
+    "4": {
+      "teamId": 4,
+      "owner": "Dennis McGarrity",
+      "teamName": "Vinz Clortho: The Keymaster",
+      "sigma": null,
+      "rules": [{ "kind": "pos-boost", "position": "QB", "rounds": [4, 5], "strength": 2.5 }],
+      "evidence": {
+        "0": "McGarrity (team 4): QB R4-5 both years — Richardson R5 '24 (-18 reach), Hurts R4 '25"
+      }
+    },
+    "5": {
+      "teamId": 5,
+      "owner": "Jason Lehmer",
+      "teamName": "Jefferson Airplane",
+      "sigma": null,
+      "rules": [{ "kind": "loyalty", "playerName": "Jayden Daniels", "strength": 4 }],
+      "evidence": {
+        "0": "Lehmer (team 5): Daniels at pick 54 vs board 117 (QB R6) in '24 — his only human draft (n=14, low confidence)"
+      },
+      "notes": [
+        "2025 was full autodraft (personal emergency) — evidence about ESPN's list, not the owner; excluded.",
+        "Profiled from 2024 only: base model except the Daniels loyalty pick.",
+        "His 2025 title came via that full autodraft — mild elevated chance he deliberately shadows ESPN's list this year, which the base model already assumes; no rule change."
+      ]
+    },
+    "7": {
+      "teamId": 7,
+      "owner": "kyle stefl",
+      "teamName": "King Kong",
+      "sigma": null,
+      "rules": [{ "kind": "pos-suppress", "position": "QB", "rounds": [1, 7], "strength": 0.1 }],
+      "evidence": {
+        "0": "stefl (team 7): QB waiter — first QB R10 '24, R8 '25; will not join a QB run"
+      }
+    },
+    "8": {
+      "teamId": 8,
+      "owner": "G L",
+      "teamName": "Team Lettow",
+      "sigma": null,
+      "sigmaScale": 1.25,
+      "sigmaScaleEvidence": "Lettow (team 8): sharp collapse 10-4 (#4) 2024 → 4-10 (#8) 2025 — elevated chance of deliberate behavior change",
+      "rules": [
+        { "kind": "loyalty", "playerName": "Nico Collins", "strength": 2.5 },
+        { "kind": "loyalty", "playerName": "DK Metcalf", "strength": 2.5 },
+        { "kind": "loyalty", "playerName": "David Njoku", "strength": 2.5 },
+        { "kind": "loyalty", "playerName": "Brock Purdy", "strength": 2.5 }
+      ],
+      "evidence": {
+        "0": "Lettow (team 8): drafted Nico Collins both '24 and '25; SF-HOU lean. Strength reduced: his loyalty picks coincided with the 10-4 → 4-10 collapse — likeliest owner to break pattern",
+        "1": "Lettow (team 8): drafted DK Metcalf both '24 and '25. Strength reduced: loyalty picks coincided with the 10-4 → 4-10 collapse",
+        "2": "Lettow (team 8): drafted Njoku both years (2024: pick 116 vs board 84). Strength reduced: loyalty picks coincided with the 10-4 → 4-10 collapse",
+        "3": "Lettow (team 8): drafted Purdy both '24 and '25; QB R6-7 habit. Strength reduced: loyalty picks coincided with the 10-4 → 4-10 collapse"
+      },
+      "notes": ["Most ESPN-faithful drafter in the room (early dev -2.6) — base σ, loyalty only."]
+    },
+    "9": {
+      "teamId": 9,
+      "owner": "jason walker",
+      "teamName": "No one healthy on BYE week",
+      "sigma": null,
+      "rules": [{ "kind": "pos-boost", "position": "QB", "rounds": [4, 5], "strength": 2.5 }],
+      "evidence": {
+        "0": "walker (team 9): QB R4 '25 (Lamar Jackson) — single season of history (n=14)"
+      }
+    },
+    "10": {
+      "teamId": 10,
+      "owner": "colin skow",
+      "teamName": "La Porta Potty",
+      "sigma": 5.1,
+      "rules": [
+        { "kind": "pos-boost", "position": "QB", "rounds": [3, 14], "strength": 2.5 },
+        { "kind": "loyalty", "playerName": "Jahmyr Gibbs", "strength": 4 },
+        { "kind": "loyalty", "playerName": "Sam LaPorta", "strength": 2 }
+      ],
+      "evidence": {
+        "0": "skow (team 10): QB early and getting earlier — R5 '24, Josh Allen R3 '25 (pick 25); starts the QB run",
+        "1": "skow (team 10): drafted Gibbs both years — R2 '24, R1 '25; DET lean",
+        "2": "skow (team 10): LaPorta R6 '25; team name is a LaPorta pun"
+      },
+      "notes": ["Tightest drafter in the room: early σ 5.1 vs league ~8."]
+    },
+    "11": {
+      "teamId": 11,
+      "owner": "James Johnson",
+      "teamName": "Theo Von Retically",
+      "sigma": null,
+      "sigmaScale": 1.25,
+      "sigmaScaleEvidence": "Johnson (team 11): last place both 2024 and 2025 — elevated chance of deliberate behavior change",
+      "rules": [
+        { "kind": "pos-boost", "position": "TE", "rounds": [2, 6], "strength": 2.5 },
+        { "kind": "pos-boost", "position": "K", "rounds": [9, 11], "strength": 2 },
+        { "kind": "loyalty", "playerName": "Brian Robinson", "strength": 3 },
+        { "kind": "loyalty", "playerName": "Ka'imi Fairbairn", "strength": 3 }
+      ],
+      "evidence": {
+        "0": "Johnson (team 11): TE early both years — Bowers R2 '25, Kelce R4 '24",
+        "1": "Johnson (team 11): the league's only early kicker — Fairbairn R10 '24",
+        "2": "Johnson (team 11): drafted Brian Robinson both years; 2025 at pick 119 vs board 265; HOU-WSH lean",
+        "3": "Johnson (team 11): drafted Fairbairn both '24 (R10) and '25"
+      },
+      "notes": [
+        "Taste rules kept at full strength despite the finishes: Kelce R4 and early Fairbairn came after finishing #10 in 2024 — his idiosyncrasies already survived a last-place season."
+      ]
+    },
+    "12": {
+      "teamId": 12,
+      "owner": "b kohl",
+      "teamName": "Cache Money",
+      "sigma": null,
+      "rules": [{ "kind": "pos-suppress", "position": "QB", "rounds": [1, 7], "strength": 0.1 }],
+      "evidence": {
+        "0": "kohl (team 12): QB R9 '25 (Herbert-class waiter) — single season of history (n=14)"
+      }
+    },
+    "13": {
+      "teamId": 13,
+      "owner": "Sean Kleinjung",
+      "teamName": "Smite Club",
+      "sigma": null,
+      "rules": [],
+      "evidence": {},
+      "notes": ["2026 newcomer (us); no history — base model."]
+    },
+    "14": {
+      "teamId": 14,
+      "owner": "Rob Petro",
+      "teamName": "The Dude Staleys",
+      "sigma": null,
+      "rules": [],
+      "evidence": {},
+      "notes": ["2026 newcomer; no history — base model."]
+    }
+  }
+}

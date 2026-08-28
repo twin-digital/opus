@@ -7,11 +7,13 @@ import { isPosition, openDatabase, Store, type PlayerId, type Position } from '@
 
 import { board, type BoardRow, type BoardState } from '../board.js'
 import { loadOverridesFile, type PlayerOverride } from '../overrides.js'
+import { loadRoomRulesFile, pickThreats, type PlayerThreat, type RoomProfiles } from '../room-profiles.js'
 import { evaluateCandidates, type CandidateEvaluation } from '../rollout.js'
 
 const packageDir = path.resolve(fileURLToPath(import.meta.url), '../../..')
 const DEFAULT_DB = path.join(packageDir, '..', 'data', '.data', 'football.db')
 const DEFAULT_OVERRIDES = path.join(packageDir, '..', 'overrides.json')
+const DEFAULT_ROOM_RULES = path.join(packageDir, '..', 'design', 'room-rules.json')
 
 /** The owner's slot in league 1838733150 (teamId 13, slot 11 of 12) — a default, not a constant. */
 const DEFAULT_SLOT = '11'
@@ -24,10 +26,14 @@ const formatDelta = (value: number | null): string =>
   value === null ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(0)}`
 const formatUpside = (value: number | null): string => (value === null ? '—' : String(Math.round(value)))
 
-const printRows = (rows: BoardRow[], nextPicks: number[]): void => {
+const THREAT_MARKS = ['', '!', '!!', '!!!'] as const
+
+const printRows = (rows: BoardRow[], nextPicks: number[], threats?: Map<PlayerId, PlayerThreat>): void => {
+  const threatMark = (row: BoardRow): string => THREAT_MARKS[threats?.get(row.playerId)?.threatLevel ?? 0]
   const header = [
     ['#', 4],
     ['PLAYER', 26],
+    ...(threats === undefined ? [] : ([['THR', 4]] as const)),
     ['!', 2],
     ['POS', 4],
     ['TEAM', 5],
@@ -48,6 +54,7 @@ const printRows = (rows: BoardRow[], nextPicks: number[]): void => {
     const cells: [string, number][] = [
       [String(row.rank), 4],
       [(row.banned ? '✕ ' : '') + row.name.slice(0, 24), 26],
+      ...(threats === undefined ? [] : ([[threatMark(row), 4]] as [string, number][])),
       [row.contested ? '!' : '', 2], // sources genuinely disagree on his season
       [row.position, 4],
       [row.team ?? 'FA', 5],
@@ -64,6 +71,28 @@ const printRows = (rows: BoardRow[], nextPicks: number[]): void => {
       [formatOdds(row.pPickAfter), 6],
     ]
     console.log(cells.map(([value, width]) => value.padEnd(width)).join(' '))
+  }
+}
+
+/** Attribution lines for displayed rows that carry a mark and a named team. */
+const printThreatAttributions = (rows: BoardRow[], threats: Map<PlayerId, PlayerThreat>): void => {
+  const lines: string[] = []
+  for (const row of rows) {
+    const threat = threats.get(row.playerId)
+    if (threat === undefined || threat.threatLevel === 0 || threat.attribution === null) {
+      continue
+    }
+    const { attribution } = threat
+    const who = `${attribution.ownerName ?? 'team ' + String(attribution.teamId)} (T${String(attribution.teamId)}, slot ${String(attribution.slot ?? '?')})`
+    lines.push(
+      `${THREAT_MARKS[threat.threatLevel].padEnd(3)} ${row.name} — ${(threat.pTakenBeforeMyPick * 100).toFixed(0)}% gone before pick ${String(threat.myPick)}; ${who} @ pick ${String(attribution.atPick)}: ${(attribution.probability * 100).toFixed(0)}% — ${attribution.evidence.join('; ')}`,
+    )
+  }
+  if (lines.length > 0) {
+    console.log('\nthreats:')
+    for (const line of lines) {
+      console.log(`  ${line}`)
+    }
   }
 }
 
@@ -111,6 +140,9 @@ const main = (): void => {
       mine: { type: 'string' }, // comma-separated player ids I hold; default = my team's draft picks
       overrides: { type: 'string' }, // overrides.json path; default nodejs/football/overrides.json if present
       evaluate: { type: 'boolean', default: false },
+      threats: { type: 'boolean', default: false }, // threat column + attribution lines
+      rules: { type: 'string' }, // room-rules.json path; default nodejs/football/design/room-rules.json
+      'no-profiles': { type: 'boolean', default: false }, // pure-ADP room model
     },
   })
   const season = Number(values.season)
@@ -146,6 +178,19 @@ const main = (): void => {
   if (overridesPath !== undefined) {
     overrides = loadOverridesFile(overridesPath, players)
     console.error(`overrides: ${String(overrides.length)} from ${overridesPath}`)
+  }
+
+  let profiles: RoomProfiles | undefined
+  const rulesPath = values.rules ?? (existsSync(DEFAULT_ROOM_RULES) ? DEFAULT_ROOM_RULES : undefined)
+  if (!values['no-profiles'] && rulesPath !== undefined) {
+    profiles = loadRoomRulesFile(rulesPath, players, (message) => {
+      console.error(`room-rules: ${message}`)
+    })
+    const ruleCount = [...profiles.teams.values()].reduce(
+      (sum, team) => sum + team.posRules.length + team.loyalty.size,
+      0,
+    )
+    console.error(`room profiles: ${String(ruleCount)} team rules from ${rulesPath}`)
   }
 
   const state: BoardState = {
@@ -184,11 +229,29 @@ const main = (): void => {
   )
 
   if (values.evaluate) {
-    const evaluations = evaluateCandidates(state, { overrides })
+    const evaluations = evaluateCandidates(state, { overrides, profiles })
     printCandidates(evaluations.slice(0, Number(values.limit)))
     return
   }
-  printRows(result.rows.slice(0, Number(values.limit)), result.myNextPicks)
+
+  let threats: Map<PlayerId, PlayerThreat> | undefined
+  if (values.threats && profiles !== undefined && result.myNextPicks[0] !== undefined) {
+    threats = pickThreats(
+      profiles,
+      settings.draft.pickOrder,
+      result.currentOverall,
+      result.myNextPicks[0],
+      result.rows,
+      {
+        myTeamId,
+      },
+    )
+  }
+  const shown = result.rows.slice(0, Number(values.limit))
+  printRows(shown, result.myNextPicks, threats)
+  if (threats !== undefined) {
+    printThreatAttributions(shown, threats)
+  }
 }
 
 main()

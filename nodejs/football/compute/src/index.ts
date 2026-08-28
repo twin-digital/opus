@@ -45,8 +45,29 @@ export {
   type RolloutOptions,
   type RolloutPlayer,
   type RolloutResult,
+  type RoomSegmentModel,
   type RosterState,
 } from './rollout.js'
+export {
+  argmaxTake,
+  loadRoomRulesFile,
+  pickThreats,
+  resolveRoomRules,
+  takeDistribution,
+  takeProbability,
+  teamAtPick,
+  ATTRIBUTION_MIN_PROB,
+  ATTRIBUTION_RATIO,
+  LEAGUE_FLAT_SIGMA,
+  type LoyaltyRule,
+  type PickThreatsOptions,
+  type PlayerThreat,
+  type PosRule,
+  type RoomProfiles,
+  type TakeCandidate,
+  type TeamProfile,
+  type ThreatAttribution,
+} from './room-profiles.js'
 export { marketAdp, roomAdp, roomDelta, ESPN_UNDRAFTED_SENTINEL } from './room.js'
 export {
   bestLineup,
