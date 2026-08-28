@@ -6,7 +6,7 @@ import { config as loadDotenv } from 'dotenv'
 import { FP_PROJECTIONS_MODES, type FpProjectionsMode } from '@twin-digital/football-data'
 import { fetchEspnDraftDetail, type EspnLeagueCredentials } from '@twin-digital/football-data/fetchers/espn'
 
-import { App } from '../app.js'
+import { App, evalModeFromEnv } from '../app.js'
 import { DraftPoller } from '../poller.js'
 import { startServer } from '../server.js'
 
@@ -57,6 +57,8 @@ const main = async (): Promise<void> => {
   const port = Number(process.env.PORT ?? '8020')
   const overridesFile = process.env.FOOTBALL_OVERRIDES ?? path.join(packageDir, '..', 'overrides.json')
   const roomRulesFile = process.env.FOOTBALL_ROOM_RULES ?? path.join(packageDir, '..', 'design', 'room-rules.json')
+  const evalMode = evalModeFromEnv(process.env.FOOTBALL_EVAL)
+  const mcSamples = Number(process.env.FOOTBALL_EVAL_K ?? '') || undefined
   const creds = espnCreds()
 
   const app = new App({
@@ -68,6 +70,8 @@ const main = async (): Promise<void> => {
     fpProjectionsMode: fpProjectionsMode(),
     overridesFile,
     roomRulesFile,
+    evalMode,
+    mcSamples,
     log,
   })
   const poller = new DraftPoller({
@@ -97,6 +101,7 @@ const main = async (): Promise<void> => {
       `overrides: ${String(overrides.boosted)} boosted, ${String(overrides.banned)} banned (${overridesFile})`
     : 'overrides: none',
   )
+  log(`evaluate: ${evalMode === 'mc' ? `Monte Carlo (K=${String(mcSamples ?? 300)})` : 'deterministic mean-path'}`)
   const profiles = app.roomProfiles
   log(
     profiles === null ?

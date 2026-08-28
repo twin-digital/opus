@@ -25,13 +25,15 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
    `nodejs/football/.env`, and re-run. This same run is the data refresh (fresh ADP/ECR,
    injuries, projections), so doing it the morning of covers both.
 
-2. **Start the server**:
+2. **Start the server** (build first — `serve` runs the compute package's built `dist`, and a
+   stale build silently serves the old evaluation engine):
 
    ```sh
-   cd nodejs/football/web && pnpm serve
+   pnpm build && cd nodejs/football/web && pnpm serve
    ```
 
-   It logs the league, your slot, whether creds are present, and the URL.
+   It logs the league, your slot, whether creds are present, the evaluation engine
+   (`evaluate: Monte Carlo (K=300)`), and the URL; each MC recompute logs its duration.
 
 3. **Open the board**: <http://127.0.0.1:8020/>
 
@@ -51,6 +53,17 @@ All commands run from the repo root unless noted. Creds live in `nodejs/football
 ## During the draft
 
 - Turn **live poll** on. Picks land on the board within ~5s of ESPN registering them.
+- **Candidate evaluation is Monte Carlo**: EST TEAM is the mean final starter total over
+  ~300 sampled drafts (the room drawn from the profiled take distribution; your later picks
+  greedy, with a one-ply lookahead at your next pick), so it prices in who might be gone
+  instead of assuming the single most-likely path. A small **%** next to Δ best is
+  P(best) — the share of sampled drafts where that pick's team scores highest (exact ties
+  split the win and show a ≡). Under MC the green Δ band widens to 15 pts — model error,
+  not sampling noise, is the binding uncertainty — so treat green rows as decision-ties and
+  break them on Back@/UPS. The evaluation recomputes off-path after each pick (~15s at
+  K=300); a subtle "simulating…" appears while the panel still shows the previous pick's
+  numbers. `FOOTBALL_EVAL=det` at server start is the instant fallback to the old
+  deterministic rollout, no other changes.
 - **When you are on the clock** a violet panel appears above the board: candidates ranked
   by projected final starter total (EST TEAM), with **Δ best** (the decision column),
   the lineup slot each lands on, **ECR** (the independent expert-consensus audit — "is
@@ -170,6 +183,8 @@ instantly and the real pre-draft board comes back.
 | `FOOTBALL_TEAM_ID`    | 13                                       |
 | `FOOTBALL_OVERRIDES`  | `nodejs/football/overrides.json`         |
 | `FOOTBALL_ROOM_RULES` | `nodejs/football/design/room-rules.json` |
+| `FOOTBALL_EVAL`       | `mc` (`det` = deterministic fallback)    |
+| `FOOTBALL_EVAL_K`     | 300 (MC scenarios per candidate)         |
 
 ## Overrides (optional)
 

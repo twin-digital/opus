@@ -132,6 +132,7 @@ export const PAGE = `<!doctype html>
   .rm1up { color: var(--success); } .rm2up { color: var(--success); font-weight: 700; }
   .rm1dn { color: var(--warning); } .rm2dn { color: var(--danger); font-weight: 700; }
   .ups-hi { color: var(--primary); font-weight: 600; }
+  .pbest { font-size: 11px; color: var(--muted-fg); cursor: help; }
   .mark-boost { color: var(--primary); font-weight: 700; cursor: help; }
   .mark-contested { color: var(--warning); font-weight: 700; cursor: help; padding: 0 2px; }
   .src-manual { color: var(--warning); }
@@ -272,7 +273,7 @@ export const PAGE = `<!doctype html>
         <thead>
           <tr>
             <th class="l">Player</th><th class="l">Pos</th>
-            <th title="Projected final starter total if you take him now">Est team</th>
+            <th title="Projected final starter total if you take him now (Monte Carlo mean over sampled drafts)">Est team</th>
             <th id="deltaH" title="">Δ best</th>
             <th class="l" title="Lineup slot he lands on in the projected final roster">Lands</th>
             <th title="FantasyPros expert consensus rank — the independent audit signal; hover a value for room ADP">ECR</th>
@@ -348,7 +349,7 @@ var rowById = {}, drawerPid = null, toastTimer = null;
 var THREAT_MARKS = ['', '!', '!!', '!!!'];
 // Δ-best bands: within the noise band of BEST the evaluator cannot tell candidates apart
 // (break the tie on Back@); past the costly band the alternative is genuinely expensive.
-// The evaluate payload may carry its own noiseBand (e.g. MC model error); default 3.
+// The evaluate payload's noiseBand (model-error dominated, 15 under MC) overrides the default 3.
 var DELTA_NOISE = 3, DELTA_COSTLY = 15;
 function noiseBand() {
   return (E && typeof E.noiseBand === 'number' && E.noiseBand > 0) ? E.noiseBand : DELTA_NOISE;
@@ -489,7 +490,10 @@ function loadState() {
   return api('/api/state').then(function (s) {
     serverOk = true;
     S = s;
-    var p = (s.version !== lastVersion) ?
+    // Refetch on a version bump, and keep refetching while the MC evaluation is computing
+    // off-path — its payload lags the board version until the compute lands.
+    var evalStale = E && (E.computing || E.version !== s.version);
+    var p = (s.version !== lastVersion || evalStale) ?
       Promise.all([api('/api/board'), api('/api/evaluate')]).then(function (res) {
         B = res[0]; E = res[1];
         rowById = {};
@@ -647,12 +651,14 @@ function renderClock() {
     var band = noiseBand(), costly = costlyBand();
     el('deltaH').title = 'Est team minus BEST: green = within ' + band +
       ' pts (evaluation noise — effectively tied, break the tie on Back@), amber = real but modest cost (' +
-      band + '–' + costly + ' pts), muted = expensive (>' + costly + ' pts)';
+      band + '–' + costly + ' pts), muted = expensive (>' + costly + ' pts).' +
+      ' The small % is P(best): the share of sampled drafts where this pick finishes with the highest-scoring team';
     // myNextPicks is strictly future, so on my turn [0] is already the next turn if I pass.
     var nextTurn = E.myNextPicks[0];
     el('clockPick').textContent = 'pick ' + E.currentOverall +
       ' (R' + Math.ceil(E.currentOverall / S.league.size) + ')' +
-      (nextTurn ? ' — your next turn is ' + nextTurn : '');
+      (nextTurn ? ' — your next turn is ' + nextTurn : '') +
+      (E.computing ? ' · simulating…' : '');
     el('backH').textContent = 'Back@' + (nextTurn || '—');
     var html = [];
     var top = E.candidates.slice(0, 10);
@@ -660,11 +666,16 @@ function renderClock() {
       var c = top[i];
       var best = c.deltaVsBest === 0;
       var bench = c.landsOn === 'BENCH';
+      var tied = c.exactTies > 1;
+      var pbest = (c.pBest === null || c.pBest === undefined) ? '' :
+        ' <span class="pbest" title="wins ' + Math.round(c.pBest * 100) + '% of sampled drafts' +
+        (tied ? '; exactly tied with ' + (c.exactTies - 1) + ' other candidate' + (c.exactTies > 2 ? 's' : '') : '') +
+        '">' + Math.round(c.pBest * 100) + '%' + (tied ? '≡' : '') + '</span>';
       html.push('<tr class="' + (best ? 'best' : '') + '">' +
         '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
         '<td class="l">' + c.position + '</td>' +
         '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
-        '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + '</td>' +
+        '<td class="delta ' + deltaBestClass(c.deltaVsBest) + '">' + (best ? '<span class="best-tag">BEST</span>' : num(c.deltaVsBest, 1)) + pbest + '</td>' +
         '<td class="l' + (bench ? ' muted' : '') + '">' + c.landsOn + '</td>' +
         '<td title="' + esc('ECR ' + (c.ecrRank === null ? '—' : c.ecrRank) + ' · ADP ' + num(c.roomAdp, 1)) + '">' +
           (c.ecrRank === null ? '—' : c.ecrRank) + '</td>' +
@@ -695,7 +706,8 @@ function renderClock() {
         'est <span class="mono">' + num(c.estTeamScore, 1) + '</span> ' +
         '<span class="' + oddsClass(c.pNextPick) + '">' + pct(c.pNextPick) + ' back</span>';
     });
-    falls.innerHTML = 'IF HE FALLS TO YOU @' + (E.myNextPicks[0] || '?') + ' — ' + entries.join(' &nbsp;·&nbsp; ');
+    falls.innerHTML = 'IF HE FALLS TO YOU @' + (E.myNextPicks[0] || '?') + ' — ' + entries.join(' &nbsp;·&nbsp; ') +
+      (E.computing ? ' <span class="muted">· simulating…</span>' : '');
   }
 }
 

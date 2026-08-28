@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import {
   board,
   evaluateCandidates,
+  evaluateCandidatesMCAsync,
   loadOverridesFile,
   loadRoomRulesFile,
   pickThreats,
@@ -12,6 +13,7 @@ import {
   type BoardResult,
   type BoardRow,
   type CandidateEvaluation,
+  type McCandidateEvaluation,
   type OverrideSpec,
   type PlayerOverride,
   type PlayerThreat,
@@ -72,7 +74,22 @@ export interface AppOptions {
   now?: () => Date
   /** Injectable mock-pacing timer (tests fake it); defaults to an unref'd setTimeout. Returns a cancel. */
   scheduleTimer?: (fn: () => void, ms: number) => () => void
+  /**
+   * Candidate evaluation engine (default 'mc'). 'mc' integrates the room model's uncertainty
+   * (Monte Carlo, computed off the request path); 'det' is the deterministic mean-path rollout,
+   * computed synchronously — the instant fallback.
+   */
+  evalMode?: 'mc' | 'det'
+  /** MC scenarios per candidate (default 300). */
+  mcSamples?: number
+  /** MC root seed (default fixed). */
+  mcSeed?: number
 }
+
+export type EvalMode = 'mc' | 'det'
+
+/** FOOTBALL_EVAL env → engine: anything but 'det' (including unset) is the MC default. */
+export const evalModeFromEnv = (value: string | undefined): EvalMode => (value === 'det' ? 'det' : 'mc')
 
 export interface IngestStatus {
   running: boolean
@@ -155,6 +172,14 @@ export interface OverridesStatus {
 }
 
 export interface EvaluateRow extends CandidateEvaluation {
+  /** MC standard error of estTeamScore; null under the deterministic engine. */
+  se: number | null
+  /** MC share of scenarios this candidate's team total wins (exact ties split); null under det. */
+  pBest: number | null
+  /** Mean est minus the pre-registered reference (top-VOR) candidate's; null under det. */
+  deltaVsRef: number | null
+  /** Candidates (self included) with bit-identical scenario outcomes; null under det. */
+  exactTies: number | null
   tier: number | null
   /** Expert consensus rank — the panel's independent audit signal, joined from the board. */
   ecrRank: number | null
@@ -201,6 +226,9 @@ export interface OverrideInput {
 
 /** estTeamScore gaps at or under this are rollout noise — the Δ-band the UI paints green. */
 export const DELTA_NOISE = 3
+
+/** The MC engine's Δ noise band: model error (room/projections) dominates sampling error. */
+export const MC_NOISE_BAND = 15
 
 /** estTeamScore gaps at or under this are an effective tie the secondary sort may reorder. */
 export const TIE_EPSILON = 0.5
@@ -254,6 +282,19 @@ export interface EvaluatePayload {
   /** True when the pick on the clock is mine. */
   myTurn: boolean
   myNextPicks: number[]
+  /** Engine behind `candidates`: MC (mean over sampled rollouts) or the deterministic path. */
+  evalMode: EvalMode
+  /**
+   * Δ pts within which candidates are indistinguishable — the UI's green band. Model error
+   * dominates (the room and projection models, not sampling noise), so MC carries 15; the
+   * deterministic engine keeps the legacy 3.
+   */
+  noiseBand: number
+  /**
+   * True while a fresher MC evaluation is being computed off the request path; the payload
+   * carries the last completed evaluation (its own version) until the new one lands.
+   */
+  computing: boolean
   candidates: EvaluateRow[]
 }
 
@@ -359,6 +400,7 @@ export class App {
   private profiles: RoomProfiles | null = null
   private boardCache: { version: number; payload: BoardPayload } | null = null
   private evaluateCache: { version: number; payload: EvaluatePayload } | null = null
+  private evalInFlight: Promise<void> | null = null
   private fullRowsCache: { generation: number; rowsById: Map<PlayerId, BoardRow> } | null = null
   private warnedUnresolvedEspnIds = new Set<number>()
   /** Polled picks with unmapped ESPN ids, as placeholder rows. Memory-only (draft_pick FK);
@@ -1013,52 +1055,138 @@ export class App {
     return payload
   }
 
-  /** Candidate rollouts for the pick on the clock, cached on the same version as the board. */
+  /**
+   * Candidate rollouts for the pick on the clock, cached on the same version as the board.
+   * Deterministic mode computes inline; MC mode never blocks the request — it serves the last
+   * completed payload (marked `computing`) and refreshes off the request path.
+   */
   evaluatePayload(): EvaluatePayload {
     if (this.evaluateCache?.version === this.version) {
       return this.evaluateCache.payload
     }
+    if (this.evalMode === 'det') {
+      const picks = this.effectivePicks()
+      const complete = picks.length >= this.totalPicks
+      const candidates =
+        complete ?
+          []
+        : evaluateCandidates(this.boardState(picks), {
+            overrides: this.overrides,
+            profiles: this.profiles ?? undefined,
+          })
+      const payload = this.assembleEvaluatePayload(this.version, picks, candidates, false)
+      this.evaluateCache = { version: this.version, payload }
+      return payload
+    }
+    this.kickEvaluation()
+    if (this.evaluateCache !== null) {
+      return { ...this.evaluateCache.payload, computing: true }
+    }
+    // Nothing computed yet (fresh server): an empty slate the UI reads as "computing".
+    return this.assembleEvaluatePayload(this.version, this.effectivePicks(), [], true)
+  }
+
+  get evalMode(): EvalMode {
+    return this.options.evalMode ?? 'mc'
+  }
+
+  /** True while an off-path MC evaluation is running (test and status introspection). */
+  get evaluating(): boolean {
+    return this.evalInFlight !== null
+  }
+
+  /** Resolves once no MC evaluation is in flight (the cache then matches the version). */
+  async settleEvaluation(): Promise<void> {
+    while (this.evalInFlight !== null) {
+      await this.evalInFlight
+    }
+  }
+
+  /** Start (or queue) the off-path MC compute for the current version; one flight at a time. */
+  private kickEvaluation(): void {
+    if (this.evalInFlight !== null) {
+      return
+    }
+    const version = this.version
+    this.evalInFlight = this.computeMcEvaluation(version)
+      .catch((error: unknown) => {
+        this.log(`evaluate: MC compute failed: ${error instanceof Error ? error.message : String(error)}`)
+      })
+      .finally(() => {
+        this.evalInFlight = null
+        // The board moved while we computed: go again so the cache converges without a request.
+        if (this.version !== version && this.evalMode === 'mc') {
+          this.kickEvaluation()
+        }
+      })
+  }
+
+  private async computeMcEvaluation(version: number): Promise<void> {
+    const started = Date.now()
     const picks = this.effectivePicks()
+    const complete = picks.length >= this.totalPicks
+    const candidates =
+      complete ?
+        []
+      : await evaluateCandidatesMCAsync(this.boardState(picks), {
+          overrides: this.overrides,
+          profiles: this.profiles ?? undefined,
+          samples: this.options.mcSamples,
+          seed: this.options.mcSeed,
+        })
+    this.evaluateCache = { version, payload: this.assembleEvaluatePayload(version, picks, candidates, false) }
+    this.log(
+      `evaluate: MC v${String(version)} — ${String(candidates.length)} candidates in ${((Date.now() - started) / 1000).toFixed(1)}s`,
+    )
+  }
+
+  /** Join candidates onto board rows and finish the payload (shared by both engines). */
+  private assembleEvaluatePayload(
+    version: number,
+    picks: EffectivePick[],
+    candidates: (CandidateEvaluation | McCandidateEvaluation)[],
+    computing: boolean,
+  ): EvaluatePayload {
     const complete = picks.length >= this.totalPicks
     const currentOverall = currentOverallFromPicks(picks, this.totalPicks)
     const onClockTeamId = complete ? null : teamOnClock(this.settings.draft.pickOrder, currentOverall, this.totalRounds)
     const boardRows = new Map(this.boardPayload().rows.map((row) => [row.playerId, row]))
     const boosted = new Set(this.boardPayload().boostedIds)
-    const candidates = orderCandidates(
-      complete ?
-        []
-      : evaluateCandidates(this.boardState(picks), {
-          overrides: this.overrides,
-          profiles: this.profiles ?? undefined,
-        }).map((candidate) => {
-          const row = boardRows.get(candidate.playerId)
-          return {
-            ...candidate,
-            // One UPS number everywhere: the panel displays the board's 3-component score.
-            // The rollout's internal bench scoring keeps its own (spread-free) upside inputs.
-            upsideScore: row?.upsideScore ?? candidate.upsideScore,
-            tier: row?.tier ?? null,
-            ecrRank: row?.ecrRank ?? null,
-            roomAdp: row?.roomAdp ?? null,
-            pNextPick: row?.pNextPick ?? null,
-            pPickAfter: row?.pPickAfter ?? null,
-            boosted: boosted.has(candidate.playerId),
-            news: row?.news ?? null,
-            threat: row?.threat ?? null,
-          }
-        }),
+    const rows = orderCandidates(
+      candidates.map((candidate): EvaluateRow => {
+        const row = boardRows.get(candidate.playerId)
+        return {
+          ...candidate,
+          // One UPS number everywhere: the panel displays the board's 3-component score.
+          // The rollout's internal bench scoring keeps its own (spread-free) upside inputs.
+          upsideScore: row?.upsideScore ?? candidate.upsideScore,
+          se: 'se' in candidate ? candidate.se : null,
+          pBest: 'pBest' in candidate ? candidate.pBest : null,
+          deltaVsRef: 'deltaVsRef' in candidate ? candidate.deltaVsRef : null,
+          exactTies: 'exactTies' in candidate ? candidate.exactTies : null,
+          tier: row?.tier ?? null,
+          ecrRank: row?.ecrRank ?? null,
+          roomAdp: row?.roomAdp ?? null,
+          pNextPick: row?.pNextPick ?? null,
+          pPickAfter: row?.pPickAfter ?? null,
+          boosted: boosted.has(candidate.playerId),
+          news: row?.news ?? null,
+          threat: row?.threat ?? null,
+        }
+      }),
     )
-    const payload: EvaluatePayload = {
-      version: this.version,
+    return {
+      version,
       computedAt: this.now().toISOString(),
       currentOverall,
       onClockTeamId,
       myTurn: onClockTeamId === this.options.myTeamId,
       myNextPicks: this.boardPayload().myNextPicks,
-      candidates,
+      evalMode: this.evalMode,
+      noiseBand: this.evalMode === 'mc' ? MC_NOISE_BAND : DELTA_NOISE,
+      computing,
+      candidates: rows,
     }
-    this.evaluateCache = { version: this.version, payload }
-    return payload
   }
 
   /**
@@ -1205,7 +1333,8 @@ export class App {
   private bumpVersion(): void {
     this.version += 1
     this.boardCache = null
-    this.evaluateCache = null
+    // evaluateCache stays: MC mode serves the last completed evaluation (marked computing)
+    // until the off-path recompute lands; both modes recompute on the version mismatch.
   }
 
   /** Board rows over the full pool (nobody drafted), for displaying drafted players' values. */
