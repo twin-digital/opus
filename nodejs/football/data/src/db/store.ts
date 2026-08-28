@@ -1,17 +1,23 @@
 import type { Database } from 'better-sqlite3'
 
-import type { PlayerId } from '../ids.js'
+import { mintNewsId, type NewsId, type PlayerId } from '../ids.js'
 import type {
   DraftPick,
   LeagueSettings,
   ManualPick,
   MarketData,
+  NewsAssessment,
   Player,
   PlayerIdMapping,
+  PlayerNewsDraft,
+  PlayerNewsItem,
+  PlayerNewsSignal,
   SeasonProjection,
 } from '../models.js'
+import { rollupAssessments } from '../news/rollup.js'
 import type { DataSource } from '../reference/data-source.js'
 import type { InjuryStatus } from '../reference/injury-status.js'
+import type { NewsDirection, NewsImpact, NewsSource } from '../reference/news.js'
 import type { NflTeam } from '../reference/nfl-team.js'
 import type { Position } from '../reference/position.js'
 import type { ScoringFormat } from '../reference/scoring-format.js'
@@ -325,6 +331,141 @@ export class Store {
     }))
   }
 
+  // -- PlayerNews -----------------------------------------------------------
+
+  /**
+   * Upsert fetched items by (source, externalId): new items mint an id, refetches refresh the
+   * content and fetchedAt in place. Player attribution is first-seen — ESPN serves shared
+   * content (multi-player videos) under the same item id in several players' feeds.
+   */
+  upsertNewsItems(drafts: PlayerNewsDraft[], fetchedAt: string): { inserted: number; updated: number } {
+    const find = this.db.prepare('SELECT id FROM player_news WHERE source = ? AND external_id = ?')
+    const insert = this.db.prepare(
+      `INSERT INTO player_news (id, player_id, source, external_id, published, headline, body, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    const update = this.db.prepare(
+      'UPDATE player_news SET published = ?, headline = ?, body = ?, fetched_at = ? WHERE id = ?',
+    )
+    let inserted = 0
+    let updated = 0
+    this.db.transaction(() => {
+      for (const draft of drafts) {
+        const existing = find.get(draft.source, draft.externalId) as { id: NewsId } | undefined
+        if (existing) {
+          update.run(draft.published, draft.headline, draft.body, fetchedAt, existing.id)
+          updated += 1
+        } else {
+          insert.run(
+            mintNewsId(),
+            draft.playerId,
+            draft.source,
+            draft.externalId,
+            draft.published,
+            draft.headline,
+            draft.body,
+            fetchedAt,
+          )
+          inserted += 1
+        }
+      }
+    })()
+    return { inserted, updated }
+  }
+
+  getNewsItems(): PlayerNewsItem[] {
+    return (this.db.prepare('SELECT * FROM player_news').all() as NewsRow[]).map(newsItemFromRow)
+  }
+
+  countNewsBySource(): Record<string, number> {
+    const rows = this.db.prepare('SELECT source, COUNT(*) AS n FROM player_news GROUP BY source').all() as {
+      source: string
+      n: number
+    }[]
+    return Object.fromEntries(rows.map((row) => [row.source, row.n]))
+  }
+
+  /** One player's items with their assessments (null while unassessed), newest first. */
+  getNewsForPlayer(playerId: PlayerId): { item: PlayerNewsItem; assessment: NewsAssessment | null }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT n.*,
+                a.direction, a.impact, a.summary, a.assessed_at, a.assessed_by
+         FROM player_news n
+         LEFT JOIN news_assessment a ON a.news_id = n.id
+         WHERE n.player_id = ?
+         ORDER BY n.published DESC NULLS LAST, n.fetched_at DESC`,
+      )
+      .all(playerId) as (NewsRow & AssessmentColumns)[]
+    return rows.map((row) => ({ item: newsItemFromRow(row), assessment: assessmentFromColumns(row) }))
+  }
+
+  // -- NewsAssessment -------------------------------------------------------
+
+  upsertAssessment(assessment: NewsAssessment): void {
+    this.db
+      .prepare(
+        `INSERT INTO news_assessment (news_id, direction, impact, summary, assessed_at, assessed_by)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(news_id) DO UPDATE SET
+           direction = excluded.direction, impact = excluded.impact, summary = excluded.summary,
+           assessed_at = excluded.assessed_at, assessed_by = excluded.assessed_by`,
+      )
+      .run(
+        assessment.newsId,
+        assessment.direction,
+        assessment.impact,
+        assessment.summary,
+        assessment.assessedAt,
+        assessment.assessedBy,
+      )
+  }
+
+  countAssessments(): number {
+    return (this.db.prepare('SELECT COUNT(*) AS n FROM news_assessment').get() as { n: number }).n
+  }
+
+  /** Worst-of rollup per player with any stored news, for board dots. */
+  getNewsSignals(): PlayerNewsSignal[] {
+    interface Row {
+      player_id: PlayerId
+      direction: NewsDirection | null
+      impact: NewsImpact | null
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT n.player_id, a.direction, a.impact
+         FROM player_news n
+         LEFT JOIN news_assessment a ON a.news_id = n.id`,
+      )
+      .all() as Row[]
+    const byPlayer = new Map<
+      PlayerId,
+      { assessed: { direction: NewsDirection; impact: NewsImpact }[]; items: number }
+    >()
+    for (const row of rows) {
+      let entry = byPlayer.get(row.player_id)
+      if (!entry) {
+        entry = { assessed: [], items: 0 }
+        byPlayer.set(row.player_id, entry)
+      }
+      entry.items += 1
+      if (row.direction !== null && row.impact !== null) {
+        entry.assessed.push({ direction: row.direction, impact: row.impact })
+      }
+    }
+    return [...byPlayer.entries()].map(([playerId, entry]) => {
+      const rollup = rollupAssessments(entry.assessed)
+      return {
+        playerId,
+        direction: rollup?.direction ?? null,
+        impact: rollup?.impact ?? null,
+        itemCount: entry.items,
+        assessedCount: entry.assessed.length,
+      }
+    })
+  }
+
   // -- Freshness ------------------------------------------------------------
 
   /** Latest as_of per refreshable table; null where the table is empty. */
@@ -343,3 +484,46 @@ export class Store {
     }
   }
 }
+
+interface NewsRow {
+  id: NewsId
+  player_id: PlayerId
+  source: NewsSource
+  external_id: string
+  published: string | null
+  headline: string
+  body: string | null
+  fetched_at: string
+}
+
+const newsItemFromRow = (row: NewsRow): PlayerNewsItem => ({
+  id: row.id,
+  playerId: row.player_id,
+  source: row.source,
+  externalId: row.external_id,
+  published: row.published,
+  headline: row.headline,
+  body: row.body,
+  fetchedAt: row.fetched_at,
+})
+
+interface AssessmentColumns {
+  id: NewsId
+  direction: NewsDirection | null
+  impact: NewsImpact | null
+  summary: string | null
+  assessed_at: string | null
+  assessed_by: string | null
+}
+
+const assessmentFromColumns = (row: AssessmentColumns): NewsAssessment | null =>
+  row.direction === null || row.impact === null ?
+    null
+  : {
+      newsId: row.id,
+      direction: row.direction,
+      impact: row.impact,
+      summary: row.summary ?? '',
+      assessedAt: row.assessed_at ?? '',
+      assessedBy: row.assessed_by ?? '',
+    }

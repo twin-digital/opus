@@ -7,6 +7,7 @@ import { ulid } from 'ulid'
  */
 export const ID_PREFIXES = {
   p: 'Player',
+  nw: 'PlayerNews',
 } as const
 
 export type IdPrefix = keyof typeof ID_PREFIXES
@@ -22,3 +23,10 @@ export const mintPlayerId = (): PlayerId => mintId('p') as PlayerId
 
 export const isPlayerId = (value: string): value is PlayerId =>
   value.startsWith('p-') && ULID_PATTERN.test(value.slice(2))
+
+/** App-minted id for a stored news item. */
+export type NewsId = `nw-${string}`
+
+export const mintNewsId = (): NewsId => mintId('nw') as NewsId
+
+export const isNewsId = (value: string): value is NewsId => value.startsWith('nw-') && ULID_PATTERN.test(value.slice(3))

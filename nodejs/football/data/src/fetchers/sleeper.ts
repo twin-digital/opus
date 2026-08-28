@@ -29,6 +29,8 @@ export interface SleeperPlayer {
   injury_status?: string | null
   injury_body_part?: string | null
   injury_notes?: string | null
+  /** Epoch ms of Sleeper's last news touch for the player. */
+  news_updated?: number | null
   active?: boolean
 }
 

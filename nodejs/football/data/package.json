@@ -33,6 +33,7 @@
     "ingest": "tsx src/cli/ingest.ts",
     "lint": "lint",
     "lint:fix": "lint_fix",
+    "news": "tsx src/cli/news.ts",
     "test": "opus-test",
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"

@@ -1,7 +1,8 @@
-import type { PlayerId } from './ids.js'
+import type { NewsId, PlayerId } from './ids.js'
 import type { DataSource } from './reference/data-source.js'
 import type { InjuryStatus } from './reference/injury-status.js'
 import type { LineupSlot } from './reference/lineup-slot.js'
+import type { NewsDirection, NewsImpact, NewsSource } from './reference/news.js'
 import type { NflTeam } from './reference/nfl-team.js'
 import type { Position } from './reference/position.js'
 import type { ScoringFormat } from './reference/scoring-format.js'
@@ -89,4 +90,45 @@ export interface ManualPick {
   playerId: PlayerId
   teamId: number | null // ESPN team id; null = unknown
   markedAt: string
+}
+
+/**
+ * One stored news item. Append-mostly: refetches upsert by (source, externalId), so the corpus
+ * accumulates across runs and survives player-snapshot refreshes (no FK to player).
+ */
+export interface PlayerNewsItem {
+  id: NewsId
+  playerId: PlayerId
+  source: NewsSource
+  /** Source item id: ESPN `nowId` (falling back to numeric id); sleeper-injury a playerId+news_updated hash. */
+  externalId: string
+  published: string | null
+  headline: string
+  /** Raw text/html as served; null when the source item carries no body. */
+  body: string | null
+  fetchedAt: string
+}
+
+/** A fetched-but-unstored item: the store mints the id and stamps fetchedAt on upsert. */
+export type PlayerNewsDraft = Omit<PlayerNewsItem, 'id' | 'fetchedAt'>
+
+/** A human/agent judgment on one news item's fantasy relevance. One per item, upserted by newsId. */
+export interface NewsAssessment {
+  newsId: NewsId
+  direction: NewsDirection
+  impact: NewsImpact
+  /** 1–2 sentences a football novice can act on. */
+  summary: string
+  assessedAt: string
+  assessedBy: string
+}
+
+/** Per-player rollup for board dots: worst direction, highest impact within that direction. */
+export interface PlayerNewsSignal {
+  playerId: PlayerId
+  /** null until at least one of the player's items is assessed. */
+  direction: NewsDirection | null
+  impact: NewsImpact | null
+  itemCount: number
+  assessedCount: number
 }

@@ -85,4 +85,31 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    id: '0003-player-news',
+    sql: `
+      -- Append-mostly news corpus. No FK to player: items survive snapshot refreshes.
+      CREATE TABLE player_news (
+        id          TEXT PRIMARY KEY,
+        player_id   TEXT NOT NULL,
+        source      TEXT NOT NULL,  -- 'espn-news' | 'sleeper-injury'
+        external_id TEXT NOT NULL,
+        published   TEXT,
+        headline    TEXT NOT NULL,
+        body        TEXT,           -- raw text/html as served
+        fetched_at  TEXT NOT NULL,
+        UNIQUE (source, external_id)
+      );
+      CREATE INDEX idx_player_news_player ON player_news(player_id);
+
+      CREATE TABLE news_assessment (
+        news_id     TEXT PRIMARY KEY REFERENCES player_news(id),
+        direction   TEXT NOT NULL CHECK (direction IN ('improves', 'harms', 'unclear')),
+        impact      TEXT NOT NULL CHECK (impact IN ('low', 'med', 'high')),
+        summary     TEXT NOT NULL,
+        assessed_at TEXT NOT NULL,
+        assessed_by TEXT NOT NULL
+      );
+    `,
+  },
 ]
