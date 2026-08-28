@@ -84,6 +84,8 @@ interface FixtureOptions {
   withCandidates?: boolean
   /** Players already seated in my starting lineup (drives the panel's bye highlights). */
   myStarters?: { name: string; position: string; byeWeek: number | null }[]
+  /** Signed boost totals on /api/board (drives the direction-aware ▲/▼ marker). */
+  boosts?: { playerId: string; points: number; note: string | null }[]
 }
 
 const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> => {
@@ -164,7 +166,8 @@ const buildPayloads = (options: FixtureOptions = {}): Record<string, unknown> =>
       replacement: { rank: {}, points: {} },
       benchmarks: { ceiling: 2000, replacement: 1200 },
       captureRatio: 0.1,
-      boostedIds: [],
+      boostedIds: (options.boosts ?? []).map((boost) => boost.playerId),
+      boosts: options.boosts ?? [],
       scarcity: [],
       costOfWaiting: [],
       rows,
@@ -496,6 +499,36 @@ describe('page rendering with fixture data', () => {
         const cell = byeCells()[0] as HTMLElement
         expect(cell.className).toContain('bye-samepos')
         expect(cell.title).toContain('same bye (week 8) as your TE starter Starter TE')
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('marks a positive boost green-up and a penalty amber-down with signed tooltips', async () => {
+      try {
+        const penalized = {
+          ...BOWERS_ROW,
+          playerId: 'p-penal',
+          name: 'Penalized Guy',
+          position: 'WR',
+        }
+        await runPage(
+          buildPayloads({
+            extraRows: [penalized],
+            boosts: [
+              { playerId: 'p-bowers', points: 25, note: null },
+              { playerId: 'p-penal', points: -40, note: 'holdout' },
+            ],
+          }),
+        )
+        const rows = document.getElementById('rows') as HTMLElement
+        const up = rows.querySelector('.mark-boost') as HTMLElement
+        const down = rows.querySelector('.mark-boost-down') as HTMLElement
+        expect(up.textContent).toBe('▲')
+        expect(up.title).toContain('boost +25 pts')
+        expect(down.textContent).toBe('▼')
+        expect(down.title).toContain('boost -40 pts')
+        expect(down.title).toContain('holdout')
       } finally {
         vi.unstubAllGlobals()
       }

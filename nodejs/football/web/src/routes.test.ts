@@ -620,6 +620,42 @@ describe('routes', () => {
     expect(settled.candidates.some((candidate) => candidate.playerId === 'p-RB1')).toBe(false)
   })
 
+  it('a complete-but-stale cache never serves a false settled window', async () => {
+    const { app, context } = makeApp({ evalMode: 'mc', mcSamples: 12 })
+    call(context, 'GET', '/api/evaluate')
+    await app.settleEvaluation()
+    expect((call(context, 'GET', '/api/evaluate').json as { computing: boolean }).computing).toBe(false)
+    // The board moves; until the recompute for the new version lands, every poll must say
+    // computing — no poll may land in a gap and read a false "settled".
+    expect(call(context, 'POST', '/api/mark', { playerId: 'p-RB1', teamId: 'unknown' }).status).toBe(200)
+    const first = call(context, 'GET', '/api/evaluate').json as { computing: boolean; candidates: unknown[] }
+    const second = call(context, 'GET', '/api/evaluate').json as { computing: boolean }
+    expect(first.computing).toBe(true)
+    expect(second.computing).toBe(true)
+    expect(first.candidates.length).toBeGreaterThan(0)
+    await app.settleEvaluation()
+    const settled = call(context, 'GET', '/api/evaluate').json as { computing: boolean }
+    expect(settled.computing).toBe(false)
+  })
+
+  it('rapid version bumps keep computing continuously true until converged', async () => {
+    const { app, context } = makeApp({ evalMode: 'mc', mcSamples: 12 })
+    call(context, 'GET', '/api/evaluate')
+    await app.settleEvaluation()
+    const gone = ['p-RB1', 'p-RB2', 'p-WR1', 'p-WR2']
+    for (const playerId of gone) {
+      expect(call(context, 'POST', '/api/mark', { playerId, teamId: 'unknown' }).status).toBe(200)
+      expect((call(context, 'GET', '/api/evaluate').json as { computing: boolean }).computing).toBe(true)
+    }
+    await app.settleEvaluation()
+    const settled = call(context, 'GET', '/api/evaluate').json as {
+      computing: boolean
+      candidates: { playerId: string }[]
+    }
+    expect(settled.computing).toBe(false)
+    expect(settled.candidates.some((candidate) => gone.includes(candidate.playerId))).toBe(false)
+  })
+
   it('flags my turn once ten picks are in, excluding drafted players from the slate', () => {
     const { context } = makeApp()
     const gone = ['p-RB1', 'p-RB2', 'p-RB3', 'p-RB4', 'p-WR1', 'p-WR2', 'p-WR3', 'p-QB1', 'p-QB2', 'p-TE1']
@@ -660,18 +696,23 @@ describe('routes', () => {
     const file = writeOverrides([
       { player: 'RB Player 1', action: 'ban' },
       { player: 'WR Player 1', action: 'boost', points: 50 },
+      { player: 'WR Player 2', action: 'boost', points: -40, note: 'holdout' },
     ])
     const plain = makeApp()
     const { context } = makeApp({ overridesFile: file })
 
     const board = call(context, 'GET', '/api/board').json as {
       boostedIds: string[]
+      boosts: { playerId: string; points: number; note: string | null }[]
       rows: { playerId: string; points: number | null; banned: boolean }[]
     }
     const plainBoard = call(plain.context, 'GET', '/api/board').json as {
       rows: { playerId: string; points: number | null }[]
     }
-    expect(board.boostedIds).toEqual(['p-WR1'])
+    expect(board.boostedIds).toEqual(['p-WR1', 'p-WR2'])
+    // The signed totals ride along so the client can render marker direction.
+    expect(board.boosts).toContainEqual({ playerId: 'p-WR1', points: 50, note: null })
+    expect(board.boosts).toContainEqual({ playerId: 'p-WR2', points: -40, note: 'holdout' })
     expect(board.rows.find((row) => row.playerId === 'p-RB1')?.banned).toBe(true)
     const boosted = board.rows.find((row) => row.playerId === 'p-WR1')?.points
     const unboosted = plainBoard.rows.find((row) => row.playerId === 'p-WR1')?.points
@@ -686,7 +727,7 @@ describe('routes', () => {
     const state = call(context, 'GET', '/api/state').json as {
       overrides: { count: number; boosted: number; banned: number; error: string | null }
     }
-    expect(state.overrides).toMatchObject({ count: 2, boosted: 1, banned: 1, error: null })
+    expect(state.overrides).toMatchObject({ count: 3, boosted: 2, banned: 1, error: null })
   })
 
   it('serves without overrides when the file is broken, surfacing the error', () => {

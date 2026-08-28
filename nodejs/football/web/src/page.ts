@@ -133,7 +133,8 @@ export const PAGE = `<!doctype html>
   .rm1dn { color: var(--warning); } .rm2dn { color: var(--danger); font-weight: 700; }
   .ups-hi { color: var(--primary); font-weight: 600; }
   .pbest { font-size: 11px; color: var(--muted-fg); cursor: help; }
-  .mark-boost { color: var(--primary); font-weight: 700; cursor: help; }
+  .mark-boost { color: var(--success); font-weight: 700; cursor: help; }
+  .mark-boost-down { color: var(--warning); font-weight: 700; cursor: help; }
   .mark-contested { color: var(--warning); font-weight: 700; cursor: help; padding: 0 2px; }
   .src-manual { color: var(--warning); }
   .warn-text { color: var(--warning); }
@@ -399,9 +400,22 @@ function chip(text, colorVar, extraClass, title) {
     'style="background: color-mix(in oklab, ' + c + ' 15%, transparent); ' +
     'color: color-mix(in oklab, ' + c + ' 65%, var(--chip-text-mix));">' + text + '</span>';
 }
-function nameMarkers(r, boosted) {
+function boostFor(id) {
+  var list = (B && B.boosts) || [];
+  for (var i = 0; i < list.length; i++) if (list[i].playerId === id) return list[i];
+  return (B && (B.boostedIds || []).indexOf(id) >= 0) ? { points: 0, note: null } : null;
+}
+// Direction-aware boost marker: ▲ green for a positive boost, ▼ amber for a penalty.
+function boostMark(b) {
+  if (!b) return '';
+  var down = b.points < 0;
+  var t = 'boost ' + (b.points > 0 ? '+' : '') + b.points + ' pts via overrides.json' + (b.note ? ' — ' + b.note : '');
+  return ' <span class="' + (down ? 'mark-boost-down' : 'mark-boost') + '" title="' + esc(t) + '">' +
+    (down ? '▼' : '▲') + '</span>';
+}
+function nameMarkers(r, boost) {
   var m = '';
-  if (boosted) m += ' <span class="mark-boost" title="boosted via overrides.json">▲</span>';
+  m += boostMark(boost);
   if (r.contested) m += ' <span class="mark-contested" title="sources disagree: spread ' +
     num(r.residualSpread, 1) + ' pts across ' + (r.sourceCount || '?') + ' sources">!</span>';
   if (r.banned) m += ' ' + chip('BAN', '--c-rose', '', 'banned via overrides.json — excluded from recommendations');
@@ -757,7 +771,7 @@ function renderClock() {
       (tied ? '; exactly tied with ' + (c.exactTies - 1) + ' other candidate' + (c.exactTies > 2 ? 's' : '') : '') +
       '">' + Math.round(c.pBest * 100) + '%' + (tied ? '≡' : '') + '</span>';
     html.push('<tr class="' + (best ? 'best' : '') + '">' +
-      '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + (c.boosted ? ' <span class="mark-boost" title="boosted via overrides.json">▲</span>' : '') + '</td>' +
+      '<td class="l"><b><span class="pname" data-pid="' + c.playerId + '">' + newsDot(c.news) + esc(c.name) + '</span></b>' + boostMark(boostFor(c.playerId)) + '</td>' +
       '<td class="l">' + c.position + '</td>' +
       byeCell(c, starters) +
       '<td class="est">' + num(c.estTeamScore, 1) + '</td>' +
@@ -910,8 +924,7 @@ function renderTable() {
   var ths = document.querySelectorAll('thead th[data-k]');
   ths.forEach(function (th) { th.className = th.className.replace(' sorted', ''); if (th.dataset.k === ui.sortKey) th.className += ' sorted'; });
 
-  var boosted = {};
-  (B.boostedIds || []).forEach(function (id) { boosted[id] = true; });
+
   // The threat runs to B.threatPick — mark whichever P@ column shows that pick.
   var thrCol = B.threatPick !== null && B.myNextPicks[1] === B.threatPick ? 1 : 0;
   var rows = viewRows();
@@ -941,7 +954,7 @@ function renderTable() {
     html.push('<tr class="' + cls + '">' +
       '<td>' + (r.rank === null ? '—' : r.rank) + '</td>' +
       newsCell(r) +
-      '<td class="l">' + nameCell(r) + nameMarkers(r, boosted[r.playerId]) + '</td>' +
+      '<td class="l">' + nameCell(r) + nameMarkers(r, boostFor(r.playerId)) + '</td>' +
       '<td class="l">' + r.position + '</td>' +
       '<td class="l">' + (r.team || 'FA') + '</td>' +
       '<td>' + (r.byeWeek === null ? '—' : r.byeWeek) + '</td>' +
@@ -1075,7 +1088,7 @@ function renderDrawer(d) {
   var row = rowById[p.playerId];
   var status = '';
   if (row && row.banned) status = chip('BAN', '--c-rose', '', 'banned via overrides.json');
-  else if (B && (B.boostedIds || []).indexOf(p.playerId) >= 0) status = '<span class="mark-boost">▲ boosted</span>';
+  else if (boostFor(p.playerId)) status = boostMark(boostFor(p.playerId)).replace('</span>', ' boosted</span>');
   el('drawerFoot').innerHTML =
     '<button id="ovrBan" class="btn-danger">Ban</button>' +
     '<button id="ovrBoost">Boost ±points</button>' +

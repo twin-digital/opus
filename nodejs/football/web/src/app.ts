@@ -157,6 +157,8 @@ export interface BoardPayload {
   captureRatio: number
   /** Players carrying a points boost from the overrides file. */
   boostedIds: PlayerId[]
+  /** Per-player boost totals (points summed across boost overrides, notes joined). */
+  boosts: { playerId: PlayerId; points: number; note: string | null }[]
   scarcity: TierScarcity[]
   costOfWaiting: CostOfWaitingRow[]
   rows: WebBoardRow[]
@@ -1048,6 +1050,7 @@ export class App {
       benchmarks: live.benchmarks,
       captureRatio: live.captureRatio,
       boostedIds: [...new Set(this.overrides.filter((override) => override.action === 'boost').map((o) => o.playerId))],
+      boosts: this.boostSummaries(),
       scarcity: tierScarcity(live.rows),
       costOfWaiting: this.costOfWaiting(live.currentOverall, myNextPicks, live.rows, this.livePositionPicks(picks)),
       rows,
@@ -1057,16 +1060,33 @@ export class App {
     return payload
   }
 
+  /** Sum boost overrides per player so the client can render marker direction and tooltip. */
+  private boostSummaries(): { playerId: PlayerId; points: number; note: string | null }[] {
+    const byPlayer = new Map<PlayerId, { points: number; note: string | null }>()
+    for (const override of this.overrides) {
+      if (override.action !== 'boost') {
+        continue
+      }
+      const entry = byPlayer.get(override.playerId) ?? { points: 0, note: null }
+      entry.points += override.points
+      if (override.note !== undefined) {
+        entry.note = entry.note === null ? override.note : `${entry.note}; ${override.note}`
+      }
+      byPlayer.set(override.playerId, entry)
+    }
+    return [...byPlayer].map(([playerId, entry]) => ({ playerId, ...entry }))
+  }
+
   /**
    * Candidate rollouts for the pick on the clock, cached on the same version as the board.
    * Deterministic mode computes inline; MC mode never blocks the request — it serves the last
    * completed payload (marked `computing`) and refreshes off the request path.
    */
   evaluatePayload(): EvaluatePayload {
-    if (this.evaluateCache?.version === this.version) {
-      return this.evaluateCache.payload
-    }
     if (this.evalMode === 'det') {
+      if (this.evaluateCache?.version === this.version) {
+        return this.evaluateCache.payload
+      }
       const picks = this.effectivePicks()
       const complete = picks.length >= this.totalPicks
       const candidates =
@@ -1080,25 +1100,37 @@ export class App {
       this.evaluateCache = { version: this.version, payload }
       return payload
     }
-    this.kickEvaluation()
-    if (this.evaluateCache !== null) {
-      // The stale slate keeps serving numbers, but turn fields must be the live pick's and
-      // just-drafted players must not be offered with live ME buttons.
-      const picks = this.effectivePicks()
-      const drafted = new Set(picks.map((pick) => pick.playerId))
-      const fresh = this.assembleEvaluatePayload(this.version, picks, [], true)
-      return {
-        ...this.evaluateCache.payload,
-        myTurn: fresh.myTurn,
-        currentOverall: fresh.currentOverall,
-        onClockTeamId: fresh.onClockTeamId,
-        myNextPicks: fresh.myNextPicks,
-        candidates: this.evaluateCache.payload.candidates.filter((c) => !drafted.has(c.playerId)),
-        computing: true,
-      }
+    // Kick BEFORE assembling: a complete-but-stale cache re-enters computing on this very
+    // request, so no poll can land in a gap and read a false "settled". Kicking is a no-op
+    // while a flight is active.
+    if (this.evaluateCache?.version !== this.version) {
+      this.kickEvaluation()
     }
-    // Nothing computed yet (fresh server): an empty slate the UI reads as "computing".
-    return this.assembleEvaluatePayload(this.version, this.effectivePicks(), [], true)
+    const cache = this.evaluateCache
+    // `computing` means "what the client sees is not the current board's evaluation": a
+    // flight is in the air, nothing is cached, or the cache is for an older version.
+    const computing = this.evalInFlight !== null || cache?.version !== this.version
+    if (cache === null) {
+      // Nothing computed yet (fresh server): an empty slate the UI reads as "computing".
+      return this.assembleEvaluatePayload(this.version, this.effectivePicks(), [], true)
+    }
+    if (!computing) {
+      return cache.payload
+    }
+    // The stale slate keeps serving numbers, but turn fields must be the live pick's and
+    // just-drafted players must not be offered with live ME buttons.
+    const picks = this.effectivePicks()
+    const drafted = new Set(picks.map((pick) => pick.playerId))
+    const fresh = this.assembleEvaluatePayload(this.version, picks, [], true)
+    return {
+      ...cache.payload,
+      myTurn: fresh.myTurn,
+      currentOverall: fresh.currentOverall,
+      onClockTeamId: fresh.onClockTeamId,
+      myNextPicks: fresh.myNextPicks,
+      candidates: cache.payload.candidates.filter((c) => !drafted.has(c.playerId)),
+      computing: true,
+    }
   }
 
   get evalMode(): EvalMode {
