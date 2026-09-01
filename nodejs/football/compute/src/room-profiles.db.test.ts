@@ -22,7 +22,7 @@ const HAS_FIXTURES = existsSync(DB_FILE) && existsSync(RULES_FILE)
 describe.skipIf(!HAS_FIXTURES)('room profiles against the ingested snapshot', async () => {
   // the factory still runs during collection when skipped; don't touch the DB
   if (!HAS_FIXTURES) {
-    it.skip('requires an ingested DB and room rules', () => {})
+    it.todo('requires an ingested DB and room rules')
     return
   }
   const { openDatabase, Store } = await import('@twin-digital/football-data')

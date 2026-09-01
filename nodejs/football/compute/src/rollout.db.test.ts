@@ -21,7 +21,7 @@ const HAS_DB = existsSync(DB_FILE)
 describe.skipIf(!HAS_DB)('rollout against the ingested snapshot', async () => {
   // the factory still runs during collection when skipped; don't touch the DB
   if (!HAS_DB) {
-    it.skip('requires an ingested DB', () => {})
+    it.todo('requires an ingested DB')
     return
   }
   const { openDatabase, Store } = await import('@twin-digital/football-data')
