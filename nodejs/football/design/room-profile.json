@@ -1,0 +1,554 @@
+{
+  "league": "1838733150",
+  "generated": "2026-08-28",
+  "draft": {
+    "date": "2026-08-28T20:00:00Z",
+    "teams": 12,
+    "type": "SNAKE",
+    "orderByTeamId": [8, 1, 9, 11, 7, 4, 10, 12, 3, 5, 13, 14],
+    "keepers": false
+  },
+  "seasonsAnalyzed": [2024, 2025],
+  "historicalFormat": "10-team, 14-round snake; deviations are in overall-pick units of those drafts",
+  "referenceBoard": "ESPN kona leaguedefaults/3 draftRanksByRankType.STANDARD.rank (validated as preseason values both seasons; ownership ADP is a 170 sentinel in 2025 and in-season-contaminated in 2024)",
+  "devConvention": "dev = overallPick - boardRank; negative = reach. Human picks only, K/DST excluded. meanDev/sigmaDev restrict to boardRank <= 100 (behavioral); *All variants are unfiltered.",
+  "autoDraftTypeId": {
+    "0": "live human pick",
+    "2": "one-off autopick (timer/queue)",
+    "3": "full-team autodraft"
+  },
+  "league_wide": {
+    "pooledN": 223,
+    "pooledMean": -12.6,
+    "pooledSigma": 26.9,
+    "sigmaByRankBin": [
+      {
+        "bin": "1-30",
+        "n": 55,
+        "mean": 1,
+        "sigma": 4.5
+      },
+      {
+        "bin": "31-60",
+        "n": 50,
+        "mean": -1.2,
+        "sigma": 10.8
+      },
+      {
+        "bin": "61-100",
+        "n": 59,
+        "mean": -8,
+        "sigma": 14
+      },
+      {
+        "bin": "101-200",
+        "n": 56,
+        "mean": -34,
+        "sigma": 25.6
+      }
+    ],
+    "sigmaSuggestion": {
+      "form": "sigma ~= 0.15 * adp + 2.5",
+      "flatTop60": 8,
+      "note": "matches the existing sigmaForPick fallback (0.15*adp + 2); no retune needed"
+    },
+    "kRounds": [10, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14],
+    "dstRounds": [11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14],
+    "boardCoverage": {
+      "2024": "139/140",
+      "2025": "140/140"
+    }
+  },
+  "teams": {
+    "1": {
+      "teamId": 1,
+      "slot": 2,
+      "owner": "Chris Wollman",
+      "teamName": "Purple Reign",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": []
+      },
+      "meanDev": -3.9,
+      "sigmaDev": 7.1,
+      "nDev": 16,
+      "meanDevAll": -24.3,
+      "sigmaDevAll": 48.9,
+      "posTiming": {
+        "firstQB": {
+          "2024": 6,
+          "2025": 10
+        },
+        "firstTE": {
+          "2024": 5,
+          "2025": 4
+        },
+        "firstK": {
+          "2024": 12,
+          "2025": 13
+        },
+        "firstDST": {
+          "2024": 13,
+          "2025": 12
+        },
+        "rbThru6": {
+          "2024": 1,
+          "2025": 2
+        },
+        "wrThru6": {
+          "2024": 3,
+          "2025": 3
+        }
+      },
+      "biggestReach": "Michael Pittman Jr. 2024: pick 29, board 44 (-15)",
+      "biggestValue": "Keenan Allen 2024: pick 92, board 82 (+10)",
+      "repeatedPlayers": ["DeVonta Smith"],
+      "notes": ["TE R4-5 both years; WR/TE heavy, light RB early; chaotic deep stashes late (Guerendo p133/b351)"]
+    },
+    "3": {
+      "teamId": 3,
+      "slot": 9,
+      "owner": "S s",
+      "teamName": "Scottie Pickens JR",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": []
+      },
+      "meanDev": -4.8,
+      "sigmaDev": 8.7,
+      "nDev": 17,
+      "meanDevAll": -12.9,
+      "sigmaDevAll": 20.6,
+      "posTiming": {
+        "firstQB": {
+          "2024": 5,
+          "2025": 4
+        },
+        "firstTE": {
+          "2024": 11,
+          "2025": 7
+        },
+        "firstK": {
+          "2024": 14,
+          "2025": 12
+        },
+        "firstDST": {
+          "2024": 12,
+          "2025": 11
+        },
+        "rbThru6": {
+          "2024": 3,
+          "2025": 3
+        },
+        "wrThru6": {
+          "2024": 2,
+          "2025": 2
+        }
+      },
+      "biggestReach": "Rhamondre Stevenson 2024: pick 58, board 73 (-15)",
+      "biggestValue": "Emeka Egbuka 2025: pick 98, board 83 (+15)",
+      "repeatedPlayers": ["T.J. Hockenson"],
+      "notes": ["QB R4-5 both years; biggest rookie chaser (5 in 2 drafts); RB-lean thru R6; repeated Hockenson"]
+    },
+    "4": {
+      "teamId": 4,
+      "slot": 6,
+      "owner": "Dennis McGarrity",
+      "teamName": "Vinz Clortho: The Keymaster",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": []
+      },
+      "meanDev": -4.2,
+      "sigmaDev": 9,
+      "nDev": 16,
+      "meanDevAll": -15.8,
+      "sigmaDevAll": 18.7,
+      "posTiming": {
+        "firstQB": {
+          "2024": 5,
+          "2025": 4
+        },
+        "firstTE": {
+          "2024": 8,
+          "2025": 10
+        },
+        "firstK": {
+          "2024": 14,
+          "2025": 13
+        },
+        "firstDST": {
+          "2024": 13,
+          "2025": 14
+        },
+        "rbThru6": {
+          "2024": 3,
+          "2025": 2
+        },
+        "wrThru6": {
+          "2024": 2,
+          "2025": 3
+        }
+      },
+      "biggestReach": "Aaron Jones Sr. 2025: pick 61, board 81 (-20)",
+      "biggestValue": "Tank Dell 2024: pick 64, board 56 (+8)",
+      "repeatedPlayers": ["Bengals D/ST"],
+      "notes": ["QB R4-5 both years; 2025 rookie chaser (Hunter, Warren, Loveland); CIN-IND lean"]
+    },
+    "5": {
+      "teamId": 5,
+      "slot": 10,
+      "owner": "Jason Lehmer",
+      "teamName": "Jefferson Airplane",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0.5,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+      },
+      "meanDev": -7.3,
+      "sigmaDev": 19.6,
+      "nDev": 7,
+      "meanDevAll": -20.8,
+      "sigmaDevAll": 26.3,
+      "posTiming": {
+        "firstQB": {
+          "2024": 6,
+          "2025": 4
+        },
+        "firstTE": {
+          "2024": 10,
+          "2025": 3
+        },
+        "firstK": {
+          "2024": 12,
+          "2025": 14
+        },
+        "firstDST": {
+          "2024": 14,
+          "2025": 13
+        },
+        "rbThru6": {
+          "2024": 2,
+          "2025": 1
+        },
+        "wrThru6": {
+          "2024": 3,
+          "2025": 3
+        }
+      },
+      "biggestReach": "Aaron Jones 2024: pick 34, board 88 (-54)",
+      "biggestValue": "Rashee Rice 2024: pick 67, board 57 (+10)",
+      "repeatedPlayers": ["Jayden Daniels"],
+      "notes": [
+        "FULL AUTODRAFT all of 2025 (autoDraftTypeId 3); 2024 human draft reached for own guys (A.Jones -54, Daniels -63)"
+      ]
+    },
+    "7": {
+      "teamId": 7,
+      "slot": 5,
+      "owner": "kyle stefl",
+      "teamName": "King Kong",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": []
+      },
+      "meanDev": -1.1,
+      "sigmaDev": 7,
+      "nDev": 16,
+      "meanDevAll": -13,
+      "sigmaDevAll": 26.7,
+      "posTiming": {
+        "firstQB": {
+          "2024": 10,
+          "2025": 8
+        },
+        "firstTE": {
+          "2024": 4,
+          "2025": 10
+        },
+        "firstK": {
+          "2024": 14,
+          "2025": 14
+        },
+        "firstDST": {
+          "2024": 13,
+          "2025": 13
+        },
+        "rbThru6": {
+          "2024": 2,
+          "2025": 2
+        },
+        "wrThru6": {
+          "2024": 3,
+          "2025": 4
+        }
+      },
+      "biggestReach": "Ladd McConkey 2025: pick 26, board 38 (-12)",
+      "biggestValue": "Deebo Samuel 2025: pick 106, board 89 (+17)",
+      "repeatedPlayers": ["Lions D/ST"],
+      "notes": ["QB waiter (R8-10); WR heavy thru R6; 2025 rookie-RB reaches (Hampton, Judkins p86/b191)"]
+    },
+    "8": {
+      "teamId": 8,
+      "slot": 1,
+      "owner": "G L",
+      "teamName": "Team Lettow",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0.036,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": [10]
+      },
+      "meanDev": -2.6,
+      "sigmaDev": 14,
+      "nDev": 20,
+      "meanDevAll": -3.5,
+      "sigmaDevAll": 13.6,
+      "posTiming": {
+        "firstQB": {
+          "2024": 6,
+          "2025": 7
+        },
+        "firstTE": {
+          "2024": 7,
+          "2025": 8
+        },
+        "firstK": {
+          "2024": 14,
+          "2025": 13
+        },
+        "firstDST": {
+          "2024": 13,
+          "2025": 14
+        },
+        "rbThru6": {
+          "2024": 2,
+          "2025": 3
+        },
+        "wrThru6": {
+          "2024": 3,
+          "2025": 3
+        }
+      },
+      "biggestReach": "Raheem Mostert 2024: pick 76, board 100 (-24)",
+      "biggestValue": "David Njoku 2024: pick 116, board 84 (+32)",
+      "repeatedPlayers": ["Nico Collins", "DK Metcalf", "David Njoku", "Brock Purdy"],
+      "notes": ["most ESPN-faithful; repeats Collins/Metcalf/Njoku/Purdy; SF-HOU lean"]
+    },
+    "9": {
+      "teamId": 9,
+      "slot": 3,
+      "owner": "jason walker",
+      "teamName": "No one healthy on BYE week",
+      "seasons": [2025],
+      "n": 14,
+      "autoShare": 0.143,
+      "autoRoundsByYear": {
+        "2025": [13, 14]
+      },
+      "meanDev": -7,
+      "sigmaDev": 11,
+      "nDev": 8,
+      "meanDevAll": -12.7,
+      "sigmaDevAll": 12.2,
+      "posTiming": {
+        "firstQB": {
+          "2025": 4
+        },
+        "firstTE": {
+          "2025": 8
+        },
+        "firstK": {
+          "2025": 14
+        },
+        "firstDST": {
+          "2025": 13
+        },
+        "rbThru6": {
+          "2025": 2
+        },
+        "wrThru6": {
+          "2025": 3
+        }
+      },
+      "biggestReach": "Tony Pollard 2025: pick 50, board 77 (-27)",
+      "biggestValue": "Tyreek Hill 2025: pick 30, board 26 (+4)",
+      "repeatedPlayers": [],
+      "notes": ["single draft (2025); QB R4; rookie-RB friendly; timer autopicks R13-14"]
+    },
+    "10": {
+      "teamId": 10,
+      "slot": 7,
+      "owner": "colin skow",
+      "teamName": "La Porta Potty",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": []
+      },
+      "meanDev": -1.3,
+      "sigmaDev": 5.1,
+      "nDev": 19,
+      "meanDevAll": -6,
+      "sigmaDevAll": 14.3,
+      "posTiming": {
+        "firstQB": {
+          "2024": 5,
+          "2025": 3
+        },
+        "firstTE": {
+          "2024": 6,
+          "2025": 6
+        },
+        "firstK": {
+          "2024": 14,
+          "2025": 14
+        },
+        "firstDST": {
+          "2024": 12,
+          "2025": 13
+        },
+        "rbThru6": {
+          "2024": 2,
+          "2025": 2
+        },
+        "wrThru6": {
+          "2024": 2,
+          "2025": 2
+        }
+      },
+      "biggestReach": "Sam LaPorta 2025: pick 56, board 67 (-11)",
+      "biggestValue": "Zay Flowers 2024: pick 66, board 58 (+8)",
+      "repeatedPlayers": ["Jahmyr Gibbs"],
+      "notes": [
+        "tightest drafter (sigmaEarly 5.1); QB early and earlier (R5 then R3 Allen); Gibbs both years; DET lean"
+      ]
+    },
+    "11": {
+      "teamId": 11,
+      "slot": 4,
+      "owner": "James Johnson",
+      "teamName": "Theo Von Retically",
+      "seasons": [2024, 2025],
+      "n": 28,
+      "autoShare": 0.071,
+      "autoRoundsByYear": {
+        "2024": [],
+        "2025": [3, 13]
+      },
+      "meanDev": -4.1,
+      "sigmaDev": 10.8,
+      "nDev": 17,
+      "meanDevAll": -16.1,
+      "sigmaDevAll": 33.6,
+      "posTiming": {
+        "firstQB": {
+          "2024": 6,
+          "2025": 6
+        },
+        "firstTE": {
+          "2024": 4,
+          "2025": 2
+        },
+        "firstK": {
+          "2024": 10,
+          "2025": 14
+        },
+        "firstDST": {
+          "2024": 14,
+          "2025": 13
+        },
+        "rbThru6": {
+          "2024": 2,
+          "2025": 3
+        },
+        "wrThru6": {
+          "2024": 2,
+          "2025": 1
+        }
+      },
+      "biggestReach": "Joe Mixon 2024: pick 21, board 41 (-20)",
+      "biggestValue": "Calvin Ridley 2024: pick 61, board 34 (+27)",
+      "repeatedPlayers": ["Brian Robinson Jr.", "Ka'imi Fairbairn"],
+      "notes": [
+        "TE early (Bowers R2, Kelce R4); only early-K owner (Fairbairn R10, drafted twice); repeats B.Robinson; HOU-WSH lean"
+      ]
+    },
+    "12": {
+      "teamId": 12,
+      "slot": 8,
+      "owner": "b kohl",
+      "teamName": "Cache Money",
+      "seasons": [2025],
+      "n": 14,
+      "autoShare": 0,
+      "autoRoundsByYear": {
+        "2025": []
+      },
+      "meanDev": 1.8,
+      "sigmaDev": 16.3,
+      "nDev": 11,
+      "meanDevAll": -2.7,
+      "sigmaDevAll": 21.5,
+      "posTiming": {
+        "firstQB": {
+          "2025": 9
+        },
+        "firstTE": {
+          "2025": 7
+        },
+        "firstK": {
+          "2025": 14
+        },
+        "firstDST": {
+          "2025": 12
+        },
+        "rbThru6": {
+          "2025": 3
+        },
+        "wrThru6": {
+          "2025": 3
+        }
+      },
+      "biggestReach": "Travis Kelce 2025: pick 67, board 97 (-30)",
+      "biggestValue": "Jacory Croskey-Merritt 2025: pick 127, board 92 (+35)",
+      "repeatedPlayers": [],
+      "notes": ["single draft (2025); only positive early dev (value-waiter); QB R9; RB-RB start"]
+    },
+    "13": {
+      "teamId": 13,
+      "slot": 11,
+      "owner": "Sean Kleinjung",
+      "teamName": "Smite Club",
+      "n": 0,
+      "noHistory": true,
+      "notes": ["2026 newcomer (league owner of this tool); no history"]
+    },
+    "14": {
+      "teamId": 14,
+      "slot": 12,
+      "owner": "Rob Petro",
+      "teamName": "The Dude Staleys",
+      "n": 0,
+      "noHistory": true,
+      "notes": ["2026 newcomer; no history"]
+    }
+  }
+}

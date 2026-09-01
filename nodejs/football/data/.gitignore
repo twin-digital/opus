@@ -1,0 +1,2 @@
+# local SQLite store written by `pnpm ingest`
+.data/

@@ -83,3 +83,4 @@ nodejs/dolmenwood/refbash/.data
 # digits only: a bare `core.*` also swallows source files named core.ts.
 core
 core.[0-9]*
+nodejs/football/overrides.json
