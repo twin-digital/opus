@@ -36,6 +36,9 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/fw-core](./nodejs/farwatch/core): Deterministic RNG and shared primitives for Farwatch.
 - [@thrashplay/fw-simulation](./nodejs/farwatch/simulation): Adventure resolution and simulation loop for Farwatch.
 - [@thrashplay/fw-worldgen](./nodejs/farwatch/worldgen): Procedural compact and world generation for Farwatch.
+- [@twin-digital/football-compute](./nodejs/football/compute): Draft-day compute layer for the fantasy football app: consensus projections, league-exact rescoring, VOR with FLEX-aware replacement, tier breaks, make-it-back odds, and the draft board query.
+- [@twin-digital/football-data](./nodejs/football/data): Draft-day data layer for the fantasy football app: canonical models, player id mapping, SQLite store, and multi-source ingest (Sleeper, ESPN, FantasyPros, nflverse crosswalk).
+- [@twin-digital/football-web](./nodejs/football/web): Draft-day web UI for the fantasy football app: live board server with ESPN draft polling, manual-pick fallback, and on-demand ingest refresh.
 - [@twin-digital/bedrock](./nodejs/genai/bedrock): Utilities for integrating with AWS Bedrock.
 - [@twin-digital/genai-core](./nodejs/genai/genai-core): Core types and utilities for building GenAI applications and services.
 - [@grinbox/server](./nodejs/grinbox/server): The grinbox daemon: HTTP surface, poll schedule, triage execution, and the SQLite state store.
