@@ -19,7 +19,14 @@ const SEASON = Number(process.env.FOOTBALL_SEASON ?? '2026')
  * or above Josh Allen, and the top three sit within one another's reach — the deterministic
  * engine had Allen first with Henry 11 points back.
  */
-describe.skipIf(!existsSync(DB_FILE))('evaluateCandidatesMC against the ingested snapshot', async () => {
+const HAS_DB = existsSync(DB_FILE)
+
+describe.skipIf(!HAS_DB)('evaluateCandidatesMC against the ingested snapshot', async () => {
+  // the factory still runs during collection when skipped; don't touch the DB
+  if (!HAS_DB) {
+    it.skip('requires an ingested DB', () => {})
+    return
+  }
   const { openDatabase, Store } = await import('@twin-digital/football-data')
   const store = new Store(openDatabase(DB_FILE))
   const settings = store.getLeagueSettings()

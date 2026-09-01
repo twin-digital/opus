@@ -16,7 +16,14 @@ const SEASON = Number(process.env.FOOTBALL_SEASON ?? '2026')
  * Smoke tests against the real snapshot: tolerances are generous because ADP and projections
  * move daily. Skipped wholesale when the local DB has not been ingested.
  */
-describe.skipIf(!existsSync(DB_FILE))('rollout against the ingested snapshot', async () => {
+const HAS_DB = existsSync(DB_FILE)
+
+describe.skipIf(!HAS_DB)('rollout against the ingested snapshot', async () => {
+  // the factory still runs during collection when skipped; don't touch the DB
+  if (!HAS_DB) {
+    it.skip('requires an ingested DB', () => {})
+    return
+  }
   const { openDatabase, Store } = await import('@twin-digital/football-data')
   const store = new Store(openDatabase(DB_FILE))
   const settings = store.getLeagueSettings()
