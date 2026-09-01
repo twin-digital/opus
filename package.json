@@ -39,6 +39,6 @@
     "typescript": "^6.0.0"
   },
   "author": "Sean Kleinjung <sean@twindigital.io>",
-  "packageManager": "pnpm@11.19.0",
+  "packageManager": "pnpm@11.21.0",
   "lint-staged": "tooling/config/lint-staged.config.js"
 }
