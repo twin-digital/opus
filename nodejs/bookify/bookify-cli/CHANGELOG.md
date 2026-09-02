@@ -1,5 +1,13 @@
 # @twin-digital/bookify-cli
 
+## 0.4.6
+
+### Patch Changes
+
+- 67582c3: chore(deps): update dependency chalk to v6
+  - @twin-digital/bookify@0.4.5
+  - @twin-digital/cli-lib@0.0.2
+
 ## 0.4.5
 
 ### Patch Changes
