@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/football-data",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Draft-day data layer for the fantasy football app: canonical models, player id mapping, SQLite store, and multi-source ingest (Sleeper, ESPN, FantasyPros, nflverse crosswalk).",
   "license": "UNLICENSED",
   "type": "module",
