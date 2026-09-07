@@ -82,7 +82,7 @@ peerDependencyRules:
     'eslint-plugin-react>eslint': '10'
 
 overrides:
-  '@smithy/types': 4.16.1
+  '@smithy/types': 4.17.2
 
 packageExtensions:
   aws-sdk-client-mock:
