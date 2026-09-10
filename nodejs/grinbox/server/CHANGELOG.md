@@ -1,5 +1,12 @@
 # @grinbox/server
 
+## 0.5.1
+
+### Patch Changes
+
+- 6709e2b: fix(deps): update build-script dependency better-sqlite3 to v13
+  - @grinbox/shared@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

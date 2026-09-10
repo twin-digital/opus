@@ -1,5 +1,13 @@
 # @twin-digital/codex
 
+## 0.3.5
+
+### Patch Changes
+
+- 67582c3: chore(deps): update dependency chalk to v6
+- Updated dependencies [b67f921]
+  - @twin-digital/dolmenwood@0.3.3
+
 ## 0.3.4
 
 ### Patch Changes
