@@ -1,5 +1,12 @@
 # @twin-digital/repo-kit
 
+## 0.4.2
+
+### Patch Changes
+
+- 67582c3: chore(deps): update dependency chalk to v6
+  - @twin-digital/json-patch-x@0.3.1
+
 ## 0.4.1
 
 ### Patch Changes
