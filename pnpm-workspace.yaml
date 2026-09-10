@@ -22,7 +22,7 @@ catalog:
   '@minecraft/common': ^1.2.0
   '@minecraft/server': 2.8.0
   '@minecraft/server-ui': 2.1.0
-  '@minecraft/vanilla-data': 1.26.33
+  '@minecraft/vanilla-data': 1.26.44
   '@types/aws-lambda': ^8.10.159
   '@types/lodash-es': ^4.17.12
   '@types/node': 24.13.3
