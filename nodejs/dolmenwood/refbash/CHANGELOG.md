@@ -1,5 +1,14 @@
 # @twin-digital/refbash
 
+## 0.1.7
+
+### Patch Changes
+
+- 67582c3: chore(deps): update dependency chalk to v6
+- b67f921: fix(deps): update mobx
+- Updated dependencies [b67f921]
+  - @twin-digital/dolmenwood@0.3.3
+
 ## 0.1.6
 
 ### Patch Changes
