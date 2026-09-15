@@ -103,8 +103,8 @@ catalogs:
       specifier: ^2.8.0
       version: 2.8.0
     serverless:
-      specifier: 4.40.0
-      version: 4.40.0
+      specifier: 4.41.0
+      version: 4.41.0
     ts-node:
       specifier: ^10.9.2
       version: 10.9.2
@@ -156,7 +156,7 @@ importers:
         version: 3.9.6
       serverless:
         specifier: 'catalog:'
-        version: 4.40.0
+        version: 4.41.0
       sherif:
         specifier: ^1.11.1
         version: 1.13.0
@@ -281,7 +281,7 @@ importers:
         version: 2.8.0
       serverless:
         specifier: 'catalog:'
-        version: 4.40.0
+        version: 4.41.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -609,7 +609,7 @@ importers:
         version: 2.8.0
       serverless:
         specifier: 'catalog:'
-        version: 4.40.0
+        version: 4.41.0
       tsdown:
         specifier: 'catalog:'
         version: 0.18.3(typescript@6.0.3)
@@ -10302,8 +10302,8 @@ packages:
     resolution: {integrity: sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==}
     engines: {node: '>= 18'}
 
-  serverless@4.40.0:
-    resolution: {integrity: sha512-5PePQZRgJPbyfSjrZUWL7ys7U50t69EeBhokZnAe3CPedPsFGiVcn0aJHi91dYJDluWfYMDJY5zizkBPp1XHgA==}
+  serverless@4.41.0:
+    resolution: {integrity: sha512-H/yAldLpPggt3EqonzAsXAqJF0+ILcynlaS/G7aJRKvPXNY6LzIXPvFxTo32s3GJVQgahzRiUZvGp0ZhkiIF2w==}
     engines: {node: '>=18.17.0'}
     hasBin: true
 
@@ -10982,10 +10982,6 @@ packages:
 
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
-
-  undici@6.27.0:
-    resolution: {integrity: sha512-YmfV3YnEDzXRC5lZ2jWtWWHKGUm1zIt8AhesR1tens+HTNv+YZlN/dp6G727LOvMJ8xjP9Be7Y2Sdr96LDm+pg==}
-    engines: {node: '>=18.17'}
 
   undici@6.28.0:
     resolution: {integrity: sha512-LIY910g9TI13YS95lrMFrs8Rm/u/irgHeTWoKCoteeJ04CUJ92eEfj0rVn+7VKMPBpUPiUoBKfhNyLI23EE/KA==}
@@ -19222,10 +19218,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  serverless@4.40.0:
+  serverless@4.41.0:
     dependencies:
-      rimraf: 5.0.10
-      undici: 6.27.0
+      undici: 6.28.0
 
   set-blocking@2.0.0: {}
 
@@ -19936,8 +19931,6 @@ snapshots:
   undici-types@7.18.2: {}
 
   undici-types@8.3.0: {}
-
-  undici@6.27.0: {}
 
   undici@6.28.0: {}
 
