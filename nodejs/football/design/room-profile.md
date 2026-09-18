@@ -2,7 +2,7 @@
 
 Scouting report from the 2024 and 2025 league drafts (both 10-team, 14-round snake; 140 picks
 each). Tonight is 12 teams. Deviation is `overall pick − ESPN board rank` for the same season:
-negative = took the player earlier than ESPN's list (reach), positive = let him fall (value).
+
 Autopicks and K/DST are excluded from deviation stats; "early dev" restricts to board rank ≤ 100,
 where deviation is behavioral rather than a mechanical artifact of drafting deep players.
 
