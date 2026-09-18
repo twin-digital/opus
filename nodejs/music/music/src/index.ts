@@ -7,6 +7,9 @@ import { createLauncherProgram } from './app/launcher-program.js'
 import { MidiScheduler } from './midi/sequencing.js'
 import { makeLaunchpadInputRouter } from './vendors/novation/launchpad-mini-mk3/launchpad-input.js'
 import { Engine } from './engine/engine.js'
+import { getConfig } from './config.js'
+import { ReaperClient } from './studio/reaper-client.js'
+import { StudioService } from './studio/studio-service.js'
 
 const main = async (): Promise<void> => {
   const launchpad = new NovationLaunchpadMiniMk3()
@@ -25,6 +28,11 @@ const main = async (): Promise<void> => {
     name: 'Roland Digital Piano',
   })
 
+  const { reaperUrl } = getConfig()
+  const studio =
+    reaperUrl === undefined ? undefined : new StudioService({ client: new ReaperClient({ baseUrl: reaperUrl }) })
+  studio?.start()
+
   const launcher = await createLauncherProgram({
     launchpad,
     options: {
@@ -32,6 +40,7 @@ const main = async (): Promise<void> => {
     },
     renderer,
     scheduler: new MidiScheduler(fp30x),
+    studio,
     synthesizer: fp30x,
   })
 

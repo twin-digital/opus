@@ -55,4 +55,23 @@ describe('createLauncher', () => {
     expect(secondDraw).toHaveBeenCalled()
     expect(secondUpdate).toHaveBeenCalled()
   })
+  it('draws overlays above the active program and updates them every frame', async () => {
+    const program: Program = {
+      getDrawable: () => ({ draw: () => [{ value: [1, 1, 1] as RgbColor, x: 7, y: 8 }] }),
+    }
+    const overlayUpdate = vi.fn()
+    const overlay: Program = {
+      getDrawable: () => ({ draw: () => [{ value: [9, 9, 9] as RgbColor, x: 7, y: 8 }] }),
+      update: overlayUpdate,
+    }
+
+    const launcher = await createLauncher([() => program], { overlays: [overlay] })
+
+    // last cell at a pad wins when the engine composites, so the overlay must come after the program
+    const cells = launcher.getDrawable().draw()
+    expect(cells.findLast((cell) => cell.x === 7 && cell.y === 8)?.value).toEqual([9, 9, 9])
+
+    launcher.update?.(0.1)
+    expect(overlayUpdate).toHaveBeenCalledWith(0.1)
+  })
 })

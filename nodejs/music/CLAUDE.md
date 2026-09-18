@@ -51,6 +51,18 @@ downloads them from the asset servers the game's own launcher uses, into `~/.thr
 (`MUSIC_SAMPLES_DIR` overrides). The sim serves that same directory at `/samples` via a Vite config
 fragment, since it sits outside any checkout.
 
+## Recording studio
+
+`src/studio/` links the Launchpad to a REAPER project that captures what gets played. `ReaperClient`
+talks to REAPER's built-in web remote; `StudioService` polls it and owns the one snapshot every
+view reads: transport, input level, and the takes (the project's regions, newest first — a
+background ReaScript makes one per recording). Recording appends after the last take, and playback
+of a take stops itself at the take's end.
+
+The Launchpad view is `createTransportOverlay`: two toggling pads in the top row beside the logo,
+record and play-my-last-one, which the launcher draws above every program so they never move. It
+is enabled by `MUSIC_REAPER_URL`.
+
 ## Environment variables
 
 | Variable                             | Default                 | Purpose                                                                                                                                                        |
