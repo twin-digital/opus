@@ -1,5 +1,11 @@
 # @twin-digital/opus-scripts
 
+## 0.5.2
+
+### Patch Changes
+
+- 67582c3: chore(deps): update dependency chalk to v6
+
 ## 0.5.1
 
 ### Patch Changes
