@@ -1,5 +1,14 @@
 # @thrashplay/farwatch
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [54ad708]
+  - @thrashplay/fw-chronicler@0.1.5
+  - @thrashplay/fw-core@0.0.2
+  - @thrashplay/fw-simulation@0.1.1
+
 ## 0.1.4
 
 ### Patch Changes
