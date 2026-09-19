@@ -32,7 +32,19 @@ export interface ReaperStatus {
   peakDb: number
 }
 
-export type FetchLike = (url: string) => Promise<{ ok: boolean; text(): Promise<string> }>
+export type FetchLike = (
+  url: string,
+  init: { signal: AbortSignal },
+) => Promise<{ ok: boolean; text(): Promise<string> }>
+
+const DEFAULT_TIMEOUT_MS = 2000
+
+const toSeconds = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new Error(`Invalid position: ${String(seconds)}`)
+  }
+  return `SET/POS/${seconds.toFixed(3)}`
+}
 
 const STATUS_QUERY = ['TRANSPORT', 'REGION', 'TRACK']
 
@@ -51,19 +63,20 @@ export const parseReaperReply = (text: string): ReaperStatus => {
     switch (fields[0]) {
       case 'TRANSPORT':
         status.playState = decodePlayState(Number(fields[1]))
-        status.position = Number(fields[2])
+        status.position = Number.isFinite(Number(fields[2])) ? Number(fields[2]) : 0
         break
-      case 'REGION':
-        status.regions.push({
-          name: fields[1] ?? '',
-          id: fields[2] ?? '',
-          start: Number(fields[3]),
-          end: Number(fields[4]),
-        })
+      case 'REGION': {
+        const start = Number(fields[3])
+        const end = Number(fields[4])
+        // a truncated line must not become a NaN seek later
+        if (Number.isFinite(start) && Number.isFinite(end)) {
+          status.regions.push({ name: fields[1] ?? '', id: fields[2] ?? '', start, end })
+        }
         break
+      }
       case 'TRACK': {
-        // track 0 is the master; its peak is the mix, not the input signal
-        const peak = Number(fields[6])
+        // peaks arrive as tenths of a dB; track 0 is the master, whose peak is the mix, not the input
+        const peak = Number(fields[6]) / 10
         if (fields[1] !== '0' && Number.isFinite(peak)) {
           status.peakDb = Math.max(status.peakDb, peak)
         }
@@ -80,15 +93,33 @@ export const parseReaperReply = (text: string): ReaperStatus => {
 export class ReaperClient {
   private readonly baseUrl: string
   private readonly fetchImpl: FetchLike
+  private readonly timeoutMs: number
 
-  constructor({ baseUrl = 'http://localhost:8080', fetch: fetchImpl }: { baseUrl?: string; fetch?: FetchLike } = {}) {
-    this.baseUrl = baseUrl.replace(/\/$/, '')
-    this.fetchImpl = fetchImpl ?? ((url) => fetch(url, { cache: 'no-store' }))
+  constructor({
+    baseUrl = 'http://localhost:8080',
+    fetch: fetchImpl,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  }: {
+    /** Origin of the web remote, with scheme, e.g. `http://localhost:8080`. */
+    baseUrl?: string
+    fetch?: FetchLike
+    /** A reply slower than this counts as REAPER being unreachable. */
+    timeoutMs?: number
+  } = {}) {
+    const url = new URL(baseUrl)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error(`REAPER base URL must start with http:// or https://: ${baseUrl}`)
+    }
+    this.baseUrl = url.href.replace(/\/+$/, '')
+    this.fetchImpl = fetchImpl ?? ((url, { signal }) => fetch(url, { cache: 'no-store', signal }))
+    this.timeoutMs = timeoutMs
   }
 
   /** Sends commands in one request so REAPER applies them in order. */
   async send(commands: string[]): Promise<string> {
-    const response = await this.fetchImpl(`${this.baseUrl}/_/${commands.join(';')}`)
+    const response = await this.fetchImpl(`${this.baseUrl}/_/${commands.join(';')}`, {
+      signal: AbortSignal.timeout(this.timeoutMs),
+    })
     if (!response.ok) {
       throw new Error(`REAPER web remote request failed: ${commands.join(';')}`)
     }
@@ -104,17 +135,17 @@ export class ReaperClient {
   }
 
   async setPosition(seconds: number): Promise<void> {
-    await this.send([`SET/POS/${seconds.toFixed(3)}`])
+    await this.send([toSeconds(seconds)])
   }
 
   /** Stops, seeks, and plays as one request so no frame is rendered at the old position. */
   async playFrom(seconds: number): Promise<void> {
-    await this.send([ReaperActions.stop, `SET/POS/${seconds.toFixed(3)}`, ReaperActions.play])
+    await this.send([ReaperActions.stop, toSeconds(seconds), ReaperActions.play])
   }
 
   /** Stops, seeks (or jumps to the project end when no position is given), and records. */
   async recordAt(seconds?: number): Promise<void> {
-    const seek = seconds === undefined ? ReaperActions.goToProjectEnd : `SET/POS/${seconds.toFixed(3)}`
+    const seek = seconds === undefined ? ReaperActions.goToProjectEnd : toSeconds(seconds)
     await this.send([ReaperActions.stop, seek, ReaperActions.record])
   }
 }

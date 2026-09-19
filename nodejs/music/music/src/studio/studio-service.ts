@@ -49,7 +49,7 @@ const toLevel = (peakDb: number) => Math.min(1, Math.max(0, (peakDb - METER_FLOO
 
 /**
  * Single owner of the studio's REAPER session. Polls the web remote, keeps one snapshot of
- * transport and takes for every view (Launchpad overlay, touch page), and exposes the three
+ * transport and takes that every view reads, and exposes the three
  * things the kid can do: record a new take, stop, play a take back.
  *
  * Takes are the project's regions; a background ReaScript creates one per recording. Recording
@@ -75,6 +75,8 @@ export class StudioService {
   private handle: ReturnType<typeof setTimeout> | undefined
   private inFlight: Promise<void> | undefined
   private commandSeq = 0
+  private pendingCommand: Promise<void> | undefined
+  private runId = 0
 
   constructor({ client, pollIntervalMs = 150 }: { client?: ReaperClient; pollIntervalMs?: number } = {}) {
     this.client = client ?? new ReaperClient()
@@ -90,13 +92,19 @@ export class StudioService {
       return
     }
     this.running = true
-    this.schedule(0)
+    this.runId += 1
+    this.schedule(0, this.runId)
   }
 
   stop() {
     this.running = false
     clearTimeout(this.handle)
     this.handle = undefined
+  }
+
+  /** True while a record/stop/play command (and its follow-up poll) is still in progress. */
+  get busy(): boolean {
+    return this.pendingCommand !== undefined
   }
 
   /** Starts a new take after the last one (or at the project end when there are none). */
@@ -128,13 +136,22 @@ export class StudioService {
     }
   }
 
-  /** Toggles between recording and stopped, for single-button surfaces. */
+  /**
+   * Toggles between recording and stopped, for single-button surfaces. A press while a command is
+   * still settling is ignored, so a double-tap doesn't restart the take.
+   */
   async toggleRecord(): Promise<void> {
+    if (this.busy) {
+      return
+    }
     await (this.state.transport === 'recording' ? this.stopTransport() : this.record())
   }
 
-  /** Toggles playback of the latest take, for single-button surfaces. */
+  /** Toggles playback of the latest take, for single-button surfaces; ignored while a command is settling. */
   async togglePlayLatest(): Promise<void> {
+    if (this.busy) {
+      return
+    }
     await (this.state.transport === 'playing' ? this.stopTransport() : this.playLatest())
   }
 
@@ -147,16 +164,33 @@ export class StudioService {
     await this.inFlight
   }
 
+  /** Runs commands one at a time, each followed by a poll that started after the command landed. */
   private async command(run: () => Promise<void>) {
-    this.commandSeq += 1
+    const previous = this.pendingCommand
+    const current = (async () => {
+      await previous
+      this.commandSeq += 1
+      try {
+        await run()
+      } catch (error) {
+        this.log.warn(error, 'REAPER command failed.')
+        this.update({ connected: false, playingTake: undefined })
+        return
+      }
+      // a poll already in flight answers from before the command; wait it out, then poll fresh
+      while (this.inFlight !== undefined) {
+        await this.inFlight
+      }
+      await this.refresh()
+    })()
+    this.pendingCommand = current
     try {
-      await run()
-    } catch (error) {
-      this.log.warn(error, 'REAPER command failed.')
-      this.update({ connected: false })
-      return
+      await current
+    } finally {
+      if (this.pendingCommand === current) {
+        this.pendingCommand = undefined
+      }
     }
-    await this.refresh()
   }
 
   private async doRefresh() {
@@ -177,17 +211,20 @@ export class StudioService {
       : status.playState === 'playing' ? 'playing'
       : 'stopped'
 
+    // a poll that started before the latest command answers from before it; it must not clear the
+    // take or judge whether playback reached the end
+    const stale = seq !== this.commandSeq
+
     if (transport === 'recording') {
       this.recordingStartedAt ??= status.position
-    } else {
+    } else if (!stale) {
       this.recordingStartedAt = undefined
     }
 
     const takes = status.regions.map(toTake).sort((a, b) => b.start - a.start)
     const { playingTake } = this.state
-    // a poll that started before the latest command reflects the old transport; it must not clear the take
-    const stale = seq !== this.commandSeq
-    const reachedEnd = playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
+    const reachedEnd =
+      !stale && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
     const stillPlaying = playingTake !== undefined && (stale || (transport === 'playing' && !reachedEnd))
 
     this.update({
@@ -200,6 +237,7 @@ export class StudioService {
     })
 
     if (reachedEnd) {
+      this.commandSeq += 1
       await this.client.runActions(ReaperActions.stop).catch((error: unknown) => {
         this.log.warn(error, 'Failed to stop at the end of the take.')
       })
@@ -215,17 +253,18 @@ export class StudioService {
     this.events.emit('change', this.state)
   }
 
-  private schedule(delayMs: number) {
+  private schedule(delayMs: number, runId: number) {
     this.handle = setTimeout(() => {
-      void this.tick()
+      void this.tick(runId)
     }, delayMs)
   }
 
-  private async tick() {
+  private async tick(runId: number) {
     const startedAt = Date.now()
     await this.refresh()
-    if (this.running) {
-      this.schedule(Math.max(0, this.pollIntervalMs - (Date.now() - startedAt)))
+    // a stop()/start() during the poll started a newer chain; this one ends here
+    if (this.running && runId === this.runId) {
+      this.schedule(Math.max(0, this.pollIntervalMs - (Date.now() - startedAt)), runId)
     }
   }
 }

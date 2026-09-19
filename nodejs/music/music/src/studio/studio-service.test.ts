@@ -12,6 +12,9 @@ interface FakeReaper {
   peakDb: number
   offline: boolean
   requests: string[]
+  /** When true, replies are captured at request time but delivered only by release(). */
+  hold: boolean
+  release: () => void
 }
 
 const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
@@ -22,8 +25,16 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     peakDb: -150,
     offline: false,
     requests: [],
+    hold: false,
+    release: () => {
+      const pending = held.splice(0)
+      pending.forEach((deliver) => {
+        deliver()
+      })
+    },
     ...overrides,
   }
+  const held: (() => void)[] = []
 
   const fetchImpl = (url: string) => {
     if (reaper.offline) {
@@ -49,9 +60,17 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     const lines = [
       `TRANSPORT\t${reaper.playState}\t${reaper.position}\t0\t0\t0`,
       ...reaper.regions.map((r) => `REGION\t${r.name}\t${r.id}\t${r.start}\t${r.end}\t0`),
-      `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb}\t${reaper.peakDb}`,
+      `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
     ]
-    return Promise.resolve({ ok: true, text: () => Promise.resolve(lines.join('\n')) })
+    const reply = { ok: true, text: () => Promise.resolve(lines.join('\n')) }
+    if (!reaper.hold) {
+      return Promise.resolve(reply)
+    }
+    return new Promise<typeof reply>((resolve) => {
+      held.push(() => {
+        resolve(reply)
+      })
+    })
   }
 
   return { reaper, client: new ReaperClient({ fetch: fetchImpl }) }
@@ -201,6 +220,88 @@ describe('StudioService', () => {
 
     expect(reaper.playState).toBe(1)
     expect(service.getState().playingTake?.id).toBe('2')
+    expect(service.getState().transport).toBe('playing')
+  })
+
+  it('resolves a command with a poll taken after it landed, even when a stale poll was in flight', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    reaper.hold = true
+    const stalePoll = service.refresh() // answered from the stopped state, delivered later
+    reaper.hold = false
+    const recording = service.record()
+    reaper.release()
+    await Promise.all([stalePoll, recording])
+
+    expect(service.getState().transport).toBe('recording')
+    expect(reaper.requests.at(-1)).toBe('TRANSPORT;REGION;TRACK')
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/22.000;1013')
+  })
+
+  it('ignores a toggle press while the previous command is still settling', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    reaper.hold = true
+    const first = service.toggleRecord()
+    const second = service.toggleRecord()
+    expect(service.busy).toBe(true)
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, second])
+
+    expect(reaper.requests.filter((r) => r.endsWith('1013'))).toHaveLength(1)
+    expect(reaper.requests).not.toContain('1016')
+    expect(service.getState().transport).toBe('recording')
+    expect(service.busy).toBe(false)
+
+    await service.toggleRecord()
+    expect(reaper.requests.at(-2)).toBe('1016')
+  })
+
+  it('does not auto-stop a newly started take because a stale poll passed its end', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes, playState: 1, position: 50 })
+    await service.refresh()
+
+    reaper.hold = true
+    const stalePoll = service.refresh() // reports playing at 50, past take 1's end
+    reaper.hold = false
+    const play = service.playTake('1')
+    reaper.release()
+    await Promise.all([stalePoll, play])
+
+    expect(reaper.requests.filter((r) => r === '1016')).toHaveLength(0)
+    expect(reaper.playState).toBe(1)
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
+  it('clears the playing take when the play command fails', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    reaper.offline = true
+    await service.playLatest()
+    expect(service.getState().connected).toBe(false)
+    expect(service.getState().playingTake).toBeUndefined()
+  })
+
+  it('runs a single poll chain after a quick stop() and start()', async () => {
+    const { reaper, service } = makeService()
+    service.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    reaper.hold = true
+    await vi.advanceTimersByTimeAsync(POLL_MS) // a poll is now in flight
+    service.stop()
+    service.start()
+    reaper.hold = false
+    reaper.release()
+    await vi.advanceTimersByTimeAsync(0)
+
+    const before = reaper.requests.length
+    await vi.advanceTimersByTimeAsync(POLL_MS * 10)
+    expect(reaper.requests.length - before).toBeLessThanOrEqual(11)
   })
 
   it('reports disconnection and recovers', async () => {
