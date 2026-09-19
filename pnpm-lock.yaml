@@ -539,7 +539,7 @@ importers:
         version: link:../../core-aws/observability-lib
       adm-zip:
         specifier: ^0.6.0
-        version: 0.6.0
+        version: 0.6.1
       lodash-es:
         specifier: 'catalog:'
         version: 4.18.1
@@ -2521,7 +2521,7 @@ importers:
         version: link:../mc-pack-runtime
       adm-zip:
         specifier: ^0.6.0
-        version: 0.6.0
+        version: 0.6.1
       semver:
         specifier: ^7.7.3
         version: 7.8.5
@@ -6760,8 +6760,8 @@ packages:
     resolution: {integrity: sha512-ufJnssQGbxzLNS1Ho9bCtX4rQKCCvoVuDLHoJyc3F9dOGDB4BkWs2Ci0kv53lqocAEQ/Cbi+I2XCsNYGqVYqng==}
     engines: {node: '>=12.0'}
 
-  adm-zip@0.6.0:
-    resolution: {integrity: sha512-XleryMhbuksdKtofnWZ9Sk+4CUTbms4Mb/EU32SZwToAyZ5RgVos/ki8n+yr0LWHOGKuakbXTuuYNHLQjhddgg==}
+  adm-zip@0.6.1:
+    resolution: {integrity: sha512-Xwrja8nx9e5o2N1my4DsKCeKpdrnACyr1wtbPxBDgGzKzKyE9kRtBFA8mWldI+RVlD7CBZNWY/wQ2+ydwOR6kQ==}
     engines: {node: '>=14.0'}
 
   adsr@1.0.1:
@@ -15464,7 +15464,7 @@ snapshots:
 
   adm-zip@0.5.18: {}
 
-  adm-zip@0.6.0: {}
+  adm-zip@0.6.1: {}
 
   adsr@1.0.1: {}
 
