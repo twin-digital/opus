@@ -1086,8 +1086,8 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
       '@pnpm/types':
-        specifier: ^1101.0.0
-        version: 1101.9.0
+        specifier: ^1102.0.0
+        version: 1102.1.0
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
@@ -5349,8 +5349,8 @@ packages:
     resolution: {integrity: sha512-8dvQ/12/Zko+R2+f7guZPXDMMRVgsJlCDx3HtRGd+sRaFKqn52Er7tUDCqCvdcrBbSsW+75bDt6RCmEOJ9Ewwg==}
     engines: {node: '>=18.12'}
 
-  '@pnpm/types@1101.9.0':
-    resolution: {integrity: sha512-lB2aSB2h950UX1GX3JW4AZ86xjXD92YJbV92IBSQqHXXZdiemoVKADLA2cDQ4/wKeS7djY8fkITM6X+6iYF62A==}
+  '@pnpm/types@1102.1.0':
+    resolution: {integrity: sha512-h8qqbRIueCujntCBRnVpujeGzwWG+D39Z6pnXHsUp17ZZGLFK/W+ClRLSQZxWFBmgv9z7BNCAi7Arrf/exq5/A==}
     engines: {node: '>=22.13'}
 
   '@pnpm/util.lex-comparator@3.0.2':
@@ -14031,7 +14031,7 @@ snapshots:
 
   '@pnpm/types@1001.3.1': {}
 
-  '@pnpm/types@1101.9.0': {}
+  '@pnpm/types@1102.1.0': {}
 
   '@pnpm/util.lex-comparator@3.0.2': {}
 
