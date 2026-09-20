@@ -59,9 +59,13 @@ view reads: transport, input level, and the takes (the project's regions, newest
 background ReaScript makes one per recording). Recording appends after the last take, and playback
 of a take stops itself at the take's end.
 
-The Launchpad view is `createTransportOverlay`: two toggling pads in the top row beside the logo,
-record and play-my-last-one, which the launcher draws above every program so they never move. It
-is enabled by `MUSIC_REAPER_URL`.
+Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
+
+- `createTransportOverlay`, the Launchpad view: two toggling pads in the top row beside the logo,
+  record and play-my-last-one, which the launcher draws above every program so they never move.
+- `createStudioServer`, the touchscreen view: serves `TouchPageHtml` on `MUSIC_STUDIO_PORT` and
+  streams state to it over server-sent events; the page posts actions back. Open it fullscreen
+  in a browser on the touchscreen.
 
 ## Environment variables
 
@@ -71,6 +75,7 @@ is enabled by `MUSIC_REAPER_URL`.
 | `MUSIC_SAMPLE_RATE`                  | `44100`                 | Rate the audio output stream opens at; match the output device's native rate to avoid CoreAudio resampling.                                                    |
 | `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
 | `MUSIC_REAPER_URL`                   | unset (studio off)      | Base URL, with scheme, of REAPER's web remote, e.g. `http://localhost:8080`. Enables the Launchpad record/play transport.                                      |
+| `MUSIC_STUDIO_PORT`                  | `8765`                  | Port the studio touch page is served on, when `MUSIC_REAPER_URL` is set.                                                                                       |
 | `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |
 | `MINECRAFT_VERSION`                  | latest release          | Game version `music-fetch-samples` resolves sample names against.                                                                                              |
 | `PROBE_SAMPLE_RATE`, `PROBE_LATENCY` | library default         | Stream configuration for `music-audio-probe`.                                                                                                                  |

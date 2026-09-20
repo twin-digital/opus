@@ -10,6 +10,7 @@ import { Engine } from './engine/engine.js'
 import { getConfig } from './config.js'
 import { ReaperClient } from './studio/reaper-client.js'
 import { StudioService } from './studio/studio-service.js'
+import { createStudioServer } from './studio/studio-server.js'
 
 const main = async (): Promise<void> => {
   const launchpad = new NovationLaunchpadMiniMk3()
@@ -28,10 +29,13 @@ const main = async (): Promise<void> => {
     name: 'Roland Digital Piano',
   })
 
-  const { reaperUrl } = getConfig()
+  const { reaperUrl, studioPort } = getConfig()
   const studio =
     reaperUrl === undefined ? undefined : new StudioService({ client: new ReaperClient({ baseUrl: reaperUrl }) })
   studio?.start()
+  if (studio !== undefined) {
+    await createStudioServer({ service: studio, port: studioPort })
+  }
 
   const launcher = await createLauncherProgram({
     launchpad,
