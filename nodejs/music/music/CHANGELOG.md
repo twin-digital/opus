@@ -1,5 +1,11 @@
 # @thrashplay/music
 
+## 0.4.3
+
+### Patch Changes
+
+- c16c3e3: The sound picker no longer speaks the instrument name when an instrument is selected. Side and split announcements are unchanged.
+
 ## 0.4.2
 
 ### Patch Changes

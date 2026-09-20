@@ -1,5 +1,11 @@
 # @twin-digital/dolmenwood
 
+## 0.3.3
+
+### Patch Changes
+
+- b67f921: fix(deps): update mobx
+
 ## 0.3.2
 
 ### Patch Changes
