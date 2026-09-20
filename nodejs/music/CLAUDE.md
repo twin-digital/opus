@@ -17,6 +17,8 @@ live here.
 - `launchpad-sim` (`@thrashplay/launchpad-sim`) — browser-based hardware stand-in: a Vite app that
   renders the Launchpad grid on a canvas and an on-screen piano (Web MIDI + soundfont-player), so
   programs can be developed without the physical devices.
+- `reaper/` — not a package: the ReaScript that runs inside REAPER for the recording studio (take
+  regions, silent-tail trim, runaway-recording backstop) and the Mac setup guide.
 
 ## Running it
 
