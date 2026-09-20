@@ -23,23 +23,8 @@ import type { Program } from '../../engine/program.js'
 import { SamplePlayer } from '../../audio/sample-player.js'
 import { SoundBoardSampleNames } from '../../soundboard/sound-boards.js'
 import { InstrumentFamilyColors } from './sound-select-screen/colors.js'
-import { toChannelId, type ChannelId, type MidiChannel } from './model.js'
-
-/**
- * Sends Local Control (CC 122) to the piano on every MIDI channel, since which channel the piano listens for mode
- * messages on is its own configuration. Off, the keyboard stops sounding its own keys and only transmits — which is
- * the mode this program is built around: every key press is re-voiced through the app, as an echoed program or a
- * sample, and the piano sounding its factory tone underneath doubles every note.
- */
-const setLocalControl = (device: MidiDevice, on: boolean) => {
-  for (let channel = 0; channel < 16; channel++) {
-    device.send('cc', {
-      channel: channel as MidiChannel,
-      controller: 122,
-      value: on ? 127 : 0,
-    })
-  }
-}
+import { toChannelId, type ChannelId } from './model.js'
+import { setLocalControl } from '../../midi/local-control.js'
 
 const log = logger.child({}, { msgPrefix: '[PROGRAM] ' })
 

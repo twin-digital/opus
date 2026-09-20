@@ -67,6 +67,13 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   streams state to it over server-sent events; the page posts actions back. Open it fullscreen
   in a browser on the touchscreen.
 
+Two settings get what he plays into REAPER. `MUSIC_MIDI_MIRROR` names a MIDI output (an IAC bus)
+that receives a copy of everything sent to the piano, so REAPER records the re-voiced notes with a
+channel per hand and the program changes; the piano's own MIDI out carries neither.
+`MUSIC_SAMPLE_OUTPUT` sends sound-board samples to a virtual audio device (BlackHole) for REAPER
+to record, since they never pass through the piano. The CLI also turns the piano's Local Control
+back on when it exits, so an interrupted session leaves a piano that plays on its own.
+
 ## Environment variables
 
 | Variable                             | Default                 | Purpose                                                                                                                                                        |
@@ -76,6 +83,8 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
 | `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
 | `MUSIC_REAPER_URL`                   | unset (studio off)      | Base URL, with scheme, of REAPER's web remote, e.g. `http://localhost:8080`. Enables the Launchpad record/play transport.                                      |
 | `MUSIC_STUDIO_PORT`                  | `8765`                  | Port the studio touch page is served on, when `MUSIC_REAPER_URL` is set.                                                                                       |
+| `MUSIC_MIDI_MIRROR`                  | unset                   | Exact name of a MIDI output port that gets a copy of everything sent to the piano, e.g. `IAC Driver Bus 1`.                                                    |
+| `MUSIC_SAMPLE_OUTPUT`                | unset (system output)   | Substring of the audio output device label sound-board samples play through, e.g. `BlackHole`.                                                                 |
 | `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |
 | `MINECRAFT_VERSION`                  | latest release          | Game version `music-fetch-samples` resolves sample names against.                                                                                              |
 | `PROBE_SAMPLE_RATE`, `PROBE_LATENCY` | library default         | Stream configuration for `music-audio-probe`.                                                                                                                  |

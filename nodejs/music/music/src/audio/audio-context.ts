@@ -1,4 +1,5 @@
 import { isBrowser } from '../app/is-browser.js'
+import type { MediaDevicesLike } from './output-device.js'
 
 /**
  * Specifier held in a variable, and marked `@vite-ignore`, so Vite cannot statically analyze it. The sim never
@@ -10,8 +11,10 @@ const NodeWebAudioModule = 'node-web-audio-api'
  * The Web Audio constructors this package uses. The browser's globals and `node-web-audio-api` both provide them.
  */
 export interface AudioApi {
-  AudioContext: new (options?: { sampleRate?: number }) => AudioContext
+  AudioContext: new (options?: { sampleRate?: number; sinkId?: string }) => AudioContext
   OfflineAudioContext: new (channels: number, length: number, sampleRate: number) => OfflineAudioContext
+  /** Device enumeration, for choosing the output an `AudioContext` opens. Absent in the browser sim. */
+  mediaDevices?: MediaDevicesLike
 }
 
 let api: Promise<AudioApi> | undefined

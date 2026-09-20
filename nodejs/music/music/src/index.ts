@@ -11,6 +11,7 @@ import { getConfig } from './config.js'
 import { ReaperClient } from './studio/reaper-client.js'
 import { StudioService } from './studio/studio-service.js'
 import { createStudioServer } from './studio/studio-server.js'
+import { setLocalControl } from './midi/local-control.js'
 
 const main = async (): Promise<void> => {
   const launchpad = new NovationLaunchpadMiniMk3()
@@ -29,7 +30,26 @@ const main = async (): Promise<void> => {
     name: 'Roland Digital Piano',
   })
 
-  const { reaperUrl, studioPort } = getConfig()
+  const { midiMirror, reaperUrl, studioPort } = getConfig()
+
+  // Whatever the piano hears, the mirror port hears too, so a DAW can record the re-voiced MIDI.
+  if (midiMirror !== undefined) {
+    fp30x.mirrorTo(new MidiDevice({ name: midiMirror, direction: 'output' }))
+  }
+
+  // The programs turn the piano's Local Control off; hand it back on the way out, so an interrupted
+  // session leaves a piano that still plays on its own.
+  const restorePiano = () => {
+    setLocalControl(fp30x, true)
+  }
+  process.on('exit', restorePiano)
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      restorePiano()
+      process.exit(0)
+    })
+  }
+
   const studio =
     reaperUrl === undefined ? undefined : new StudioService({ client: new ReaperClient({ baseUrl: reaperUrl }) })
   studio?.start()

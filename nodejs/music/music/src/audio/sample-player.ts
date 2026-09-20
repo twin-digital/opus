@@ -1,6 +1,7 @@
 import { logger } from '../logger.js'
 import { getAudioApi, type AudioApi } from './audio-context.js'
 import { readSample } from './sample-store.js'
+import { configuredOutputDevice, resolveOutputSinkId } from './output-device.js'
 
 const log = logger.child({}, { msgPrefix: '[AUDIO] ' })
 
@@ -125,6 +126,12 @@ export class SamplePlayer {
   private _buffers = new Map<string, AudioBuffer>()
 
   /**
+   * Sink the output opens on, when MUSIC_SAMPLE_OUTPUT names a device that is present. Resolved with the API, ahead
+   * of the first note, because play() opens the output synchronously.
+   */
+  private _sinkId: string | undefined
+
+  /**
    * Context used only to turn encoded bytes into `AudioBuffer`s. Offline, so the eager decode at startup does not
    * claim the machine's audio output device for a session that may never play a sample.
    */
@@ -189,7 +196,8 @@ export class SamplePlayer {
 
   private api(): Promise<AudioApi | undefined> {
     this._apiLoad ??= getAudioApi().then(
-      (api) => {
+      async (api) => {
+        this._sinkId = await this.chooseOutput(api)
         this._api = api
         return api
       },
@@ -200,6 +208,31 @@ export class SamplePlayer {
     )
 
     return this._apiLoad
+  }
+
+  private async chooseOutput(api: AudioApi): Promise<string | undefined> {
+    const wanted = configuredOutputDevice()
+    if (wanted === undefined) {
+      return undefined
+    }
+    if (api.mediaDevices === undefined) {
+      log.warn(`Cannot choose an output device here; samples play through the default output. [wanted=${wanted}]`)
+      return undefined
+    }
+    try {
+      const sinkId = await resolveOutputSinkId(api.mediaDevices, wanted)
+      if (sinkId === undefined) {
+        log.warn(
+          `No audio output matches MUSIC_SAMPLE_OUTPUT; samples play through the default output. [wanted=${wanted}]`,
+        )
+      } else {
+        log.info(`Samples play through "${wanted}". [sinkId=${sinkId}]`)
+      }
+      return sinkId
+    } catch (error) {
+      log.warn(`Unable to list audio outputs; samples play through the default output. [error=${String(error)}]`)
+      return undefined
+    }
   }
 
   private decode(name: string): Promise<void> {
@@ -262,7 +295,7 @@ export class SamplePlayer {
       // The output device opens here, on the first sample actually played — the earliest point a missing device can
       // be observed, since decoding needs none.
       if (this._output === undefined) {
-        this._output = new this._api.AudioContext({ sampleRate: outputSampleRate() })
+        this._output = new this._api.AudioContext({ sampleRate: outputSampleRate(), sinkId: this._sinkId })
         this.monitor(this._output)
       }
       const output = this._output
