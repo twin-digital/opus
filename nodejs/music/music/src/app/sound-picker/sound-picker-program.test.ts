@@ -165,6 +165,17 @@ describe('createSoundPickerProgram split keyboard', () => {
     })
   })
 
+  it('does not announce instrument changes', async () => {
+    const harness = await makeProgram()
+    vi.mocked(speak).mockClear()
+
+    // the second piano patch on the sound-select screen
+    press(cellAt(drawCells(harness), 1, 4))
+
+    expect(harness.send).toHaveBeenCalledWith('program', expect.anything())
+    expect(speak).not.toHaveBeenCalled()
+  })
+
   it('announces side selection', async () => {
     const harness = await makeProgram()
 

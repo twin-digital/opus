@@ -71,7 +71,7 @@ export const createSoundPickerProgram = (
     speech = true,
   }: {
     /**
-     * Whether to speak selection feedback aloud: instrument names, side selection, and split announcements.
+     * Whether to speak selection feedback aloud: side selection and split announcements.
      * @defaultValue true
      */
     speech?: boolean
@@ -123,11 +123,9 @@ export const createSoundPickerProgram = (
     selectedFamilies[selectedChannelId] = family
   }
 
+  // Instrument changes are silent: the pad color and the sound itself are the feedback, and a name
+  // spoken over every switch got in the way of playing.
   const selectInstrument = (instrument: Instrument) => {
-    if (speech) {
-      void speak(instrument.name)
-    }
-
     setChannelInstrument(selectedChannelId, instrument)
     rebuildChannelLevelScreen()
   }
