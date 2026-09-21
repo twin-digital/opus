@@ -148,6 +148,7 @@ let takesKey = ''
 let busyUntil = 0 // ignore record taps briefly after one, until the state catches up
 
 const tapRecord = () => {
+  if (!(state.helper && state.helper.matches)) return
   const isRec = state.transport === 'recording'
   busyUntil = Date.now() + 600
   act(isRec ? 'stop' : 'record')
@@ -191,13 +192,17 @@ function render() {
   const isRec = state.transport === 'recording'
   const isPlay = state.transport === 'playing'
   const online = streamOk && state.connected
+  // without the REAPER helper a recording produces no clip, so Record reads as unavailable
+  const helperOk = !!state.helper && state.helper.matches
+  const canRecord = online && helperOk
   $('dot').className = isRec ? 'rec' : isPlay ? 'play' : ''
   $('statusText').textContent = isRec ? 'Recording' : isPlay ? 'Playing' : 'Ready'
   const rec = $('recBtn')
   rec.classList.toggle('recording', isRec)
   rec.classList.toggle('busy', Date.now() < busyUntil)
-  rec.classList.toggle('offline', !online)
-  rec.querySelector('.label').textContent = !online ? 'Not connected' : isRec ? fmt(state.recordingElapsed) : 'Record'
+  rec.classList.toggle('offline', !canRecord)
+  rec.querySelector('.label').textContent =
+    !online ? 'Not connected' : !helperOk ? 'Helper missing' : isRec ? fmt(state.recordingElapsed) : 'Record'
   $('stopBtn').disabled = !(isRec || isPlay)
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'
