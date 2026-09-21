@@ -12,6 +12,8 @@ import { ReaperClient } from './studio/reaper-client.js'
 import { StudioService } from './studio/studio-service.js'
 import { createStudioServer } from './studio/studio-server.js'
 import { setLocalControl } from './midi/local-control.js'
+import { ensureHelper } from './studio/ensure-helper.js'
+import { bundledHelperHash } from './studio/helper.js'
 
 const main = async (): Promise<void> => {
   const launchpad = new NovationLaunchpadMiniMk3()
@@ -51,9 +53,24 @@ const main = async (): Promise<void> => {
   }
 
   const studio =
-    reaperUrl === undefined ? undefined : new StudioService({ client: new ReaperClient({ baseUrl: reaperUrl }) })
-  studio?.start()
+    reaperUrl === undefined ? undefined : (
+      new StudioService({
+        client: new ReaperClient({ baseUrl: reaperUrl }),
+        expectedHelperHash: await bundledHelperHash(),
+      })
+    )
   if (studio !== undefined) {
+    // The watcher inside REAPER is half of the studio; make sure REAPER runs the one this build ships.
+    const outcome = await ensureHelper({ service: studio })
+    if (!outcome.ok) {
+      const ignore = process.argv.includes('--ignore-helper-mismatch')
+      logger[ignore ? 'warn' : 'error'](`REAPER helper: ${outcome.detail}`)
+      if (!ignore) {
+        logger.error('Refusing to start. Pass --ignore-helper-mismatch to start anyway.')
+        process.exit(1)
+      }
+    }
+    studio.start()
     await createStudioServer({ service: studio, port: studioPort })
   }
 

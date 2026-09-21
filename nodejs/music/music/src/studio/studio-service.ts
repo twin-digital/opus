@@ -3,6 +3,7 @@ import { Events } from '../typed-event-emitter.js'
 import { logger } from '../logger.js'
 import { ReaperActions, ReaperClient, type ReaperRegion, type ReaperStatus } from './reaper-client.js'
 import type { InstrumentSelection } from '../app/sound-picker/sound-picker-program.js'
+import { helperStatus, type HelperStatus } from './helper.js'
 
 /** A recording, as marked by a region in the REAPER project. */
 export interface Take {
@@ -56,6 +57,8 @@ export interface StudioState {
   instruments: InstrumentSelection | undefined
   /** Name of the open REAPER project, when the watcher has published it. */
   projectName: string | undefined
+  /** The watcher running inside REAPER, once it has published itself; undefined means none seen. */
+  helper: HelperStatus | undefined
 }
 
 /** The part of the service a view needs; a preview can stand in a fake. */
@@ -70,6 +73,7 @@ export type StudioApi = Pick<
   | 'toggleRecord'
   | 'togglePlayLatest'
   | 'renameTake'
+  | 'reloadHelper'
   | 'setInstruments'
 >
 
@@ -125,7 +129,9 @@ export class StudioService {
     playingTake: undefined,
     instruments: undefined,
     projectName: undefined,
+    helper: undefined,
   }
+  private readonly expectedHelperHash: string | undefined
   private recordingStartedAt: number | undefined
   private running = false
   private handle: ReturnType<typeof setTimeout> | undefined
@@ -134,9 +140,19 @@ export class StudioService {
   private pendingCommand: Promise<void> | undefined
   private runId = 0
 
-  constructor({ client, pollIntervalMs = 150 }: { client?: ReaperClient; pollIntervalMs?: number } = {}) {
+  constructor({
+    client,
+    pollIntervalMs = 150,
+    expectedHelperHash,
+  }: {
+    client?: ReaperClient
+    pollIntervalMs?: number
+    /** Hash of the watcher this app ships; when given, the state reports whether REAPER runs that one. */
+    expectedHelperHash?: string
+  } = {}) {
     this.client = client ?? new ReaperClient()
     this.pollIntervalMs = pollIntervalMs
+    this.expectedHelperHash = expectedHelperHash
   }
 
   getState(): StudioState {
@@ -207,6 +223,11 @@ export class StudioService {
       return
     }
     await this.command(() => this.client.setProjExtState(RENAME_SECTION, `rename_${id}`, clean))
+  }
+
+  /** Asks the running watcher to reload itself from disk (after a newer file was installed). */
+  async reloadHelper(): Promise<void> {
+    await this.command(() => this.client.setProjExtState(RENAME_SECTION, 'reload', '1'))
   }
 
   /** Records what the keyboard is playing, for views that show it. */
@@ -311,7 +332,8 @@ export class StudioService {
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
       level: transport === 'stopped' ? 0 : toLevel(status.peakDb),
       takes,
-      projectName: status.projectName === '' ? undefined : status.projectName,
+      projectName: status.ext.project_name || undefined,
+      helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
       playingTake: stillPlaying ? (takes.find((take) => take.id === playingTake.id) ?? playingTake) : undefined,
     })
 

@@ -86,10 +86,13 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .simple-keyboard .hg-button.hg-functionBtn { background: #3a3f4b; }
   .simple-keyboard .hg-button.hg-button-space { min-width: 40%; }
   .empty { color: #9aa0ad; font-size: 24px; padding: 20px; text-align: center; }
+  #banner { display: none; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
+  #banner.show { display: block; }
   #offline { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
 </style>
 </head>
 <body>
+<div id="banner"></div>
 <header>
   <div>🎹 <span id="title">CS Studio</span></div>
   <div id="instrument"></div>
@@ -112,7 +115,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
     <div id="takes"></div>
   </aside>
 </main>
-<div id="offline">Can't reach the studio.<br>Ask a grown-up to check REAPER.</div>
+<div id="offline">Can't reach the studio.<br>Ask Dad to check REAPER.</div>
 <div id="sheet">
   <div class="panel">
     <div class="row"><span class="clip" id="sheetClip">Clip 7</span><input id="nameField" inputmode="none" maxlength="40" placeholder="Name this clip"></div>
@@ -139,12 +142,13 @@ const displayName = (take) =>
   : 'Clip ' + take.number
 
 const DefaultTitle = 'CS Studio'
-let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined }
+let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
 let streamOk = false
 let takesKey = ''
 let busyUntil = 0 // ignore record taps briefly after one, until the state catches up
 
 const tapRecord = () => {
+  if (!(state.helper && state.helper.matches)) return
   const isRec = state.transport === 'recording'
   busyUntil = Date.now() + 600
   act(isRec ? 'stop' : 'record')
@@ -168,7 +172,19 @@ function renderInstrument() {
   part('Right', sel.right)
 }
 
+function renderBanner() {
+  const banner = $('banner')
+  const text =
+    !state.connected ? ''
+    : state.helper === undefined ? 'The REAPER helper is not running. Ask Dad to restart REAPER.'
+    : state.helper.matches ? ''
+    : 'The REAPER helper is out of date. Ask Dad to restart REAPER.'
+  banner.textContent = text
+  banner.classList.toggle('show', text !== '')
+}
+
 function render() {
+  renderBanner()
   const title = state.projectName || DefaultTitle
   $('title').textContent = title
   document.title = title
@@ -176,13 +192,17 @@ function render() {
   const isRec = state.transport === 'recording'
   const isPlay = state.transport === 'playing'
   const online = streamOk && state.connected
+  // without the REAPER helper a recording produces no clip, so Record reads as unavailable
+  const helperOk = !!state.helper && state.helper.matches
+  const canRecord = online && helperOk
   $('dot').className = isRec ? 'rec' : isPlay ? 'play' : ''
   $('statusText').textContent = isRec ? 'Recording' : isPlay ? 'Playing' : 'Ready'
   const rec = $('recBtn')
   rec.classList.toggle('recording', isRec)
   rec.classList.toggle('busy', Date.now() < busyUntil)
-  rec.classList.toggle('offline', !online)
-  rec.querySelector('.label').textContent = !online ? 'Not connected' : isRec ? fmt(state.recordingElapsed) : 'Record'
+  rec.classList.toggle('offline', !canRecord)
+  rec.querySelector('.label').textContent =
+    !online ? 'Not connected' : !helperOk ? 'Helper missing' : isRec ? fmt(state.recordingElapsed) : 'Record'
   $('stopBtn').disabled = !(isRec || isPlay)
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'

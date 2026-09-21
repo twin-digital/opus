@@ -30,8 +30,8 @@ export interface ReaperStatus {
   regions: ReaperRegion[]
   /** Loudest last-meter peak across all tracks, in dB. `-Infinity` when unmetered. */
   peakDb: number
-  /** Project name, as published to project ext state by the studio watcher; empty when unknown. */
-  projectName: string
+  /** Project ext-state values the status query asks for, keyed by lower-cased key. */
+  ext: Record<string, string>
 }
 
 export type FetchLike = (
@@ -48,14 +48,15 @@ const toSeconds = (seconds: number) => {
   return `SET/POS/${seconds.toFixed(3)}`
 }
 
-/** Ext-state section and key the watcher publishes the project name under. */
-const PROJECT_NAME_KEY = { section: 'Studio', key: 'project_name' }
+/** Ext-state section the watcher publishes under, and the keys the status query reads. */
+export const EXT_SECTION = 'Studio'
+export const STATUS_EXT_KEYS = ['project_name', 'watcher_version', 'watcher_hash'] as const
 
 const STATUS_QUERY = [
   'TRANSPORT',
   'REGION',
   'TRACK',
-  `GET/PROJEXTSTATE/${PROJECT_NAME_KEY.section}/${PROJECT_NAME_KEY.key}`,
+  ...STATUS_EXT_KEYS.map((key) => `GET/PROJEXTSTATE/${EXT_SECTION}/${key}`),
 ]
 
 // REAPER's TRANSPORT playstate: bit 0 play, bit 1 pause, bit 2 record
@@ -66,7 +67,7 @@ const decodePlayState = (flags: number): ReaperPlayState =>
   : 'stopped'
 
 export const parseReaperReply = (text: string): ReaperStatus => {
-  const status: ReaperStatus = { playState: 'stopped', position: 0, regions: [], peakDb: -Infinity, projectName: '' }
+  const status: ReaperStatus = { playState: 'stopped', position: 0, regions: [], peakDb: -Infinity, ext: {} }
 
   for (const line of text.split('\n')) {
     const fields = line.split('\t')
@@ -93,8 +94,9 @@ export const parseReaperReply = (text: string): ReaperStatus => {
         break
       }
       case 'PROJEXTSTATE':
-        if (fields[1] === PROJECT_NAME_KEY.section && fields[2] === PROJECT_NAME_KEY.key) {
-          status.projectName = fields.slice(3).join('\t').trim()
+        // REAPER echoes the section and key as asked; keys are matched case-insensitively
+        if ((fields[1] ?? '').toLowerCase() === EXT_SECTION.toLowerCase()) {
+          status.ext[(fields[2] ?? '').toLowerCase()] = fields.slice(3).join('\t').trim()
         }
         break
       default:
