@@ -25,9 +25,10 @@ live here.
 - Against hardware: `pnpm --filter @thrashplay/music dev` (requires the Launchpad and a MIDI piano
   connected; device names are matched in `src/index.ts`).
 - In the browser: `pnpm --filter @thrashplay/launchpad-sim dev`, then open the printed URL.
-- Touch page only, against a simulated studio (no REAPER or hardware):
+- Touch page only, no Launchpad or piano:
   `pnpm --filter @thrashplay/music exec tsx --conditions=source src/scripts/studio-preview.ts`, then open
-  the printed URL (published as the `music-studio-preview` bin).
+  the printed URL (published as the `music-studio-preview` bin). Against a simulated studio by default;
+  with `MUSIC_REAPER_URL` set it drives that REAPER for real.
 - In the studio (no monorepo checkout): `npx @thrashplay/music@latest` — the package is published
   to npm with a `music` bin; deploying is merging a PR and re-running that command.
 - Sound-board samples, once per machine: `npx -p @thrashplay/music music-fetch-samples` (or

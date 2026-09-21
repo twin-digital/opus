@@ -2,6 +2,9 @@
 
 import { Events } from '../typed-event-emitter.js'
 import { createStudioServer } from '../studio/studio-server.js'
+import { ReaperClient } from '../studio/reaper-client.js'
+import { StudioService } from '../studio/studio-service.js'
+import { getConfig } from '../config.js'
 import {
   parseTakeName,
   sanitizeLabel,
@@ -13,8 +16,9 @@ import {
 import type { InstrumentSelection } from '../app/sound-picker/sound-picker-program.js'
 
 /**
- * Runs the studio touch page against a simulated studio, so the page can be looked at and poked without REAPER,
- * the Launchpad, or the piano: takes accumulate as you record, playback runs for the take's length, the level bar
+ * Runs the studio touch page without the Launchpad or the piano. With MUSIC_REAPER_URL set it drives that REAPER for
+ * real (transport, clips, renames); otherwise it runs against a simulated studio, so the page can be looked at and
+ * poked with nothing else running: takes accumulate as you record, playback runs for the take's length, the level bar
  * wobbles, and the instrument name cycles. MUSIC_STUDIO_PORT picks the port (default 8765); MUSIC_STUDIO_HOST the
  * bind address (default 127.0.0.1, use 0.0.0.0 to reach it from another device).
  */
@@ -153,8 +157,17 @@ const makeFakeStudio = (): StudioApi => {
   return studio
 }
 
+const makeRealStudio = (baseUrl: string): StudioApi => {
+  const studio = new StudioService({ client: new ReaperClient({ baseUrl }) })
+  studio.start()
+  studio.setInstruments({ split: false, instrument: 'Acoustic Grand Piano' })
+  console.log(`Driving REAPER at ${baseUrl}`)
+  return studio
+}
+
+const { reaperUrl } = getConfig()
 const server = await createStudioServer({
-  service: makeFakeStudio(),
+  service: reaperUrl === undefined ? makeFakeStudio() : makeRealStudio(reaperUrl),
   port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
   host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
 })

@@ -39,22 +39,19 @@ local CONFIG = {
   finalize_timeout_seconds = 2,
 }
 
+local VERSION = "2026-09-22.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
--- REAPER's web remote upper-cases the section and key it writes and reads, so anything shared
--- with the app is written under both spellings and read under both.
-local EXT_SECTION_WEB = EXT_SECTION:upper()
+-- REAPER's web remote upper-cases the section and key when it writes (its reads are
+-- case-insensitive), so requests from the app live under this spelling.
+local REQUEST_SECTION = EXT_SECTION:upper()
 
-local function readShared(key)
-  local _, value = reaper.GetProjExtState(0, EXT_SECTION_WEB, key:upper())
-  if value == nil or value == "" then
-    _, value = reaper.GetProjExtState(0, EXT_SECTION, key)
-  end
+local function readRequest(key)
+  local _, value = reaper.GetProjExtState(0, REQUEST_SECTION, key:upper())
   return value or ""
 end
 
-local function writeShared(key, value)
-  reaper.SetProjExtState(0, EXT_SECTION, key, value)
-  reaper.SetProjExtState(0, EXT_SECTION_WEB, key:upper(), value)
+local function clearRequest(key)
+  reaper.SetProjExtState(0, REQUEST_SECTION, key:upper(), "")
 end
 local ACTION_STOP = 1016
 
@@ -168,7 +165,7 @@ end
 local function publishProjectName()
   local name = reaper.GetProjectName(0, ""):gsub("%.[rR][pP][pP]$", "")
   if name ~= publishedProjectName then
-    writeShared("project_name", name)
+    reaper.SetProjExtState(0, EXT_SECTION, "project_name", name)
     publishedProjectName = name
   end
 end
@@ -185,7 +182,7 @@ local function applyRenames()
     if retval == 0 then break end
     if isrgn then
       local key = "rename_" .. tostring(idx)
-      local label = readShared(key)
+      local label = readRequest(key)
       if label ~= "" then
         log(string.format("rename request for region %d: '%s'", idx, label))
         local prefix = name:match("^(%a+ %d+)") or name
@@ -195,7 +192,7 @@ local function applyRenames()
           log(string.format("renamed region %d to '%s'", idx, newName))
           renamed = true
         end
-        writeShared(key, "") -- consumed
+        clearRequest(key) -- consumed
       end
     end
     j = j + 1
@@ -348,8 +345,8 @@ local function tick()
   reaper.defer(tick)
 end
 
-reaper.ShowConsoleMsg(string.format("[Studio] watcher started (debug=%s, %s)\n",
-  tostring(CONFIG.debug), os.date("%Y-%m-%d %H:%M:%S")))
+reaper.ShowConsoleMsg(string.format("[Studio] watcher %s started (debug=%s, %s)\n",
+  VERSION, tostring(CONFIG.debug), os.date("%Y-%m-%d %H:%M:%S")))
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)
