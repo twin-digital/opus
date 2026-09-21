@@ -154,7 +154,7 @@ toolbar pops in on touch near the top.
 - **Stop** stops.
 - **Play my last one** and the list play a take from its region start; playback stops at
   the region end.
-- The list shows the newest 12 regions, newest by clip number, so a take recorded from
+- The list shows every region, newest by clip number, so a take recorded from
   REAPER's own transport with the cursor parked earlier on the timeline still sorts as the
   latest. Rename or delete regions in REAPER's Region Manager and the list follows; keep
   the "Clip N" prefix when renaming, or the take drops to the bottom of the list.
