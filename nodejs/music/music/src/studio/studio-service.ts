@@ -37,6 +37,18 @@ export type StudioEventMap = {
 const TAKE_GAP_SECONDS = 2
 const METER_FLOOR_DB = -60
 
+/**
+ * Take number from a region named by the watcher ("Take 12 - ..."). Creation order, which survives the region being
+ * moved or recorded out of timeline order. A region renamed without the number sorts after every numbered one.
+ */
+const takeNumber = (name: string): number => {
+  const match = /^Take (\d+)\b/.exec(name)
+  return match === null ? -1 : Number(match[1])
+}
+
+/** Newest first: by take number, then by timeline position. */
+const byNewest = (a: Take, b: Take) => takeNumber(b.name) - takeNumber(a.name) || b.start - a.start
+
 const toTake = (region: ReaperRegion): Take => ({
   id: region.id,
   name: region.name,
@@ -221,7 +233,7 @@ export class StudioService {
       this.recordingStartedAt = undefined
     }
 
-    const takes = status.regions.map(toTake).sort((a, b) => b.start - a.start)
+    const takes = status.regions.map(toTake).sort(byNewest)
     const { playingTake } = this.state
     const reachedEnd =
       !stale && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end

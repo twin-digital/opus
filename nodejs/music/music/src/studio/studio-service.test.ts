@@ -111,6 +111,19 @@ describe('StudioService', () => {
     expect(service.getState().takes[0]?.duration).toBe(8)
   })
 
+  it('orders takes by take number, so one recorded earlier on the timeline is still the latest', async () => {
+    const { service } = makeService({
+      regions: [
+        { id: '1', name: 'Take 1 - Sep 21', start: 0, end: 10 },
+        { id: '2', name: 'Take 2 - Sep 21', start: 100, end: 110 },
+        { id: '3', name: 'Take 3 - Sep 21', start: 50, end: 60 }, // recorded from REAPER with the cursor parked mid-timeline
+        { id: '4', name: 'Twinkle (rough)', start: 200, end: 210 }, // renamed without the number: sorts last
+      ],
+    })
+    await service.refresh()
+    expect(service.getState().takes.map((take) => take.id)).toEqual(['3', '2', '1', '4'])
+  })
+
   it('records after the last take, or at the project end when there are none', async () => {
     const empty = makeService()
     await empty.service.refresh()
