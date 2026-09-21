@@ -1,5 +1,12 @@
 # @thrashplay/music
 
+## 0.5.1
+
+### Patch Changes
+
+- 3c19696: The studio watcher now finds rename requests written through REAPER's web remote (which upper-cases ext-state keys), reports its version and errors on the ReaScript console, and uses wall-clock time. `music-studio-preview` drives a real REAPER when `MUSIC_REAPER_URL` is set. Adds `reaper-probe.mjs` / `.ps1`, dependency-free checks of the REAPER web remote and the watcher round trip.
+- 550ff5d: The studio touch page lists every clip instead of the newest twelve.
+
 ## 0.5.0
 
 ### Minor Changes
