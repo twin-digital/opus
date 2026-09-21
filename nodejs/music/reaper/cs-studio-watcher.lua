@@ -166,7 +166,10 @@ local function applyRenames()
     local ok, key, value = reaper.EnumProjExtState(0, EXT_SECTION, i)
     if not ok then break end
     local id = key:match("^rename_(%d+)$")
-    if id then pending[#pending + 1] = { key = key, id = tonumber(id), label = value } end
+    if id then
+      log(string.format("rename request for region %s: '%s'", id, value))
+      pending[#pending + 1] = { key = key, id = tonumber(id), label = value }
+    end
     i = i + 1
   end
   if #pending == 0 then return end
@@ -278,7 +281,9 @@ local function onRecordingFinished()
   return true
 end
 
-local function tick()
+-- One pass of the loop. Split out so an error is reported and survived rather than ending
+-- the script silently behind other windows.
+local function step()
   applyRenames()
   local recording = isRecording()
   if recording and not wasRecording then
@@ -287,7 +292,6 @@ local function tick()
     whileRecording()
   elseif wasRecording then
     if not onRecordingFinished() then
-      reaper.defer(tick)
       return -- still finalizing: stay in the "was recording" state
     end
     finalizeDeadline = nil
@@ -297,8 +301,26 @@ local function tick()
     whileIdle()
   end
   wasRecording = recording
+end
+
+local lastHeartbeat = os.clock()
+local lastError = nil
+
+local function tick()
+  local ok, err = xpcall(step, debug.traceback)
+  if not ok and err ~= lastError then
+    reaper.ShowConsoleMsg("[Studio] error: " .. tostring(err) .. "\n")
+    lastError = err
+  end
+  if CONFIG.debug and os.clock() - lastHeartbeat >= 30 then
+    lastHeartbeat = os.clock()
+    reaper.ShowConsoleMsg(string.format("[Studio] alive; %s\n", isRecording() and "recording" or "idle"))
+  end
   reaper.defer(tick)
 end
+
+reaper.ShowConsoleMsg(string.format("[Studio] watcher started (debug=%s, %s)\n",
+  tostring(CONFIG.debug), os.date("%Y-%m-%d %H:%M:%S")))
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)
