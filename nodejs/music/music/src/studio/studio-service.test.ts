@@ -393,12 +393,16 @@ describe('StudioService', () => {
     expect(service.getState().instruments).toBeUndefined()
   })
 
-  it('reports disconnection and recovers', async () => {
+  it('reports disconnection after a few misses and recovers', async () => {
     const { reaper, service } = makeService()
     await service.refresh()
     expect(service.getState().connected).toBe(true)
 
+    // a couple of failed polls (REAPER busy rendering) keep the last good state
     reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    expect(service.getState().connected).toBe(true)
     await service.refresh()
     expect(service.getState().connected).toBe(false)
 
