@@ -238,8 +238,8 @@ end
 local function onRecordingFinished()
   local items = newItems()
   if #items == 0 then
-    finalizeDeadline = finalizeDeadline or (os.clock() + CONFIG.finalize_timeout_seconds)
-    if os.clock() < finalizeDeadline then return false end
+    finalizeDeadline = finalizeDeadline or (reaper.time_precise() + CONFIG.finalize_timeout_seconds)
+    if reaper.time_precise() < finalizeDeadline then return false end
     reaper.ShowConsoleMsg("[Studio] Recording stopped but no new items appeared; no take created.\n")
     return true
   end
@@ -303,17 +303,34 @@ local function step()
   wasRecording = recording
 end
 
-local lastHeartbeat = os.clock()
+local lastHeartbeat = reaper.time_precise()
 local lastError = nil
+local ticks = 0
+
+local function describeExtState()
+  local keys = {}
+  local i = 0
+  while true do
+    local ok, key, value = reaper.EnumProjExtState(0, EXT_SECTION, i)
+    if not ok then break end
+    keys[#keys + 1] = string.format("%s='%s'", key, tostring(value):sub(1, 30))
+    i = i + 1
+  end
+  return #keys == 0 and "(none)" or table.concat(keys, ", ")
+end
 
 local function tick()
-  local ok, err = xpcall(step, debug.traceback)
+  ticks = ticks + 1
+  if CONFIG.debug and (ticks <= 3 or ticks == 30) then
+    reaper.ShowConsoleMsg(string.format("[Studio] tick %d; ext state in '%s': %s\n", ticks, EXT_SECTION, describeExtState()))
+  end
+  local ok, err = xpcall(step, function(e) return tostring(e) end)
   if not ok and err ~= lastError then
     reaper.ShowConsoleMsg("[Studio] error: " .. tostring(err) .. "\n")
     lastError = err
   end
-  if CONFIG.debug and os.clock() - lastHeartbeat >= 30 then
-    lastHeartbeat = os.clock()
+  if CONFIG.debug and reaper.time_precise() - lastHeartbeat >= 10 then
+    lastHeartbeat = reaper.time_precise()
     reaper.ShowConsoleMsg(string.format("[Studio] alive; %s\n", isRecording() and "recording" or "idle"))
   end
   reaper.defer(tick)
