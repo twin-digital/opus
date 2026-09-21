@@ -39,7 +39,20 @@ local CONFIG = {
   finalize_timeout_seconds = 2,
 }
 
+local VERSION = "2026-09-22.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
+-- REAPER's web remote upper-cases the section and key when it writes (its reads are
+-- case-insensitive), so requests from the app live under this spelling.
+local REQUEST_SECTION = EXT_SECTION:upper()
+
+local function readRequest(key)
+  local _, value = reaper.GetProjExtState(0, REQUEST_SECTION, key:upper())
+  return value or ""
+end
+
+local function clearRequest(key)
+  reaper.SetProjExtState(0, REQUEST_SECTION, key:upper(), "")
+end
 local ACTION_STOP = 1016
 
 local wasRecording = false
@@ -158,37 +171,36 @@ local function publishProjectName()
 end
 
 -- Rename requests arrive from the touch page as project ext state: key "rename_<region id>",
--- value the new label. The region keeps its "Clip N" prefix so ordering survives.
+-- value the new label. The region keeps its "Clip N" prefix so ordering survives. Each region's
+-- key is read directly by name rather than enumerating the section, which has proven unreliable
+-- for keys written through the web remote.
 local function applyRenames()
-  local pending = {}
-  local i = 0
+  local renamed = false
+  local j = 0
   while true do
-    local ok, key, value = reaper.EnumProjExtState(0, EXT_SECTION, i)
-    if not ok then break end
-    local id = key:match("^rename_(%d+)$")
-    if id then pending[#pending + 1] = { key = key, id = tonumber(id), label = value } end
-    i = i + 1
-  end
-  if #pending == 0 then return end
-
-  for _, request in ipairs(pending) do
-    local j = 0
-    while true do
-      local retval, isrgn, pos, rgnend, name, idx, color = reaper.EnumProjectMarkers3(0, j)
-      if retval == 0 then break end
-      if isrgn and idx == request.id then
+    local retval, isrgn, pos, rgnend, name, idx, color = reaper.EnumProjectMarkers3(0, j)
+    if retval == 0 then break end
+    if isrgn then
+      local key = "rename_" .. tostring(idx)
+      local label = readRequest(key)
+      if label ~= "" then
+        log(string.format("rename request for region %d: '%s'", idx, label))
         local prefix = name:match("^(%a+ %d+)") or name
-        local newName = request.label ~= "" and (prefix .. " - " .. request.label) or prefix
-        reaper.SetProjectMarker3(0, idx, true, pos, rgnend, newName, color)
-        log(string.format("renamed region %d to '%s'", idx, newName))
-        break
+        local newName = prefix .. " - " .. label
+        if newName ~= name then
+          reaper.SetProjectMarker3(0, idx, true, pos, rgnend, newName, color)
+          log(string.format("renamed region %d to '%s'", idx, newName))
+          renamed = true
+        end
+        clearRequest(key) -- consumed
       end
-      j = j + 1
     end
-    reaper.SetProjExtState(0, EXT_SECTION, request.key, "") -- consumed
+    j = j + 1
   end
-  reaper.UpdateArrange()
-  reaper.Main_SaveProject(0, false)
+  if renamed then
+    reaper.UpdateArrange()
+    reaper.Main_SaveProject(0, false)
+  end
 end
 
 -- REAPER creates the recording items before this script sees the record state, so the
@@ -235,8 +247,8 @@ end
 local function onRecordingFinished()
   local items = newItems()
   if #items == 0 then
-    finalizeDeadline = finalizeDeadline or (os.clock() + CONFIG.finalize_timeout_seconds)
-    if os.clock() < finalizeDeadline then return false end
+    finalizeDeadline = finalizeDeadline or (reaper.time_precise() + CONFIG.finalize_timeout_seconds)
+    if reaper.time_precise() < finalizeDeadline then return false end
     reaper.ShowConsoleMsg("[Studio] Recording stopped but no new items appeared; no take created.\n")
     return true
   end
@@ -278,7 +290,9 @@ local function onRecordingFinished()
   return true
 end
 
-local function tick()
+-- One pass of the loop. Split out so an error is reported and survived rather than ending
+-- the script silently behind other windows.
+local function step()
   applyRenames()
   local recording = isRecording()
   if recording and not wasRecording then
@@ -287,7 +301,6 @@ local function tick()
     whileRecording()
   elseif wasRecording then
     if not onRecordingFinished() then
-      reaper.defer(tick)
       return -- still finalizing: stay in the "was recording" state
     end
     finalizeDeadline = nil
@@ -297,8 +310,42 @@ local function tick()
     whileIdle()
   end
   wasRecording = recording
+end
+
+local lastHeartbeat = reaper.time_precise()
+local lastError = nil
+local ticks = 0
+
+local function describeExtState()
+  local keys = {}
+  local i = 0
+  while true do
+    local ok, key, value = reaper.EnumProjExtState(0, EXT_SECTION, i)
+    if not ok then break end
+    keys[#keys + 1] = string.format("%s='%s'", key, tostring(value):sub(1, 30))
+    i = i + 1
+  end
+  return #keys == 0 and "(none)" or table.concat(keys, ", ")
+end
+
+local function tick()
+  ticks = ticks + 1
+  if CONFIG.debug and (ticks <= 3 or ticks == 30) then
+    reaper.ShowConsoleMsg(string.format("[Studio] tick %d; ext state in '%s': %s\n", ticks, EXT_SECTION, describeExtState()))
+  end
+  local ok, err = xpcall(step, function(e) return tostring(e) end)
+  if not ok and err ~= lastError then
+    reaper.ShowConsoleMsg("[Studio] error: " .. tostring(err) .. "\n")
+    lastError = err
+  end
+  if CONFIG.debug and reaper.time_precise() - lastHeartbeat >= 10 then
+    lastHeartbeat = reaper.time_precise()
+    reaper.ShowConsoleMsg(string.format("[Studio] alive; %s\n", isRecording() and "recording" or "idle"))
+  end
   reaper.defer(tick)
 end
+
+log(string.format("watcher %s started (%s)", VERSION, os.date("%Y-%m-%d %H:%M:%S")))
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)
