@@ -1,5 +1,12 @@
 # @thrashplay/music
 
+## 0.6.0
+
+### Minor Changes
+
+- 1524da7: The studio app ships and installs its REAPER watcher: on start it writes `cs-studio-watcher.lua`, a user-owned `cs-studio-config.lua`, and the startup hook into REAPER's resource path, asks a running watcher of a different version to reload itself, and refuses to start when REAPER is not running the shipped file (`--ignore-helper-mismatch` downgrades that to a warning and a banner on the touch page). The watcher's settings move to `cs-studio-config.lua`. The `reaper/` folder moves into the package.
+- 0d5b32d: The studio watcher keeps a clip library (`cs-studio-library.json` beside the project: number, label, bounds, how the take ended, source files, render record) and fills an Outbox while the studio is idle: a rendered mix and a MIDI file per clip, and a manifest. Renames move the files, trims re-render, deletions remove them. The app tolerates the short stall a render causes instead of flagging REAPER offline.
+
 ## 0.5.1
 
 ### Patch Changes
