@@ -5,6 +5,7 @@ import { createStudioServer } from '../studio/studio-server.js'
 import { ReaperClient } from '../studio/reaper-client.js'
 import { StudioService } from '../studio/studio-service.js'
 import { getConfig } from '../config.js'
+import { bundledHelperHash } from '../studio/helper.js'
 import {
   parseTakeName,
   sanitizeLabel,
@@ -54,6 +55,7 @@ const makeFakeStudio = (): StudioApi => {
     playingTake: undefined,
     instruments: instruments[0],
     projectName: 'Piano Corner 2026',
+    helper: { version: 'preview', hash: 'preview', matches: true },
   }
 
   const update = (patch: Partial<StudioState>) => {
@@ -150,6 +152,7 @@ const makeFakeStudio = (): StudioApi => {
       }, 400)
       return Promise.resolve()
     },
+    reloadHelper: () => Promise.resolve(),
     setInstruments: (selection) => {
       update({ instruments: selection })
     },
@@ -157,8 +160,11 @@ const makeFakeStudio = (): StudioApi => {
   return studio
 }
 
-const makeRealStudio = (baseUrl: string): StudioApi => {
-  const studio = new StudioService({ client: new ReaperClient({ baseUrl }) })
+const makeRealStudio = async (baseUrl: string): Promise<StudioApi> => {
+  const studio = new StudioService({
+    client: new ReaperClient({ baseUrl }),
+    expectedHelperHash: await bundledHelperHash(),
+  })
   studio.start()
   studio.setInstruments({ split: false, instrument: 'Acoustic Grand Piano' })
   console.log(`Driving REAPER at ${baseUrl}`)
@@ -167,7 +173,7 @@ const makeRealStudio = (baseUrl: string): StudioApi => {
 
 const { reaperUrl } = getConfig()
 const server = await createStudioServer({
-  service: reaperUrl === undefined ? makeFakeStudio() : makeRealStudio(reaperUrl),
+  service: reaperUrl === undefined ? makeFakeStudio() : await makeRealStudio(reaperUrl),
   port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
   host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
 })

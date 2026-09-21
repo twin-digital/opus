@@ -4,8 +4,12 @@
 -- silent tail, moves the edit cursor past them, and saves the project. While recording it
 -- watches for activity on the configured inputs and stops a take that has gone quiet for
 -- too long, or that has hit the hard length cap.
+--
+-- Installed and kept current by the studio app (@thrashplay/music), which compares the
+-- hash of this file with the one it ships. Settings live in cs-studio-config.lua beside
+-- this file, so they can change without changing the hash.
 
-local CONFIG = {
+local DEFAULTS = {
   -- Stop any take longer than this, no matter what.
   max_take_seconds = 60 * 60,
 
@@ -39,6 +43,22 @@ local CONFIG = {
   finalize_timeout_seconds = 2,
 }
 
+local SCRIPT_PATH = debug.getinfo(1, "S").source:sub(2)
+local SCRIPT_DIR = SCRIPT_PATH:match("^(.*)[/\\]") or "."
+
+-- cs-studio-config.lua, beside this file, returns a table overriding any of the defaults.
+local function loadConfig()
+  local config = {}
+  for key, value in pairs(DEFAULTS) do config[key] = value end
+  local ok, overrides = pcall(dofile, SCRIPT_DIR .. "/cs-studio-config.lua")
+  if ok and type(overrides) == "table" then
+    for key, value in pairs(overrides) do config[key] = value end
+  end
+  return config
+end
+
+local CONFIG = loadConfig()
+
 local VERSION = "2026-09-22.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
@@ -63,6 +83,7 @@ local lastActivity = 0
 local midiEventCount = 0
 local finalizeDeadline = nil
 local publishedProjectName = nil
+local publishedIdentity = false
 
 local function log(message)
   if CONFIG.debug then
@@ -162,6 +183,38 @@ end
 
 -- The web remote cannot report the project name, so it is kept in project ext state, where
 -- the app's status query can read it (shown as the touch page's title).
+-- FNV-1a (32-bit) over the file's bytes; the app runs the same function over the copy it
+-- ships and warns when they differ. Written without wide multiplies or bitwise ops on the
+-- full word, so it gives the same answer under any Lua number model.
+local function fnv1a32(data)
+  local h = 2166136261
+  for i = 1, #data do
+    local low = h % 256
+    h = h - low + (low ~ data:byte(i))
+    h = (h * 403 + (h % 256) * 16777216) % 4294967296 -- h * 16777619 mod 2^32
+  end
+  return string.format("%04x%04x", h // 65536, h % 65536)
+end
+
+local function hashSelf()
+  local file = io.open ~= nil and io.open(SCRIPT_PATH, "rb") or nil
+  if file == nil then return "unreadable" end
+  local data = file:read("a")
+  file:close()
+  return fnv1a32(data)
+end
+
+local SCRIPT_HASH = hashSelf()
+
+-- The app asks for a reload (after installing a newer file) through ext state. The running
+-- loop ends and the file on disk starts in its place, in this same script instance.
+local function reloadRequested()
+  if readRequest("reload") == "" then return false end
+  clearRequest("reload")
+  if isRecording() then return false end -- finish the take first; the app asks again
+  return true
+end
+
 local function publishProjectName()
   local name = reaper.GetProjectName(0, ""):gsub("%.[rR][pP][pP]$", "")
   if name ~= publishedProjectName then
@@ -206,6 +259,11 @@ end
 -- REAPER creates the recording items before this script sees the record state, so the
 -- "before" snapshot is taken while idle and only refreshed when the item count changes.
 local function whileIdle()
+  if not publishedIdentity then
+    reaper.SetProjExtState(0, EXT_SECTION, "watcher_version", VERSION)
+    reaper.SetProjExtState(0, EXT_SECTION, "watcher_hash", SCRIPT_HASH)
+    publishedIdentity = true
+  end
   publishProjectName()
   local count = reaper.CountMediaItems(0)
   if count ~= itemsBeforeCount then
@@ -329,6 +387,11 @@ local function describeExtState()
 end
 
 local function tick()
+  if reloadRequested() then
+    log("reloading " .. SCRIPT_PATH)
+    dofile(SCRIPT_PATH)
+    return
+  end
   ticks = ticks + 1
   if CONFIG.debug and (ticks <= 3 or ticks == 30) then
     reaper.ShowConsoleMsg(string.format("[Studio] tick %d; ext state in '%s': %s\n", ticks, EXT_SECTION, describeExtState()))
@@ -345,7 +408,7 @@ local function tick()
   reaper.defer(tick)
 end
 
-log(string.format("watcher %s started (%s)", VERSION, os.date("%Y-%m-%d %H:%M:%S")))
+log(string.format("watcher %s (%s) started (%s)", VERSION, SCRIPT_HASH, os.date("%Y-%m-%d %H:%M:%S")))
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)

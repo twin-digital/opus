@@ -13,6 +13,7 @@ const idle: StudioState = {
   playingTake: undefined,
   instruments: undefined,
   projectName: undefined,
+  helper: undefined,
 }
 
 const makeService = () => {
@@ -25,6 +26,7 @@ const makeService = () => {
     playLatest: vi.fn(() => Promise.resolve()),
     playTake: vi.fn((_id: string) => Promise.resolve()),
     renameTake: vi.fn((_id: string, _label: string) => Promise.resolve()),
+    reloadHelper: vi.fn(() => Promise.resolve()),
   }
   return service as unknown as StudioService & typeof service
 }

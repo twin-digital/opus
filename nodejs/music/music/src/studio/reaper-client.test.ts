@@ -24,7 +24,7 @@ describe('parseReaperReply', () => {
       { id: '2', name: 'Take 2 - Sep 17', start: 12, end: 20.5 },
     ])
     expect(status.peakDb).toBe(-9)
-    expect(status.projectName).toBe('Piano Corner')
+    expect(status.ext).toEqual({ project_name: 'Piano Corner' })
   })
 
   it.each([
@@ -49,7 +49,7 @@ describe('parseReaperReply', () => {
       position: 0,
       regions: [],
       peakDb: -Infinity,
-      projectName: '',
+      ext: {},
     })
   })
 })

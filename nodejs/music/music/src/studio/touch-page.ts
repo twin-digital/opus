@@ -86,10 +86,13 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .simple-keyboard .hg-button.hg-functionBtn { background: #3a3f4b; }
   .simple-keyboard .hg-button.hg-button-space { min-width: 40%; }
   .empty { color: #9aa0ad; font-size: 24px; padding: 20px; text-align: center; }
+  #banner { display: none; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
+  #banner.show { display: block; }
   #offline { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
 </style>
 </head>
 <body>
+<div id="banner"></div>
 <header>
   <div>🎹 <span id="title">CS Studio</span></div>
   <div id="instrument"></div>
@@ -139,7 +142,7 @@ const displayName = (take) =>
   : 'Clip ' + take.number
 
 const DefaultTitle = 'CS Studio'
-let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined }
+let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
 let streamOk = false
 let takesKey = ''
 let busyUntil = 0 // ignore record taps briefly after one, until the state catches up
@@ -168,7 +171,19 @@ function renderInstrument() {
   part('Right', sel.right)
 }
 
+function renderBanner() {
+  const banner = $('banner')
+  const text =
+    !state.connected ? ''
+    : state.helper === undefined ? 'The REAPER helper is not running. Ask a grown-up to restart REAPER.'
+    : state.helper.matches ? ''
+    : 'The REAPER helper is out of date. Ask a grown-up to restart REAPER.'
+  banner.textContent = text
+  banner.classList.toggle('show', text !== '')
+}
+
 function render() {
+  renderBanner()
   const title = state.projectName || DefaultTitle
   $('title').textContent = title
   document.title = title

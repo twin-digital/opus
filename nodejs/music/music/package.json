@@ -26,10 +26,12 @@
     "music": "./dist/index.js",
     "music-audio-probe": "./dist/scripts/audio-probe.js",
     "music-fetch-samples": "./dist/scripts/fetch-samples.js",
+    "music-reaper-probe": "./dist/scripts/reaper-probe.js",
     "music-studio-preview": "./dist/scripts/studio-preview.js"
   },
   "files": [
     "dist",
+    "reaper",
     "!dist/**/*.d.ts.map"
   ],
   "scripts": {

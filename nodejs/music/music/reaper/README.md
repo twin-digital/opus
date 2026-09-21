@@ -62,14 +62,21 @@ Preferences worth setting:
 - General > Startup: open the studio project on launch, or add it to the
   "Recently used" list and just leave REAPER open.
 
-## Install the scripts
+## The watcher installs itself
 
-Copy `cs-studio-watcher.lua` to
-`~/Library/Application Support/REAPER/Scripts/Studio/cs-studio-watcher.lua`.
+The studio app ships the watcher and installs it into REAPER's resource path every time it
+starts: `Scripts/Studio/cs-studio-watcher.lua`, a `Scripts/Studio/cs-studio-config.lua` for
+your settings (created once, never overwritten), and a line in `Scripts/__startup.lua` that
+loads the watcher when REAPER launches. Restart REAPER once after the first install.
 
-Copy `__startup.lua` to `~/Library/Application Support/REAPER/Scripts/__startup.lua`
-(merge with an existing one if you have it). REAPER runs it at launch and the
-watcher stays running in the background. Nothing else to configure.
+The app compares a hash of the watcher it ships with the hash the running watcher reports.
+When they differ it asks the watcher to reload itself (no REAPER restart), and if that
+fails, or no watcher is running, it refuses to start and says why. `--ignore-helper-mismatch`
+starts it anyway; the touch page then shows a banner and the Launchpad record pad stays dark.
+
+`MUSIC_REAPER_RESOURCE_PATH` overrides the resource path (Options > Show REAPER resource
+path shows it). Settings go in `cs-studio-config.lua`, not the watcher: editing the watcher
+changes its hash and trips the check.
 
 What the watcher does after each recording stops:
 
@@ -89,7 +96,7 @@ the four-track template, so the watcher stops the take on its own in two cases:
 
 Both only ever stop. The take is still kept, named, trimmed, and saved.
 
-Everything is in the `CONFIG` table at the top of `cs-studio-watcher.lua`:
+Everything is a key in `cs-studio-config.lua`, overriding these defaults:
 
 | Key                | Default    | Meaning                                                     |
 | ------------------ | ---------- | ----------------------------------------------------------- |

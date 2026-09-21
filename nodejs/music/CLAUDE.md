@@ -17,8 +17,12 @@ live here.
 - `launchpad-sim` (`@thrashplay/launchpad-sim`) — browser-based hardware stand-in: a Vite app that
   renders the Launchpad grid on a canvas and an on-screen piano (Web MIDI + soundfont-player), so
   programs can be developed without the physical devices.
-- `reaper/` — not a package: the ReaScript that runs inside REAPER for the recording studio (take
-  regions, silent-tail trim, runaway-recording backstop) and the Mac setup guide.
+- `music/reaper/` — shipped in the package, not code: the ReaScript that runs inside REAPER for
+  the recording studio (clip regions, silent-tail trim, runaway-recording backstop), its config
+  file, the startup hook, the PowerShell REAPER probe (`music-reaper-probe` is the Node one), and the Mac setup guide. The app installs the
+  watcher into REAPER's resource path on start and checks that REAPER runs that exact file
+  (FNV-1a hash, computed identically in Lua and TypeScript); `--ignore-helper-mismatch` turns
+  a mismatch into a warning.
 
 ## Running it
 

@@ -12,6 +12,7 @@ interface FakeReaper {
   peakDb: number
   offline: boolean
   projectName: string
+  watcherHash: string
   requests: string[]
   /** When true, replies are captured at request time but delivered only by release(). */
   hold: boolean
@@ -26,6 +27,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     peakDb: -150,
     offline: false,
     projectName: '',
+    watcherHash: '',
     requests: [],
     hold: false,
     release: () => {
@@ -64,6 +66,8 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
       ...reaper.regions.map((r) => `REGION\t${r.name}\t${r.id}\t${r.start}\t${r.end}\t0`),
       `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
       `PROJEXTSTATE\tStudio\tproject_name\t${reaper.projectName}`,
+      `PROJEXTSTATE\tStudio\twatcher_hash\t${reaper.watcherHash}`,
+      `PROJEXTSTATE\tStudio\twatcher_version\t1`,
     ]
     const reply = { ok: true, text: () => Promise.resolve(lines.join('\n')) }
     if (!reaper.hold) {
@@ -103,9 +107,9 @@ describe('sanitizeLabel', () => {
 describe('StudioService', () => {
   const services: StudioService[] = []
 
-  const makeService = (overrides: Partial<FakeReaper> = {}) => {
+  const makeService = (overrides: Partial<FakeReaper> = {}, expectedHelperHash?: string) => {
     const { reaper, client } = makeFakeReaper(overrides)
-    const service = new StudioService({ client, pollIntervalMs: POLL_MS })
+    const service = new StudioService({ client, pollIntervalMs: POLL_MS, expectedHelperHash })
     services.push(service)
     return { reaper, service }
   }
@@ -347,6 +351,23 @@ describe('StudioService', () => {
     await service.renameTake('2', '   ')
     await service.renameTake('nope', 'x')
     expect(reaper.requests.length).toBe(before)
+  })
+
+  it('reports whether the running watcher is the bundled one', async () => {
+    const { reaper, service } = makeService({}, 'abc')
+    await service.refresh()
+    expect(service.getState().helper).toBeUndefined()
+
+    reaper.watcherHash = 'old'
+    await service.refresh()
+    expect(service.getState().helper).toEqual({ version: '1', hash: 'old', matches: false })
+
+    await service.reloadHelper()
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/reload/1')
+
+    reaper.watcherHash = 'abc'
+    await service.refresh()
+    expect(service.getState().helper?.matches).toBe(true)
   })
 
   it('exposes the project name the watcher publishes', async () => {

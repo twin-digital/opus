@@ -43,13 +43,15 @@ export const createTransportOverlay = (service: StudioApi): Program => {
   let clock = 0
 
   const recordPad = () => {
-    const { connected, transport } = service.getState()
+    const { connected, transport, helper } = service.getState()
+    // without the watcher no clip would come of a recording, so the pad reads as unavailable
+    const usable = connected && helper?.matches !== false
     return translate(
       TransportPads.record.x,
       TransportPads.record.y,
       createButton({
         color:
-          !connected ? Off
+          !usable ? Off
           : transport === 'recording' ? pulse(RecordActive, clock)
           : RecordIdle,
         onPress: () => {
