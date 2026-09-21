@@ -1,0 +1,5 @@
+---
+'@thrashplay/music': minor
+---
+
+Add the recording studio: a REAPER web-remote client, a polling `StudioService` that owns transport state, the list of recorded takes (project regions), and record / stop / play-take actions, a two-pad Launchpad transport overlay (record, play my last one) drawn above every program, and a touchscreen page (record, stop, recent takes, level) served on `MUSIC_STUDIO_PORT` with state streamed over server-sent events. `createLauncher` accepts persistent `overlays`; `createLauncherProgram` takes a `studio` service and adds the transport. Enabled by `MUSIC_REAPER_URL`. For capture, `MUSIC_MIDI_MIRROR` mirrors everything sent to the piano to a second MIDI port and `MUSIC_SAMPLE_OUTPUT` picks the audio device sound-board samples play through; the CLI restores the piano's Local Control on exit. The page shows the sounding instrument and the project name, records with a single toggling button, plays clips by tapping them, and names clips through an on-screen keyboard (simple-keyboard) with the watcher renaming the region; `music-studio-preview` runs the page against a simulated studio.

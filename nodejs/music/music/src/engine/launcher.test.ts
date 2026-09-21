@@ -4,6 +4,7 @@ import type { Cell } from '../ui/drawable.js'
 import type { RgbColor } from '../ui/color.js'
 import type { Program } from './program.js'
 import { createLauncher } from './launcher.js'
+import { InputMap } from '../ui/input/input-map.js'
 
 const press = (cell: Cell<RgbColor> | undefined) => {
   expect(cell, 'expected a pressable cell at that position').toBeDefined()
@@ -54,5 +55,30 @@ describe('createLauncher', () => {
     launcher.update?.(0.1)
     expect(secondDraw).toHaveBeenCalled()
     expect(secondUpdate).toHaveBeenCalled()
+  })
+  it('draws overlays above the active program and updates them every frame', async () => {
+    const program: Program = {
+      getDrawable: () => ({ draw: () => [{ value: [1, 1, 1] as RgbColor, x: 7, y: 8 }] }),
+    }
+    const overlayUpdate = vi.fn()
+    const overlayPress = vi.fn()
+    const overlay: Program = {
+      getDrawable: () => ({ draw: () => [{ value: [9, 9, 9] as RgbColor, x: 7, y: 8, onPress: overlayPress }] }),
+      update: overlayUpdate,
+    }
+
+    const launcher = await createLauncher([() => program], { overlays: [overlay] })
+
+    // last cell at a pad wins when the engine composites, so the overlay must come after the program
+    const cells = launcher.getDrawable().draw()
+    expect(cells.findLast((cell) => cell.x === 7 && cell.y === 8)?.value).toEqual([9, 9, 9])
+
+    // and the engine's input map must dispatch to the overlay's handler at that pad
+    const handler = InputMap.fromCells(cells).getHandler(7, 8, 'press')
+    handler?.({ type: 'press', x: 7, y: 8, absoluteX: 7, absoluteY: 8 })
+    expect(overlayPress).toHaveBeenCalledOnce()
+
+    launcher.update?.(0.1)
+    expect(overlayUpdate).toHaveBeenCalledWith(0.1)
   })
 })

@@ -17,12 +17,17 @@ live here.
 - `launchpad-sim` (`@thrashplay/launchpad-sim`) — browser-based hardware stand-in: a Vite app that
   renders the Launchpad grid on a canvas and an on-screen piano (Web MIDI + soundfont-player), so
   programs can be developed without the physical devices.
+- `reaper/` — not a package: the ReaScript that runs inside REAPER for the recording studio (take
+  regions, silent-tail trim, runaway-recording backstop) and the Mac setup guide.
 
 ## Running it
 
 - Against hardware: `pnpm --filter @thrashplay/music dev` (requires the Launchpad and a MIDI piano
   connected; device names are matched in `src/index.ts`).
 - In the browser: `pnpm --filter @thrashplay/launchpad-sim dev`, then open the printed URL.
+- Touch page only, against a simulated studio (no REAPER or hardware):
+  `pnpm --filter @thrashplay/music exec tsx --conditions=source src/scripts/studio-preview.ts`, then open
+  the printed URL (published as the `music-studio-preview` bin).
 - In the studio (no monorepo checkout): `npx @thrashplay/music@latest` — the package is published
   to npm with a `music` bin; deploying is merging a PR and re-running that command.
 - Sound-board samples, once per machine: `npx -p @thrashplay/music music-fetch-samples` (or
@@ -51,6 +56,31 @@ downloads them from the asset servers the game's own launcher uses, into `~/.thr
 (`MUSIC_SAMPLES_DIR` overrides). The sim serves that same directory at `/samples` via a Vite config
 fragment, since it sits outside any checkout.
 
+## Recording studio
+
+`src/studio/` links the Launchpad to a REAPER project that captures what gets played. `ReaperClient`
+talks to REAPER's built-in web remote; `StudioService` polls it and owns the one snapshot every
+view reads: transport, input level, and the takes (the project's regions, newest first — a
+background ReaScript makes one per recording). Recording appends after the last take, and playback
+of a take stops itself at the take's end.
+
+Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
+
+- `createTransportOverlay`, the Launchpad view: two toggling pads in the top row beside the logo,
+  record and play-my-last-one, which the launcher draws above every program so they never move.
+- `createStudioServer`, the touchscreen view: serves `TouchPageHtml` on `MUSIC_STUDIO_PORT` and
+  streams state to it over server-sent events; the page posts actions back. Open it fullscreen
+  in a browser on the touchscreen. Clips are named on the page with an on-screen keyboard
+  (`simple-keyboard`, served from its package); the rename travels as project ext state, and
+  the watcher applies it to the region.
+
+Two settings get what he plays into REAPER. `MUSIC_MIDI_MIRROR` names a MIDI output (an IAC bus)
+that receives a copy of everything sent to the piano, so REAPER records the re-voiced notes with a
+channel per hand and the program changes; the piano's own MIDI out carries neither.
+`MUSIC_SAMPLE_OUTPUT` sends sound-board samples to a virtual audio device (BlackHole) for REAPER
+to record, since they never pass through the piano. The CLI also turns the piano's Local Control
+back on when it exits, so an interrupted session leaves a piano that plays on its own.
+
 ## Environment variables
 
 | Variable                             | Default                 | Purpose                                                                                                                                                        |
@@ -58,6 +88,10 @@ fragment, since it sits outside any checkout.
 | `MUSIC_SAMPLES_DIR`                  | `~/.thrashplay/samples` | Where `music-fetch-samples` downloads and the app reads sound-board samples.                                                                                   |
 | `MUSIC_SAMPLE_RATE`                  | `44100`                 | Rate the audio output stream opens at; match the output device's native rate to avoid CoreAudio resampling.                                                    |
 | `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
+| `MUSIC_REAPER_URL`                   | unset (studio off)      | Base URL, with scheme, of REAPER's web remote, e.g. `http://localhost:8080`. Enables the Launchpad record/play transport.                                      |
+| `MUSIC_STUDIO_PORT`                  | `8765`                  | Port the studio touch page is served on, when `MUSIC_REAPER_URL` is set.                                                                                       |
+| `MUSIC_MIDI_MIRROR`                  | unset                   | Exact name of a MIDI output port that gets a copy of everything sent to the piano, e.g. `IAC Driver Bus 1`.                                                    |
+| `MUSIC_SAMPLE_OUTPUT`                | unset (system output)   | Substring of the audio output device label sound-board samples play through, e.g. `BlackHole`.                                                                 |
 | `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |
 | `MINECRAFT_VERSION`                  | latest release          | Game version `music-fetch-samples` resolves sample names against.                                                                                              |
 | `PROBE_SAMPLE_RATE`, `PROBE_LATENCY` | library default         | Stream configuration for `music-audio-probe`.                                                                                                                  |

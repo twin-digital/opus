@@ -25,7 +25,8 @@
   "bin": {
     "music": "./dist/index.js",
     "music-audio-probe": "./dist/scripts/audio-probe.js",
-    "music-fetch-samples": "./dist/scripts/fetch-samples.js"
+    "music-fetch-samples": "./dist/scripts/fetch-samples.js",
+    "music-studio-preview": "./dist/scripts/studio-preview.js"
   },
   "files": [
     "dist",
@@ -49,7 +50,8 @@
     "lodash-es": "catalog:",
     "node-web-audio-api": "^2.0.0",
     "pino": "^10.0.0",
-    "popmotion": "^11.0.5"
+    "popmotion": "^11.0.5",
+    "simple-keyboard": "^3.8.190"
   },
   "peerDependencies": {
     "audify": "^1.10.1"

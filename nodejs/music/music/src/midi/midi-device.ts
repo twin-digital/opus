@@ -24,6 +24,7 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
   private createDeviceHandle: ReturnType<typeof setTimeout> | undefined
   private pollIntervalMs: number
   private watcher: MidiDeviceWatcher
+  private mirror: MidiDevice | undefined
 
   constructor({
     name,
@@ -159,12 +160,36 @@ export class MidiDevice extends (EventEmitter as new () => TypedEventEmitter<All
     return this
   }
 
+  /**
+   * Also sends every message this device sends to `device`, so a second port (an IAC bus feeding a DAW, say) hears
+   * exactly what the instrument hears. Local Control (CC 122) is not mirrored: it configures this instrument only.
+   */
+  public mirrorTo(device: MidiDevice | undefined) {
+    this.mirror = device
+  }
+
   /** for output devices only */
   public send = <E extends keyof MidiParameterMap>(evt: E, arg: MidiParameterMap[E]) => {
     if (this.output) {
       const output = this.output
       output.send(evt, arg)
     }
+    if (this.mirror !== undefined && !(evt === 'cc' && (arg as MidiParameterMap['cc']).controller === 122)) {
+      this.mirror.send(evt, arg)
+    }
+  }
+
+  /** Stops watching for the device and releases its ports. */
+  public close() {
+    this.watcher.stop()
+    if (this.createDeviceHandle) {
+      clearTimeout(this.createDeviceHandle)
+      this.createDeviceHandle = undefined
+    }
+    this.input?.close()
+    this.output?.close()
+    this.input = undefined
+    this.output = undefined
   }
 
   public get state(): 'connected' | 'disconnected' | 'error' {
