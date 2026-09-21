@@ -3047,6 +3047,9 @@ importers:
       popmotion:
         specifier: ^11.0.5
         version: 11.0.5
+      simple-keyboard:
+        specifier: ^3.8.190
+        version: 3.8.190
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -10131,6 +10134,9 @@ packages:
 
   simple-get@4.0.1:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
+
+  simple-keyboard@3.8.190:
+    resolution: {integrity: sha512-iwRlj+vfiCylmQANyK1cR5aIiCp1rWiZCtZ9tMjdwYCnwM/r1DqxRhB4opwbSaBqy/y/4nzBWMGi2tob9xu0xg==}
 
   sinon@18.0.1:
     resolution: {integrity: sha512-a2N2TDY1uGviajJ6r4D1CyRAkzE9NNVlYOV1wX5xQDuAk0ONgzgRl0EjCQuRCPxOwp13ghsMwt9Gdldujs39qw==}
@@ -18799,6 +18805,8 @@ snapshots:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
+
+  simple-keyboard@3.8.190: {}
 
   sinon@18.0.1:
     dependencies:

@@ -7,11 +7,36 @@ import type { InstrumentSelection } from '../app/sound-picker/sound-picker-progr
 /** A recording, as marked by a region in the REAPER project. */
 export interface Take {
   id: string
+  /** Full region name, e.g. "Clip 7 - Sep 21, 04:12 PM". */
   name: string
+  /** Clip number from the name, when the watcher named it. */
+  number: number | undefined
+  /** The part after the number: the timestamp, or whatever it was renamed to. */
+  label: string
   start: number
   end: number
   duration: number
 }
+
+/** Splits a watcher-named region into its number and label; a foreign name is all label. */
+export const parseTakeName = (name: string): { number: number | undefined; label: string } => {
+  const match = /^(?:Clip|Take) (\d+)(?:\s*-\s*(.*))?$/.exec(name)
+  if (match === null) {
+    return { number: undefined, label: name }
+  }
+  return { number: Number(match[1]), label: match.at(2) ?? '' }
+}
+
+/** Longest label a clip can be given from a view. */
+export const MAX_LABEL_LENGTH = 40
+
+/** Trims a label to something a region name can carry through the web remote: no control characters or separators. */
+export const sanitizeLabel = (label: string): string =>
+  label
+    .replace(/[\p{Cc}/;]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_LABEL_LENGTH)
 
 export type StudioTransport = 'stopped' | 'playing' | 'recording'
 
@@ -44,6 +69,7 @@ export type StudioApi = Pick<
   | 'playTake'
   | 'toggleRecord'
   | 'togglePlayLatest'
+  | 'renameTake'
   | 'setInstruments'
 >
 
@@ -55,23 +81,19 @@ export type StudioEventMap = {
 /** Silence between takes on the timeline, so each one is visually distinct. */
 const TAKE_GAP_SECONDS = 2
 const METER_FLOOR_DB = -60
+/** Project ext-state section the watcher reads rename requests from. */
+const RENAME_SECTION = 'Studio'
 
 /**
- * Clip number from a region named by the watcher ("Clip 12 - ..."; earlier versions wrote "Take"). Creation order,
- * which survives the region being moved or recorded out of timeline order. A region renamed without the number sorts
- * after every numbered one.
+ * Newest first: by clip number (creation order, which survives the region being moved or recorded out of timeline
+ * order), then by timeline position. A region without a number sorts after every numbered one.
  */
-const takeNumber = (name: string): number => {
-  const match = /^(?:Clip|Take) (\d+)\b/.exec(name)
-  return match === null ? -1 : Number(match[1])
-}
-
-/** Newest first: by take number, then by timeline position. */
-const byNewest = (a: Take, b: Take) => takeNumber(b.name) - takeNumber(a.name) || b.start - a.start
+const byNewest = (a: Take, b: Take) => (b.number ?? -1) - (a.number ?? -1) || b.start - a.start
 
 const toTake = (region: ReaperRegion): Take => ({
   id: region.id,
   name: region.name,
+  ...parseTakeName(region.name),
   start: region.start,
   end: region.end,
   duration: region.end - region.start,
@@ -168,6 +190,23 @@ export class StudioService {
     if (latest !== undefined) {
       await this.playTake(latest.id)
     }
+  }
+
+  /**
+   * Gives a clip a new label. The request is left in the project's ext state for the watcher, which renames the
+   * region (keeping its "Clip N" prefix) and saves; the new name shows up on the next poll.
+   */
+  async renameTake(id: string, label: string): Promise<void> {
+    const take = this.state.takes.find((candidate) => candidate.id === id)
+    if (take === undefined) {
+      this.log.warn(`No take with id ${id}.`)
+      return
+    }
+    const clean = sanitizeLabel(label)
+    if (clean === '') {
+      return
+    }
+    await this.command(() => this.client.setProjExtState(RENAME_SECTION, `rename_${id}`, clean))
   }
 
   /** Records what the keyboard is playing, for views that show it. */

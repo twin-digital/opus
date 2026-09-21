@@ -149,6 +149,11 @@ export class ReaperClient {
     await this.send(actions)
   }
 
+  /** Writes a project ext-state value (`GET/PROJEXTSTATE` reads it back; an empty value deletes the key). */
+  async setProjExtState(section: string, key: string, value: string): Promise<void> {
+    await this.send([`SET/PROJEXTSTATE/${section}/${key}/${encodeURIComponent(value)}`])
+  }
+
   async setPosition(seconds: number): Promise<void> {
     await this.send([toSeconds(seconds)])
   }

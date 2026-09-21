@@ -2,7 +2,14 @@
 
 import { Events } from '../typed-event-emitter.js'
 import { createStudioServer } from '../studio/studio-server.js'
-import type { StudioApi, StudioEventMap, StudioState, Take } from '../studio/studio-service.js'
+import {
+  parseTakeName,
+  sanitizeLabel,
+  type StudioApi,
+  type StudioEventMap,
+  type StudioState,
+  type Take,
+} from '../studio/studio-service.js'
 import type { InstrumentSelection } from '../app/sound-picker/sound-picker-program.js'
 
 /**
@@ -30,8 +37,15 @@ const makeFakeStudio = (): StudioApi => {
     recordingElapsed: 0,
     level: 0,
     takes: [
-      { id: '2', name: 'Clip 2 - Sep 21, 03:12 PM', start: 32, end: 41.5, duration: 9.5 },
-      { id: '1', name: 'Clip 1 - Sep 21, 03:05 PM', start: 0, end: 30, duration: 30 },
+      {
+        id: '2',
+        name: 'Clip 2 - Sep 21, 03:12 PM',
+        ...parseTakeName('Clip 2 - Sep 21, 03:12 PM'),
+        start: 32,
+        end: 41.5,
+        duration: 9.5,
+      },
+      { id: '1', name: 'Clip 1 - Twinkle', ...parseTakeName('Clip 1 - Twinkle'), start: 0, end: 30, duration: 30 },
     ],
     playingTake: undefined,
     instruments: instruments[0],
@@ -48,9 +62,11 @@ const makeFakeStudio = (): StudioApi => {
       const duration = (Date.now() - recordingStartedAt) / 1000
       const start = (state.takes[0]?.end ?? -2) + 2
       takeCount += 1
+      const name = `Clip ${String(takeCount)} - ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
       const take: Take = {
         id: String(takeCount),
-        name: `Clip ${String(takeCount)} - ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`,
+        name,
+        ...parseTakeName(name),
         start,
         end: start + duration,
         duration,
@@ -114,6 +130,22 @@ const makeFakeStudio = (): StudioApi => {
     },
     toggleRecord: () => (state.transport === 'recording' ? studio.stopTransport() : studio.record()),
     togglePlayLatest: () => (state.transport === 'playing' ? studio.stopTransport() : studio.playLatest()),
+    renameTake: (id, label) => {
+      const clean = sanitizeLabel(label)
+      // the real watcher takes a poll or two; mimic that
+      setTimeout(() => {
+        update({
+          takes: state.takes.map((take) => {
+            if (take.id !== id || clean === '') {
+              return take
+            }
+            const name = `Clip ${String(take.number ?? 0)} - ${clean}`
+            return { ...take, name, ...parseTakeName(name) }
+          }),
+        })
+      }, 400)
+      return Promise.resolve()
+    },
     setInstruments: (selection) => {
       update({ instruments: selection })
     },

@@ -5,7 +5,7 @@ import type { RgbColor } from '../ui/color.js'
 import type { StudioService, StudioState, Take } from './studio-service.js'
 import { TransportPads, createTransportOverlay } from './transport-overlay.js'
 
-const take: Take = { id: '1', name: 'Take 1', start: 0, end: 10, duration: 10 }
+const take: Take = { id: '1', name: 'Take 1', number: 1, label: '', start: 0, end: 10, duration: 10 }
 
 const makeService = (state: Partial<StudioState> = {}) => {
   const service = {

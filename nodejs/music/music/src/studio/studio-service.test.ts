@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ReaperClient } from './reaper-client.js'
-import { StudioService } from './studio-service.js'
+import { StudioService, parseTakeName, sanitizeLabel } from './studio-service.js'
 
 const POLL_MS = 100
 
@@ -83,6 +83,22 @@ const twoTakes = [
   { id: '1', name: 'Take 1', start: 0, end: 10 },
   { id: '2', name: 'Take 2', start: 12, end: 20 },
 ]
+
+describe('parseTakeName', () => {
+  it('splits watcher names into number and label, and keeps foreign names whole', () => {
+    expect(parseTakeName('Clip 7 - Sep 21, 04:12 PM')).toEqual({ number: 7, label: 'Sep 21, 04:12 PM' })
+    expect(parseTakeName('Take 3 - Twinkle')).toEqual({ number: 3, label: 'Twinkle' })
+    expect(parseTakeName('Clip 9')).toEqual({ number: 9, label: '' })
+    expect(parseTakeName('Twinkle (rough)')).toEqual({ number: undefined, label: 'Twinkle (rough)' })
+  })
+})
+
+describe('sanitizeLabel', () => {
+  it('strips separators and control characters, collapses space, and caps length', () => {
+    expect(sanitizeLabel('  Twinkle / Little; Star\t\n ')).toBe('Twinkle Little Star')
+    expect(sanitizeLabel('x'.repeat(60))).toHaveLength(40)
+  })
+})
 
 describe('StudioService', () => {
   const services: StudioService[] = []
@@ -318,6 +334,19 @@ describe('StudioService', () => {
     const before = reaper.requests.length
     await vi.advanceTimersByTimeAsync(POLL_MS * 10)
     expect(reaper.requests.length - before).toBeLessThanOrEqual(11)
+  })
+
+  it('asks the watcher to rename a clip through project ext state', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    await service.renameTake('2', '  Twinkle / Little; Star\n ')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/rename_2/Twinkle%20Little%20Star')
+
+    const before = reaper.requests.length
+    await service.renameTake('2', '   ')
+    await service.renameTake('nope', 'x')
+    expect(reaper.requests.length).toBe(before)
   })
 
   it('exposes the project name the watcher publishes', async () => {

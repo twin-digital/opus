@@ -9,7 +9,7 @@ const idle: StudioState = {
   transport: 'stopped',
   recordingElapsed: 0,
   level: 0,
-  takes: [{ id: '1', name: 'Take 1', start: 0, end: 10, duration: 10 }],
+  takes: [{ id: '1', name: 'Take 1', number: 1, label: '', start: 0, end: 10, duration: 10 }],
   playingTake: undefined,
   instruments: undefined,
   projectName: undefined,
@@ -24,6 +24,7 @@ const makeService = () => {
     stopTransport: vi.fn(() => Promise.resolve()),
     playLatest: vi.fn(() => Promise.resolve()),
     playTake: vi.fn((_id: string) => Promise.resolve()),
+    renameTake: vi.fn((_id: string, _label: string) => Promise.resolve()),
   }
   return service as unknown as StudioService & typeof service
 }
@@ -100,6 +101,29 @@ describe('createStudioServer', () => {
     expect(service.stopTransport).toHaveBeenCalledOnce()
     expect(service.playLatest).toHaveBeenCalledOnce()
     expect(service.playTake).toHaveBeenCalledExactlyOnceWith('Take 1')
+  })
+
+  it('renames a clip from a JSON body', async () => {
+    const service = makeService()
+    server = await createStudioServer({ service, port: 0 })
+    const response = await fetch(`${server.url}/actions/rename/2`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Twinkle' }),
+    })
+    expect(response.status).toBe(204)
+    await vi.waitFor(() => {
+      expect(service.renameTake).toHaveBeenCalledExactlyOnceWith('2', 'Twinkle')
+    })
+  })
+
+  it('serves the on-screen keyboard from its package', async () => {
+    server = await createStudioServer({ service: makeService(), port: 0 })
+    const script = await fetch(`${server.url}/vendor/simple-keyboard.js`)
+    expect(script.headers.get('content-type')).toContain('javascript')
+    expect(await script.text()).toContain('simple-keyboard')
+    const css = await fetch(`${server.url}/vendor/simple-keyboard.css`)
+    expect(css.headers.get('content-type')).toContain('text/css')
   })
 
   it('stops pushing after close', async () => {

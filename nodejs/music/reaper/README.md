@@ -158,6 +158,10 @@ toolbar pops in on touch near the top.
   REAPER's own transport with the cursor parked earlier on the timeline still sorts as the
   latest. Rename or delete regions in REAPER's Region Manager and the list follows; keep
   the "Clip N" prefix when renaming, or the take drops to the bottom of the list.
+- The pencil on a clip opens a naming sheet with an on-screen keyboard. The name is
+  written into the project's ext state, and the watcher renames the region to
+  "Clip N - <name>" and saves, so the clip keeps its place in the list. Rename in REAPER's
+  Region Manager works the same way as long as the "Clip N" prefix stays.
 - The level bar shows the loudest track peak so the kid can see it's listening.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 

@@ -70,7 +70,9 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   record and play-my-last-one, which the launcher draws above every program so they never move.
 - `createStudioServer`, the touchscreen view: serves `TouchPageHtml` on `MUSIC_STUDIO_PORT` and
   streams state to it over server-sent events; the page posts actions back. Open it fullscreen
-  in a browser on the touchscreen.
+  in a browser on the touchscreen. Clips are named on the page with an on-screen keyboard
+  (`simple-keyboard`, served from its package); the rename travels as project ext state, and
+  the watcher applies it to the region.
 
 Two settings get what he plays into REAPER. `MUSIC_MIDI_MIRROR` names a MIDI output (an IAC bus)
 that receives a copy of everything sent to the piano, so REAPER records the re-voiced notes with a

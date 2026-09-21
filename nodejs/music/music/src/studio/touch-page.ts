@@ -11,6 +11,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>CS Studio</title>
+<link rel="stylesheet" href="vendor/simple-keyboard.css">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
   html, body { height: 100%; margin: 0; }
@@ -62,8 +63,28 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .take .play { width: 72px; height: 72px; border-radius: 50%; background: #37d67a; flex: none; padding: 0; }
   .take .play svg { width: 30px; height: 30px; display: block; fill: #fff; }
   .take.active .play { background: #ff3b3b; }
-  .take .name { flex: 1; }
+  .take .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .take .len { color: #9aa0ad; font-size: 20px; }
+  .take .edit { width: 56px; height: 56px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
+  .take .edit svg { width: 24px; height: 24px; display: block; fill: #fff; }
+
+  /* naming sheet */
+  #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; z-index: 10; }
+  #sheet.open { display: flex; }
+  #sheet .panel { width: 100%; background: #1d2029; border-radius: 28px 28px 0 0; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+  #sheet .row { display: flex; align-items: center; gap: 14px; }
+  #sheet .clip { font-size: 24px; font-weight: 700; white-space: nowrap; }
+  #nameField { flex: 1; font-size: 30px; font-weight: 600; padding: 12px 16px; border-radius: 14px; border: 2px solid transparent; background: #2a2e3a; color: #fff; caret-color: #ffd166; min-width: 0; outline: none; }
+  #nameField:focus { border-color: #ffd166; }
+  #sheet .actions { display: flex; gap: 14px; justify-content: flex-end; }
+  #sheet .actions button { font-size: 26px; padding: 12px 28px; border-radius: 16px; }
+  #cancelBtn { background: #3a3f4b; }
+  #saveBtn { background: #2a9d8f; }
+  .simple-keyboard.hg-theme-default { background: #14161c; padding: 8px; }
+  .simple-keyboard .hg-button { height: 64px; font-size: 28px; font-weight: 600; background: #2a2e3a; color: #fff; border-bottom: 1px solid #111; box-shadow: none; border-radius: 10px; }
+  .simple-keyboard .hg-button.hg-activeButton, .simple-keyboard .hg-button:active { background: #4a5060; }
+  .simple-keyboard .hg-button.hg-functionBtn { background: #3a3f4b; }
+  .simple-keyboard .hg-button.hg-button-space { min-width: 40%; }
   .empty { color: #9aa0ad; font-size: 24px; padding: 20px; text-align: center; }
   #offline { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
 </style>
@@ -92,6 +113,14 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   </aside>
 </main>
 <div id="offline">Can't reach the studio.<br>Ask a grown-up to check REAPER.</div>
+<div id="sheet">
+  <div class="panel">
+    <div class="row"><span class="clip" id="sheetClip">Clip 7</span><input id="nameField" inputmode="none" maxlength="40" placeholder="Name this clip"></div>
+    <div class="simple-keyboard"></div>
+    <div class="actions"><button id="cancelBtn">Cancel</button><button id="saveBtn">Save</button></div>
+  </div>
+</div>
+<script src="vendor/simple-keyboard.js"></script>
 
 <script>
 const $ = (id) => document.getElementById(id)
@@ -100,6 +129,14 @@ const act = (name) => { fetch('/actions/' + name, { method: 'POST' }).catch(() =
 // geometric icons, so they center exactly (text glyphs sit off-center in most fonts)
 const PlayIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="7,4 21,12 7,20"/></svg>'
 const StopIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>'
+const EditIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.3V21h3.7L17.8 9.9l-3.7-3.7L3 17.3zm17.7-10.2a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7 1.9-1.7z"/></svg>'
+// a label that is just the recording timestamp, as the watcher writes it
+const isTimestamp = (label) => /^[A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2} [AP]M$/.test(label)
+// the given name when there is one, otherwise "Clip N" (or the whole name for a region not made by the watcher)
+const displayName = (take) =>
+  take.number === undefined ? take.name
+  : take.label && !isTimestamp(take.label) ? take.label
+  : 'Clip ' + take.number
 
 const DefaultTitle = 'CS Studio'
 let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined }
@@ -150,7 +187,7 @@ function render() {
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'
 
-  const key = state.takes.map((t) => t.id + ':' + t.end).join(',') + '|' + (state.playingTake ? state.playingTake.id : '')
+  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '')
   if (key === takesKey) return
   takesKey = key
   const box = $('takes')
@@ -169,19 +206,85 @@ function render() {
     const play = document.createElement('button')
     play.className = 'play'
     play.innerHTML = active ? StopIcon : PlayIcon
-    play.setAttribute('aria-label', active ? 'Stop' : 'Play ' + take.name)
+    play.setAttribute('aria-label', active ? 'Stop' : 'Play ' + displayName(take))
     play.tabIndex = -1 // the whole card is the control; the button is its icon
     el.onclick = () => act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id))
     const name = document.createElement('span')
     name.className = 'name'
-    name.textContent = take.name
+    name.textContent = displayName(take)
     const len = document.createElement('span')
     len.className = 'len'
     len.textContent = fmt(take.duration)
-    el.append(play, name, len)
+    const edit = document.createElement('button')
+    edit.className = 'edit'
+    edit.innerHTML = EditIcon
+    edit.setAttribute('aria-label', 'Name this clip')
+    edit.onclick = (event) => { event.stopPropagation(); openSheet(take) }
+    el.append(play, name, len, edit)
     box.appendChild(el)
   }
 }
+
+// --- naming sheet ---------------------------------------------------------
+let editing = null
+let keyboard = null
+
+function ensureKeyboard() {
+  if (keyboard) return keyboard
+  const Keyboard = window.SimpleKeyboard.default || window.SimpleKeyboard
+  keyboard = new Keyboard({
+    layout: {
+      default: ['1 2 3 4 5 6 7 8 9 0 {bksp}', 'Q W E R T Y U I O P', 'A S D F G H J K L', '{shift} Z X C V B N M ! ?', '{space}'],
+      lower: ['1 2 3 4 5 6 7 8 9 0 {bksp}', 'q w e r t y u i o p', 'a s d f g h j k l', '{shift} z x c v b n m , .', '{space}'],
+    },
+    display: { '{bksp}': '⌫', '{shift}': '⇧', '{space}': ' ' },
+    maxLength: 40,
+    preventMouseDownDefault: true, // key taps must not steal focus (and the caret) from the field
+    onChange: (value) => { setFieldValue(value) },
+    onKeyPress: (button) => {
+      if (button === '{shift}') keyboard.setOptions({ layoutName: keyboard.options.layoutName === 'lower' ? 'default' : 'lower' })
+    },
+  })
+  return keyboard
+}
+
+function setFieldValue(value) {
+  const field = $('nameField')
+  field.value = value
+  field.focus()
+  field.setSelectionRange(value.length, value.length)
+}
+
+function openSheet(take) {
+  editing = take
+  $('sheetClip').textContent = take.number === undefined ? take.name : 'Clip ' + take.number
+  const current = isTimestamp(take.label) ? '' : take.label
+  ensureKeyboard().setInput(current)
+  $('sheet').classList.add('open')
+  setFieldValue(current)
+}
+
+function closeSheet() {
+  editing = null
+  $('sheet').classList.remove('open')
+}
+
+function saveSheet() {
+  if (!editing) return
+  const name = $('nameField').value.trim()
+  const id = editing.id
+  closeSheet()
+  if (!name) return
+  fetch('/actions/rename/' + encodeURIComponent(id), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name }),
+  }).catch(() => {})
+}
+
+$('cancelBtn').onclick = closeSheet
+$('saveBtn').onclick = saveSheet
+$('sheet').onclick = (event) => { if (event.target === $('sheet')) closeSheet() }
 
 function subscribe() {
   const source = new EventSource('/events')
