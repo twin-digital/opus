@@ -1,7 +1,7 @@
 import * as http from 'node:http'
 
 import { logger } from '../logger.js'
-import type { StudioService, StudioState } from './studio-service.js'
+import type { StudioApi, StudioState } from './studio-service.js'
 import { TouchPageHtml } from './touch-page.js'
 
 const ACTION_PATH = /^\/actions\/(record|stop|play-latest|play-take\/([^/]+))$/
@@ -30,7 +30,7 @@ export const createStudioServer = async ({
   port,
   host = '127.0.0.1',
 }: {
-  service: StudioService
+  service: StudioApi
   /** 0 picks a free port. */
   port: number
   /** Bind address; the default keeps the page local to the machine driving REAPER. */

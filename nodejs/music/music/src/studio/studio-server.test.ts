@@ -11,6 +11,8 @@ const idle: StudioState = {
   level: 0,
   takes: [{ id: '1', name: 'Take 1', start: 0, end: 10, duration: 10 }],
   playingTake: undefined,
+  instruments: undefined,
+  projectName: undefined,
 }
 
 const makeService = () => {
@@ -65,7 +67,7 @@ describe('createStudioServer', () => {
     server = await createStudioServer({ service: makeService(), port: 0 })
     const response = await fetch(server.url)
     expect(response.headers.get('content-type')).toContain('text/html')
-    expect(await response.text()).toContain('My Studio')
+    expect(await response.text()).toContain('CS Studio')
   })
 
   it('streams the current state on connect and every change after', async () => {

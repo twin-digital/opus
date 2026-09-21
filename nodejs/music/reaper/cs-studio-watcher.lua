@@ -1,6 +1,6 @@
 -- Studio watcher: runs in the background inside REAPER.
 --
--- After every recording it wraps the new items in a named "Take N" region, trims the
+-- After every recording it wraps the new items in a named "Clip N" region, trims the
 -- silent tail, moves the edit cursor past them, and saves the project. While recording it
 -- watches for activity on the configured inputs and stops a take that has gone quiet for
 -- too long, or that has hit the hard length cap.
@@ -49,6 +49,7 @@ local recStart = 0
 local lastActivity = 0
 local midiEventCount = 0
 local finalizeDeadline = nil
+local publishedProjectName = nil
 
 local function log(message)
   if CONFIG.debug then
@@ -146,9 +147,20 @@ end
 -- ---------------------------------------------------------------------------------------
 -- take lifecycle
 
+-- The web remote cannot report the project name, so it is kept in project ext state, where
+-- the app's status query can read it (shown as the touch page's title).
+local function publishProjectName()
+  local name = reaper.GetProjectName(0, ""):gsub("%.[rR][pP][pP]$", "")
+  if name ~= publishedProjectName then
+    reaper.SetProjExtState(0, EXT_SECTION, "project_name", name)
+    publishedProjectName = name
+  end
+end
+
 -- REAPER creates the recording items before this script sees the record state, so the
 -- "before" snapshot is taken while idle and only refreshed when the item count changes.
 local function whileIdle()
+  publishProjectName()
   local count = reaper.CountMediaItems(0)
   if count ~= itemsBeforeCount then
     itemsBefore = snapshotItems()
@@ -220,7 +232,7 @@ local function onRecordingFinished()
   end
 
   local n = nextTakeNumber()
-  local name = string.format("Take %d - %s", n, os.date("%b %d, %I:%M %p"))
+  local name = string.format("Clip %d - %s", n, os.date("%b %d, %I:%M %p"))
   if lastActivity <= recStart then name = name .. " (empty)" end
   local color = reaper.ColorToNative(80, 160, 255) | 0x1000000
   reaper.AddProjectMarker2(0, true, first, last, name, -1, color)

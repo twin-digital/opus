@@ -10,6 +10,7 @@ const reply = [
   'TRACK\t0\tMASTER\t0\t1\t0\t-30\t-30',
   'TRACK\t1\tPiano\t0\t1\t0\t-185\t-185',
   'TRACK\t2\tVocal\t0\t1\t0\t-90\t-90',
+  'PROJEXTSTATE\tStudio\tproject_name\tPiano Corner',
 ].join('\n')
 
 describe('parseReaperReply', () => {
@@ -23,6 +24,7 @@ describe('parseReaperReply', () => {
       { id: '2', name: 'Take 2 - Sep 17', start: 12, end: 20.5 },
     ])
     expect(status.peakDb).toBe(-9)
+    expect(status.projectName).toBe('Piano Corner')
   })
 
   it.each([
@@ -42,7 +44,13 @@ describe('parseReaperReply', () => {
   })
 
   it('returns an idle status for an empty reply', () => {
-    expect(parseReaperReply('')).toEqual({ playState: 'stopped', position: 0, regions: [], peakDb: -Infinity })
+    expect(parseReaperReply('')).toEqual({
+      playState: 'stopped',
+      position: 0,
+      regions: [],
+      peakDb: -Infinity,
+      projectName: '',
+    })
   })
 })
 

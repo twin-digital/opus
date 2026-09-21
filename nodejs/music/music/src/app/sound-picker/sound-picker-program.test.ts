@@ -37,7 +37,10 @@ interface Harness {
   send: ReturnType<typeof vi.fn>
 }
 
-const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boolean } = {}): Promise<Harness> => {
+const makeProgram = async ({
+  clearInitTraffic = true,
+  onSelectionChanged,
+}: { clearInitTraffic?: boolean; onSelectionChanged?: (selection: unknown) => void } = {}): Promise<Harness> => {
   // Handler lists mirror EventEmitter semantics — the same listener registered twice fires twice — so tests can see
   // duplicate registrations that a keyed map would silently dedupe.
   const deviceHandlers = new Map<string, NoteHandler[]>()
@@ -60,7 +63,7 @@ const makeProgram = async ({ clearInitTraffic = true }: { clearInitTraffic?: boo
     sendCommand: vi.fn(() => Promise.resolve()),
   } as unknown as NovationLaunchpadMiniMk3
 
-  const program = createSoundPickerProgram(launchpad, synthesizer, { speech: true })
+  const program = createSoundPickerProgram(launchpad, synthesizer, { speech: true, onSelectionChanged })
   await program.initialize?.()
   if (clearInitTraffic) {
     send.mockClear() // drop initialization traffic (program changes, stop-all-sound)
@@ -163,6 +166,26 @@ describe('createSoundPickerProgram split keyboard', () => {
       expect(cellAt(cells, 8, 0)?.value).toEqual(breathedAtTimeZero(InstrumentFamilyColors['Drum Kit']))
       expect(cellAt(cells, 8, 1)?.value).toEqual(InstrumentFamilyColors.Piano)
     })
+  })
+
+  it('reports the sounding instruments to onSelectionChanged', async () => {
+    const onSelectionChanged = vi.fn()
+    const harness = await makeProgram({ onSelectionChanged })
+    expect(onSelectionChanged).toHaveBeenLastCalledWith({ split: false, instrument: expect.any(String) })
+
+    press(cellAt(drawCells(harness), 1, 4)) // the second piano patch
+    const single = onSelectionChanged.mock.lastCall?.[0] as { split: boolean; instrument: string }
+    expect(single.split).toBe(false)
+
+    pressToggle(harness)
+    expect(onSelectionChanged).toHaveBeenLastCalledWith({
+      split: true,
+      left: expect.any(String),
+      right: single.instrument,
+    })
+
+    await harness.program.shutdown?.()
+    expect(onSelectionChanged).toHaveBeenLastCalledWith(undefined)
   })
 
   it('does not announce instrument changes', async () => {

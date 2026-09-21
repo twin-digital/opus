@@ -2,6 +2,7 @@ import type { TypedEventEmitter } from '../typed-event-emitter.js'
 import { Events } from '../typed-event-emitter.js'
 import { logger } from '../logger.js'
 import { ReaperActions, ReaperClient, type ReaperRegion, type ReaperStatus } from './reaper-client.js'
+import type { InstrumentSelection } from '../app/sound-picker/sound-picker-program.js'
 
 /** A recording, as marked by a region in the REAPER project. */
 export interface Take {
@@ -26,7 +27,25 @@ export interface StudioState {
   takes: Take[]
   /** The take being played, when playback was started through this service. */
   playingTake: Take | undefined
+  /** What the keyboard currently plays, when a program has reported it. */
+  instruments: InstrumentSelection | undefined
+  /** Name of the open REAPER project, when the watcher has published it. */
+  projectName: string | undefined
 }
+
+/** The part of the service a view needs; a preview can stand in a fake. */
+export type StudioApi = Pick<
+  StudioService,
+  | 'events'
+  | 'getState'
+  | 'record'
+  | 'stopTransport'
+  | 'playLatest'
+  | 'playTake'
+  | 'toggleRecord'
+  | 'togglePlayLatest'
+  | 'setInstruments'
+>
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export type StudioEventMap = {
@@ -38,11 +57,12 @@ const TAKE_GAP_SECONDS = 2
 const METER_FLOOR_DB = -60
 
 /**
- * Take number from a region named by the watcher ("Take 12 - ..."). Creation order, which survives the region being
- * moved or recorded out of timeline order. A region renamed without the number sorts after every numbered one.
+ * Clip number from a region named by the watcher ("Clip 12 - ..."; earlier versions wrote "Take"). Creation order,
+ * which survives the region being moved or recorded out of timeline order. A region renamed without the number sorts
+ * after every numbered one.
  */
 const takeNumber = (name: string): number => {
-  const match = /^Take (\d+)\b/.exec(name)
+  const match = /^(?:Clip|Take) (\d+)\b/.exec(name)
   return match === null ? -1 : Number(match[1])
 }
 
@@ -81,6 +101,8 @@ export class StudioService {
     level: 0,
     takes: [],
     playingTake: undefined,
+    instruments: undefined,
+    projectName: undefined,
   }
   private recordingStartedAt: number | undefined
   private running = false
@@ -146,6 +168,11 @@ export class StudioService {
     if (latest !== undefined) {
       await this.playTake(latest.id)
     }
+  }
+
+  /** Records what the keyboard is playing, for views that show it. */
+  setInstruments(instruments: InstrumentSelection | undefined) {
+    this.update({ instruments })
   }
 
   /**
@@ -245,6 +272,7 @@ export class StudioService {
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
       level: transport === 'stopped' ? 0 : toLevel(status.peakDb),
       takes,
+      projectName: status.projectName === '' ? undefined : status.projectName,
       playingTake: stillPlaying ? (takes.find((take) => take.id === playingTake.id) ?? playingTake) : undefined,
     })
 

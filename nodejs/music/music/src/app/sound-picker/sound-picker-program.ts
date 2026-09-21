@@ -49,12 +49,24 @@ const RightHand = toChannelId(1)
 const familyOf = (instrument: Instrument): InstrumentFamily =>
   InstrumentFamilies.find((family) => family.name === instrument.family) ?? InstrumentFamilies[0]
 
+/**
+ * What the keyboard currently plays: one instrument across the whole keyboard, or one per hand when split.
+ */
+export type InstrumentSelection = { split: false; instrument: string } | { split: true; left: string; right: string }
+
 export const createSoundPickerProgram = (
   launchpad: NovationLaunchpadMiniMk3,
   synthesizer: MidiDevice,
   {
+    onSelectionChanged,
     speech = true,
   }: {
+    /**
+     * Called whenever the sounding instrument(s) change, and with `undefined` when the program shuts down, for
+     * displays outside the Launchpad (the studio's touch page shows the current instrument).
+     */
+    onSelectionChanged?: (selection: InstrumentSelection | undefined) => void
+
     /**
      * Whether to speak selection feedback aloud: side selection and split announcements.
      * @defaultValue true
@@ -98,10 +110,23 @@ export const createSoundPickerProgram = (
    * Records and applies a channel's instrument without announcing it. User-driven selections go through
    * `selectInstrument`, which also speaks the name.
    */
+  const publishSelection = () => {
+    // during initialize the channels are assigned one at a time; report once both are known
+    if (controller.channels.some((channel) => !(channel.id in selectedInstruments))) {
+      return
+    }
+    onSelectionChanged?.(
+      split ?
+        { split: true, left: selectedInstruments[LeftHand].name, right: selectedInstruments[RightHand].name }
+      : { split: false, instrument: selectedInstruments[selectedChannelId].name },
+    )
+  }
+
   const setChannelInstrument = (channelId: ChannelId, instrument: Instrument) => {
     selectedFamilies[channelId] = familyOf(instrument)
     selectedInstruments[channelId] = instrument
     controller.selectSound(channelId, instrument)
+    publishSelection()
   }
 
   const selectFamily = (family: InstrumentFamily) => {
@@ -152,6 +177,7 @@ export const createSoundPickerProgram = (
 
     applyRoutes()
     rebuildChannelLevelScreen()
+    publishSelection()
 
     if (speech) {
       void speak(split ? 'two instruments' : 'one instrument')
@@ -265,6 +291,7 @@ export const createSoundPickerProgram = (
 
       applyRoutes()
       rebuildChannelLevelScreen()
+      publishSelection()
 
       controller.initialize()
 
@@ -276,6 +303,7 @@ export const createSoundPickerProgram = (
       log.info('Shutting down "Sound Picker" program.')
       controller.shutdown()
       setLocalControl(synthesizer, true)
+      onSelectionChanged?.(undefined)
       launchpad.events.off('readback', handleReadback)
 
       // Releases the audio output device. Without it the render thread's handles keep Node's event loop alive and the

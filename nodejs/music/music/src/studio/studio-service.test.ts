@@ -11,6 +11,7 @@ interface FakeReaper {
   regions: { id: string; name: string; start: number; end: number }[]
   peakDb: number
   offline: boolean
+  projectName: string
   requests: string[]
   /** When true, replies are captured at request time but delivered only by release(). */
   hold: boolean
@@ -24,6 +25,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     regions: [],
     peakDb: -150,
     offline: false,
+    projectName: '',
     requests: [],
     hold: false,
     release: () => {
@@ -61,6 +63,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
       `TRANSPORT\t${reaper.playState}\t${reaper.position}\t0\t0\t0`,
       ...reaper.regions.map((r) => `REGION\t${r.name}\t${r.id}\t${r.start}\t${r.end}\t0`),
       `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
+      `PROJEXTSTATE\tStudio\tproject_name\t${reaper.projectName}`,
     ]
     const reply = { ok: true, text: () => Promise.resolve(lines.join('\n')) }
     if (!reaper.hold) {
@@ -114,9 +117,9 @@ describe('StudioService', () => {
   it('orders takes by take number, so one recorded earlier on the timeline is still the latest', async () => {
     const { service } = makeService({
       regions: [
-        { id: '1', name: 'Take 1 - Sep 21', start: 0, end: 10 },
-        { id: '2', name: 'Take 2 - Sep 21', start: 100, end: 110 },
-        { id: '3', name: 'Take 3 - Sep 21', start: 50, end: 60 }, // recorded from REAPER with the cursor parked mid-timeline
+        { id: '1', name: 'Take 1 - Sep 21', start: 0, end: 10 }, // named by an earlier watcher
+        { id: '2', name: 'Clip 2 - Sep 21', start: 100, end: 110 },
+        { id: '3', name: 'Clip 3 - Sep 21', start: 50, end: 60 }, // recorded from REAPER with the cursor parked mid-timeline
         { id: '4', name: 'Twinkle (rough)', start: 200, end: 210 }, // renamed without the number: sorts last
       ],
     })
@@ -248,7 +251,7 @@ describe('StudioService', () => {
     await Promise.all([stalePoll, recording])
 
     expect(service.getState().transport).toBe('recording')
-    expect(reaper.requests.at(-1)).toBe('TRANSPORT;REGION;TRACK')
+    expect(reaper.requests.at(-1)).toMatch(/^TRANSPORT;REGION;TRACK/)
     expect(reaper.requests.at(-2)).toBe('1016;SET/POS/22.000;1013')
   })
 
@@ -315,6 +318,29 @@ describe('StudioService', () => {
     const before = reaper.requests.length
     await vi.advanceTimersByTimeAsync(POLL_MS * 10)
     expect(reaper.requests.length - before).toBeLessThanOrEqual(11)
+  })
+
+  it('exposes the project name the watcher publishes', async () => {
+    const { reaper, service } = makeService()
+    await service.refresh()
+    expect(service.getState().projectName).toBeUndefined()
+
+    reaper.projectName = 'Piano Corner'
+    await service.refresh()
+    expect(service.getState().projectName).toBe('Piano Corner')
+  })
+
+  it('carries the current instrument selection for views', () => {
+    const { service } = makeService()
+    const change = vi.fn()
+    service.events.on('change', change)
+
+    service.setInstruments({ split: false, instrument: 'Church Organ' })
+    expect(service.getState().instruments).toEqual({ split: false, instrument: 'Church Organ' })
+    expect(change).toHaveBeenCalledOnce()
+
+    service.setInstruments(undefined)
+    expect(service.getState().instruments).toBeUndefined()
   })
 
   it('reports disconnection and recovers', async () => {

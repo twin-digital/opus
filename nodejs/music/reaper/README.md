@@ -3,7 +3,7 @@
 The REAPER side of the piano recording corner. The touch page and the Launchpad
 transport live in `@thrashplay/music`; this folder holds the ReaScript that runs inside
 REAPER and the setup notes for the Mac. Every recording lands as a new item in a normal REAPER
-project, wrapped in a named "Take N" region, and the project auto-saves.
+project, wrapped in a named "Clip N" region, and the project auto-saves.
 
 ```
 Touchscreen (browser)  ──▶  @thrashplay/music (Node)  ──HTTP──▶  REAPER web interface (8080)
@@ -75,7 +75,7 @@ What the watcher does after each recording stops:
 
 - finds the items created during that recording,
 - trims the quiet tail off them (non-destructive: drag the item edge back out to recover it),
-- adds a region `Take 7 - Sep 17, 04:12 PM` spanning them,
+- adds a region `Clip 7 - Sep 17, 04:12 PM` spanning them,
 - moves the edit cursor 2 seconds past the end,
 - saves the project.
 
@@ -154,10 +154,10 @@ toolbar pops in on touch near the top.
 - **Stop** stops.
 - **Play my last one** and the list play a take from its region start; playback stops at
   the region end.
-- The list shows the newest 12 regions, newest by take number, so a take recorded from
+- The list shows the newest 12 regions, newest by clip number, so a take recorded from
   REAPER's own transport with the cursor parked earlier on the timeline still sorts as the
   latest. Rename or delete regions in REAPER's Region Manager and the list follows; keep
-  the "Take N" prefix when renaming, or the take drops to the bottom of the list.
+  the "Clip N" prefix when renaming, or the take drops to the bottom of the list.
 - The level bar shows the loudest track peak so the kid can see it's listening.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 

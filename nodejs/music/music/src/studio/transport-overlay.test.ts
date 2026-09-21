@@ -16,6 +16,8 @@ const makeService = (state: Partial<StudioState> = {}) => {
       level: 0,
       takes: [take],
       playingTake: undefined,
+      instruments: undefined,
+      projectName: undefined,
       ...state,
     }),
     toggleRecord: vi.fn(() => Promise.resolve()),

@@ -47,7 +47,16 @@ export const createLauncherProgram = ({
 }): Promise<Program> => {
   return createLauncher(
     [
-      () => createSoundPickerProgram(launchpad, synthesizer, options),
+      () =>
+        createSoundPickerProgram(launchpad, synthesizer, {
+          ...options,
+          onSelectionChanged:
+            studio === undefined ? undefined : (
+              (selection) => {
+                studio.setInstruments(selection)
+              }
+            ),
+        }),
       () =>
         createMusicalExerciseProgram({
           device: synthesizer,

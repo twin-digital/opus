@@ -3,7 +3,7 @@ import type { RgbColor } from '../ui/color.js'
 import { createButton } from '../ui/components/button.js'
 import { group } from '../ui/components/group.js'
 import { translate } from '../ui/transform/translate.js'
-import type { StudioService } from './studio-service.js'
+import type { StudioApi } from './studio-service.js'
 
 /**
  * Pads in the top CC row, beside the Novation logo. Every program leaves these two unused, so the
@@ -39,7 +39,7 @@ const pulse = (color: RgbColor, time: number): RgbColor => {
  *
  * Meant to be composed into the launcher as an overlay, above whatever program is running.
  */
-export const createTransportOverlay = (service: StudioService): Program => {
+export const createTransportOverlay = (service: StudioApi): Program => {
   let clock = 0
 
   const recordPad = () => {
