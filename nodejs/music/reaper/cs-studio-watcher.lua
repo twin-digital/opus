@@ -345,8 +345,7 @@ local function tick()
   reaper.defer(tick)
 end
 
-reaper.ShowConsoleMsg(string.format("[Studio] watcher %s started (debug=%s, %s)\n",
-  VERSION, tostring(CONFIG.debug), os.date("%Y-%m-%d %H:%M:%S")))
+log(string.format("watcher %s started (%s)", VERSION, os.date("%Y-%m-%d %H:%M:%S")))
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)
