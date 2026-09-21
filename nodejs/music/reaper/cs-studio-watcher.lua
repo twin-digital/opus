@@ -40,6 +40,22 @@ local CONFIG = {
 }
 
 local EXT_SECTION = "Studio"
+-- REAPER's web remote upper-cases the section and key it writes and reads, so anything shared
+-- with the app is written under both spellings and read under both.
+local EXT_SECTION_WEB = EXT_SECTION:upper()
+
+local function readShared(key)
+  local _, value = reaper.GetProjExtState(0, EXT_SECTION_WEB, key:upper())
+  if value == nil or value == "" then
+    _, value = reaper.GetProjExtState(0, EXT_SECTION, key)
+  end
+  return value or ""
+end
+
+local function writeShared(key, value)
+  reaper.SetProjExtState(0, EXT_SECTION, key, value)
+  reaper.SetProjExtState(0, EXT_SECTION_WEB, key:upper(), value)
+end
 local ACTION_STOP = 1016
 
 local wasRecording = false
@@ -152,7 +168,7 @@ end
 local function publishProjectName()
   local name = reaper.GetProjectName(0, ""):gsub("%.[rR][pP][pP]$", "")
   if name ~= publishedProjectName then
-    reaper.SetProjExtState(0, EXT_SECTION, "project_name", name)
+    writeShared("project_name", name)
     publishedProjectName = name
   end
 end
@@ -169,15 +185,17 @@ local function applyRenames()
     if retval == 0 then break end
     if isrgn then
       local key = "rename_" .. tostring(idx)
-      local _, label = reaper.GetProjExtState(0, EXT_SECTION, key)
-      if label ~= nil and label ~= "" then
+      local label = readShared(key)
+      if label ~= "" then
         log(string.format("rename request for region %d: '%s'", idx, label))
         local prefix = name:match("^(%a+ %d+)") or name
         local newName = prefix .. " - " .. label
-        reaper.SetProjectMarker3(0, idx, true, pos, rgnend, newName, color)
-        reaper.SetProjExtState(0, EXT_SECTION, key, "") -- consumed
-        log(string.format("renamed region %d to '%s'", idx, newName))
-        renamed = true
+        if newName ~= name then
+          reaper.SetProjectMarker3(0, idx, true, pos, rgnend, newName, color)
+          log(string.format("renamed region %d to '%s'", idx, newName))
+          renamed = true
+        end
+        writeShared(key, "") -- consumed
       end
     end
     j = j + 1
