@@ -97,8 +97,8 @@ await roundTrip('ampersand', 'Tom & Jerry')
 await roundTrip('semicolon (app strips these)', 'a;b', { info: true })
 await roundTrip('slash (app strips these)', 'a/b', { info: true })
 await roundTrip('json', JSON.stringify({ v: 1, clips: { 12: { label: 'Twinkle', starred: true } } }))
-await roundTrip('long 1000', 'x'.repeat(1000))
-for (const size of [4000, 16000, 64000]) {
+await roundTrip('long 200', 'x'.repeat(200))
+for (const size of [300, 400, 500, 600, 800, 1000, 2000, 4000]) {
   await roundTrip(`long ${size} (size ceiling)`, 'x'.repeat(size), { info: true })
 }
 

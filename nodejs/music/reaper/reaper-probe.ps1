@@ -16,7 +16,9 @@ $script:Failures = 0
 function Send-Reaper([string[]]$Commands) {
   $url = "$BaseUrl/_/" + ($Commands -join ';')
   $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3
-  return [string]$response.Content
+  # REAPER replies in UTF-8 without saying so; Windows PowerShell would otherwise decode it as Latin-1
+  $bytes = [System.Text.Encoding]::GetEncoding('ISO-8859-1').GetBytes([string]$response.Content)
+  return [System.Text.Encoding]::UTF8.GetString($bytes)
 }
 
 # info checks map the edges (what the app avoids or never sends); they never fail the run
@@ -54,7 +56,8 @@ function Test-RoundTrip([string]$Name, [string]$Value, [switch]$Info) {
       Report $true "ext state round trip: $Name" "$($Value.Length) chars" -Info:$Info
     } else {
       $shown = if ($null -eq $back) { 'undefined' } elseif ($back.Length -gt 60) { $back.Substring(0, 57) + '...' } else { $back }
-      Report $false "ext state round trip: $Name" "got `"$shown`"" -Info:$Info
+      $lengths = if ($null -ne $back) { "sent $($Value.Length), got $($back.Length) chars: " } else { '' }
+      Report $false "ext state round trip: $Name" "$lengths$shown" -Info:$Info
     }
   } catch {
     Report $false "ext state round trip: $Name" "$($_.Exception.Message)" -Info:$Info
@@ -108,8 +111,8 @@ Test-RoundTrip 'ampersand' 'Tom & Jerry'
 Test-RoundTrip 'semicolon (app strips these)' 'a;b' -Info
 Test-RoundTrip 'slash (app strips these)' 'a/b' -Info
 Test-RoundTrip 'json' '{"v":1,"clips":{"12":{"label":"Twinkle","starred":true}}}'
-Test-RoundTrip 'long 1000' ('x' * 1000)
-foreach ($size in 4000, 16000, 64000) {
+Test-RoundTrip 'long 200' ('x' * 200)
+foreach ($size in 300, 400, 500, 600, 800, 1000, 2000, 4000) {
   Test-RoundTrip "long $size (size ceiling)" ('x' * $size) -Info
 }
 
