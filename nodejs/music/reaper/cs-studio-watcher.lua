@@ -158,40 +158,34 @@ local function publishProjectName()
 end
 
 -- Rename requests arrive from the touch page as project ext state: key "rename_<region id>",
--- value the new label. The region keeps its "Clip N" prefix so ordering survives.
+-- value the new label. The region keeps its "Clip N" prefix so ordering survives. Each region's
+-- key is read directly by name rather than enumerating the section, which has proven unreliable
+-- for keys written through the web remote.
 local function applyRenames()
-  local pending = {}
-  local i = 0
+  local renamed = false
+  local j = 0
   while true do
-    local ok, key, value = reaper.EnumProjExtState(0, EXT_SECTION, i)
-    if not ok then break end
-    local id = key:match("^rename_(%d+)$")
-    if id then
-      log(string.format("rename request for region %s: '%s'", id, value))
-      pending[#pending + 1] = { key = key, id = tonumber(id), label = value }
-    end
-    i = i + 1
-  end
-  if #pending == 0 then return end
-
-  for _, request in ipairs(pending) do
-    local j = 0
-    while true do
-      local retval, isrgn, pos, rgnend, name, idx, color = reaper.EnumProjectMarkers3(0, j)
-      if retval == 0 then break end
-      if isrgn and idx == request.id then
+    local retval, isrgn, pos, rgnend, name, idx, color = reaper.EnumProjectMarkers3(0, j)
+    if retval == 0 then break end
+    if isrgn then
+      local key = "rename_" .. tostring(idx)
+      local _, label = reaper.GetProjExtState(0, EXT_SECTION, key)
+      if label ~= nil and label ~= "" then
+        log(string.format("rename request for region %d: '%s'", idx, label))
         local prefix = name:match("^(%a+ %d+)") or name
-        local newName = request.label ~= "" and (prefix .. " - " .. request.label) or prefix
+        local newName = prefix .. " - " .. label
         reaper.SetProjectMarker3(0, idx, true, pos, rgnend, newName, color)
+        reaper.SetProjExtState(0, EXT_SECTION, key, "") -- consumed
         log(string.format("renamed region %d to '%s'", idx, newName))
-        break
+        renamed = true
       end
-      j = j + 1
     end
-    reaper.SetProjExtState(0, EXT_SECTION, request.key, "") -- consumed
+    j = j + 1
   end
-  reaper.UpdateArrange()
-  reaper.Main_SaveProject(0, false)
+  if renamed then
+    reaper.UpdateArrange()
+    reaper.Main_SaveProject(0, false)
+  end
 end
 
 -- REAPER creates the recording items before this script sees the record state, so the
