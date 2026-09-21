@@ -199,7 +199,7 @@ function render() {
     box.appendChild(empty)
     return
   }
-  for (const take of state.takes.slice(0, 12)) {
+  for (const take of state.takes) {
     const active = !!state.playingTake && state.playingTake.id === take.id
     const el = document.createElement('div')
     el.className = 'take' + (active ? ' active' : '')
