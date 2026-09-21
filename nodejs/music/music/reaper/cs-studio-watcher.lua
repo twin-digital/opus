@@ -558,7 +558,7 @@ end
 
 local function clipBaseName(entry)
   local text = fileLabel(entry.label)
-  local label = text ~= "" and (" - " .. text) or ""
+  local label = text == "" and "" or (text:sub(1, 1) == "(" and (" " .. text) or (" - " .. text))
   return safeName(string.format("%s - Clip %d%s", currentProjectName(), entry.number, label))
 end
 
