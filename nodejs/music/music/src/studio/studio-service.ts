@@ -82,6 +82,12 @@ export type StudioEventMap = {
   change: (state: StudioState) => void
 }
 
+/**
+ * Consecutive failed polls before REAPER counts as unreachable. A render inside REAPER blocks its
+ * web remote for a few seconds; that must not flap the page to "offline" and back.
+ */
+const DISCONNECT_AFTER_MISSES = 3
+
 /** Silence between takes on the timeline, so each one is visually distinct. */
 const TAKE_GAP_SECONDS = 2
 const METER_FLOOR_DB = -60
@@ -137,6 +143,7 @@ export class StudioService {
   private handle: ReturnType<typeof setTimeout> | undefined
   private inFlight: Promise<void> | undefined
   private commandSeq = 0
+  private misses = 0
   private pendingCommand: Promise<void> | undefined
   private runId = 0
 
@@ -298,12 +305,17 @@ export class StudioService {
     try {
       status = await this.client.getStatus()
     } catch (error) {
+      this.misses += 1
+      if (this.state.connected && this.misses < DISCONNECT_AFTER_MISSES) {
+        return // a short stall (REAPER rendering, say); keep the last good state
+      }
       if (this.state.connected) {
         this.log.warn(error, 'REAPER is unreachable.')
       }
       this.update({ connected: false })
       return
     }
+    this.misses = 0
 
     const transport: StudioTransport =
       status.playState === 'recording' ? 'recording'
