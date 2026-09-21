@@ -115,7 +115,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
     <div id="takes"></div>
   </aside>
 </main>
-<div id="offline">Can't reach the studio.<br>Ask a grown-up to check REAPER.</div>
+<div id="offline">Can't reach the studio.<br>Ask Dad to check REAPER.</div>
 <div id="sheet">
   <div class="panel">
     <div class="row"><span class="clip" id="sheetClip">Clip 7</span><input id="nameField" inputmode="none" maxlength="40" placeholder="Name this clip"></div>
@@ -176,9 +176,9 @@ function renderBanner() {
   const banner = $('banner')
   const text =
     !state.connected ? ''
-    : state.helper === undefined ? 'The REAPER helper is not running. Ask a grown-up to restart REAPER.'
+    : state.helper === undefined ? 'The REAPER helper is not running. Ask Dad to restart REAPER.'
     : state.helper.matches ? ''
-    : 'The REAPER helper is out of date. Ask a grown-up to restart REAPER.'
+    : 'The REAPER helper is out of date. Ask Dad to restart REAPER.'
   banner.textContent = text
   banner.classList.toggle('show', text !== '')
 }
