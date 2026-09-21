@@ -1,2 +1,2 @@
--- REAPER runs this file on launch. Starts the KidStudio watcher automatically.
-dofile(reaper.GetResourcePath() .. "/Scripts/KidStudio/kidstudio_watcher.lua")
+-- REAPER runs this file on launch. Starts the studio watcher automatically.
+dofile(reaper.GetResourcePath() .. "/Scripts/Studio/cs-studio-watcher.lua")

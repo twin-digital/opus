@@ -1,4 +1,4 @@
--- KidStudio watcher: runs in the background inside REAPER.
+-- Studio watcher: runs in the background inside REAPER.
 --
 -- After every recording it wraps the new items in a named "Take N" region, trims the
 -- silent tail, moves the edit cursor past them, and saves the project. While recording it
@@ -31,9 +31,15 @@ local CONFIG = {
 
   -- Silence between takes on the timeline.
   gap_seconds = 2,
+
+  -- Log each step to REAPER's console (View > ReaScript console), to see what a take did.
+  debug = false,
+
+  -- How long after the transport stops to wait for REAPER to commit the recorded items.
+  finalize_timeout_seconds = 2,
 }
 
-local EXT_SECTION = "KidStudio"
+local EXT_SECTION = "Studio"
 local ACTION_STOP = 1016
 
 local wasRecording = false
@@ -42,6 +48,13 @@ local itemsBeforeCount = -1
 local recStart = 0
 local lastActivity = 0
 local midiEventCount = 0
+local finalizeDeadline = nil
+
+local function log(message)
+  if CONFIG.debug then
+    reaper.ShowConsoleMsg(string.format("[Studio] %s\n", message))
+  end
+end
 
 -- ---------------------------------------------------------------------------------------
 -- helpers
@@ -147,16 +160,17 @@ local function onRecordingStarted()
   recStart = reaper.GetPlayPosition()
   lastActivity = recStart
   midiEventCount = reaper.MIDI_GetRecentInputEvent(0)
+  log(string.format("recording started at %.2fs; %d items before", recStart, itemsBeforeCount))
 end
 
 local function whileRecording()
   pollActivity()
   local now = reaper.GetPlayPosition()
   if now - recStart >= CONFIG.max_take_seconds then
-    reaper.ShowConsoleMsg("[KidStudio] Take hit the length cap; stopping.\n")
+    reaper.ShowConsoleMsg("[Studio] Take hit the length cap; stopping.\n")
     reaper.Main_OnCommand(ACTION_STOP, 0)
   elseif now - lastActivity >= CONFIG.silence_seconds then
-    reaper.ShowConsoleMsg("[KidStudio] No activity; stopping.\n")
+    reaper.ShowConsoleMsg("[Studio] No activity; stopping.\n")
     reaper.Main_OnCommand(ACTION_STOP, 0)
   end
 end
@@ -170,9 +184,17 @@ local function newItems()
   return items
 end
 
+-- Returns true once the take is finalized, false while still waiting for REAPER to commit the
+-- recorded items (it can report the transport stopped a moment before they exist).
 local function onRecordingFinished()
   local items = newItems()
-  if #items == 0 then return end
+  if #items == 0 then
+    finalizeDeadline = finalizeDeadline or (os.clock() + CONFIG.finalize_timeout_seconds)
+    if os.clock() < finalizeDeadline then return false end
+    reaper.ShowConsoleMsg("[Studio] Recording stopped but no new items appeared; no take created.\n")
+    return true
+  end
+  log(string.format("recording finished; %d new items, last activity at %.2fs", #items, lastActivity))
 
   local first, last = math.huge, -math.huge
   for _, item in ipairs(items) do
@@ -206,6 +228,8 @@ local function onRecordingFinished()
   reaper.SetEditCurPos(last + CONFIG.gap_seconds, true, false)
   reaper.UpdateArrange()
   reaper.Main_SaveProject(0, false)
+  log(string.format("created region '%s' (%.2fs - %.2fs) and saved", name, first, last))
+  return true
 end
 
 local function tick()
@@ -215,8 +239,13 @@ local function tick()
   elseif recording then
     whileRecording()
   elseif wasRecording then
-    onRecordingFinished()
+    if not onRecordingFinished() then
+      reaper.defer(tick)
+      return -- still finalizing: stay in the "was recording" state
+    end
+    finalizeDeadline = nil
     itemsBeforeCount = -1
+    whileIdle() -- re-snapshot now, so the take just finished can never count as new again
   else
     whileIdle()
   end

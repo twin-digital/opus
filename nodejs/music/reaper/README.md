@@ -8,7 +8,7 @@ project, wrapped in a named "Take N" region, and the project auto-saves.
 ```
 Touchscreen (browser)  ──▶  @thrashplay/music (Node)  ──HTTP──▶  REAPER web interface (8080)
 Launchpad pads         ──▶        StudioService                        │
-                                                        kidstudio_watcher.lua (background)
+                                                        cs-studio-watcher.lua (background)
                                                         names, trims, saves each take
 ```
 
@@ -64,8 +64,8 @@ Preferences worth setting:
 
 ## Install the scripts
 
-Copy `kidstudio_watcher.lua` to
-`~/Library/Application Support/REAPER/Scripts/KidStudio/kidstudio_watcher.lua`.
+Copy `cs-studio-watcher.lua` to
+`~/Library/Application Support/REAPER/Scripts/Studio/cs-studio-watcher.lua`.
 
 Copy `__startup.lua` to `~/Library/Application Support/REAPER/Scripts/__startup.lua`
 (merge with an existing one if you have it). REAPER runs it at launch and the
@@ -89,7 +89,7 @@ the four-track template, so the watcher stops the take on its own in two cases:
 
 Both only ever stop. The take is still kept, named, trimmed, and saved.
 
-Everything is in the `CONFIG` table at the top of `kidstudio_watcher.lua`:
+Everything is in the `CONFIG` table at the top of `cs-studio-watcher.lua`:
 
 | Key                | Default    | Meaning                                                     |
 | ------------------ | ---------- | ----------------------------------------------------------- |
