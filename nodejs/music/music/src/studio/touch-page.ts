@@ -282,11 +282,6 @@ function render() {
 }
 
 // --- stage: waveform with cursor while playing, live graph while recording ----------
-let wave = null       // WaveSurfer instance
-let waveClipId = null // clip the waveform was loaded for
-let waveReady = false
-const waveFailedAt = {} // clip id -> when its load last failed
-const WAVE_RETRY_MS = 5000
 let renderQueued = false
 function scheduleRender() {
   if (renderQueued) return
@@ -296,34 +291,67 @@ function scheduleRender() {
 const liveBars = []   // recent levels, newest last, for the recording graph
 const LIVE_BARS = 240
 
-function ensureWave() {
-  if (wave || !window.WaveSurfer) return wave
-  wave = WaveSurfer.create({
-    container: '#wave',
-    height: 'auto',
-    waveColor: '#3a5f4f',
-    progressColor: '#37d67a',
-    cursorColor: '#ffd166',
-    cursorWidth: 3,
-    barWidth: 3,
-    barGap: 2,
-    barRadius: 2,
-    interact: true,
-    dragToSeek: true,
-    normalize: true,
-  })
-  wave.on('ready', () => { waveReady = true; scheduleRender() })
-  // a media-element failure (an unreadable file) never settles the load promise, so it is
-  // reported here; the element's src always belongs to the newest load
-  wave.on('error', (error) => { if (!error || error.name !== 'AbortError') waveFailed(waveClipId) })
-  // tapping or dragging on the waveform moves playback there (the page never plays audio
-  // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
-  // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
-  // positions are mapped by fraction of the clip, not seconds: the rendered mix can be a little
-  // shorter or longer than the region (it is re-rendered after a trim) and must never desync
-  wave.on('click', (relative) => { scrubTo(relative) })
-  wave.on('drag', (relative) => { scrubTo(relative) })
-  return wave
+// --- waveform: the shown clip's rendered mix, one clip at a time -------------------------
+// A clip without a mix yet (a fresh one renders as it ends, a trimmed one at the next idle
+// pass) or with an unreadable one is retried after a pause, never in a loop.
+const WAVE_RETRY_MS = 5000
+const waveform = {
+  ws: null,       // WaveSurfer instance, created on first use
+  clipId: null,   // clip the current load belongs to
+  ready: false,
+  failedAt: {},   // clip id -> when its load last failed
+  ensure() {
+    if (this.ws || !window.WaveSurfer) return this.ws
+    this.ws = WaveSurfer.create({
+      container: '#wave',
+      height: 'auto',
+      waveColor: '#3a5f4f',
+      progressColor: '#37d67a',
+      cursorColor: '#ffd166',
+      cursorWidth: 3,
+      barWidth: 3,
+      barGap: 2,
+      barRadius: 2,
+      interact: true,
+      dragToSeek: true,
+      normalize: true,
+    })
+    this.ws.on('ready', () => { this.ready = true; scheduleRender() })
+    // a media-element failure (an unreadable file) never settles load(); the element's src
+    // always belongs to the newest load
+    this.ws.on('error', (error) => { if (!error || error.name !== 'AbortError') this.failed(this.clipId) })
+    // tapping or dragging moves playback there (the page never plays audio itself). Positions
+    // are fractions of the clip, not seconds: the mix can be a little shorter or longer than
+    // the region (it is re-rendered after a trim) and must never desync
+    this.ws.on('click', (relative) => scrub.begin(relative))
+    this.ws.on('drag', (relative) => scrub.begin(relative))
+    return this.ws
+  },
+  loadFor(id) {
+    const ws = this.ensure()
+    if (!ws || this.clipId === id) return
+    const failed = this.failedAt[id]
+    if (failed && Date.now() - failed < WAVE_RETRY_MS) return
+    this.clipId = id
+    this.ready = false
+    ws.load('/clips/' + encodeURIComponent(id) + '.wav').catch((error) => {
+      // a superseded load aborts, and an older load's failure is not the newer one's
+      if ((error && error.name === 'AbortError') || this.clipId !== id) return
+      this.failed(id)
+    })
+  },
+  failed(id) {
+    if (!id) return
+    this.ready = false
+    this.failedAt[id] = Date.now()
+    this.clipId = null
+    scheduleRender()
+  },
+  showAt(fraction) {
+    if (!this.ws || !this.ready) return
+    const total = this.ws.getDuration()
+    if (total > 0) this.ws.setTime(Math.min(total, Math.max(0, fraction * total)))
+  },
 }
 
 // the selected clip: the one last played (or just recorded); it stays on the stage after stop
@@ -350,66 +378,46 @@ function syncSelection() {
   newestNumber = newest
 }
 
-let scrubPending = null   // latest requested position not yet sent
-let scrubTimer = null
-let scrubHoldUntil = 0    // REAPER's position is ignored until this time (a cap)...
-let scrubTarget = null    // ...or until it reports a position near this fraction, whichever is first
+// --- scrubbing: taps and drags seek the shown clip ---------------------------------------
+// Seeks go out at most every SCRUB_INTERVAL while dragging. REAPER's reported position is
+// ignored until it nears the last target or a cap passes, so the cursor never snaps back.
 const SCRUB_INTERVAL = 120
 const SCRUB_HOLD_CAP = 1500
-
-function showCursorAt(fraction) {
-  if (!wave || !waveReady) return
-  const total = wave.getDuration()
-  if (total > 0) wave.setTime(Math.min(total, Math.max(0, fraction * total)))
-}
-
-function sendScrub() {
-  scrubTimer = null
-  const take = state.playingTake || selected
-  const fraction = scrubPending
-  scrubPending = null
-  if (fraction === null || !take) return
-  const at = fraction * take.duration
-  scrubTarget = fraction
-  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
-  // a seek starts the clip when it is not playing, so stopped and playing share one path
-  fetch('/actions/seek/' + encodeURIComponent(take.id), {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
-  }).catch(() => {})
-}
-
-function scrubTo(fraction) {
-  if (!state.playingTake && !selected) return
-  fraction = Math.min(1, Math.max(0, fraction))
-  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
-  showCursorAt(fraction)
-  scrubPending = fraction
-  if (scrubTimer === null) scrubTimer = setTimeout(sendScrub, SCRUB_INTERVAL)
-}
-
-function loadWaveFor(take) {
-  const ws = ensureWave()
-  if (!ws || waveClipId === take.id) return
-  const failed = waveFailedAt[take.id]
-  if (failed && Date.now() - failed < WAVE_RETRY_MS) return
-  const id = take.id
-  waveClipId = id
-  waveReady = false
-  ws.load('/clips/' + encodeURIComponent(id) + '.wav').catch((error) => {
-    // a load superseded by a newer one aborts, and an older load's failure is not the newer one's
-    if ((error && error.name === 'AbortError') || waveClipId !== id) return
-    waveFailed(id)
-  })
-}
-
-// no mix yet (a fresh clip renders as it ends, a trimmed one at the next idle pass) or an
-// unreadable one: try again later, never in a loop
-function waveFailed(id) {
-  if (!id) return
-  waveReady = false
-  waveFailedAt[id] = Date.now()
-  waveClipId = null
-  scheduleRender()
+const scrub = {
+  pending: null,  // latest fraction not yet sent
+  timer: null,
+  target: null,   // fraction last sent, awaiting REAPER's echo
+  holdUntil: 0,
+  begin(fraction) {
+    if (!state.playingTake && !selected) return
+    fraction = Math.min(1, Math.max(0, fraction))
+    this.holdUntil = Date.now() + SCRUB_HOLD_CAP
+    waveform.showAt(fraction)
+    this.pending = fraction
+    if (this.timer === null) this.timer = setTimeout(() => this.send(), SCRUB_INTERVAL)
+  },
+  send() {
+    this.timer = null
+    const take = state.playingTake || selected
+    const fraction = this.pending
+    this.pending = null
+    if (fraction === null || !take) { this.holdUntil = 0; return }
+    this.target = fraction
+    this.holdUntil = Date.now() + SCRUB_HOLD_CAP
+    // a seek starts the clip when it is not playing, so stopped and playing share one path
+    fetch('/actions/seek/' + encodeURIComponent(take.id), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: fraction * take.duration }),
+    }).catch(() => {})
+  },
+  // whether REAPER's reported fraction may drive the cursor now
+  accept(fraction) {
+    if (this.pending !== null || this.timer !== null) return false
+    if (this.target !== null && (Math.abs(fraction - this.target) < 0.02 || Date.now() >= this.holdUntil)) {
+      this.target = null
+      this.holdUntil = 0
+    }
+    return this.target === null && Date.now() >= this.holdUntil
+  },
 }
 
 function drawLive() {
@@ -417,6 +425,7 @@ function drawLive() {
   const w = canvas.clientWidth, h = canvas.clientHeight
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
   const ctx = canvas.getContext('2d')
+  if (!ctx) return
   ctx.clearRect(0, 0, w, h)
   const barW = w / LIVE_BARS
   for (let i = 0; i < liveBars.length; i++) {
@@ -436,7 +445,7 @@ function renderStage() {
   const title = $('stageTitle'), time = $('stageTime')
   $('wave').style.display = shown ? 'block' : 'none'
   $('live').style.display = recording ? 'block' : 'none'
-  $('progress').style.display = shown && !waveReady ? 'block' : 'none'
+  $('progress').style.display = shown && !waveform.ready ? 'block' : 'none'
 
   if (recording) {
     liveBars.push(state.level)
@@ -449,11 +458,9 @@ function renderStage() {
   if (shown) {
     const take = shown
     const position = playing ? state.position : 0
-    loadWaveFor(take)
+    waveform.loadFor(take.id)
     const fraction = take.duration > 0 ? position / take.duration : 0
-    const scrubbing = scrubPending !== null || scrubTimer !== null
-    if (!scrubbing && scrubTarget !== null && (Math.abs(fraction - scrubTarget) < 0.02 || Date.now() >= scrubHoldUntil)) { scrubTarget = null; scrubHoldUntil = 0 }
-    if (take.duration > 0 && !scrubbing && scrubTarget === null && Date.now() >= scrubHoldUntil) showCursorAt(fraction)
+    if (take.duration > 0 && scrub.accept(fraction)) waveform.showAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(position) + ' / ' + fmt(take.duration)

@@ -381,21 +381,17 @@ export class StudioService {
       : status.playState === 'playing' ? 'playing'
       : 'stopped'
 
-    // a poll that started before the latest command answers from before it; it must not clear the
-    // take or judge whether playback reached the end
+    // a poll that started before the latest command answers from before it; it must not clear
+    // the take or a recording start. Only a poll that closely follows the last may call the end
+    // of a take: the first one after an outage may find the cursor anywhere
     const stale = seq !== this.commandSeq
+    const consecutive = !stale && this.state.connected
 
-    // after an outage REAPER may have moved on; keep only what the cursor still lies within
-    let { playingTake } = this.state
-    if (!this.state.connected) {
-      if (playingTake !== undefined && (status.position < playingTake.start || status.position >= playingTake.end)) {
-        playingTake = undefined
-      }
-      if (this.recordingStartedAt !== undefined && status.position < this.recordingStartedAt) {
-        this.recordingStartedAt = undefined
-      }
+    // a recording start is trusted only while the cursor is still past it (a new recording
+    // started while REAPER was unreachable begins earlier)
+    if (this.recordingStartedAt !== undefined && status.position < this.recordingStartedAt) {
+      this.recordingStartedAt = undefined
     }
-
     if (transport === 'recording') {
       this.recordingStartedAt ??= status.position
     } else if (!stale) {
@@ -403,9 +399,17 @@ export class StudioService {
     }
 
     const takes = status.regions.map(toTake).sort(byNewest)
+    // the take this service started is believed only while REAPER is playing inside it; past its
+    // end playback is stopped, and anywhere else REAPER is doing something of its own
+    const { playingTake } = this.state
+    const inside =
+      playingTake !== undefined &&
+      transport === 'playing' &&
+      status.position >= playingTake.start &&
+      status.position < playingTake.end
+    const stillPlaying = playingTake !== undefined && (stale || inside) ? playingTake : undefined
     const reachedEnd =
-      !stale && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
-    const stillPlaying = playingTake !== undefined && (stale || (transport === 'playing' && !reachedEnd))
+      consecutive && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
 
     this.update({
       connected: true,
@@ -415,14 +419,12 @@ export class StudioService {
       meters: [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
         (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
       ),
-      position: playingTake !== undefined && stillPlaying ? Math.max(0, status.position - playingTake.start) : 0,
+      position: stillPlaying === undefined ? 0 : Math.max(0, status.position - stillPlaying.start),
       takes,
       projectName: status.ext.project_name || undefined,
       helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
       playingTake:
-        stillPlaying && playingTake !== undefined ?
-          (takes.find((take) => take.id === playingTake.id) ?? playingTake)
-        : undefined,
+        stillPlaying === undefined ? undefined : (takes.find((take) => take.id === stillPlaying.id) ?? stillPlaying),
     })
 
     if (reachedEnd) {

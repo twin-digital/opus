@@ -1,0 +1,197 @@
+// @vitest-environment jsdom
+/// <reference lib="dom" />
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { StudioState, Take } from './studio-service.js'
+import { TouchPageHtml } from './touch-page.js'
+
+/**
+ * Runs the page's inline script against its own markup in jsdom, with the vendor libraries,
+ * the event stream, and fetch stubbed, so the scrub and waveform-load lifecycles are pinned by
+ * tests rather than by reading.
+ */
+
+const script = /<script>([\s\S]*)<\/script>/.exec(TouchPageHtml)?.[1] ?? ''
+const markup = TouchPageHtml.replace(/^<!DOCTYPE html>\s*/i, '').replace(/<script[^>]*>[\s\S]*?<\/script>/g, '')
+
+type Handler = (...args: unknown[]) => void
+
+/** A WaveSurfer stand-in that records handlers and calls, and never loads anything itself. */
+const makeWaveSurfer = () => {
+  const handlers: Record<string, Handler[]> = {}
+  const instance = {
+    on: vi.fn((event: string, handler: Handler) => {
+      ;(handlers[event] ??= []).push(handler)
+    }),
+    load: vi.fn(() => new Promise<void>(() => undefined)),
+    getDuration: vi.fn(() => 30),
+    setTime: vi.fn(),
+  }
+  const emit = (event: string, ...args: unknown[]) => {
+    for (const handler of handlers[event] ?? []) {
+      handler(...args)
+    }
+  }
+  return { instance, emit, create: vi.fn(() => instance) }
+}
+
+const take = (id: string, number: number, duration = 30): Take => ({
+  id,
+  name: `Clip ${String(number)}`,
+  number,
+  label: '',
+  start: number * 100,
+  end: number * 100 + duration,
+  duration,
+})
+
+const idle: StudioState = {
+  connected: true,
+  transport: 'stopped',
+  recordingElapsed: 0,
+  level: 0,
+  meters: [],
+  position: 0,
+  takes: [take('1', 1)],
+  playingTake: undefined,
+  instruments: undefined,
+  projectName: 'Piano Corner',
+  helper: undefined,
+}
+
+describe('touch page', () => {
+  let ws: ReturnType<typeof makeWaveSurfer>
+  let fetchMock: ReturnType<typeof vi.fn>
+  let push: (state: StudioState) => void
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    document.documentElement.innerHTML = markup
+    ws = makeWaveSurfer()
+    fetchMock = vi.fn(() => Promise.resolve({ ok: true }))
+    // the script's EventSource is captured so tests can push states through it
+    const source: { onmessage?: (event: { data: string }) => void; onopen?: () => void } = {}
+    Object.assign(window, {
+      WaveSurfer: { create: ws.create },
+      SimpleKeyboard: { default: vi.fn() },
+      fetch: fetchMock,
+      EventSource: function () {
+        return source
+      },
+    })
+    // Deliberate: the page's inline script must run as-is against the served markup.
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+    new Function(script)()
+    source.onopen?.()
+    push = (state) => {
+      source.onmessage?.({ data: JSON.stringify(state) })
+    }
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** Selects clip 2 by letting it appear as a newly finished recording. */
+  const selectNewClip = () => {
+    push(idle)
+    push({ ...idle, takes: [take('2', 2), take('1', 1)] })
+    vi.advanceTimersByTime(1)
+  }
+
+  it('loads the selected clip and seeks it with a scrub when stopped', () => {
+    selectNewClip()
+    expect(ws.instance.load).toHaveBeenCalledWith('/clips/2.wav')
+    ws.emit('ready')
+    vi.advanceTimersByTime(1)
+
+    ws.emit('click', 0.5)
+    ws.emit('drag', 0.75)
+    expect(ws.instance.setTime).toHaveBeenLastCalledWith(22.5)
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(120)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0] as [string, { body: string }]
+    expect(url).toBe('/actions/seek/2')
+    expect(JSON.parse(init.body)).toEqual({ at: 22.5 })
+  })
+
+  it('holds the cursor where the finger left it until REAPER catches up', () => {
+    selectNewClip()
+    ws.emit('ready')
+    vi.advanceTimersByTime(1)
+    ws.emit('click', 0.5)
+    vi.advanceTimersByTime(120)
+    ws.instance.setTime.mockClear()
+
+    const playing = {
+      ...idle,
+      takes: [take('2', 2), take('1', 1)],
+      transport: 'playing' as const,
+      playingTake: take('2', 2),
+    }
+    push({ ...playing, position: 3 }) // REAPER still reports the old position
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.setTime).not.toHaveBeenCalled()
+    push({ ...playing, position: 15.2 }) // near the target: REAPER drives the cursor again
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.setTime.mock.lastCall?.[0]).toBeCloseTo(15.2)
+  })
+
+  it('follows REAPER again after a scrub whose clip vanished before it was sent', () => {
+    selectNewClip()
+    ws.emit('ready')
+    vi.advanceTimersByTime(1)
+    ws.emit('click', 0.5)
+    push({ ...idle, takes: [take('1', 1)] }) // clip 2 removed from the project
+    vi.advanceTimersByTime(120)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1), position: 6 })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.load).toHaveBeenLastCalledWith('/clips/1.wav')
+    ws.emit('ready')
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1), position: 9 })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.setTime).toHaveBeenLastCalledWith(9)
+  })
+
+  it('retries a clip whose media failed to load, after a pause', () => {
+    selectNewClip()
+    expect(ws.instance.load).toHaveBeenCalledTimes(1)
+    ws.emit('error', new Error('MEDIA_ERR_SRC_NOT_SUPPORTED')) // load() never settles for these
+    vi.advanceTimersByTime(1000)
+    push(idle)
+    push({ ...idle, takes: [take('2', 2), take('1', 1)] })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.load).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(5000)
+    push({ ...idle, takes: [take('2', 2), take('1', 1)] })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.load).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores the abort of a load that a newer clip superseded', async () => {
+    let rejectFirst: (error: Error) => void = () => undefined
+    ws.instance.load.mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectFirst = reject
+        }),
+    )
+    selectNewClip()
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1), takes: [take('2', 2), take('1', 1)] })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.load).toHaveBeenLastCalledWith('/clips/1.wav')
+    const abort = new Error('aborted')
+    abort.name = 'AbortError'
+    rejectFirst(abort)
+    await vi.advanceTimersByTimeAsync(1)
+    // clip 1 is still the loaded clip; nothing was marked failed or reloaded
+    expect(ws.instance.load).toHaveBeenCalledTimes(2)
+    ws.emit('ready')
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1), takes: [take('2', 2), take('1', 1)], position: 4 })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.setTime).toHaveBeenLastCalledWith(4)
+  })
+})

@@ -1,4 +1,6 @@
+import { readdirSync } from 'node:fs'
 import * as fs from 'node:fs/promises'
+import * as http from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -19,6 +21,15 @@ const idle: StudioState = {
   instruments: undefined,
   projectName: undefined,
   helper: undefined,
+}
+
+/** Open descriptors of this process, or 0 where /proc is not available. */
+const openFdCount = () => {
+  try {
+    return readdirSync('/proc/self/fd').length
+  } catch {
+    return 0
+  }
 }
 
 const makeService = () => {
@@ -159,6 +170,38 @@ describe('createStudioServer', () => {
     })
     expect((await fetch(`${server.url}/clips/1.wav`)).status).toBe(404)
     expect((await fetch(`${server.url}/`)).status).toBe(200)
+  })
+
+  it.skipIf(!openFdCount())('closes the mix file when the client leaves before the stream starts', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clip-'))
+    const file = path.join(dir, 'mix.wav')
+    await fs.writeFile(file, Buffer.alloc(1024))
+    try {
+      const service = makeService()
+      // the lookup answers only after the client has gone
+      server = await createStudioServer({
+        service,
+        port: 0,
+        clipFile: () =>
+          new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(file)
+            }, 20)
+          }),
+      })
+      const before = openFdCount()
+      for (let i = 0; i < 10; i += 1) {
+        const request = http.get(`${server.url}/clips/1.wav`)
+        request.on('error', () => undefined)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        request.destroy()
+        await new Promise((resolve) => setTimeout(resolve, 40))
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(openFdCount()).toBeLessThanOrEqual(before)
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
   })
 
   it('refuses a mix path that is not a regular file', async () => {
