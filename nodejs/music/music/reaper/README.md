@@ -44,6 +44,10 @@ Two virtual devices carry what the piano's own outputs never see:
 - **BlackHole 2ch** for audio (free, existingsoftware.com/blackhole or `brew install
 blackhole-2ch`). The app plays sound-board samples through it, and it joins the
   aggregate device so REAPER can record it.
+  Check the Master track's hardware output (ROUTE on the master) goes to the piano's or
+  Scarlett's pair: an aggregate numbers its channels in the order its devices were added, and
+  REAPER's default output 1/2 is BlackHole when BlackHole came first, which loops the master
+  straight back into the Samples track.
 
 Touch input on macOS usually needs the monitor vendor's driver or a third-party
 one such as UPDD. Plug-and-play touch is a Windows thing.
