@@ -23,6 +23,11 @@ local DEFAULTS = {
   head_seconds = 0.5,
   tail_seconds = 5,
 
+  -- Trimming looks at everything recorded, not only the activity sources: every recorded
+  -- audio file is scanned for sound above this level, so a part sung before the piano comes
+  -- in (or after it stops) is kept. Set it above the mic's room noise.
+  trim_audio_db = -40,
+
   -- Inputs that count as "someone is playing". Any one of them keeps the take alive.
   --   { type = "midi",  device = "<substring of the MIDI input device name>" }
   --       Any note-on from that device. Empty string matches every enabled device.
@@ -77,7 +82,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-25.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-25.2" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -183,11 +188,19 @@ local function pollMidiActivity(deviceFilter)
   return latest
 end
 
-local function pollAudioActivity(trackName, thresholdDb)
+local audioAbove = {} -- per track: whether the meter was above the threshold last tick
+
+-- While recording, sound above the threshold counts every tick (that is what the silence
+-- timer needs). While idle only a crossing counts, so steady room noise on a mic cannot hold
+-- the studio "busy" forever.
+local function pollAudioActivity(trackName, thresholdDb, edgeOnly)
   local track = findTrack(trackName)
   if track == nil then return nil end
   local peak = math.max(reaper.Track_GetPeakInfo(track, 0), reaper.Track_GetPeakInfo(track, 1))
-  if toDb(peak) > thresholdDb then
+  local above = toDb(peak) > thresholdDb
+  local wasAbove = audioAbove[trackName] == true
+  audioAbove[trackName] = above
+  if above and (not edgeOnly or not wasAbove) then
     return reaper.GetPlayPosition()
   end
   return nil
@@ -197,12 +210,13 @@ end
 -- firstActivity (project time) along.
 local function pollActivity()
   local seen = false
+  local recording = isRecording()
   for _, source in ipairs(CONFIG.activity) do
     local at = nil
     if source.type == "midi" then
       at = pollMidiActivity(source.device or "")
     elseif source.type == "audio" then
-      at = pollAudioActivity(source.track, source.threshold_db or -50)
+      at = pollAudioActivity(source.track, source.threshold_db or -50, not recording)
     end
     if at ~= nil then
       seen = true
@@ -503,7 +517,8 @@ local function timestampLabel()
   local t = os.date("*t")
   local hour12 = t.hour % 12
   if hour12 == 0 then hour12 = 12 end
-  return string.format("%s %d, %02d:%02d %s", os.date("%b"), t.day, hour12, t.min, t.hour < 12 and "AM" or "PM")
+  local months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
+  return string.format("%s %d, %02d:%02d %s", months[t.month], t.day, hour12, t.min, t.hour < 12 and "AM" or "PM")
 end
 
 local function near(a, b)
@@ -594,7 +609,11 @@ local function recordClip(number, label, first, last, items, stoppedBy, regionId
       if name:sub(1, #dir) == dir then name = name:sub(#dir + 2) end
       file = name
     end
-    sources[#sources + 1] = { track = trackName, file = file, itemStart = reaper.GetMediaItemInfo_Value(item, "D_POSITION") }
+    -- where the file itself begins in project time (an item trimmed at the head starts later
+    -- than its file); the importer places stems from this
+    local itemStart = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+    if take ~= nil then itemStart = itemStart - reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") end
+    sources[#sources + 1] = { track = trackName, file = file, itemStart = itemStart }
   end
   lib.clips[tostring(number)] = {
     number = number,
@@ -731,6 +750,46 @@ local function clipItems(region)
   return items
 end
 
+-- The instrument is chosen before Record is pressed, so its program change and bank select
+-- sit in an earlier MIDI item (or earlier in this one). The last of each per channel from
+-- before the region start is replayed at its start, bank MSB, then LSB, then program.
+local carried = {}
+local function noteInstrumentEvent(chan, msg, a, b, seconds)
+  if msg == 0xC0 or (msg == 0xB0 and (a == 0 or a == 32)) then
+    local key = string.format("%d:%d:%d", chan, msg, msg == 0xB0 and a or 0)
+    if carried[key] == nil or seconds >= carried[key].seconds then
+      local order = msg == 0xC0 and -1 or (a == 0 and -3 or -2)
+      local bytes = msg == 0xC0 and string.char(msg | chan, a) or string.char(msg | chan, a, b)
+      carried[key] = { seconds = seconds, bytes = bytes, order = order }
+    end
+  end
+end
+
+local function carryInstrumentFrom(track, regionStart, events)
+  carried = {}
+  for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+    local item = reaper.GetTrackMediaItem(track, i)
+    local take = reaper.GetActiveTake(item)
+    -- an item trimmed at the head still holds the events before its visible start
+    if take ~= nil and reaper.TakeIsMIDI(take)
+      and reaper.GetMediaItemInfo_Value(item, "D_POSITION") - reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") < regionStart then
+      do
+        local _, _, ccs = reaper.MIDI_CountEvts(take)
+        for j = 0, ccs - 1 do
+          local _, _, muted, ppqpos, msg, chan, a, b = reaper.MIDI_GetCC(take, j)
+          if not muted then
+            local seconds = reaper.MIDI_GetProjTimeFromPPQPos(take, ppqpos)
+            if seconds < regionStart then noteInstrumentEvent(chan, msg, a, b, seconds) end
+          end
+        end
+      end
+    end
+  end
+  for _, event in pairs(carried) do
+    events[#events + 1] = { tick = 0, order = event.order, bytes = event.bytes }
+  end
+end
+
 -- Times are taken in seconds from the project and written as ticks at one fixed tempo (the
 -- tempo at the region start), so the file is exact whatever the project's tempo map does; the
 -- importer places events by seconds from that same tempo.
@@ -760,24 +819,14 @@ local function exportMidi(entry, region)
           events[#events + 1] = { tick = tickAt(math.min(endppq, limit)), order = 1, bytes = string.char(0x80 | chan, pitch, 0) }
         end
       end
-      -- the instrument is usually chosen before the take starts: the last program change and
-      -- bank select per channel from before the region are replayed at its start
-      local before = {}
       for i = 0, ccs - 1 do
         local _, _, muted, ppqpos, msg, chan, a, b = reaper.MIDI_GetCC(take, i)
-        if not muted then
+        if not muted and ppqpos >= origin and ppqpos < limit then
           local bytes = (msg == 0xC0 or msg == 0xD0) and string.char(msg | chan, a) or string.char(msg | chan, a, b)
-          if ppqpos >= origin and ppqpos < limit then
-            events[#events + 1] = { tick = tickAt(ppqpos), order = 0, bytes = bytes } -- controllers before the notes they shape
-          elseif ppqpos < origin and (msg == 0xC0 or (msg == 0xB0 and (a == 0 or a == 32))) then
-            local key = string.format("%d:%d:%d", chan, msg, msg == 0xB0 and a or 0)
-            if before[key] == nil or ppqpos >= before[key].ppqpos then before[key] = { ppqpos = ppqpos, bytes = bytes } end
-          end
+          events[#events + 1] = { tick = tickAt(ppqpos), order = 0, bytes = bytes } -- controllers before the notes they shape
         end
       end
-      for _, carried in pairs(before) do
-        events[#events + 1] = { tick = 0, order = -1, bytes = carried.bytes }
-      end
+      carryInstrumentFrom(reaper.GetMediaItem_Track(item), region.start, events)
     end
   end
   if not any or #events == 0 then return nil end
@@ -853,7 +902,10 @@ local function syncLibrary()
   -- entries follow their regions: by the id the watcher remembered, else by the number in
   -- the name (an older entry, or a region renumbered by hand)
   for key, entry in pairs(lib.clips) do
-    local region = (entry.regionId and byId[entry.regionId]) or byNumber[entry.number]
+    local byIdMatch = entry.regionId and byId[entry.regionId] or nil
+    -- an id can be reused after a deletion; trust it only when the name agrees (or has no number)
+    if byIdMatch ~= nil and byIdMatch.number ~= nil and byIdMatch.number ~= entry.number then byIdMatch = nil end
+    local region = byIdMatch or byNumber[entry.number]
     if region ~= nil and matched[region.id] == nil then
       matched[region.id] = entry
       if entry.regionId ~= region.id or entry.label ~= region.label or not near(entry.start, region.start) or not near(entry["end"], region["end"]) then
@@ -926,7 +978,7 @@ local function syncOutbox(regions)
     local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
     -- a failed render is retried later, not every tick: 10 minutes, then 20, 40...
     local attempts = render and render.attempts or 0
-    local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(attempts, 6))
+    local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(math.max(attempts - 1, 0), 6))
     if (mixMissing or midiMissing or stale) and needed and region ~= nil and not backedOff then
       local mix = json.null
       if CONFIG.render then mix = renderMix(entry, region) or json.null end
@@ -962,7 +1014,7 @@ local function whileIdle()
   -- REAPER may create the items of a new recording a tick before it reports the record state;
   -- a count that has held for two idle ticks is settled and safe to snapshot
   local count = reaper.CountMediaItems(0)
-  if count ~= itemsBeforeCount then
+  if count ~= itemsBeforeCount and reaper.GetPlayState() == 0 then
     if count == pendingCount then
       itemsBefore = snapshotItems()
       itemsBeforeCount = count
@@ -1018,6 +1070,39 @@ local function newItems()
   return items
 end
 
+-- First and last moment (project time) a recorded audio item's file has sound above
+-- trim_audio_db, from REAPER's peak data; nil when it has none or the peaks are not built yet.
+local function audioExtent(item)
+  local take = reaper.GetActiveTake(item)
+  if take == nil or reaper.TakeIsMIDI(take) then return nil, nil end
+  local source = reaper.GetMediaItemTake_Source(take)
+  if source == nil then return nil, nil end
+  local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  local offset = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+  local channels = math.max(1, math.floor(reaper.GetMediaSourceNumChannels(source) or 1))
+  local rate = 20 -- peak samples per second: 50 ms resolution is plenty for a trim
+  local count = math.max(1, math.floor(len * rate))
+  local buffer = reaper.new_array(count * channels * 2)
+  buffer.clear()
+  local got = reaper.PCM_Source_GetPeaks(source, rate, offset, channels, count, 0, buffer)
+  local samples = got & 0xFFFFF
+  if samples == 0 then return nil, nil end
+  local threshold = 10 ^ (CONFIG.trim_audio_db / 20)
+  local values = buffer.table()
+  local first, last = nil, nil
+  -- layout: a block of maxima then a block of minima, each channel-interleaved per sample
+  for i = 1, #values do
+    if math.abs(values[i]) > threshold then
+      local index = ((i - 1) % (samples * channels)) // channels
+      if first == nil or index < first then first = index end
+      if last == nil or index > last then last = index end
+    end
+  end
+  if first == nil then return nil, nil end
+  return pos + first / rate, pos + (last + 1) / rate
+end
+
 -- Returns true once the take is finalized, false while still waiting for REAPER to commit the
 -- recorded items (it can report the transport stopped a moment before they exist).
 local function onRecordingFinished()
@@ -1038,11 +1123,22 @@ local function onRecordingFinished()
     last = math.max(last, pos + len)
   end
 
-  -- Trim the quiet head and tail, only when an activity source actually saw the take: with no
-  -- activity detected at all there is nothing to trim against, and the audio must not be cut.
-  local sawActivity = firstActivity ~= nil
+  -- Sound in the recorded files widens the trim window: the activity sources may only watch
+  -- the piano, and a part sung alone must survive
+  local soundStart, soundEnd = firstActivity, firstActivity ~= nil and lastActivity or nil
+  for _, item in ipairs(items) do
+    local ok, from, to = pcall(audioExtent, item)
+    if ok and from ~= nil then
+      if soundStart == nil or from < soundStart then soundStart = from end
+      if soundEnd == nil or to > soundEnd then soundEnd = to end
+    end
+  end
+
+  -- Trim the quiet head and tail, only when something actually saw the take: with nothing
+  -- detected at all there is nothing to trim against, and the audio must not be cut.
+  local sawActivity = soundStart ~= nil
   if CONFIG.trim_silence and sawActivity then
-    local headCut = firstActivity - CONFIG.head_seconds
+    local headCut = soundStart - CONFIG.head_seconds
     if headCut > first then
       for _, item in ipairs(items) do
         local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
@@ -1059,7 +1155,7 @@ local function onRecordingFinished()
       end
       first = headCut
     end
-    local cut = math.max(lastActivity + CONFIG.tail_seconds, first + 1)
+    local cut = math.max(soundEnd + CONFIG.tail_seconds, first + 1)
     if cut < last then
       for _, item in ipairs(items) do
         local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
@@ -1067,6 +1163,17 @@ local function onRecordingFinished()
         if pos + len > cut then
           reaper.SetMediaItemInfo_Value(item, "D_LENGTH", math.max(cut - pos, 0.1))
         end
+      end
+      last = cut
+    end
+  elseif CONFIG.trim_silence and stoppedBy == "silence" then
+    -- the detector worked and saw nothing: keep a short stub rather than minutes of silence
+    local cut = math.max(recStart + CONFIG.tail_seconds, first + 1)
+    if cut < last then
+      for _, item in ipairs(items) do
+        local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+        local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        if pos + len > cut then reaper.SetMediaItemInfo_Value(item, "D_LENGTH", math.max(cut - pos, 0.1)) end
       end
       last = cut
     end
