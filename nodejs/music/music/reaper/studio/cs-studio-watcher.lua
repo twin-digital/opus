@@ -85,7 +85,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-26.2" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-26.3" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 
 -- Only one watcher may run, or every take gets a region per copy. The newest started wins:
@@ -606,10 +606,10 @@ local function clipEntry(number)
   return lib and lib.clips[tostring(number)] or nil
 end
 
--- Called at finalize with the new items, so the entry knows its source files and how it ended.
-local function recordClip(number, label, first, last, items, stoppedBy, regionId)
-  local lib = loadLibrary()
-  if lib == nil then return end
+-- A clip's sources: for each item, its track, its file (relative to the project; null for
+-- MIDI), and where the file itself begins in project time (an item trimmed at the head starts
+-- later than its file); the importer places stems from this.
+local function describeSources(items)
   local sources = {}
   for _, item in ipairs(items) do
     local track = reaper.GetMediaItem_Track(item)
@@ -623,12 +623,31 @@ local function recordClip(number, label, first, last, items, stoppedBy, regionId
       if name:sub(1, #dir) == dir then name = name:sub(#dir + 2) end
       file = name
     end
-    -- where the file itself begins in project time (an item trimmed at the head starts later
-    -- than its file); the importer places stems from this
     local itemStart = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
     if take ~= nil then itemStart = itemStart - reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") end
     sources[#sources + 1] = { track = trackName, file = file, itemStart = itemStart }
   end
+  return sources
+end
+
+-- The items that sound within a region: what a clip made outside the watcher (or before the
+-- library) is made of.
+local function itemsWithin(start, stop)
+  local items = {}
+  for i = 0, reaper.CountMediaItems(0) - 1 do
+    local item = reaper.GetMediaItem(0, i)
+    local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+    local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+    if pos < stop and pos + len > start then items[#items + 1] = item end
+  end
+  return items
+end
+
+-- Called at finalize with the new items, so the entry knows its source files and how it ended.
+local function recordClip(number, label, first, last, items, stoppedBy, regionId)
+  local lib = loadLibrary()
+  if lib == nil then return end
+  local sources = describeSources(items)
   lib.clips[tostring(number)] = {
     number = number,
     regionId = regionId,
@@ -954,6 +973,15 @@ local function syncLibrary()
         entry.regionId, entry.label, entry.start, entry["end"] = region.id, region.label, region.start, region["end"]
         changed = true
       end
+      -- an entry that never learned its files (from before the library, or made by hand) gets
+      -- them from the items under its region, so the importer has stems for it
+      if type(entry.sources) ~= "table" or #entry.sources == 0 then
+        local sources = describeSources(itemsWithin(region.start, region["end"]))
+        if #sources > 0 then
+          entry.sources = sources
+          changed = true
+        end
+      end
     else
       -- the region is gone: its entry and outbox files go with it
       if entry.render ~= json.null and entry.render ~= nil then removeOutboxFiles(entry.render.base) end
@@ -967,7 +995,7 @@ local function syncLibrary()
     if matched[region.id] == nil and lib.clips[tostring(number)] == nil then
       lib.clips[tostring(number)] = { number = number, regionId = region.id, label = region.label, createdAt = localNow(),
         start = region.start, ["end"] = region["end"], starred = false, archived = false, stoppedBy = "unknown",
-        sources = {}, render = json.null }
+        sources = describeSources(itemsWithin(region.start, region["end"])), render = json.null }
       matched[region.id] = lib.clips[tostring(number)]
       changed = true
     end

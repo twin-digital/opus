@@ -108,7 +108,9 @@ What the watcher does after each recording stops:
 Beside the project, the watcher keeps `cs-studio-library.json`: one entry per clip with its
 number, label, bounds, when it was made, how it stopped (user, silence, cap), the source
 file per track, and its render record. It is the source of truth for everything about a clip
-that is not "where it sits on the timeline", which stays with the region.
+that is not "where it sits on the timeline", which stays with the region. A region the watcher
+did not make (from before the library, or by hand) gets an entry on the next idle pass, with
+its source files found from the items under it.
 
 While the studio is idle, the watcher fills the Outbox (`~/Music/Studio Outbox` by default),
 one folder per project:
