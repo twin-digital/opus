@@ -308,8 +308,10 @@ function ensureWave() {
   // tapping or dragging on the waveform moves playback there (the page never plays audio
   // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
   // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
-  wave.on('interaction', (seconds) => { scrubTo(seconds) })
-  wave.on('drag', (relative) => { if (state.playingTake) scrubTo(relative * state.playingTake.duration) })
+  // positions are mapped by fraction of the clip, not seconds: the rendered mix can be a little
+  // shorter or longer than the region (it is re-rendered after a trim) and must never desync
+  wave.on('interaction', (seconds) => { scrubTo(waveFraction(seconds)) })
+  wave.on('drag', (relative) => { scrubTo(relative) })
   return wave
 }
 
@@ -318,21 +320,33 @@ let scrubTimer = null
 let scrubHoldUntil = 0    // REAPER's position is ignored until this time
 const SCRUB_INTERVAL = 120
 
+function waveFraction(seconds) {
+  const total = wave && wave.getDuration ? wave.getDuration() : 0
+  return total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0
+}
+
+function showCursorAt(fraction) {
+  if (!wave || !waveReady) return
+  const total = wave.getDuration()
+  if (total > 0) wave.setTime(Math.min(total, Math.max(0, fraction * total)))
+}
+
 function sendScrub() {
   scrubTimer = null
   if (scrubPending === null || !state.playingTake) return
-  const at = scrubPending
+  const at = scrubPending * state.playingTake.duration
   scrubPending = null
   fetch('/actions/seek/' + encodeURIComponent(state.playingTake.id), {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
   }).catch(() => {})
 }
 
-function scrubTo(seconds) {
+function scrubTo(fraction) {
   if (!state.playingTake) return
+  fraction = Math.min(1, Math.max(0, fraction))
   scrubHoldUntil = Date.now() + 400
-  if (wave) wave.setTime(seconds)
-  scrubPending = seconds
+  showCursorAt(fraction)
+  scrubPending = fraction
   if (scrubTimer === null) scrubTimer = setTimeout(sendScrub, SCRUB_INTERVAL)
 }
 
@@ -379,7 +393,7 @@ function renderStage() {
   if (playing) {
     const take = state.playingTake
     loadWaveFor(take)
-    if (waveReady && wave && take.duration > 0 && Date.now() >= scrubHoldUntil) wave.setTime(Math.min(state.position, take.duration))
+    if (take.duration > 0 && Date.now() >= scrubHoldUntil) showCursorAt(state.position / take.duration)
     $('progressFill').style.width = (take.duration > 0 ? (state.position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(state.position) + ' / ' + fmt(take.duration)

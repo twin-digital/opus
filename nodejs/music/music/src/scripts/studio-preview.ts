@@ -231,10 +231,25 @@ const syntheticClip = async (seconds: number): Promise<string> => {
 
 const { reaperUrl } = getConfig()
 const fake = reaperUrl === undefined
-const clip = fake ? await syntheticClip(30) : undefined
+const service = fake ? makeFakeStudio() : await makeRealStudio(reaperUrl)
+// one synthetic file per clip length, so the waveform is as long as the clip it stands for
+const clips = new Map<number, Promise<string>>()
+const clipFor = (id: string) => {
+  const take = service.getState().takes.find((candidate) => candidate.id === id)
+  if (take === undefined) {
+    return Promise.resolve(undefined)
+  }
+  const seconds = Math.max(1, Math.round(take.duration * 10) / 10)
+  let file = clips.get(seconds)
+  if (file === undefined) {
+    file = syntheticClip(seconds)
+    clips.set(seconds, file)
+  }
+  return file
+}
 const server = await createStudioServer({
-  service: fake ? makeFakeStudio() : await makeRealStudio(reaperUrl),
-  clipFile: fake ? () => Promise.resolve(clip) : undefined,
+  service,
+  clipFile: fake ? clipFor : undefined,
   port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
   host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
 })
