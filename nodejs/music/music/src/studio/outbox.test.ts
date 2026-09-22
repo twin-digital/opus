@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { defaultOutboxDir, findClipMix, mixContentType, safeName } from './outbox.js'
 
@@ -12,7 +12,12 @@ describe('outbox', () => {
   })
 
   it('defaults to ~/Music/Studio Outbox', () => {
-    expect(defaultOutboxDir('/Users/kid')).toBe(path.join('/Users/kid', 'Music', 'Studio Outbox'))
+    vi.stubEnv('MUSIC_STUDIO_OUTBOX', '')
+    try {
+      expect(defaultOutboxDir('/Users/kid')).toBe(path.join('/Users/kid', 'Music', 'Studio Outbox'))
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('sanitizes names like the watcher, ASCII whitespace only', () => {

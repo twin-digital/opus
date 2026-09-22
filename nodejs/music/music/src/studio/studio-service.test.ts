@@ -231,6 +231,47 @@ describe('StudioService', () => {
     expect(seeks).toEqual(['SET/POS/2.000', 'SET/POS/5.000']) // the middle one was superseded
   })
 
+  it('drops a waiting seek when a stop or record follows it', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const first = service.seekTake('1', 2)
+    const second = service.seekTake('1', 5)
+    const stop = service.stopTransport()
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, second, stop])
+
+    expect(reaper.requests.filter((r) => r.startsWith('SET/POS/'))).toEqual(['SET/POS/2.000'])
+    expect(reaper.playState).toBe(0)
+    expect(service.getState().transport).toBe('stopped')
+  })
+
+  it('keeps the take when a poll reads a hair before its start', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('2')
+    reaper.position = 11.9
+    await service.refresh()
+    expect(service.getState().playingTake?.id).toBe('2')
+    reaper.position = 22
+    await service.refresh()
+    expect(reaper.requests.at(-1)).toBe('1016') // still stops at its end
+  })
+
+  it('counts a re-record from its own start', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.record()
+    reaper.position = 30
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(8)
+    await service.record() // restarts at 22 again
+    expect(service.getState().recordingElapsed).toBe(0)
+  })
+
   it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {
     const { reaper, service } = makeService({ regions: twoTakes })
     await service.refresh()

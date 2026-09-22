@@ -223,8 +223,13 @@ export const createStudioServer = async ({
     const clip = request.method === 'GET' ? CLIP_PATH.exec(url.pathname) : null
     if (clip !== null) {
       serveClip(clip.at(1) ?? '', response).catch((error: unknown) => {
-        // nothing below may take the process down: it also hosts the MIDI echo
-        log.warn(error, `Cannot serve ${url.pathname}.`)
+        // nothing below may take the process down: it also hosts the MIDI echo. The page drops
+        // a download whenever it moves to another clip, which is routine, not a failure
+        if (response.destroyed) {
+          log.debug(`Client left while downloading ${url.pathname}.`)
+        } else {
+          log.warn(error, `Cannot serve ${url.pathname}.`)
+        }
         if (!response.headersSent) {
           send(response, 404, 'Not found')
         } else {

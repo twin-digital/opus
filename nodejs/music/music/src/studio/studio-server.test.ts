@@ -179,16 +179,15 @@ describe('createStudioServer', () => {
     try {
       const service = makeService()
       // the lookup answers only after the client has gone
-      server = await createStudioServer({
-        service,
-        port: 0,
-        clipFile: () =>
-          new Promise((resolve) => {
+      const clipFile = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
             setTimeout(() => {
               resolve(file)
             }, 20)
           }),
-      })
+      )
+      server = await createStudioServer({ service, port: 0, clipFile })
       const before = openFdCount()
       for (let i = 0; i < 10; i += 1) {
         const request = http.get(`${server.url}/clips/1.wav`)
@@ -198,9 +197,41 @@ describe('createStudioServer', () => {
         await new Promise((resolve) => setTimeout(resolve, 40))
       }
       await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(clipFile).toHaveBeenCalledTimes(10) // every request reached the file
       expect(openFdCount()).toBeLessThanOrEqual(before)
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('finds a clip mix in the Outbox by project and clip number', async () => {
+    const outbox = await fs.mkdtemp(path.join(os.tmpdir(), 'outbox-'))
+    const dir = path.join(outbox, 'Piano Corner')
+    await fs.mkdir(dir)
+    await fs.writeFile(path.join(dir, '20260921 - 0001 - clip.wav'), Buffer.from('RIFF....'))
+    await fs.writeFile(
+      path.join(dir, 'manifest.json'),
+      JSON.stringify({
+        clips: { '1': { number: 1, render: { mix: '20260921 - 0001 - clip.wav' } }, '2': { number: 2, render: null } },
+      }),
+    )
+    try {
+      const service = makeService()
+      service.getState.mockReturnValue({
+        ...idle,
+        projectName: 'Piano: Corner',
+        takes: [
+          { id: 'r1', name: 'Clip 1', number: 1, label: '', start: 0, end: 10, duration: 10 },
+          { id: 'r2', name: 'Clip 2', number: 2, label: '', start: 20, end: 30, duration: 10 },
+        ],
+      })
+      server = await createStudioServer({ service, port: 0, outboxDir: outbox })
+      const hit = await fetch(`${server.url}/clips/r1.wav`)
+      expect(hit.status).toBe(200)
+      expect(await hit.text()).toBe('RIFF....')
+      expect((await fetch(`${server.url}/clips/r2.wav`)).status).toBe(404)
+    } finally {
+      await fs.rm(outbox, { recursive: true, force: true })
     }
   })
 

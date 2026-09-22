@@ -157,6 +157,7 @@ export class StudioService {
   private runId = 0
   /** The latest seek asked for while an earlier one is still settling; only it is sent. */
   private queuedSeek: { id: string; atSeconds: number } | undefined
+  private seekEpoch = 0
   private seeking = false
 
   constructor({
@@ -204,11 +205,14 @@ export class StudioService {
   /** Starts a new take after the last one (or at the project end when there are none). */
   async record(): Promise<void> {
     const lastEnd = this.state.takes.reduce((end, take) => Math.max(end, take.end), -Infinity)
+    this.dropSeeks()
+    this.recordingStartedAt = undefined
     this.setPlayingTake(undefined)
     await this.command(() => this.client.recordAt(lastEnd === -Infinity ? undefined : lastEnd + TAKE_GAP_SECONDS))
   }
 
   async stopTransport(): Promise<void> {
+    this.dropSeeks()
     this.setPlayingTake(undefined)
     await this.command(() => this.client.runActions(ReaperActions.stop))
   }
@@ -238,17 +242,23 @@ export class StudioService {
       return
     }
     this.seeking = true
+    const epoch = this.seekEpoch
     try {
       let next: { id: string; atSeconds: number } | undefined = { id, atSeconds }
-      while (next !== undefined) {
+      while (next !== undefined && epoch === this.seekEpoch) {
         await this.seekOnce(next.id, next.atSeconds)
         next = this.queuedSeek
         this.queuedSeek = undefined
       }
     } finally {
       this.seeking = false
-      this.queuedSeek = undefined
     }
+  }
+
+  /** A stop or record makes a waiting scrub moot; it must not replay afterwards. */
+  private dropSeeks() {
+    this.queuedSeek = undefined
+    this.seekEpoch += 1
   }
 
   private async seekOnce(id: string, atSeconds: number): Promise<void> {
@@ -402,10 +412,11 @@ export class StudioService {
     // the take this service started is believed only while REAPER is playing inside it; past its
     // end playback is stopped, and anywhere else REAPER is doing something of its own
     const { playingTake } = this.state
+    // the first poll after a play or a seek to the start can read a hair before it
     const inside =
       playingTake !== undefined &&
       transport === 'playing' &&
-      status.position >= playingTake.start &&
+      status.position >= playingTake.start - 0.25 &&
       status.position < playingTake.end
     const stillPlaying = playingTake !== undefined && (stale || inside) ? playingTake : undefined
     const reachedEnd =

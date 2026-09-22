@@ -317,9 +317,10 @@ const waveform = {
       normalize: true,
     })
     this.ws.on('ready', () => { this.ready = true; scheduleRender() })
-    // a media-element failure (an unreadable file) never settles load(); the element's src
-    // always belongs to the newest load
-    this.ws.on('error', (error) => { if (!error || error.name !== 'AbortError') this.failed(this.clipId) })
+    // a media-element failure (an unreadable file) never settles load() and is reported here
+    // as a MediaError; the element's src always belongs to the newest load. Errors from load()
+    // itself are Error instances and reach the promise of the load they belong to
+    this.ws.on('error', (error) => { if (!(error instanceof Error) || error.message === 'Media error') this.failed(this.clipId) })
     // tapping or dragging moves playback there (the page never plays audio itself). Positions
     // are fractions of the clip, not seconds: the mix can be a little shorter or longer than
     // the region (it is re-rendered after a trim) and must never desync
@@ -345,6 +346,7 @@ const waveform = {
     this.ready = false
     this.failedAt[id] = Date.now()
     this.clipId = null
+    if (this.ws) this.ws.empty() // never another clip's waveform under this one's title
     scheduleRender()
   },
   showAt(fraction) {
@@ -409,10 +411,12 @@ const scrub = {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: fraction * take.duration }),
     }).catch(() => {})
   },
-  // whether REAPER's reported fraction may drive the cursor now
-  accept(fraction) {
+  // whether REAPER's reported fraction may drive the cursor now: once it echoes the target
+  // (within a quarter second, or 2% of a long clip) or the cap passes
+  accept(fraction, duration) {
     if (this.pending !== null || this.timer !== null) return false
-    if (this.target !== null && (Math.abs(fraction - this.target) < 0.02 || Date.now() >= this.holdUntil)) {
+    const near = Math.abs(fraction - this.target) * duration < Math.max(0.25, 0.02 * duration)
+    if (this.target !== null && (near || Date.now() >= this.holdUntil)) {
       this.target = null
       this.holdUntil = 0
     }
@@ -460,7 +464,7 @@ function renderStage() {
     const position = playing ? state.position : 0
     waveform.loadFor(take.id)
     const fraction = take.duration > 0 ? position / take.duration : 0
-    if (take.duration > 0 && scrub.accept(fraction)) waveform.showAt(fraction)
+    if (take.duration > 0 && scrub.accept(fraction, take.duration)) waveform.showAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(position) + ' / ' + fmt(take.duration)

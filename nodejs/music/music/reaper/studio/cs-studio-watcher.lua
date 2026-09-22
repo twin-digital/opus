@@ -992,6 +992,7 @@ end
 -- A short clip is rendered as soon as it is finalized, without waiting for idle.
 local function renderClipNow(number)
   if not (CONFIG.render or CONFIG.midi_export) or not CONFIG.render_now_seconds then return end
+  if reaper.GetPlayState() ~= 0 then return end -- a render halts the transport; the idle pass will get it
   local lib = loadLibrary()
   local entry = lib and lib.clips[tostring(number)] or nil
   if entry == nil then return end

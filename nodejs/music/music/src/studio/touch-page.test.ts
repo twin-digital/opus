@@ -26,6 +26,7 @@ const makeWaveSurfer = () => {
     load: vi.fn(() => new Promise<void>(() => undefined)),
     getDuration: vi.fn(() => 30),
     setTime: vi.fn(),
+    empty: vi.fn(),
   }
   const emit = (event: string, ...args: unknown[]) => {
     for (const handler of handlers[event] ?? []) {
@@ -159,7 +160,8 @@ describe('touch page', () => {
   it('retries a clip whose media failed to load, after a pause', () => {
     selectNewClip()
     expect(ws.instance.load).toHaveBeenCalledTimes(1)
-    ws.emit('error', new Error('MEDIA_ERR_SRC_NOT_SUPPORTED')) // load() never settles for these
+    // the element's MediaError, not an Error: load() never settles for these
+    ws.emit('error', { code: 4, message: 'MEDIA_ERR_SRC_NOT_SUPPORTED' })
     vi.advanceTimersByTime(1000)
     push(idle)
     push({ ...idle, takes: [take('2', 2), take('1', 1)] })
@@ -185,6 +187,7 @@ describe('touch page', () => {
     expect(ws.instance.load).toHaveBeenLastCalledWith('/clips/1.wav')
     const abort = new Error('aborted')
     abort.name = 'AbortError'
+    ws.emit('error', abort) // the library reports a load's failure both ways
     rejectFirst(abort)
     await vi.advanceTimersByTimeAsync(1)
     // clip 1 is still the loaded clip; nothing was marked failed or reloaded
@@ -193,5 +196,42 @@ describe('touch page', () => {
     push({ ...idle, transport: 'playing', playingTake: take('1', 1), takes: [take('2', 2), take('1', 1)], position: 4 })
     vi.advanceTimersByTime(1)
     expect(ws.instance.setTime).toHaveBeenLastCalledWith(4)
+    vi.advanceTimersByTime(5000)
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1), takes: [take('2', 2), take('1', 1)], position: 5 })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.load).toHaveBeenCalledTimes(2) // nothing was marked failed, so no reload
+  })
+
+  it('clears the stage of the previous waveform when the new clip has no mix yet', async () => {
+    push({ ...idle, transport: 'playing', playingTake: take('1', 1) })
+    vi.advanceTimersByTime(1)
+    ws.emit('ready')
+    ws.instance.load.mockImplementationOnce(() => Promise.reject(new Error('404')))
+    push(idle)
+    push({ ...idle, takes: [take('2', 2), take('1', 1)] })
+    await vi.advanceTimersByTimeAsync(1)
+    expect(ws.instance.load).toHaveBeenLastCalledWith('/clips/2.wav')
+    expect(ws.instance.empty).toHaveBeenCalled()
+  })
+
+  it('releases the cursor hold on a short clip once REAPER is within a quarter second', () => {
+    push(idle)
+    push({ ...idle, takes: [take('2', 2, 2), take('1', 1)] })
+    vi.advanceTimersByTime(1)
+    ws.instance.getDuration.mockReturnValue(2)
+    ws.emit('ready')
+    ws.emit('click', 0.5)
+    vi.advanceTimersByTime(120)
+    ws.instance.setTime.mockClear()
+    // 1.2 s into a 2 s clip is 0.2 s from the target: close enough
+    push({
+      ...idle,
+      takes: [take('2', 2, 2), take('1', 1)],
+      transport: 'playing',
+      playingTake: take('2', 2, 2),
+      position: 1.2,
+    })
+    vi.advanceTimersByTime(1)
+    expect(ws.instance.setTime.mock.lastCall?.[0]).toBeCloseTo(1.2)
   })
 })
