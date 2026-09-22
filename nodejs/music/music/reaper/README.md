@@ -1,5 +1,11 @@
 # REAPER studio setup
 
+Two machines, two folders here:
+
+- `studio/`: what runs inside REAPER on the studio Mac. The app installs it; nothing to copy.
+- `producer/`: what runs inside REAPER on the machine where clips are reviewed and turned into
+  songs. Installed once by `install-producer.ps1`.
+
 The REAPER side of the piano recording corner. The touch page and the Launchpad
 transport live in `@thrashplay/music`; this folder holds the ReaScript that runs inside
 REAPER and the setup notes for the Mac. Every recording lands as a new item in a normal REAPER
@@ -11,6 +17,8 @@ Launchpad pads         ──▶        StudioService                        │
                                                         cs-studio-watcher.lua (background)
                                                         names, trims, saves each take
 ```
+
+# Studio machine
 
 ## Hardware wiring
 
@@ -81,7 +89,8 @@ changes its hash and trips the check.
 What the watcher does after each recording stops:
 
 - finds the items created during that recording,
-- trims the quiet tail off them (non-destructive: drag the item edge back out to recover it),
+- trims the quiet head (the seconds between pressing Record and the first note) and the
+  quiet tail off them (non-destructive: drag the item edges back out to recover the audio),
 - adds a region `Clip 7 - Sep 17, 04:12 PM` spanning them,
 - moves the edit cursor 2 seconds past the end,
 - saves the project.
@@ -93,17 +102,30 @@ number, label, bounds, when it was made, how it stopped (user, silence, cap), th
 file per track, and its render record. It is the source of truth for everything about a clip
 that is not "where it sits on the timeline", which stays with the region.
 
-While the studio is idle, the watcher fills the Outbox (`~/Music/Studio Outbox` by default):
+While the studio is idle, the watcher fills the Outbox (`~/Music/Studio Outbox` by default),
+one folder per project:
 
-- `<project> - Clip 12 - Twinkle.wav`, the master mix of the region, in the project's
-  current render format (WAV unless you changed it).
-- `<project> - Clip 12 - Twinkle.mid`, the clip's MIDI: each hand on its own channel with
-  the program changes, written by the watcher itself.
-- `<project>.manifest.json`, the library exported next to the files.
+```
+Studio Outbox/
+  Piano Corner 2026/
+    20260922 - 0011 - Clip 11.wav
+    20260922 - 0012 - Twinkle.wav
+    20260922 - 0012 - Twinkle.mid
+    manifest.json
+```
 
-Unnamed clips are `<project> - Clip 12`. A rename moves the files; trimming a region in
-REAPER re-renders it; deleting a region removes its files and its entry. The project name is
-in every file name so rotated projects can share one Outbox.
+- The `.wav` is the master mix of the region, in the project's current render format (WAV
+  unless you changed it), normalized to `normalize_lufs` (-14 LUFS, the level streaming
+  services use) so it plays at a normal volume on a phone however quiet the piano's USB
+  signal is. The recorded files are never changed.
+- The `.mid` is the clip's MIDI: each hand on its own channel with the program changes,
+  written by the watcher itself.
+- `manifest.json` is the library exported next to the files.
+
+File names are the clip's recording date, its number padded to four digits so they sort, and
+its given name, or "Clip 12" when it has none ("Clip 12 (empty)" when nothing was played).
+A rename moves the files; trimming a region in REAPER re-renders it; deleting a region
+removes its files and its entry.
 
 Idle means: the transport is stopped, no key has been pressed and nothing has started or
 stopped for `render_idle_seconds` (30). One clip renders per pass, and the loop re-checks
@@ -200,8 +222,86 @@ toolbar pops in on touch near the top.
 - The level bar shows the loudest track peak so the kid can see it's listening.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
-## Turning takes into songs
+# Producer machine
 
-Everything is normal REAPER material. Select a region, `Time selection: set to
-region`, then render, or copy the items to a fresh project. The MIDI track means
-you can re-voice the piano with any instrument later.
+The Outbox reaches this machine as a mirror (the Inbox), and the studio's REAPER projects
+folder is mounted read-only (see [Getting the Outbox here](#getting-the-outbox-here)).
+
+## Install the producer scripts
+
+From PowerShell, with your two paths:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/twin-digital/opus/main/nodejs/music/music/reaper/producer/install-producer.ps1 -OutFile install-producer.ps1
+powershell -ExecutionPolicy Bypass -File install-producer.ps1 -Inbox "D:\Users\sean\Nextcloud\1 - Projects\Lucas Music\Studio" -Projects "P:\" -MinSeconds 30 -Watch
+```
+
+It downloads `cs-studio-import.lua` and the probe into REAPER's `Scripts\Studio` folder and
+writes `cs-studio-import-config.lua` with the paths. Run it again any time to update; the
+config is rewritten from the parameters you pass. `-MinSeconds` sets the length threshold,
+`-Watch` adds the continuous importer to REAPER's startup script, `-Ref` fetches from a branch
+instead of main, `-ResourcePath` overrides REAPER's resource path.
+
+Once, after the first install: REAPER > Actions > Show action list > New action > Load
+ReaScript, pick `Scripts\Studio\cs-studio-import.lua`. It is then an action you can run,
+or bind to a key.
+
+## Bless: import clips into the open project
+
+A clip is eligible when it was named in the studio (not the default "Clip N"), is at least
+`min_seconds` long (30 by default), and has not been imported into this project before.
+Imports are recorded in the project itself, so deleting a clip's tracks does not bring it
+back.
+
+Open (or create and save) the song project you want the clips in. Run the import action:
+
+1. The console lists the eligible clips: name, project, date, length, `*` for starred ones,
+   and a note on any shorter than the threshold.
+2. A dialog shows the threshold, changeable for this run, and takes an optional list of
+   numbers to import only some. Leave it blank for all of them.
+3. Before anything is made, every chosen clip's files are checked: the stems on the projects
+   share and the MIDI file in the Inbox. A clip with something missing (the mirror has not
+   caught up, the share is not mounted) is skipped for now and reported, not recorded.
+4. For each clip the script copies its stems from the projects share into the song project's
+   media folder (verified copies, never overwriting a different file), so the project is
+   self-contained, and builds a folder track named `0012 - Twinkle` with the stems and the
+   MIDI as children, all at time zero and trimmed to the clip. MIDI timing follows the tempo
+   the file was written at, so it lines up with the stems whatever the song's tempo. Every
+   folder but the first is muted, so the project does not play everything at once. A clip
+   that fails part-way is removed again and left unrecorded. The project is saved.
+
+Where the song project lives, inside Nextcloud or not, is up to you; the stems ride along.
+
+### Continuous import
+
+`cs-studio-import-watch.lua` keeps the importer running: every `watch_seconds` (300) while
+the transport is stopped, it brings new eligible clips into the open project without asking,
+using the configured threshold. It only does this in a project that has had one on-demand
+import, which is the opt-in, and it never saves: the tracks arrive as an undoable edit and are
+kept when you save. Load it from the Actions list to run it for a session, or install
+with `-Watch` to start it whenever REAPER launches.
+
+## Getting the Outbox here
+
+Share the Outbox and the REAPER projects folder from the Mac (System Preferences > Sharing >
+File Sharing, with SMB on; the projects share read-only). On Windows, a scheduled `robocopy`
+mirrors the Outbox share into the Inbox every few minutes:
+
+```bat
+@echo off
+if not exist "\\adept\Studio Outbox" exit /b 0
+robocopy "\\adept\Studio Outbox" "D:\...\Studio" /MIR /R:1 /W:1 /NP /NFL /NDL /XD .stfolder /LOG+:"%LOCALAPPDATA%\studio-sync.log"
+exit /b 0
+```
+
+registered with `schtasks /Create /TN "Studio Outbox sync" /TR "wscript.exe C:\...\studio-sync.vbs" /SC MINUTE /MO 5`,
+where the `.vbs` runs the `.cmd` with no window:
+`CreateObject("WScript.Shell").Run """C:\...\studio-sync.cmd""", 0, False`.
+The guard line keeps `/MIR` from emptying the Inbox when the Mac is asleep. Put the Inbox
+inside a Nextcloud folder and everything in it is backed up until the studio removes it.
+
+## Without the import script
+
+Everything is normal REAPER material. Copy a project folder from the share to a working
+location, open the copy, select a region, and save the selected items as a new project. The
+MIDI track means you can re-voice the piano with any instrument later.

@@ -5,7 +5,9 @@ return {
   -- debug = true,                 -- log each step to REAPER's console
   -- max_take_seconds = 60 * 60,   -- hard cap on take length
   -- silence_seconds = 3 * 60,     -- quiet time before the watcher stops the take
+  -- head_seconds = 0.5,           -- room kept before the first note when trimming
   -- tail_seconds = 5,             -- room left after the last note when trimming
+  -- trim_audio_db = -40,          -- sound in any recorded file above this counts for trimming
   -- activity = {                  -- inputs that count as playing
   --   { type = "midi", device = "IAC" },
   --   { type = "audio", track = "Vocal", threshold_db = -35 },
@@ -14,4 +16,5 @@ return {
   -- render = true,                -- render a mix per clip while idle
   -- midi_export = true,           -- write a .mid per clip
   -- render_idle_seconds = 30,     -- idle before the watcher renders (no keys, no transport change)
+  -- normalize_lufs = -14,         -- loudness of the rendered mix; false to leave it at the project's level
 }

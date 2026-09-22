@@ -22,7 +22,7 @@ export const HelperFiles = {
 /** Where the watcher and its config live under REAPER's resource path. */
 const SCRIPTS_SUBDIR = path.join('Scripts', 'Studio')
 
-const bundledDir = () => new URL('../../reaper/', import.meta.url)
+const bundledDir = () => new URL('../../reaper/studio/', import.meta.url)
 
 /**
  * FNV-1a (32-bit), written the same way as the watcher's Lua copy: no wide multiplies or
