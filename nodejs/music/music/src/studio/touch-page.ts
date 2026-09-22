@@ -29,7 +29,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #dot.play { background: #37d67a; }
   @keyframes pulse { 50% { opacity: 0.25; } }
   #meter { width: 160px; height: 18px; background: #2a2d36; border-radius: 9px; overflow: hidden; }
-  #meterFill { height: 100%; width: 0; background: linear-gradient(90deg, #37d67a, #ffd166 70%, #ff3b3b); transition: width 80ms linear; }
+  #meterFill { height: 100%; width: 0; background: linear-gradient(90deg, #37d67a 0%, #37d67a 70%, #ffd166 70%, #ffd166 90%, #ff3b3b 90%); background-size: 160px 100%; transition: width 80ms linear; }
   /* the stage: waveform or live graph, with the meters standing at its right edge */
   #strip { display: flex; gap: 16px; padding: 0 28px 18px; height: 190px; }
   #stage { flex: 1; position: relative; background: #0d0f14; border-radius: 18px; overflow: hidden; border: 1px solid #23262f; }
@@ -37,13 +37,19 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #live { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
   #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #2a2e3a; display: none; }
   #progressFill { height: 100%; width: 0; background: #37d67a; }
-  #stageTitle { position: absolute; top: 10px; left: 14px; font-size: 18px; font-weight: 600; color: #9aa0ad; pointer-events: none; }
-  #stageTime { position: absolute; top: 10px; right: 14px; font-size: 18px; font-weight: 600; color: #f2f2f2; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #stageTitle, #stageTime { position: absolute; top: 10px; z-index: 3; font-size: 18px; font-weight: 600; padding: 4px 10px; border-radius: 10px; background: rgba(13, 15, 20, 0.8); pointer-events: none; }
+  #stageTitle { left: 12px; color: #d5d8e0; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #stageTime { right: 12px; color: #ffd166; font-variant-numeric: tabular-nums; }
   #meters { display: flex; gap: 10px; align-items: stretch; }
-  .meter { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 46px; }
-  .meter .bar { flex: 1; width: 100%; position: relative; background: #0d0f14; border-radius: 8px; overflow: hidden; border: 1px solid #23262f; }
-  .meter .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(to top, #37d67a 0%, #37d67a 62%, #ffd166 62%, #ffd166 86%, #ff3b3b 86%); background-size: 100% var(--bar-h, 100px); background-position: bottom; }
-  .meter .hold { position: absolute; left: 0; right: 0; height: 3px; background: #fff; bottom: 0; opacity: 0; }
+  .meter { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 34px; }
+  .meter .bar { flex: 1; width: 100%; position: relative; background: #0a0c10; border-radius: 4px; overflow: hidden; border: 1px solid #2a2e3a; }
+  /* the whole scale, dim, so the unlit segments read as a meter and not an empty box */
+  .meter .scale, .meter .fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, #37d67a 0%, #37d67a 70%, #ffd166 70%, #ffd166 90%, #ff3b3b 90%); background-size: 100% var(--bar-h, 100px); background-position: bottom; }
+  .meter .scale { top: 0; opacity: 0.16; }
+  .meter .fill { height: 0; }
+  /* segmentation: a thin dark line every few pixels, over both */
+  .meter .segments { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0 5px, #0a0c10 5px 7px); pointer-events: none; }
+  .meter .hold { position: absolute; left: 0; right: 0; height: 2px; background: #fff; bottom: 0; opacity: 0; z-index: 2; }
   .meter .name { font-size: 13px; color: #9aa0ad; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
   main { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 0 28px 28px; min-height: 0; }
   .buttons { display: flex; flex-direction: column; gap: 24px; }
@@ -294,18 +300,40 @@ function ensureWave() {
     barGap: 2,
     barRadius: 2,
     interact: true,
+    dragToSeek: true,
     normalize: true,
   })
   wave.on('ready', () => { waveReady = true; render() })
   wave.on('error', () => { waveReady = false; waveClipId = null; render() })
-  // a tap on the waveform starts the clip from there (the page never plays audio itself)
-  wave.on('interaction', (seconds) => {
-    if (!state.playingTake) return
-    fetch('/actions/play-take/' + encodeURIComponent(state.playingTake.id), {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: seconds }),
-    }).catch(() => {})
-  })
+  // tapping or dragging on the waveform moves playback there (the page never plays audio
+  // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
+  // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
+  wave.on('interaction', (seconds) => { scrubTo(seconds) })
+  wave.on('drag', (relative) => { if (state.playingTake) scrubTo(relative * state.playingTake.duration) })
   return wave
+}
+
+let scrubPending = null   // latest requested position not yet sent
+let scrubTimer = null
+let scrubHoldUntil = 0    // REAPER's position is ignored until this time
+const SCRUB_INTERVAL = 120
+
+function sendScrub() {
+  scrubTimer = null
+  if (scrubPending === null || !state.playingTake) return
+  const at = scrubPending
+  scrubPending = null
+  fetch('/actions/seek/' + encodeURIComponent(state.playingTake.id), {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
+  }).catch(() => {})
+}
+
+function scrubTo(seconds) {
+  if (!state.playingTake) return
+  scrubHoldUntil = Date.now() + 400
+  if (wave) wave.setTime(seconds)
+  scrubPending = seconds
+  if (scrubTimer === null) scrubTimer = setTimeout(sendScrub, SCRUB_INTERVAL)
 }
 
 function loadWaveFor(take) {
@@ -327,7 +355,7 @@ function drawLive() {
     const level = liveBars[i]
     const x = w - (liveBars.length - i) * barW
     const bh = Math.max(2, level * (h - 30))
-    ctx.fillStyle = level > 0.86 ? '#ff3b3b' : level > 0.62 ? '#ffd166' : '#37d67a'
+    ctx.fillStyle = level > 0.9 ? '#ff3b3b' : level > 0.7 ? '#ffd166' : '#37d67a'
     ctx.fillRect(x, (h - bh) / 2 + 10, Math.max(1, barW - 1), bh)
   }
 }
@@ -351,7 +379,7 @@ function renderStage() {
   if (playing) {
     const take = state.playingTake
     loadWaveFor(take)
-    if (waveReady && wave && take.duration > 0) wave.setTime(Math.min(state.position, take.duration))
+    if (waveReady && wave && take.duration > 0 && Date.now() >= scrubHoldUntil) wave.setTime(Math.min(state.position, take.duration))
     $('progressFill').style.width = (take.duration > 0 ? (state.position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(state.position) + ' / ' + fmt(take.duration)
@@ -372,7 +400,7 @@ function renderMeters() {
     for (const m of meters) {
       const el = document.createElement('div')
       el.className = 'meter'
-      el.innerHTML = '<div class="bar"><div class="fill"></div><div class="hold"></div></div><span class="name"></span>'
+      el.innerHTML = '<div class="bar"><div class="scale"></div><div class="fill"></div><div class="segments"></div><div class="hold"></div></div><span class="name"></span>'
       el.querySelector('.name').textContent = m.name
       box.appendChild(el)
     }
@@ -383,6 +411,7 @@ function renderMeters() {
     const bar = el.querySelector('.bar'), fill = el.querySelector('.fill'), hold = el.querySelector('.hold')
     const hPx = bar.clientHeight
     fill.style.setProperty('--bar-h', hPx + 'px')
+    el.querySelector('.scale').style.setProperty('--bar-h', hPx + 'px')
     fill.style.height = (m.level * 100) + '%'
     const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0 })
     if (m.level >= h.level) { h.level = m.level; h.at = now }

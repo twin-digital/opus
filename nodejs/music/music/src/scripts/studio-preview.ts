@@ -171,6 +171,13 @@ const makeFakeStudio = (): StudioApi => {
       }, 400)
       return Promise.resolve()
     },
+    seekTake: (id, atSeconds) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take !== undefined) {
+        play(take, atSeconds)
+      }
+      return Promise.resolve()
+    },
     reloadHelper: () => Promise.resolve(),
     setInstruments: (selection) => {
       update({ instruments: selection })

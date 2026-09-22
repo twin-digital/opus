@@ -9,7 +9,7 @@ import type { StudioApi, StudioState } from './studio-service.js'
 import { TouchPageHtml } from './touch-page.js'
 import { defaultOutboxDir, findClipMix } from './outbox.js'
 
-const ACTION_PATH = /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+))$/
+const ACTION_PATH = /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+))$/
 
 /** The on-screen keyboard, served from its installed package so the page needs no CDN. */
 /**
@@ -85,6 +85,7 @@ const send = (response: http.ServerResponse, status: number, body = '', type = '
  * - `POST /actions/record | stop | play-latest | play-take/<id>` — the service's actions.
  * - `POST /actions/rename/<id>` with `{"name": "..."}` — relabels a clip.
  * - `POST /actions/play-take/<id>` may carry `{"at": <seconds>}` to start part-way in.
+ * - `POST /actions/seek/<id>` with `{"at": <seconds>}` — moves playback within a clip (scrubbing).
  * - `GET /clips/<id>.wav` — the clip's rendered mix from the Outbox, for the waveform.
  * - `GET /vendor/*` — the on-screen keyboard's script and stylesheet, and the waveform library.
  */
@@ -121,6 +122,7 @@ export const createStudioServer = async ({
     // optional groups are absent for the other actions; .at() keeps that in the type
     const playId = match.at(2)
     const renameId = match.at(3)
+    const seekId = match.at(4)
     switch (action) {
       case 'record':
         return service.record()
@@ -132,6 +134,10 @@ export const createStudioServer = async ({
         if (renameId !== undefined) {
           const { name } = await readJsonBody(request)
           return service.renameTake(decodeURIComponent(renameId), typeof name === 'string' ? name : '')
+        }
+        if (seekId !== undefined) {
+          const { at } = await readJsonBody(request)
+          return service.seekTake(decodeURIComponent(seekId), typeof at === 'number' && Number.isFinite(at) ? at : 0)
         }
         {
           const { at } = await readJsonBody(request)

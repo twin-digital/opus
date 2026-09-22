@@ -77,6 +77,7 @@ export type StudioApi = Pick<
   | 'toggleRecord'
   | 'togglePlayLatest'
   | 'renameTake'
+  | 'seekTake'
   | 'reloadHelper'
   | 'setInstruments'
 >
@@ -219,6 +220,24 @@ export class StudioService {
     const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
     this.setPlayingTake(take)
     await this.command(() => this.client.playFrom(take.start + offset))
+  }
+
+  /**
+   * Moves playback to `atSeconds` into the take. While that take is playing this is a seek
+   * that keeps the transport rolling (REAPER follows a cursor move during playback); otherwise
+   * it starts the take there.
+   */
+  async seekTake(id: string, atSeconds: number): Promise<void> {
+    const take = this.state.takes.find((candidate) => candidate.id === id)
+    if (take === undefined) {
+      return
+    }
+    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
+    if (this.state.transport === 'playing' && this.state.playingTake?.id === id) {
+      await this.command(() => this.client.setPosition(take.start + offset))
+      return
+    }
+    await this.playTake(id, offset)
   }
 
   async playLatest(): Promise<void> {

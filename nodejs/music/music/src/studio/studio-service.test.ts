@@ -190,6 +190,19 @@ describe('StudioService', () => {
     expect(service.getState().playingTake).toBeUndefined()
   })
 
+  it('seeks within the playing take without restarting, and starts it otherwise', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    await service.seekTake('1', 4)
+    expect(reaper.requests).toContain('1016;SET/POS/4.000;1007') // not playing yet: starts there
+
+    await service.seekTake('1', 7)
+    expect(reaper.requests.at(-2)).toBe('SET/POS/7.000') // playing: a plain cursor move
+    expect(reaper.playState).toBe(1)
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
   it('forgets the playing take when REAPER is stopped from elsewhere', async () => {
     const { reaper, service } = makeService({ regions: twoTakes, playState: 1 })
     await service.refresh()

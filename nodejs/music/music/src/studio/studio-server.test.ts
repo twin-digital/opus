@@ -28,6 +28,7 @@ const makeService = () => {
     playLatest: vi.fn(() => Promise.resolve()),
     playTake: vi.fn((_id: string, _at?: number) => Promise.resolve()),
     renameTake: vi.fn((_id: string, _label: string) => Promise.resolve()),
+    seekTake: vi.fn((_id: string, _at: number) => Promise.resolve()),
     reloadHelper: vi.fn(() => Promise.resolve()),
   }
   return service as unknown as StudioService & typeof service
