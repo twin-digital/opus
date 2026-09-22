@@ -1,5 +1,6 @@
 import * as http from 'node:http'
 import * as fs from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import * as path from 'node:path'
 
@@ -179,13 +180,11 @@ export const createStudioServer = async ({
             send(response, 404, 'No rendered mix for this clip yet')
             return
           }
-          const content = await fs.readFile(file)
-          response.writeHead(200, {
-            'content-type': 'audio/wav',
-            'content-length': content.length,
-            'cache-control': 'no-store',
-          })
-          response.end(content)
+          // streamed in chunks: the MIDI echo shares this process, and a whole mix in one
+          // buffer would be a large copy on the main thread
+          const { size } = await fs.stat(file)
+          response.writeHead(200, { 'content-type': 'audio/wav', 'content-length': size, 'cache-control': 'no-store' })
+          createReadStream(file, { highWaterMark: 256 * 1024 }).pipe(response)
         },
         (error: unknown) => {
           log.warn(error, `Cannot serve clip ${id}.`)
