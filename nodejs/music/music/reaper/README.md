@@ -44,6 +44,10 @@ Two virtual devices carry what the piano's own outputs never see:
 - **BlackHole 2ch** for audio (free, existingsoftware.com/blackhole or `brew install
 blackhole-2ch`). The app plays sound-board samples through it, and it joins the
   aggregate device so REAPER can record it.
+  Check the Master track's hardware output (ROUTE on the master) goes to the piano's or
+  Scarlett's pair: an aggregate numbers its channels in the order its devices were added, and
+  REAPER's default output 1/2 is BlackHole when BlackHole came first, which loops the master
+  straight back into the Samples track.
 
 Touch input on macOS usually needs the monitor vendor's driver or a third-party
 one such as UPDD. Plug-and-play touch is a Windows thing.
@@ -224,8 +228,10 @@ toolbar pops in on touch near the top.
 - The strip under the header shows the selected clip (the one last played or just recorded):
   its waveform from the Outbox mix, a plain progress bar until that exists, with a cursor that
   follows playback; tap or drag on it to play from there. While recording it shows a live level
-  graph. Track meters with peak hold stand at the strip's right edge at all times; REAPER meters
-  the armed tracks' input even while stopped.
+  graph. Track meters with peak hold stand at the strip's right edge at all times. Each shows
+  the louder of the track's input (REAPER meters an armed track from its input, even while
+  stopped) and what the track plays back, which the watcher reads from the items at the play
+  position and publishes, since REAPER's own meters show nothing of playback on an armed track.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

@@ -85,7 +85,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-25.4" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-26.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -1271,7 +1271,70 @@ end
 
 -- One pass of the loop. Split out so an error is reported and survived rather than ending
 -- the script silently behind other windows.
+-- --- playback peaks ---------------------------------------------------------------------
+-- REAPER meters an armed track from its input, so its meters (and the web remote's) show
+-- nothing of what plays back. While playing, the level of each track's items at the play
+-- position is published as global ext state ("tracknumber:dB,..." for tracks with sound),
+-- which the app reads with every poll and merges into its meters.
+local PEAKS_KEY = "playback_peaks"
+local PEAKS_INTERVAL = 0.05
+local lastPeaks, lastPeaksAt = nil, 0
+
+-- Linear peak of an audio item's sound at project time `at`, item and take volume applied; nil
+-- when the item is not sounding there.
+local function itemPeakAt(item, at)
+  local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  if at < pos or at >= pos + len or reaper.GetMediaItemInfo_Value(item, "B_MUTE") == 1 then return nil end
+  local take = reaper.GetActiveTake(item)
+  if take == nil or reaper.TakeIsMIDI(take) then return nil end
+  local source = reaper.GetMediaItemTake_Source(take)
+  if source == nil then return nil end
+  local rate = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+  if rate == nil or rate <= 0 then rate = 1 end
+  local offset = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") + (at - pos) * rate
+  local channels = math.max(1, math.floor(reaper.GetMediaSourceNumChannels(source) or 1))
+  local buffer = reaper.new_array(channels * 2)
+  buffer.clear()
+  local got = reaper.PCM_Source_GetPeaks(source, 1 / PEAKS_INTERVAL, offset, channels, 1, 0, buffer)
+  if got & 0xFFFFF == 0 then return nil end
+  local peak = 0
+  for _, v in ipairs(buffer.table()) do
+    if math.abs(v) > peak then peak = math.abs(v) end
+  end
+  return peak * reaper.GetMediaItemInfo_Value(item, "D_VOL") * reaper.GetMediaItemTakeInfo_Value(take, "D_VOL")
+end
+
+local function publishPlaybackPeaks()
+  local now = reaper.time_precise()
+  if now - lastPeaksAt < PEAKS_INTERVAL then return end
+  lastPeaksAt = now
+  local value = ""
+  if reaper.GetPlayState() == 1 then -- playing, not paused or recording
+    local at = reaper.GetPlayPosition()
+    local parts = {}
+    for t = 0, reaper.CountTracks(0) - 1 do
+      local track = reaper.GetTrack(0, t)
+      local peak = 0
+      if reaper.GetMediaTrackInfo_Value(track, "B_MUTE") ~= 1 then
+        for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+          local p = itemPeakAt(reaper.GetTrackMediaItem(track, i), at)
+          if p ~= nil and p > peak then peak = p end
+        end
+      end
+      peak = peak * reaper.GetMediaTrackInfo_Value(track, "D_VOL")
+      if peak > 0 then parts[#parts + 1] = string.format("%d:%.1f", t + 1, 20 * math.log(peak, 10)) end
+    end
+    value = table.concat(parts, ",")
+  end
+  if value ~= lastPeaks then
+    lastPeaks = value
+    reaper.SetExtState(EXT_SECTION, PEAKS_KEY, value, false)
+  end
+end
+
 local function step()
+  publishPlaybackPeaks()
   local recording = isRecording()
   if not recording and not wasRecording then applyRenames() end -- never mid-take or mid-finalize
   if recording and not wasRecording then
