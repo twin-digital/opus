@@ -148,6 +148,8 @@ export class StudioService {
   }
   private readonly expectedHelperHash: string | undefined
   private recordingStartedAt: number | undefined
+  /** A poll has found REAPER playing inside the take it was asked to play. */
+  private takeReached = false
   private running = false
   private handle: ReturnType<typeof setTimeout> | undefined
   private inFlight: Promise<void> | undefined
@@ -420,18 +422,23 @@ export class StudioService {
     }
 
     const takes = status.regions.map(toTake).sort(byNewest)
-    // the take this service started is believed only while REAPER is playing inside it; past its
-    // end playback is stopped, and anywhere else REAPER is doing something of its own
+    // the take this service started is believed while REAPER plays and has not yet reached it
+    // (the first polls after a play can still report where the cursor was), then while REAPER
+    // is playing inside it. Past its end playback is stopped, and the take stays believed until
+    // that stop lands, so one that went astray is sent again. Anywhere else REAPER is doing
+    // something of its own
     const { playingTake } = this.state
-    // the first poll after a play or a seek to the start can read a hair before it
-    const inside =
-      playingTake !== undefined &&
-      transport === 'playing' &&
-      status.position >= playingTake.start - 0.25 &&
-      status.position < playingTake.end
-    const stillPlaying = playingTake !== undefined && (stale || inside) ? playingTake : undefined
-    const reachedEnd =
-      consecutive && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
+    const playing = playingTake !== undefined && transport === 'playing'
+    const inside = playing && status.position >= playingTake.start - 0.25 && status.position < playingTake.end
+    if (inside) {
+      this.takeReached = true
+    }
+    // past its end the take is believed only by a poll that also sends the stop; the first poll
+    // after an outage that finds REAPER past the end is not that
+    const pastStart = playing && status.position >= playingTake.start - 0.25
+    const believed = stale || (playing && !this.takeReached) || inside || (consecutive && pastStart)
+    const stillPlaying = playingTake !== undefined && believed ? playingTake : undefined
+    const reachedEnd = consecutive && this.takeReached && playing && status.position >= playingTake.end
 
     this.update({
       connected: true,
@@ -441,7 +448,10 @@ export class StudioService {
       meters: [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
         (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
       ),
-      position: stillPlaying === undefined ? 0 : Math.max(0, status.position - stillPlaying.start),
+      position:
+        stillPlaying === undefined ? 0 : (
+          Math.min(stillPlaying.duration, Math.max(0, status.position - stillPlaying.start))
+        ),
       takes,
       projectName: status.ext.project_name || undefined,
       helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
@@ -451,13 +461,18 @@ export class StudioService {
 
     if (reachedEnd) {
       this.commandSeq += 1
-      await this.client.runActions(ReaperActions.stop).catch((error: unknown) => {
+      try {
+        await this.client.runActions(ReaperActions.stop)
+        this.update({ transport: 'stopped', playingTake: undefined, position: 0 })
+      } catch (error) {
+        // the take stays believed, so the next poll past its end sends the stop again
         this.log.warn(error, 'Failed to stop at the end of the take.')
-      })
+      }
     }
   }
 
   private setPlayingTake(playingTake: Take | undefined) {
+    this.takeReached = false
     this.update({ playingTake })
   }
 
