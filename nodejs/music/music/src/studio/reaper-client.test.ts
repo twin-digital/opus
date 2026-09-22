@@ -101,8 +101,19 @@ describe('ReaperClient', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
-  it('requires a base URL with a scheme', () => {
+  it('requires a base URL with a scheme, and names the loopback address for localhost', async () => {
     expect(() => new ReaperClient({ baseUrl: 'localhost:8080' })).toThrow()
+    // REAPER answers on IPv4 only; naming the address spares each request a doomed IPv6 attempt
+    const seen: string[] = []
+    const client = new ReaperClient({
+      baseUrl: 'http://localhost:8080/',
+      fetch: (url) => {
+        seen.push(url)
+        return Promise.resolve({ ok: true, text: () => Promise.resolve('') })
+      },
+    })
+    await client.getStatus()
+    expect(seen[0]?.startsWith('http://127.0.0.1:8080/_/')).toBe(true)
     expect(() => new ReaperClient({ baseUrl: 'reaper.local' })).toThrow()
   })
 

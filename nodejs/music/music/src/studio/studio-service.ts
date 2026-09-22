@@ -91,7 +91,10 @@ export type StudioEventMap = {
  * Consecutive failed polls before REAPER counts as unreachable. A render inside REAPER blocks its
  * web remote for a few seconds; that must not flap the page to "offline" and back.
  */
-const DISCONNECT_AFTER_MISSES = 3
+/** How long polls may fail before REAPER counts as unreachable: a render or a save stalls it for a moment. */
+const UNREACHABLE_AFTER_MS = 2000
+/** A stop at a take's end that did not land is tried again no sooner than this. */
+const STOP_RETRY_MS = 1000
 
 /** Silence between takes on the timeline, so each one is visually distinct. */
 const TAKE_GAP_SECONDS = 2
@@ -154,7 +157,10 @@ export class StudioService {
   private handle: ReturnType<typeof setTimeout> | undefined
   private inFlight: Promise<void> | undefined
   private commandSeq = 0
-  private misses = 0
+  private lastGoodPollAt: number
+  private lastStopAttemptAt = -Infinity
+  private stopWarned = false
+  private readonly now: () => number
   private pendingCommand: Promise<void> | undefined
   private runId = 0
   /** The latest seek asked for while an earlier one is still settling; only it is sent. */
@@ -166,17 +172,22 @@ export class StudioService {
     pollIntervalMs = 150,
     activePollIntervalMs = 50,
     expectedHelperHash,
+    now = Date.now,
   }: {
     client?: ReaperClient
     pollIntervalMs?: number
     activePollIntervalMs?: number
     /** Hash of the watcher this app ships; when given, the state reports whether REAPER runs that one. */
     expectedHelperHash?: string
+    /** Clock, for tests. */
+    now?: () => number
   } = {}) {
     this.client = client ?? new ReaperClient()
     this.pollIntervalMs = pollIntervalMs
     this.activePollIntervalMs = activePollIntervalMs
     this.expectedHelperHash = expectedHelperHash
+    this.now = now
+    this.lastGoodPollAt = now()
   }
 
   getState(): StudioState {
@@ -385,8 +396,7 @@ export class StudioService {
     try {
       status = await this.client.getStatus()
     } catch (error) {
-      this.misses += 1
-      if (this.state.connected && this.misses < DISCONNECT_AFTER_MISSES) {
+      if (this.state.connected && this.now() - this.lastGoodPollAt < UNREACHABLE_AFTER_MS) {
         return // a short stall (REAPER rendering, say); keep the last good state
       }
       if (this.state.connected) {
@@ -397,7 +407,7 @@ export class StudioService {
       }
       return
     }
-    this.misses = 0
+    this.lastGoodPollAt = this.now()
 
     const transport: StudioTransport =
       status.playState === 'recording' ? 'recording'
@@ -464,14 +474,19 @@ export class StudioService {
         stillPlaying === undefined ? undefined : (takes.find((take) => take.id === stillPlaying.id) ?? stillPlaying),
     })
 
-    if (reachedEnd) {
+    if (reachedEnd && this.now() - this.lastStopAttemptAt >= STOP_RETRY_MS) {
+      this.lastStopAttemptAt = this.now()
       this.commandSeq += 1
       try {
         await this.client.runActions(ReaperActions.stop)
         this.update({ transport: 'stopped', playingTake: undefined, position: 0 })
+        this.stopWarned = false
       } catch (error) {
-        // the take stays believed, so the next poll past its end sends the stop again
-        this.log.warn(error, 'Failed to stop at the end of the take.')
+        // the take stays believed, so a later poll past its end sends the stop again
+        if (!this.stopWarned) {
+          this.log.warn(error, 'Failed to stop at the end of the take; retrying.')
+          this.stopWarned = true
+        }
       }
     }
   }
