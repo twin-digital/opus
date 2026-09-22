@@ -196,3 +196,21 @@ jobs:
           role-arn: ${{ secrets.AWS_ROLE_ARN }}
           serverless-access-key: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           stage: ${{ needs.gate.outputs.stage }}
+
+      # Surface the preview on the PR: an upserted comment with each deployed service's endpoint, the
+      # commit, and a link to this run. Reads endpoints from the just-deployed CloudFormation stacks
+      # (the Deploy step above left AWS creds in the job env). Purely cosmetic — the script downgrades
+      # any failure to a warning, and teardown stays keyed on the `preview-deployed` label, never this
+      # comment.
+      - name: Comment preview details on PR
+        if: ${{ steps.pr_state.outputs.open == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.gate.outputs.pr }}
+          STAGE: ${{ needs.gate.outputs.stage }}
+          SHA: ${{ needs.gate.outputs.sha }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node .github/scripts/preview-comment.mjs
