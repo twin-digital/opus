@@ -19,7 +19,7 @@
 -- is stopped, imports new eligible clips without asking, into a project that has had at
 -- least one on-demand import (that first import is the opt-in).
 
-local VERSION = "2026-09-24.3"
+local VERSION = "2026-09-24.4"
 local EXT_SECTION = "CSStudioImport"
 
 local SCRIPT_PATH = debug.getinfo(1, "S").source:sub(2)
@@ -145,7 +145,7 @@ local function copyFile(from, to)
     if not dst:write(chunk) then ok = false; break end
   end
   src:close()
-  dst:close()
+  if not dst:close() then ok = false end -- a full disk can surface on the final flush
   if ok and fileSize(to) ~= fileSize(from) then ok = false end
   if not ok then os.remove(to) end
   return ok
@@ -320,6 +320,7 @@ local function parseMidi(data)
   if data:sub(pos, pos + 3) ~= "MTrk" then return nil end
   local len = be32(data, pos + 4)
   local i, stop = pos + 8, pos + 8 + len
+  if stop > #data + 1 then error("truncated MIDI file") end
   local function vlq()
     local n = 0
     while true do
@@ -358,11 +359,14 @@ local function parseMidi(data)
       end
       running = status
       local kind = status & 0xF0
+      local a, b = data:byte(i), data:byte(i + 1)
       if kind == 0xC0 or kind == 0xD0 then
-        events[#events + 1] = { tick = tick, status = status, a = data:byte(i) }
+        if a == nil then error("truncated MIDI file") end
+        events[#events + 1] = { tick = tick, status = status, a = a }
         i = i + 1
       else
-        events[#events + 1] = { tick = tick, status = status, a = data:byte(i), b = data:byte(i + 1) }
+        if a == nil or b == nil then error("truncated MIDI file") end
+        events[#events + 1] = { tick = tick, status = status, a = a, b = b }
         i = i + 2
       end
     end
@@ -433,7 +437,24 @@ local function validateClip(clip, config)
   end
   local midi = midiSource(clip)
   if midi ~= nil and fileSize(midi) == nil then missing[#missing + 1] = midi end
+  local anything = midi ~= nil
+  for _, source in ipairs(clip.entry.sources or {}) do
+    if source.file ~= nil and source.file ~= json.null then anything = true end
+  end
+  if not anything then missing[#missing + 1] = "no stems and no MIDI" end
   return missing
+end
+
+-- Whether any item in the open project plays this file.
+local function fileInUse(path)
+  for i = 0, reaper.CountMediaItems(0) - 1 do
+    local take = reaper.GetActiveTake(reaper.GetMediaItem(0, i))
+    if take ~= nil and not reaper.TakeIsMIDI(take) then
+      local source = reaper.GetMediaItemTake_Source(take)
+      if source ~= nil and reaper.GetMediaSourceFileName(source, "") == path then return true end
+    end
+  end
+  return false
 end
 
 -- Tracks inserted at the end of a project inherit any folder still open there; close it first.
@@ -472,11 +493,11 @@ local function importClip(clip, config, mediaDir, mute)
   local made = {}   -- tracks inserted, for cleanup on failure
   local copied = {} -- files copied, likewise
   local function fail(message)
-    for i = #made, 1, -1 do reaper.DeleteTrack(made[i]) end
-    for _, path in ipairs(copied) do os.remove(path) end
     error(string.format("%s: %s", title, message), 0)
   end
 
+  -- Whatever goes wrong below, the clip's tracks and copied files are taken back out.
+  local ok, err = pcall(function()
   local parent = insertTrack(index, title)
   made[#made + 1] = parent
   local children = {}
@@ -490,8 +511,11 @@ local function importClip(clip, config, mediaDir, mute)
         if not copyFile(from, to) then fail("could not copy " .. from) end
         copied[#copied + 1] = to
       elseif existing ~= fileSize(from) then
-        -- a different file of the same name is someone else's; never overwrite it
-        fail("would overwrite " .. to)
+        -- a different file of the same name: a leftover from an interrupted copy can be
+        -- replaced, a file some track still plays must not be
+        if fileInUse(to) then fail("would overwrite " .. to .. ", which a track uses") end
+        if not copyFile(from, to) then fail("could not copy " .. from) end
+        copied[#copied + 1] = to
       end
       -- an identical file is a copy from an earlier import of this clip (its tracks since
       -- deleted, or the project closed unsaved); reuse it
@@ -534,6 +558,12 @@ local function importClip(clip, config, mediaDir, mute)
   reaper.SetMediaTrackInfo_Value(children[#children], "I_FOLDERDEPTH", -1)
   reaper.SetMediaTrackInfo_Value(parent, "B_MUTE", mute and 1 or 0)
   reaper.ShowConsoleMsg(string.format("  imported %s (%d tracks)\n", title, #children))
+  end)
+  if not ok then
+    for i = #made, 1, -1 do reaper.DeleteTrack(made[i]) end
+    for _, path in ipairs(copied) do os.remove(path) end
+    error(tostring(err), 0)
+  end
 end
 
 -- Imports what validates, one clip at a time; a clip that fails is undone and left unrecorded.
