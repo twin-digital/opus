@@ -1,5 +1,11 @@
 # REAPER studio setup
 
+Two machines, two folders here:
+
+- `studio/`: what runs inside REAPER on the studio Mac. The app installs it; nothing to copy.
+- `producer/`: what runs inside REAPER on the machine where clips are reviewed and turned into
+  songs. Installed once by `install-producer.ps1`.
+
 The REAPER side of the piano recording corner. The touch page and the Launchpad
 transport live in `@thrashplay/music`; this folder holds the ReaScript that runs inside
 REAPER and the setup notes for the Mac. Every recording lands as a new item in a normal REAPER
@@ -11,6 +17,8 @@ Launchpad pads         ──▶        StudioService                        │
                                                         cs-studio-watcher.lua (background)
                                                         names, trims, saves each take
 ```
+
+# Studio machine
 
 ## Hardware wiring
 
@@ -211,8 +219,65 @@ toolbar pops in on touch near the top.
 - The level bar shows the loudest track peak so the kid can see it's listening.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
-## Turning takes into songs
+# Producer machine
 
-Everything is normal REAPER material. Select a region, `Time selection: set to
-region`, then render, or copy the items to a fresh project. The MIDI track means
-you can re-voice the piano with any instrument later.
+The Outbox reaches this machine as a mirror (the Inbox), and the studio's REAPER projects
+folder is mounted read-only (see [Getting the Outbox here](#getting-the-outbox-here)).
+
+## Install the producer scripts
+
+From PowerShell, with your two paths:
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/twin-digital/opus/main/nodejs/music/music/reaper/producer/install-producer.ps1 -OutFile install-producer.ps1
+powershell -ExecutionPolicy Bypass -File install-producer.ps1 -Inbox "D:\Users\sean\Nextcloud\1 - Projects\Lucas Music\Studio" -Projects "P:\"
+```
+
+It downloads `cs-studio-import.lua` and the probe into REAPER's `Scripts\Studio` folder and
+writes `cs-studio-import-config.lua` with the paths. Run it again any time to update; the
+config is rewritten from the parameters you pass. `-Ref` fetches from a branch instead of
+main, `-ResourcePath` overrides REAPER's resource path.
+
+Once, after the first install: REAPER > Actions > Show action list > New action > Load
+ReaScript, pick `Scripts\Studio\cs-studio-import.lua`. It is then an action you can run,
+or bind to a key.
+
+## Bless: import clips into the open project
+
+Open (or create and save) the song project you want the clips in. Run the import action:
+
+1. The console lists every clip in the Inbox: name, project, date, length, and `*` for
+   starred ones.
+2. A dialog asks for list numbers (`3, 5`), or `*` for every starred clip.
+3. For each clip the script copies its stems from the projects share into the song project's
+   media folder, so the project is self-contained, and builds a folder track named
+   `0012 - Twinkle` with the stems and the MIDI as children, all at time zero and trimmed to
+   the clip. Every folder but the first is muted, so the project does not play everything at
+   once. The project is saved.
+
+Where the song project lives, inside Nextcloud or not, is up to you; the stems ride along.
+
+## Getting the Outbox here
+
+Share the Outbox and the REAPER projects folder from the Mac (System Preferences > Sharing >
+File Sharing, with SMB on; the projects share read-only). On Windows, a scheduled `robocopy`
+mirrors the Outbox share into the Inbox every few minutes:
+
+```bat
+@echo off
+if not exist "\\adept\Studio Outbox" exit /b 0
+robocopy "\\adept\Studio Outbox" "D:\...\Studio" /MIR /R:1 /W:1 /NP /NFL /NDL /XD .stfolder /LOG+:"%LOCALAPPDATA%\studio-sync.log"
+exit /b 0
+```
+
+registered with `schtasks /Create /TN "Studio Outbox sync" /TR "wscript.exe C:\...\studio-sync.vbs" /SC MINUTE /MO 5`,
+where the `.vbs` runs the `.cmd` with no window:
+`CreateObject("WScript.Shell").Run """C:\...\studio-sync.cmd""", 0, False`.
+The guard line keeps `/MIR` from emptying the Inbox when the Mac is asleep. Put the Inbox
+inside a Nextcloud folder and everything in it is backed up until the studio removes it.
+
+## Without the import script
+
+Everything is normal REAPER material. Copy a project folder from the share to a working
+location, open the copy, select a region, and save the selected items as a new project. The
+MIDI track means you can re-voice the piano with any instrument later.

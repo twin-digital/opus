@@ -503,7 +503,13 @@ end
 local function saveLibrary()
   local path = libraryPath()
   if library == nil or path == nil then return end
-  library.project = { name = currentProjectName(), file = (projectFile() or ""):match("[^/\\]+$"), updatedAt = localNow() }
+  local dir = projectDir() or ""
+  library.project = {
+    name = currentProjectName(),
+    file = (projectFile() or ""):match("[^/\\]+$"),
+    folder = dir:match("[^/\\]+$") or "",
+    updatedAt = localNow(),
+  }
   writeFile(path, json.encode(library, "  ") .. "\n")
   if CONFIG.render or CONFIG.midi_export then
     reaper.RecursiveCreateDirectory(outboxDir(), 0)
@@ -533,7 +539,7 @@ local function recordClip(number, label, first, last, items, stoppedBy)
       if name:sub(1, #dir) == dir then name = name:sub(#dir + 2) end
       file = name
     end
-    sources[#sources + 1] = { track = trackName, file = file }
+    sources[#sources + 1] = { track = trackName, file = file, itemStart = reaper.GetMediaItemInfo_Value(item, "D_POSITION") }
   end
   lib.clips[tostring(number)] = {
     number = number,
