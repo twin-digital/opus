@@ -155,6 +155,9 @@ export class StudioService {
   private misses = 0
   private pendingCommand: Promise<void> | undefined
   private runId = 0
+  /** The latest seek asked for while an earlier one is still settling; only it is sent. */
+  private queuedSeek: { id: string; atSeconds: number } | undefined
+  private seeking = false
 
   constructor({
     client,
@@ -228,11 +231,32 @@ export class StudioService {
    * it starts the take there.
    */
   async seekTake(id: string, atSeconds: number): Promise<void> {
+    // scrubbing sends seeks faster than they settle: while one is in flight only the newest
+    // waiting one is kept, so the cursor never replays the whole drag afterwards
+    if (this.seeking) {
+      this.queuedSeek = { id, atSeconds }
+      return
+    }
+    this.seeking = true
+    try {
+      let next: { id: string; atSeconds: number } | undefined = { id, atSeconds }
+      while (next !== undefined) {
+        await this.seekOnce(next.id, next.atSeconds)
+        next = this.queuedSeek
+        this.queuedSeek = undefined
+      }
+    } finally {
+      this.seeking = false
+    }
+  }
+
+  private async seekOnce(id: string, atSeconds: number): Promise<void> {
     const take = this.state.takes.find((candidate) => candidate.id === id)
     if (take === undefined) {
       return
     }
-    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
+    // stay clear of the end: a seek right at it would end the take on the next poll
+    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.25))
     if (this.state.transport === 'playing' && this.state.playingTake?.id === id) {
       await this.command(() => this.client.setPosition(take.start + offset))
       return
@@ -343,8 +367,18 @@ export class StudioService {
       }
       if (this.state.connected) {
         this.log.warn(error, 'REAPER is unreachable.')
+        // nothing is known to be moving any more; views drop back to idle and the poll slows
+        this.recordingStartedAt = undefined
+        this.update({
+          connected: false,
+          transport: 'stopped',
+          recordingElapsed: 0,
+          level: 0,
+          meters: [],
+          position: 0,
+          playingTake: undefined,
+        })
       }
-      this.update({ connected: false })
       return
     }
     this.misses = 0
@@ -413,7 +447,8 @@ export class StudioService {
     await this.refresh()
     // a stop()/start() during the poll started a newer chain; this one ends here
     if (this.running && runId === this.runId) {
-      const interval = this.state.transport === 'stopped' ? this.pollIntervalMs : this.activePollIntervalMs
+      const interval =
+        this.state.connected && this.state.transport !== 'stopped' ? this.activePollIntervalMs : this.pollIntervalMs
       this.schedule(Math.max(0, interval - (Date.now() - startedAt)), runId)
     }
   }

@@ -7,7 +7,8 @@ import * as path from 'node:path'
 import { logger } from '../logger.js'
 import type { StudioApi, StudioState } from './studio-service.js'
 import { TouchPageHtml } from './touch-page.js'
-import { defaultOutboxDir, findClipMix } from './outbox.js'
+import { pipeline } from 'node:stream/promises'
+import { defaultOutboxDir, findClipMix, mixContentType } from './outbox.js'
 
 const ACTION_PATH = /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+))$/
 
@@ -86,7 +87,8 @@ const send = (response: http.ServerResponse, status: number, body = '', type = '
  * - `POST /actions/rename/<id>` with `{"name": "..."}` — relabels a clip.
  * - `POST /actions/play-take/<id>` may carry `{"at": <seconds>}` to start part-way in.
  * - `POST /actions/seek/<id>` with `{"at": <seconds>}` — moves playback within a clip (scrubbing).
- * - `GET /clips/<id>.wav` — the clip's rendered mix from the Outbox, for the waveform.
+ * - `GET /clips/<id>.wav` — the clip's finished mix from the Outbox (whatever format the project
+ *   renders in; the media type follows the file), for the waveform.
  * - `GET /vendor/*` — the on-screen keyboard's script and stylesheet, and the waveform library.
  */
 export const createStudioServer = async ({
@@ -149,6 +151,39 @@ export const createStudioServer = async ({
     }
   }
 
+  /**
+   * Streams a clip's finished mix in chunks (the MIDI echo shares this process; a whole mix in
+   * one buffer would be a large copy on the main thread). The file can vanish between lookup and
+   * open, since the watcher renames and re-renders mixes: every failure ends up in the caller's
+   * catch, and an aborted download releases the file.
+   */
+  const serveClip = async (rawId: string, response: http.ServerResponse) => {
+    let id: string
+    try {
+      id = decodeURIComponent(rawId)
+    } catch {
+      send(response, 400, 'Bad clip id')
+      return
+    }
+    const { takes, projectName } = service.getState()
+    const take = takes.find((candidate) => candidate.id === id)
+    const file =
+      clipFile !== undefined ? await clipFile(id)
+      : take?.number !== undefined && projectName !== undefined ? await findClipMix(outboxDir, projectName, take.number)
+      : undefined
+    if (file === undefined) {
+      send(response, 404, 'No rendered mix for this clip yet')
+      return
+    }
+    const { size } = await fs.stat(file)
+    response.writeHead(200, {
+      'content-type': mixContentType(file),
+      'content-length': size,
+      'cache-control': 'no-store',
+    })
+    await pipeline(createReadStream(file, { highWaterMark: 256 * 1024 }), response)
+  }
+
   const server = http.createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost')
 
@@ -173,30 +208,15 @@ export const createStudioServer = async ({
 
     const clip = request.method === 'GET' ? CLIP_PATH.exec(url.pathname) : null
     if (clip !== null) {
-      const id = decodeURIComponent(clip.at(1) ?? '')
-      const take = service.getState().takes.find((candidate) => candidate.id === id)
-      const project = service.getState().projectName
-      const lookup =
-        clipFile !== undefined ? clipFile(id)
-        : take?.number !== undefined && project !== undefined ? findClipMix(outboxDir, project, take.number)
-        : Promise.resolve(undefined)
-      lookup.then(
-        async (file) => {
-          if (file === undefined) {
-            send(response, 404, 'No rendered mix for this clip yet')
-            return
-          }
-          // streamed in chunks: the MIDI echo shares this process, and a whole mix in one
-          // buffer would be a large copy on the main thread
-          const { size } = await fs.stat(file)
-          response.writeHead(200, { 'content-type': 'audio/wav', 'content-length': size, 'cache-control': 'no-store' })
-          createReadStream(file, { highWaterMark: 256 * 1024 }).pipe(response)
-        },
-        (error: unknown) => {
-          log.warn(error, `Cannot serve clip ${id}.`)
+      serveClip(clip.at(1) ?? '', response).catch((error: unknown) => {
+        // nothing below may take the process down: it also hosts the MIDI echo
+        log.warn(error, `Cannot serve ${url.pathname}.`)
+        if (!response.headersSent) {
           send(response, 404, 'Not found')
-        },
-      )
+        } else {
+          response.destroy()
+        }
+      })
       return
     }
 

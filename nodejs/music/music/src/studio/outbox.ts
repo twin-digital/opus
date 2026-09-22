@@ -4,8 +4,9 @@ import * as path from 'node:path'
 
 /**
  * Where the watcher's Outbox is on this machine (the app and REAPER share it), and how to find
- * the rendered mix of a clip in it. Mirrors the watcher's naming: `<outbox>/<project>/<date> -
- * <0012> - <name>.<ext>`.
+ * the rendered mix of a clip in it. The manifest the watcher writes beside the files is the
+ * authority: a mix is only served once the watcher has recorded it as finished, so REAPER's
+ * in-progress render (written in place, not atomically) is never handed out.
  */
 
 export const defaultOutboxDir = (home = os.homedir()): string => {
@@ -13,17 +14,42 @@ export const defaultOutboxDir = (home = os.homedir()): string => {
   return configured !== undefined && configured !== '' ? configured : path.join(home, 'Music', 'Studio Outbox')
 }
 
-/** The watcher's file-name sanitizer, so folder names match what it wrote. */
+/**
+ * The watcher's file-name sanitizer, character for character (its Lua classes are ASCII-only,
+ * so this one is too), so folder names match what it wrote.
+ */
+const UNSAFE = '<>:"/\\|?*$'
+const isUnsafe = (char: string) => UNSAFE.includes(char) || char.charCodeAt(0) < 0x20 || char.charCodeAt(0) === 0x7f
+
 export const safeName = (text: string): string =>
   text
-    .replace(/[<>:"/\\|?*$\p{Cc}]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/^\s+/, '')
-    .replace(/[\s.]+$/, '')
+    .replace(/./gsu, (char) => (isUnsafe(char) ? ' ' : char))
+    .replace(/[ \t\n\v\f\r]+/g, ' ')
+    .replace(/^[ \t\n\v\f\r]+/, '')
+    .replace(/[ \t\n\v\f\r.]+$/, '')
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.wav': 'audio/wav',
+  '.aif': 'audio/aiff',
+  '.aiff': 'audio/aiff',
+  '.flac': 'audio/flac',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.opus': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+}
+
+/** Media type for a rendered mix, whatever format the project renders in. */
+export const mixContentType = (file: string): string =>
+  MIME_BY_EXTENSION[path.extname(file).toLowerCase()] ?? 'application/octet-stream'
+
+interface Manifest {
+  clips?: Record<string, { number?: unknown; render?: { mix?: unknown } | null } | undefined>
+}
 
 /**
- * The rendered mix of clip `number` in `projectName`'s Outbox folder, or undefined when there is
- * none yet. Only files the watcher named for that clip are ever returned.
+ * The finished rendered mix of clip `number` in `projectName`'s Outbox folder, from the manifest
+ * there, or undefined when there is none yet. Only a file the watcher recorded is ever returned.
  */
 export const findClipMix = async (
   outboxDir: string,
@@ -31,15 +57,16 @@ export const findClipMix = async (
   number: number,
 ): Promise<string | undefined> => {
   const dir = path.join(outboxDir, safeName(projectName))
-  const marker = ` - ${String(number).padStart(4, '0')} - `
-  let names: string[]
+  let manifest: Manifest
   try {
-    names = await fs.readdir(dir)
+    manifest = JSON.parse(await fs.readFile(path.join(dir, 'manifest.json'), 'utf8')) as Manifest
   } catch {
     return undefined
   }
-  const mix = names.find(
-    (name) => name.includes(marker) && !name.endsWith('.mid') && !name.endsWith('.json') && !name.endsWith('.tmp'),
-  )
-  return mix === undefined ? undefined : path.join(dir, mix)
+  const entry = manifest.clips?.[String(number)]
+  const mix = entry?.render?.mix
+  if (typeof mix !== 'string' || mix === '' || path.basename(mix) !== mix) {
+    return undefined
+  }
+  return path.join(dir, mix)
 }

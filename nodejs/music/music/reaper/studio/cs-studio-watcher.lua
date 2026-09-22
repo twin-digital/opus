@@ -56,6 +56,9 @@ local DEFAULTS = {
   outbox = "~/Music/Studio Outbox",
   render = true,
   midi_export = true,
+  -- A clip up to this long is rendered the moment it ends (a few seconds of REAPER's time),
+  -- so its waveform is on the page almost at once. Longer ones wait for idle.
+  render_now_seconds = 3 * 60,
   render_idle_seconds = 30,
   render_long_seconds = 10 * 60,
   render_long_idle_seconds = 5 * 60,
@@ -82,7 +85,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-25.2" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-25.3" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -113,6 +116,7 @@ local lastActivity = 0
 local firstActivity = nil -- first activity seen in the current take, nil until one is
 local midiEventCount = 0
 local finalizeDeadline = nil
+local lastFinalized = nil -- clip number of the take just finalized, rendered right away if short
 local stoppedBy = "user"
 local publishedProjectName = nil
 local publishedIdentity = false
@@ -940,6 +944,43 @@ local function syncLibrary()
   return regions
 end
 
+-- Renders one clip's mix and MIDI into the Outbox and records the result on its entry.
+local function renderEntry(entry, region)
+  local base = clipBaseName(entry)
+  local render = entry.render ~= json.null and entry.render or nil
+  local attempts = render and render.attempts or 0
+  local mix = json.null
+  if CONFIG.render then mix = renderMix(entry, region) or json.null end
+  local midi = json.null
+  local noMidi = false
+  if CONFIG.midi_export then
+    midi = exportMidi(entry, region) or json.null
+    noMidi = midi == json.null
+  end
+  local failed = CONFIG.render and mix == json.null
+  entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label,
+    attempts = failed and (attempts + 1) or 0, failedAt = failed and os.time() or nil }
+  saveLibrary()
+  if failed then
+    reaper.ShowConsoleMsg(string.format("[Studio] Render of clip %d produced no file; will retry later.\n", entry.number))
+  else
+    log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
+  end
+end
+
+-- A short clip is rendered as soon as it is finalized, without waiting for idle.
+local function renderClipNow(number)
+  if not (CONFIG.render or CONFIG.midi_export) or not CONFIG.render_now_seconds then return end
+  local lib = loadLibrary()
+  local entry = lib and lib.clips[tostring(number)] or nil
+  if entry == nil then return end
+  if entry["end"] - entry.start > CONFIG.render_now_seconds then return end
+  local _, byId = scanRegions()
+  local region = entry.regionId and byId[entry.regionId] or nil
+  if region == nil then return end
+  renderEntry(entry, region)
+end
+
 -- Picks the one clip whose outbox files are missing or stale and brings them up to date.
 local function syncOutbox(regions)
   if not (CONFIG.render or CONFIG.midi_export) then return end
@@ -980,23 +1021,7 @@ local function syncOutbox(regions)
     local attempts = render and render.attempts or 0
     local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(math.max(attempts - 1, 0), 6))
     if (mixMissing or midiMissing or stale) and needed and region ~= nil and not backedOff then
-      local mix = json.null
-      if CONFIG.render then mix = renderMix(entry, region) or json.null end
-      local midi = json.null
-      local noMidi = false
-      if CONFIG.midi_export then
-        midi = exportMidi(entry, region) or json.null
-        noMidi = midi == json.null
-      end
-      local failed = CONFIG.render and mix == json.null
-      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label,
-        attempts = failed and (attempts + 1) or 0, failedAt = failed and os.time() or nil }
-      saveLibrary()
-      if failed then
-        reaper.ShowConsoleMsg(string.format("[Studio] Render of clip %d produced no file; will retry later.\n", entry.number))
-      else
-        log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
-      end
+      renderEntry(entry, region)
       return
     end
   end
@@ -1196,6 +1221,7 @@ local function onRecordingFinished()
   reaper.UpdateArrange()
   if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
   log(string.format("created region '%s' (%.2fs - %.2fs) and saved", name, first, last))
+  lastFinalized = n
   return true
 end
 
@@ -1218,6 +1244,11 @@ local function step()
     itemsBeforeCount = reaper.CountMediaItems(0)
     pendingCount = itemsBeforeCount
     whileIdle()
+    if lastFinalized ~= nil and projectFile() ~= nil then
+      local ok, err = pcall(renderClipNow, lastFinalized)
+      if not ok then reaper.ShowConsoleMsg("[Studio] Immediate render failed: " .. tostring(err) .. "\n") end
+    end
+    lastFinalized = nil
   else
     whileIdle()
   end

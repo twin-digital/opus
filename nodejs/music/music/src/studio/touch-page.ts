@@ -285,6 +285,14 @@ function render() {
 let wave = null       // WaveSurfer instance
 let waveClipId = null // clip the waveform was loaded for
 let waveReady = false
+const waveFailedAt = {} // clip id -> when its load last failed
+const WAVE_RETRY_MS = 5000
+let renderQueued = false
+function scheduleRender() {
+  if (renderQueued) return
+  renderQueued = true
+  setTimeout(() => { renderQueued = false; render() }, 0)
+}
 const liveBars = []   // recent levels, newest last, for the recording graph
 const LIVE_BARS = 240
 
@@ -304,8 +312,17 @@ function ensureWave() {
     dragToSeek: true,
     normalize: true,
   })
-  wave.on('ready', () => { waveReady = true; render() })
-  wave.on('error', () => { waveReady = false; waveClipId = null; render() })
+  wave.on('ready', () => { waveReady = true; scheduleRender() })
+  wave.on('error', (error) => {
+    // a load superseded by a newer one aborts: that is not a failure of the newer one
+    if (error && error.name === 'AbortError') return
+    waveReady = false
+    // no mix yet (a fresh clip renders on the watcher's next idle pass) or an unreadable one:
+    // try again later, never in a loop
+    waveFailedAt[waveClipId] = Date.now()
+    waveClipId = null
+    scheduleRender()
+  })
   // tapping or dragging on the waveform moves playback there (the page never plays audio
   // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
   // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
@@ -341,8 +358,10 @@ function syncSelection() {
 
 let scrubPending = null   // latest requested position not yet sent
 let scrubTimer = null
-let scrubHoldUntil = 0    // REAPER's position is ignored until this time
+let scrubHoldUntil = 0    // REAPER's position is ignored until this time (a cap)...
+let scrubTarget = null    // ...or until it reports a position near this fraction, whichever is first
 const SCRUB_INTERVAL = 120
+const SCRUB_HOLD_CAP = 1500
 
 function waveFraction(seconds) {
   const total = wave && wave.getDuration ? wave.getDuration() : 0
@@ -359,6 +378,8 @@ function sendScrub() {
   scrubTimer = null
   if (scrubPending === null || !state.playingTake) return
   const at = scrubPending * state.playingTake.duration
+  scrubTarget = scrubPending
+  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
   scrubPending = null
   fetch('/actions/seek/' + encodeURIComponent(state.playingTake.id), {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
@@ -375,7 +396,7 @@ function scrubTo(fraction) {
     return
   }
   fraction = Math.min(1, Math.max(0, fraction))
-  scrubHoldUntil = Date.now() + 400
+  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
   showCursorAt(fraction)
   scrubPending = fraction
   if (scrubTimer === null) scrubTimer = setTimeout(sendScrub, SCRUB_INTERVAL)
@@ -384,9 +405,11 @@ function scrubTo(fraction) {
 function loadWaveFor(take) {
   const ws = ensureWave()
   if (!ws || waveClipId === take.id) return
+  const failed = waveFailedAt[take.id]
+  if (failed && Date.now() - failed < WAVE_RETRY_MS) return
   waveClipId = take.id
   waveReady = false
-  ws.load('/clips/' + encodeURIComponent(take.id) + '.wav').catch(() => { waveReady = false })
+  ws.load('/clips/' + encodeURIComponent(take.id) + '.wav').catch(() => undefined) // reported through 'error'
 }
 
 function drawLive() {
@@ -427,7 +450,9 @@ function renderStage() {
     const take = shown
     const position = playing ? state.position : 0
     loadWaveFor(take)
-    if (take.duration > 0 && Date.now() >= scrubHoldUntil) showCursorAt(position / take.duration)
+    const fraction = take.duration > 0 ? position / take.duration : 0
+    if (scrubTarget !== null && (Math.abs(fraction - scrubTarget) < 0.02 || Date.now() >= scrubHoldUntil)) { scrubTarget = null; scrubHoldUntil = 0 }
+    if (take.duration > 0 && scrubTarget === null && Date.now() >= scrubHoldUntil) showCursorAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(position) + ' / ' + fmt(take.duration)
@@ -442,7 +467,8 @@ function renderStage() {
 // --- meters: one bar per track, master last, with a falling peak-hold line -------------
 // Levels arrive with each state update; the hold lines fall on their own clock so they keep
 // dropping after the last update, and vanish at the bottom.
-const holds = {} // name -> { level, at }
+let holds = []   // per meter column: { level, at, painted }
+let metersKey = ''
 const HOLD_MS = 700
 const FALL_PER_SECOND = 0.5
 let holdTimer = null
@@ -455,14 +481,14 @@ function paintHolds() {
   meters.forEach((m, i) => {
     const el = box.children[i]
     if (!el) return
-    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0, painted: 0 })
+    const h = holds[i] || (holds[i] = { level: 0, at: 0, painted: 0 })
     if (now - h.at > HOLD_MS && h.level > 0) {
       h.level = Math.max(0, h.level - FALL_PER_SECOND * (now - h.painted) / 1000)
     }
     h.painted = now
     const hold = el.querySelector('.hold')
     hold.style.opacity = h.level > 0.01 ? 1 : 0
-    hold.style.bottom = (h.level * 100) + '%'
+    hold.style.bottom = 'min(calc(100% - 2px), ' + (h.level * 100) + '%)'
     if (h.level > 0) any = true
   })
   if (any && holdTimer === null) holdTimer = setTimeout(() => { holdTimer = null; paintHolds() }, 33)
@@ -471,7 +497,10 @@ function paintHolds() {
 function renderMeters() {
   const box = $('meters')
   const meters = state.meters || []
-  if (box.childElementCount !== meters.length) {
+  const key = meters.map((m) => m.name).join('\t')
+  if (key !== metersKey) {
+    metersKey = key
+    holds = [] // columns changed: no hold belongs to a new column
     box.innerHTML = ''
     for (const m of meters) {
       const el = document.createElement('div')
@@ -489,7 +518,7 @@ function renderMeters() {
     fill.style.setProperty('--bar-h', hPx + 'px')
     el.querySelector('.scale').style.setProperty('--bar-h', hPx + 'px')
     fill.style.height = (m.level * 100) + '%'
-    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0, painted: now })
+    const h = holds[i] || (holds[i] = { level: 0, at: 0, painted: now })
     if (m.level >= h.level) { h.level = m.level; h.at = now; h.painted = now }
   })
   paintHolds()

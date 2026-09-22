@@ -82,7 +82,8 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   in a browser on the touchscreen. While playing it draws the clip's Outbox mix as a waveform
   (wavesurfer.js, served from its package; `/clips/<id>.wav`) with a cursor that follows REAPER,
   while recording a live level graph, and always per-track meters from the web remote's track
-  peaks (polled every 50 ms while the transport moves). Clips are named on the page with an on-screen keyboard
+  peaks (polled every 50 ms while the transport moves). The mix is served only once the watcher's
+  manifest records it as finished; short clips render the moment they end (`render_now_seconds`). Clips are named on the page with an on-screen keyboard
   (`simple-keyboard`, served from its package); the rename travels as project ext state, and
   the watcher applies it to the region.
 

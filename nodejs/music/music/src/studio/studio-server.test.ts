@@ -1,3 +1,6 @@
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { Events } from '../typed-event-emitter.js'
@@ -122,6 +125,73 @@ describe('createStudioServer', () => {
     })
   })
 
+  it('serves a clip mix through the lookup, and 404s otherwise', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'clip-'))
+    const file = path.join(dir, 'mix.flac')
+    await fs.writeFile(file, Buffer.from('fLaC-not-really-but-bytes'))
+    try {
+      const service = makeService()
+      server = await createStudioServer({
+        service,
+        port: 0,
+        clipFile: (id) => Promise.resolve(id === '1' ? file : undefined),
+      })
+      const hit = await fetch(`${server.url}/clips/1.wav`)
+      expect(hit.status).toBe(200)
+      expect(hit.headers.get('content-type')).toBe('audio/flac')
+      expect(hit.headers.get('content-length')).toBe('25')
+      expect(Buffer.from(await hit.arrayBuffer()).toString()).toBe('fLaC-not-really-but-bytes')
+
+      expect((await fetch(`${server.url}/clips/2.wav`)).status).toBe(404)
+      expect((await fetch(`${server.url}/clips/%.wav`)).status).toBe(400) // bad encoding, no crash
+      expect((await fetch(`${server.url}/clips/1.wav`)).status).toBe(200) // still alive
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('survives a mix that vanishes between lookup and open', async () => {
+    const service = makeService()
+    server = await createStudioServer({
+      service,
+      port: 0,
+      clipFile: () => Promise.resolve(path.join(os.tmpdir(), 'no-such-clip-' + String(Date.now()) + '.wav')),
+    })
+    expect((await fetch(`${server.url}/clips/1.wav`)).status).toBe(404)
+    expect((await fetch(`${server.url}/`)).status).toBe(200)
+  })
+
+  it('seeks within a clip from a JSON body, tolerating a bad one', async () => {
+    const service = makeService()
+    server = await createStudioServer({ service, port: 0 })
+    const post = (body: string) =>
+      fetch(`${server?.url ?? ''}/actions/seek/1`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+      })
+    expect((await post('{"at": 4.5}')).status).toBe(204)
+    expect((await post('{"at": "x"}')).status).toBe(204)
+    await vi.waitFor(() => {
+      expect(service.seekTake).toHaveBeenCalledTimes(2)
+    })
+    expect(service.seekTake).toHaveBeenNthCalledWith(1, '1', 4.5)
+    expect(service.seekTake).toHaveBeenNthCalledWith(2, '1', 0)
+  })
+
+  it('starts a clip part-way in from the play-take body', async () => {
+    const service = makeService()
+    server = await createStudioServer({ service, port: 0 })
+    await fetch(`${server.url}/actions/play-take/1`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"at": 2}',
+    })
+    await vi.waitFor(() => {
+      expect(service.playTake).toHaveBeenCalledWith('1', 2)
+    })
+  })
+
   it('serves the on-screen keyboard from its package', async () => {
     server = await createStudioServer({ service: makeService(), port: 0 })
     const script = await fetch(`${server.url}/vendor/simple-keyboard.js`)
@@ -129,6 +199,9 @@ describe('createStudioServer', () => {
     expect(await script.text()).toContain('simple-keyboard')
     const css = await fetch(`${server.url}/vendor/simple-keyboard.css`)
     expect(css.headers.get('content-type')).toContain('text/css')
+    const wave = await fetch(`${server.url}/vendor/wavesurfer.js`)
+    expect(wave.headers.get('content-type')).toContain('javascript')
+    expect(await wave.text()).toContain('WaveSurfer')
   })
 
   it('stops pushing after close', async () => {
