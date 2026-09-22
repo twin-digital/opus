@@ -52,6 +52,11 @@ local DEFAULTS = {
   render_idle_seconds = 30,
   render_long_seconds = 10 * 60,
   render_long_idle_seconds = 5 * 60,
+
+  -- Loudness the mix is normalized to (integrated LUFS), so the review copy plays at a
+  -- normal level on a phone however quiet the piano's USB signal is. false leaves the
+  -- render at the project's own level. The recorded files are never changed.
+  normalize_lufs = -14,
 }
 
 local SCRIPT_PATH = debug.getinfo(1, "S").source:sub(2)
@@ -70,7 +75,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-24.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-24.3" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -610,7 +615,7 @@ local function renderMix(entry, region)
   local base = clipBaseName(entry)
   removeOutboxFiles(base)
 
-  local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER" }
+  local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER", "RENDER_NORMALIZE", "RENDER_NORMALIZE_TARGET" }
   local saved = {}
   for _, key in ipairs(numeric) do saved[key] = reaper.GetSetProjectInfo(0, key, 0, false) end
   local _, savedFile = reaper.GetSetProjectInfo_String(0, "RENDER_FILE", "", false)
@@ -625,6 +630,13 @@ local function renderMix(entry, region)
   reaper.GetSetProjectInfo(0, "RENDER_ADDTOPROJ", 0, true)
   reaper.GetSetProjectInfo(0, "RENDER_TAILFLAG", 0, true)
   reaper.GetSetProjectInfo(0, "RENDER_DITHER", 0, true)
+  if CONFIG.normalize_lufs then
+    -- &1 enables normalization; no mode bits = integrated LUFS; the target is an amplitude
+    reaper.GetSetProjectInfo(0, "RENDER_NORMALIZE", 1, true)
+    reaper.GetSetProjectInfo(0, "RENDER_NORMALIZE_TARGET", 10 ^ (CONFIG.normalize_lufs / 20), true)
+  else
+    reaper.GetSetProjectInfo(0, "RENDER_NORMALIZE", 0, true)
+  end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", dir, true)
   reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", base, true)
   reaper.Main_OnCommand(42230, 0) -- render project using the most recent settings, auto-close

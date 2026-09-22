@@ -114,7 +114,9 @@ Studio Outbox/
 ```
 
 - The `.wav` is the master mix of the region, in the project's current render format (WAV
-  unless you changed it).
+  unless you changed it), normalized to `normalize_lufs` (-14 LUFS, the level streaming
+  services use) so it plays at a normal volume on a phone however quiet the piano's USB
+  signal is. The recorded files are never changed.
 - The `.mid` is the clip's MIDI: each hand on its own channel with the program changes,
   written by the watcher itself.
 - `manifest.json` is the library exported next to the files.

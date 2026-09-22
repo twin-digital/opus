@@ -14,4 +14,5 @@ return {
   -- render = true,                -- render a mix per clip while idle
   -- midi_export = true,           -- write a .mid per clip
   -- render_idle_seconds = 30,     -- idle before the watcher renders (no keys, no transport change)
+  -- normalize_lufs = -14,         -- loudness of the rendered mix; false to leave it at the project's level
 }
