@@ -1,6 +1,7 @@
 import * as http from 'node:http'
 import * as fs from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
+import { once } from 'node:events'
 import { fileURLToPath } from 'node:url'
 import * as path from 'node:path'
 
@@ -175,13 +176,21 @@ export const createStudioServer = async ({
       send(response, 404, 'No rendered mix for this clip yet')
       return
     }
-    const { size } = await fs.stat(file)
+    const stat = await fs.stat(file)
+    if (!stat.isFile()) {
+      send(response, 404, 'Not found')
+      return
+    }
+    // opened before any header goes out, so an open failure is still a clean 404; bounded to
+    // the size just measured, so a file growing underneath (a re-render) cannot overrun it
+    const stream = createReadStream(file, { highWaterMark: 256 * 1024, end: Math.max(0, stat.size - 1) })
+    await once(stream, 'open')
     response.writeHead(200, {
       'content-type': mixContentType(file),
-      'content-length': size,
+      'content-length': stat.size,
       'cache-control': 'no-store',
     })
-    await pipeline(createReadStream(file, { highWaterMark: 256 * 1024 }), response)
+    await pipeline(stream, response)
   }
 
   const server = http.createServer((request, response) => {

@@ -43,6 +43,7 @@ describe('outbox', () => {
           '12': { number: 12, render: { mix: '20260922 - 0012 - Twinkle.wav' } },
           '13': { number: 13, render: null },
           '14': { number: 14, render: { mix: '../escape.wav' } },
+          '15': { number: 15, render: { mix: '..' } },
         },
       }),
     )
@@ -50,6 +51,7 @@ describe('outbox', () => {
     expect(await findClipMix(root, 'Piano Corner', 12)).toBe(path.join(project, '20260922 - 0012 - Twinkle.wav'))
     expect(await findClipMix(root, 'Piano Corner', 13)).toBeUndefined() // file exists, not finished
     expect(await findClipMix(root, 'Piano Corner', 14)).toBeUndefined() // never outside the folder
+    expect(await findClipMix(root, 'Piano Corner', 15)).toBeUndefined()
     expect(await findClipMix(root, 'Nope', 12)).toBeUndefined()
   })
 })

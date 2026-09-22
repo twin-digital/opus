@@ -313,29 +313,20 @@ function ensureWave() {
     normalize: true,
   })
   wave.on('ready', () => { waveReady = true; scheduleRender() })
-  wave.on('error', (error) => {
-    // a load superseded by a newer one aborts: that is not a failure of the newer one
-    if (error && error.name === 'AbortError') return
-    waveReady = false
-    // no mix yet (a fresh clip renders on the watcher's next idle pass) or an unreadable one:
-    // try again later, never in a loop
-    waveFailedAt[waveClipId] = Date.now()
-    waveClipId = null
-    scheduleRender()
-  })
+  // load failures are handled per load (see loadWaveFor), where the clip they belong to is known
   // tapping or dragging on the waveform moves playback there (the page never plays audio
   // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
   // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
   // positions are mapped by fraction of the clip, not seconds: the rendered mix can be a little
   // shorter or longer than the region (it is re-rendered after a trim) and must never desync
-  wave.on('interaction', (seconds) => { scrubTo(waveFraction(seconds)) })
+  wave.on('click', (relative) => { scrubTo(relative) })
   wave.on('drag', (relative) => { scrubTo(relative) })
   return wave
 }
 
 // the selected clip: the one last played (or just recorded); it stays on the stage after stop
 let selected = null
-let newestNumber = -1
+let newestNumber = null // highest clip number seen so far; null until the first connected state
 
 function selectTake(take) {
   selected = take
@@ -349,8 +340,9 @@ function syncSelection() {
     selected = current || null // gone from the project: nothing selected
   }
   // a clip that just finished recording becomes the selection
+  if (!state.connected) return
   const newest = state.takes.reduce((max, t) => (t.number !== undefined && t.number > max ? t.number : max), -1)
-  if (newestNumber >= 0 && newest > newestNumber && state.transport !== 'playing') {
+  if (newestNumber !== null && newest > newestNumber && state.transport !== 'playing') {
     selected = state.takes.find((t) => t.number === newest) || selected
   }
   newestNumber = newest
@@ -363,11 +355,6 @@ let scrubTarget = null    // ...or until it reports a position near this fractio
 const SCRUB_INTERVAL = 120
 const SCRUB_HOLD_CAP = 1500
 
-function waveFraction(seconds) {
-  const total = wave && wave.getDuration ? wave.getDuration() : 0
-  return total > 0 ? Math.min(1, Math.max(0, seconds / total)) : 0
-}
-
 function showCursorAt(fraction) {
   if (!wave || !waveReady) return
   const total = wave.getDuration()
@@ -376,25 +363,20 @@ function showCursorAt(fraction) {
 
 function sendScrub() {
   scrubTimer = null
-  if (scrubPending === null || !state.playingTake) return
-  const at = scrubPending * state.playingTake.duration
+  const take = state.playingTake || selected
+  if (scrubPending === null || !take) return
+  const at = scrubPending * take.duration
   scrubTarget = scrubPending
   scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
   scrubPending = null
-  fetch('/actions/seek/' + encodeURIComponent(state.playingTake.id), {
+  // a seek starts the clip when it is not playing, so stopped and playing share one path
+  fetch('/actions/seek/' + encodeURIComponent(take.id), {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
   }).catch(() => {})
 }
 
 function scrubTo(fraction) {
-  if (!state.playingTake) {
-    if (selected) {
-      fetch('/actions/play-take/' + encodeURIComponent(selected.id), {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: fraction * selected.duration }),
-      }).catch(() => {})
-    }
-    return
-  }
+  if (!state.playingTake && !selected) return
   fraction = Math.min(1, Math.max(0, fraction))
   scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
   showCursorAt(fraction)
@@ -407,9 +389,19 @@ function loadWaveFor(take) {
   if (!ws || waveClipId === take.id) return
   const failed = waveFailedAt[take.id]
   if (failed && Date.now() - failed < WAVE_RETRY_MS) return
-  waveClipId = take.id
+  const id = take.id
+  waveClipId = id
   waveReady = false
-  ws.load('/clips/' + encodeURIComponent(take.id) + '.wav').catch(() => undefined) // reported through 'error'
+  ws.load('/clips/' + encodeURIComponent(id) + '.wav').catch((error) => {
+    // a load superseded by a newer one aborts, and an older load's failure is not the newer one's
+    if ((error && error.name === 'AbortError') || waveClipId !== id) return
+    // no mix yet (a fresh clip renders as it ends, a trimmed one at the next idle pass) or an
+    // unreadable one: try again later, never in a loop
+    waveReady = false
+    waveFailedAt[id] = Date.now()
+    waveClipId = null
+    scheduleRender()
+  })
 }
 
 function drawLive() {
@@ -451,8 +443,9 @@ function renderStage() {
     const position = playing ? state.position : 0
     loadWaveFor(take)
     const fraction = take.duration > 0 ? position / take.duration : 0
-    if (scrubTarget !== null && (Math.abs(fraction - scrubTarget) < 0.02 || Date.now() >= scrubHoldUntil)) { scrubTarget = null; scrubHoldUntil = 0 }
-    if (take.duration > 0 && scrubTarget === null && Date.now() >= scrubHoldUntil) showCursorAt(fraction)
+    const scrubbing = scrubPending !== null || scrubTimer !== null
+    if (!scrubbing && scrubTarget !== null && (Math.abs(fraction - scrubTarget) < 0.02 || Date.now() >= scrubHoldUntil)) { scrubTarget = null; scrubHoldUntil = 0 }
+    if (take.duration > 0 && !scrubbing && scrubTarget === null && Date.now() >= scrubHoldUntil) showCursorAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
     time.textContent = fmt(position) + ' / ' + fmt(take.duration)

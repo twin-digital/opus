@@ -85,7 +85,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-25.3" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-25.4" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -117,6 +117,7 @@ local firstActivity = nil -- first activity seen in the current take, nil until 
 local midiEventCount = 0
 local finalizeDeadline = nil
 local lastFinalized = nil -- clip number of the take just finalized, rendered right away if short
+local markBusy -- defined with the idle trackers below
 local stoppedBy = "user"
 local publishedProjectName = nil
 local publishedIdentity = false
@@ -865,6 +866,12 @@ local lastTransportChange = reaper.time_precise()
 local lastKeyPress = reaper.time_precise()
 local lastPlayState = nil
 
+-- Anything that counts as the studio being in use restarts the idle clock.
+markBusy = function()
+  lastTransportChange = reaper.time_precise()
+  lastKeyPress = reaper.time_precise()
+end
+
 local function trackIdle()
   local state = reaper.GetPlayState()
   if state ~= lastPlayState then
@@ -945,10 +952,24 @@ local function syncLibrary()
 end
 
 -- Renders one clip's mix and MIDI into the Outbox and records the result on its entry.
+-- What a clip's outbox needs: nothing, or a render (mix and/or MIDI missing, or the region moved).
+local function renderNeeded(entry)
+  local render = entry.render ~= json.null and entry.render or nil
+  local mixMissing = CONFIG.render and (render == nil or render.mix == json.null or not fileExists(outboxDir() .. SEP .. render.mix))
+  local midiMissing = CONFIG.midi_export and (render == nil or render.midi == json.null and not render.noMidi)
+  local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
+  return mixMissing or midiMissing or stale
+end
+
 local function renderEntry(entry, region)
   local base = clipBaseName(entry)
   local render = entry.render ~= json.null and entry.render or nil
   local attempts = render and render.attempts or 0
+  -- the file about to be rewritten must not be advertised as finished while REAPER writes it
+  if render ~= nil and (render.mix ~= json.null or render.midi ~= json.null) then
+    render.mix, render.midi = json.null, json.null
+    saveLibrary()
+  end
   local mix = json.null
   if CONFIG.render then mix = renderMix(entry, region) or json.null end
   local midi = json.null
@@ -975,6 +996,7 @@ local function renderClipNow(number)
   local entry = lib and lib.clips[tostring(number)] or nil
   if entry == nil then return end
   if entry["end"] - entry.start > CONFIG.render_now_seconds then return end
+  if not renderNeeded(entry) then return end -- already done (by the idle pass, say)
   local _, byId = scanRegions()
   local region = entry.regionId and byId[entry.regionId] or nil
   if region == nil then return end
@@ -1014,13 +1036,10 @@ local function syncOutbox(regions)
       return
     end
 
-    local mixMissing = CONFIG.render and (render == nil or render.mix == json.null or not fileExists(outboxDir() .. SEP .. render.mix))
-    local midiMissing = CONFIG.midi_export and (render == nil or render.midi == json.null and not render.noMidi)
-    local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
     -- a failed render is retried later, not every tick: 10 minutes, then 20, 40...
     local attempts = render and render.attempts or 0
     local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(math.max(attempts - 1, 0), 6))
-    if (mixMissing or midiMissing or stale) and needed and region ~= nil and not backedOff then
+    if renderNeeded(entry) and needed and region ~= nil and not backedOff then
       renderEntry(entry, region)
       return
     end
@@ -1059,6 +1078,7 @@ local function onRecordingStarted()
   lastActivity = recStart
   firstActivity = nil
   stoppedBy = "user"
+  markBusy() -- a take is activity: the idle clock starts over when it ends
   midiEventCount = reaper.MIDI_GetRecentInputEvent(0)
   log(string.format("recording started at %.2fs; %d items before", recStart, itemsBeforeCount))
 end
@@ -1222,6 +1242,7 @@ local function onRecordingFinished()
   if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
   log(string.format("created region '%s' (%.2fs - %.2fs) and saved", name, first, last))
   lastFinalized = n
+  markBusy()
   return true
 end
 

@@ -247,6 +247,7 @@ export class StudioService {
       }
     } finally {
       this.seeking = false
+      this.queuedSeek = undefined
     }
   }
 
@@ -367,17 +368,9 @@ export class StudioService {
       }
       if (this.state.connected) {
         this.log.warn(error, 'REAPER is unreachable.')
-        // nothing is known to be moving any more; views drop back to idle and the poll slows
-        this.recordingStartedAt = undefined
-        this.update({
-          connected: false,
-          transport: 'stopped',
-          recordingElapsed: 0,
-          level: 0,
-          meters: [],
-          position: 0,
-          playingTake: undefined,
-        })
+        // views show idle and the poll slows; what was playing or recording is remembered, since
+        // REAPER may only have been busy for a few seconds and still be at it when polls resume
+        this.update({ connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], position: 0 })
       }
       return
     }

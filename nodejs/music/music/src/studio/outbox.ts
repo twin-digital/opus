@@ -65,7 +65,7 @@ export const findClipMix = async (
   }
   const entry = manifest.clips?.[String(number)]
   const mix = entry?.render?.mix
-  if (typeof mix !== 'string' || mix === '' || path.basename(mix) !== mix) {
+  if (typeof mix !== 'string' || mix === '' || mix === '.' || mix === '..' || path.basename(mix) !== mix) {
     return undefined
   }
   return path.join(dir, mix)

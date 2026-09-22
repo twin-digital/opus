@@ -244,8 +244,18 @@ describe('StudioService', () => {
     const state = service.getState()
     expect(state.connected).toBe(false)
     expect(state.transport).toBe('stopped')
-    expect(state.playingTake).toBeUndefined()
     expect(state.meters).toEqual([])
+
+    // REAPER was only busy: when it answers again, still playing, the take is still known and
+    // playback still stops at its end
+    reaper.offline = false
+    reaper.position = 5
+    await service.refresh()
+    expect(service.getState().transport).toBe('playing')
+    expect(service.getState().playingTake?.id).toBe('1')
+    reaper.position = 10
+    await service.refresh()
+    expect(reaper.requests.at(-1)).toBe('1016')
   })
 
   it('polls faster only while connected and moving', async () => {
