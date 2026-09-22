@@ -1,5 +1,11 @@
 # @thrashplay/music
 
+## 0.8.1
+
+### Patch Changes
+
+- 8ec8269: Studio: a take that was just started is kept while REAPER still reports the cursor's old position, and the stop at a take's end is sent again if it went astray, so playback shows on the page and stops at the take's end again.
+
 ## 0.8.0
 
 ### Minor Changes
