@@ -14,6 +14,19 @@ const reply = [
 ].join('\n')
 
 describe('parseReaperReply', () => {
+  it('reads the playback peaks the watcher publishes, by track number', () => {
+    const status = parseReaperReply(
+      [
+        'TRANSPORT\t1\t5\t0\t0\t0',
+        'EXTSTATE\tStudio\tplayback_peaks\t1:-12.5,3:-40.0',
+        'EXTSTATE\tOther\tplayback_peaks\t2:0',
+      ].join('\n'),
+    )
+    expect(status.playbackDb).toEqual({ 1: -12.5, 3: -40 })
+    expect(parseReaperReply('EXTSTATE\tStudio\tplayback_peaks\t').playbackDb).toEqual({})
+    expect(parseReaperReply('EXTSTATE\tStudio\tplayback_peaks\tx:y,2:-3').playbackDb).toEqual({ 2: -3 })
+  })
+
   it('decodes transport, regions, and the loudest non-master peak', () => {
     const status = parseReaperReply(reply)
 
@@ -25,9 +38,9 @@ describe('parseReaperReply', () => {
     ])
     expect(status.peakDb).toBe(-9)
     expect(status.tracks).toEqual([
-      { name: 'Master', peakDb: -3, master: true },
-      { name: 'Piano', peakDb: -18.5, master: false },
-      { name: 'Vocal', peakDb: -9, master: false },
+      { name: 'Master', peakDb: -3, master: true, number: 0 },
+      { name: 'Piano', peakDb: -18.5, master: false, number: 1 },
+      { name: 'Vocal', peakDb: -9, master: false, number: 2 },
     ])
     expect(status.ext).toEqual({ project_name: 'Piano Corner' })
   })
@@ -55,6 +68,7 @@ describe('parseReaperReply', () => {
       regions: [],
       peakDb: -Infinity,
       tracks: [],
+      playbackDb: {},
       ext: {},
     })
   })

@@ -31,7 +31,12 @@ export interface ReaperStatus {
   /** Loudest last-meter peak across all tracks, in dB. `-Infinity` when unmetered. */
   peakDb: number
   /** Every track's last-meter peak in dB, master first, in project order. */
-  tracks: { name: string; peakDb: number; master: boolean }[]
+  tracks: { name: string; peakDb: number; master: boolean; number: number }[]
+  /**
+   * What each track plays back, in dB by track number, from the watcher. REAPER meters an armed
+   * track from its input, so `tracks` carries nothing of playback.
+   */
+  playbackDb: Record<number, number>
   /** Project ext-state values the status query asks for, keyed by lower-cased key. */
   ext: Record<string, string>
 }
@@ -54,11 +59,15 @@ const toSeconds = (seconds: number) => {
 export const EXT_SECTION = 'Studio'
 export const STATUS_EXT_KEYS = ['project_name', 'watcher_version', 'watcher_hash'] as const
 
+/** Global ext-state key the watcher publishes playback peaks under. */
+export const PLAYBACK_PEAKS_KEY = 'playback_peaks'
+
 const STATUS_QUERY = [
   'TRANSPORT',
   'REGION',
   'TRACK',
   ...STATUS_EXT_KEYS.map((key) => `GET/PROJEXTSTATE/${EXT_SECTION}/${key}`),
+  `GET/EXTSTATE/${EXT_SECTION}/${PLAYBACK_PEAKS_KEY}`,
 ]
 
 // REAPER's TRANSPORT playstate: bit 0 play, bit 1 pause, bit 2 record
@@ -75,6 +84,7 @@ export const parseReaperReply = (text: string): ReaperStatus => {
     regions: [],
     peakDb: -Infinity,
     tracks: [],
+    playbackDb: {},
     ext: {},
   }
 
@@ -97,15 +107,26 @@ export const parseReaperReply = (text: string): ReaperStatus => {
       case 'TRACK': {
         // peaks arrive as tenths of a dB; track 0 is the master, whose peak is the mix, not the input
         const peak = Number(fields[6]) / 10
-        const master = fields[1] === '0'
-        if (Number.isFinite(peak)) {
-          status.tracks.push({ name: master ? 'Master' : (fields[2] ?? ''), peakDb: peak, master })
+        const number = Number(fields[1])
+        const master = number === 0
+        if (Number.isFinite(peak) && Number.isFinite(number)) {
+          status.tracks.push({ name: master ? 'Master' : (fields[2] ?? ''), peakDb: peak, master, number })
           if (!master) {
             status.peakDb = Math.max(status.peakDb, peak)
           }
         }
         break
       }
+      case 'EXTSTATE':
+        if (fields[1] === EXT_SECTION && fields[2] === PLAYBACK_PEAKS_KEY) {
+          for (const part of (fields[3] ?? '').split(',')) {
+            const [number, db] = part.split(':').map(Number)
+            if (Number.isFinite(number) && Number.isFinite(db)) {
+              status.playbackDb[number] = db
+            }
+          }
+        }
+        break
       case 'PROJEXTSTATE':
         // REAPER echoes the section and key as asked; keys are matched case-insensitively
         if ((fields[1] ?? '').toLowerCase() === EXT_SECTION.toLowerCase()) {

@@ -14,6 +14,8 @@ interface FakeReaper {
   projectName: string
   watcherHash: string
   requests: string[]
+  /** What the watcher publishes as playback peaks, verbatim. */
+  playbackPeaks: string
   /** When true, replies are captured at request time but delivered only by release(). */
   hold: boolean
   release: () => void
@@ -29,6 +31,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     projectName: '',
     watcherHash: '',
     requests: [],
+    playbackPeaks: '',
     hold: false,
     release: () => {
       const pending = held.splice(0)
@@ -67,6 +70,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
       `TRACK\t0\tMASTER\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
       `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
       `TRACK\t2\tVocal\t0\t1\t0\t-600\t-600`,
+      `EXTSTATE\tStudio\tplayback_peaks\t${reaper.playbackPeaks}`,
       `PROJEXTSTATE\tStudio\tproject_name\t${reaper.projectName}`,
       `PROJEXTSTATE\tStudio\twatcher_hash\t${reaper.watcherHash}`,
       `PROJEXTSTATE\tStudio\twatcher_version\t1`,
@@ -442,6 +446,17 @@ describe('StudioService', () => {
     await service.refresh()
     expect(service.getState().level).toBeCloseTo(0.9)
     expect(service.getState().meters[0]?.name).toBe('Piano')
+  })
+
+  it("shows the louder of a track's input and what it plays back", async () => {
+    const { reaper, service } = makeService({ playState: 1, peakDb: -30, playbackPeaks: '1:-48,2:-12' })
+    await service.refresh()
+    expect(service.getState().meters).toEqual([
+      { name: 'Piano', level: 0.5 }, // input -30 over playback -48
+      { name: 'Vocal', level: 0.8 }, // playback -12 over a silent input
+      { name: 'Master', level: 0.5 },
+    ])
+    expect(service.getState().level).toBeCloseTo(0.5) // the record graph stays the input
   })
 
   it('polls on an interval and emits change events', async () => {

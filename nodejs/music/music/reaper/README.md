@@ -224,8 +224,10 @@ toolbar pops in on touch near the top.
 - The strip under the header shows the selected clip (the one last played or just recorded):
   its waveform from the Outbox mix, a plain progress bar until that exists, with a cursor that
   follows playback; tap or drag on it to play from there. While recording it shows a live level
-  graph. Track meters with peak hold stand at the strip's right edge at all times; REAPER meters
-  the armed tracks' input even while stopped.
+  graph. Track meters with peak hold stand at the strip's right edge at all times. Each shows
+  the louder of the track's input (REAPER meters an armed track from its input, even while
+  stopped) and what the track plays back, which the watcher reads from the items at the play
+  position and publishes, since REAPER's own meters show nothing of playback on an armed track.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

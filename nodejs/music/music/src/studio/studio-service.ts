@@ -438,8 +438,13 @@ export class StudioService {
       transport,
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
       level: toLevel(status.peakDb),
+      // a track's meter is the louder of its input (what REAPER meters on an armed track) and
+      // what it plays back (from the watcher), as the ear hears the two together
       meters: [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
-        (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
+        (track) => ({
+          name: track.name,
+          level: toLevel(Math.max(track.peakDb, status.playbackDb[track.number] ?? -Infinity)),
+        }),
       ),
       position: stillPlaying === undefined ? 0 : Math.max(0, status.position - stillPlaying.start),
       takes,
