@@ -76,6 +76,10 @@ Preferences worth setting:
 
 ## The watcher installs itself
 
+Only one watcher runs at a time: a copy started later (a second line in the startup hook, or
+the script run by hand from the Actions list) takes over and the earlier one stops with a note
+in the console. Before that guard, two running copies made two regions for every take.
+
 The studio app ships the watcher and installs it into REAPER's resource path every time it
 starts: `Scripts/Studio/cs-studio-watcher.lua`, a `Scripts/Studio/cs-studio-config.lua` for
 your settings (created once, never overwritten), and a line in `Scripts/__startup.lua` that
