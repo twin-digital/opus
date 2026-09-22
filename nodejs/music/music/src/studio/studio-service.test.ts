@@ -228,14 +228,18 @@ describe('StudioService', () => {
     expect(reaper.requests.at(-2)).toBe('1016;SET/POS/12.000;1007')
   })
 
-  it('maps peaks to a 0..1 level only while the transport is moving', async () => {
+  it('maps peaks to a 0..1 level, per track, whatever the transport is doing', async () => {
     const { reaper, service } = makeService({ playState: 1, peakDb: -30 })
     await service.refresh()
     expect(service.getState().level).toBeCloseTo(0.5)
+    expect(service.getState().meters).toEqual([{ name: 'Piano', level: 0.5 }])
 
+    // stopped, the meters still show live input on armed tracks
     reaper.playState = 0
+    reaper.peakDb = -6
     await service.refresh()
-    expect(service.getState().level).toBe(0)
+    expect(service.getState().level).toBeCloseTo(0.9)
+    expect(service.getState().meters[0]?.name).toBe('Piano')
   })
 
   it('polls on an interval and emits change events', async () => {

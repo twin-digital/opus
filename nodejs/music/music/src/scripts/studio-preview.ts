@@ -44,7 +44,12 @@ const makeFakeStudio = (): StudioApi => {
     transport: 'stopped',
     recordingElapsed: 0,
     level: 0,
-    meters: [],
+    meters: [
+      { name: 'Piano', level: 0 },
+      { name: 'Samples', level: 0 },
+      { name: 'Vocal', level: 0 },
+      { name: 'Master', level: 0 },
+    ],
     position: 0,
     takes: [
       {
@@ -82,9 +87,15 @@ const makeFakeStudio = (): StudioApi => {
         end: start + duration,
         duration,
       }
-      update({ transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], takes: [take, ...state.takes] })
+      update({
+        transport: 'stopped',
+        recordingElapsed: 0,
+        level: 0,
+        meters: meters(0, 0),
+        takes: [take, ...state.takes],
+      })
     } else {
-      update({ transport: 'stopped', level: 0, meters: [], position: 0, playingTake: undefined })
+      update({ transport: 'stopped', level: 0, meters: meters(0, 0), position: 0, playingTake: undefined })
     }
     recordingStartedAt = undefined
     playingUntil = undefined
@@ -97,7 +108,7 @@ const makeFakeStudio = (): StudioApi => {
     update({ transport: 'playing', playingTake: take, position: at })
   }
 
-  const wobble = (base: number) => Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.3))
+  const wobble = (base: number) => (base === 0 ? 0 : Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.3)))
   const meters = (piano: number, vocal: number) => [
     { name: 'Piano', level: wobble(piano) },
     { name: 'Samples', level: wobble(piano * 0.4) },

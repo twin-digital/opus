@@ -49,7 +49,7 @@ export interface StudioState {
   recordingElapsed: number
   /** Input level, 0..1, derived from the loudest track peak. */
   level: number
-  /** Every track's level, 0..1, master last, in project order; empty while stopped. */
+  /** Every track's level, 0..1, master last, in project order. Live input shows here even while stopped. */
   meters: { name: string; level: number }[]
   /** Seconds into the playing take, when one is playing through this service. */
   position: number
@@ -374,13 +374,10 @@ export class StudioService {
       connected: true,
       transport,
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
-      level: transport === 'stopped' ? 0 : toLevel(status.peakDb),
-      meters:
-        transport === 'stopped' ?
-          []
-        : [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
-            (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
-          ),
+      level: toLevel(status.peakDb),
+      meters: [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
+        (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
+      ),
       position: playingTake !== undefined && stillPlaying ? Math.max(0, status.position - playingTake.start) : 0,
       takes,
       projectName: status.ext.project_name || undefined,

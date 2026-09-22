@@ -83,7 +83,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .take.active { box-shadow: inset 0 0 0 4px #37d67a; }
   .take .play { width: 72px; height: 72px; border-radius: 50%; background: #37d67a; flex: none; padding: 0; }
   .take .play svg { width: 30px; height: 30px; display: block; fill: #fff; }
-  .take.active .play { background: #ff3b3b; }
+  .take.playing .play { background: #ff3b3b; }
   .take .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .take .len { color: #9aa0ad; font-size: 20px; }
   .take .edit { width: 56px; height: 56px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
@@ -242,7 +242,7 @@ function render() {
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'
 
-  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '')
+  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '') + '|' + (selected ? selected.id : '')
   if (key === takesKey) return
   takesKey = key
   const box = $('takes')
@@ -256,14 +256,15 @@ function render() {
   }
   for (const take of state.takes) {
     const active = !!state.playingTake && state.playingTake.id === take.id
+    const isSelected = !!selected && selected.id === take.id
     const el = document.createElement('div')
-    el.className = 'take' + (active ? ' active' : '')
+    el.className = 'take' + (isSelected ? ' active' : '') + (active ? ' playing' : '')
     const play = document.createElement('button')
     play.className = 'play'
     play.innerHTML = active ? StopIcon : PlayIcon
     play.setAttribute('aria-label', active ? 'Stop' : 'Play ' + displayName(take))
     play.tabIndex = -1 // the whole card is the control; the button is its icon
-    el.onclick = () => act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id))
+    el.onclick = () => { if (!active) selectTake(take); act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id)) }
     const name = document.createElement('span')
     name.className = 'name'
     name.textContent = displayName(take)
@@ -315,6 +316,29 @@ function ensureWave() {
   return wave
 }
 
+// the selected clip: the one last played (or just recorded); it stays on the stage after stop
+let selected = null
+let newestNumber = -1
+
+function selectTake(take) {
+  selected = take
+  render()
+}
+
+function syncSelection() {
+  if (state.playingTake) selected = state.playingTake
+  if (selected) {
+    const current = state.takes.find((t) => t.id === selected.id)
+    selected = current || null // gone from the project: nothing selected
+  }
+  // a clip that just finished recording becomes the selection
+  const newest = state.takes.reduce((max, t) => (t.number !== undefined && t.number > max ? t.number : max), -1)
+  if (newestNumber >= 0 && newest > newestNumber && state.transport !== 'playing') {
+    selected = state.takes.find((t) => t.number === newest) || selected
+  }
+  newestNumber = newest
+}
+
 let scrubPending = null   // latest requested position not yet sent
 let scrubTimer = null
 let scrubHoldUntil = 0    // REAPER's position is ignored until this time
@@ -342,7 +366,14 @@ function sendScrub() {
 }
 
 function scrubTo(fraction) {
-  if (!state.playingTake) return
+  if (!state.playingTake) {
+    if (selected) {
+      fetch('/actions/play-take/' + encodeURIComponent(selected.id), {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: fraction * selected.duration }),
+      }).catch(() => {})
+    }
+    return
+  }
   fraction = Math.min(1, Math.max(0, fraction))
   scrubHoldUntil = Date.now() + 400
   showCursorAt(fraction)
@@ -375,12 +406,14 @@ function drawLive() {
 }
 
 function renderStage() {
+  syncSelection()
   const playing = state.transport === 'playing' && state.playingTake
   const recording = state.transport === 'recording'
+  const shown = playing ? state.playingTake : (!recording && selected) || null
   const title = $('stageTitle'), time = $('stageTime')
-  $('wave').style.display = playing ? 'block' : 'none'
+  $('wave').style.display = shown ? 'block' : 'none'
   $('live').style.display = recording ? 'block' : 'none'
-  $('progress').style.display = playing && !waveReady ? 'block' : 'none'
+  $('progress').style.display = shown && !waveReady ? 'block' : 'none'
 
   if (recording) {
     liveBars.push(state.level)
@@ -390,13 +423,15 @@ function renderStage() {
     time.textContent = fmt(state.recordingElapsed)
     return
   }
-  if (playing) {
-    const take = state.playingTake
+  if (shown) {
+    const take = shown
+    const position = playing ? state.position : 0
     loadWaveFor(take)
-    if (take.duration > 0 && Date.now() >= scrubHoldUntil) showCursorAt(state.position / take.duration)
-    $('progressFill').style.width = (take.duration > 0 ? (state.position / take.duration) * 100 : 0) + '%'
+    if (take.duration > 0 && Date.now() >= scrubHoldUntil) showCursorAt(position / take.duration)
+    $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
     title.textContent = displayName(take)
-    time.textContent = fmt(state.position) + ' / ' + fmt(take.duration)
+    time.textContent = fmt(position) + ' / ' + fmt(take.duration)
+    if (!playing) liveBars.length = 0
     return
   }
   liveBars.length = 0
