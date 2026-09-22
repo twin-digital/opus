@@ -452,8 +452,11 @@ local function safeName(text)
   return (text:gsub('[<>:"/\\|?*%c]', " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("[%s.]+$", ""))
 end
 
-local function utcNow()
-  return os.date("!%Y-%m-%dT%H:%M:%SZ")
+-- Local time with its UTC offset ("2026-09-22T18:41:07-05:00"): a real timestamp, whose first
+-- ten characters are also the local calendar day the file names sort by.
+local function localNow()
+  local offset = os.date("%z") -- "-0500"
+  return os.date("%Y-%m-%dT%H:%M:%S") .. offset:sub(1, 3) .. ":" .. offset:sub(4, 5)
 end
 
 -- ---------------------------------------------------------------------------------------
@@ -500,7 +503,7 @@ end
 local function saveLibrary()
   local path = libraryPath()
   if library == nil or path == nil then return end
-  library.project = { name = currentProjectName(), file = (projectFile() or ""):match("[^/\\]+$"), updatedAt = utcNow() }
+  library.project = { name = currentProjectName(), file = (projectFile() or ""):match("[^/\\]+$"), updatedAt = localNow() }
   writeFile(path, json.encode(library, "  ") .. "\n")
   if CONFIG.render or CONFIG.midi_export then
     reaper.RecursiveCreateDirectory(outboxDir(), 0)
@@ -535,8 +538,7 @@ local function recordClip(number, label, first, last, items, stoppedBy)
   lib.clips[tostring(number)] = {
     number = number,
     label = label,
-    createdAt = utcNow(),
-    createdDate = os.date("%Y%m%d"),
+    createdAt = localNow(),
     start = first,
     ["end"] = last,
     starred = false,
@@ -571,7 +573,7 @@ local function clipBaseName(entry)
   else
     slug = text
   end
-  local date = entry.createdDate or (type(entry.createdAt) == "string" and entry.createdAt:sub(1, 10):gsub("-", "")) or os.date("%Y%m%d")
+  local date = (type(entry.createdAt) == "string" and #entry.createdAt >= 10) and entry.createdAt:sub(1, 10):gsub("-", "") or os.date("%Y%m%d")
   return safeName(string.format("%s - %04d - %s", date, entry.number, slug))
 end
 
@@ -758,7 +760,7 @@ local function syncLibrary()
     local key = tostring(number)
     local entry = lib.clips[key]
     if entry == nil then
-      entry = { number = number, label = region.label, createdAt = utcNow(), createdDate = os.date("%Y%m%d"), start = region.start, ["end"] = region["end"],
+      entry = { number = number, label = region.label, createdAt = localNow(), start = region.start, ["end"] = region["end"],
         starred = false, archived = false, stoppedBy = "unknown", sources = {}, render = json.null }
       lib.clips[key] = entry
       changed = true
@@ -826,7 +828,7 @@ local function syncOutbox(regions)
         midi = exportMidi(entry, region) or json.null
         noMidi = midi == json.null
       end
-      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = utcNow(), start = entry.start, ["end"] = entry["end"], label = entry.label }
+      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label }
       saveLibrary()
       log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
       return
