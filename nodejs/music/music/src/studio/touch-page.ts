@@ -108,9 +108,9 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .simple-keyboard .hg-button.hg-functionBtn { background: #3a3f4b; }
   .simple-keyboard .hg-button.hg-button-space { min-width: 40%; }
   .empty { color: #9aa0ad; font-size: 24px; padding: 20px; text-align: center; }
-  #banner { display: none; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
+  #banner { display: none; position: relative; z-index: 4; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
   #banner.show { display: block; }
-  #offline { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
+  #offline { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
 </style>
 </head>
 <body>
