@@ -271,11 +271,15 @@ export class StudioService {
     }
     // stay clear of the end: a seek right at it would end the take on the next poll
     const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.25))
-    if (this.state.transport === 'playing' && this.state.playingTake?.id === id) {
-      await this.command(() => this.client.setPosition(take.start + offset))
-      return
-    }
-    await this.playTake(id, offset)
+    await this.command(async () => {
+      // decided on its turn: a stop queued ahead, or the take ending meanwhile, makes it a start
+      if (this.state.transport === 'playing' && this.state.playingTake?.id === id) {
+        await this.client.setPosition(take.start + offset)
+        return
+      }
+      this.setPlayingTake(take)
+      await this.client.playFrom(take.start + offset)
+    })
   }
 
   async playLatest(): Promise<void> {

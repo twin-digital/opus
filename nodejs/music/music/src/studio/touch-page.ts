@@ -34,6 +34,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #strip { display: flex; gap: 16px; padding: 0 28px 18px; height: 190px; }
   #stage { flex: 1; position: relative; background: #0d0f14; border-radius: 18px; overflow: hidden; border: 1px solid #23262f; }
   #wave { position: absolute; inset: 0; }
+  #wave.loading { visibility: hidden; } /* the previous clip's shape must not sit under a new title */
   #live { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
   #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #2a2e3a; display: none; }
   #progressFill { height: 100%; width: 0; background: #37d67a; }
@@ -462,6 +463,7 @@ function renderStage() {
     const take = shown
     const position = playing ? state.position : 0
     waveform.loadFor(take.id, take.duration)
+    $('wave').classList.toggle('loading', !waveform.ready)
     const fraction = take.duration > 0 ? position / take.duration : 0
     if (take.duration > 0 && scrub.accept(fraction, take.duration)) waveform.showAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'

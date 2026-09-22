@@ -217,9 +217,18 @@ describe('touch page', () => {
     push({ ...idle, takes: [take('2', 2), take('1', 1)] })
     await vi.advanceTimersByTimeAsync(1)
     expect(ws.instance.load).toHaveBeenLastCalledWith('/clips/2.wav', undefined, 30)
+    expect($('wave').classList.contains('loading')).toBe(true) // hidden while clip 2 loads
     await ws.fail(new Error('Failed to fetch audio: 404'))
     expect(ws.instance.empty).toHaveBeenCalled()
     expect($('progress').style.display).toBe('block') // the fallback stays until a mix loads
+    expect($('wave').classList.contains('loading')).toBe(true)
+  })
+
+  it('shows the waveform once its clip is loaded', async () => {
+    selectNewClip()
+    expect($('wave').classList.contains('loading')).toBe(true)
+    await ws.ready()
+    expect($('wave').classList.contains('loading')).toBe(false)
   })
 
   it('releases the cursor hold on a short clip once REAPER is within a quarter second', async () => {

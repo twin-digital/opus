@@ -249,6 +249,41 @@ describe('StudioService', () => {
     expect(service.getState().transport).toBe('stopped')
   })
 
+  it('starts the clip from a seek that reaches REAPER after a stop queued ahead of it', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const rename = service.renameTake('2', 'Twinkle') // any command still settling
+    const stop = service.stopTransport()
+    const seek = service.seekTake('1', 5)
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([rename, stop, seek])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/5.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
+  it('starts the clip from a seek whose take ended while the seek waited', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const rename = service.renameTake('2', 'Twinkle')
+    const seek = service.seekTake('1', 3)
+    reaper.hold = false
+    reaper.position = 10.5 // past the end: the poll stops it
+    reaper.release()
+    await Promise.all([rename, seek])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/3.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+    expect(reaper.playState).toBe(1)
+  })
+
   it('honours a seek asked for after a stop, while an older seek is still settling', async () => {
     const { reaper, service } = makeService({ regions: twoTakes })
     await service.refresh()
