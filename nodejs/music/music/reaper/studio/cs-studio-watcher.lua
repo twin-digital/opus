@@ -56,6 +56,9 @@ local DEFAULTS = {
   outbox = "~/Music/Studio Outbox",
   render = true,
   midi_export = true,
+  -- A clip up to this long is rendered the moment it ends (a few seconds of REAPER's time),
+  -- so its waveform is on the page almost at once. Longer ones wait for idle.
+  render_now_seconds = 3 * 60,
   render_idle_seconds = 30,
   render_long_seconds = 10 * 60,
   render_long_idle_seconds = 5 * 60,
@@ -82,7 +85,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-25.2" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-25.4" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -113,6 +116,8 @@ local lastActivity = 0
 local firstActivity = nil -- first activity seen in the current take, nil until one is
 local midiEventCount = 0
 local finalizeDeadline = nil
+local lastFinalized = nil -- clip number of the take just finalized, rendered right away if short
+local markBusy -- defined with the idle trackers below
 local stoppedBy = "user"
 local publishedProjectName = nil
 local publishedIdentity = false
@@ -678,13 +683,31 @@ local function removeOutboxFiles(base)
   for _, name in ipairs(outboxFiles(base)) do os.remove(outboxDir() .. SEP .. name) end
 end
 
+-- Files REAPER left under the temporary render name of `base`.
+local RENDER_TEMP = ".rendering"
+local function renderTempFiles(base)
+  local found = {}
+  local dir = outboxDir()
+  reaper.EnumerateFiles(dir, -1)
+  local i = 0
+  while true do
+    local name = reaper.EnumerateFiles(dir, i)
+    if name == nil then break end
+    if name:sub(1, #base + #RENDER_TEMP + 1) == base .. RENDER_TEMP .. "." then found[#found + 1] = name end
+    i = i + 1
+  end
+  return found
+end
+
 -- Renders the region as the master mix, with the project's current render format, into the
--- Outbox as <base>.<ext>. Render settings and the time selection are put back afterwards.
+-- Outbox as <base>.<ext>. REAPER writes the file in place, so it renders under a temporary
+-- name and is renamed once complete: a file under its final name is always whole. Render
+-- settings and the time selection are put back afterwards.
 local function renderMix(entry, region)
   local dir = outboxDir()
   reaper.RecursiveCreateDirectory(dir, 0)
   local base = clipBaseName(entry)
-  removeOutboxFiles(base)
+  for _, name in ipairs(renderTempFiles(base)) do os.remove(dir .. SEP .. name) end -- an interrupted render
 
   local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_STARTPOS", "RENDER_ENDPOS", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER", "RENDER_NORMALIZE", "RENDER_NORMALIZE_TARGET", "RENDER_FADEIN", "RENDER_FADEOUT" }
   local saved = {}
@@ -711,16 +734,20 @@ local function renderMix(entry, region)
     reaper.GetSetProjectInfo(0, "RENDER_NORMALIZE", 0, true)
   end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", dir, true)
-  reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", base, true)
+  reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", base .. RENDER_TEMP, true)
   reaper.Main_OnCommand(42230, 0) -- render project using the most recent settings, auto-close
 
   for _, key in ipairs(numeric) do reaper.GetSetProjectInfo(0, key, saved[key], true) end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", savedFile, true)
   reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", savedPattern, true)
 
-  local files = outboxFiles(base)
-  for _, name in ipairs(files) do
-    if not name:match("%.mid$") then return name end
+  for _, temp in ipairs(renderTempFiles(base)) do
+    local name = base .. temp:sub(#base + #RENDER_TEMP + 1)
+    for _, old in ipairs(outboxFiles(base)) do
+      if not old:match("%.mid$") then os.remove(dir .. SEP .. old) end -- the previous mix, whatever its format
+    end
+    if os.rename(dir .. SEP .. temp, dir .. SEP .. name) then return name end
+    os.remove(dir .. SEP .. temp)
   end
   return nil
 end
@@ -861,6 +888,12 @@ local lastTransportChange = reaper.time_precise()
 local lastKeyPress = reaper.time_precise()
 local lastPlayState = nil
 
+-- Anything that counts as the studio being in use restarts the idle clock.
+markBusy = function()
+  lastTransportChange = reaper.time_precise()
+  lastKeyPress = reaper.time_precise()
+end
+
 local function trackIdle()
   local state = reaper.GetPlayState()
   if state ~= lastPlayState then
@@ -940,6 +973,59 @@ local function syncLibrary()
   return regions
 end
 
+-- Renders one clip's mix and MIDI into the Outbox and records the result on its entry.
+-- What a clip's outbox needs: nothing, or a render (mix and/or MIDI missing, or the region moved).
+local function renderNeeded(entry)
+  local render = entry.render ~= json.null and entry.render or nil
+  local mixMissing = CONFIG.render and (render == nil or render.mix == json.null or not fileExists(outboxDir() .. SEP .. render.mix))
+  local midiMissing = CONFIG.midi_export and (render == nil or render.midi == json.null and not render.noMidi)
+  local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
+  return mixMissing or midiMissing or stale
+end
+
+local function renderEntry(entry, region)
+  local base = clipBaseName(entry)
+  local render = entry.render ~= json.null and entry.render or nil
+  local attempts = render and render.attempts or 0
+  -- the file about to be rewritten must not be advertised as finished while REAPER writes it
+  if render ~= nil and (render.mix ~= json.null or render.midi ~= json.null) then
+    render.mix, render.midi = json.null, json.null
+    saveLibrary()
+  end
+  local mix = json.null
+  if CONFIG.render then mix = renderMix(entry, region) or json.null end
+  local midi = json.null
+  local noMidi = false
+  if CONFIG.midi_export then
+    midi = exportMidi(entry, region) or json.null
+    noMidi = midi == json.null
+  end
+  local failed = CONFIG.render and mix == json.null
+  entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label,
+    attempts = failed and (attempts + 1) or 0, failedAt = failed and os.time() or nil }
+  saveLibrary()
+  if failed then
+    reaper.ShowConsoleMsg(string.format("[Studio] Render of clip %d produced no file; will retry later.\n", entry.number))
+  else
+    log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
+  end
+end
+
+-- A short clip is rendered as soon as it is finalized, without waiting for idle.
+local function renderClipNow(number)
+  if not (CONFIG.render or CONFIG.midi_export) or not CONFIG.render_now_seconds then return end
+  if reaper.GetPlayState() ~= 0 then return end -- a render halts the transport; the idle pass will get it
+  local lib = loadLibrary()
+  local entry = lib and lib.clips[tostring(number)] or nil
+  if entry == nil then return end
+  if entry["end"] - entry.start > CONFIG.render_now_seconds then return end
+  if not renderNeeded(entry) then return end -- already done (by the idle pass, say)
+  local _, byId = scanRegions()
+  local region = entry.regionId and byId[entry.regionId] or nil
+  if region == nil then return end
+  renderEntry(entry, region)
+end
+
 -- Picks the one clip whose outbox files are missing or stale and brings them up to date.
 local function syncOutbox(regions)
   if not (CONFIG.render or CONFIG.midi_export) then return end
@@ -973,30 +1059,11 @@ local function syncOutbox(regions)
       return
     end
 
-    local mixMissing = CONFIG.render and (render == nil or render.mix == json.null or not fileExists(outboxDir() .. SEP .. render.mix))
-    local midiMissing = CONFIG.midi_export and (render == nil or render.midi == json.null and not render.noMidi)
-    local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
     -- a failed render is retried later, not every tick: 10 minutes, then 20, 40...
     local attempts = render and render.attempts or 0
     local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(math.max(attempts - 1, 0), 6))
-    if (mixMissing or midiMissing or stale) and needed and region ~= nil and not backedOff then
-      local mix = json.null
-      if CONFIG.render then mix = renderMix(entry, region) or json.null end
-      local midi = json.null
-      local noMidi = false
-      if CONFIG.midi_export then
-        midi = exportMidi(entry, region) or json.null
-        noMidi = midi == json.null
-      end
-      local failed = CONFIG.render and mix == json.null
-      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label,
-        attempts = failed and (attempts + 1) or 0, failedAt = failed and os.time() or nil }
-      saveLibrary()
-      if failed then
-        reaper.ShowConsoleMsg(string.format("[Studio] Render of clip %d produced no file; will retry later.\n", entry.number))
-      else
-        log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
-      end
+    if renderNeeded(entry) and needed and region ~= nil and not backedOff then
+      renderEntry(entry, region)
       return
     end
   end
@@ -1034,6 +1101,7 @@ local function onRecordingStarted()
   lastActivity = recStart
   firstActivity = nil
   stoppedBy = "user"
+  markBusy() -- a take is activity: the idle clock starts over when it ends
   midiEventCount = reaper.MIDI_GetRecentInputEvent(0)
   log(string.format("recording started at %.2fs; %d items before", recStart, itemsBeforeCount))
 end
@@ -1196,6 +1264,8 @@ local function onRecordingFinished()
   reaper.UpdateArrange()
   if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
   log(string.format("created region '%s' (%.2fs - %.2fs) and saved", name, first, last))
+  lastFinalized = n
+  markBusy()
   return true
 end
 
@@ -1218,6 +1288,11 @@ local function step()
     itemsBeforeCount = reaper.CountMediaItems(0)
     pendingCount = itemsBeforeCount
     whileIdle()
+    if lastFinalized ~= nil and projectFile() ~= nil then
+      local ok, err = pcall(renderClipNow, lastFinalized)
+      if not ok then reaper.ShowConsoleMsg("[Studio] Immediate render failed: " .. tostring(err) .. "\n") end
+    end
+    lastFinalized = nil
   else
     whileIdle()
   end

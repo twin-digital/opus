@@ -29,7 +29,29 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #dot.play { background: #37d67a; }
   @keyframes pulse { 50% { opacity: 0.25; } }
   #meter { width: 160px; height: 18px; background: #2a2d36; border-radius: 9px; overflow: hidden; }
-  #meterFill { height: 100%; width: 0; background: linear-gradient(90deg, #37d67a, #ffd166 70%, #ff3b3b); transition: width 80ms linear; }
+  #meterFill { height: 100%; width: 0; background: linear-gradient(90deg, #37d67a 0%, #37d67a 70%, #ffd166 70%, #ffd166 90%, #ff3b3b 90%); background-size: 160px 100%; transition: width 80ms linear; }
+  /* the stage: waveform or live graph, with the meters standing at its right edge */
+  #strip { display: flex; gap: 16px; padding: 0 28px 18px; height: 190px; }
+  #stage { flex: 1; position: relative; background: #0d0f14; border-radius: 18px; overflow: hidden; border: 1px solid #23262f; }
+  #wave { position: absolute; inset: 0; }
+  #wave.loading { visibility: hidden; } /* the previous clip's shape must not sit under a new title */
+  #live { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+  #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #2a2e3a; display: none; }
+  #progressFill { height: 100%; width: 0; background: #37d67a; }
+  #stageTitle, #stageTime { position: absolute; top: 10px; z-index: 3; font-size: 18px; font-weight: 600; padding: 4px 10px; border-radius: 10px; background: rgba(13, 15, 20, 0.8); pointer-events: none; }
+  #stageTitle { left: 12px; color: #d5d8e0; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #stageTime { right: 12px; color: #ffd166; font-variant-numeric: tabular-nums; }
+  #meters { display: flex; gap: 10px; align-items: stretch; }
+  .meter { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 34px; }
+  .meter .bar { flex: 1; width: 100%; position: relative; background: #0a0c10; border-radius: 4px; overflow: hidden; border: 1px solid #2a2e3a; }
+  /* the whole scale, dim, so the unlit segments read as a meter and not an empty box */
+  .meter .scale, .meter .fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, #37d67a 0%, #37d67a 70%, #ffd166 70%, #ffd166 90%, #ff3b3b 90%); background-size: 100% var(--bar-h, 100px); background-position: bottom; }
+  .meter .scale { top: 0; opacity: 0.16; }
+  .meter .fill { height: 0; }
+  /* segmentation: a thin dark line every few pixels, over both */
+  .meter .segments { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0 5px, #0a0c10 5px 7px); pointer-events: none; }
+  .meter .hold { position: absolute; left: 0; right: 0; height: 2px; background: #fff; bottom: 0; opacity: 0; z-index: 2; }
+  .meter .name { font-size: 13px; color: #9aa0ad; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
   main { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 0 28px 28px; min-height: 0; }
   .buttons { display: flex; flex-direction: column; gap: 24px; }
   button {
@@ -62,7 +84,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .take.active { box-shadow: inset 0 0 0 4px #37d67a; }
   .take .play { width: 72px; height: 72px; border-radius: 50%; background: #37d67a; flex: none; padding: 0; }
   .take .play svg { width: 30px; height: 30px; display: block; fill: #fff; }
-  .take.active .play { background: #ff3b3b; }
+  .take.playing .play { background: #ff3b3b; }
   .take .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .take .len { color: #9aa0ad; font-size: 20px; }
   .take .edit { width: 56px; height: 56px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
@@ -71,7 +93,8 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   /* naming sheet */
   #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; z-index: 10; }
   #sheet.open { display: flex; }
-  #sheet .panel { width: 100%; background: #1d2029; border-radius: 28px 28px 0 0; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+  #sheet { justify-content: center; }
+  #sheet .panel { width: 50%; min-width: 640px; max-width: 100%; background: #1d2029; border-radius: 28px 28px 0 0; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
   #sheet .row { display: flex; align-items: center; gap: 14px; }
   #sheet .clip { font-size: 24px; font-weight: 700; white-space: nowrap; }
   #nameField { flex: 1; font-size: 30px; font-weight: 600; padding: 12px 16px; border-radius: 14px; border: 2px solid transparent; background: #2a2e3a; color: #fff; caret-color: #ffd166; min-width: 0; outline: none; }
@@ -86,9 +109,9 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .simple-keyboard .hg-button.hg-functionBtn { background: #3a3f4b; }
   .simple-keyboard .hg-button.hg-button-space { min-width: 40%; }
   .empty { color: #9aa0ad; font-size: 24px; padding: 20px; text-align: center; }
-  #banner { display: none; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
+  #banner { display: none; position: relative; z-index: 4; background: #ffd166; color: #14161c; font-size: 20px; font-weight: 600; padding: 10px 28px; }
   #banner.show { display: block; }
-  #offline { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
+  #offline { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; font-size: 32px; text-align: center; padding: 40px; }
 </style>
 </head>
 <body>
@@ -98,6 +121,16 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   <div id="instrument"></div>
   <div id="status"><div id="meter"><div id="meterFill"></div></div><div id="dot"></div><span id="statusText">Ready</span></div>
 </header>
+<div id="strip">
+  <div id="stage">
+    <div id="wave"></div>
+    <canvas id="live"></canvas>
+    <div id="progress"><div id="progressFill"></div></div>
+    <div id="stageTitle"></div>
+    <div id="stageTime"></div>
+  </div>
+  <div id="meters"></div>
+</div>
 <main>
   <div class="buttons">
     <button id="recBtn">
@@ -124,6 +157,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   </div>
 </div>
 <script src="vendor/simple-keyboard.js"></script>
+<script src="vendor/wavesurfer.js"></script>
 
 <script>
 const $ = (id) => document.getElementById(id)
@@ -142,7 +176,7 @@ const displayName = (take) =>
   : 'Clip ' + take.number
 
 const DefaultTitle = 'CS Studio'
-let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
+let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], position: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
 let streamOk = false
 let takesKey = ''
 let busyUntil = 0 // ignore record taps briefly after one, until the state catches up
@@ -185,6 +219,8 @@ function renderBanner() {
 
 function render() {
   renderBanner()
+  renderStage()
+  renderMeters()
   const title = state.projectName || DefaultTitle
   $('title').textContent = title
   document.title = title
@@ -207,7 +243,7 @@ function render() {
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'
 
-  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '')
+  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '') + '|' + (selected ? selected.id : '')
   if (key === takesKey) return
   takesKey = key
   const box = $('takes')
@@ -221,14 +257,15 @@ function render() {
   }
   for (const take of state.takes) {
     const active = !!state.playingTake && state.playingTake.id === take.id
+    const isSelected = !!selected && selected.id === take.id
     const el = document.createElement('div')
-    el.className = 'take' + (active ? ' active' : '')
+    el.className = 'take' + (isSelected ? ' active' : '') + (active ? ' playing' : '')
     const play = document.createElement('button')
     play.className = 'play'
     play.innerHTML = active ? StopIcon : PlayIcon
     play.setAttribute('aria-label', active ? 'Stop' : 'Play ' + displayName(take))
     play.tabIndex = -1 // the whole card is the control; the button is its icon
-    el.onclick = () => act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id))
+    el.onclick = () => { if (!active) selectTake(take); act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id)) }
     const name = document.createElement('span')
     name.className = 'name'
     name.textContent = displayName(take)
@@ -243,6 +280,261 @@ function render() {
     el.append(play, name, len, edit)
     box.appendChild(el)
   }
+}
+
+// --- stage: waveform with cursor while playing, live graph while recording ----------
+let renderQueued = false
+function scheduleRender() {
+  if (renderQueued) return
+  renderQueued = true
+  setTimeout(() => { renderQueued = false; render() }, 0)
+}
+const liveBars = []   // recent levels, newest last, for the recording graph
+const LIVE_BARS = 240
+
+// --- waveform: the shown clip's rendered mix, one clip at a time -------------------------
+// A clip without a mix yet (a fresh one renders as it ends, a trimmed one at the next idle
+// pass) or with an unreadable one is retried after a pause, never in a loop.
+const WAVE_RETRY_MS = 5000
+const waveform = {
+  ws: null,       // WaveSurfer instance, created on first use
+  clipId: null,   // clip the current load belongs to
+  loads: 0,       // counts loads; an outcome is honoured only for the latest
+  ready: false,
+  failedAt: {},   // clip id -> when its load last failed
+  ensure() {
+    if (this.ws || !window.WaveSurfer) return this.ws
+    this.ws = WaveSurfer.create({
+      container: '#wave',
+      height: 'auto',
+      waveColor: '#3a5f4f',
+      progressColor: '#37d67a',
+      cursorColor: '#ffd166',
+      cursorWidth: 3,
+      barWidth: 3,
+      barGap: 2,
+      barRadius: 2,
+      interact: true,
+      dragToSeek: true,
+      normalize: true,
+    })
+    // tapping or dragging moves playback there (the page never plays audio itself). Positions
+    // are fractions of the clip, not seconds: the mix can be a little shorter or longer than
+    // the region (it is re-rendered after a trim) and must never desync
+    this.ws.on('click', (relative) => scrub.begin(relative))
+    this.ws.on('drag', (relative) => scrub.begin(relative))
+    return this.ws
+  },
+  loadFor(id, duration) {
+    const ws = this.ensure()
+    if (!ws || this.clipId === id) return
+    const failed = this.failedAt[id]
+    if (failed && Date.now() - failed < WAVE_RETRY_MS) return
+    this.clipId = id
+    this.ready = false
+    const load = ++this.loads
+    // with the duration given, the library never waits on the media element: a file it
+    // cannot read fails at decode and rejects like any other failure. A superseded load
+    // settles too (aborted or bailed out), and is ignored
+    ws.load('/clips/' + encodeURIComponent(id) + '.wav', undefined, duration).then(
+      () => { if (load === this.loads) { this.ready = true; scheduleRender() } },
+      () => { if (load === this.loads) this.failed(id) },
+    )
+  },
+  failed(id) {
+    this.ready = false
+    this.failedAt[id] = Date.now()
+    this.clipId = null
+    this.loads += 1
+    this.ws.empty() // never another clip's waveform under this one's title
+    scheduleRender()
+  },
+  showAt(fraction) {
+    if (!this.ws || !this.ready) return
+    const total = this.ws.getDuration()
+    if (total > 0) this.ws.setTime(Math.min(total, Math.max(0, fraction * total)))
+  },
+}
+
+// the selected clip: the one last played (or just recorded); it stays on the stage after stop
+let selected = null
+let newestNumber = null // highest clip number seen so far; null until the first connected state
+
+function selectTake(take) {
+  selected = take
+  render()
+}
+
+function syncSelection() {
+  if (state.playingTake) selected = state.playingTake
+  if (selected) {
+    const current = state.takes.find((t) => t.id === selected.id)
+    selected = current || null // gone from the project: nothing selected
+  }
+  // a clip that just finished recording becomes the selection
+  if (!state.connected) return
+  const newest = state.takes.reduce((max, t) => (t.number !== undefined && t.number > max ? t.number : max), -1)
+  if (newestNumber !== null && newest > newestNumber && state.transport !== 'playing') {
+    selected = state.takes.find((t) => t.number === newest) || selected
+  }
+  newestNumber = newest
+}
+
+// --- scrubbing: taps and drags seek the shown clip ---------------------------------------
+// Seeks go out at most every SCRUB_INTERVAL while dragging. REAPER's reported position is
+// ignored until it nears the last target or a cap passes, so the cursor never snaps back.
+const SCRUB_INTERVAL = 120
+const SCRUB_HOLD_CAP = 1500
+const scrub = {
+  pending: null,  // latest fraction not yet sent
+  timer: null,
+  target: null,   // fraction last sent, awaiting REAPER's echo
+  holdUntil: 0,
+  begin(fraction) {
+    if (!state.playingTake && !selected) return
+    fraction = Math.min(1, Math.max(0, fraction))
+    this.holdUntil = Date.now() + SCRUB_HOLD_CAP
+    waveform.showAt(fraction)
+    this.pending = fraction
+    if (this.timer === null) this.timer = setTimeout(() => this.send(), SCRUB_INTERVAL)
+  },
+  send() {
+    this.timer = null
+    const take = state.playingTake || selected
+    const fraction = this.pending
+    this.pending = null
+    if (fraction === null || !take) { this.holdUntil = 0; return }
+    this.target = fraction
+    this.holdUntil = Date.now() + SCRUB_HOLD_CAP
+    // a seek starts the clip when it is not playing, so stopped and playing share one path
+    fetch('/actions/seek/' + encodeURIComponent(take.id), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: fraction * take.duration }),
+    }).catch(() => {})
+  },
+  // whether REAPER's reported fraction may drive the cursor now: once it echoes the target
+  // (within a quarter second, or 2% of a long clip) or the cap passes
+  accept(fraction, duration) {
+    if (this.pending !== null || this.timer !== null) return false
+    const near = Math.abs(fraction - this.target) * duration < Math.max(0.25, 0.02 * duration)
+    if (this.target !== null && (near || Date.now() >= this.holdUntil)) {
+      this.target = null
+      this.holdUntil = 0
+    }
+    return this.target === null && Date.now() >= this.holdUntil
+  },
+}
+
+function drawLive() {
+  const canvas = $('live')
+  const w = canvas.clientWidth, h = canvas.clientHeight
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.clearRect(0, 0, w, h)
+  const barW = w / LIVE_BARS
+  for (let i = 0; i < liveBars.length; i++) {
+    const level = liveBars[i]
+    const x = w - (liveBars.length - i) * barW
+    const bh = Math.max(2, level * (h - 30))
+    ctx.fillStyle = level > 0.9 ? '#ff3b3b' : level > 0.7 ? '#ffd166' : '#37d67a'
+    ctx.fillRect(x, (h - bh) / 2 + 10, Math.max(1, barW - 1), bh)
+  }
+}
+
+function renderStage() {
+  syncSelection()
+  const playing = state.transport === 'playing' && state.playingTake
+  const recording = state.transport === 'recording'
+  const shown = playing ? state.playingTake : (!recording && selected) || null
+  const title = $('stageTitle'), time = $('stageTime')
+  $('wave').style.display = shown ? 'block' : 'none'
+  $('live').style.display = recording ? 'block' : 'none'
+  $('progress').style.display = shown && !waveform.ready ? 'block' : 'none'
+
+  if (recording) {
+    liveBars.push(state.level)
+    if (liveBars.length > LIVE_BARS) liveBars.shift()
+    drawLive()
+    title.textContent = 'Recording'
+    time.textContent = fmt(state.recordingElapsed)
+    return
+  }
+  if (shown) {
+    const take = shown
+    const position = playing ? state.position : 0
+    waveform.loadFor(take.id, take.duration)
+    $('wave').classList.toggle('loading', !waveform.ready)
+    const fraction = take.duration > 0 ? position / take.duration : 0
+    if (take.duration > 0 && scrub.accept(fraction, take.duration)) waveform.showAt(fraction)
+    $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
+    title.textContent = displayName(take)
+    time.textContent = fmt(position) + ' / ' + fmt(take.duration)
+    if (!playing) liveBars.length = 0
+    return
+  }
+  liveBars.length = 0
+  title.textContent = ''
+  time.textContent = ''
+}
+
+// --- meters: one bar per track, master last, with a falling peak-hold line -------------
+// Levels arrive with each state update; the hold lines fall on their own clock so they keep
+// dropping after the last update, and vanish at the bottom.
+let holds = []   // per meter column: { level, at, painted }
+let metersKey = ''
+const HOLD_MS = 700
+const FALL_PER_SECOND = 0.5
+let holdTimer = null
+
+function paintHolds() {
+  const box = $('meters')
+  const meters = state.meters || []
+  const now = Date.now()
+  let any = false
+  meters.forEach((m, i) => {
+    const el = box.children[i]
+    if (!el) return
+    const h = holds[i] || (holds[i] = { level: 0, at: 0, painted: 0 })
+    if (now - h.at > HOLD_MS && h.level > 0) {
+      h.level = Math.max(0, h.level - FALL_PER_SECOND * (now - h.painted) / 1000)
+    }
+    h.painted = now
+    const hold = el.querySelector('.hold')
+    hold.style.opacity = h.level > 0.01 ? 1 : 0
+    hold.style.bottom = 'min(calc(100% - 2px), ' + (h.level * 100) + '%)'
+    if (h.level > 0) any = true
+  })
+  if (any && holdTimer === null) holdTimer = setTimeout(() => { holdTimer = null; paintHolds() }, 33)
+}
+
+function renderMeters() {
+  const box = $('meters')
+  const meters = state.meters || []
+  const key = meters.map((m) => m.name).join('\t')
+  if (key !== metersKey) {
+    metersKey = key
+    holds = [] // columns changed: no hold belongs to a new column
+    box.innerHTML = ''
+    for (const m of meters) {
+      const el = document.createElement('div')
+      el.className = 'meter'
+      el.innerHTML = '<div class="bar"><div class="scale"></div><div class="fill"></div><div class="segments"></div><div class="hold"></div></div><span class="name"></span>'
+      el.querySelector('.name').textContent = m.name
+      box.appendChild(el)
+    }
+  }
+  const now = Date.now()
+  meters.forEach((m, i) => {
+    const el = box.children[i]
+    const bar = el.querySelector('.bar'), fill = el.querySelector('.fill')
+    const hPx = bar.clientHeight
+    fill.style.setProperty('--bar-h', hPx + 'px')
+    el.querySelector('.scale').style.setProperty('--bar-h', hPx + 'px')
+    fill.style.height = (m.level * 100) + '%'
+    const h = holds[i] || (holds[i] = { level: 0, at: 0, painted: now })
+    if (m.level >= h.level) { h.level = m.level; h.at = now; h.painted = now }
+  })
+  paintHolds()
 }
 
 // --- naming sheet ---------------------------------------------------------

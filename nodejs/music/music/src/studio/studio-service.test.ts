@@ -64,7 +64,9 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     const lines = [
       `TRANSPORT\t${reaper.playState}\t${reaper.position}\t0\t0\t0`,
       ...reaper.regions.map((r) => `REGION\t${r.name}\t${r.id}\t${r.start}\t${r.end}\t0`),
+      `TRACK\t0\tMASTER\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
       `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
+      `TRACK\t2\tVocal\t0\t1\t0\t-600\t-600`,
       `PROJEXTSTATE\tStudio\tproject_name\t${reaper.projectName}`,
       `PROJEXTSTATE\tStudio\twatcher_hash\t${reaper.watcherHash}`,
       `PROJEXTSTATE\tStudio\twatcher_version\t1`,
@@ -109,7 +111,12 @@ describe('StudioService', () => {
 
   const makeService = (overrides: Partial<FakeReaper> = {}, expectedHelperHash?: string) => {
     const { reaper, client } = makeFakeReaper(overrides)
-    const service = new StudioService({ client, pollIntervalMs: POLL_MS, expectedHelperHash })
+    const service = new StudioService({
+      client,
+      pollIntervalMs: POLL_MS,
+      activePollIntervalMs: POLL_MS / 2,
+      expectedHelperHash,
+    })
     services.push(service)
     return { reaper, service }
   }
@@ -190,6 +197,210 @@ describe('StudioService', () => {
     expect(service.getState().playingTake).toBeUndefined()
   })
 
+  it('seeks within the playing take without restarting, and starts it otherwise', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+
+    await service.seekTake('1', 4)
+    expect(reaper.requests).toContain('1016;SET/POS/4.000;1007') // not playing yet: starts there
+
+    await service.seekTake('1', 7)
+    expect(reaper.requests.at(-2)).toBe('SET/POS/7.000') // playing: a plain cursor move
+    expect(reaper.requests.filter((r) => r.includes('1016'))).toHaveLength(1) // no restart
+    expect(service.getState().playingTake?.id).toBe('1')
+    expect(service.getState().position).toBe(7)
+
+    await service.seekTake('1', 99)
+    expect(reaper.requests.at(-2)).toBe('SET/POS/9.750') // clear of the end
+  })
+
+  it('coalesces seeks that arrive while one is settling', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const first = service.seekTake('1', 2)
+    const second = service.seekTake('1', 3)
+    const third = service.seekTake('1', 5)
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, second, third])
+
+    const seeks = reaper.requests.filter((r) => r.startsWith('SET/POS/'))
+    expect(seeks).toEqual(['SET/POS/2.000', 'SET/POS/5.000']) // the middle one was superseded
+  })
+
+  it('drops a waiting seek when a stop or record follows it', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const first = service.seekTake('1', 2)
+    const second = service.seekTake('1', 5)
+    const stop = service.stopTransport()
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, second, stop])
+
+    expect(reaper.requests.filter((r) => r.startsWith('SET/POS/'))).toEqual(['SET/POS/2.000'])
+    expect(reaper.playState).toBe(0)
+    expect(service.getState().transport).toBe('stopped')
+  })
+
+  it('starts the clip from a seek that reaches REAPER after a stop queued ahead of it', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const rename = service.renameTake('2', 'Twinkle') // any command still settling
+    const stop = service.stopTransport()
+    const seek = service.seekTake('1', 5)
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([rename, stop, seek])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/5.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
+  it('starts the clip from a seek whose take ended while the seek waited', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const rename = service.renameTake('2', 'Twinkle')
+    const seek = service.seekTake('1', 3)
+    reaper.hold = false
+    reaper.position = 10.5 // past the end: the poll stops it
+    reaper.release()
+    await Promise.all([rename, seek])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/3.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+    expect(reaper.playState).toBe(1)
+  })
+
+  it('honours a seek asked for after a stop, while an older seek is still settling', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const first = service.seekTake('1', 2)
+    const stop = service.stopTransport()
+    const after = service.seekTake('1', 5) // a tap on the waveform starts the clip there
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, stop, after])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/5.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
+  it('keeps the take when a poll reads a hair before its start', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('2')
+    reaper.position = 11.9
+    await service.refresh()
+    expect(service.getState().playingTake?.id).toBe('2')
+    reaper.position = 22
+    await service.refresh()
+    expect(reaper.requests.at(-1)).toBe('1016') // still stops at its end
+  })
+
+  it('counts a re-record from its own start', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.record()
+    reaper.position = 30
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(8)
+    await service.record() // restarts at 22 again
+    expect(service.getState().recordingElapsed).toBe(0)
+  })
+
+  it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+    expect(service.getState().transport).toBe('playing')
+
+    reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    await service.refresh()
+    const state = service.getState()
+    expect(state.connected).toBe(false)
+    expect(state.transport).toBe('stopped')
+    expect(state.meters).toEqual([])
+
+    // REAPER was only busy: when it answers again, still playing, the take is still known and
+    // playback still stops at its end
+    reaper.offline = false
+    reaper.position = 5
+    await service.refresh()
+    expect(service.getState().transport).toBe('playing')
+    expect(service.getState().playingTake?.id).toBe('1')
+    reaper.position = 10
+    await service.refresh()
+    expect(reaper.requests.at(-1)).toBe('1016')
+  })
+
+  it('forgets a take and a recording start that REAPER moved past during an outage', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    await service.refresh()
+
+    // REAPER comes back playing beyond the take: it is someone else's playback, not stopped
+    reaper.offline = false
+    reaper.position = 15
+    await service.refresh()
+    expect(service.getState().playingTake).toBeUndefined()
+    expect(reaper.requests.at(-1)).not.toBe('1016')
+    expect(reaper.playState).toBe(1)
+
+    // a recording restarted during an outage counts from its own start
+    reaper.playState = 0
+    await service.refresh()
+    await service.record() // starts at 22, after the last take
+    reaper.position = 30
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(8)
+    reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    await service.refresh()
+    reaper.offline = false
+    reaper.position = 3
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(0)
+  })
+
+  it('polls faster only while connected and moving', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    service.start()
+    await vi.advanceTimersByTimeAsync(0)
+    const idlePolls = reaper.requests.length
+    await vi.advanceTimersByTimeAsync(POLL_MS)
+    expect(reaper.requests.length - idlePolls).toBe(1) // one poll per 100 ms while stopped
+
+    await service.playTake('1')
+    const before = reaper.requests.length
+    await vi.advanceTimersByTimeAsync(POLL_MS * 2)
+    expect(reaper.requests.length - before).toBeGreaterThanOrEqual(3) // 50 ms polls while playing
+    service.stop()
+  })
+
   it('forgets the playing take when REAPER is stopped from elsewhere', async () => {
     const { reaper, service } = makeService({ regions: twoTakes, playState: 1 })
     await service.refresh()
@@ -215,14 +426,22 @@ describe('StudioService', () => {
     expect(reaper.requests.at(-2)).toBe('1016;SET/POS/12.000;1007')
   })
 
-  it('maps peaks to a 0..1 level only while the transport is moving', async () => {
+  it('maps peaks to a 0..1 level, per track, whatever the transport is doing', async () => {
     const { reaper, service } = makeService({ playState: 1, peakDb: -30 })
     await service.refresh()
     expect(service.getState().level).toBeCloseTo(0.5)
+    expect(service.getState().meters).toEqual([
+      { name: 'Piano', level: 0.5 },
+      { name: 'Vocal', level: 0 },
+      { name: 'Master', level: 0.5 },
+    ])
 
+    // stopped, the meters still show live input on armed tracks
     reaper.playState = 0
+    reaper.peakDb = -6
     await service.refresh()
-    expect(service.getState().level).toBe(0)
+    expect(service.getState().level).toBeCloseTo(0.9)
+    expect(service.getState().meters[0]?.name).toBe('Piano')
   })
 
   it('polls on an interval and emits change events', async () => {

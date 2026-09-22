@@ -3050,6 +3050,9 @@ importers:
       simple-keyboard:
         specifier: ^3.8.190
         version: 3.8.190
+      wavesurfer.js:
+        specifier: ^7.12.12
+        version: 7.12.12
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -3087,6 +3090,9 @@ importers:
       globals:
         specifier: 'catalog:'
         version: 17.12.0
+      jsdom:
+        specifier: ^30.0.0
+        version: 30.0.1
       pino-pretty:
         specifier: ^13.0.0
         version: 13.1.3
@@ -10920,6 +10926,9 @@ packages:
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
+
+  wavesurfer.js@7.12.12:
+    resolution: {integrity: sha512-fyKNuREQTliCl4b9w7pUzpFXQIkX5tcdYu1o6vBdH+NlUXvTxshvfbG2hj8OxDevzQNZlDTHzZGyAT3FhuutWw==}
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
@@ -19548,6 +19557,8 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  wavesurfer.js@7.12.12: {}
 
   wcwidth@1.0.1:
     dependencies:

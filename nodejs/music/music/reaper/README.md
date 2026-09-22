@@ -127,8 +127,10 @@ its given name, or "Clip 12" when it has none ("Clip 12 (empty)" when nothing wa
 A rename moves the files; trimming a region in REAPER re-renders it; deleting a region
 removes its files and its entry.
 
-Idle means: the transport is stopped, no key has been pressed and nothing has started or
-stopped for `render_idle_seconds` (30). One clip renders per pass, and the loop re-checks
+A clip up to `render_now_seconds` (3 minutes) is rendered the moment it ends, a second or two
+of REAPER's time, so its waveform is on the page almost at once. Longer clips, re-renders after
+a trim, and the backlog wait for idle. Idle means: the transport is stopped, no key has been
+pressed and nothing has started or stopped for `render_idle_seconds` (30). One clip renders per pass, and the loop re-checks
 before the next, so playing again stops the batch. A render freezes REAPER for a second or
 two; clips longer than `render_long_seconds` (10 minutes, which only the length cap makes)
 wait for `render_long_idle_seconds` (5 minutes) instead. The app tolerates the short stall
@@ -219,7 +221,11 @@ toolbar pops in on touch near the top.
   written into the project's ext state, and the watcher renames the region to
   "Clip N - <name>" and saves, so the clip keeps its place in the list. Rename in REAPER's
   Region Manager works the same way as long as the "Clip N" prefix stays.
-- The level bar shows the loudest track peak so the kid can see it's listening.
+- The strip under the header shows the selected clip (the one last played or just recorded):
+  its waveform from the Outbox mix, a plain progress bar until that exists, with a cursor that
+  follows playback; tap or drag on it to play from there. While recording it shows a live level
+  graph. Track meters with peak hold stand at the strip's right edge at all times; REAPER meters
+  the armed tracks' input even while stopped.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

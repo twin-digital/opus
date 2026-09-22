@@ -14,6 +14,8 @@ const makeService = (state: Partial<StudioState> = {}) => {
       transport: 'stopped',
       recordingElapsed: 0,
       level: 0,
+      meters: [],
+      position: 0,
       takes: [take],
       playingTake: undefined,
       instruments: undefined,

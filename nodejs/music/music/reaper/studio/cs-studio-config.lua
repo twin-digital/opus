@@ -13,7 +13,8 @@ return {
   --   { type = "audio", track = "Vocal", threshold_db = -35 },
   -- },
   -- outbox = "~/Music/Studio Outbox", -- where each clip's mix, MIDI file, and the manifest go
-  -- render = true,                -- render a mix per clip while idle
+  -- render = true,                -- render a mix per clip
+  -- render_now_seconds = 3 * 60,  -- clips up to this long render the moment they end; longer ones wait for idle
   -- midi_export = true,           -- write a .mid per clip
   -- render_idle_seconds = 30,     -- idle before the watcher renders (no keys, no transport change)
   -- normalize_lufs = -14,         -- loudness of the rendered mix; false to leave it at the project's level

@@ -79,7 +79,11 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   record and play-my-last-one, which the launcher draws above every program so they never move.
 - `createStudioServer`, the touchscreen view: serves `TouchPageHtml` on `MUSIC_STUDIO_PORT` and
   streams state to it over server-sent events; the page posts actions back. Open it fullscreen
-  in a browser on the touchscreen. Clips are named on the page with an on-screen keyboard
+  in a browser on the touchscreen. While playing it draws the clip's Outbox mix as a waveform
+  (wavesurfer.js, served from its package; `/clips/<id>.wav`) with a cursor that follows REAPER,
+  while recording a live level graph, and always per-track meters from the web remote's track
+  peaks (polled every 50 ms while the transport moves). The mix is served only once the watcher's
+  manifest records it as finished; short clips render the moment they end (`render_now_seconds`). Clips are named on the page with an on-screen keyboard
   (`simple-keyboard`, served from its package); the rename travels as project ext state, and
   the watcher applies it to the region.
 
@@ -99,6 +103,8 @@ back on when it exits, so an interrupted session leaves a piano that plays on it
 | `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
 | `MUSIC_REAPER_URL`                   | unset (studio off)      | Base URL, with scheme, of REAPER's web remote, e.g. `http://localhost:8080`. Enables the Launchpad record/play transport.                                      |
 | `MUSIC_STUDIO_PORT`                  | `8765`                  | Port the studio touch page is served on, when `MUSIC_REAPER_URL` is set.                                                                                       |
+| `MUSIC_REAPER_RESOURCE_PATH`         | platform default        | REAPER's resource path, where the watcher is installed (`~/Library/Application Support/REAPER` on macOS).                                                      |
+| `MUSIC_STUDIO_OUTBOX`                | `~/Music/Studio Outbox` | The watcher's Outbox, where the page finds a clip's rendered mix for its waveform.                                                                             |
 | `MUSIC_MIDI_MIRROR`                  | unset                   | Exact name of a MIDI output port that gets a copy of everything sent to the piano, e.g. `IAC Driver Bus 1`.                                                    |
 | `MUSIC_SAMPLE_OUTPUT`                | unset (system output)   | Substring of the audio output device label sound-board samples play through, e.g. `BlackHole`.                                                                 |
 | `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |

@@ -49,6 +49,10 @@ export interface StudioState {
   recordingElapsed: number
   /** Input level, 0..1, derived from the loudest track peak. */
   level: number
+  /** Every track's level, 0..1, master last, in project order. Live input shows here even while stopped. */
+  meters: { name: string; level: number }[]
+  /** Seconds into the playing take, when one is playing through this service. */
+  position: number
   /** Newest first. */
   takes: Take[]
   /** The take being played, when playback was started through this service. */
@@ -73,6 +77,7 @@ export type StudioApi = Pick<
   | 'toggleRecord'
   | 'togglePlayLatest'
   | 'renameTake'
+  | 'seekTake'
   | 'reloadHelper'
   | 'setInstruments'
 >
@@ -124,6 +129,8 @@ export class StudioService {
 
   private readonly client: ReaperClient
   private readonly pollIntervalMs: number
+  /** Poll interval while recording or playing, so meters and the cursor move smoothly. */
+  private readonly activePollIntervalMs: number
   private readonly log = logger.child({}, { msgPrefix: '[STUDIO] ' })
 
   private state: StudioState = {
@@ -131,6 +138,8 @@ export class StudioService {
     transport: 'stopped',
     recordingElapsed: 0,
     level: 0,
+    meters: [],
+    position: 0,
     takes: [],
     playingTake: undefined,
     instruments: undefined,
@@ -146,19 +155,25 @@ export class StudioService {
   private misses = 0
   private pendingCommand: Promise<void> | undefined
   private runId = 0
+  /** The latest seek asked for while an earlier one is still settling; only it is sent. */
+  private queuedSeek: { id: string; atSeconds: number } | undefined
+  private seeking = false
 
   constructor({
     client,
     pollIntervalMs = 150,
+    activePollIntervalMs = 50,
     expectedHelperHash,
   }: {
     client?: ReaperClient
     pollIntervalMs?: number
+    activePollIntervalMs?: number
     /** Hash of the watcher this app ships; when given, the state reports whether REAPER runs that one. */
     expectedHelperHash?: string
   } = {}) {
     this.client = client ?? new ReaperClient()
     this.pollIntervalMs = pollIntervalMs
+    this.activePollIntervalMs = activePollIntervalMs
     this.expectedHelperHash = expectedHelperHash
   }
 
@@ -189,23 +204,82 @@ export class StudioService {
   /** Starts a new take after the last one (or at the project end when there are none). */
   async record(): Promise<void> {
     const lastEnd = this.state.takes.reduce((end, take) => Math.max(end, take.end), -Infinity)
-    this.setPlayingTake(undefined)
-    await this.command(() => this.client.recordAt(lastEnd === -Infinity ? undefined : lastEnd + TAKE_GAP_SECONDS))
+    this.dropSeeks()
+    await this.command(async () => {
+      this.recordingStartedAt = undefined
+      this.setPlayingTake(undefined)
+      await this.client.recordAt(lastEnd === -Infinity ? undefined : lastEnd + TAKE_GAP_SECONDS)
+    })
   }
 
   async stopTransport(): Promise<void> {
-    this.setPlayingTake(undefined)
-    await this.command(() => this.client.runActions(ReaperActions.stop))
+    this.dropSeeks()
+    await this.command(async () => {
+      this.setPlayingTake(undefined)
+      await this.client.runActions(ReaperActions.stop)
+    })
   }
 
-  async playTake(id: string): Promise<void> {
+  /** Plays a take from its start, or from `atSeconds` into it. */
+  async playTake(id: string, atSeconds = 0): Promise<void> {
     const take = this.state.takes.find((candidate) => candidate.id === id)
     if (take === undefined) {
       this.log.warn(`No take with id ${id}.`)
       return
     }
-    this.setPlayingTake(take)
-    await this.command(() => this.client.playFrom(take.start))
+    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
+    await this.command(async () => {
+      this.setPlayingTake(take)
+      await this.client.playFrom(take.start + offset)
+    })
+  }
+
+  /**
+   * Moves playback to `atSeconds` into the take. While that take is playing this is a seek
+   * that keeps the transport rolling (REAPER follows a cursor move during playback); otherwise
+   * it starts the take there.
+   */
+  async seekTake(id: string, atSeconds: number): Promise<void> {
+    // scrubbing sends seeks faster than they settle: while one is in flight only the newest
+    // waiting one is kept, so the cursor never replays the whole drag afterwards
+    if (this.seeking) {
+      this.queuedSeek = { id, atSeconds }
+      return
+    }
+    this.seeking = true
+    try {
+      let next: { id: string; atSeconds: number } | undefined = { id, atSeconds }
+      while (next !== undefined) {
+        await this.seekOnce(next.id, next.atSeconds)
+        next = this.queuedSeek
+        this.queuedSeek = undefined
+      }
+    } finally {
+      this.seeking = false
+    }
+  }
+
+  /** A stop or record makes the scrub waiting behind it moot; it must not replay afterwards. */
+  private dropSeeks() {
+    this.queuedSeek = undefined
+  }
+
+  private async seekOnce(id: string, atSeconds: number): Promise<void> {
+    const take = this.state.takes.find((candidate) => candidate.id === id)
+    if (take === undefined) {
+      return
+    }
+    // stay clear of the end: a seek right at it would end the take on the next poll
+    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.25))
+    await this.command(async () => {
+      // decided on its turn: a stop queued ahead, or the take ending meanwhile, makes it a start
+      if (this.state.transport === 'playing' && this.state.playingTake?.id === id) {
+        await this.client.setPosition(take.start + offset)
+        return
+      }
+      this.setPlayingTake(take)
+      await this.client.playFrom(take.start + offset)
+    })
   }
 
   async playLatest(): Promise<void> {
@@ -270,7 +344,11 @@ export class StudioService {
     await this.inFlight
   }
 
-  /** Runs commands one at a time, each followed by a poll that started after the command landed. */
+  /**
+   * Runs commands one at a time, each followed by a poll that started after the command landed.
+   * What a command believes about the transport is set inside `run`, when it is REAPER's turn,
+   * so the poll of an earlier command cannot clear it first.
+   */
   private async command(run: () => Promise<void>) {
     const previous = this.pendingCommand
     const current = (async () => {
@@ -311,8 +389,10 @@ export class StudioService {
       }
       if (this.state.connected) {
         this.log.warn(error, 'REAPER is unreachable.')
+        // views show idle and the poll slows; what was playing or recording is remembered, since
+        // REAPER may only have been busy for a few seconds and still be at it when polls resume
+        this.update({ connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], position: 0 })
       }
-      this.update({ connected: false })
       return
     }
     this.misses = 0
@@ -322,10 +402,17 @@ export class StudioService {
       : status.playState === 'playing' ? 'playing'
       : 'stopped'
 
-    // a poll that started before the latest command answers from before it; it must not clear the
-    // take or judge whether playback reached the end
+    // a poll that started before the latest command answers from before it; it must not clear
+    // the take or a recording start. Only a poll that closely follows the last may call the end
+    // of a take: the first one after an outage may find the cursor anywhere
     const stale = seq !== this.commandSeq
+    const consecutive = !stale && this.state.connected
 
+    // a recording start is trusted only while the cursor is still past it (a new recording
+    // started while REAPER was unreachable begins earlier)
+    if (this.recordingStartedAt !== undefined && status.position < this.recordingStartedAt) {
+      this.recordingStartedAt = undefined
+    }
     if (transport === 'recording') {
       this.recordingStartedAt ??= status.position
     } else if (!stale) {
@@ -333,20 +420,33 @@ export class StudioService {
     }
 
     const takes = status.regions.map(toTake).sort(byNewest)
+    // the take this service started is believed only while REAPER is playing inside it; past its
+    // end playback is stopped, and anywhere else REAPER is doing something of its own
     const { playingTake } = this.state
+    // the first poll after a play or a seek to the start can read a hair before it
+    const inside =
+      playingTake !== undefined &&
+      transport === 'playing' &&
+      status.position >= playingTake.start - 0.25 &&
+      status.position < playingTake.end
+    const stillPlaying = playingTake !== undefined && (stale || inside) ? playingTake : undefined
     const reachedEnd =
-      !stale && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
-    const stillPlaying = playingTake !== undefined && (stale || (transport === 'playing' && !reachedEnd))
+      consecutive && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
 
     this.update({
       connected: true,
       transport,
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
-      level: transport === 'stopped' ? 0 : toLevel(status.peakDb),
+      level: toLevel(status.peakDb),
+      meters: [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
+        (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
+      ),
+      position: stillPlaying === undefined ? 0 : Math.max(0, status.position - stillPlaying.start),
       takes,
       projectName: status.ext.project_name || undefined,
       helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
-      playingTake: stillPlaying ? (takes.find((take) => take.id === playingTake.id) ?? playingTake) : undefined,
+      playingTake:
+        stillPlaying === undefined ? undefined : (takes.find((take) => take.id === stillPlaying.id) ?? stillPlaying),
     })
 
     if (reachedEnd) {
@@ -377,7 +477,9 @@ export class StudioService {
     await this.refresh()
     // a stop()/start() during the poll started a newer chain; this one ends here
     if (this.running && runId === this.runId) {
-      this.schedule(Math.max(0, this.pollIntervalMs - (Date.now() - startedAt)), runId)
+      const interval =
+        this.state.connected && this.state.transport !== 'stopped' ? this.activePollIntervalMs : this.pollIntervalMs
+      this.schedule(Math.max(0, interval - (Date.now() - startedAt)), runId)
     }
   }
 }
