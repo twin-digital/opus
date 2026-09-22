@@ -230,13 +230,14 @@ From PowerShell, with your two paths:
 
 ```powershell
 Invoke-WebRequest https://raw.githubusercontent.com/twin-digital/opus/main/nodejs/music/music/reaper/producer/install-producer.ps1 -OutFile install-producer.ps1
-powershell -ExecutionPolicy Bypass -File install-producer.ps1 -Inbox "D:\Users\sean\Nextcloud\1 - Projects\Lucas Music\Studio" -Projects "P:\"
+powershell -ExecutionPolicy Bypass -File install-producer.ps1 -Inbox "D:\Users\sean\Nextcloud\1 - Projects\Lucas Music\Studio" -Projects "P:\" -MinSeconds 30 -Watch
 ```
 
 It downloads `cs-studio-import.lua` and the probe into REAPER's `Scripts\Studio` folder and
 writes `cs-studio-import-config.lua` with the paths. Run it again any time to update; the
-config is rewritten from the parameters you pass. `-Ref` fetches from a branch instead of
-main, `-ResourcePath` overrides REAPER's resource path.
+config is rewritten from the parameters you pass. `-MinSeconds` sets the length threshold,
+`-Watch` adds the continuous importer to REAPER's startup script, `-Ref` fetches from a branch
+instead of main, `-ResourcePath` overrides REAPER's resource path.
 
 Once, after the first install: REAPER > Actions > Show action list > New action > Load
 ReaScript, pick `Scripts\Studio\cs-studio-import.lua`. It is then an action you can run,
@@ -244,11 +245,17 @@ or bind to a key.
 
 ## Bless: import clips into the open project
 
+A clip is eligible when it was named in the studio (not the default "Clip N"), is at least
+`min_seconds` long (30 by default), and has not been imported into this project before.
+Imports are recorded in the project itself, so deleting a clip's tracks does not bring it
+back.
+
 Open (or create and save) the song project you want the clips in. Run the import action:
 
-1. The console lists every clip in the Inbox: name, project, date, length, and `*` for
-   starred ones.
-2. A dialog asks for list numbers (`3, 5`), or `*` for every starred clip.
+1. The console lists the eligible clips: name, project, date, length, `*` for starred ones,
+   and a note on any shorter than the threshold.
+2. A dialog shows the threshold, changeable for this run, and takes an optional list of
+   numbers to import only some. Leave it blank for all of them.
 3. For each clip the script copies its stems from the projects share into the song project's
    media folder, so the project is self-contained, and builds a folder track named
    `0012 - Twinkle` with the stems and the MIDI as children, all at time zero and trimmed to
@@ -256,6 +263,14 @@ Open (or create and save) the song project you want the clips in. Run the import
    once. The project is saved.
 
 Where the song project lives, inside Nextcloud or not, is up to you; the stems ride along.
+
+### Continuous import
+
+`cs-studio-import-watch.lua` keeps the importer running: every `watch_seconds` (300) while
+the transport is stopped, it brings new eligible clips into the open project without asking,
+using the configured threshold. It only does this in a project that has had one on-demand
+import, which is the opt-in. Load it from the Actions list to run it for a session, or install
+with `-Watch` to start it whenever REAPER launches.
 
 ## Getting the Outbox here
 

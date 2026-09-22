@@ -1,16 +1,25 @@
 -- CS Studio: import clips into the open project.
 --
 -- Runs in REAPER on the producer machine. Reads the manifests the studio writes into the
--- Inbox, asks which clips to bring in, copies each clip's stems from the studio's projects
--- share into this project's media folder, and builds one folder track per clip: its stems
--- and its MIDI as children, all starting at time zero and trimmed to the clip. Every folder
--- but the first is muted, so the project does not play everything at once.
+-- Inbox and imports every eligible clip: named in the studio (not the default "Clip N"),
+-- at least min_seconds long, and not imported into this project before. Each clip's stems
+-- are copied from the studio's projects share into this project's media folder, and it
+-- becomes one folder track: stems and MIDI as children, all at time zero and trimmed to
+-- the clip. Every folder but the first is muted, so the project does not play everything
+-- at once. What was imported is recorded in the project, so a clip comes in once; deleting
+-- its tracks does not bring it back.
 --
--- Paths come from cs-studio-import-config.lua beside this file (written by the installer):
---   return { inbox = "D:\\...\\Studio", projects = "P:\\" }
--- Anything missing is asked for once and remembered.
+-- Paths and the length threshold come from cs-studio-import-config.lua beside this file
+-- (written by the installer):
+--   return { inbox = "D:\\...\\Studio", projects = "P:\\", min_seconds = 30, watch_seconds = 300 }
+-- Missing paths are asked for once and remembered; the threshold can be changed per run.
+--
+-- Two ways to run it. As an action, it lists what is eligible and asks. Loaded by
+-- cs-studio-import-watch.lua it stays running and, every watch_seconds while the transport
+-- is stopped, imports new eligible clips without asking, into a project that has had at
+-- least one on-demand import (that first import is the opt-in).
 
-local VERSION = "2026-09-24.1"
+local VERSION = "2026-09-24.2"
 local EXT_SECTION = "CSStudioImport"
 
 local SCRIPT_PATH = debug.getinfo(1, "S").source:sub(2)
@@ -161,6 +170,8 @@ local function loadConfig()
   end
   config.inbox = config.inbox:gsub("[/\\]+$", "")
   config.projects = config.projects:gsub("[/\\]+$", "")
+  config.min_seconds = tonumber(config.min_seconds) or 30
+  config.watch_seconds = tonumber(config.watch_seconds) or 300
   return config
 end
 
@@ -193,40 +204,81 @@ local function loadClips(inbox)
   return clips
 end
 
-local function clipTitle(clip)
+local function isNamed(clip)
   local label = clip.entry.label or ""
-  if label == "" or label:match("^%a%a%a %d%d?, %d%d?:%d%d [AP]M") then
-    label = string.format("Clip %d", clip.entry.number)
-  end
-  return label
+  return label ~= "" and not label:match("^%a%a%a %d%d?, %d%d?:%d%d [AP]M")
+end
+
+local function clipTitle(clip)
+  if isNamed(clip) then return clip.entry.label end
+  return string.format("Clip %d", clip.entry.number)
+end
+
+local function clipLength(clip)
+  return (clip.entry["end"] or 0) - (clip.entry.start or 0)
+end
+
+-- Imports are recorded in the song project itself, keyed by studio project folder and clip
+-- number, so a clip is brought in once no matter what happens to its tracks afterwards.
+local function importKey(clip)
+  return string.format("imported:%s:%d", clip.project.folder or clip.project.name or "?", clip.entry.number)
+end
+
+local function wasImported(clip)
+  local _, value = reaper.GetProjExtState(0, EXT_SECTION, importKey(clip))
+  return value ~= nil and value ~= ""
+end
+
+local function recordImport(clip)
+  reaper.SetProjExtState(0, EXT_SECTION, importKey(clip), os.date("%Y-%m-%dT%H:%M:%S"))
 end
 
 local function describe(clip)
   local starred = clip.entry.starred and " *" or ""
   return string.format("%s%s  (%s, %s, %.0fs)", clipTitle(clip), starred, clip.project.name or "?",
-    (clip.entry.createdAt or ""):sub(1, 10), (clip.entry["end"] or 0) - (clip.entry.start or 0))
+    (clip.entry.createdAt or ""):sub(1, 10), clipLength(clip))
 end
 
--- Asks which clips: numbers as listed in the console ("12, 15"), or "*" for every starred clip.
-local function chooseClips(clips)
+local function eligibleClips(clips)
+  local named = {}
+  for _, clip in ipairs(clips) do
+    if isNamed(clip) and not wasImported(clip) then named[#named + 1] = clip end
+  end
+  return named
+end
+
+-- Lists what is eligible and asks for the length threshold; the answer can also narrow the
+-- import to some list numbers. Returns the clips to import.
+local function chooseClips(clips, config)
+  local named = eligibleClips(clips)
   reaper.ClearConsole()
-  reaper.ShowConsoleMsg("CS Studio clips in the Inbox:\n\n")
-  for i, clip in ipairs(clips) do
-    reaper.ShowConsoleMsg(string.format("%3d  %s\n", i, describe(clip)))
+  if #named == 0 then
+    reaper.ShowConsoleMsg("CS Studio: no new named clips in the Inbox.\n")
+    return {}
   end
-  reaper.ShowConsoleMsg("\nEnter the list numbers to import in the dialog (e.g. 3, 5), or * for all starred.\n")
-  local ok, answer = reaper.GetUserInputs("CS Studio import", 1, "List numbers (or *):,extrawidth=200", "")
+  reaper.ShowConsoleMsg("CS Studio: named clips not yet in this project:\n\n")
+  for i, clip in ipairs(named) do
+    local short = clipLength(clip) < config.min_seconds and "   (shorter than the threshold)" or ""
+    reaper.ShowConsoleMsg(string.format("%3d  %s%s\n", i, describe(clip), short))
+  end
+  reaper.ShowConsoleMsg("\nEverything at least as long as the threshold is imported. Leave the list blank for all of them.\n")
+  local ok, answer = reaper.GetUserInputs("CS Studio import", 2,
+    "Minimum length (seconds):,Only list numbers (blank = all):,extrawidth=200",
+    tostring(config.min_seconds) .. ",")
   if not ok then return {} end
-  local chosen = {}
-  if answer:match("^%s*%*%s*$") then
-    for _, clip in ipairs(clips) do
-      if clip.entry.starred then chosen[#chosen + 1] = clip end
+  local minText, only = answer:match("^(.-),(.*)$")
+  local minSeconds = tonumber(minText) or config.min_seconds
+  local wanted = nil
+  if only ~= nil and only:match("%S") then
+    wanted = {}
+    for token in only:gmatch("[^,%s]+") do
+      local index = tonumber(token)
+      if index ~= nil then wanted[index] = true end
     end
-    return chosen
   end
-  for token in answer:gmatch("[^,%s]+") do
-    local index = tonumber(token)
-    if index ~= nil and clips[index] ~= nil then chosen[#chosen + 1] = clips[index] end
+  local chosen = {}
+  for i, clip in ipairs(named) do
+    if clipLength(clip) >= minSeconds and (wanted == nil or wanted[i]) then chosen[#chosen + 1] = clip end
   end
   return chosen
 end
@@ -376,7 +428,29 @@ local function importClip(clip, config, mediaDir, mute)
   return true
 end
 
-local function main()
+local function importAll(chosen, config, mediaDir)
+  reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1)
+  local first = reaper.CountTracks(0) == 0
+  local imported = 0
+  for _, clip in ipairs(chosen) do
+    if importClip(clip, config, mediaDir, not (first and imported == 0)) then
+      recordImport(clip)
+      imported = imported + 1
+    end
+  end
+  reaper.PreventUIRefresh(-1)
+  reaper.TrackList_AdjustWindows(false)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock("CS Studio: import clips", -1)
+  if imported > 0 then
+    reaper.SetProjExtState(0, EXT_SECTION, "auto_import", "1") -- this project keeps receiving new clips
+    reaper.Main_SaveProject(0, false)
+  end
+  return imported
+end
+
+local function onDemand()
   local mediaDir = projectMediaDir()
   if mediaDir == nil then
     reaper.MB("Save the project first: the clips' stems are copied into its media folder.", "CS Studio import", 0)
@@ -389,22 +463,47 @@ local function main()
     reaper.MB("No clips found under " .. config.inbox .. ". Is the Inbox syncing?", "CS Studio import", 0)
     return
   end
-  local chosen = chooseClips(clips)
+  local chosen = chooseClips(clips, config)
   if #chosen == 0 then return end
-
-  reaper.Undo_BeginBlock()
-  reaper.PreventUIRefresh(1)
-  local first = reaper.CountTracks(0) == 0
-  local imported = 0
-  for _, clip in ipairs(chosen) do
-    if importClip(clip, config, mediaDir, not (first and imported == 0)) then imported = imported + 1 end
-  end
-  reaper.PreventUIRefresh(-1)
-  reaper.TrackList_AdjustWindows(false)
-  reaper.UpdateArrange()
-  reaper.Undo_EndBlock("CS Studio: import clips", -1)
-  if imported > 0 then reaper.Main_SaveProject(0, false) end
+  local imported = importAll(chosen, config, mediaDir)
   reaper.ShowConsoleMsg(string.format("\n%d clip(s) imported.\n", imported))
 end
 
-main()
+-- Continuous mode: every watch_seconds, with the transport stopped and the open project
+-- opted in by an earlier on-demand import, bring in whatever became eligible since.
+local function watchPass()
+  local mediaDir = projectMediaDir()
+  if mediaDir == nil or reaper.GetPlayState() ~= 0 then return end
+  local _, optedIn = reaper.GetProjExtState(0, EXT_SECTION, "auto_import")
+  if optedIn ~= "1" then return end
+  local config = loadConfig()
+  if config == nil then return end
+  local chosen = {}
+  for _, clip in ipairs(eligibleClips(loadClips(config.inbox))) do
+    if clipLength(clip) >= config.min_seconds then chosen[#chosen + 1] = clip end
+  end
+  if #chosen == 0 then return end
+  reaper.ShowConsoleMsg(string.format("CS Studio: importing %d new clip(s)\n", #chosen))
+  importAll(chosen, config, mediaDir)
+end
+
+local function watch()
+  local config = loadConfig()
+  local interval = config and config.watch_seconds or 300
+  local nextPass = reaper.time_precise() -- first pass right away
+  local function tick()
+    if reaper.time_precise() >= nextPass then
+      nextPass = reaper.time_precise() + interval
+      local ok, err = pcall(watchPass)
+      if not ok then reaper.ShowConsoleMsg("CS Studio import: " .. tostring(err) .. "\n") end
+    end
+    reaper.defer(tick)
+  end
+  tick()
+end
+
+if CS_STUDIO_IMPORT_MODE == "watch" then
+  watch()
+else
+  onDemand()
+end
