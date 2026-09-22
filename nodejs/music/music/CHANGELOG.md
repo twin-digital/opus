@@ -1,5 +1,11 @@
 # @thrashplay/music
 
+## 0.8.3
+
+### Patch Changes
+
+- 994d883: Studio watcher: only one copy runs (a later start supersedes an earlier one), and a failure right after a take's region is made can no longer make the region a second time.
+
 ## 0.8.2
 
 ### Patch Changes
