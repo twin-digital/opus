@@ -1402,6 +1402,7 @@ local function tick()
     local ok, err = pcall(dofile, SCRIPT_PATH)
     if ok then return end -- the new file's loop has taken over
     reaper.ShowConsoleMsg("[Studio] Reload failed, keeping the running watcher: " .. tostring(err) .. "\n")
+    reaper.SetExtState(EXT_SECTION, INSTANCE_KEY, INSTANCE, false) -- the new copy may have claimed the token before failing
   end
   ticks = ticks + 1
   if CONFIG.debug and (ticks <= 3 or ticks == 30) then
