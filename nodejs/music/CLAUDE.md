@@ -1,5 +1,3 @@
-| `MUSIC_STUDIO_OUTBOX` | `~/Music/Studio Outbox` | The watcher's Outbox, where the page finds a clip's rendered mix for its waveform. |
-
 # music (`@thrashplay/*`)
 
 Music-learning games for the Novation Launchpad Mini Mk3: the Launchpad is both screen and
@@ -104,6 +102,8 @@ back on when it exits, so an interrupted session leaves a piano that plays on it
 | `MUSIC_SPEECH_VOLUME`                | `0.5`                   | Volume of spoken announcements, 0-1.                                                                                                                           |
 | `MUSIC_REAPER_URL`                   | unset (studio off)      | Base URL, with scheme, of REAPER's web remote, e.g. `http://localhost:8080`. Enables the Launchpad record/play transport.                                      |
 | `MUSIC_STUDIO_PORT`                  | `8765`                  | Port the studio touch page is served on, when `MUSIC_REAPER_URL` is set.                                                                                       |
+| `MUSIC_REAPER_RESOURCE_PATH`         | platform default        | REAPER's resource path, where the watcher is installed (`~/Library/Application Support/REAPER` on macOS).                                                      |
+| `MUSIC_STUDIO_OUTBOX`                | `~/Music/Studio Outbox` | The watcher's Outbox, where the page finds a clip's rendered mix for its waveform.                                                                             |
 | `MUSIC_MIDI_MIRROR`                  | unset                   | Exact name of a MIDI output port that gets a copy of everything sent to the piano, e.g. `IAC Driver Bus 1`.                                                    |
 | `MUSIC_SAMPLE_OUTPUT`                | unset (system output)   | Substring of the audio output device label sound-board samples play through, e.g. `BlackHole`.                                                                 |
 | `MUSIC_AUDIO_DEBUG`                  | off                     | Log render-thread load and a health line while playing samples.                                                                                                |
