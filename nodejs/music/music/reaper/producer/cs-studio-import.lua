@@ -19,7 +19,7 @@
 -- is stopped, imports new eligible clips without asking, into a project that has had at
 -- least one on-demand import (that first import is the opt-in).
 
-local VERSION = "2026-09-24.2"
+local VERSION = "2026-09-24.3"
 local EXT_SECTION = "CSStudioImport"
 
 local SCRIPT_PATH = debug.getinfo(1, "S").source:sub(2)
@@ -123,10 +123,32 @@ local function writeFile(path, data)
   return true
 end
 
+local function fileSize(path)
+  local f = io.open(path, "rb")
+  if f == nil then return nil end
+  local size = f:seek("end")
+  f:close()
+  return size
+end
+
+-- Copies in chunks, checking every write and the final size; a failed or short copy leaves
+-- nothing behind.
 local function copyFile(from, to)
-  local data = readFile(from)
-  if data == nil then return false end
-  return writeFile(to, data)
+  local src = io.open(from, "rb")
+  if src == nil then return false end
+  local dst = io.open(to, "wb")
+  if dst == nil then src:close(); return false end
+  local ok = true
+  while true do
+    local chunk = src:read(1 << 20)
+    if chunk == nil then break end
+    if not dst:write(chunk) then ok = false; break end
+  end
+  src:close()
+  dst:close()
+  if ok and fileSize(to) ~= fileSize(from) then ok = false end
+  if not ok then os.remove(to) end
+  return ok
 end
 
 local function listDirs(path)
@@ -289,6 +311,8 @@ end
 local function be32(s, i) return (s:byte(i) << 24) | (s:byte(i + 1) << 16) | (s:byte(i + 2) << 8) | s:byte(i + 3) end
 local function be16(s, i) return (s:byte(i) << 8) | s:byte(i + 1) end
 
+-- Returns { ppq, usPerQuarter, events }: ticks plus the tempo they were written against, so the
+-- events can be placed in seconds regardless of the song project's tempo.
 local function parseMidi(data)
   if data == nil or data:sub(1, 4) ~= "MThd" then return nil end
   local ppq = be16(data, 13)
@@ -296,27 +320,42 @@ local function parseMidi(data)
   if data:sub(pos, pos + 3) ~= "MTrk" then return nil end
   local len = be32(data, pos + 4)
   local i, stop = pos + 8, pos + 8 + len
+  local function vlq()
+    local n = 0
+    while true do
+      local b = data:byte(i)
+      if b == nil then error("truncated MIDI file") end
+      i = i + 1
+      n = (n << 7) | (b & 0x7f)
+      if b < 0x80 then return n end
+    end
+  end
   local tick = 0
   local events = {}
   local running = nil
+  local usPerQuarter = 500000 -- 120 BPM unless the file says otherwise
   while i < stop do
-    local delta = 0
-    while true do
-      local b = data:byte(i)
-      i = i + 1
-      delta = (delta << 7) | (b & 0x7f)
-      if b < 0x80 then break end
-    end
-    tick = tick + delta
+    tick = tick + vlq()
     local status = data:byte(i)
+    if status == nil then error("truncated MIDI file") end
     if status == 0xFF then
-      local length = data:byte(i + 2)
-      i = i + 3 + length
+      local kind = data:byte(i + 1)
+      i = i + 2
+      local length = vlq()
+      if kind == 0x51 and length == 3 then
+        usPerQuarter = (data:byte(i) << 16) | (data:byte(i + 1) << 8) | data:byte(i + 2)
+      end
+      i = i + length
     elseif status == 0xF0 or status == 0xF7 then
-      local length = data:byte(i + 1)
-      i = i + 2 + length
+      i = i + 1
+      i = i + vlq()
     else
-      if status < 0x80 then status = running else i = i + 1 end
+      if status < 0x80 then
+        if running == nil then error("MIDI running status without a status byte") end
+        status = running
+      else
+        i = i + 1
+      end
       running = status
       local kind = status & 0xF0
       if kind == 0xC0 or kind == 0xD0 then
@@ -328,25 +367,27 @@ local function parseMidi(data)
       end
     end
   end
-  return { ppq = ppq, events = events }
+  return { ppq = ppq, usPerQuarter = usPerQuarter, events = events }
 end
 
 local function insertMidiItem(track, midi, lengthSeconds)
   local item = reaper.CreateNewMIDIItemInProj(track, 0, lengthSeconds, false)
   local take = reaper.GetActiveTake(item)
-  local qnPerTick = 1 / midi.ppq
+  -- ticks -> seconds at the file's own tempo -> this project's PPQ (the item sits at 0)
+  local secondsPerTick = midi.usPerQuarter / 1e6 / midi.ppq
   local open = {}
   for _, e in ipairs(midi.events) do
     local kind = e.status & 0xF0
     local chan = e.status & 0x0F
-    local ppqpos = reaper.MIDI_GetPPQPosFromProjQN(take, e.tick * qnPerTick)
+    local ppqpos = reaper.MIDI_GetPPQPosFromProjTime(take, e.tick * secondsPerTick)
+    local key = chan * 128 + e.a
     if kind == 0x90 and e.b > 0 then
-      open[chan * 128 + e.a] = { ppq = ppqpos, vel = e.b }
+      open[key] = open[key] or {}
+      table.insert(open[key], { ppq = ppqpos, vel = e.b })
     elseif kind == 0x80 or (kind == 0x90 and e.b == 0) then
-      local started = open[chan * 128 + e.a]
+      local started = open[key] and table.remove(open[key], 1) or nil
       if started ~= nil then
         reaper.MIDI_InsertNote(take, false, false, started.ppq, ppqpos, chan, e.a, started.vel, true)
-        open[chan * 128 + e.a] = nil
       end
     elseif kind == 0xB0 or kind == 0xC0 or kind == 0xD0 or kind == 0xE0 then
       reaper.MIDI_InsertCC(take, false, false, ppqpos, kind, chan, e.a, e.b or 0)
@@ -367,6 +408,49 @@ local function projectMediaDir()
   return dir
 end
 
+-- Where a clip's files should be, on the share and in the Inbox; nil path = cannot be resolved.
+local function stemSource(clip, config, source)
+  local file = source.file
+  if file == nil or file == json.null then return nil end
+  if file:match("^[/\\]") or file:match("^%a:") then return nil end -- absolute on the studio side
+  return config.projects .. SEP .. (clip.project.folder or "") .. SEP .. file:gsub("/", SEP)
+end
+
+local function midiSource(clip)
+  local render = clip.entry.render
+  if type(render) ~= "table" or render.midi == nil or render.midi == json.null then return nil end
+  return clip.inboxDir .. SEP .. render.midi
+end
+
+-- Everything a clip needs must be reachable before a single track is made.
+local function validateClip(clip, config)
+  local missing = {}
+  for _, source in ipairs(clip.entry.sources or {}) do
+    if source.file ~= nil and source.file ~= json.null then
+      local from = stemSource(clip, config, source)
+      if from == nil or fileSize(from) == nil then missing[#missing + 1] = tostring(from or source.file) end
+    end
+  end
+  local midi = midiSource(clip)
+  if midi ~= nil and fileSize(midi) == nil then missing[#missing + 1] = midi end
+  return missing
+end
+
+-- Tracks inserted at the end of a project inherit any folder still open there; close it first.
+local function closeOpenFolders()
+  local count = reaper.CountTracks(0)
+  if count == 0 then return end
+  local depth = 0
+  for i = 0, count - 1 do
+    depth = depth + reaper.GetMediaTrackInfo_Value(reaper.GetTrack(0, i), "I_FOLDERDEPTH")
+  end
+  if depth > 0 then
+    local last = reaper.GetTrack(0, count - 1)
+    local own = reaper.GetMediaTrackInfo_Value(last, "I_FOLDERDEPTH")
+    reaper.SetMediaTrackInfo_Value(last, "I_FOLDERDEPTH", own - depth)
+  end
+end
+
 local function insertTrack(index, name)
   reaper.InsertTrackAtIndex(index, false)
   local track = reaper.GetTrack(0, index)
@@ -376,67 +460,106 @@ end
 
 local function importClip(clip, config, mediaDir, mute)
   local entry = clip.entry
-  local length = (entry["end"] or 0) - (entry.start or 0)
+  local start = entry.start or 0
+  local length = (entry["end"] or 0) - start
   local title = string.format("%04d - %s", entry.number, clipTitle(clip))
-  local folderName = safeName(title)
-  local clipMedia = mediaDir .. SEP .. folderName
+  -- the studio project folder keeps two projects' "0012 - Twinkle" apart
+  local clipMedia = mediaDir .. SEP .. safeName(clip.project.folder or clip.project.name or "studio") .. SEP .. safeName(title)
   reaper.RecursiveCreateDirectory(clipMedia, 0)
 
   local index = reaper.CountTracks(0)
+  closeOpenFolders()
+  local made = {}   -- tracks inserted, for cleanup on failure
+  local copied = {} -- files copied, likewise
+  local function fail(message)
+    for i = #made, 1, -1 do reaper.DeleteTrack(made[i]) end
+    for _, path in ipairs(copied) do os.remove(path) end
+    error(string.format("%s: %s", title, message), 0)
+  end
+
   local parent = insertTrack(index, title)
+  made[#made + 1] = parent
   local children = {}
 
   for _, source in ipairs(entry.sources or {}) do
-    if source.file ~= nil and source.file ~= json.null then
-      local from = config.projects .. SEP .. (clip.project.folder or "") .. SEP .. source.file:gsub("/", SEP)
-      local to = clipMedia .. SEP .. (source.file:match("[^/\\]+$") or "stem.wav")
-      if copyFile(from, to) then
-        local track = insertTrack(index + #children + 1, source.track or "Stem")
-        local item = reaper.AddMediaItemToTrack(track)
-        local take = reaper.AddTakeToMediaItem(item)
-        local pcm = reaper.PCM_Source_CreateFromFile(to)
-        reaper.SetMediaItemTake_Source(take, pcm)
+    local from = stemSource(clip, config, source)
+    if from ~= nil then
+      local to = clipMedia .. SEP .. (from:match("[^/\\]+$") or "stem.wav")
+      local existing = fileSize(to)
+      if existing == nil then
+        if not copyFile(from, to) then fail("could not copy " .. from) end
+        copied[#copied + 1] = to
+      elseif existing ~= fileSize(from) then
+        -- a different file of the same name is someone else's; never overwrite it
+        fail("would overwrite " .. to)
+      end
+      -- an identical file is a copy from an earlier import of this clip (its tracks since
+      -- deleted, or the project closed unsaved); reuse it
+      local track = insertTrack(index + #children + 1, source.track or "Stem")
+      made[#made + 1] = track
+      local item = reaper.AddMediaItemToTrack(track)
+      local take = reaper.AddTakeToMediaItem(item)
+      local pcm = reaper.PCM_Source_CreateFromFile(to)
+      if pcm == nil then fail("REAPER could not open " .. to) end
+      reaper.SetMediaItemTake_Source(take, pcm)
+      -- the stem's file begins where its item began in the studio; place it so the clip's
+      -- own start is at 0, whether that is inside the file or after the file began
+      local itemStart = source.itemStart or start
+      local lead = itemStart - start
+      if lead >= 0 then
+        reaper.SetMediaItemInfo_Value(item, "D_POSITION", lead)
+        reaper.SetMediaItemInfo_Value(item, "D_LENGTH", math.max(0, length - lead))
+        reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", 0)
+      else
         reaper.SetMediaItemInfo_Value(item, "D_POSITION", 0)
         reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
-        reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", math.max(0, (entry.start or 0) - (source.itemStart or entry.start or 0)))
-        children[#children + 1] = track
-      else
-        reaper.ShowConsoleMsg(string.format("  could not copy %s\n", from))
+        reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", -lead)
       end
-    end
-  end
-
-  local render = entry.render
-  if type(render) == "table" and render.midi ~= nil and render.midi ~= json.null then
-    local midi = parseMidi(readFile(clip.inboxDir .. SEP .. render.midi))
-    if midi ~= nil then
-      local track = insertTrack(index + #children + 1, "MIDI")
-      insertMidiItem(track, midi, length)
       children[#children + 1] = track
     end
   end
 
-  if #children == 0 then
-    reaper.DeleteTrack(parent)
-    reaper.ShowConsoleMsg(string.format("  nothing imported for %s\n", title))
-    return false
+  local midiPath = midiSource(clip)
+  if midiPath ~= nil then
+    local ok, midi = pcall(parseMidi, readFile(midiPath))
+    if not ok or midi == nil then fail("could not read the MIDI file " .. midiPath) end
+    local track = insertTrack(index + #children + 1, "MIDI")
+    made[#made + 1] = track
+    insertMidiItem(track, midi, length)
+    children[#children + 1] = track
   end
+
+  if #children == 0 then fail("nothing to import") end
   reaper.SetMediaTrackInfo_Value(parent, "I_FOLDERDEPTH", 1)
   reaper.SetMediaTrackInfo_Value(children[#children], "I_FOLDERDEPTH", -1)
   reaper.SetMediaTrackInfo_Value(parent, "B_MUTE", mute and 1 or 0)
   reaper.ShowConsoleMsg(string.format("  imported %s (%d tracks)\n", title, #children))
-  return true
 end
 
-local function importAll(chosen, config, mediaDir)
+-- Imports what validates, one clip at a time; a clip that fails is undone and left unrecorded.
+local function importAll(chosen, config, mediaDir, save)
+  local ready = {}
+  for _, clip in ipairs(chosen) do
+    local missing = validateClip(clip, config)
+    if #missing == 0 then
+      ready[#ready + 1] = clip
+    else
+      reaper.ShowConsoleMsg(string.format("  skipped %s, not all files are here yet: %s\n", clipTitle(clip), table.concat(missing, ", ")))
+    end
+  end
+  if #ready == 0 then return 0 end
+
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
   local first = reaper.CountTracks(0) == 0
   local imported = 0
-  for _, clip in ipairs(chosen) do
-    if importClip(clip, config, mediaDir, not (first and imported == 0)) then
+  for _, clip in ipairs(ready) do
+    local ok, err = pcall(importClip, clip, config, mediaDir, not (first and imported == 0))
+    if ok then
       recordImport(clip)
       imported = imported + 1
+    else
+      reaper.ShowConsoleMsg("  failed: " .. tostring(err) .. "\n")
     end
   end
   reaper.PreventUIRefresh(-1)
@@ -445,7 +568,7 @@ local function importAll(chosen, config, mediaDir)
   reaper.Undo_EndBlock("CS Studio: import clips", -1)
   if imported > 0 then
     reaper.SetProjExtState(0, EXT_SECTION, "auto_import", "1") -- this project keeps receiving new clips
-    reaper.Main_SaveProject(0, false)
+    if save then reaper.Main_SaveProject(0, false) end
   end
   return imported
 end
@@ -465,12 +588,13 @@ local function onDemand()
   end
   local chosen = chooseClips(clips, config)
   if #chosen == 0 then return end
-  local imported = importAll(chosen, config, mediaDir)
+  local imported = importAll(chosen, config, mediaDir, true)
   reaper.ShowConsoleMsg(string.format("\n%d clip(s) imported.\n", imported))
 end
 
 -- Continuous mode: every watch_seconds, with the transport stopped and the open project
--- opted in by an earlier on-demand import, bring in whatever became eligible since.
+-- opted in by an earlier on-demand import, bring in whatever became eligible since. It never
+-- saves: the tracks arrive as an undoable edit, and the record of them is saved when you save.
 local function watchPass()
   local mediaDir = projectMediaDir()
   if mediaDir == nil or reaper.GetPlayState() ~= 0 then return end
@@ -484,7 +608,7 @@ local function watchPass()
   end
   if #chosen == 0 then return end
   reaper.ShowConsoleMsg(string.format("CS Studio: importing %d new clip(s)\n", #chosen))
-  importAll(chosen, config, mediaDir)
+  importAll(chosen, config, mediaDir, false) -- saving is yours to do; the import is undoable
 end
 
 local function watch()

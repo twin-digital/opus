@@ -75,7 +75,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-24.3" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-24.4" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -432,9 +432,20 @@ end
 local function writeFile(path, data)
   local f = io.open(path, "wb")
   if f == nil then return false end
-  f:write(data)
+  local ok = f:write(data)
   f:close()
-  return true
+  return ok ~= nil
+end
+
+-- Written beside the target and swapped in, so a reader (or the mirror copying the Outbox)
+-- never sees a half-written file.
+local function writeFileAtomic(path, data)
+  local temp = path .. ".tmp"
+  if not writeFile(temp, data) then os.remove(temp); return false end
+  os.remove(path) -- os.rename does not overwrite on Windows
+  local ok = os.rename(temp, path)
+  if not ok then os.remove(temp) end
+  return ok == true
 end
 
 local function projectFile()
@@ -515,10 +526,11 @@ local function saveLibrary()
     folder = dir:match("[^/\\]+$") or "",
     updatedAt = localNow(),
   }
-  writeFile(path, json.encode(library, "  ") .. "\n")
+  local text = json.encode(library, "  ") .. "\n"
+  writeFileAtomic(path, text)
   if CONFIG.render or CONFIG.midi_export then
     reaper.RecursiveCreateDirectory(outboxDir(), 0)
-    writeFile(manifestPath(), json.encode(library, "  ") .. "\n")
+    writeFileAtomic(manifestPath(), text)
   end
 end
 

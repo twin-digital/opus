@@ -258,11 +258,16 @@ Open (or create and save) the song project you want the clips in. Run the import
    and a note on any shorter than the threshold.
 2. A dialog shows the threshold, changeable for this run, and takes an optional list of
    numbers to import only some. Leave it blank for all of them.
-3. For each clip the script copies its stems from the projects share into the song project's
-   media folder, so the project is self-contained, and builds a folder track named
-   `0012 - Twinkle` with the stems and the MIDI as children, all at time zero and trimmed to
-   the clip. Every folder but the first is muted, so the project does not play everything at
-   once. The project is saved.
+3. Before anything is made, every chosen clip's files are checked: the stems on the projects
+   share and the MIDI file in the Inbox. A clip with something missing (the mirror has not
+   caught up, the share is not mounted) is skipped for now and reported, not recorded.
+4. For each clip the script copies its stems from the projects share into the song project's
+   media folder (verified copies, never overwriting a different file), so the project is
+   self-contained, and builds a folder track named `0012 - Twinkle` with the stems and the
+   MIDI as children, all at time zero and trimmed to the clip. MIDI timing follows the tempo
+   the file was written at, so it lines up with the stems whatever the song's tempo. Every
+   folder but the first is muted, so the project does not play everything at once. A clip
+   that fails part-way is removed again and left unrecorded. The project is saved.
 
 Where the song project lives, inside Nextcloud or not, is up to you; the stems ride along.
 
@@ -271,7 +276,8 @@ Where the song project lives, inside Nextcloud or not, is up to you; the stems r
 `cs-studio-import-watch.lua` keeps the importer running: every `watch_seconds` (300) while
 the transport is stopped, it brings new eligible clips into the open project without asking,
 using the configured threshold. It only does this in a project that has had one on-demand
-import, which is the opt-in. Load it from the Actions list to run it for a session, or install
+import, which is the opt-in, and it never saves: the tracks arrive as an undoable edit and are
+kept when you save. Load it from the Actions list to run it for a session, or install
 with `-Watch` to start it whenever REAPER launches.
 
 ## Getting the Outbox here
