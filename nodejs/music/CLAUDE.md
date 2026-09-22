@@ -1,3 +1,5 @@
+| `MUSIC_STUDIO_OUTBOX` | `~/Music/Studio Outbox` | The watcher's Outbox, where the page finds a clip's rendered mix for its waveform. |
+
 # music (`@thrashplay/*`)
 
 Music-learning games for the Novation Launchpad Mini Mk3: the Launchpad is both screen and
@@ -79,7 +81,10 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   record and play-my-last-one, which the launcher draws above every program so they never move.
 - `createStudioServer`, the touchscreen view: serves `TouchPageHtml` on `MUSIC_STUDIO_PORT` and
   streams state to it over server-sent events; the page posts actions back. Open it fullscreen
-  in a browser on the touchscreen. Clips are named on the page with an on-screen keyboard
+  in a browser on the touchscreen. While playing it draws the clip's Outbox mix as a waveform
+  (wavesurfer.js, served from its package; `/clips/<id>.wav`) with a cursor that follows REAPER,
+  while recording a live level graph, and always per-track meters from the web remote's track
+  peaks (polled every 50 ms while the transport moves). Clips are named on the page with an on-screen keyboard
   (`simple-keyboard`, served from its package); the rename travels as project ext state, and
   the watcher applies it to the region.
 

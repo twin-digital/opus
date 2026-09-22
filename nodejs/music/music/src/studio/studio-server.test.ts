@@ -9,6 +9,8 @@ const idle: StudioState = {
   transport: 'stopped',
   recordingElapsed: 0,
   level: 0,
+  meters: [],
+  position: 0,
   takes: [{ id: '1', name: 'Take 1', number: 1, label: '', start: 0, end: 10, duration: 10 }],
   playingTake: undefined,
   instruments: undefined,
@@ -24,7 +26,7 @@ const makeService = () => {
     record: vi.fn(() => Promise.resolve()),
     stopTransport: vi.fn(() => Promise.resolve()),
     playLatest: vi.fn(() => Promise.resolve()),
-    playTake: vi.fn((_id: string) => Promise.resolve()),
+    playTake: vi.fn((_id: string, _at?: number) => Promise.resolve()),
     renameTake: vi.fn((_id: string, _label: string) => Promise.resolve()),
     reloadHelper: vi.fn(() => Promise.resolve()),
   }
@@ -102,7 +104,7 @@ describe('createStudioServer', () => {
     expect(service.record).toHaveBeenCalledOnce()
     expect(service.stopTransport).toHaveBeenCalledOnce()
     expect(service.playLatest).toHaveBeenCalledOnce()
-    expect(service.playTake).toHaveBeenCalledExactlyOnceWith('Take 1')
+    expect(service.playTake).toHaveBeenCalledExactlyOnceWith('Take 1', 0)
   })
 
   it('renames a clip from a JSON body', async () => {

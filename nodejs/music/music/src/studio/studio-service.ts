@@ -49,6 +49,10 @@ export interface StudioState {
   recordingElapsed: number
   /** Input level, 0..1, derived from the loudest track peak. */
   level: number
+  /** Every track's level, 0..1, master last, in project order; empty while stopped. */
+  meters: { name: string; level: number }[]
+  /** Seconds into the playing take, when one is playing through this service. */
+  position: number
   /** Newest first. */
   takes: Take[]
   /** The take being played, when playback was started through this service. */
@@ -124,6 +128,8 @@ export class StudioService {
 
   private readonly client: ReaperClient
   private readonly pollIntervalMs: number
+  /** Poll interval while recording or playing, so meters and the cursor move smoothly. */
+  private readonly activePollIntervalMs: number
   private readonly log = logger.child({}, { msgPrefix: '[STUDIO] ' })
 
   private state: StudioState = {
@@ -131,6 +137,8 @@ export class StudioService {
     transport: 'stopped',
     recordingElapsed: 0,
     level: 0,
+    meters: [],
+    position: 0,
     takes: [],
     playingTake: undefined,
     instruments: undefined,
@@ -150,15 +158,18 @@ export class StudioService {
   constructor({
     client,
     pollIntervalMs = 150,
+    activePollIntervalMs = 50,
     expectedHelperHash,
   }: {
     client?: ReaperClient
     pollIntervalMs?: number
+    activePollIntervalMs?: number
     /** Hash of the watcher this app ships; when given, the state reports whether REAPER runs that one. */
     expectedHelperHash?: string
   } = {}) {
     this.client = client ?? new ReaperClient()
     this.pollIntervalMs = pollIntervalMs
+    this.activePollIntervalMs = activePollIntervalMs
     this.expectedHelperHash = expectedHelperHash
   }
 
@@ -198,14 +209,16 @@ export class StudioService {
     await this.command(() => this.client.runActions(ReaperActions.stop))
   }
 
-  async playTake(id: string): Promise<void> {
+  /** Plays a take from its start, or from `atSeconds` into it. */
+  async playTake(id: string, atSeconds = 0): Promise<void> {
     const take = this.state.takes.find((candidate) => candidate.id === id)
     if (take === undefined) {
       this.log.warn(`No take with id ${id}.`)
       return
     }
+    const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
     this.setPlayingTake(take)
-    await this.command(() => this.client.playFrom(take.start))
+    await this.command(() => this.client.playFrom(take.start + offset))
   }
 
   async playLatest(): Promise<void> {
@@ -343,6 +356,13 @@ export class StudioService {
       transport,
       recordingElapsed: this.recordingStartedAt === undefined ? 0 : status.position - this.recordingStartedAt,
       level: transport === 'stopped' ? 0 : toLevel(status.peakDb),
+      meters:
+        transport === 'stopped' ?
+          []
+        : [...status.tracks.filter((track) => !track.master), ...status.tracks.filter((track) => track.master)].map(
+            (track) => ({ name: track.name, level: toLevel(track.peakDb) }),
+          ),
+      position: playingTake !== undefined && stillPlaying ? Math.max(0, status.position - playingTake.start) : 0,
       takes,
       projectName: status.ext.project_name || undefined,
       helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
@@ -377,7 +397,8 @@ export class StudioService {
     await this.refresh()
     // a stop()/start() during the poll started a newer chain; this one ends here
     if (this.running && runId === this.runId) {
-      this.schedule(Math.max(0, this.pollIntervalMs - (Date.now() - startedAt)), runId)
+      const interval = this.state.transport === 'stopped' ? this.pollIntervalMs : this.activePollIntervalMs
+      this.schedule(Math.max(0, interval - (Date.now() - startedAt)), runId)
     }
   }
 }

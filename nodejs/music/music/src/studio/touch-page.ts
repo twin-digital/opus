@@ -30,6 +30,21 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   @keyframes pulse { 50% { opacity: 0.25; } }
   #meter { width: 160px; height: 18px; background: #2a2d36; border-radius: 9px; overflow: hidden; }
   #meterFill { height: 100%; width: 0; background: linear-gradient(90deg, #37d67a, #ffd166 70%, #ff3b3b); transition: width 80ms linear; }
+  /* the stage: waveform or live graph, with the meters standing at its right edge */
+  #strip { display: flex; gap: 16px; padding: 0 28px 18px; height: 190px; }
+  #stage { flex: 1; position: relative; background: #0d0f14; border-radius: 18px; overflow: hidden; border: 1px solid #23262f; }
+  #wave { position: absolute; inset: 0; }
+  #live { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+  #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #2a2e3a; display: none; }
+  #progressFill { height: 100%; width: 0; background: #37d67a; }
+  #stageTitle { position: absolute; top: 10px; left: 14px; font-size: 18px; font-weight: 600; color: #9aa0ad; pointer-events: none; }
+  #stageTime { position: absolute; top: 10px; right: 14px; font-size: 18px; font-weight: 600; color: #f2f2f2; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #meters { display: flex; gap: 10px; align-items: stretch; }
+  .meter { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 46px; }
+  .meter .bar { flex: 1; width: 100%; position: relative; background: #0d0f14; border-radius: 8px; overflow: hidden; border: 1px solid #23262f; }
+  .meter .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(to top, #37d67a 0%, #37d67a 62%, #ffd166 62%, #ffd166 86%, #ff3b3b 86%); background-size: 100% var(--bar-h, 100px); background-position: bottom; }
+  .meter .hold { position: absolute; left: 0; right: 0; height: 3px; background: #fff; bottom: 0; opacity: 0; }
+  .meter .name { font-size: 13px; color: #9aa0ad; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
   main { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 0 28px 28px; min-height: 0; }
   .buttons { display: flex; flex-direction: column; gap: 24px; }
   button {
@@ -71,7 +86,8 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   /* naming sheet */
   #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; z-index: 10; }
   #sheet.open { display: flex; }
-  #sheet .panel { width: 100%; background: #1d2029; border-radius: 28px 28px 0 0; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+  #sheet { justify-content: center; }
+  #sheet .panel { width: 50%; min-width: 640px; max-width: 100%; background: #1d2029; border-radius: 28px 28px 0 0; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
   #sheet .row { display: flex; align-items: center; gap: 14px; }
   #sheet .clip { font-size: 24px; font-weight: 700; white-space: nowrap; }
   #nameField { flex: 1; font-size: 30px; font-weight: 600; padding: 12px 16px; border-radius: 14px; border: 2px solid transparent; background: #2a2e3a; color: #fff; caret-color: #ffd166; min-width: 0; outline: none; }
@@ -98,6 +114,16 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   <div id="instrument"></div>
   <div id="status"><div id="meter"><div id="meterFill"></div></div><div id="dot"></div><span id="statusText">Ready</span></div>
 </header>
+<div id="strip">
+  <div id="stage">
+    <div id="wave"></div>
+    <canvas id="live"></canvas>
+    <div id="progress"><div id="progressFill"></div></div>
+    <div id="stageTitle"></div>
+    <div id="stageTime"></div>
+  </div>
+  <div id="meters"></div>
+</div>
 <main>
   <div class="buttons">
     <button id="recBtn">
@@ -124,6 +150,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   </div>
 </div>
 <script src="vendor/simple-keyboard.js"></script>
+<script src="vendor/wavesurfer.js"></script>
 
 <script>
 const $ = (id) => document.getElementById(id)
@@ -142,7 +169,7 @@ const displayName = (take) =>
   : 'Clip ' + take.number
 
 const DefaultTitle = 'CS Studio'
-let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
+let state = { connected: false, transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], position: 0, takes: [], playingTake: undefined, instruments: undefined, projectName: undefined, helper: undefined }
 let streamOk = false
 let takesKey = ''
 let busyUntil = 0 // ignore record taps briefly after one, until the state catches up
@@ -185,6 +212,8 @@ function renderBanner() {
 
 function render() {
   renderBanner()
+  renderStage()
+  renderMeters()
   const title = state.projectName || DefaultTitle
   $('title').textContent = title
   document.title = title
@@ -243,6 +272,124 @@ function render() {
     el.append(play, name, len, edit)
     box.appendChild(el)
   }
+}
+
+// --- stage: waveform with cursor while playing, live graph while recording ----------
+let wave = null       // WaveSurfer instance
+let waveClipId = null // clip the waveform was loaded for
+let waveReady = false
+const liveBars = []   // recent levels, newest last, for the recording graph
+const LIVE_BARS = 240
+
+function ensureWave() {
+  if (wave || !window.WaveSurfer) return wave
+  wave = WaveSurfer.create({
+    container: '#wave',
+    height: 'auto',
+    waveColor: '#3a5f4f',
+    progressColor: '#37d67a',
+    cursorColor: '#ffd166',
+    cursorWidth: 3,
+    barWidth: 3,
+    barGap: 2,
+    barRadius: 2,
+    interact: true,
+    normalize: true,
+  })
+  wave.on('ready', () => { waveReady = true; render() })
+  wave.on('error', () => { waveReady = false; waveClipId = null; render() })
+  // a tap on the waveform starts the clip from there (the page never plays audio itself)
+  wave.on('interaction', (seconds) => {
+    if (!state.playingTake) return
+    fetch('/actions/play-take/' + encodeURIComponent(state.playingTake.id), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at: seconds }),
+    }).catch(() => {})
+  })
+  return wave
+}
+
+function loadWaveFor(take) {
+  const ws = ensureWave()
+  if (!ws || waveClipId === take.id) return
+  waveClipId = take.id
+  waveReady = false
+  ws.load('/clips/' + encodeURIComponent(take.id) + '.wav').catch(() => { waveReady = false })
+}
+
+function drawLive() {
+  const canvas = $('live')
+  const w = canvas.clientWidth, h = canvas.clientHeight
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, w, h)
+  const barW = w / LIVE_BARS
+  for (let i = 0; i < liveBars.length; i++) {
+    const level = liveBars[i]
+    const x = w - (liveBars.length - i) * barW
+    const bh = Math.max(2, level * (h - 30))
+    ctx.fillStyle = level > 0.86 ? '#ff3b3b' : level > 0.62 ? '#ffd166' : '#37d67a'
+    ctx.fillRect(x, (h - bh) / 2 + 10, Math.max(1, barW - 1), bh)
+  }
+}
+
+function renderStage() {
+  const playing = state.transport === 'playing' && state.playingTake
+  const recording = state.transport === 'recording'
+  const title = $('stageTitle'), time = $('stageTime')
+  $('wave').style.display = playing ? 'block' : 'none'
+  $('live').style.display = recording ? 'block' : 'none'
+  $('progress').style.display = playing && !waveReady ? 'block' : 'none'
+
+  if (recording) {
+    liveBars.push(state.level)
+    if (liveBars.length > LIVE_BARS) liveBars.shift()
+    drawLive()
+    title.textContent = 'Recording'
+    time.textContent = fmt(state.recordingElapsed)
+    return
+  }
+  if (playing) {
+    const take = state.playingTake
+    loadWaveFor(take)
+    if (waveReady && wave && take.duration > 0) wave.setTime(Math.min(state.position, take.duration))
+    $('progressFill').style.width = (take.duration > 0 ? (state.position / take.duration) * 100 : 0) + '%'
+    title.textContent = displayName(take)
+    time.textContent = fmt(state.position) + ' / ' + fmt(take.duration)
+    return
+  }
+  liveBars.length = 0
+  title.textContent = ''
+  time.textContent = ''
+}
+
+// --- meters: one bar per track, master last, with a falling peak-hold line -------------
+const holds = {} // name -> { level, at }
+function renderMeters() {
+  const box = $('meters')
+  const meters = state.meters || []
+  if (box.childElementCount !== meters.length) {
+    box.innerHTML = ''
+    for (const m of meters) {
+      const el = document.createElement('div')
+      el.className = 'meter'
+      el.innerHTML = '<div class="bar"><div class="fill"></div><div class="hold"></div></div><span class="name"></span>'
+      el.querySelector('.name').textContent = m.name
+      box.appendChild(el)
+    }
+  }
+  const now = Date.now()
+  meters.forEach((m, i) => {
+    const el = box.children[i]
+    const bar = el.querySelector('.bar'), fill = el.querySelector('.fill'), hold = el.querySelector('.hold')
+    const hPx = bar.clientHeight
+    fill.style.setProperty('--bar-h', hPx + 'px')
+    fill.style.height = (m.level * 100) + '%'
+    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0 })
+    if (m.level >= h.level) { h.level = m.level; h.at = now }
+    else if (now - h.at > 900) h.level = Math.max(m.level, h.level - 0.02)
+    hold.style.opacity = h.level > 0.02 ? 1 : 0
+    hold.style.bottom = (h.level * 100) + '%'
+  })
 }
 
 // --- naming sheet ---------------------------------------------------------

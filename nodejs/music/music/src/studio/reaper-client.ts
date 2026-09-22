@@ -30,6 +30,8 @@ export interface ReaperStatus {
   regions: ReaperRegion[]
   /** Loudest last-meter peak across all tracks, in dB. `-Infinity` when unmetered. */
   peakDb: number
+  /** Every track's last-meter peak in dB, master first, in project order. */
+  tracks: { name: string; peakDb: number; master: boolean }[]
   /** Project ext-state values the status query asks for, keyed by lower-cased key. */
   ext: Record<string, string>
 }
@@ -67,7 +69,14 @@ const decodePlayState = (flags: number): ReaperPlayState =>
   : 'stopped'
 
 export const parseReaperReply = (text: string): ReaperStatus => {
-  const status: ReaperStatus = { playState: 'stopped', position: 0, regions: [], peakDb: -Infinity, ext: {} }
+  const status: ReaperStatus = {
+    playState: 'stopped',
+    position: 0,
+    regions: [],
+    peakDb: -Infinity,
+    tracks: [],
+    ext: {},
+  }
 
   for (const line of text.split('\n')) {
     const fields = line.split('\t')
@@ -88,8 +97,12 @@ export const parseReaperReply = (text: string): ReaperStatus => {
       case 'TRACK': {
         // peaks arrive as tenths of a dB; track 0 is the master, whose peak is the mix, not the input
         const peak = Number(fields[6]) / 10
-        if (fields[1] !== '0' && Number.isFinite(peak)) {
-          status.peakDb = Math.max(status.peakDb, peak)
+        const master = fields[1] === '0'
+        if (Number.isFinite(peak)) {
+          status.tracks.push({ name: master ? 'Master' : (fields[2] ?? ''), peakDb: peak, master })
+          if (!master) {
+            status.peakDb = Math.max(status.peakDb, peak)
+          }
         }
         break
       }

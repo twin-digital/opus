@@ -1,0 +1,5 @@
+---
+'@thrashplay/music': minor
+---
+
+Studio touch page visuals: a strip under the header shows the playing clip's waveform (wavesurfer.js over the clip's Outbox mix, served at `/clips/<id>.wav`) with a cursor that follows REAPER and seeks on tap, a live level graph while recording, and per-track meters with peak hold whenever the transport moves. The service polls every 50 ms while playing or recording and exposes per-track levels and the position within the playing clip; `playTake` accepts an offset. The on-screen keyboard is half width, centered. `MUSIC_STUDIO_OUTBOX` points the app at the watcher's Outbox.

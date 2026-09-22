@@ -5,6 +5,9 @@ import { createStudioServer } from '../studio/studio-server.js'
 import { ReaperClient } from '../studio/reaper-client.js'
 import { StudioService } from '../studio/studio-service.js'
 import { getConfig } from '../config.js'
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import { bundledHelperHash } from '../studio/helper.js'
 import {
   parseTakeName,
@@ -41,6 +44,8 @@ const makeFakeStudio = (): StudioApi => {
     transport: 'stopped',
     recordingElapsed: 0,
     level: 0,
+    meters: [],
+    position: 0,
     takes: [
       {
         id: '2',
@@ -77,30 +82,44 @@ const makeFakeStudio = (): StudioApi => {
         end: start + duration,
         duration,
       }
-      update({ transport: 'stopped', recordingElapsed: 0, level: 0, takes: [take, ...state.takes] })
+      update({ transport: 'stopped', recordingElapsed: 0, level: 0, meters: [], takes: [take, ...state.takes] })
     } else {
-      update({ transport: 'stopped', level: 0, playingTake: undefined })
+      update({ transport: 'stopped', level: 0, meters: [], position: 0, playingTake: undefined })
     }
     recordingStartedAt = undefined
     playingUntil = undefined
   }
 
-  const play = (take: Take) => {
-    playingUntil = Date.now() + take.duration * 1000
-    update({ transport: 'playing', playingTake: take })
+  let playingFrom = 0
+  const play = (take: Take, at = 0) => {
+    playingFrom = Date.now() - at * 1000
+    playingUntil = playingFrom + take.duration * 1000
+    update({ transport: 'playing', playingTake: take, position: at })
   }
+
+  const wobble = (base: number) => Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.3))
+  const meters = (piano: number, vocal: number) => [
+    { name: 'Piano', level: wobble(piano) },
+    { name: 'Samples', level: wobble(piano * 0.4) },
+    { name: 'Vocal', level: wobble(vocal) },
+    { name: 'Master', level: wobble(Math.max(piano, vocal)) },
+  ]
 
   setInterval(() => {
     if (state.transport === 'recording' && recordingStartedAt !== undefined) {
-      update({ recordingElapsed: (Date.now() - recordingStartedAt) / 1000, level: 0.3 + 0.5 * Math.random() })
+      const t = (Date.now() - recordingStartedAt) / 1000
+      const piano = 0.35 + 0.35 * Math.abs(Math.sin(t * 1.3))
+      update({ recordingElapsed: t, level: wobble(piano), meters: meters(piano, 0.25) })
     } else if (state.transport === 'playing') {
       if (playingUntil !== undefined && Date.now() >= playingUntil) {
         stop()
       } else {
-        update({ level: 0.2 + 0.6 * Math.random() })
+        const t = (Date.now() - playingFrom) / 1000
+        const piano = 0.3 + 0.4 * Math.abs(Math.sin(t * 1.1))
+        update({ position: t, level: wobble(piano), meters: meters(piano, 0.5) })
       }
     }
-  }, 150)
+  }, 50)
 
   let instrumentIndex = 0
   setInterval(() => {
@@ -127,10 +146,10 @@ const makeFakeStudio = (): StudioApi => {
       }
       return Promise.resolve()
     },
-    playTake: (id) => {
+    playTake: (id, atSeconds) => {
       const take = state.takes.find((candidate) => candidate.id === id)
       if (take !== undefined) {
-        play(take)
+        play(take, atSeconds)
       }
       return Promise.resolve()
     },
@@ -171,9 +190,44 @@ const makeRealStudio = async (baseUrl: string): Promise<StudioApi> => {
   return studio
 }
 
+/** A short synthetic recording (a few decaying notes), so the waveform has something to draw. */
+const syntheticClip = async (seconds: number): Promise<string> => {
+  const rate = 22050
+  const frames = Math.floor(seconds * rate)
+  const data = Buffer.alloc(frames * 2)
+  for (let i = 0; i < frames; i++) {
+    const t = i / rate
+    const note = Math.floor(t / 0.8)
+    const phase = t - note * 0.8
+    const freq = 220 * 2 ** (((note * 5) % 12) / 12)
+    const env = Math.exp(-phase * 2.5)
+    const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.8
+    data.writeInt16LE(Math.round(sample * 32767), i * 2)
+  }
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0)
+  header.writeUInt32LE(36 + data.length, 4)
+  header.write('WAVEfmt ', 8)
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(1, 22)
+  header.writeUInt32LE(rate, 24)
+  header.writeUInt32LE(rate * 2, 28)
+  header.writeUInt16LE(2, 32)
+  header.writeUInt16LE(16, 34)
+  header.write('data', 36)
+  header.writeUInt32LE(data.length, 40)
+  const file = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'studio-preview-')), 'clip.wav')
+  await fs.writeFile(file, Buffer.concat([header, data]))
+  return file
+}
+
 const { reaperUrl } = getConfig()
+const fake = reaperUrl === undefined
+const clip = fake ? await syntheticClip(30) : undefined
 const server = await createStudioServer({
-  service: reaperUrl === undefined ? makeFakeStudio() : await makeRealStudio(reaperUrl),
+  service: fake ? makeFakeStudio() : await makeRealStudio(reaperUrl),
+  clipFile: fake ? () => Promise.resolve(clip) : undefined,
   port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
   host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
 })

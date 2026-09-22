@@ -219,7 +219,10 @@ toolbar pops in on touch near the top.
   written into the project's ext state, and the watcher renames the region to
   "Clip N - <name>" and saves, so the clip keeps its place in the list. Rename in REAPER's
   Region Manager works the same way as long as the "Clip N" prefix stays.
-- The level bar shows the loudest track peak so the kid can see it's listening.
+- While a clip plays, the strip under the header shows its waveform with a moving cursor
+  (from the Outbox mix; a plain progress bar until the clip has been rendered), and tapping
+  the waveform plays from there. While recording it shows a live level graph. Track meters
+  with peak hold stand at the strip's right edge whenever the transport moves.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

@@ -53,7 +53,8 @@
     "node-web-audio-api": "^2.0.0",
     "pino": "^10.0.0",
     "popmotion": "^11.0.5",
-    "simple-keyboard": "^3.8.190"
+    "simple-keyboard": "^3.8.190",
+    "wavesurfer.js": "^7.12.12"
   },
   "peerDependencies": {
     "audify": "^1.10.1"
