@@ -93,17 +93,28 @@ number, label, bounds, when it was made, how it stopped (user, silence, cap), th
 file per track, and its render record. It is the source of truth for everything about a clip
 that is not "where it sits on the timeline", which stays with the region.
 
-While the studio is idle, the watcher fills the Outbox (`~/Music/Studio Outbox` by default):
+While the studio is idle, the watcher fills the Outbox (`~/Music/Studio Outbox` by default),
+one folder per project:
 
-- `<project> - Clip 12 - Twinkle.wav`, the master mix of the region, in the project's
-  current render format (WAV unless you changed it).
-- `<project> - Clip 12 - Twinkle.mid`, the clip's MIDI: each hand on its own channel with
-  the program changes, written by the watcher itself.
-- `<project>.manifest.json`, the library exported next to the files.
+```
+Studio Outbox/
+  Piano Corner 2026/
+    20260922 - 0011 - Clip 11.wav
+    20260922 - 0012 - Twinkle.wav
+    20260922 - 0012 - Twinkle.mid
+    manifest.json
+```
 
-Unnamed clips are `<project> - Clip 12`. A rename moves the files; trimming a region in
-REAPER re-renders it; deleting a region removes its files and its entry. The project name is
-in every file name so rotated projects can share one Outbox.
+- The `.wav` is the master mix of the region, in the project's current render format (WAV
+  unless you changed it).
+- The `.mid` is the clip's MIDI: each hand on its own channel with the program changes,
+  written by the watcher itself.
+- `manifest.json` is the library exported next to the files.
+
+File names are the clip's recording date, its number padded to four digits so they sort, and
+its given name, or "Clip 12" when it has none ("Clip 12 (empty)" when nothing was played).
+A rename moves the files; trimming a region in REAPER re-renders it; deleting a region
+removes its files and its entry.
 
 Idle means: the transport is stopped, no key has been pressed and nothing has started or
 stopped for `render_idle_seconds` (30). One clip renders per pass, and the loop re-checks

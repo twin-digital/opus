@@ -70,7 +70,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-23.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-24.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -487,12 +487,14 @@ local function loadLibrary()
   return library
 end
 
+-- Each project gets its own folder under the Outbox, so a folder listing is one project's
+-- clips in date order.
 local function outboxDir()
-  return expandHome(CONFIG.outbox)
+  return expandHome(CONFIG.outbox) .. SEP .. safeName(currentProjectName())
 end
 
 local function manifestPath()
-  return outboxDir() .. SEP .. safeName(currentProjectName()) .. ".manifest.json"
+  return outboxDir() .. SEP .. "manifest.json"
 end
 
 local function saveLibrary()
@@ -534,6 +536,7 @@ local function recordClip(number, label, first, last, items, stoppedBy)
     number = number,
     label = label,
     createdAt = utcNow(),
+    createdDate = os.date("%Y%m%d"),
     start = first,
     ["end"] = last,
     starred = false,
@@ -556,10 +559,20 @@ local function fileLabel(label)
   return label
 end
 
+-- "<YYYYMMDD> - <0012> - <slug>": date first for sorting, the number padded so it sorts too,
+-- then the given name, or "Clip 12" when there is none.
 local function clipBaseName(entry)
   local text = fileLabel(entry.label)
-  local label = text == "" and "" or (text:sub(1, 1) == "(" and (" " .. text) or (" - " .. text))
-  return safeName(string.format("%s - Clip %d%s", currentProjectName(), entry.number, label))
+  local slug
+  if text == "" then
+    slug = string.format("Clip %d", entry.number)
+  elseif text:sub(1, 1) == "(" then
+    slug = string.format("Clip %d %s", entry.number, text)
+  else
+    slug = text
+  end
+  local date = entry.createdDate or (type(entry.createdAt) == "string" and entry.createdAt:sub(1, 10):gsub("-", "")) or os.date("%Y%m%d")
+  return safeName(string.format("%s - %04d - %s", date, entry.number, slug))
 end
 
 local function outboxFiles(base)
@@ -745,7 +758,7 @@ local function syncLibrary()
     local key = tostring(number)
     local entry = lib.clips[key]
     if entry == nil then
-      entry = { number = number, label = region.label, createdAt = utcNow(), start = region.start, ["end"] = region["end"],
+      entry = { number = number, label = region.label, createdAt = utcNow(), createdDate = os.date("%Y%m%d"), start = region.start, ["end"] = region["end"],
         starred = false, archived = false, stoppedBy = "unknown", sources = {}, render = json.null }
       lib.clips[key] = entry
       changed = true
