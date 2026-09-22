@@ -385,6 +385,17 @@ export class StudioService {
     // take or judge whether playback reached the end
     const stale = seq !== this.commandSeq
 
+    // after an outage REAPER may have moved on; keep only what the cursor still lies within
+    let { playingTake } = this.state
+    if (!this.state.connected) {
+      if (playingTake !== undefined && (status.position < playingTake.start || status.position >= playingTake.end)) {
+        playingTake = undefined
+      }
+      if (this.recordingStartedAt !== undefined && status.position < this.recordingStartedAt) {
+        this.recordingStartedAt = undefined
+      }
+    }
+
     if (transport === 'recording') {
       this.recordingStartedAt ??= status.position
     } else if (!stale) {
@@ -392,7 +403,6 @@ export class StudioService {
     }
 
     const takes = status.regions.map(toTake).sort(byNewest)
-    const { playingTake } = this.state
     const reachedEnd =
       !stale && playingTake !== undefined && transport === 'playing' && status.position >= playingTake.end
     const stillPlaying = playingTake !== undefined && (stale || (transport === 'playing' && !reachedEnd))
@@ -409,7 +419,10 @@ export class StudioService {
       takes,
       projectName: status.ext.project_name || undefined,
       helper: this.expectedHelperHash === undefined ? undefined : helperStatus(status.ext, this.expectedHelperHash),
-      playingTake: stillPlaying ? (takes.find((take) => take.id === playingTake.id) ?? playingTake) : undefined,
+      playingTake:
+        stillPlaying && playingTake !== undefined ?
+          (takes.find((take) => take.id === playingTake.id) ?? playingTake)
+        : undefined,
     })
 
     if (reachedEnd) {

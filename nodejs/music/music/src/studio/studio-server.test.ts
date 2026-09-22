@@ -161,6 +161,12 @@ describe('createStudioServer', () => {
     expect((await fetch(`${server.url}/`)).status).toBe(200)
   })
 
+  it('refuses a mix path that is not a regular file', async () => {
+    const service = makeService()
+    server = await createStudioServer({ service, port: 0, clipFile: () => Promise.resolve(os.tmpdir()) })
+    expect((await fetch(`${server.url}/clips/1.wav`)).status).toBe(404)
+  })
+
   it('seeks within a clip from a JSON body, tolerating a bad one', async () => {
     const service = makeService()
     server = await createStudioServer({ service, port: 0 })

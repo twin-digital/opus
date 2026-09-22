@@ -258,6 +258,41 @@ describe('StudioService', () => {
     expect(reaper.requests.at(-1)).toBe('1016')
   })
 
+  it('forgets a take and a recording start that REAPER moved past during an outage', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    await service.refresh()
+
+    // REAPER comes back playing beyond the take: it is someone else's playback, not stopped
+    reaper.offline = false
+    reaper.position = 15
+    await service.refresh()
+    expect(service.getState().playingTake).toBeUndefined()
+    expect(reaper.requests.at(-1)).not.toBe('1016')
+    expect(reaper.playState).toBe(1)
+
+    // a recording restarted during an outage counts from its own start
+    reaper.playState = 0
+    await service.refresh()
+    await service.record() // starts at 22, after the last take
+    reaper.position = 30
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(8)
+    reaper.offline = true
+    await service.refresh()
+    await service.refresh()
+    await service.refresh()
+    reaper.offline = false
+    reaper.position = 3
+    await service.refresh()
+    expect(service.getState().recordingElapsed).toBe(0)
+  })
+
   it('polls faster only while connected and moving', async () => {
     const { reaper, service } = makeService({ regions: twoTakes })
     service.start()

@@ -184,13 +184,18 @@ export const createStudioServer = async ({
     // opened before any header goes out, so an open failure is still a clean 404; bounded to
     // the size just measured, so a file growing underneath (a re-render) cannot overrun it
     const stream = createReadStream(file, { highWaterMark: 256 * 1024, end: Math.max(0, stat.size - 1) })
-    await once(stream, 'open')
-    response.writeHead(200, {
-      'content-type': mixContentType(file),
-      'content-length': stat.size,
-      'cache-control': 'no-store',
-    })
-    await pipeline(stream, response)
+    try {
+      await once(stream, 'open')
+      response.writeHead(200, {
+        'content-type': mixContentType(file),
+        'content-length': stat.size,
+        'cache-control': 'no-store',
+      })
+      await pipeline(stream, response)
+    } finally {
+      // pipeline rejects before attaching its cleanup when the client has already gone
+      stream.destroy()
+    }
   }
 
   const server = http.createServer((request, response) => {

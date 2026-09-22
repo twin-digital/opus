@@ -313,7 +313,9 @@ function ensureWave() {
     normalize: true,
   })
   wave.on('ready', () => { waveReady = true; scheduleRender() })
-  // load failures are handled per load (see loadWaveFor), where the clip they belong to is known
+  // a media-element failure (an unreadable file) never settles the load promise, so it is
+  // reported here; the element's src always belongs to the newest load
+  wave.on('error', (error) => { if (!error || error.name !== 'AbortError') waveFailed(waveClipId) })
   // tapping or dragging on the waveform moves playback there (the page never plays audio
   // itself). Seeks go out at most every 120 ms while dragging, and REAPER's own position is
   // ignored for a moment afterwards so the cursor does not snap back before REAPER catches up.
@@ -364,11 +366,12 @@ function showCursorAt(fraction) {
 function sendScrub() {
   scrubTimer = null
   const take = state.playingTake || selected
-  if (scrubPending === null || !take) return
-  const at = scrubPending * take.duration
-  scrubTarget = scrubPending
-  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
+  const fraction = scrubPending
   scrubPending = null
+  if (fraction === null || !take) return
+  const at = fraction * take.duration
+  scrubTarget = fraction
+  scrubHoldUntil = Date.now() + SCRUB_HOLD_CAP
   // a seek starts the clip when it is not playing, so stopped and playing share one path
   fetch('/actions/seek/' + encodeURIComponent(take.id), {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ at }),
@@ -395,13 +398,18 @@ function loadWaveFor(take) {
   ws.load('/clips/' + encodeURIComponent(id) + '.wav').catch((error) => {
     // a load superseded by a newer one aborts, and an older load's failure is not the newer one's
     if ((error && error.name === 'AbortError') || waveClipId !== id) return
-    // no mix yet (a fresh clip renders as it ends, a trimmed one at the next idle pass) or an
-    // unreadable one: try again later, never in a loop
-    waveReady = false
-    waveFailedAt[id] = Date.now()
-    waveClipId = null
-    scheduleRender()
+    waveFailed(id)
   })
+}
+
+// no mix yet (a fresh clip renders as it ends, a trimmed one at the next idle pass) or an
+// unreadable one: try again later, never in a loop
+function waveFailed(id) {
+  if (!id) return
+  waveReady = false
+  waveFailedAt[id] = Date.now()
+  waveClipId = null
+  scheduleRender()
 }
 
 function drawLive() {
