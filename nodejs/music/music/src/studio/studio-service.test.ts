@@ -17,6 +17,8 @@ interface FakeReaper {
   /** When true, replies are captured at request time but delivered only by release(). */
   hold: boolean
   release: () => void
+  /** Polls still reporting the position from before the last seek, as REAPER does briefly. */
+  lagPolls: number
 }
 
 const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
@@ -30,6 +32,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     watcherHash: '',
     requests: [],
     hold: false,
+    lagPolls: 0,
     release: () => {
       const pending = held.splice(0)
       pending.forEach((deliver) => {
@@ -39,6 +42,7 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
     ...overrides,
   }
   const held: (() => void)[] = []
+  let stalePosition = 0
 
   const fetchImpl = (url: string) => {
     if (reaper.offline) {
@@ -58,11 +62,13 @@ const makeFakeReaper = (overrides: Partial<FakeReaper> = {}) => {
         reaper.playState = 5
       }
       if (part.startsWith('SET/POS/')) {
+        stalePosition = reaper.position
         reaper.position = Number(part.slice('SET/POS/'.length))
       }
     }
+    const position = reaper.lagPolls > 0 ? ((reaper.lagPolls -= 1), stalePosition) : reaper.position
     const lines = [
-      `TRANSPORT\t${reaper.playState}\t${reaper.position}\t0\t0\t0`,
+      `TRANSPORT\t${reaper.playState}\t${position}\t0\t0\t0`,
       ...reaper.regions.map((r) => `REGION\t${r.name}\t${r.id}\t${r.start}\t${r.end}\t0`),
       `TRACK\t0\tMASTER\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
       `TRACK\t1\tPiano\t0\t1\t0\t${reaper.peakDb * 10}\t${reaper.peakDb * 10}`,
@@ -299,6 +305,34 @@ describe('StudioService', () => {
 
     expect(reaper.requests.at(-2)).toBe('1016;SET/POS/5.000;1007')
     expect(service.getState().playingTake?.id).toBe('1')
+  })
+
+  it('keeps the take while the first polls after a play still report the old position', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    reaper.position = 200 // the cursor sat far past every take
+    reaper.lagPolls = 2
+    await service.playTake('1')
+    expect(service.getState().playingTake?.id).toBe('1')
+    expect(reaper.requests.at(-1)).not.toBe('1016') // an old position past the end is not its end
+    await service.refresh()
+    expect(service.getState().playingTake?.id).toBe('1')
+    expect(service.getState().transport).toBe('playing')
+    reaper.position = 4
+    await service.refresh()
+    expect(service.getState().position).toBe(4)
+    reaper.position = 10
+    await service.refresh()
+    expect(reaper.requests.at(-1)).toBe('1016') // stops at the real end
+
+    // the same when the old position was before the take
+    reaper.position = 0
+    reaper.lagPolls = 1
+    await service.playTake('2')
+    expect(service.getState().playingTake?.id).toBe('2')
+    reaper.position = 15
+    await service.refresh()
+    expect(service.getState().playingTake?.id).toBe('2')
   })
 
   it('keeps the take when a poll reads a hair before its start', async () => {
