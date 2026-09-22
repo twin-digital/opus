@@ -440,7 +440,34 @@ function renderStage() {
 }
 
 // --- meters: one bar per track, master last, with a falling peak-hold line -------------
+// Levels arrive with each state update; the hold lines fall on their own clock so they keep
+// dropping after the last update, and vanish at the bottom.
 const holds = {} // name -> { level, at }
+const HOLD_MS = 700
+const FALL_PER_SECOND = 0.5
+let holdTimer = null
+
+function paintHolds() {
+  const box = $('meters')
+  const meters = state.meters || []
+  const now = Date.now()
+  let any = false
+  meters.forEach((m, i) => {
+    const el = box.children[i]
+    if (!el) return
+    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0, painted: 0 })
+    if (now - h.at > HOLD_MS && h.level > 0) {
+      h.level = Math.max(0, h.level - FALL_PER_SECOND * (now - h.painted) / 1000)
+    }
+    h.painted = now
+    const hold = el.querySelector('.hold')
+    hold.style.opacity = h.level > 0.01 ? 1 : 0
+    hold.style.bottom = (h.level * 100) + '%'
+    if (h.level > 0) any = true
+  })
+  if (any && holdTimer === null) holdTimer = setTimeout(() => { holdTimer = null; paintHolds() }, 33)
+}
+
 function renderMeters() {
   const box = $('meters')
   const meters = state.meters || []
@@ -457,17 +484,15 @@ function renderMeters() {
   const now = Date.now()
   meters.forEach((m, i) => {
     const el = box.children[i]
-    const bar = el.querySelector('.bar'), fill = el.querySelector('.fill'), hold = el.querySelector('.hold')
+    const bar = el.querySelector('.bar'), fill = el.querySelector('.fill')
     const hPx = bar.clientHeight
     fill.style.setProperty('--bar-h', hPx + 'px')
     el.querySelector('.scale').style.setProperty('--bar-h', hPx + 'px')
     fill.style.height = (m.level * 100) + '%'
-    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0 })
-    if (m.level >= h.level) { h.level = m.level; h.at = now }
-    else if (now - h.at > 900) h.level = Math.max(m.level, h.level - 0.02)
-    hold.style.opacity = h.level > 0.02 ? 1 : 0
-    hold.style.bottom = (h.level * 100) + '%'
+    const h = holds[m.name] || (holds[m.name] = { level: 0, at: 0, painted: now })
+    if (m.level >= h.level) { h.level = m.level; h.at = now; h.painted = now }
   })
+  paintHolds()
 }
 
 // --- naming sheet ---------------------------------------------------------
