@@ -11,7 +11,11 @@ import * as path from 'node:path'
 
 export const defaultOutboxDir = (home = os.homedir()): string => {
   const configured = process.env.MUSIC_STUDIO_OUTBOX?.trim()
-  return configured !== undefined && configured !== '' ? configured : path.join(home, 'Music', 'Studio Outbox')
+  if (configured === undefined || configured === '') {
+    return path.join(home, 'Music', 'Studio Outbox')
+  }
+  // a leading ~ as in the watcher's config, which expands it the same way
+  return configured.replace(/^~(?=$|[/\\])/, home)
 }
 
 /**

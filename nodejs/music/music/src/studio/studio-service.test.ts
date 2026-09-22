@@ -249,6 +249,23 @@ describe('StudioService', () => {
     expect(service.getState().transport).toBe('stopped')
   })
 
+  it('honours a seek asked for after a stop, while an older seek is still settling', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.playTake('1')
+
+    reaper.hold = true
+    const first = service.seekTake('1', 2)
+    const stop = service.stopTransport()
+    const after = service.seekTake('1', 5) // a tap on the waveform starts the clip there
+    reaper.hold = false
+    reaper.release()
+    await Promise.all([first, stop, after])
+
+    expect(reaper.requests.at(-2)).toBe('1016;SET/POS/5.000;1007')
+    expect(service.getState().playingTake?.id).toBe('1')
+  })
+
   it('keeps the take when a poll reads a hair before its start', async () => {
     const { reaper, service } = makeService({ regions: twoTakes })
     await service.refresh()

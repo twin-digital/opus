@@ -255,6 +255,7 @@ const clipFor = (id: string) => {
   if (file === undefined) {
     file = syntheticClip(seconds)
     clips.set(seconds, file)
+    file.catch(() => clips.delete(seconds))
   }
   return file
 }

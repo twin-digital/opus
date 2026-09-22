@@ -109,7 +109,11 @@ export const parseReaperReply = (text: string): ReaperStatus => {
       case 'PROJEXTSTATE':
         // REAPER echoes the section and key as asked; keys are matched case-insensitively
         if ((fields[1] ?? '').toLowerCase() === EXT_SECTION.toLowerCase()) {
-          status.ext[(fields[2] ?? '').toLowerCase()] = fields.slice(3).join('\t').trim()
+          // ASCII trim only: the watcher's file names keep any other whitespace
+          status.ext[(fields[2] ?? '').toLowerCase()] = fields
+            .slice(3)
+            .join('\t')
+            .replace(/^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g, '')
         }
         break
       default:

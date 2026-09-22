@@ -11,10 +11,14 @@ describe('outbox', () => {
     await Promise.all(dirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
   })
 
-  it('defaults to ~/Music/Studio Outbox', () => {
-    vi.stubEnv('MUSIC_STUDIO_OUTBOX', '')
+  it('defaults to ~/Music/Studio Outbox, and expands ~ in the configured path', () => {
     try {
+      vi.stubEnv('MUSIC_STUDIO_OUTBOX', '')
       expect(defaultOutboxDir('/Users/kid')).toBe(path.join('/Users/kid', 'Music', 'Studio Outbox'))
+      vi.stubEnv('MUSIC_STUDIO_OUTBOX', '~/Clips')
+      expect(defaultOutboxDir('/Users/kid')).toBe('/Users/kid/Clips')
+      vi.stubEnv('MUSIC_STUDIO_OUTBOX', '/Volumes/Shared/~tilde')
+      expect(defaultOutboxDir('/Users/kid')).toBe('/Volumes/Shared/~tilde')
     } finally {
       vi.unstubAllEnvs()
     }

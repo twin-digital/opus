@@ -683,13 +683,31 @@ local function removeOutboxFiles(base)
   for _, name in ipairs(outboxFiles(base)) do os.remove(outboxDir() .. SEP .. name) end
 end
 
+-- Files REAPER left under the temporary render name of `base`.
+local RENDER_TEMP = ".rendering"
+local function renderTempFiles(base)
+  local found = {}
+  local dir = outboxDir()
+  reaper.EnumerateFiles(dir, -1)
+  local i = 0
+  while true do
+    local name = reaper.EnumerateFiles(dir, i)
+    if name == nil then break end
+    if name:sub(1, #base + #RENDER_TEMP + 1) == base .. RENDER_TEMP .. "." then found[#found + 1] = name end
+    i = i + 1
+  end
+  return found
+end
+
 -- Renders the region as the master mix, with the project's current render format, into the
--- Outbox as <base>.<ext>. Render settings and the time selection are put back afterwards.
+-- Outbox as <base>.<ext>. REAPER writes the file in place, so it renders under a temporary
+-- name and is renamed once complete: a file under its final name is always whole. Render
+-- settings and the time selection are put back afterwards.
 local function renderMix(entry, region)
   local dir = outboxDir()
   reaper.RecursiveCreateDirectory(dir, 0)
   local base = clipBaseName(entry)
-  removeOutboxFiles(base)
+  for _, name in ipairs(renderTempFiles(base)) do os.remove(dir .. SEP .. name) end -- an interrupted render
 
   local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_STARTPOS", "RENDER_ENDPOS", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER", "RENDER_NORMALIZE", "RENDER_NORMALIZE_TARGET", "RENDER_FADEIN", "RENDER_FADEOUT" }
   local saved = {}
@@ -716,16 +734,20 @@ local function renderMix(entry, region)
     reaper.GetSetProjectInfo(0, "RENDER_NORMALIZE", 0, true)
   end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", dir, true)
-  reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", base, true)
+  reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", base .. RENDER_TEMP, true)
   reaper.Main_OnCommand(42230, 0) -- render project using the most recent settings, auto-close
 
   for _, key in ipairs(numeric) do reaper.GetSetProjectInfo(0, key, saved[key], true) end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", savedFile, true)
   reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", savedPattern, true)
 
-  local files = outboxFiles(base)
-  for _, name in ipairs(files) do
-    if not name:match("%.mid$") then return name end
+  for _, temp in ipairs(renderTempFiles(base)) do
+    local name = base .. temp:sub(#base + #RENDER_TEMP + 1)
+    for _, old in ipairs(outboxFiles(base)) do
+      if not old:match("%.mid$") then os.remove(dir .. SEP .. old) end -- the previous mix, whatever its format
+    end
+    if os.rename(dir .. SEP .. temp, dir .. SEP .. name) then return name end
+    os.remove(dir .. SEP .. temp)
   end
   return nil
 end

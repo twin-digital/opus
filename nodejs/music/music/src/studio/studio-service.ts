@@ -157,7 +157,6 @@ export class StudioService {
   private runId = 0
   /** The latest seek asked for while an earlier one is still settling; only it is sent. */
   private queuedSeek: { id: string; atSeconds: number } | undefined
-  private seekEpoch = 0
   private seeking = false
 
   constructor({
@@ -206,15 +205,19 @@ export class StudioService {
   async record(): Promise<void> {
     const lastEnd = this.state.takes.reduce((end, take) => Math.max(end, take.end), -Infinity)
     this.dropSeeks()
-    this.recordingStartedAt = undefined
-    this.setPlayingTake(undefined)
-    await this.command(() => this.client.recordAt(lastEnd === -Infinity ? undefined : lastEnd + TAKE_GAP_SECONDS))
+    await this.command(async () => {
+      this.recordingStartedAt = undefined
+      this.setPlayingTake(undefined)
+      await this.client.recordAt(lastEnd === -Infinity ? undefined : lastEnd + TAKE_GAP_SECONDS)
+    })
   }
 
   async stopTransport(): Promise<void> {
     this.dropSeeks()
-    this.setPlayingTake(undefined)
-    await this.command(() => this.client.runActions(ReaperActions.stop))
+    await this.command(async () => {
+      this.setPlayingTake(undefined)
+      await this.client.runActions(ReaperActions.stop)
+    })
   }
 
   /** Plays a take from its start, or from `atSeconds` into it. */
@@ -225,8 +228,10 @@ export class StudioService {
       return
     }
     const offset = Math.min(Math.max(0, atSeconds), Math.max(0, take.duration - 0.05))
-    this.setPlayingTake(take)
-    await this.command(() => this.client.playFrom(take.start + offset))
+    await this.command(async () => {
+      this.setPlayingTake(take)
+      await this.client.playFrom(take.start + offset)
+    })
   }
 
   /**
@@ -242,10 +247,9 @@ export class StudioService {
       return
     }
     this.seeking = true
-    const epoch = this.seekEpoch
     try {
       let next: { id: string; atSeconds: number } | undefined = { id, atSeconds }
-      while (next !== undefined && epoch === this.seekEpoch) {
+      while (next !== undefined) {
         await this.seekOnce(next.id, next.atSeconds)
         next = this.queuedSeek
         this.queuedSeek = undefined
@@ -255,10 +259,9 @@ export class StudioService {
     }
   }
 
-  /** A stop or record makes a waiting scrub moot; it must not replay afterwards. */
+  /** A stop or record makes the scrub waiting behind it moot; it must not replay afterwards. */
   private dropSeeks() {
     this.queuedSeek = undefined
-    this.seekEpoch += 1
   }
 
   private async seekOnce(id: string, atSeconds: number): Promise<void> {
@@ -337,7 +340,11 @@ export class StudioService {
     await this.inFlight
   }
 
-  /** Runs commands one at a time, each followed by a poll that started after the command landed. */
+  /**
+   * Runs commands one at a time, each followed by a poll that started after the command landed.
+   * What a command believes about the transport is set inside `run`, when it is REAPER's turn,
+   * so the poll of an earlier command cannot clear it first.
+   */
   private async command(run: () => Promise<void>) {
     const previous = this.pendingCommand
     const current = (async () => {

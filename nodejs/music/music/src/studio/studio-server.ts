@@ -1,7 +1,6 @@
 import * as http from 'node:http'
 import * as fs from 'node:fs/promises'
-import { createReadStream } from 'node:fs'
-import { once } from 'node:events'
+import type { ReadStream } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import * as path from 'node:path'
 
@@ -176,16 +175,18 @@ export const createStudioServer = async ({
       send(response, 404, 'No rendered mix for this clip yet')
       return
     }
-    const stat = await fs.stat(file)
-    if (!stat.isFile()) {
-      send(response, 404, 'Not found')
-      return
-    }
-    // opened before any header goes out, so an open failure is still a clean 404; bounded to
-    // the size just measured, so a file growing underneath (a re-render) cannot overrun it
-    const stream = createReadStream(file, { highWaterMark: 256 * 1024, end: Math.max(0, stat.size - 1) })
+    // opened before any header goes out, so an open failure is still a clean 404. The size
+    // and the bytes come from the one file opened: a re-render replaces the file (the
+    // watcher renames a finished render into place), and the old one stays whole
+    const handle = await fs.open(file)
+    let stream: ReadStream | undefined
     try {
-      await once(stream, 'open')
+      const stat = await handle.stat()
+      if (!stat.isFile()) {
+        send(response, 404, 'Not found')
+        return
+      }
+      stream = handle.createReadStream({ highWaterMark: 256 * 1024, end: Math.max(0, stat.size - 1) })
       response.writeHead(200, {
         'content-type': mixContentType(file),
         'content-length': stat.size,
@@ -193,8 +194,13 @@ export const createStudioServer = async ({
       })
       await pipeline(stream, response)
     } finally {
-      // pipeline rejects before attaching its cleanup when the client has already gone
-      stream.destroy()
+      // pipeline rejects before attaching its cleanup when the client has already gone;
+      // destroying the stream closes the file
+      if (stream === undefined) {
+        await handle.close()
+      } else {
+        stream.destroy()
+      }
     }
   }
 

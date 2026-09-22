@@ -161,7 +161,7 @@ describe('createStudioServer', () => {
     }
   })
 
-  it('survives a mix that vanishes between lookup and open', async () => {
+  it('answers 404 when the mix file does not exist', async () => {
     const service = makeService()
     server = await createStudioServer({
       service,

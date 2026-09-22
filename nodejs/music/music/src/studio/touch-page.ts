@@ -298,6 +298,7 @@ const WAVE_RETRY_MS = 5000
 const waveform = {
   ws: null,       // WaveSurfer instance, created on first use
   clipId: null,   // clip the current load belongs to
+  loads: 0,       // counts loads; an outcome is honoured only for the latest
   ready: false,
   failedAt: {},   // clip id -> when its load last failed
   ensure() {
@@ -316,11 +317,6 @@ const waveform = {
       dragToSeek: true,
       normalize: true,
     })
-    this.ws.on('ready', () => { this.ready = true; scheduleRender() })
-    // a media-element failure (an unreadable file) never settles load() and is reported here
-    // as a MediaError; the element's src always belongs to the newest load. Errors from load()
-    // itself are Error instances and reach the promise of the load they belong to
-    this.ws.on('error', (error) => { if (!(error instanceof Error) || error.message === 'Media error') this.failed(this.clipId) })
     // tapping or dragging moves playback there (the page never plays audio itself). Positions
     // are fractions of the clip, not seconds: the mix can be a little shorter or longer than
     // the region (it is re-rendered after a trim) and must never desync
@@ -328,25 +324,28 @@ const waveform = {
     this.ws.on('drag', (relative) => scrub.begin(relative))
     return this.ws
   },
-  loadFor(id) {
+  loadFor(id, duration) {
     const ws = this.ensure()
     if (!ws || this.clipId === id) return
     const failed = this.failedAt[id]
     if (failed && Date.now() - failed < WAVE_RETRY_MS) return
     this.clipId = id
     this.ready = false
-    ws.load('/clips/' + encodeURIComponent(id) + '.wav').catch((error) => {
-      // a superseded load aborts, and an older load's failure is not the newer one's
-      if ((error && error.name === 'AbortError') || this.clipId !== id) return
-      this.failed(id)
-    })
+    const load = ++this.loads
+    // with the duration given, the library never waits on the media element: a file it
+    // cannot read fails at decode and rejects like any other failure. A superseded load
+    // settles too (aborted or bailed out), and is ignored
+    ws.load('/clips/' + encodeURIComponent(id) + '.wav', undefined, duration).then(
+      () => { if (load === this.loads) { this.ready = true; scheduleRender() } },
+      () => { if (load === this.loads) this.failed(id) },
+    )
   },
   failed(id) {
-    if (!id) return
     this.ready = false
     this.failedAt[id] = Date.now()
     this.clipId = null
-    if (this.ws) this.ws.empty() // never another clip's waveform under this one's title
+    this.loads += 1
+    this.ws.empty() // never another clip's waveform under this one's title
     scheduleRender()
   },
   showAt(fraction) {
@@ -462,7 +461,7 @@ function renderStage() {
   if (shown) {
     const take = shown
     const position = playing ? state.position : 0
-    waveform.loadFor(take.id)
+    waveform.loadFor(take.id, take.duration)
     const fraction = take.duration > 0 ? position / take.duration : 0
     if (take.duration > 0 && scrub.accept(fraction, take.duration)) waveform.showAt(fraction)
     $('progressFill').style.width = (take.duration > 0 ? (position / take.duration) * 100 : 0) + '%'
