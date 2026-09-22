@@ -85,8 +85,17 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-26.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-26.2" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
+
+-- Only one watcher may run, or every take gets a region per copy. The newest started wins:
+-- an older loop (a second startup-hook line, a copy run by hand) sees the token change and ends.
+local INSTANCE_KEY = "watcher_instance"
+local INSTANCE = string.format("%s@%.6f", VERSION, reaper.time_precise())
+reaper.SetExtState(EXT_SECTION, INSTANCE_KEY, INSTANCE, false)
+local function superseded()
+  return reaper.GetExtState(EXT_SECTION, INSTANCE_KEY) ~= INSTANCE
+end
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
 local REQUEST_SECTION = EXT_SECTION:upper()
@@ -1255,6 +1264,11 @@ local function onRecordingFinished()
   if not sawActivity and stoppedBy == "silence" then name = name .. " (empty)" end
   local color = reaper.ColorToNative(80, 160, 255) | 0x1000000
   local regionId = reaper.AddProjectMarker2(0, true, first, last, name, -1, color)
+  -- the take exists: whatever fails below, the next tick must not make it again
+  itemsBefore = snapshotItems()
+  itemsBeforeCount = reaper.CountMediaItems(0)
+  pendingCount = itemsBeforeCount
+  wasRecording = false
   if projectFile() ~= nil then
     local ok, err = pcall(recordClip, n, name:match("^Clip %d+ %- (.*)$") or "", first, last, items, stoppedBy, regionId)
     if not ok then reaper.ShowConsoleMsg("[Studio] The clip was not recorded in the library: " .. tostring(err) .. "\n") end
@@ -1379,6 +1393,10 @@ local function describeExtState()
 end
 
 local function tick()
+  if superseded() then
+    reaper.ShowConsoleMsg(string.format("[Studio] Another watcher has started; this copy (%s) stops.\n", VERSION))
+    return
+  end
   if reloadRequested() then
     log("reloading " .. SCRIPT_PATH)
     local ok, err = pcall(dofile, SCRIPT_PATH)
