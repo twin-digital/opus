@@ -16,9 +16,11 @@ local DEFAULTS = {
   -- Stop a take once no configured input has shown activity for this long.
   silence_seconds = 3 * 60,
 
-  -- Trim the take to the last activity plus this much tail. Non-destructive: the audio
-  -- stays in the file and the item edge can be dragged back out in REAPER.
+  -- Trim the take to the first activity minus head_seconds and the last activity plus
+  -- tail_seconds. Non-destructive: the audio stays in the file and the item edges can be
+  -- dragged back out in REAPER. Nothing is trimmed when no activity source fired at all.
   trim_silence = true,
+  head_seconds = 0.5,
   tail_seconds = 5,
 
   -- Inputs that count as "someone is playing". Any one of them keeps the take alive.
@@ -75,7 +77,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-24.4" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-25.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 -- REAPER's web remote upper-cases the section and key when it writes (its reads are
 -- case-insensitive), so requests from the app live under this spelling.
@@ -91,11 +93,19 @@ local function clearRequest(key)
 end
 local ACTION_STOP = 1016
 
+local function projectFile()
+  local _, file = reaper.EnumProjects(-1, "")
+  if file == nil or file == "" then return nil end
+  return file
+end
+
 local wasRecording = false
 local itemsBefore = {}
 local itemsBeforeCount = -1
+local pendingCount = nil -- an item count seen once while idle; it becomes the snapshot when seen again
 local recStart = 0
 local lastActivity = 0
+local firstActivity = nil -- first activity seen in the current take, nil until one is
 local midiEventCount = 0
 local finalizeDeadline = nil
 local stoppedBy = "user"
@@ -183,7 +193,10 @@ local function pollAudioActivity(trackName, thresholdDb)
   return nil
 end
 
+-- Returns true when any source showed activity this tick, and moves lastActivity /
+-- firstActivity (project time) along.
 local function pollActivity()
+  local seen = false
   for _, source in ipairs(CONFIG.activity) do
     local at = nil
     if source.type == "midi" then
@@ -191,8 +204,13 @@ local function pollActivity()
     elseif source.type == "audio" then
       at = pollAudioActivity(source.track, source.threshold_db or -50)
     end
-    if at ~= nil and at > lastActivity then lastActivity = at end
+    if at ~= nil then
+      seen = true
+      if at > lastActivity then lastActivity = at end
+      if firstActivity == nil or at < firstActivity then firstActivity = at end
+    end
   end
+  return seen
 end
 
 -- ---------------------------------------------------------------------------------------
@@ -227,8 +245,8 @@ local SCRIPT_HASH = hashSelf()
 -- loop ends and the file on disk starts in its place, in this same script instance.
 local function reloadRequested()
   if readRequest("reload") == "" then return false end
+  if isRecording() or wasRecording then return false end -- finish the take first; the app asks again
   clearRequest("reload")
-  if isRecording() then return false end -- finish the take first; the app asks again
   return true
 end
 
@@ -269,7 +287,7 @@ local function applyRenames()
   end
   if renamed then
     reaper.UpdateArrange()
-    reaper.Main_SaveProject(0, false)
+    if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
   end
 end
 
@@ -302,7 +320,7 @@ function json.encode(value, indent, depth)
   if t == "number" then
     if value ~= value or value == math.huge or value == -math.huge then return "null" end
     if math.type(value) == "integer" then return tostring(value) end
-    return string.format("%.4f", value):gsub("0+$", ""):gsub("%.$", "")
+    return string.format("%.17g", value)
   end
   if t == "string" then return '"' .. jsonEscape(value) .. '"' end
   if t ~= "table" then error("cannot encode " .. t) end
@@ -441,17 +459,17 @@ end
 -- never sees a half-written file.
 local function writeFileAtomic(path, data)
   local temp = path .. ".tmp"
-  if not writeFile(temp, data) then os.remove(temp); return false end
-  os.remove(path) -- os.rename does not overwrite on Windows
+  if not writeFile(temp, data) then
+    os.remove(temp)
+    return writeFile(path, data) -- better a direct write than no file
+  end
+  if SEP == "\\" then os.remove(path) end -- only Windows refuses to rename over a file
   local ok = os.rename(temp, path)
-  if not ok then os.remove(temp) end
-  return ok == true
-end
-
-local function projectFile()
-  local _, file = reaper.EnumProjects(-1, "")
-  if file == nil or file == "" then return nil end
-  return file
+  if not ok then
+    os.remove(temp)
+    return writeFile(path, data)
+  end
+  return true
 end
 
 local function projectDir()
@@ -465,14 +483,31 @@ end
 
 -- A label as it can appear in a file name on both macOS and Windows.
 local function safeName(text)
-  return (text:gsub('[<>:"/\\|?*%c]', " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("[%s.]+$", ""))
+  return (text:gsub('[<>:"/\\|?*$%c]', " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("[%s.]+$", ""))
 end
 
 -- Local time with its UTC offset ("2026-09-22T18:41:07-05:00"): a real timestamp, whose first
 -- ten characters are also the local calendar day the file names sort by.
 local function localNow()
-  local offset = os.date("%z") -- "-0500"
-  return os.date("%Y-%m-%dT%H:%M:%S") .. offset:sub(1, 3) .. ":" .. offset:sub(4, 5)
+  local now = os.time()
+  local utc = os.date("!*t", now)
+  utc.isdst = os.date("*t", now).isdst
+  local offsetMinutes = math.floor(os.difftime(now, os.time(utc)) / 60 + 0.5)
+  local sign = offsetMinutes < 0 and "-" or "+"
+  offsetMinutes = math.abs(offsetMinutes)
+  return os.date("%Y-%m-%dT%H:%M:%S", now) .. string.format("%s%02d:%02d", sign, offsetMinutes // 60, offsetMinutes % 60)
+end
+
+-- "Sep 22, 04:36 PM", with AM/PM spelled the same in every locale, as fileLabel expects.
+local function timestampLabel()
+  local t = os.date("*t")
+  local hour12 = t.hour % 12
+  if hour12 == 0 then hour12 = 12 end
+  return string.format("%s %d, %02d:%02d %s", os.date("%b"), t.day, hour12, t.min, t.hour < 12 and "AM" or "PM")
+end
+
+local function near(a, b)
+  return math.abs((a or 0) - (b or 0)) < 0.001
 end
 
 -- ---------------------------------------------------------------------------------------
@@ -481,6 +516,7 @@ end
 
 local LIBRARY_FILE = "cs-studio-library.json"
 local library = nil -- loaded lazily once the project has a file
+local libraryLoadedFrom = nil
 
 local function libraryPath()
   local dir = projectDir()
@@ -488,9 +524,11 @@ local function libraryPath()
 end
 
 local function loadLibrary()
-  if library ~= nil then return library end
   local path = libraryPath()
   if path == nil then return nil end
+  if library ~= nil and libraryLoadedFrom == path then return library end
+  library = nil -- a different project is open now; never carry another project's entries over
+  libraryLoadedFrom = path
   local text = readFile(path)
   if text ~= nil then
     local ok, parsed = pcall(json.decode, text)
@@ -540,7 +578,7 @@ local function clipEntry(number)
 end
 
 -- Called at finalize with the new items, so the entry knows its source files and how it ended.
-local function recordClip(number, label, first, last, items, stoppedBy)
+local function recordClip(number, label, first, last, items, stoppedBy, regionId)
   local lib = loadLibrary()
   if lib == nil then return end
   local sources = {}
@@ -560,6 +598,7 @@ local function recordClip(number, label, first, last, items, stoppedBy)
   end
   lib.clips[tostring(number)] = {
     number = number,
+    regionId = regionId,
     label = label,
     createdAt = localNow(),
     start = first,
@@ -603,6 +642,7 @@ end
 local function outboxFiles(base)
   local found = {}
   local dir = outboxDir()
+  reaper.EnumerateFiles(dir, -1) -- REAPER caches directory listings; force a re-read
   local i = 0
   while true do
     local name = reaper.EnumerateFiles(dir, i)
@@ -627,16 +667,18 @@ local function renderMix(entry, region)
   local base = clipBaseName(entry)
   removeOutboxFiles(base)
 
-  local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER", "RENDER_NORMALIZE", "RENDER_NORMALIZE_TARGET" }
+  local numeric = { "RENDER_SETTINGS", "RENDER_BOUNDSFLAG", "RENDER_STARTPOS", "RENDER_ENDPOS", "RENDER_CHANNELS", "RENDER_SRATE", "RENDER_ADDTOPROJ", "RENDER_TAILFLAG", "RENDER_DITHER", "RENDER_NORMALIZE", "RENDER_NORMALIZE_TARGET", "RENDER_FADEIN", "RENDER_FADEOUT" }
   local saved = {}
   for _, key in ipairs(numeric) do saved[key] = reaper.GetSetProjectInfo(0, key, 0, false) end
   local _, savedFile = reaper.GetSetProjectInfo_String(0, "RENDER_FILE", "", false)
   local _, savedPattern = reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", "", false)
-  local selStart, selEnd = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
 
-  reaper.GetSet_LoopTimeRange(true, false, region.start, region["end"], false)
   reaper.GetSetProjectInfo(0, "RENDER_SETTINGS", 0, true)   -- master mix
-  reaper.GetSetProjectInfo(0, "RENDER_BOUNDSFLAG", 2, true) -- time selection
+  reaper.GetSetProjectInfo(0, "RENDER_BOUNDSFLAG", 0, true) -- custom time range: the region, without touching the selection
+  reaper.GetSetProjectInfo(0, "RENDER_STARTPOS", region.start, true)
+  reaper.GetSetProjectInfo(0, "RENDER_ENDPOS", region["end"], true)
+  reaper.GetSetProjectInfo(0, "RENDER_FADEIN", 0, true)
+  reaper.GetSetProjectInfo(0, "RENDER_FADEOUT", 0, true)
   reaper.GetSetProjectInfo(0, "RENDER_CHANNELS", 2, true)
   reaper.GetSetProjectInfo(0, "RENDER_SRATE", 0, true)      -- project rate
   reaper.GetSetProjectInfo(0, "RENDER_ADDTOPROJ", 0, true)
@@ -656,7 +698,6 @@ local function renderMix(entry, region)
   for _, key in ipairs(numeric) do reaper.GetSetProjectInfo(0, key, saved[key], true) end
   reaper.GetSetProjectInfo_String(0, "RENDER_FILE", savedFile, true)
   reaper.GetSetProjectInfo_String(0, "RENDER_PATTERN", savedPattern, true)
-  reaper.GetSet_LoopTimeRange(true, false, selStart, selEnd, false)
 
   local files = outboxFiles(base)
   for _, name in ipairs(files) do
@@ -690,40 +731,62 @@ local function clipItems(region)
   return items
 end
 
+-- Times are taken in seconds from the project and written as ticks at one fixed tempo (the
+-- tempo at the region start), so the file is exact whatever the project's tempo map does; the
+-- importer places events by seconds from that same tempo.
 local function exportMidi(entry, region)
   local events = {}
-  local ppq = nil
+  local ppq = 960
+  local bpm = reaper.TimeMap_GetDividedBpmAtTime(region.start)
+  if bpm == nil or bpm <= 0 then bpm = 120 end
+  local ticksPerSecond = ppq * bpm / 60
+  local any = false
   for _, item in ipairs(clipItems(region)) do
     local take = reaper.GetActiveTake(item)
-    if take ~= nil and reaper.TakeIsMIDI(take) then
-      ppq = ppq or math.floor(reaper.MIDI_GetPPQPosFromProjQN(take, 1) - reaper.MIDI_GetPPQPosFromProjQN(take, 0) + 0.5)
+    if take ~= nil and reaper.TakeIsMIDI(take) and reaper.GetMediaItemInfo_Value(item, "B_MUTE") ~= 1 then
+      any = true
+      local function tickAt(ppqpos)
+        local seconds = reaper.MIDI_GetProjTimeFromPPQPos(take, ppqpos) - region.start
+        return math.max(0, math.floor(seconds * ticksPerSecond + 0.5))
+      end
       local origin = reaper.MIDI_GetPPQPosFromProjTime(take, region.start)
       local limit = reaper.MIDI_GetPPQPosFromProjTime(take, region["end"])
       local _, notes, ccs = reaper.MIDI_CountEvts(take)
       for i = 0, notes - 1 do
         local _, _, muted, startppq, endppq, chan, pitch, vel = reaper.MIDI_GetNote(take, i)
-        if not muted and startppq >= origin and startppq < limit then
-          events[#events + 1] = { tick = startppq - origin, order = 1, bytes = string.char(0x90 | chan, pitch, vel) }
-          events[#events + 1] = { tick = math.min(endppq, limit) - origin, order = 0, bytes = string.char(0x80 | chan, pitch, 0) }
+        -- notes held across the region start are kept, starting at the region
+        if not muted and endppq > origin and startppq < limit then
+          events[#events + 1] = { tick = tickAt(math.max(startppq, origin)), order = 2, bytes = string.char(0x90 | chan, pitch, vel) }
+          events[#events + 1] = { tick = tickAt(math.min(endppq, limit)), order = 1, bytes = string.char(0x80 | chan, pitch, 0) }
         end
       end
+      -- the instrument is usually chosen before the take starts: the last program change and
+      -- bank select per channel from before the region are replayed at its start
+      local before = {}
       for i = 0, ccs - 1 do
         local _, _, muted, ppqpos, msg, chan, a, b = reaper.MIDI_GetCC(take, i)
-        if not muted and ppqpos >= origin and ppqpos < limit then
+        if not muted then
           local bytes = (msg == 0xC0 or msg == 0xD0) and string.char(msg | chan, a) or string.char(msg | chan, a, b)
-          events[#events + 1] = { tick = ppqpos - origin, order = 2, bytes = bytes }
+          if ppqpos >= origin and ppqpos < limit then
+            events[#events + 1] = { tick = tickAt(ppqpos), order = 0, bytes = bytes } -- controllers before the notes they shape
+          elseif ppqpos < origin and (msg == 0xC0 or (msg == 0xB0 and (a == 0 or a == 32))) then
+            local key = string.format("%d:%d:%d", chan, msg, msg == 0xB0 and a or 0)
+            if before[key] == nil or ppqpos >= before[key].ppqpos then before[key] = { ppqpos = ppqpos, bytes = bytes } end
+          end
         end
+      end
+      for _, carried in pairs(before) do
+        events[#events + 1] = { tick = 0, order = -1, bytes = carried.bytes }
       end
     end
   end
-  if ppq == nil or #events == 0 then return nil end
+  if not any or #events == 0 then return nil end
 
   table.sort(events, function(x, y)
     if x.tick ~= y.tick then return x.tick < y.tick end
     return x.order < y.order
   end)
 
-  local bpm = reaper.Master_GetTempo()
   local usPerQuarter = math.floor(60000000 / bpm + 0.5)
   local track = { "\0\255\81\3" .. string.char((usPerQuarter >> 16) & 0xff, (usPerQuarter >> 8) & 0xff, usPerQuarter & 0xff) }
   local last = 0
@@ -738,7 +801,7 @@ local function exportMidi(entry, region)
 
   local name = clipBaseName(entry) .. ".mid"
   reaper.RecursiveCreateDirectory(outboxDir(), 0)
-  if not writeFile(outboxDir() .. SEP .. name, data) then return nil end
+  if not writeFileAtomic(outboxDir() .. SEP .. name, data) then return nil end
   return name
 end
 
@@ -755,61 +818,73 @@ local function trackIdle()
     lastPlayState = state
     lastTransportChange = reaper.time_precise()
   end
-  local before = lastActivity
-  pollActivity()
-  if lastActivity ~= before then lastKeyPress = reaper.time_precise() end
+  if pollActivity() then lastKeyPress = reaper.time_precise() end
 end
 
 local function idleSeconds()
   return reaper.time_precise() - math.max(lastTransportChange, lastKeyPress)
 end
 
-local function regionsByNumber()
-  local found = {}
+-- Regions keyed by clip number (from the name) and by region id (stable across renames).
+local function scanRegions()
+  local byNumber, byId = {}, {}
   local i = 0
   while true do
     local retval, isrgn, pos, rgnend, name, idx = reaper.EnumProjectMarkers3(0, i)
     if retval == 0 then break end
     if isrgn then
       local number, label = name:match("^%a+ (%d+)%s*%-?%s*(.*)$")
-      if number then found[tonumber(number)] = { id = idx, start = pos, ["end"] = rgnend, label = label or "", name = name } end
+      local region = { id = idx, start = pos, ["end"] = rgnend, label = number and (label or "") or name, name = name, number = number and tonumber(number) or nil }
+      byId[idx] = region
+      if number and byNumber[tonumber(number)] == nil then byNumber[tonumber(number)] = region end
     end
     i = i + 1
   end
-  return found
+  return byNumber, byId
 end
 
 local function syncLibrary()
   local lib = loadLibrary()
   if lib == nil then return nil end
-  local regions = regionsByNumber()
+  local byNumber, byId = scanRegions()
   local changed = false
+  local matched = {} -- region id -> entry, so a region is claimed once
 
-  -- entries follow their regions; a region the watcher never saw (made by hand) gets an entry too
-  for number, region in pairs(regions) do
-    local key = tostring(number)
-    local entry = lib.clips[key]
-    if entry == nil then
-      entry = { number = number, label = region.label, createdAt = localNow(), start = region.start, ["end"] = region["end"],
-        starred = false, archived = false, stoppedBy = "unknown", sources = {}, render = json.null }
-      lib.clips[key] = entry
-      changed = true
-    elseif entry.label ~= region.label or entry.start ~= region.start or entry["end"] ~= region["end"] then
-      entry.label, entry.start, entry["end"] = region.label, region.start, region["end"]
-      changed = true
-    end
-  end
-
-  -- a deleted region takes its entry and outbox files with it
+  -- entries follow their regions: by the id the watcher remembered, else by the number in
+  -- the name (an older entry, or a region renumbered by hand)
   for key, entry in pairs(lib.clips) do
-    if regions[entry.number] == nil then
+    local region = (entry.regionId and byId[entry.regionId]) or byNumber[entry.number]
+    if region ~= nil and matched[region.id] == nil then
+      matched[region.id] = entry
+      if entry.regionId ~= region.id or entry.label ~= region.label or not near(entry.start, region.start) or not near(entry["end"], region["end"]) then
+        entry.regionId, entry.label, entry.start, entry["end"] = region.id, region.label, region.start, region["end"]
+        changed = true
+      end
+    else
+      -- the region is gone: its entry and outbox files go with it
       if entry.render ~= json.null and entry.render ~= nil then removeOutboxFiles(entry.render.base) end
       lib.clips[key] = nil
       changed = true
     end
   end
 
+  -- a numbered region the watcher never saw (made by hand) gets an entry
+  for number, region in pairs(byNumber) do
+    if matched[region.id] == nil and lib.clips[tostring(number)] == nil then
+      lib.clips[tostring(number)] = { number = number, regionId = region.id, label = region.label, createdAt = localNow(),
+        start = region.start, ["end"] = region["end"], starred = false, archived = false, stoppedBy = "unknown",
+        sources = {}, render = json.null }
+      matched[region.id] = lib.clips[tostring(number)]
+      changed = true
+    end
+  end
+
   if changed then saveLibrary() end
+  -- what syncOutbox renders from: each entry's own region
+  local regions = {}
+  for _, entry in pairs(lib.clips) do
+    if entry.regionId and byId[entry.regionId] then regions[entry.number] = byId[entry.regionId] end
+  end
   return regions
 end
 
@@ -848,8 +923,11 @@ local function syncOutbox(regions)
 
     local mixMissing = CONFIG.render and (render == nil or render.mix == json.null or not fileExists(outboxDir() .. SEP .. render.mix))
     local midiMissing = CONFIG.midi_export and (render == nil or render.midi == json.null and not render.noMidi)
-    local stale = render ~= nil and (render.start ~= entry.start or render["end"] ~= entry["end"])
-    if (mixMissing or midiMissing or stale) and needed and region ~= nil then
+    local stale = render ~= nil and (not near(render.start, entry.start) or not near(render["end"], entry["end"]))
+    -- a failed render is retried later, not every tick: 10 minutes, then 20, 40...
+    local attempts = render and render.attempts or 0
+    local backedOff = render ~= nil and render.failedAt ~= nil and os.time() < render.failedAt + 600 * (2 ^ math.min(attempts, 6))
+    if (mixMissing or midiMissing or stale) and needed and region ~= nil and not backedOff then
       local mix = json.null
       if CONFIG.render then mix = renderMix(entry, region) or json.null end
       local midi = json.null
@@ -858,9 +936,15 @@ local function syncOutbox(regions)
         midi = exportMidi(entry, region) or json.null
         noMidi = midi == json.null
       end
-      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label }
+      local failed = CONFIG.render and mix == json.null
+      entry.render = { base = base, mix = mix, midi = midi, noMidi = noMidi, renderedAt = localNow(), start = entry.start, ["end"] = entry["end"], label = entry.label,
+        attempts = failed and (attempts + 1) or 0, failedAt = failed and os.time() or nil }
       saveLibrary()
-      log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
+      if failed then
+        reaper.ShowConsoleMsg(string.format("[Studio] Render of clip %d produced no file; will retry later.\n", entry.number))
+      else
+        log(string.format("outbox: clip %d -> %s, %s", entry.number, tostring(mix), tostring(midi)))
+      end
       return
     end
   end
@@ -875,10 +959,16 @@ local function whileIdle()
     publishedIdentity = true
   end
   publishProjectName()
+  -- REAPER may create the items of a new recording a tick before it reports the record state;
+  -- a count that has held for two idle ticks is settled and safe to snapshot
   local count = reaper.CountMediaItems(0)
   if count ~= itemsBeforeCount then
-    itemsBefore = snapshotItems()
-    itemsBeforeCount = count
+    if count == pendingCount then
+      itemsBefore = snapshotItems()
+      itemsBeforeCount = count
+    else
+      pendingCount = count
+    end
   end
   trackIdle()
   if projectFile() ~= nil then
@@ -890,6 +980,7 @@ end
 local function onRecordingStarted()
   recStart = reaper.GetPlayPosition()
   lastActivity = recStart
+  firstActivity = nil
   stoppedBy = "user"
   midiEventCount = reaper.MIDI_GetRecentInputEvent(0)
   log(string.format("recording started at %.2fs; %d items before", recStart, itemsBeforeCount))
@@ -898,6 +989,15 @@ end
 local function whileRecording()
   pollActivity()
   local now = reaper.GetPlayPosition()
+  if #CONFIG.activity == 0 then
+    -- nothing to watch: only the length cap applies
+    if now - recStart >= CONFIG.max_take_seconds then
+      reaper.ShowConsoleMsg("[Studio] Take hit the length cap; stopping.\n")
+      stoppedBy = "cap"
+      reaper.Main_OnCommand(ACTION_STOP, 0)
+    end
+    return
+  end
   if now - recStart >= CONFIG.max_take_seconds then
     reaper.ShowConsoleMsg("[Studio] Take hit the length cap; stopping.\n")
     stoppedBy = "cap"
@@ -938,8 +1038,27 @@ local function onRecordingFinished()
     last = math.max(last, pos + len)
   end
 
-  -- Trim the quiet tail. An empty take keeps tail_seconds (at least one second) so it stays visible.
-  if CONFIG.trim_silence then
+  -- Trim the quiet head and tail, only when an activity source actually saw the take: with no
+  -- activity detected at all there is nothing to trim against, and the audio must not be cut.
+  local sawActivity = firstActivity ~= nil
+  if CONFIG.trim_silence and sawActivity then
+    local headCut = firstActivity - CONFIG.head_seconds
+    if headCut > first then
+      for _, item in ipairs(items) do
+        local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+        local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        local delta = headCut - pos
+        if delta > 0 and delta < len then
+          local take = reaper.GetActiveTake(item)
+          if take ~= nil then
+            reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") + delta)
+          end
+          reaper.SetMediaItemInfo_Value(item, "D_POSITION", headCut)
+          reaper.SetMediaItemInfo_Value(item, "D_LENGTH", len - delta)
+        end
+      end
+      first = headCut
+    end
     local cut = math.max(lastActivity + CONFIG.tail_seconds, first + 1)
     if cut < last then
       for _, item in ipairs(items) do
@@ -951,20 +1070,24 @@ local function onRecordingFinished()
       end
       last = cut
     end
+  elseif CONFIG.trim_silence and #CONFIG.activity > 0 then
+    reaper.ShowConsoleMsg("[Studio] No activity was detected during the take, so it was not trimmed. Check the activity setting in cs-studio-config.lua.\n")
   end
 
   local n = nextTakeNumber()
-  local name = string.format("Clip %d - %s", n, os.date("%b %d, %I:%M %p"))
-  if lastActivity <= recStart then name = name .. " (empty)" end
+  local name = string.format("Clip %d - %s", n, timestampLabel())
+  -- "(empty)" only when the detector was working (stopped by it) and nothing ever came
+  if not sawActivity and stoppedBy == "silence" then name = name .. " (empty)" end
   local color = reaper.ColorToNative(80, 160, 255) | 0x1000000
-  reaper.AddProjectMarker2(0, true, first, last, name, -1, color)
+  local regionId = reaper.AddProjectMarker2(0, true, first, last, name, -1, color)
   if projectFile() ~= nil then
-    recordClip(n, name:match("^Clip %d+ %- (.*)$") or "", first, last, items, stoppedBy)
+    local ok, err = pcall(recordClip, n, name:match("^Clip %d+ %- (.*)$") or "", first, last, items, stoppedBy, regionId)
+    if not ok then reaper.ShowConsoleMsg("[Studio] The clip was not recorded in the library: " .. tostring(err) .. "\n") end
   end
 
   reaper.SetEditCurPos(last + CONFIG.gap_seconds, true, false)
   reaper.UpdateArrange()
-  reaper.Main_SaveProject(0, false)
+  if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
   log(string.format("created region '%s' (%.2fs - %.2fs) and saved", name, first, last))
   return true
 end
@@ -972,8 +1095,8 @@ end
 -- One pass of the loop. Split out so an error is reported and survived rather than ending
 -- the script silently behind other windows.
 local function step()
-  applyRenames()
   local recording = isRecording()
+  if not recording and not wasRecording then applyRenames() end -- never mid-take or mid-finalize
   if recording and not wasRecording then
     onRecordingStarted()
   elseif recording then
@@ -983,8 +1106,11 @@ local function step()
       return -- still finalizing: stay in the "was recording" state
     end
     finalizeDeadline = nil
-    itemsBeforeCount = -1
-    whileIdle() -- re-snapshot now, so the take just finished can never count as new again
+    -- the take's items are committed: snapshot now, so they can never count as new again
+    itemsBefore = snapshotItems()
+    itemsBeforeCount = reaper.CountMediaItems(0)
+    pendingCount = itemsBeforeCount
+    whileIdle()
   else
     whileIdle()
   end
@@ -1010,8 +1136,9 @@ end
 local function tick()
   if reloadRequested() then
     log("reloading " .. SCRIPT_PATH)
-    dofile(SCRIPT_PATH)
-    return
+    local ok, err = pcall(dofile, SCRIPT_PATH)
+    if ok then return end -- the new file's loop has taken over
+    reaper.ShowConsoleMsg("[Studio] Reload failed, keeping the running watcher: " .. tostring(err) .. "\n")
   end
   ticks = ticks + 1
   if CONFIG.debug and (ticks <= 3 or ticks == 30) then
@@ -1030,6 +1157,18 @@ local function tick()
 end
 
 log(string.format("watcher %s (%s) started (%s)", VERSION, SCRIPT_HASH, os.date("%Y-%m-%d %H:%M:%S")))
+if CONFIG.debug then
+  for _, source in ipairs(CONFIG.activity) do
+    if source.type == "midi" then
+      local names = {}
+      for i = 0, (reaper.GetNumMIDIInputs and reaper.GetNumMIDIInputs() or 0) - 1 do
+        local ok, name = reaper.GetMIDIInputName(i, "")
+        if ok and (source.device == "" or name:find(source.device, 1, true)) then names[#names + 1] = name end
+      end
+      log(string.format("midi activity device '%s' matches: %s", source.device or "", #names == 0 and "(none!)" or table.concat(names, ", ")))
+    end
+  end
+end
 
 -- Park the cursor after existing material so the first take appends cleanly.
 reaper.SetEditCurPos(reaper.GetProjectLength(0) + CONFIG.gap_seconds, false, false)

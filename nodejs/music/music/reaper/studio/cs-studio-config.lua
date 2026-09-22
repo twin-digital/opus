@@ -5,6 +5,7 @@ return {
   -- debug = true,                 -- log each step to REAPER's console
   -- max_take_seconds = 60 * 60,   -- hard cap on take length
   -- silence_seconds = 3 * 60,     -- quiet time before the watcher stops the take
+  -- head_seconds = 0.5,           -- room kept before the first note when trimming
   -- tail_seconds = 5,             -- room left after the last note when trimming
   -- activity = {                  -- inputs that count as playing
   --   { type = "midi", device = "IAC" },

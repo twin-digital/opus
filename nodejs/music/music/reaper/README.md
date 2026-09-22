@@ -89,7 +89,8 @@ changes its hash and trips the check.
 What the watcher does after each recording stops:
 
 - finds the items created during that recording,
-- trims the quiet tail off them (non-destructive: drag the item edge back out to recover it),
+- trims the quiet head (the seconds between pressing Record and the first note) and the
+  quiet tail off them (non-destructive: drag the item edges back out to recover the audio),
 - adds a region `Clip 7 - Sep 17, 04:12 PM` spanning them,
 - moves the edit cursor 2 seconds past the end,
 - saves the project.
