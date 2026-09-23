@@ -165,6 +165,11 @@ export class ReaperClient {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       throw new Error(`REAPER base URL must start with http:// or https://: ${baseUrl}`)
     }
+    // "localhost" names both stacks, and REAPER's web remote answers on IPv4 only; naming the
+    // address spares every request a doomed IPv6 attempt
+    if (url.hostname === 'localhost') {
+      url.hostname = '127.0.0.1'
+    }
     this.baseUrl = url.href.replace(/\/+$/, '')
     this.fetchImpl = fetchImpl ?? ((url, { signal }) => fetch(url, { cache: 'no-store', signal }))
     this.timeoutMs = timeoutMs

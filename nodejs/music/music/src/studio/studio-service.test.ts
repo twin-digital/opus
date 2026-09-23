@@ -128,14 +128,21 @@ describe('StudioService', () => {
 
   const makeService = (overrides: Partial<FakeReaper> = {}, expectedHelperHash?: string) => {
     const { reaper, client } = makeFakeReaper(overrides)
+    const clock = {
+      now: 1_000_000,
+      advance(ms: number) {
+        this.now += ms
+      },
+    }
     const service = new StudioService({
       client,
       pollIntervalMs: POLL_MS,
       activePollIntervalMs: POLL_MS / 2,
       expectedHelperHash,
+      now: () => clock.now,
     })
     services.push(service)
-    return { reaper, service }
+    return { reaper, service, clock }
   }
 
   beforeEach(() => {
@@ -347,7 +354,7 @@ describe('StudioService', () => {
   })
 
   it('keeps stopping at the end of a take until REAPER actually stops', async () => {
-    const { reaper, service } = makeService({ regions: twoTakes })
+    const { reaper, service, clock } = makeService({ regions: twoTakes })
     await service.refresh()
     await service.playTake('1')
     reaper.position = 5
@@ -360,6 +367,10 @@ describe('StudioService', () => {
     expect(reaper.playState).toBe(1) // the stop went astray
     expect(service.getState().playingTake?.id).toBe('1') // still watched
     expect(service.getState().position).toBe(10) // shown at its end, not past it
+    reaper.position = 10.3
+    await service.refresh()
+    expect(reaper.requests.filter((r) => r === '1016')).toHaveLength(1) // not every poll: REAPER may be busy
+    clock.advance(250)
     reaper.position = 10.4
     await service.refresh()
     expect(reaper.requests.at(-1)).toBe('1016')
@@ -392,14 +403,14 @@ describe('StudioService', () => {
   })
 
   it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {
-    const { reaper, service } = makeService({ regions: twoTakes })
+    const { reaper, service, clock } = makeService({ regions: twoTakes })
     await service.refresh()
     await service.playTake('1')
     expect(service.getState().transport).toBe('playing')
 
     reaper.offline = true
     await service.refresh()
-    await service.refresh()
+    clock.advance(2100) // REAPER has been silent longer than a stall
     await service.refresh()
     const state = service.getState()
     expect(state.connected).toBe(false)
@@ -419,13 +430,13 @@ describe('StudioService', () => {
   })
 
   it('forgets a take and a recording start that REAPER moved past during an outage', async () => {
-    const { reaper, service } = makeService({ regions: twoTakes })
+    const { reaper, service, clock } = makeService({ regions: twoTakes })
     await service.refresh()
     await service.playTake('1')
 
     reaper.offline = true
     await service.refresh()
-    await service.refresh()
+    clock.advance(2100) // REAPER has been silent longer than a stall
     await service.refresh()
 
     // REAPER comes back playing beyond the take: it is someone else's playback, not stopped
@@ -445,7 +456,7 @@ describe('StudioService', () => {
     expect(service.getState().recordingElapsed).toBe(8)
     reaper.offline = true
     await service.refresh()
-    await service.refresh()
+    clock.advance(2100) // REAPER has been silent longer than a stall
     await service.refresh()
     reaper.offline = false
     reaper.position = 3
@@ -690,16 +701,19 @@ describe('StudioService', () => {
     expect(service.getState().instruments).toBeUndefined()
   })
 
-  it('reports disconnection after a few misses and recovers', async () => {
-    const { reaper, service } = makeService()
+  it('reports disconnection after two seconds of silence, however many polls that is, and recovers', async () => {
+    const { reaper, service, clock } = makeService()
     await service.refresh()
     expect(service.getState().connected).toBe(true)
 
-    // a couple of failed polls (REAPER busy rendering) keep the last good state
+    // failed polls within the tolerance (REAPER busy rendering) keep the last good state
     reaper.offline = true
-    await service.refresh()
-    await service.refresh()
+    for (let i = 0; i < 30; i += 1) {
+      clock.advance(50)
+      await service.refresh()
+    }
     expect(service.getState().connected).toBe(true)
+    clock.advance(600)
     await service.refresh()
     expect(service.getState().connected).toBe(false)
 
