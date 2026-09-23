@@ -1,5 +1,12 @@
 # @thrashplay/music
 
+## 0.8.4
+
+### Patch Changes
+
+- de70b58: Studio: REAPER counts as unreachable after two seconds without an answer rather than after three polls, so a render or a save no longer flashes the offline overlay; a stop at a take's end that went astray is retried every 250 ms with one warning, so it lands well inside the gap before the next take; `localhost` in MUSIC_REAPER_URL is sent as 127.0.0.1.
+- ccf3cc1: Studio watcher: a clip whose library entry has no source files (from before the library, or a region made by hand) gets them from the items under its region, so the producer import has its stems.
+
 ## 0.8.3
 
 ### Patch Changes
