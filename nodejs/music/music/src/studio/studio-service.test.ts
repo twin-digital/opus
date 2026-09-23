@@ -370,7 +370,7 @@ describe('StudioService', () => {
     reaper.position = 10.3
     await service.refresh()
     expect(reaper.requests.filter((r) => r === '1016')).toHaveLength(1) // not every poll: REAPER may be busy
-    clock.advance(1000)
+    clock.advance(250)
     reaper.position = 10.4
     await service.refresh()
     expect(reaper.requests.at(-1)).toBe('1016')

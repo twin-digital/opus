@@ -93,8 +93,8 @@ export type StudioEventMap = {
  */
 /** How long polls may fail before REAPER counts as unreachable: a render or a save stalls it for a moment. */
 const UNREACHABLE_AFTER_MS = 2000
-/** A stop at a take's end that did not land is tried again no sooner than this. */
-const STOP_RETRY_MS = 1000
+/** A stop at a take's end that did not land is tried again no sooner than this: several tries fit in the two-second gap before the next take. */
+const STOP_RETRY_MS = 250
 
 /** Silence between takes on the timeline, so each one is visually distinct. */
 const TAKE_GAP_SECONDS = 2
