@@ -165,6 +165,43 @@ describe('touch page', () => {
     expect(cards()).toEqual(['Clip 4 · 4:12 PM', 'Twinkle', 'Rondo'])
   })
 
+  it('shows the open album as a tile under its own name, and renames it from there', () => {
+    const today = new Date().toISOString()
+    push({
+      ...idle,
+      projectName: 'Piano Corner',
+      albumName: 'songs for mom',
+      takes: [listed('3', 3, { createdAt: today }), listed('2', 2, { createdAt: today, deleted: true })],
+    })
+    expect($('title').textContent).toBe('songs for mom')
+    expect($('where').textContent).toBe('songs for mom')
+    expect($('albumsBtn').hidden).toBe(false)
+    $('albumsBtn').click()
+    expect($('where').textContent).toBe('Albums')
+    expect($('albumsBtn').hidden).toBe(true) // no way further out than the albums
+    expect(document.querySelector('main')?.classList.contains('albums')).toBe(true)
+    const tiles = [...document.querySelectorAll('#takes .album')]
+    expect(tiles.map((t) => t.querySelector('.name')?.textContent ?? t.textContent.trim())).toEqual([
+      'songs for mom',
+      '+New albumComing soon',
+    ])
+    expect(tiles[0]?.querySelector('.meta')?.textContent).toBe(
+      '1 song \u00B7 ' + new Date(today).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    )
+    ;(tiles[0]?.querySelector('.edit') as HTMLElement).click()
+    expect($('sheetClip').textContent).toBe('Album')
+    expect(($('nameField') as HTMLInputElement).value).toBe('songs for mom')
+    ;($('nameField') as HTMLInputElement).value = 'MINECRAFT SONGS'
+    $('saveBtn').click()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/actions/rename-album',
+      expect.objectContaining({ body: JSON.stringify({ name: 'MINECRAFT SONGS' }) }),
+    )
+    ;(document.querySelector('#takes .album.current') as HTMLElement).click() // the tile leads back
+    expect($('where').textContent).toBe('songs for mom')
+    expect(document.querySelector('main')?.classList.contains('albums')).toBe(false)
+  })
+
   it('narrows the list as a search is typed, and clears it', () => {
     push({
       ...idle,

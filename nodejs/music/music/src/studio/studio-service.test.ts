@@ -414,6 +414,8 @@ describe('StudioService', () => {
     const before = reaper.requests.length
     await service.setStarred('9', false)
     expect(reaper.requests.length).toBe(before)
+    await service.renameAlbum('  songs / for; mom ')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/album_name/songs%20for%20mom')
   })
 
   it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {

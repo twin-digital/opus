@@ -90,7 +90,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-29.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-29.2" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 
 -- Only one watcher may run, or every take gets a region per copy. The newest started wins:
@@ -592,8 +592,10 @@ local function saveLibrary()
   local path = libraryPath()
   if library == nil or path == nil then return end
   local dir = projectDir() or ""
+  local displayName = type(library.project) == "table" and library.project.displayName or nil
   library.project = {
     name = currentProjectName(),
+    displayName = displayName, -- the name he gave the album on the page; nil until he does
     file = (projectFile() or ""):match("[^/\\]+$"),
     folder = dir:match("[^/\\]+$") or "",
     updatedAt = localNow(),
@@ -1076,6 +1078,15 @@ local function applyFlags()
   if lib == nil then return end
   local _, byId = scanRegions()
   local changed = false
+  -- the album's own name, from the page: "album_name" in the request section
+  local albumName = readRequest("album_name")
+  if albumName ~= "" then
+    if type(lib.project) ~= "table" then lib.project = {} end
+    lib.project.displayName = albumName
+    log(string.format("album named '%s'", albumName))
+    clearRequest("album_name")
+    changed = true
+  end
   for id, region in pairs(byId) do
     local key = "flag_" .. tostring(id)
     local flag = readRequest(key)

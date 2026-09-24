@@ -37,7 +37,8 @@ const instruments: InstrumentSelection[] = [
 
 /** Clip facts the fake studio keeps in memory, where the real app reads the manifest. */
 const fakeInfo = new Map<number, ClipInfo>()
-const fakeClipInfo = () => Promise.resolve(fakeInfo)
+let fakeAlbumName: string | undefined
+const fakeClipInfo = () => Promise.resolve({ clips: fakeInfo, displayName: fakeAlbumName })
 
 /** A few days of example clips, so the list can be judged as it really fills up. */
 const exampleTakes = (): Take[] => {
@@ -198,6 +199,16 @@ const makeFakeStudio = (): StudioApi => {
     },
     toggleRecord: () => (state.transport === 'recording' ? studio.stopTransport() : studio.record()),
     togglePlayLatest: () => (state.transport === 'playing' ? studio.stopTransport() : studio.playLatest()),
+    renameAlbum: (label) => {
+      const clean = sanitizeLabel(label)
+      if (clean !== '') {
+        setTimeout(() => {
+          fakeAlbumName = clean
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
     setStarred: (id, on) => {
       const take = state.takes.find((candidate) => candidate.id === id)
       if (take?.number !== undefined) {

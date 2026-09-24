@@ -45,6 +45,7 @@ const makeService = () => {
     seekTake: vi.fn((_id: string, _at: number) => Promise.resolve()),
     setStarred: vi.fn((_id: string, _on: boolean) => Promise.resolve()),
     setDeleted: vi.fn((_id: string, _on: boolean) => Promise.resolve()),
+    renameAlbum: vi.fn((_label: string) => Promise.resolve()),
     reloadHelper: vi.fn(() => Promise.resolve()),
   }
   return service as unknown as StudioService & typeof service
@@ -256,6 +257,10 @@ describe('createStudioServer', () => {
     expect(service.setStarred).toHaveBeenNthCalledWith(1, '2', true)
     expect(service.setStarred).toHaveBeenNthCalledWith(2, '2', false)
     expect(service.setDeleted).toHaveBeenCalledWith('3', true) // on defaults to true
+    expect((await post('rename-album', '{"name": "songs for mom"}')).status).toBe(204)
+    await vi.waitFor(() => {
+      expect(service.renameAlbum).toHaveBeenCalledWith('songs for mom')
+    })
   })
 
   it('lists each take with what the manifest knows about it', async () => {
@@ -264,6 +269,7 @@ describe('createStudioServer', () => {
     await fs.writeFile(
       path.join(outbox, 'Piano Corner', 'manifest.json'),
       JSON.stringify({
+        project: { displayName: 'songs for mom' },
         clips: {
           '1': { number: 1, createdAt: '2026-09-22T17:12:39-05:00', starred: true, archived: false },
           '2': { number: 2, createdAt: '2026-09-23T09:00:00-05:00', archived: true },
@@ -284,8 +290,10 @@ describe('createStudioServer', () => {
       server = await createStudioServer({ service, port: 0, outboxDir: outbox })
       const events = await eventReader(`${server.url}/events`)
       const first = (await events.next()) as {
+        albumName?: string
         takes: { id: string; starred?: boolean; deleted?: boolean; createdAt?: string }[]
       }
+      expect(first.albumName).toBe('songs for mom')
       expect(first.takes.map((t) => [t.id, t.starred, t.deleted, t.createdAt])).toEqual([
         ['r2', false, true, '2026-09-23T09:00:00-05:00'],
         ['r1', true, false, '2026-09-22T17:12:39-05:00'],
