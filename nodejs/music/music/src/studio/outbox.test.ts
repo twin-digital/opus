@@ -44,20 +44,26 @@ describe('outbox', () => {
     const project = path.join(root, 'Piano Corner')
     await fs.mkdir(project)
     const read = createClipInfoReader(root)
-    expect(await read('Piano: Corner')).toEqual(new Map()) // no manifest yet
+    expect(await read('Piano: Corner')).toEqual({ clips: new Map() }) // no manifest yet
     const manifest = path.join(project, 'manifest.json')
     await fs.writeFile(
       manifest,
-      JSON.stringify({ clips: { '5': { number: 5, createdAt: '2026-09-22T10:00:00Z', starred: true } } }),
+      JSON.stringify({
+        project: { displayName: 'songs for mom' },
+        clips: { '5': { number: 5, createdAt: '2026-09-22T10:00:00Z', starred: true } },
+      }),
     )
     await new Promise((resolve) => setTimeout(resolve, 300))
-    expect(await read('Piano: Corner')).toEqual(
-      new Map([[5, { createdAt: '2026-09-22T10:00:00Z', starred: true, deleted: false }]]),
-    )
+    expect(await read('Piano: Corner')).toEqual({
+      clips: new Map([[5, { createdAt: '2026-09-22T10:00:00Z', starred: true, deleted: false }]]),
+      displayName: 'songs for mom',
+    })
     await fs.writeFile(manifest, JSON.stringify({ clips: { '5': { number: 5, archived: true } } }))
     await fs.utimes(manifest, new Date(), new Date(Date.now() + 5000)) // a distinct mtime whatever the clock does
     await new Promise((resolve) => setTimeout(resolve, 300))
-    expect(await read('Piano: Corner')).toEqual(new Map([[5, { createdAt: undefined, starred: false, deleted: true }]]))
+    expect(await read('Piano: Corner')).toEqual({
+      clips: new Map([[5, { createdAt: undefined, starred: false, deleted: true }]]),
+    })
   })
 
   it('finds the mix through the manifest, only once the watcher recorded it', async () => {

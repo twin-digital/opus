@@ -48,6 +48,7 @@ export const mixContentType = (file: string): string =>
   MIME_BY_EXTENSION[path.extname(file).toLowerCase()] ?? 'application/octet-stream'
 
 interface Manifest {
+  project?: { displayName?: unknown }
   clips?: Record<
     string,
     | {
@@ -71,22 +72,28 @@ export interface ClipInfo {
 /** How often the manifest is re-checked for changes, at most. */
 const MANIFEST_CHECK_MS = 250
 
+/** What the manifest says beyond the clips: the album's own name, when he has given it one. */
+export interface ManifestInfo {
+  clips: Map<number, ClipInfo>
+  displayName?: string
+}
+
 /**
- * Reads clip facts from the project's manifest, by clip number. The file is re-read only when
- * its modification time changes, checked at most every quarter second, so polling the state
- * at 20 Hz costs nothing between edits.
+ * Reads clip facts (by clip number) and the album's display name from the project's manifest.
+ * The file is re-read only when its modification time changes, checked at most every quarter
+ * second, so polling the state at 20 Hz costs nothing between edits.
  */
 export const createClipInfoReader = (outboxDir: string) => {
   let checkedAt = -Infinity
   let seen = { file: '', mtime: -1 }
-  let cache = new Map<number, ClipInfo>()
-  const parse = (text: string) => {
+  let cache: ManifestInfo = { clips: new Map() }
+  const parse = (text: string): ManifestInfo => {
     const infos = new Map<number, ClipInfo>()
     let manifest: Manifest
     try {
       manifest = JSON.parse(text) as Manifest
     } catch {
-      return infos
+      return { clips: infos }
     }
     for (const entry of Object.values(manifest.clips ?? {})) {
       if (typeof entry?.number !== 'number') {
@@ -98,9 +105,13 @@ export const createClipInfoReader = (outboxDir: string) => {
         deleted: entry.archived === true,
       })
     }
-    return infos
+    const displayName = manifest.project?.displayName
+    return {
+      clips: infos,
+      displayName: typeof displayName === 'string' && displayName !== '' ? displayName : undefined,
+    }
   }
-  return async (projectName: string): Promise<Map<number, ClipInfo>> => {
+  return async (projectName: string): Promise<ManifestInfo> => {
     const file = path.join(outboxDir, safeName(projectName), 'manifest.json')
     const now = Date.now()
     if (file === seen.file && now - checkedAt < MANIFEST_CHECK_MS) {
@@ -114,7 +125,7 @@ export const createClipInfoReader = (outboxDir: string) => {
         seen = { file, mtime: stat.mtimeMs }
       }
     } catch {
-      cache = new Map()
+      cache = { clips: new Map() }
       seen = { file, mtime: -1 }
     }
     return cache

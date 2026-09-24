@@ -55,6 +55,11 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   /* the list gets most of the width; tracks are capped so no clip name can widen them */
   main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); gap: 24px; padding: 0 28px 28px; min-height: 0; }
   .buttons { display: flex; flex-direction: column; gap: 24px; }
+  /* no album open means nothing to record into: the transport buttons go away with the clips */
+  main.albums { grid-template-columns: minmax(0, 1fr); }
+  main.albums .buttons { display: none; }
+  header #title { cursor: pointer; }
+  header #title::after { content: " \25BE"; color: #9aa0ad; font-size: 20px; }
   button {
     border: none; border-radius: 28px; color: #fff; font-size: 44px; font-weight: 800;
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 18px;
@@ -78,7 +83,26 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #stopBtn { flex: 1; background: #3a3f4b; font-size: 36px; }
   #stopBtn svg { width: 40px; height: 40px; fill: #fff; }
   aside { background: #1d2029; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 14px; }
-  aside h2 { margin: 0; font-size: 26px; display: flex; align-items: baseline; justify-content: space-between; }
+  aside h2 { margin: 0; font-size: 26px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  aside h2 .where { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  /* the way back is a labelled button, not a bare chevron */
+  aside h2 .back { font-size: 20px; font-weight: 700; padding: 0 18px 0 12px; min-height: 48px; background: #3a3f4b; color: #fff; border-radius: 14px; gap: 6px; flex: none; }
+  aside h2 .back svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  /* albums: a grid of tiles, nothing like the clip rows */
+  #takes.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-content: start; }
+  .album { display: flex; flex-direction: column; gap: 10px; background: #2a2e3a; border-radius: 18px; padding: 12px; cursor: pointer; min-width: 0; }
+  .album:active { filter: brightness(1.2); }
+  .album.current { box-shadow: inset 0 0 0 4px #37d67a; }
+  .album .art { height: 96px; border-radius: 12px; }
+  .album .name { font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .album .meta { color: #9aa0ad; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .album .actions { display: flex; justify-content: flex-end; }
+  .album .actions .round { width: 44px; height: 44px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
+  .album .actions .round svg { width: 20px; height: 20px; fill: #fff; }
+  .album.new { border: 2px dashed #3a3f4b; background: transparent; justify-content: center; align-items: center; min-height: 190px; color: #9aa0ad; font-size: 22px; font-weight: 700; gap: 8px; opacity: 0.5; cursor: default; }
+  .album.new .plus { font-size: 44px; line-height: 1; }
+  .album.new .soon { font-size: 15px; font-weight: 600; }
+
   aside h2 .count { font-size: 18px; color: #9aa0ad; font-weight: 600; font-variant-numeric: tabular-nums; }
   /* search reads as a place to type; one filter beside it, quiet grey or green when narrowing */
   #filters { display: flex; gap: 10px; align-items: stretch; }
@@ -167,7 +191,8 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
     <button id="stopBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</button>
   </div>
   <aside>
-    <h2>My recordings <span class="count" id="count"></span></h2>
+    <h2><button class="back" id="backBtn" aria-label="Back to albums"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Albums</button><span class="where" id="where">My recordings</span><span class="count" id="count"></span></h2>
+
     <div id="filters">
       <div id="search" role="button" tabindex="0">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
@@ -252,8 +277,12 @@ function render() {
   renderBanner()
   renderStage()
   renderMeters()
-  const title = state.projectName || DefaultTitle
+  const title = state.albumName || state.projectName || DefaultTitle
   $('title').textContent = title
+  document.querySelector('main').classList.toggle('albums', view === 'albums')
+  $('backBtn').hidden = view !== 'clips'
+  $('where').textContent = view === 'clips' ? title : 'Albums'
+  $('delFilter').hidden = view !== 'clips'
   document.title = title
   renderInstrument()
   const isRec = state.transport === 'recording'
@@ -331,7 +360,7 @@ function settleFlags() {
 
 function renderFilters() {
   const text = $('searchText')
-  text.textContent = filter.q || 'Search names'
+  text.textContent = filter.q || (view === 'albums' ? 'Search albums' : 'Search names')
   text.classList.toggle('placeholder', !filter.q)
   $('searchClear').hidden = !filter.q
   $('search').classList.toggle('on', !!filter.q)
@@ -340,9 +369,65 @@ function renderFilters() {
   del.innerHTML = TrashIcon + '<span>' + (filter.deleted ? 'Deleted' : 'Not deleted') + '</span>'
 }
 
+// --- albums: the open project is the one album there is, under the name he gave it -----------
+// Making another album needs REAPER's help and is not here yet; the tile for it says so.
+let view = 'clips' // or 'albums'
+function showAlbums() { view = 'albums'; filter.q = ''; takesKey = ''; render() }
+function showClips() { view = 'clips'; filter.q = ''; takesKey = ''; render() }
+$('backBtn').onclick = showClips
+$('where').onclick = () => { if (view === 'clips') showAlbums() }
+$('title').onclick = () => { if (view === 'clips') showAlbums(); else showClips() }
+const albumHue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return h }
+const albumDate = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
+
+function renderAlbums() {
+  const name = state.albumName || state.projectName || DefaultTitle
+  const clips = state.takes.filter((t) => !flagsOf(t).deleted).length
+  const first = state.takes.map((t) => t.createdAt).filter(Boolean).sort()[0]
+  const albums = filter.q && !name.toLowerCase().includes(filter.q.toLowerCase()) ? [] : [{ name, clips, createdAt: first }]
+  $('count').textContent = filter.q ? albums.length + ' of 1' : '1'
+  const key = 'albums|' + albums.map((a) => a.name + ':' + a.clips + ':' + (a.createdAt || '')).join('|') + '?' + filter.q
+  if (key === takesKey) return
+  takesKey = key
+  const box = $('takes')
+  box.className = 'grid'
+  box.innerHTML = ''
+  for (const a of albums) {
+    const el = document.createElement('div')
+    el.className = 'album current'
+    const art = document.createElement('div')
+    art.className = 'art'
+    art.style.background = 'linear-gradient(135deg, hsl(' + albumHue(a.name) + ' 45% 38%), hsl(' + ((albumHue(a.name) + 40) % 360) + ' 55% 22%))'
+    const label = document.createElement('div')
+    label.className = 'name'
+    label.textContent = a.name
+    const meta = document.createElement('div')
+    meta.className = 'meta'
+    const when = albumDate(a.createdAt)
+    meta.textContent = a.clips + (a.clips === 1 ? ' song' : ' songs') + (when ? ' \u00B7 ' + when : '')
+    const actions = document.createElement('div')
+    actions.className = 'actions'
+    const edit = document.createElement('button')
+    edit.className = 'round edit'
+    edit.innerHTML = EditIcon
+    edit.setAttribute('aria-label', 'Name this album')
+    edit.onclick = (event) => { event.stopPropagation(); openSheet('renameAlbum') }
+    actions.appendChild(edit)
+    el.append(art, label, meta, actions)
+    el.onclick = showClips
+    box.appendChild(el)
+  }
+  const add = document.createElement('div')
+  add.className = 'album new'
+  add.innerHTML = '<span class="plus">+</span>New album<span class="soon">Coming soon</span>'
+  box.appendChild(add)
+}
+
 function renderTakes() {
   settleFlags()
   renderFilters()
+  if (view === 'albums') { renderAlbums(); return }
+  $('takes').className = ''
   const shown = state.takes.filter(passes)
   $('count').textContent = state.takes.length === 0 ? '' : shown.length === state.takes.length ? String(state.takes.length) : shown.length + ' of ' + state.takes.length
   const key = shown.map((t) => { const f = flagsOf(t); return t.id + ':' + t.end + ':' + t.name + ':' + f.starred + ':' + f.deleted + ':' + (t.createdAt || '') }).join(',')
@@ -716,6 +801,11 @@ function openSheet(mode, take) {
     $('sheetClip').textContent = 'Search'
     field.placeholder = 'Type part of a name'
     $('saveBtn').textContent = 'Done'
+  } else if (mode === 'renameAlbum') {
+    current = state.albumName || ''
+    $('sheetClip').textContent = 'Album'
+    field.placeholder = 'Name this album'
+    $('saveBtn').textContent = 'Save'
   } else {
     current = isTimestamp(take.label) ? '' : take.label
     $('sheetClip').textContent = take.number === undefined ? take.name : 'Clip ' + take.number
@@ -739,6 +829,12 @@ function cancelSheet() {
 
 function saveSheet() {
   if (sheetMode === 'search') { closeSheet(); return }
+  if (sheetMode === 'renameAlbum') {
+    const name = $('nameField').value.trim()
+    closeSheet()
+    if (name) fetch('/actions/rename-album', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }) }).catch(() => {})
+    return
+  }
   if (!editing) return
   const name = $('nameField').value.trim()
   const id = editing.id

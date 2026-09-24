@@ -91,6 +91,9 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   library, and the server enriches each take in the event stream with `createdAt`, `starred`
   and `deleted` read from the Outbox manifest (re-read when its mtime changes). The page
   filters by name and by deleted on its own, and groups clips under day headings.
+  The album view shows the open project as one tile under the display name he gave it
+  (`album_name` request; the watcher keeps it in the library's project record, the manifest
+  carries it as `project.displayName`, the stream as `albumName`).
 
 Two settings get what he plays into REAPER. `MUSIC_MIDI_MIRROR` names a MIDI output (an IAC bus)
 that receives a copy of everything sent to the piano, so REAPER records the re-voiced notes with a

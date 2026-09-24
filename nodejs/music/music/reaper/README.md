@@ -255,6 +255,11 @@ toolbar pops in on touch near the top.
   from his list in one tap, and the same button brings it back from the deleted view. A deleted
   clip's region and recording stay in REAPER; the producer import passes it over. Unnamed clips
   sit back a little in the list.
+- The album name at the top left (and above the list) opens the album view: one tile for the open
+  project, with its song count and first date, and a pencil to give the album a name of its own.
+  That name lives in the clip library next to the project and shows everywhere the project name
+  did; the REAPER project file keeps its own name. The "New album" tile is a preview of what is
+  coming; making and switching albums needs REAPER's help and is not built yet.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

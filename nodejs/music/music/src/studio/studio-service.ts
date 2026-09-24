@@ -79,6 +79,7 @@ export type StudioApi = Pick<
   | 'renameTake'
   | 'setStarred'
   | 'setDeleted'
+  | 'renameAlbum'
   | 'seekTake'
   | 'reloadHelper'
   | 'setInstruments'
@@ -319,6 +320,15 @@ export class StudioService {
       return
     }
     await this.command(() => this.client.setProjExtState(RENAME_SECTION, `rename_${id}`, clean))
+  }
+
+  /** Names the open album; the watcher records it in the library, and the manifest carries it. */
+  async renameAlbum(label: string): Promise<void> {
+    const clean = sanitizeLabel(label)
+    if (clean === '') {
+      return
+    }
+    await this.command(() => this.client.setProjExtState(RENAME_SECTION, 'album_name', clean))
   }
 
   /** Stars or unstars a take; the watcher records it in the library, and the manifest carries it. */

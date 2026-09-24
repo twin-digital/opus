@@ -8,17 +8,25 @@ import { logger } from '../logger.js'
 import type { StudioApi, StudioState } from './studio-service.js'
 import { TouchPageHtml } from './touch-page.js'
 import { pipeline } from 'node:stream/promises'
-import { type ClipInfo, createClipInfoReader, defaultOutboxDir, findClipMix, mixContentType } from './outbox.js'
+import {
+  type ClipInfo,
+  createClipInfoReader,
+  defaultOutboxDir,
+  findClipMix,
+  type ManifestInfo,
+  mixContentType,
+} from './outbox.js'
 import type { Take } from './studio-service.js'
 
 /** A take as the page lists it: the region, plus what the library knows about the clip. */
 export type ListedTake = Take & Partial<ClipInfo>
 
 /** The state the page receives: the service's, with each take enriched from the manifest. */
-export type PageState = Omit<StudioState, 'takes'> & { takes: ListedTake[] }
+/** The state the page receives: the service's, each take enriched from the manifest, plus the album's own name. */
+export type PageState = Omit<StudioState, 'takes'> & { takes: ListedTake[]; albumName?: string }
 
 const ACTION_PATH =
-  /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+)|star\/([^/]+)|delete\/([^/]+))$/
+  /^\/actions\/(record|stop|play-latest|rename-album|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+)|star\/([^/]+)|delete\/([^/]+))$/
 
 /** The on-screen keyboard, served from its installed package so the page needs no CDN. */
 /**
@@ -98,7 +106,8 @@ const send = (response: http.ServerResponse, status: number, body = '', type = '
  * - `POST /actions/star/<id>` and `POST /actions/delete/<id>` with `{"on": true|false}` — his flags.
  *
  * Each take in the stream carries `createdAt`, `starred` and `deleted` from the Outbox manifest,
- * which the watcher rewrites whenever the library changes.
+ * which the watcher rewrites whenever the library changes, and `albumName`, the name he gave the
+ * album (`POST /actions/rename-album` with `{"name": "..."}`), when he has.
  * - `GET /clips/<id>.wav` — the clip's finished mix from the Outbox (whatever format the project
  *   renders in; the media type follows the file), for the waveform.
  * - `GET /vendor/*` — the on-screen keyboard's script and stylesheet, and the waveform library.
@@ -120,18 +129,23 @@ export const createStudioServer = async ({
   outboxDir?: string
   /** Overrides how a clip's mix file is found (the preview hands out a synthetic one). */
   clipFile?: (id: string) => Promise<string | undefined>
-  /** Overrides where a clip's facts come from (the preview keeps them in memory). */
-  clipInfo?: (projectName: string) => Promise<Map<number, ClipInfo>>
+  /** Overrides where a clip's facts and the album name come from (the preview keeps them in memory). */
+  clipInfo?: (projectName: string) => Promise<ManifestInfo>
 }): Promise<StudioServer> => {
   const log = logger.child({}, { msgPrefix: '[STUDIO-WEB] ' })
   const streams = new Set<http.ServerResponse>()
   const readClipInfo = clipInfo ?? createClipInfoReader(outboxDir)
 
   const enrich = async (state: StudioState): Promise<PageState> => {
-    const infos = state.projectName === undefined ? new Map<number, ClipInfo>() : await readClipInfo(state.projectName)
+    const info: ManifestInfo =
+      state.projectName === undefined ? { clips: new Map<number, ClipInfo>() } : await readClipInfo(state.projectName)
     return {
       ...state,
-      takes: state.takes.map((take) => ({ ...take, ...(take.number === undefined ? {} : infos.get(take.number)) })),
+      takes: state.takes.map((take) => ({
+        ...take,
+        ...(take.number === undefined ? {} : info.clips.get(take.number)),
+      })),
+      albumName: info.displayName,
     }
   }
   // pushes keep their order: each waits for the one before, so a slow manifest read never
@@ -162,6 +176,10 @@ export const createStudioServer = async ({
         return service.stopTransport()
       case 'play-latest':
         return service.playLatest()
+      case 'rename-album': {
+        const { name } = await readJsonBody(request)
+        return service.renameAlbum(typeof name === 'string' ? name : '')
+      }
       default:
         if (renameId !== undefined) {
           const { name } = await readJsonBody(request)
