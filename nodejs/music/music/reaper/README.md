@@ -156,7 +156,16 @@ the four-track template, so the watcher stops the take on its own in two cases:
 - no configured input has shown activity for `silence_seconds` (default 3 minutes), or
 - the take has reached `max_take_seconds` (default 60 minutes).
 
-Both only ever stop. The take is still kept, named, trimmed, and saved.
+Both only ever stop. The take is still kept, named, trimmed, and saved, with one exception: a
+take in which nothing was detected, no activity on the configured inputs and every recorded
+file scanned silent, is not a take. Its items and files are removed and no region is made;
+a tap of Record followed by Stop leaves nothing behind. A file whose peaks REAPER has not
+built yet counts as unknown, and the take is kept. `keep_empty_takes = true` keeps such takes
+as short clips labelled "(empty)" instead.
+
+The watcher is quiet in normal use. It opens REAPER's console only for a real problem (a
+library it cannot read, a render that produced nothing, a second copy of itself); `debug =
+true` logs every step there.
 
 Everything is a key in `cs-studio-config.lua`, overriding these defaults:
 
@@ -165,6 +174,7 @@ Everything is a key in `cs-studio-config.lua`, overriding these defaults:
 | `max_take_seconds` | 3600       | Hard cap on take length.                                    |
 | `silence_seconds`  | 180        | Quiet time before the watcher stops the take.               |
 | `trim_silence`     | true       | Trim each take to its last activity plus `tail_seconds`.    |
+| `keep_empty_takes` | false      | Keep takes with nothing detected as "(empty)" clips.        |
 | `tail_seconds`     | 5          | Room left after the last note for sustain and decay.        |
 | `activity`         | piano MIDI | Inputs that count as playing; any one keeps the take alive. |
 | `gap_seconds`      | 2          | Silence between takes on the timeline.                      |

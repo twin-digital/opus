@@ -8,6 +8,7 @@ return {
   -- head_seconds = 0.5,           -- room kept before the first note when trimming
   -- tail_seconds = 5,             -- room left after the last note when trimming
   -- trim_audio_db = -40,          -- sound in any recorded file above this counts for trimming
+  -- keep_empty_takes = false,     -- true keeps takes with nothing in them as short "(empty)" clips
   -- activity = {                  -- inputs that count as playing
   --   { type = "midi", device = "IAC" },
   --   { type = "audio", track = "Vocal", threshold_db = -35 },
