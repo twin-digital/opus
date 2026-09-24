@@ -43,6 +43,11 @@ local DEFAULTS = {
   -- Silence between takes on the timeline.
   gap_seconds = 2,
 
+  -- A take in which nothing was detected (no activity on the configured inputs, and every
+  -- recorded file scanned silent below trim_audio_db) is discarded: no region, and its items
+  -- and files are removed. true keeps such takes as short "(empty)" clips instead.
+  keep_empty_takes = false,
+
   -- Log each step to REAPER's console (View > ReaScript console), to see what a take did.
   debug = false,
 
@@ -85,7 +90,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-26.3" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-28.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 
 -- Only one watcher may run, or every take gets a region per copy. The newest started wins:
@@ -1149,18 +1154,18 @@ local function whileRecording()
   if #CONFIG.activity == 0 then
     -- nothing to watch: only the length cap applies
     if now - recStart >= CONFIG.max_take_seconds then
-      reaper.ShowConsoleMsg("[Studio] Take hit the length cap; stopping.\n")
+      log("take hit the length cap; stopping")
       stoppedBy = "cap"
       reaper.Main_OnCommand(ACTION_STOP, 0)
     end
     return
   end
   if now - recStart >= CONFIG.max_take_seconds then
-    reaper.ShowConsoleMsg("[Studio] Take hit the length cap; stopping.\n")
+    log("take hit the length cap; stopping")
     stoppedBy = "cap"
     reaper.Main_OnCommand(ACTION_STOP, 0)
   elseif now - lastActivity >= CONFIG.silence_seconds then
-    reaper.ShowConsoleMsg("[Studio] No activity; stopping.\n")
+    log("no activity; stopping")
     stoppedBy = "silence"
     reaper.Main_OnCommand(ACTION_STOP, 0)
   end
@@ -1176,12 +1181,13 @@ local function newItems()
 end
 
 -- First and last moment (project time) a recorded audio item's file has sound above
--- trim_audio_db, from REAPER's peak data; nil when it has none or the peaks are not built yet.
+-- trim_audio_db, from REAPER's peak data. nil, nil, true when it is known to have none (a
+-- silent file, or a MIDI item); nil, nil, false when the peaks are not built yet.
 local function audioExtent(item)
   local take = reaper.GetActiveTake(item)
-  if take == nil or reaper.TakeIsMIDI(take) then return nil, nil end
+  if take == nil or reaper.TakeIsMIDI(take) then return nil, nil, true end
   local source = reaper.GetMediaItemTake_Source(take)
-  if source == nil then return nil, nil end
+  if source == nil then return nil, nil, true end
   local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
   local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
   local offset = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
@@ -1192,7 +1198,7 @@ local function audioExtent(item)
   buffer.clear()
   local got = reaper.PCM_Source_GetPeaks(source, rate, offset, channels, count, 0, buffer)
   local samples = got & 0xFFFFF
-  if samples == 0 then return nil, nil end
+  if samples == 0 then return nil, nil, false end
   local threshold = 10 ^ (CONFIG.trim_audio_db / 20)
   local values = buffer.table()
   local first, last = nil, nil
@@ -1204,8 +1210,8 @@ local function audioExtent(item)
       if last == nil or index > last then last = index end
     end
   end
-  if first == nil then return nil, nil end
-  return pos + first / rate, pos + (last + 1) / rate
+  if first == nil then return nil, nil, true end
+  return pos + first / rate, pos + (last + 1) / rate, true
 end
 
 -- Returns true once the take is finalized, false while still waiting for REAPER to commit the
@@ -1215,7 +1221,7 @@ local function onRecordingFinished()
   if #items == 0 then
     finalizeDeadline = finalizeDeadline or (reaper.time_precise() + CONFIG.finalize_timeout_seconds)
     if reaper.time_precise() < finalizeDeadline then return false end
-    reaper.ShowConsoleMsg("[Studio] Recording stopped but no new items appeared; no take created.\n")
+    log("recording stopped but no new items appeared; no take created")
     return true
   end
   log(string.format("recording finished; %d new items, last activity at %.2fs", #items, lastActivity))
@@ -1231,12 +1237,44 @@ local function onRecordingFinished()
   -- Sound in the recorded files widens the trim window: the activity sources may only watch
   -- the piano, and a part sung alone must survive
   local soundStart, soundEnd = firstActivity, firstActivity ~= nil and lastActivity or nil
+  local allScanned = true -- every file's peaks were read: silence is a finding, not a gap
   for _, item in ipairs(items) do
-    local ok, from, to = pcall(audioExtent, item)
+    local ok, from, to, known = pcall(audioExtent, item)
     if ok and from ~= nil then
       if soundStart == nil or from < soundStart then soundStart = from end
       if soundEnd == nil or to > soundEnd then soundEnd = to end
+    elseif not (ok and known) then
+      allScanned = false
     end
+  end
+
+  -- nothing detected anywhere, with the files scanned to prove it: not a take
+  if soundStart == nil and allScanned and not CONFIG.keep_empty_takes then
+    local dir = projectDir() or ""
+    for _, item in ipairs(items) do
+      local take = reaper.GetActiveTake(item)
+      local file = nil
+      if take ~= nil and not reaper.TakeIsMIDI(take) then
+        local source = reaper.GetMediaItemTake_Source(take)
+        file = source and reaper.GetMediaSourceFileName(source, "") or nil
+      end
+      reaper.DeleteTrackMediaItem(reaper.GetMediaItem_Track(item), item)
+      -- only the take's own recording, inside the project folder, ever goes
+      if file ~= nil and dir ~= "" and file:sub(1, #dir) == dir then
+        os.remove(file)
+        os.remove(file .. ".reapeaks")
+      end
+    end
+    itemsBefore = snapshotItems()
+    itemsBeforeCount = reaper.CountMediaItems(0)
+    pendingCount = itemsBeforeCount
+    wasRecording = false
+    reaper.SetEditCurPos(first, true, false)
+    reaper.UpdateArrange()
+    if projectFile() ~= nil then reaper.Main_SaveProject(0, false) end
+    log(string.format("empty take discarded (%d items, %.1fs)", #items, last - first))
+    markBusy()
+    return true
   end
 
   -- Trim the quiet head and tail, only when something actually saw the take: with nothing
@@ -1283,7 +1321,7 @@ local function onRecordingFinished()
       last = cut
     end
   elseif CONFIG.trim_silence and #CONFIG.activity > 0 then
-    reaper.ShowConsoleMsg("[Studio] No activity was detected during the take, so it was not trimmed. Check the activity setting in cs-studio-config.lua.\n")
+    log("no activity was detected during the take, so it was not trimmed; check the activity setting in cs-studio-config.lua")
   end
 
   local n = nextTakeNumber()
