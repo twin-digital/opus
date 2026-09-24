@@ -307,6 +307,11 @@ Open (or create and save) the song project you want the clips in. Run the import
 
 Where the song project lives, inside Nextcloud or not, is up to you; the stems ride along.
 
+The import runs in the background: stems copy over the network a chunk at a time between
+REAPER's timer ticks, so REAPER stays responsive and the console counts the clips as they land
+("12/87 imported ..."). Each clip is its own undo step. Best not to edit the project until the
+summary line appears; a second import asked for meanwhile is refused until the first is done.
+
 ### Continuous import
 
 `cs-studio-import-watch.lua` keeps the importer running: every `watch_seconds` (300) while
