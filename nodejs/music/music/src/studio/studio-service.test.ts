@@ -402,6 +402,20 @@ describe('StudioService', () => {
     expect(service.getState().recordingElapsed).toBe(0)
   })
 
+  it('sends star and delete flags to the watcher, for takes it knows', async () => {
+    const { reaper, service } = makeService({ regions: twoTakes })
+    await service.refresh()
+    await service.setStarred('1', true)
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_1/star')
+    await service.setDeleted('2', true)
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/delete')
+    await service.setDeleted('2', false)
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/restore')
+    const before = reaper.requests.length
+    await service.setStarred('9', false)
+    expect(reaper.requests.length).toBe(before)
+  })
+
   it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {
     const { reaper, service, clock } = makeService({ regions: twoTakes })
     await service.refresh()

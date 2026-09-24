@@ -2,6 +2,7 @@
 
 import { Events } from '../typed-event-emitter.js'
 import { createStudioServer } from '../studio/studio-server.js'
+import type { ClipInfo } from '../studio/outbox.js'
 import { ReaperClient } from '../studio/reaper-client.js'
 import { StudioService } from '../studio/studio-service.js'
 import { getConfig } from '../config.js'
@@ -34,9 +35,49 @@ const instruments: InstrumentSelection[] = [
   { split: false, instrument: 'Minecraft Note Block' },
 ]
 
+/** Clip facts the fake studio keeps in memory, where the real app reads the manifest. */
+const fakeInfo = new Map<number, ClipInfo>()
+const fakeClipInfo = () => Promise.resolve(fakeInfo)
+
+/** A few days of example clips, so the list can be judged as it really fills up. */
+const exampleTakes = (): Take[] => {
+  const names = [
+    'THE MINECRAFT CAVE BUT HARDCORE',
+    'LABUBU FUNK REMIX',
+    'live i remember you',
+    'AXEL F 2',
+    'DRUM AND PIANO SONG',
+    'VERY SHORT SONG',
+  ]
+  const takes: Take[] = []
+  let number = 40
+  let start = 4000
+  for (let daysAgo = 0; daysAgo < 3; daysAgo += 1) {
+    for (let i = 0; i < 8; i += 1) {
+      const at = new Date(Date.now() - daysAgo * 86_400_000 - (i + 1) * 1_500_000)
+      const named = i % 2 === 0
+      const label =
+        named ?
+          (names[(number + i) % names.length] ?? 'Song')
+        : at.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      const name = `Clip ${String(number)} - ${label}`
+      const duration = named ? 45 + ((number * 37) % 120) : 4 + (number % 20)
+      takes.push({ id: String(number), name, ...parseTakeName(name), start, end: start + duration, duration })
+      fakeInfo.set(number, {
+        createdAt: at.toISOString(),
+        starred: named && number % 3 === 0,
+        deleted: !named && number % 4 === 0,
+      })
+      number -= 1
+      start -= duration + 2
+    }
+  }
+  return takes
+}
+
 const makeFakeStudio = (): StudioApi => {
   const events = new Events<StudioEventMap>()
-  let takeCount = 2
+  let takeCount = 40
   let recordingStartedAt: number | undefined
   let playingUntil: number | undefined
   let state: StudioState = {
@@ -51,17 +92,7 @@ const makeFakeStudio = (): StudioApi => {
       { name: 'Master', level: 0 },
     ],
     position: 0,
-    takes: [
-      {
-        id: '2',
-        name: 'Clip 2 - Sep 21, 03:12 PM',
-        ...parseTakeName('Clip 2 - Sep 21, 03:12 PM'),
-        start: 32,
-        end: 41.5,
-        duration: 9.5,
-      },
-      { id: '1', name: 'Clip 1 - Twinkle', ...parseTakeName('Clip 1 - Twinkle'), start: 0, end: 30, duration: 30 },
-    ],
+    takes: exampleTakes(),
     playingTake: undefined,
     instruments: instruments[0],
     projectName: 'Piano Corner 2026',
@@ -87,6 +118,7 @@ const makeFakeStudio = (): StudioApi => {
         end: start + duration,
         duration,
       }
+      fakeInfo.set(takeCount, { createdAt: new Date().toISOString(), starred: false, deleted: false })
       update({
         transport: 'stopped',
         recordingElapsed: 0,
@@ -166,6 +198,29 @@ const makeFakeStudio = (): StudioApi => {
     },
     toggleRecord: () => (state.transport === 'recording' ? studio.stopTransport() : studio.record()),
     togglePlayLatest: () => (state.transport === 'playing' ? studio.stopTransport() : studio.playLatest()),
+    setStarred: (id, on) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take?.number !== undefined) {
+        const info = fakeInfo.get(take.number) ?? { starred: false, deleted: false }
+        // the real watcher takes a tick; the page shows its own optimistic state meanwhile
+        setTimeout(() => {
+          fakeInfo.set(take.number ?? 0, { ...info, starred: on })
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
+    setDeleted: (id, on) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take?.number !== undefined) {
+        const info = fakeInfo.get(take.number) ?? { starred: false, deleted: false }
+        setTimeout(() => {
+          fakeInfo.set(take.number ?? 0, { ...info, deleted: on })
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
     renameTake: (id, label) => {
       const clean = sanitizeLabel(label)
       // the real watcher takes a poll or two; mimic that
@@ -262,6 +317,7 @@ const clipFor = (id: string) => {
 const server = await createStudioServer({
   service,
   clipFile: fake ? clipFor : undefined,
+  clipInfo: fake ? fakeClipInfo : undefined,
   port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
   host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
 })

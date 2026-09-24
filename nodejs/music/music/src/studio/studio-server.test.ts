@@ -43,6 +43,8 @@ const makeService = () => {
     playTake: vi.fn((_id: string, _at?: number) => Promise.resolve()),
     renameTake: vi.fn((_id: string, _label: string) => Promise.resolve()),
     seekTake: vi.fn((_id: string, _at: number) => Promise.resolve()),
+    setStarred: vi.fn((_id: string, _on: boolean) => Promise.resolve()),
+    setDeleted: vi.fn((_id: string, _on: boolean) => Promise.resolve()),
     reloadHelper: vi.fn(() => Promise.resolve()),
   }
   return service as unknown as StudioService & typeof service
@@ -230,6 +232,65 @@ describe('createStudioServer', () => {
       expect(hit.status).toBe(200)
       expect(await hit.text()).toBe('RIFF....')
       expect((await fetch(`${server.url}/clips/r2.wav`)).status).toBe(404)
+    } finally {
+      await fs.rm(outbox, { recursive: true, force: true })
+    }
+  })
+
+  it('stars and deletes clips from JSON bodies', async () => {
+    const service = makeService()
+    server = await createStudioServer({ service, port: 0 })
+    const post = (route: string, body: string) =>
+      fetch(`${server?.url ?? ''}/actions/${route}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+      })
+    expect((await post('star/2', '{"on": true}')).status).toBe(204)
+    expect((await post('star/2', '{"on": false}')).status).toBe(204)
+    expect((await post('delete/3', '{}')).status).toBe(204)
+    await vi.waitFor(() => {
+      expect(service.setStarred).toHaveBeenCalledTimes(2)
+      expect(service.setDeleted).toHaveBeenCalledTimes(1)
+    })
+    expect(service.setStarred).toHaveBeenNthCalledWith(1, '2', true)
+    expect(service.setStarred).toHaveBeenNthCalledWith(2, '2', false)
+    expect(service.setDeleted).toHaveBeenCalledWith('3', true) // on defaults to true
+  })
+
+  it('lists each take with what the manifest knows about it', async () => {
+    const outbox = await fs.mkdtemp(path.join(os.tmpdir(), 'outbox-'))
+    await fs.mkdir(path.join(outbox, 'Piano Corner'))
+    await fs.writeFile(
+      path.join(outbox, 'Piano Corner', 'manifest.json'),
+      JSON.stringify({
+        clips: {
+          '1': { number: 1, createdAt: '2026-09-22T17:12:39-05:00', starred: true, archived: false },
+          '2': { number: 2, createdAt: '2026-09-23T09:00:00-05:00', archived: true },
+        },
+      }),
+    )
+    try {
+      const service = makeService()
+      service.getState.mockReturnValue({
+        ...idle,
+        projectName: 'Piano Corner',
+        takes: [
+          { id: 'r2', name: 'Clip 2', number: 2, label: '', start: 20, end: 30, duration: 10 },
+          { id: 'r1', name: 'Clip 1 - Twinkle', number: 1, label: 'Twinkle', start: 0, end: 10, duration: 10 },
+          { id: 'r9', name: 'Hand made', number: undefined, label: 'Hand made', start: 40, end: 50, duration: 10 },
+        ],
+      })
+      server = await createStudioServer({ service, port: 0, outboxDir: outbox })
+      const events = await eventReader(`${server.url}/events`)
+      const first = (await events.next()) as {
+        takes: { id: string; starred?: boolean; deleted?: boolean; createdAt?: string }[]
+      }
+      expect(first.takes.map((t) => [t.id, t.starred, t.deleted, t.createdAt])).toEqual([
+        ['r2', false, true, '2026-09-23T09:00:00-05:00'],
+        ['r1', true, false, '2026-09-22T17:12:39-05:00'],
+        ['r9', undefined, undefined, undefined],
+      ])
     } finally {
       await fs.rm(outbox, { recursive: true, force: true })
     }

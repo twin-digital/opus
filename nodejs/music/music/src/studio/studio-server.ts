@@ -8,9 +8,17 @@ import { logger } from '../logger.js'
 import type { StudioApi, StudioState } from './studio-service.js'
 import { TouchPageHtml } from './touch-page.js'
 import { pipeline } from 'node:stream/promises'
-import { defaultOutboxDir, findClipMix, mixContentType } from './outbox.js'
+import { type ClipInfo, createClipInfoReader, defaultOutboxDir, findClipMix, mixContentType } from './outbox.js'
+import type { Take } from './studio-service.js'
 
-const ACTION_PATH = /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+))$/
+/** A take as the page lists it: the region, plus what the library knows about the clip. */
+export type ListedTake = Take & Partial<ClipInfo>
+
+/** The state the page receives: the service's, with each take enriched from the manifest. */
+export type PageState = Omit<StudioState, 'takes'> & { takes: ListedTake[] }
+
+const ACTION_PATH =
+  /^\/actions\/(record|stop|play-latest|play-take\/([^/]+)|rename\/([^/]+)|seek\/([^/]+)|star\/([^/]+)|delete\/([^/]+))$/
 
 /** The on-screen keyboard, served from its installed package so the page needs no CDN. */
 /**
@@ -87,6 +95,10 @@ const send = (response: http.ServerResponse, status: number, body = '', type = '
  * - `POST /actions/rename/<id>` with `{"name": "..."}` — relabels a clip.
  * - `POST /actions/play-take/<id>` may carry `{"at": <seconds>}` to start part-way in.
  * - `POST /actions/seek/<id>` with `{"at": <seconds>}` — moves playback within a clip (scrubbing).
+ * - `POST /actions/star/<id>` and `POST /actions/delete/<id>` with `{"on": true|false}` — his flags.
+ *
+ * Each take in the stream carries `createdAt`, `starred` and `deleted` from the Outbox manifest,
+ * which the watcher rewrites whenever the library changes.
  * - `GET /clips/<id>.wav` — the clip's finished mix from the Outbox (whatever format the project
  *   renders in; the media type follows the file), for the waveform.
  * - `GET /vendor/*` — the on-screen keyboard's script and stylesheet, and the waveform library.
@@ -97,6 +109,7 @@ export const createStudioServer = async ({
   host = '127.0.0.1',
   outboxDir = defaultOutboxDir(),
   clipFile,
+  clipInfo,
 }: {
   service: StudioApi
   /** 0 picks a free port. */
@@ -107,14 +120,29 @@ export const createStudioServer = async ({
   outboxDir?: string
   /** Overrides how a clip's mix file is found (the preview hands out a synthetic one). */
   clipFile?: (id: string) => Promise<string | undefined>
+  /** Overrides where a clip's facts come from (the preview keeps them in memory). */
+  clipInfo?: (projectName: string) => Promise<Map<number, ClipInfo>>
 }): Promise<StudioServer> => {
   const log = logger.child({}, { msgPrefix: '[STUDIO-WEB] ' })
   const streams = new Set<http.ServerResponse>()
+  const readClipInfo = clipInfo ?? createClipInfoReader(outboxDir)
 
+  const enrich = async (state: StudioState): Promise<PageState> => {
+    const infos = state.projectName === undefined ? new Map<number, ClipInfo>() : await readClipInfo(state.projectName)
+    return {
+      ...state,
+      takes: state.takes.map((take) => ({ ...take, ...(take.number === undefined ? {} : infos.get(take.number)) })),
+    }
+  }
+  // pushes keep their order: each waits for the one before, so a slow manifest read never
+  // lets an older state overtake a newer one
+  let lastPush: Promise<void> = Promise.resolve()
   const push = (state: StudioState) => {
-    const frame = `data: ${JSON.stringify(state)}\n\n`
-    streams.forEach((stream) => {
-      stream.write(frame)
+    lastPush = lastPush.then(async () => {
+      const frame = `data: ${JSON.stringify(await enrich(state))}\n\n`
+      streams.forEach((stream) => {
+        stream.write(frame)
+      })
     })
   }
   service.events.on('change', push)
@@ -125,6 +153,8 @@ export const createStudioServer = async ({
     const playId = match.at(2)
     const renameId = match.at(3)
     const seekId = match.at(4)
+    const starId = match.at(5)
+    const deleteId = match.at(6)
     switch (action) {
       case 'record':
         return service.record()
@@ -140,6 +170,14 @@ export const createStudioServer = async ({
         if (seekId !== undefined) {
           const { at } = await readJsonBody(request)
           return service.seekTake(decodeURIComponent(seekId), typeof at === 'number' && Number.isFinite(at) ? at : 0)
+        }
+        if (starId !== undefined) {
+          const { on } = await readJsonBody(request)
+          return service.setStarred(decodeURIComponent(starId), on !== false)
+        }
+        if (deleteId !== undefined) {
+          const { on } = await readJsonBody(request)
+          return service.setDeleted(decodeURIComponent(deleteId), on !== false)
         }
         {
           const { at } = await readJsonBody(request)
@@ -251,8 +289,11 @@ export const createStudioServer = async ({
         'cache-control': 'no-store',
         connection: 'keep-alive',
       })
-      response.write(`data: ${JSON.stringify(service.getState())}\n\n`)
-      streams.add(response)
+      // through the same queue as pushes, so the opening state is never older than the next push
+      lastPush = lastPush.then(async () => {
+        response.write(`data: ${JSON.stringify(await enrich(service.getState()))}\n\n`)
+        streams.add(response)
+      })
       request.on('close', () => {
         streams.delete(response)
       })

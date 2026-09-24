@@ -264,7 +264,7 @@ end
 local function eligibleClips(clips)
   local named = {}
   for _, clip in ipairs(clips) do
-    if isNamed(clip) and not wasImported(clip) then named[#named + 1] = clip end
+    if isNamed(clip) and not clip.entry.archived and not wasImported(clip) then named[#named + 1] = clip end
   end
   return named
 end

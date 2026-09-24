@@ -52,7 +52,8 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .meter .segments { position: absolute; inset: 0; background: repeating-linear-gradient(to top, transparent 0 5px, #0a0c10 5px 7px); pointer-events: none; }
   .meter .hold { position: absolute; left: 0; right: 0; height: 2px; background: #fff; bottom: 0; opacity: 0; z-index: 2; }
   .meter .name { font-size: 13px; color: #9aa0ad; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
-  main { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; padding: 0 28px 28px; min-height: 0; }
+  /* the list gets most of the width; tracks are capped so no clip name can widen them */
+  main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); gap: 24px; padding: 0 28px 28px; min-height: 0; }
   .buttons { display: flex; flex-direction: column; gap: 24px; }
   button {
     border: none; border-radius: 28px; color: #fff; font-size: 44px; font-weight: 800;
@@ -76,8 +77,22 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   #recBtn .label { font-variant-numeric: tabular-nums; }
   #stopBtn { flex: 1; background: #3a3f4b; font-size: 36px; }
   #stopBtn svg { width: 40px; height: 40px; fill: #fff; }
-  aside { background: #1d2029; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; min-height: 0; }
-  aside h2 { margin: 0 0 14px; font-size: 26px; }
+  aside { background: #1d2029; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 14px; }
+  aside h2 { margin: 0; font-size: 26px; display: flex; align-items: baseline; justify-content: space-between; }
+  aside h2 .count { font-size: 18px; color: #9aa0ad; font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* search reads as a place to type; one filter beside it, quiet grey or green when narrowing */
+  #filters { display: flex; gap: 10px; align-items: stretch; }
+  #search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border-radius: 16px; background: #0f1116; border: 2px solid #2a2e3a; padding: 8px 14px; min-height: 56px; font-size: 20px; font-weight: 500; cursor: pointer; }
+  #search.on { border-color: #ffd166; }
+  #search svg { width: 22px; height: 22px; fill: #9aa0ad; flex: none; }
+  #search .q { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #search .q.placeholder { color: #9aa0ad; }
+  #search .clear { width: 36px; height: 36px; border-radius: 50%; background: #fff; padding: 0; flex: none; }
+  #search .clear svg { width: 18px; height: 18px; fill: none; stroke: #14161c; stroke-width: 3; stroke-linecap: round; }
+  #delFilter { flex: none; gap: 10px; border-radius: 16px; background: #343948; color: #f2f2f2; padding: 0 18px; min-height: 56px; font-size: 18px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
+  #delFilter svg { width: 26px; height: 26px; fill: currentColor; }
+  #delFilter.on { background: #37d67a; color: #0d0f14; }
+  .day { font-size: 16px; color: #9aa0ad; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 4px 0; }
   #takes { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
   .take { display: flex; align-items: center; gap: 14px; background: #2a2e3a; border-radius: 18px; padding: 14px 18px; font-size: 24px; font-weight: 600; cursor: pointer; }
   .take:active { filter: brightness(1.2); }
@@ -87,8 +102,16 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   .take.playing .play { background: #ff3b3b; }
   .take .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .take .len { color: #9aa0ad; font-size: 20px; }
-  .take .edit { width: 56px; height: 56px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
-  .take .edit svg { width: 24px; height: 24px; display: block; fill: #fff; }
+  .take .round { width: 56px; height: 56px; border-radius: 50%; background: #3a3f4b; flex: none; padding: 0; }
+  .take .round svg { width: 24px; height: 24px; display: block; fill: #fff; }
+  .take .star.on { background: #ffd166; }
+  .take .star.on svg { fill: #14161c; }
+  .take .trash.on svg { fill: #37d67a; }
+  /* an unnamed clip sits back a little; a deleted one further, and struck through */
+  .take .name.unnamed { color: #9aa0ad; font-weight: 500; }
+  .take.unnamed .round, .take.unnamed .play, .take.unnamed .len { opacity: 0.6; }
+  .take.deleted { opacity: 0.45; }
+  .take.deleted .name { text-decoration: line-through; text-decoration-color: #9aa0ad; }
 
   /* naming sheet */
   #sheet { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; z-index: 10; }
@@ -144,14 +167,22 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
     <button id="stopBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</button>
   </div>
   <aside>
-    <h2>My recordings</h2>
+    <h2>My recordings <span class="count" id="count"></span></h2>
+    <div id="filters">
+      <div id="search" role="button" tabindex="0">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>
+        <span class="q placeholder" id="searchText">Search names</span>
+        <button class="clear" id="searchClear" aria-label="Clear search" hidden><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <button id="delFilter" aria-label="Show deleted clips"></button>
+    </div>
     <div id="takes"></div>
   </aside>
 </main>
 <div id="offline">Can't reach the studio.<br>Ask Dad to check REAPER.</div>
 <div id="sheet">
   <div class="panel">
-    <div class="row"><span class="clip" id="sheetClip">Clip 7</span><input id="nameField" inputmode="none" maxlength="40" placeholder="Name this clip"></div>
+    <div class="row"><span class="clip" id="sheetClip">Clip 7</span><input id="nameField" inputmode="none" maxlength="40" placeholder="Name this clip" autocomplete="off"></div>
     <div class="simple-keyboard"></div>
     <div class="actions"><button id="cancelBtn">Cancel</button><button id="saveBtn">Save</button></div>
   </div>
@@ -243,23 +274,106 @@ function render() {
   $('meterFill').style.width = Math.round(state.level * 100) + '%'
   $('offline').style.display = online ? 'none' : 'flex'
 
-  const key = state.takes.map((t) => t.id + ':' + t.end + ':' + t.name).join(',') + '|' + (state.playingTake ? state.playingTake.id : '') + '|' + (selected ? selected.id : '')
+  renderTakes()
+}
+
+// --- the list: his clips, newest first, under day headings ------------------------------
+// The search and the deleted filter are the page's own; star and delete go to the watcher as
+// flags and come back on the next state, shown at once meanwhile.
+const filter = { q: '', deleted: false }
+const pendingFlags = {} // take id -> { starred?, deleted? } asked for, until the state agrees
+
+const TrashIcon = '<svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>'
+const RestoreIcon = '<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg>'
+const StarIcon = '<svg viewBox="0 0 24 24"><path d="M12 17.3 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5z"/></svg>'
+
+const flagsOf = (take) => {
+  const pending = pendingFlags[take.id] || {}
+  const starred = 'starred' in pending ? pending.starred : !!take.starred
+  const deleted = 'deleted' in pending ? pending.deleted : !!take.deleted
+  return { starred, deleted }
+}
+const isNamed = (take) => take.number === undefined || (!!take.label && !isTimestamp(take.label))
+const passes = (take) => {
+  const { deleted } = flagsOf(take)
+  if (deleted !== filter.deleted) return false
+  return !filter.q || displayName(take).toLowerCase().includes(filter.q.toLowerCase())
+}
+// "Today", "Yesterday", else the weekday and date; nothing for a clip whose date is unknown
+function dayLabel(createdAt) {
+  if (!createdAt) return ''
+  const at = new Date(createdAt)
+  if (isNaN(at)) return ''
+  const day = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diff = Math.round((day(new Date()) - day(at)) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return at.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+// the time of day of an unnamed clip, from its timestamp label ("Sep 21, 04:12 PM" -> "4:12 PM")
+const timeOf = (take) => { const m = /(\d{1,2}):(\d{2}) ([AP]M)$/.exec(take.label || ''); return m ? String(Number(m[1])) + ':' + m[2] + ' ' + m[3] : '' }
+
+function setFlag(take, name, on) {
+  pendingFlags[take.id] = Object.assign(pendingFlags[take.id] || {}, { [name]: on })
+  fetch('/actions/' + (name === 'starred' ? 'star' : 'delete') + '/' + encodeURIComponent(take.id), {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ on }),
+  }).catch(() => {})
+}
+function settleFlags() {
+  for (const take of state.takes) {
+    const pending = pendingFlags[take.id]
+    if (!pending) continue
+    if ('starred' in pending && !!take.starred === pending.starred) delete pending.starred
+    if ('deleted' in pending && !!take.deleted === pending.deleted) delete pending.deleted
+    if (Object.keys(pending).length === 0) delete pendingFlags[take.id]
+  }
+}
+
+function renderFilters() {
+  const text = $('searchText')
+  text.textContent = filter.q || 'Search names'
+  text.classList.toggle('placeholder', !filter.q)
+  $('searchClear').hidden = !filter.q
+  $('search').classList.toggle('on', !!filter.q)
+  const del = $('delFilter')
+  del.classList.toggle('on', filter.deleted)
+  del.innerHTML = TrashIcon + '<span>' + (filter.deleted ? 'Deleted' : 'Not deleted') + '</span>'
+}
+
+function renderTakes() {
+  settleFlags()
+  renderFilters()
+  const shown = state.takes.filter(passes)
+  $('count').textContent = state.takes.length === 0 ? '' : shown.length === state.takes.length ? String(state.takes.length) : shown.length + ' of ' + state.takes.length
+  const key = shown.map((t) => { const f = flagsOf(t); return t.id + ':' + t.end + ':' + t.name + ':' + f.starred + ':' + f.deleted + ':' + (t.createdAt || '') }).join(',')
+    + '|' + (state.playingTake ? state.playingTake.id : '') + '|' + (selected ? selected.id : '') + '|' + filter.q + '|' + filter.deleted + '|' + state.takes.length
   if (key === takesKey) return
   takesKey = key
   const box = $('takes')
   box.innerHTML = ''
-  if (state.takes.length === 0) {
+  if (shown.length === 0) {
     const empty = document.createElement('div')
     empty.className = 'empty'
-    empty.textContent = 'Press Record to make your first one!'
+    empty.textContent = state.takes.length === 0 ? 'Press Record to make your first one!' : filter.q ? 'Nothing named "' + filter.q + '"' : filter.deleted ? 'Nothing deleted' : 'Nothing here'
     box.appendChild(empty)
     return
   }
-  for (const take of state.takes) {
+  let lastDay = null
+  for (const take of shown) {
+    const day = dayLabel(take.createdAt)
+    if (day && day !== lastDay) {
+      const heading = document.createElement('div')
+      heading.className = 'day'
+      heading.textContent = day
+      box.appendChild(heading)
+      lastDay = day
+    }
+    const { starred, deleted } = flagsOf(take)
+    const named = isNamed(take)
     const active = !!state.playingTake && state.playingTake.id === take.id
     const isSelected = !!selected && selected.id === take.id
     const el = document.createElement('div')
-    el.className = 'take' + (isSelected ? ' active' : '') + (active ? ' playing' : '')
+    el.className = 'take' + (isSelected ? ' active' : '') + (active ? ' playing' : '') + (named ? '' : ' unnamed') + (deleted ? ' deleted' : '')
     const play = document.createElement('button')
     play.className = 'play'
     play.innerHTML = active ? StopIcon : PlayIcon
@@ -267,20 +381,41 @@ function render() {
     play.tabIndex = -1 // the whole card is the control; the button is its icon
     el.onclick = () => { if (!active) selectTake(take); act(active ? 'stop' : 'play-take/' + encodeURIComponent(take.id)) }
     const name = document.createElement('span')
-    name.className = 'name'
-    name.textContent = displayName(take)
+    name.className = 'name' + (named ? '' : ' unnamed')
+    name.textContent = named ? displayName(take) : displayName(take) + (timeOf(take) ? ' · ' + timeOf(take) : '')
     const len = document.createElement('span')
     len.className = 'len'
     len.textContent = fmt(take.duration)
+    const star = document.createElement('button')
+    star.className = 'round star' + (starred ? ' on' : '')
+    star.innerHTML = StarIcon
+    star.setAttribute('aria-label', starred ? 'Unstar' : 'Star')
+    star.onclick = (event) => { event.stopPropagation(); setFlag(take, 'starred', !starred); render() }
+    const trash = document.createElement('button')
+    trash.className = 'round trash' + (deleted ? ' on' : '')
+    trash.innerHTML = deleted ? RestoreIcon : TrashIcon
+    trash.setAttribute('aria-label', deleted ? 'Bring back' : 'Delete')
+    // one tap, no asking: the recording stays in REAPER and the same button brings it back
+    trash.onclick = (event) => {
+      event.stopPropagation()
+      setFlag(take, 'deleted', !deleted)
+      if (!deleted && active) act('stop')
+      if (!deleted && isSelected) selected = null
+      render()
+    }
     const edit = document.createElement('button')
-    edit.className = 'edit'
+    edit.className = 'round edit'
     edit.innerHTML = EditIcon
     edit.setAttribute('aria-label', 'Name this clip')
-    edit.onclick = (event) => { event.stopPropagation(); openSheet(take) }
-    el.append(play, name, len, edit)
+    edit.onclick = (event) => { event.stopPropagation(); openSheet('rename', take) }
+    el.append(play, name, len, star, trash, edit)
     box.appendChild(el)
   }
 }
+
+$('search').onclick = () => openSheet('search')
+$('searchClear').onclick = (event) => { event.stopPropagation(); filter.q = ''; render() }
+$('delFilter').onclick = () => { filter.deleted = !filter.deleted; render() }
 
 // --- stage: waveform with cursor while playing, live graph while recording ----------
 let renderQueued = false
@@ -552,7 +687,7 @@ function ensureKeyboard() {
     display: { '{bksp}': '⌫', '{shift}': '⇧', '{space}': ' ' },
     maxLength: 40,
     preventMouseDownDefault: true, // key taps must not steal focus (and the caret) from the field
-    onChange: (value) => { setFieldValue(value) },
+    onChange: (value) => { setFieldValue(value); if (sheetMode === 'search') { filter.q = value.trim(); render() } },
     onKeyPress: (button) => {
       if (button === '{shift}') keyboard.setOptions({ layoutName: keyboard.options.layoutName === 'lower' ? 'default' : 'lower' })
     },
@@ -567,10 +702,26 @@ function setFieldValue(value) {
   field.setSelectionRange(value.length, value.length)
 }
 
-function openSheet(take) {
-  editing = take
-  $('sheetClip').textContent = take.number === undefined ? take.name : 'Clip ' + take.number
-  const current = isTimestamp(take.label) ? '' : take.label
+let sheetMode = 'rename'
+let searchBefore = '' // the query when the sheet opened, for Cancel
+
+function openSheet(mode, take) {
+  sheetMode = mode
+  editing = take || null
+  const field = $('nameField')
+  let current
+  if (mode === 'search') {
+    searchBefore = filter.q
+    current = filter.q
+    $('sheetClip').textContent = 'Search'
+    field.placeholder = 'Type part of a name'
+    $('saveBtn').textContent = 'Done'
+  } else {
+    current = isTimestamp(take.label) ? '' : take.label
+    $('sheetClip').textContent = take.number === undefined ? take.name : 'Clip ' + take.number
+    field.placeholder = 'Name this clip'
+    $('saveBtn').textContent = 'Save'
+  }
   ensureKeyboard().setInput(current)
   $('sheet').classList.add('open')
   setFieldValue(current)
@@ -581,7 +732,13 @@ function closeSheet() {
   $('sheet').classList.remove('open')
 }
 
+function cancelSheet() {
+  if (sheetMode === 'search') { filter.q = searchBefore; render() }
+  closeSheet()
+}
+
 function saveSheet() {
+  if (sheetMode === 'search') { closeSheet(); return }
   if (!editing) return
   const name = $('nameField').value.trim()
   const id = editing.id
@@ -594,9 +751,9 @@ function saveSheet() {
   }).catch(() => {})
 }
 
-$('cancelBtn').onclick = closeSheet
+$('cancelBtn').onclick = cancelSheet
 $('saveBtn').onclick = saveSheet
-$('sheet').onclick = (event) => { if (event.target === $('sheet')) closeSheet() }
+$('sheet').onclick = (event) => { if (event.target === $('sheet')) cancelSheet() }
 
 function subscribe() {
   const source = new EventSource('/events')

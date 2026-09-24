@@ -77,6 +77,8 @@ export type StudioApi = Pick<
   | 'toggleRecord'
   | 'togglePlayLatest'
   | 'renameTake'
+  | 'setStarred'
+  | 'setDeleted'
   | 'seekTake'
   | 'reloadHelper'
   | 'setInstruments'
@@ -317,6 +319,27 @@ export class StudioService {
       return
     }
     await this.command(() => this.client.setProjExtState(RENAME_SECTION, `rename_${id}`, clean))
+  }
+
+  /** Stars or unstars a take; the watcher records it in the library, and the manifest carries it. */
+  async setStarred(id: string, on: boolean): Promise<void> {
+    await this.flag(id, on ? 'star' : 'unstar')
+  }
+
+  /**
+   * Deletes a take from his list, or brings it back. The region and the recording stay in
+   * REAPER; the watcher marks the clip archived, and the producer import passes it over.
+   */
+  async setDeleted(id: string, on: boolean): Promise<void> {
+    await this.flag(id, on ? 'delete' : 'restore')
+  }
+
+  private async flag(id: string, flag: 'star' | 'unstar' | 'delete' | 'restore') {
+    if (!this.state.takes.some((candidate) => candidate.id === id)) {
+      this.log.warn(`No take with id ${id}.`)
+      return
+    }
+    await this.command(() => this.client.setProjExtState(RENAME_SECTION, `flag_${id}`, flag))
   }
 
   /** Asks the running watcher to reload itself from disk (after a newer file was installed). */
