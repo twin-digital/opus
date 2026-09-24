@@ -90,7 +90,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-29.2" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-30.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 
 -- Only one watcher may run, or every take gets a region per copy. The newest started wins:
@@ -130,6 +130,8 @@ local lastActivity = 0
 local firstActivity = nil -- first activity seen in the current take, nil until one is
 local midiEventCount = 0
 local finalizeDeadline = nil
+local lastChangeCount, lastIdlePass = nil, -math.huge -- the library and outbox pass, gated in whileIdle
+local IDLE_PASS_SECONDS = 1
 local lastFinalized = nil -- clip number of the take just finalized, rendered right away if short
 local markBusy -- defined with the idle trackers below
 local stoppedBy = "user"
@@ -465,11 +467,17 @@ local function expandHome(path)
   return (path:gsub("^~", home))
 end
 
+local existsSeen = {} -- path -> { at, ok }: an answer holds for a few seconds
+local EXISTS_FOR = 5
 local function fileExists(path)
+  local seen = existsSeen[path]
+  local now = reaper.time_precise()
+  if seen ~= nil and now - seen.at < EXISTS_FOR then return seen.ok end
   local f = io.open(path, "rb")
-  if f == nil then return false end
-  f:close()
-  return true
+  local ok = f ~= nil
+  if f ~= nil then f:close() end
+  existsSeen[path] = { at = now, ok = ok }
+  return ok
 end
 
 local function readFile(path)
@@ -1177,7 +1185,12 @@ local function whileIdle()
     end
   end
   trackIdle()
-  if projectFile() ~= nil then
+  -- the library and outbox passes touch every clip: run them when the project changed, and
+  -- otherwise once a second, not every tick
+  local changes = reaper.GetProjectStateChangeCount(0)
+  local now = reaper.time_precise()
+  if projectFile() ~= nil and (changes ~= lastChangeCount or now - lastIdlePass >= IDLE_PASS_SECONDS) then
+    lastChangeCount, lastIdlePass = changes, now
     local regions = syncLibrary()
     if regions ~= nil and reaper.GetPlayState() == 0 then syncOutbox(regions) end
   end
@@ -1458,10 +1471,22 @@ local function publishPlaybackPeaks()
   end
 end
 
+-- Requests from the page come with a "request_seq" the app bumps on every write; the scan over
+-- every region's keys runs when it changed, and otherwise every couple of seconds as a backstop.
+local lastRequestSeq, lastRequestScan = nil, -math.huge
+local REQUEST_SCAN_SECONDS = 2
+local function requestsPending()
+  local seq = readRequest("request_seq")
+  local now = reaper.time_precise()
+  if seq == lastRequestSeq and now - lastRequestScan < REQUEST_SCAN_SECONDS then return false end
+  lastRequestSeq, lastRequestScan = seq, now
+  return true
+end
+
 local function step()
   publishPlaybackPeaks()
   local recording = isRecording()
-  if not recording and not wasRecording then -- never mid-take or mid-finalize
+  if not recording and not wasRecording and requestsPending() then -- never mid-take or mid-finalize
     applyRenames()
     if projectFile() ~= nil then applyFlags() end
   end

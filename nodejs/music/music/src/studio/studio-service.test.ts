@@ -406,16 +406,18 @@ describe('StudioService', () => {
     const { reaper, service } = makeService({ regions: twoTakes })
     await service.refresh()
     await service.setStarred('1', true)
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_1/star')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_1/star;SET/PROJEXTSTATE/Studio/request_seq/1')
     await service.setDeleted('2', true)
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/delete')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/delete;SET/PROJEXTSTATE/Studio/request_seq/2')
     await service.setDeleted('2', false)
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/restore')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/flag_2/restore;SET/PROJEXTSTATE/Studio/request_seq/3')
     const before = reaper.requests.length
     await service.setStarred('9', false)
     expect(reaper.requests.length).toBe(before)
     await service.renameAlbum('  songs / for; mom ')
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/album_name/songs%20for%20mom')
+    expect(reaper.requests.at(-2)).toBe(
+      'SET/PROJEXTSTATE/Studio/album_name/songs%20for%20mom;SET/PROJEXTSTATE/Studio/request_seq/4',
+    )
   })
 
   it('drops back to idle and the slow poll when REAPER stops answering mid-play', async () => {
@@ -669,7 +671,9 @@ describe('StudioService', () => {
     await service.refresh()
 
     await service.renameTake('2', '  Twinkle / Little; Star\n ')
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/rename_2/Twinkle%20Little%20Star')
+    expect(reaper.requests.at(-2)).toBe(
+      'SET/PROJEXTSTATE/Studio/rename_2/Twinkle%20Little%20Star;SET/PROJEXTSTATE/Studio/request_seq/1',
+    )
 
     const before = reaper.requests.length
     await service.renameTake('2', '   ')
@@ -687,7 +691,7 @@ describe('StudioService', () => {
     expect(service.getState().helper).toEqual({ version: '1', hash: 'old', matches: false })
 
     await service.reloadHelper()
-    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/reload/1')
+    expect(reaper.requests.at(-2)).toBe('SET/PROJEXTSTATE/Studio/reload/1;SET/PROJEXTSTATE/Studio/request_seq/1')
 
     reaper.watcherHash = 'abc'
     await service.refresh()
