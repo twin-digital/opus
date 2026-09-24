@@ -14,6 +14,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
 <link rel="stylesheet" href="vendor/simple-keyboard.css">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  [hidden] { display: none !important; } /* the button rule below sets display; hidden must still win */
   html, body { height: 100%; margin: 0; }
   body {
     font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -85,7 +86,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
   aside { background: #1d2029; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 14px; }
   aside h2 { margin: 0; font-size: 26px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
   aside h2 .where { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-  /* the way back is a labelled button, not a bare chevron */
+  /* the way to the albums is a labelled button beside the album name; the tile leads back */
   aside h2 .back { font-size: 20px; font-weight: 700; padding: 0 18px 0 12px; min-height: 48px; background: #3a3f4b; color: #fff; border-radius: 14px; gap: 6px; flex: none; }
   aside h2 .back svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
   /* albums: a grid of tiles, nothing like the clip rows */
@@ -191,7 +192,7 @@ export const TouchPageHtml = String.raw`<!DOCTYPE html>
     <button id="stopBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</button>
   </div>
   <aside>
-    <h2><button class="back" id="backBtn" aria-label="Back to albums"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Albums</button><span class="where" id="where">My recordings</span><span class="count" id="count"></span></h2>
+    <h2><button class="back" id="albumsBtn" aria-label="Show albums"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Albums</button><span class="where" id="where">My recordings</span><span class="count" id="count"></span></h2>
 
     <div id="filters">
       <div id="search" role="button" tabindex="0">
@@ -280,7 +281,7 @@ function render() {
   const title = state.albumName || state.projectName || DefaultTitle
   $('title').textContent = title
   document.querySelector('main').classList.toggle('albums', view === 'albums')
-  $('backBtn').hidden = view !== 'clips'
+  $('albumsBtn').hidden = view !== 'clips'
   $('where').textContent = view === 'clips' ? title : 'Albums'
   $('delFilter').hidden = view !== 'clips'
   document.title = title
@@ -374,7 +375,7 @@ function renderFilters() {
 let view = 'clips' // or 'albums'
 function showAlbums() { view = 'albums'; filter.q = ''; takesKey = ''; render() }
 function showClips() { view = 'clips'; filter.q = ''; takesKey = ''; render() }
-$('backBtn').onclick = showClips
+$('albumsBtn').onclick = showAlbums
 $('where').onclick = () => { if (view === 'clips') showAlbums() }
 $('title').onclick = () => { if (view === 'clips') showAlbums(); else showClips() }
 const albumHue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return h }

@@ -175,8 +175,10 @@ describe('touch page', () => {
     })
     expect($('title').textContent).toBe('songs for mom')
     expect($('where').textContent).toBe('songs for mom')
-    $('where').click()
+    expect($('albumsBtn').hidden).toBe(false)
+    $('albumsBtn').click()
     expect($('where').textContent).toBe('Albums')
+    expect($('albumsBtn').hidden).toBe(true) // no way further out than the albums
     expect(document.querySelector('main')?.classList.contains('albums')).toBe(true)
     const tiles = [...document.querySelectorAll('#takes .album')]
     expect(tiles.map((t) => t.querySelector('.name')?.textContent ?? t.textContent.trim())).toEqual([
@@ -195,7 +197,7 @@ describe('touch page', () => {
       '/actions/rename-album',
       expect.objectContaining({ body: JSON.stringify({ name: 'MINECRAFT SONGS' }) }),
     )
-    $('backBtn').click()
+    ;(document.querySelector('#takes .album.current') as HTMLElement).click() // the tile leads back
     expect($('where').textContent).toBe('songs for mom')
     expect(document.querySelector('main')?.classList.contains('albums')).toBe(false)
   })
