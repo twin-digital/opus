@@ -143,6 +143,7 @@ local function copyFile(from, to)
     local chunk = src:read(1 << 20)
     if chunk == nil then break end
     if not dst:write(chunk) then ok = false; break end
+    if coroutine.isyieldable() then coroutine.yield() end -- the background job gives REAPER a turn
   end
   src:close()
   if not dst:close() then ok = false end -- a full disk can surface on the final flush
@@ -487,60 +488,75 @@ local function importClip(clip, config, mediaDir, mute)
   -- the studio project folder keeps two projects' "0012 - Twinkle" apart
   local clipMedia = mediaDir .. SEP .. safeName(clip.project.folder or clip.project.name or "studio") .. SEP .. safeName(title)
   reaper.RecursiveCreateDirectory(clipMedia, 0)
-
-  local index = reaper.CountTracks(0)
-  closeOpenFolders()
-  local made = {}   -- tracks inserted, for cleanup on failure
-  local copied = {} -- files copied, likewise
   local function fail(message)
     error(string.format("%s: %s", title, message), 0)
   end
 
-  -- Whatever goes wrong below, the clip's tracks and copied files are taken back out.
+  -- The stems first: copies are slow and may hand REAPER a turn between chunks, so nothing
+  -- in the project changes until every file is here. A failed copy leaves nothing behind.
+  local copied, staged = {}, {}
   local ok, err = pcall(function()
+    for _, source in ipairs(entry.sources or {}) do
+      local from = stemSource(clip, config, source)
+      if from ~= nil then
+        local to = clipMedia .. SEP .. (from:match("[^/\\]+$") or "stem.wav")
+        local existing = fileSize(to)
+        if existing == nil then
+          if not copyFile(from, to) then fail("could not copy " .. from) end
+          copied[#copied + 1] = to
+        elseif existing ~= fileSize(from) then
+          -- a different file of the same name: a leftover from an interrupted copy can be
+          -- replaced, a file some track still plays must not be
+          if fileInUse(to) then fail("would overwrite " .. to .. ", which a track uses") end
+          if not copyFile(from, to) then fail("could not copy " .. from) end
+          copied[#copied + 1] = to
+        end
+        -- an identical file is a copy from an earlier import of this clip (its tracks since
+        -- deleted, or the project closed unsaved); reuse it
+        staged[#staged + 1] = { source = source, path = to }
+      end
+    end
+  end)
+  if not ok then
+    for _, path in ipairs(copied) do os.remove(path) end
+    error(tostring(err), 0)
+  end
+
+  -- Then the tracks, all at once and as one undo step. Whatever goes wrong, the clip's
+  -- tracks and copied files are taken back out.
+  local made = {}
+  reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1)
+  local index = reaper.CountTracks(0)
+  closeOpenFolders()
+  ok, err = pcall(function()
   local parent = insertTrack(index, title)
   made[#made + 1] = parent
   local children = {}
 
-  for _, source in ipairs(entry.sources or {}) do
-    local from = stemSource(clip, config, source)
-    if from ~= nil then
-      local to = clipMedia .. SEP .. (from:match("[^/\\]+$") or "stem.wav")
-      local existing = fileSize(to)
-      if existing == nil then
-        if not copyFile(from, to) then fail("could not copy " .. from) end
-        copied[#copied + 1] = to
-      elseif existing ~= fileSize(from) then
-        -- a different file of the same name: a leftover from an interrupted copy can be
-        -- replaced, a file some track still plays must not be
-        if fileInUse(to) then fail("would overwrite " .. to .. ", which a track uses") end
-        if not copyFile(from, to) then fail("could not copy " .. from) end
-        copied[#copied + 1] = to
-      end
-      -- an identical file is a copy from an earlier import of this clip (its tracks since
-      -- deleted, or the project closed unsaved); reuse it
-      local track = insertTrack(index + #children + 1, source.track or "Stem")
-      made[#made + 1] = track
-      local item = reaper.AddMediaItemToTrack(track)
-      local take = reaper.AddTakeToMediaItem(item)
-      local pcm = reaper.PCM_Source_CreateFromFile(to)
-      if pcm == nil then fail("REAPER could not open " .. to) end
-      reaper.SetMediaItemTake_Source(take, pcm)
-      -- the stem's file begins where its item began in the studio; place it so the clip's
-      -- own start is at 0, whether that is inside the file or after the file began
-      local itemStart = source.itemStart or start
-      local lead = itemStart - start
-      if lead >= 0 then
-        reaper.SetMediaItemInfo_Value(item, "D_POSITION", lead)
-        reaper.SetMediaItemInfo_Value(item, "D_LENGTH", math.max(0, length - lead))
-        reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", 0)
-      else
-        reaper.SetMediaItemInfo_Value(item, "D_POSITION", 0)
-        reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
-        reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", -lead)
-      end
-      children[#children + 1] = track
+  for _, stem in ipairs(staged) do
+    local source = stem.source
+    local track = insertTrack(index + #children + 1, source.track or "Stem")
+    made[#made + 1] = track
+    local item = reaper.AddMediaItemToTrack(track)
+    local take = reaper.AddTakeToMediaItem(item)
+    local pcm = reaper.PCM_Source_CreateFromFile(stem.path)
+    if pcm == nil then fail("REAPER could not open " .. stem.path) end
+    reaper.SetMediaItemTake_Source(take, pcm)
+    -- the stem's file begins where its item began in the studio; place it so the clip's
+    -- own start is at 0, whether that is inside the file or after the file began
+    local itemStart = source.itemStart or start
+    local lead = itemStart - start
+    if lead >= 0 then
+      reaper.SetMediaItemInfo_Value(item, "D_POSITION", lead)
+      reaper.SetMediaItemInfo_Value(item, "D_LENGTH", math.max(0, length - lead))
+      reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", 0)
+    else
+      reaper.SetMediaItemInfo_Value(item, "D_POSITION", 0)
+      reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
+      reaper.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", -lead)
     end
+    children[#children + 1] = track
   end
 
   local midiPath = midiSource(clip)
@@ -557,13 +573,19 @@ local function importClip(clip, config, mediaDir, mute)
   reaper.SetMediaTrackInfo_Value(parent, "I_FOLDERDEPTH", 1)
   reaper.SetMediaTrackInfo_Value(children[#children], "I_FOLDERDEPTH", -1)
   reaper.SetMediaTrackInfo_Value(parent, "B_MUTE", mute and 1 or 0)
-  reaper.ShowConsoleMsg(string.format("  imported %s (%d tracks)\n", title, #children))
   end)
   if not ok then
     for i = #made, 1, -1 do reaper.DeleteTrack(made[i]) end
+  end
+  reaper.PreventUIRefresh(-1)
+  reaper.TrackList_AdjustWindows(false)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock("CS Studio: import " .. title, -1)
+  if not ok then
     for _, path in ipairs(copied) do os.remove(path) end
     error(tostring(err), 0)
   end
+  return title, #made - 1
 end
 
 -- Imports what validates, one clip at a time; a clip that fails is undone and left unrecorded.
@@ -579,28 +601,51 @@ local function importAll(chosen, config, mediaDir, save)
   end
   if #ready == 0 then return 0 end
 
-  reaper.Undo_BeginBlock()
-  reaper.PreventUIRefresh(1)
   local first = reaper.CountTracks(0) == 0
   local imported = 0
-  for _, clip in ipairs(ready) do
-    local ok, err = pcall(importClip, clip, config, mediaDir, not (first and imported == 0))
+  for i, clip in ipairs(ready) do
+    local ok, title, tracks = pcall(importClip, clip, config, mediaDir, not (first and imported == 0))
     if ok then
       recordImport(clip)
       imported = imported + 1
+      reaper.ShowConsoleMsg(string.format("  %d/%d imported %s (%d tracks)\n", i, #ready, title, tracks))
     else
-      reaper.ShowConsoleMsg("  failed: " .. tostring(err) .. "\n")
+      reaper.ShowConsoleMsg(string.format("  %d/%d failed: %s\n", i, #ready, tostring(title)))
     end
+    if coroutine.isyieldable() then coroutine.yield() end
   end
-  reaper.PreventUIRefresh(-1)
-  reaper.TrackList_AdjustWindows(false)
-  reaper.UpdateArrange()
-  reaper.Undo_EndBlock("CS Studio: import clips", -1)
   if imported > 0 then
     reaper.SetProjExtState(0, EXT_SECTION, "auto_import", "1") -- this project keeps receiving new clips
     if save then reaper.Main_SaveProject(0, false) end
   end
   return imported
+end
+
+-- Runs an import as a background job: a slice of work per timer tick, so REAPER stays
+-- responsive while stems copy over the network. One job at a time.
+local importRunning = false
+local function runInBackground(job, done)
+  if importRunning then
+    reaper.ShowConsoleMsg("CS Studio: an import is already running; wait for it to finish.\n")
+    return false
+  end
+  importRunning = true
+  local co = coroutine.create(job)
+  local function tick()
+    local deadline = reaper.time_precise() + 0.03
+    repeat
+      local ok, err = coroutine.resume(co)
+      if not ok then reaper.ShowConsoleMsg("CS Studio import: " .. tostring(err) .. "\n") end
+    until coroutine.status(co) == "dead" or reaper.time_precise() >= deadline
+    if coroutine.status(co) == "dead" then
+      importRunning = false
+      if done then done() end
+    else
+      reaper.defer(tick)
+    end
+  end
+  tick()
+  return true
 end
 
 local function onDemand()
@@ -618,8 +663,11 @@ local function onDemand()
   end
   local chosen = chooseClips(clips, config)
   if #chosen == 0 then return end
-  local imported = importAll(chosen, config, mediaDir, true)
-  reaper.ShowConsoleMsg(string.format("\n%d clip(s) imported.\n", imported))
+  reaper.ShowConsoleMsg(string.format("\nImporting %d clip(s) in the background; REAPER stays usable. Best not to edit until it is done.\n", #chosen))
+  runInBackground(function()
+    local imported = importAll(chosen, config, mediaDir, true)
+    reaper.ShowConsoleMsg(string.format("\n%d clip(s) imported.\n", imported))
+  end)
 end
 
 -- Continuous mode: every watch_seconds, with the transport stopped and the open project
@@ -636,9 +684,9 @@ local function watchPass()
   for _, clip in ipairs(eligibleClips(loadClips(config.inbox))) do
     if clipLength(clip) >= config.min_seconds then chosen[#chosen + 1] = clip end
   end
-  if #chosen == 0 then return end
+  if #chosen == 0 or importRunning then return end
   reaper.ShowConsoleMsg(string.format("CS Studio: importing %d new clip(s)\n", #chosen))
-  importAll(chosen, config, mediaDir, false) -- saving is yours to do; the import is undoable
+  runInBackground(function() importAll(chosen, config, mediaDir, false) end) -- saving is yours to do; the import is undoable
 end
 
 local function watch()
