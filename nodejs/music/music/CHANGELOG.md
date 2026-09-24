@@ -1,5 +1,15 @@
 # @thrashplay/music
 
+## 0.10.0
+
+### Minor Changes
+
+- 648c569: Studio touch page: an album view behind the album name, showing the open project as a tile with its song count and first date, and a name of its own that he can set from there (kept in the clip library, carried by the manifest). Making and switching albums is previewed as a disabled tile; the REAPER side is unchanged apart from recording the name.
+
+### Patch Changes
+
+- 46e2005: Producer import: runs as a background job, copying stems a chunk at a time between REAPER timer ticks, so REAPER stays responsive during a large import; progress per clip in the console, one undo step per clip.
+
 ## 0.9.0
 
 ### Minor Changes
