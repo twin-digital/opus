@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { StudioState, Take } from './studio-service.js'
+import type { ListedTake, PageState } from './studio-server.js'
 import { TouchPageHtml } from './touch-page.js'
 
 /**
@@ -63,6 +64,13 @@ const take = (id: string, number: number, duration = 30): Take => ({
   end: number * 100 + duration,
   duration,
 })
+const listed = (id: string, number: number, extra: Partial<ListedTake> = {}): ListedTake => ({
+  ...take(id, number),
+  ...extra,
+})
+const cards = () =>
+  [...document.querySelectorAll('#takes .take')].map((el) => el.querySelector('.name')?.textContent ?? '')
+const headings = () => [...document.querySelectorAll('#takes .day')].map((el) => el.textContent)
 
 const idle: StudioState = {
   connected: true,
@@ -80,8 +88,9 @@ const idle: StudioState = {
 
 describe('touch page', () => {
   let ws: ReturnType<typeof makeWaveSurfer>
+  const keyboards: { options: { onChange?: (value: string) => void } }[] = []
   let fetchMock: ReturnType<typeof vi.fn>
-  let push: (state: StudioState) => void
+  let push: (state: PageState) => void
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -92,7 +101,19 @@ describe('touch page', () => {
     const source: { onmessage?: (event: { data: string }) => void; onopen?: () => void } = {}
     Object.assign(window, {
       WaveSurfer: { create: ws.create },
-      SimpleKeyboard: { default: vi.fn() },
+      SimpleKeyboard: {
+        default: class {
+          options: { layoutName?: string; onChange?: (value: string) => void }
+          constructor(options: { onChange?: (value: string) => void }) {
+            this.options = options
+            keyboards.push(this)
+          }
+          setInput = vi.fn()
+          setOptions(options: { layoutName?: string }) {
+            Object.assign(this.options, options)
+          }
+        },
+      },
       fetch: fetchMock,
       EventSource: function () {
         return source
@@ -117,6 +138,97 @@ describe('touch page', () => {
     push({ ...idle, takes: [take('2', 2), take('1', 1)] })
     vi.advanceTimersByTime(1)
   }
+
+  it('lists clips under day headings, unnamed ones with their time, deleted ones only on request', () => {
+    const today = new Date().toISOString()
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString()
+    push({
+      ...idle,
+      takes: [
+        listed('4', 4, { name: 'Clip 4 - Sep 23, 04:12 PM', label: 'Sep 23, 04:12 PM', createdAt: today }),
+        listed('3', 3, { name: 'Clip 3 - Twinkle', label: 'Twinkle', createdAt: today, starred: true }),
+        listed('2', 2, { name: 'Clip 2 - Old one', label: 'Old one', createdAt: yesterday, deleted: true }),
+        listed('1', 1, { name: 'Clip 1 - Rondo', label: 'Rondo', createdAt: yesterday }),
+      ],
+    })
+    expect(headings()).toEqual(['Today', 'Yesterday'])
+    expect(cards()).toEqual(['Clip 4 · 4:12 PM', 'Twinkle', 'Rondo'])
+    expect($('count').textContent).toBe('3 of 4')
+    expect(document.querySelector('#takes .take.unnamed')).not.toBeNull()
+    expect(document.querySelector('#takes .take .star.on')).not.toBeNull()
+
+    $('delFilter').click()
+    expect(cards()).toEqual(['Old one'])
+    expect(document.querySelector('#takes .take.deleted')).not.toBeNull()
+    expect($('delFilter').classList.contains('on')).toBe(true)
+    $('delFilter').click()
+    expect(cards()).toEqual(['Clip 4 · 4:12 PM', 'Twinkle', 'Rondo'])
+  })
+
+  it('narrows the list as a search is typed, and clears it', () => {
+    push({
+      ...idle,
+      takes: [
+        listed('3', 3, { name: 'Clip 3 - Twinkle', label: 'Twinkle' }),
+        listed('1', 1, { name: 'Clip 1 - Rondo', label: 'Rondo' }),
+      ],
+    })
+    $('search').click()
+    expect($('sheet').classList.contains('open')).toBe(true)
+    keyboards.at(-1)?.options.onChange?.('twin')
+    expect(cards()).toEqual(['Twinkle'])
+    expect($('count').textContent).toBe('1 of 2')
+    $('saveBtn').click()
+    expect($('sheet').classList.contains('open')).toBe(false)
+    expect($('searchText').textContent).toBe('twin')
+    $('searchClear').click()
+    expect(cards()).toEqual(['Twinkle', 'Rondo'])
+    // Cancel puts the query back the way it was when the sheet opened
+    $('search').click()
+    keyboards.at(-1)?.options.onChange?.('ron')
+    expect(cards()).toEqual(['Rondo'])
+    $('cancelBtn').click()
+    expect(cards()).toEqual(['Twinkle', 'Rondo'])
+  })
+
+  it('stars and deletes with one tap, showing the result before the watcher confirms it', () => {
+    push({
+      ...idle,
+      takes: [
+        listed('3', 3, { name: 'Clip 3 - Twinkle', label: 'Twinkle' }),
+        listed('1', 1, { name: 'Clip 1 - Rondo', label: 'Rondo' }),
+      ],
+    })
+    ;(document.querySelector('#takes .take .star') as HTMLElement).click()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/actions/star/3',
+      expect.objectContaining({ body: JSON.stringify({ on: true }) }),
+    )
+    expect(document.querySelector('#takes .take .star.on')).not.toBeNull()
+    ;(document.querySelector('#takes .take .trash') as HTMLElement).click()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/actions/delete/3',
+      expect.objectContaining({ body: JSON.stringify({ on: true }) }),
+    )
+    expect(cards()).toEqual(['Rondo'])
+    // the state catches up; the optimistic flags give way to the real ones
+    push({
+      ...idle,
+      takes: [
+        listed('3', 3, { name: 'Clip 3 - Twinkle', label: 'Twinkle', starred: true, deleted: true }),
+        listed('1', 1, { name: 'Clip 1 - Rondo', label: 'Rondo' }),
+      ],
+    })
+    expect(cards()).toEqual(['Rondo'])
+    $('delFilter').click()
+    expect(cards()).toEqual(['Twinkle'])
+    ;(document.querySelector('#takes .take .trash') as HTMLElement).click()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/actions/delete/3',
+      expect.objectContaining({ body: JSON.stringify({ on: false }) }),
+    )
+    expect(cards()).toEqual([])
+  })
 
   it('loads the selected clip and seeks it with a scrub when stopped', async () => {
     selectNewClip()

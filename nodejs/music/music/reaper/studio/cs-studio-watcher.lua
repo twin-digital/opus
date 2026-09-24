@@ -90,7 +90,7 @@ end
 
 local CONFIG = loadConfig()
 
-local VERSION = "2026-09-28.1" -- bump when changing the script, so the console shows which copy runs
+local VERSION = "2026-09-29.1" -- bump when changing the script, so the console shows which copy runs
 local EXT_SECTION = "Studio"
 
 -- Only one watcher may run, or every take gets a region per copy. The newest started wins:
@@ -1068,6 +1068,40 @@ local function renderClipNow(number)
   renderEntry(entry, region)
 end
 
+-- Star and delete requests from the page arrive as project ext state: key "flag_<region id>",
+-- value star, unstar, delete or restore. They land on the library entry (a deleted clip is
+-- archived: it leaves the page, its region and files stay) and the manifest carries them.
+local function applyFlags()
+  local lib = loadLibrary()
+  if lib == nil then return end
+  local _, byId = scanRegions()
+  local changed = false
+  for id, region in pairs(byId) do
+    local key = "flag_" .. tostring(id)
+    local flag = readRequest(key)
+    if flag ~= "" then
+      local entry = nil
+      for _, candidate in pairs(lib.clips) do
+        if candidate.regionId == id or (region.number ~= nil and candidate.number == region.number) then entry = candidate break end
+      end
+      if entry == nil then
+        log(string.format("flag '%s' for region %d, which has no clip yet", flag, id))
+      elseif flag == "star" or flag == "unstar" then
+        entry.starred = flag == "star"
+        changed = true
+      elseif flag == "delete" or flag == "restore" then
+        entry.archived = flag == "delete"
+        changed = true
+      end
+      if entry ~= nil then
+        log(string.format("%s clip %d", flag, entry.number))
+        clearRequest(key)
+      end
+    end
+  end
+  if changed then saveLibrary() end
+end
+
 -- Picks the one clip whose outbox files are missing or stale and brings them up to date.
 local function syncOutbox(regions)
   if not (CONFIG.render or CONFIG.midi_export) then return end
@@ -1416,7 +1450,10 @@ end
 local function step()
   publishPlaybackPeaks()
   local recording = isRecording()
-  if not recording and not wasRecording then applyRenames() end -- never mid-take or mid-finalize
+  if not recording and not wasRecording then -- never mid-take or mid-finalize
+    applyRenames()
+    if projectFile() ~= nil then applyFlags() end
+  end
   if recording and not wasRecording then
     onRecordingStarted()
   elseif recording then

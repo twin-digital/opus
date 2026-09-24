@@ -87,6 +87,10 @@ Two views read that snapshot, both enabled by `MUSIC_REAPER_URL`:
   manifest records it as finished; short clips render the moment they end (`render_now_seconds`). Clips are named on the page with an on-screen keyboard
   (`simple-keyboard`, served from its package); the rename travels as project ext state, and
   the watcher applies it to the region.
+  Star and delete travel the same way (`flag_<region id>`); the watcher records them in the
+  library, and the server enriches each take in the event stream with `createdAt`, `starred`
+  and `deleted` read from the Outbox manifest (re-read when its mtime changes). The page
+  filters by name and by deleted on its own, and groups clips under day headings.
 
 Two settings get what he plays into REAPER. `MUSIC_MIDI_MIRROR` names a MIDI output (an IAC bus)
 that receives a copy of everything sent to the piano, so REAPER records the re-voiced notes with a

@@ -248,6 +248,13 @@ toolbar pops in on touch near the top.
   the louder of the track's input (REAPER meters an armed track from its input, even while
   stopped) and what the track plays back, which the watcher reads from the items at the play
   position and publishes, since REAPER's own meters show nothing of playback on an armed track.
+- The list shows his clips newest first under day headings (Today, Yesterday, then the date).
+  A search field narrows it by name through the on-screen keyboard, and one filter beside it
+  switches between clips and deleted clips. Each card has a star, a trash can, and the pencil:
+  the star marks a clip (the producer side sees it in the manifest), the trash can deletes it
+  from his list in one tap, and the same button brings it back from the deleted view. A deleted
+  clip's region and recording stay in REAPER; the producer import passes it over. Unnamed clips
+  sit back a little in the list.
 - If the app or REAPER is down, the page greys out and reconnects on its own.
 
 # Producer machine

@@ -3,7 +3,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { defaultOutboxDir, findClipMix, mixContentType, safeName } from './outbox.js'
+import { createClipInfoReader, defaultOutboxDir, findClipMix, mixContentType, safeName } from './outbox.js'
 
 describe('outbox', () => {
   const dirs: string[] = []
@@ -36,6 +36,28 @@ describe('outbox', () => {
     expect(mixContentType('x.FLAC')).toBe('audio/flac')
     expect(mixContentType('x.mp3')).toBe('audio/mpeg')
     expect(mixContentType('x.bin')).toBe('application/octet-stream')
+  })
+
+  it('reads clip facts from the manifest and follows its changes', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'outbox-'))
+    dirs.push(root)
+    const project = path.join(root, 'Piano Corner')
+    await fs.mkdir(project)
+    const read = createClipInfoReader(root)
+    expect(await read('Piano: Corner')).toEqual(new Map()) // no manifest yet
+    const manifest = path.join(project, 'manifest.json')
+    await fs.writeFile(
+      manifest,
+      JSON.stringify({ clips: { '5': { number: 5, createdAt: '2026-09-22T10:00:00Z', starred: true } } }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(await read('Piano: Corner')).toEqual(
+      new Map([[5, { createdAt: '2026-09-22T10:00:00Z', starred: true, deleted: false }]]),
+    )
+    await fs.writeFile(manifest, JSON.stringify({ clips: { '5': { number: 5, archived: true } } }))
+    await fs.utimes(manifest, new Date(), new Date(Date.now() + 5000)) // a distinct mtime whatever the clock does
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(await read('Piano: Corner')).toEqual(new Map([[5, { createdAt: undefined, starred: false, deleted: true }]]))
   })
 
   it('finds the mix through the manifest, only once the watcher recorded it', async () => {

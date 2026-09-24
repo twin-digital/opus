@@ -48,7 +48,77 @@ export const mixContentType = (file: string): string =>
   MIME_BY_EXTENSION[path.extname(file).toLowerCase()] ?? 'application/octet-stream'
 
 interface Manifest {
-  clips?: Record<string, { number?: unknown; render?: { mix?: unknown } | null } | undefined>
+  clips?: Record<
+    string,
+    | {
+        number?: unknown
+        render?: { mix?: unknown } | null
+        createdAt?: unknown
+        starred?: unknown
+        archived?: unknown
+      }
+    | undefined
+  >
+}
+
+/** What the watcher's library knows about a clip beyond its region: when it was made, and his flags. */
+export interface ClipInfo {
+  createdAt?: string
+  starred: boolean
+  deleted: boolean
+}
+
+/** How often the manifest is re-checked for changes, at most. */
+const MANIFEST_CHECK_MS = 250
+
+/**
+ * Reads clip facts from the project's manifest, by clip number. The file is re-read only when
+ * its modification time changes, checked at most every quarter second, so polling the state
+ * at 20 Hz costs nothing between edits.
+ */
+export const createClipInfoReader = (outboxDir: string) => {
+  let checkedAt = -Infinity
+  let seen = { file: '', mtime: -1 }
+  let cache = new Map<number, ClipInfo>()
+  const parse = (text: string) => {
+    const infos = new Map<number, ClipInfo>()
+    let manifest: Manifest
+    try {
+      manifest = JSON.parse(text) as Manifest
+    } catch {
+      return infos
+    }
+    for (const entry of Object.values(manifest.clips ?? {})) {
+      if (typeof entry?.number !== 'number') {
+        continue
+      }
+      infos.set(entry.number, {
+        createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : undefined,
+        starred: entry.starred === true,
+        deleted: entry.archived === true,
+      })
+    }
+    return infos
+  }
+  return async (projectName: string): Promise<Map<number, ClipInfo>> => {
+    const file = path.join(outboxDir, safeName(projectName), 'manifest.json')
+    const now = Date.now()
+    if (file === seen.file && now - checkedAt < MANIFEST_CHECK_MS) {
+      return cache
+    }
+    checkedAt = now
+    try {
+      const stat = await fs.stat(file)
+      if (file !== seen.file || stat.mtimeMs !== seen.mtime) {
+        cache = parse(await fs.readFile(file, 'utf8'))
+        seen = { file, mtime: stat.mtimeMs }
+      }
+    } catch {
+      cache = new Map()
+      seen = { file, mtime: -1 }
+    }
+    return cache
+  }
 }
 
 /**
