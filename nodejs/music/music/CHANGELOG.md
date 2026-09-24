@@ -1,5 +1,15 @@
 # @thrashplay/music
 
+## 0.9.0
+
+### Minor Changes
+
+- d0fc487: Studio touch page: the clip list has a name search, a deleted filter, day headings, a star and a trash can per card (one tap; the recording stays in REAPER and the deleted view brings it back), and unnamed clips sit back a little. Star and delete reach the watcher as flags and live in the library and manifest; the producer import skips deleted clips. The list takes about 70% of the width.
+
+### Patch Changes
+
+- 9e448b4: Studio watcher: a take in which nothing was detected (no input activity, every recorded file scanned silent) is discarded rather than kept as an "(empty)" clip; `keep_empty_takes = true` restores the old behaviour. Routine events (auto-stops, untrimmed takes, a stop with no items) no longer open REAPER's console, which stole the screen from the touch page; only real problems do.
+
 ## 0.8.4
 
 ### Patch Changes
