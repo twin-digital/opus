@@ -196,7 +196,12 @@ export class ReaperClient {
 
   /** Writes a project ext-state value (`GET/PROJEXTSTATE` reads it back; an empty value deletes the key). */
   async setProjExtState(section: string, key: string, value: string): Promise<void> {
-    await this.send([`SET/PROJEXTSTATE/${section}/${key}/${encodeURIComponent(value)}`])
+    await this.setProjExtStates(section, [[key, value]])
+  }
+
+  /** Writes several project ext-state values in one request. */
+  async setProjExtStates(section: string, entries: [string, string][]): Promise<void> {
+    await this.send(entries.map(([key, value]) => `SET/PROJEXTSTATE/${section}/${key}/${encodeURIComponent(value)}`))
   }
 
   async setPosition(seconds: number): Promise<void> {

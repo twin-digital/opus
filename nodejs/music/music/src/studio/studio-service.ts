@@ -160,6 +160,8 @@ export class StudioService {
   private handle: ReturnType<typeof setTimeout> | undefined
   private inFlight: Promise<void> | undefined
   private commandSeq = 0
+  /** Bumped with every request written for the watcher, so it scans for requests only when there are new ones. */
+  private requestSeq = 0
   private lastGoodPollAt: number
   private lastStopAttemptAt = -Infinity
   private stopWarned = false
@@ -319,7 +321,7 @@ export class StudioService {
     if (clean === '') {
       return
     }
-    await this.command(() => this.client.setProjExtState(RENAME_SECTION, `rename_${id}`, clean))
+    await this.request(`rename_${id}`, clean)
   }
 
   /** Names the open album; the watcher records it in the library, and the manifest carries it. */
@@ -328,7 +330,7 @@ export class StudioService {
     if (clean === '') {
       return
     }
-    await this.command(() => this.client.setProjExtState(RENAME_SECTION, 'album_name', clean))
+    await this.request('album_name', clean)
   }
 
   /** Stars or unstars a take; the watcher records it in the library, and the manifest carries it. */
@@ -349,12 +351,12 @@ export class StudioService {
       this.log.warn(`No take with id ${id}.`)
       return
     }
-    await this.command(() => this.client.setProjExtState(RENAME_SECTION, `flag_${id}`, flag))
+    await this.request(`flag_${id}`, flag)
   }
 
   /** Asks the running watcher to reload itself from disk (after a newer file was installed). */
   async reloadHelper(): Promise<void> {
-    await this.command(() => this.client.setProjExtState(RENAME_SECTION, 'reload', '1'))
+    await this.request('reload', '1')
   }
 
   /** Records what the keyboard is playing, for views that show it. */
@@ -522,6 +524,18 @@ export class StudioService {
         }
       }
     }
+  }
+
+  /** Writes a request for the watcher, with the sequence number that tells it to look. */
+  private async request(key: string, value: string) {
+    this.requestSeq += 1
+    const seq = String(this.requestSeq)
+    await this.command(() =>
+      this.client.setProjExtStates(RENAME_SECTION, [
+        [key, value],
+        ['request_seq', seq],
+      ]),
+    )
   }
 
   private setPlayingTake(playingTake: Take | undefined) {
