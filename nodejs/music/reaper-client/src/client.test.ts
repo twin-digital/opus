@@ -14,7 +14,7 @@ afterEach(async () => {
 /**
  * A client of a simulated REAPER whose watcher ticks every few milliseconds.
  */
-async function connect(options: Partial<ReaperClientOptions> = {}, { ticking = true } = {}) {
+const connect = async (options: Partial<ReaperClientOptions> = {}, { ticking = true } = {}) => {
   watcher = await startWatcher()
   if (ticking) {
     stopTicking = watcher.sim.run(5)

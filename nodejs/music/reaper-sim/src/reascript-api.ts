@@ -34,7 +34,7 @@ const multi = (...values: unknown[]) => LuaMultiReturn.from(values)
  */
 type ReaScriptApi = Record<string, (...args: never[]) => unknown>
 
-export function createReaScriptApi(context: ReaScriptContext): ReaScriptApi {
+export const createReaScriptApi = (context: ReaScriptContext): ReaScriptApi => {
   const { model } = context
 
   const project = (proj: unknown): SimProject => {

@@ -119,6 +119,13 @@ check('EnumerateFiles of the script directory, with and without a trailing separ
 check('EnumProjects(-1) handles compare equal', (await readGlobal('R_PROJECTS')).split(' ')[0], 'sameHandle=true')
 check('current project', await readGlobal('R_PROJECTS'))
 
+await step('ESCAPE')
+check(
+  'replies escape values Lua wrote, and pass UTF-8 through',
+  field((await send([`GET/EXTSTATE/${S}/LUA_ESC`])).body),
+  '{"text":"a\\\\tb"}\\t"q" \\\\ \\n é 🎹',
+)
+
 await send([`SET/PROJEXTSTATE/${S}/STEP/BUSY`])
 await sleep(200)
 const started = performance.now()

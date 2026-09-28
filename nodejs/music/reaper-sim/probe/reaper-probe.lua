@@ -72,6 +72,10 @@ local handlers = {
     local b = reaper.EnumProjects(-1)
     report("PROJECTS", "sameHandle=" .. tostring(a == b) .. " path=" .. tostring(pathA) .. " name=" .. tostring(reaper.GetProjectName(a)))
   end,
+  -- a response as the watcher writes one: JSON escapes (backslashes), quotes, tab, newline and UTF-8
+  ESCAPE = function()
+    reaper.SetExtState(S, "LUA_ESC", '{"text":"a\\tb"}\t"q" \\ \n é 🎹', false)
+  end,
   BUSY = function()
     local start = reaper.time_precise()
     while reaper.time_precise() - start < 1.0 do end
@@ -89,6 +93,7 @@ local function cleanup()
   for _, key in ipairs(REPORTS) do reaper.DeleteExtState(S, "R_" .. key, false) end
   for _, n in ipairs(BIG_SIZES) do reaper.DeleteExtState(S, "BIG" .. n, false) end
   reaper.DeleteExtState(S, "MIXED_KEY", false)
+  reaper.DeleteExtState(S, "LUA_ESC", false)
 end
 
 reaper.atexit(function() report("ATEXIT", "ran") end)

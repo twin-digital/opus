@@ -93,13 +93,13 @@ const newId = () =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export function createReaperClient({
+export const createReaperClient = ({
   url,
   auth,
   timeoutMs: clientTimeoutMs = DEFAULT_TIMEOUT_MS,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
   fetch: fetchImpl = (target, init) => fetch(target, { ...init, cache: 'no-store' }),
-}: ReaperClientOptions): ReaperClient {
+}: ReaperClientOptions): ReaperClient => {
   const base = new URL(url)
   if (base.protocol !== 'http:' && base.protocol !== 'https:') {
     throw new Error(`REAPER web remote URL must start with http:// or https://: ${url}`)
@@ -175,7 +175,7 @@ export function createReaperClient({
 
   const project = (generation: string): ReaperProject => ({
     generation,
-    async runCommand<T>(command: string, options?: Record<string, unknown>, request?: RequestOptions): Promise<T> {
+    runCommand: async <T>(command: string, options?: Record<string, unknown>, request?: RequestOptions): Promise<T> => {
       const deadline = deadlineFor(request)
       const id = newId()
       const body: WatcherRequest = { v: PROTOCOL_VERSION, generation, command, options }
@@ -213,7 +213,7 @@ export function createReaperClient({
 
   return {
     getWatcherStatus,
-    async currentProject(request) {
+    currentProject: async (request) => {
       const status = await getWatcherStatus(request)
       return { ...project(status.generation), ...status.project }
     },

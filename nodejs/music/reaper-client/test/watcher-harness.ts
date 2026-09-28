@@ -8,7 +8,7 @@ const fixtureCommands = path.join(import.meta.dirname, 'commands')
 /**
  * A simulated REAPER running the watcher with the fixture commands, on a clock the test moves.
  */
-export async function startWatcher() {
+export const startWatcher = async () => {
   let now = 1000
   const sim = new ReaperSim({ clock: () => now })
   await sim.mountDirectory(fixtureCommands, path.join(watcherDirectory, 'commands'))
@@ -24,17 +24,17 @@ export async function startWatcher() {
     script,
     status,
     generation: () => status()?.generation ?? '',
-    advance(seconds: number) {
+    advance: (seconds: number) => {
       now += seconds
     },
     /**
      * Posts a request through the web remote, as a client does.
      */
-    async post(id: string, request: unknown) {
+    post: async (id: string, request: unknown) => {
       const body = typeof request === 'string' ? request : JSON.stringify(request)
       await sim.fetch(`/_/SET/PROJEXTSTATE/thrashplay/REQ_${id}/${encodeURIComponent(body)}`)
     },
-    response(id: string) {
+    response: (id: string) => {
       const raw = sim.model.globalExtState.get(SECTION, `RES_${id}`)
       return raw === undefined ? undefined : (JSON.parse(raw) as WatcherResponse)
     },
