@@ -73,6 +73,13 @@ export const createReaScriptApi = (context: ReaScriptContext): ReaScriptApi => {
       return p === undefined ? multi(undefined, '') : multi(p, p.path)
     },
     GetProjectName: (proj: unknown) => project(proj).name,
+    Main_openProject: (name: string) => {
+      model.openProjectInTab(name.replace(/^noprompt:/, ''))
+    },
+    // saving writes nothing: project files aren't modeled
+    Main_SaveProjectEx: (proj: unknown, _filename: string, _options: number) => {
+      project(proj)
+    },
     // change tracking isn't modeled
     IsProjectDirty: (proj: unknown) => {
       project(proj)

@@ -91,6 +91,22 @@ describe('timeouts', () => {
     expect(watcher.sim.model.currentProject.extState.entries(SECTION)).toEqual([])
   })
 
+  it('withdraws the request when the deadline passes during a poll', async () => {
+    const stalling: FetchLike = (url, init) =>
+      url.includes('RES_') ?
+        new Promise((_, reject) => {
+          init.signal.addEventListener('abort', () => {
+            reject(init.signal.reason as Error)
+          })
+        })
+      : watcher.sim.fetch(url)
+    const client = await connect({ timeoutMs: 100, fetch: stalling }, { ticking: false })
+    watcher.sim.tick()
+    const project = await client.currentProject()
+    expect((await rejection(project.runCommand('echo'))).code).toBe('TIMEOUT')
+    expect(watcher.sim.model.currentProject.extState.entries(SECTION)).toEqual([])
+  })
+
   it('caps a request timeout at the client timeout', async () => {
     const client = await connect({ timeoutMs: 100 }, { ticking: false })
     const project = await client.currentProject()

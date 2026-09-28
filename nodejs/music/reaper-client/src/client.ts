@@ -122,14 +122,12 @@ export const createReaperClient = ({
     if (remaining <= 0) {
       throw new ReaperError('TIMEOUT', 'REAPER did not answer in time')
     }
+    const signal = AbortSignal.timeout(remaining)
     let response: Awaited<ReturnType<FetchLike>>
     try {
-      response = await fetchImpl(`${baseUrl}/_/${commands.join(';')}`, {
-        signal: AbortSignal.timeout(remaining),
-        headers,
-      })
+      response = await fetchImpl(`${baseUrl}/_/${commands.join(';')}`, { signal, headers })
     } catch (error) {
-      if (Date.now() >= deadline) {
+      if (signal.aborted) {
         throw new ReaperError('TIMEOUT', 'REAPER did not answer in time')
       }
       throw new ReaperError('REAPER_UNREACHABLE', `REAPER's web remote is unreachable at ${baseUrl}`, error)
@@ -187,22 +185,38 @@ export const createReaperClient = ({
           `The ${command} request is ${String(set.length)} characters encoded; REAPER takes at most ${String(COMMAND_LIMIT)}`,
         )
       }
-      await send([set], deadline)
-
-      for (;;) {
-        const raw = await readGlobal(`${RESPONSE_PREFIX}${id}`, deadline)
-        if (raw !== '') {
-          const response = parse(raw, `response to ${command}`) as WatcherResponse
-          checkVersion(response.v)
-          if (!response.ok) {
-            throw new ReaperError(response.error.code, response.error.message, response.error.details)
+      /**
+       * Posts the request and waits for its response; undefined once the deadline passes.
+       */
+      const exchange = async (): Promise<string | undefined> => {
+        try {
+          await send([set], deadline)
+          for (;;) {
+            const raw = await readGlobal(`${RESPONSE_PREFIX}${id}`, deadline)
+            if (raw !== '') {
+              return raw
+            }
+            if (Date.now() + pollIntervalMs >= deadline) {
+              return undefined
+            }
+            await sleep(pollIntervalMs)
           }
-          return response.result as T
+        } catch (error) {
+          if (error instanceof ReaperError && error.code === 'TIMEOUT') {
+            return undefined
+          }
+          throw error
         }
-        if (Date.now() + pollIntervalMs >= deadline) {
-          break
+      }
+
+      const raw = await exchange()
+      if (raw !== undefined) {
+        const response = parse(raw, `response to ${command}`) as WatcherResponse
+        checkVersion(response.v)
+        if (!response.ok) {
+          throw new ReaperError(response.error.code, response.error.message, response.error.details)
         }
-        await sleep(pollIntervalMs)
+        return response.result as T
       }
 
       // withdraw the request if the watcher hasn't claimed it; it may already have run

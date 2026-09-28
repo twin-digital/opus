@@ -23,6 +23,16 @@ export class ReaperModel {
     return project
   }
 
+  /**
+   * Opens a project in the current tab, replacing the project there, as `Main_openProject` does.
+   */
+  openProjectInTab(path = ''): SimProject {
+    const project = new SimProject(path)
+    this.projects[this.projects.indexOf(this.current)] = project
+    this.current = project
+    return project
+  }
+
   selectProject(project: SimProject): void {
     if (!this.projects.includes(project)) {
       throw new Error('Project is not open')

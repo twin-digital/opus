@@ -23,6 +23,9 @@ local DIR = debug.getinfo(1, "S").source:match("^@?(.*[/\\])") or ""
 local SEP = DIR:sub(-1) == "\\" and "\\" or "/"
 local json = dofile(DIR .. "lib" .. SEP .. "json.lua")
 
+-- tokens must differ across REAPER launches and between copies, however REAPER's Lua seeds by default
+math.randomseed(math.random(1 << 30) ~ os.time(), math.random(1 << 30) ~ math.floor(reaper.time_precise() * 1000000))
+
 local function token()
   local digits = {}
   for i = 1, 16 do
