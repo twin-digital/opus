@@ -8,20 +8,28 @@ import { createReaScriptApi } from './reascript-api.js'
 import { handleWebRemote } from './web-remote.js'
 
 export interface ReaperSimOptions {
-  /** Seconds for `time_precise`; defaults to a monotonic clock. */
+  /**
+   * Seconds for `time_precise`; defaults to a monotonic clock.
+   */
   clock?: () => number
 }
 
-/** A ReaScript call a script made. */
+/**
+ * A ReaScript call a script made.
+ */
 export interface ReaScriptCall {
   script: string
   fn: string
   args: unknown[]
 }
 
-/** A Lua script the simulator hosts, each in its own Lua state as REAPER runs them. */
+/**
+ * A Lua script the simulator hosts, each in its own Lua state as REAPER runs them.
+ */
 export class SimScript {
-  /** The error that stopped the script, if one did. */
+  /**
+   * The error that stopped the script, if one did.
+   */
   error: unknown = undefined
 
   constructor(
@@ -43,11 +51,17 @@ export class SimScript {
  */
 export class ReaperSim {
   readonly model = new ReaperModel()
-  /** The ReaScript console, as `ShowConsoleMsg` writes it. */
+  /**
+   * The ReaScript console, as `ShowConsoleMsg` writes it.
+   */
   readonly console = { text: '' }
-  /** Every ReaScript call, in order. */
+  /**
+   * Every ReaScript call, in order.
+   */
   readonly calls: ReaScriptCall[] = []
-  /** Every web remote command, in order. */
+  /**
+   * Every web remote command, in order.
+   */
   readonly webRequests: string[] = []
 
   private readonly factory = new LuaFactory()
@@ -60,7 +74,9 @@ export class ReaperSim {
     this.clock = clock
   }
 
-  /** Runs a Lua script's main chunk; its deferred functions run on later ticks. */
+  /**
+   * Runs a Lua script's main chunk; its deferred functions run on later ticks.
+   */
   async loadScript(source: string, { name = 'script' }: { name?: string } = {}): Promise<SimScript> {
     const engine = await this.factory.createEngine()
     const script = new SimScript(name, engine)
@@ -112,7 +128,9 @@ export class ReaperSim {
     }
   }
 
-  /** Ticks on a timer, as REAPER's main loop does (about 30 Hz); returns a function that stops it. */
+  /**
+   * Ticks on a timer, as REAPER's main loop does (about 30 Hz); returns a function that stops it.
+   */
   run(intervalMs = 33): () => void {
     const timer = setInterval(() => {
       try {
@@ -126,14 +144,18 @@ export class ReaperSim {
     }
   }
 
-  /** The web remote as a fetch function. */
+  /**
+   * The web remote as a fetch function.
+   */
   readonly fetch = (input: string | URL | Request): Promise<Response> => {
     const url = new URL(input instanceof Request ? input.url : input, 'http://reaper.sim')
     const reply = handleWebRemote(this.model, url.pathname, this.webRequests)
     return Promise.resolve(new Response(reply.body, { status: reply.status }))
   }
 
-  /** Serves the web remote over HTTP; resolves to its base URL. */
+  /**
+   * Serves the web remote over HTTP; resolves to its base URL.
+   */
   async listen({ port = 0, host = '127.0.0.1' }: { port?: number; host?: string } = {}): Promise<string> {
     const server = http.createServer((req, res) => {
       const reply = handleWebRemote(this.model, new URL(req.url ?? '/', 'http://reaper.sim').pathname, this.webRequests)
@@ -145,7 +167,9 @@ export class ReaperSim {
     return `http://${host}:${String((server.address() as AddressInfo).port)}`
   }
 
-  /** Stops every script and HTTP server. */
+  /**
+   * Stops every script and HTTP server.
+   */
   async close(): Promise<void> {
     for (const script of this.scripts) {
       this.stop(script)

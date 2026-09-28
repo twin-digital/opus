@@ -1,7 +1,9 @@
 import { ExtStateStore } from './ext-state.js'
 import { SimProject } from './project.js'
 
-/** REAPER's state as scripts and the web remote see it. There is always a current project. */
+/**
+ * REAPER's state as scripts and the web remote see it. There is always a current project.
+ */
 export class ReaperModel {
   readonly globalExtState = new ExtStateStore()
   readonly projects: SimProject[] = [new SimProject()]
@@ -11,7 +13,9 @@ export class ReaperModel {
     return this.current
   }
 
-  /** Opens a project in a new tab and makes it current. */
+  /**
+   * Opens a project in a new tab and makes it current.
+   */
   openProject(path = ''): SimProject {
     const project = new SimProject(path)
     this.projects.push(project)
@@ -26,7 +30,9 @@ export class ReaperModel {
     this.current = project
   }
 
-  /** Closes a project; closing the last one leaves a new unsaved project, as REAPER does. */
+  /**
+   * Closes a project; closing the last one leaves a new unsaved project, as REAPER does.
+   */
   closeProject(project: SimProject): void {
     const index = this.projects.indexOf(project)
     if (index < 0) {

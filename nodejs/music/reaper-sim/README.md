@@ -11,13 +11,13 @@ const sim = new ReaperSim()
 await sim.loadScriptFile('reaper/watcher.lua')
 
 // the web remote, in process or over HTTP
-await sim.fetch('/_/SET/PROJEXTSTATE/CSST/REQ_1/%7B%7D')
+await sim.fetch('/_/SET/PROJEXTSTATE/THRASHPLAY/REQ_1/%7B%7D')
 const baseUrl = await sim.listen({ port: 8080 })
 
 sim.tick() // one pass of REAPER's main loop: runs every deferred function once
 const stop = sim.run() // or tick on a ~30 Hz timer
 
-sim.model.currentProject.extState.entries('CSST') // assert on state
+sim.model.currentProject.extState.entries('THRASHPLAY') // assert on state
 sim.calls // or on the journal of ReaScript calls
 sim.webRequests // and web remote commands
 await sim.close()

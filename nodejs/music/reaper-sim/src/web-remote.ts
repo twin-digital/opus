@@ -1,3 +1,4 @@
+import type { ExtStateStore } from './ext-state.js'
 import type { ReaperModel } from './model.js'
 
 export interface WebRemoteReply {
@@ -5,19 +6,40 @@ export interface WebRemoteReply {
   body: string
 }
 
-/** Escapes a reply field the way the web remote's `simple_unescape` expects. */
+/**
+ * Escapes a reply field the way the web remote's `simple_unescape` expects.
+ */
 const escape = (value: string) => value.replace(/\\/g, '\\\\').replace(/\t/g, '\\t').replace(/\n/g, '\\n')
 
-/** REAPER cuts each command off at this many characters, as sent (URL-encoded), and answers as usual. */
+/**
+ * REAPER cuts each command off at this many characters, as sent (URL-encoded), and answers as usual.
+ */
 export const COMMAND_LIMIT = 1023
 
-/** Decodes percent-escapes as UTF-8 bytes; an escape or byte sequence cut short decodes to a replacement character. */
+/**
+ * Decodes percent-escapes as UTF-8 bytes; an escape or byte sequence cut short decodes to a replacement character.
+ */
 const decode = (text: string) =>
   Buffer.concat(
     text
       .split(/(%[0-9A-Fa-f]{2})/)
       .map((part) => (/^%[0-9A-Fa-f]{2}$/.test(part) ? Buffer.from([parseInt(part.slice(1), 16)]) : Buffer.from(part))),
   ).toString('utf8')
+
+/**
+ * Looks up a value ignoring the case of the section and key, as the web remote reads.
+ */
+const findIgnoringCase = (store: ExtStateStore, section: string, key: string) => {
+  const s = section.toUpperCase()
+  const k = key.toUpperCase()
+  for (const name of store.sectionNames().filter((candidate) => candidate.toUpperCase() === s)) {
+    const entry = store.entries(name).find(([candidate]) => candidate.toUpperCase() === k)
+    if (entry !== undefined) {
+      return entry[1]
+    }
+  }
+  return undefined
+}
 
 class UnsupportedCommand extends Error {}
 
@@ -58,12 +80,12 @@ function runCommand(model: ReaperModel, parts: string[]): string | undefined {
 
   switch (`${verb}/${kind}`) {
     case 'GET/PROJEXTSTATE':
-      return `PROJEXTSTATE\t${section}\t${key}\t${escape(model.currentProject.extState.find(section, key) ?? '')}`
+      return `PROJEXTSTATE\t${section}\t${key}\t${escape(findIgnoringCase(model.currentProject.extState, section, key) ?? '')}`
     case 'SET/PROJEXTSTATE':
       model.currentProject.extState.set(section.toUpperCase(), key.toUpperCase(), value())
       return undefined
     case 'GET/EXTSTATE':
-      return `EXTSTATE\t${section}\t${key}\t${escape(model.globalExtState.find(section, key) ?? '')}`
+      return `EXTSTATE\t${section}\t${key}\t${escape(findIgnoringCase(model.globalExtState, section, key) ?? '')}`
     case 'SET/EXTSTATE':
     case 'SET/EXTSTATEPERSIST':
       model.globalExtState.set(section.toUpperCase(), key.toUpperCase(), value())

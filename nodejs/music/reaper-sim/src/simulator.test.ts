@@ -43,10 +43,10 @@ describe('scripts', () => {
 
   it('reads project ext state case-sensitively, so web remote writes are upper-case', async () => {
     sim = new ReaperSim()
-    await sim.fetch('http://reaper/_/SET/PROJEXTSTATE/csst/key/v')
+    await sim.fetch('http://reaper/_/SET/PROJEXTSTATE/thrashplay/key/v')
     await sim.loadScript(`
-      local _, lower = reaper.GetProjExtState(0, "csst", "key")
-      local size, upper = reaper.GetProjExtState(0, "CSST", "KEY")
+      local _, lower = reaper.GetProjExtState(0, "thrashplay", "key")
+      local size, upper = reaper.GetProjExtState(0, "THRASHPLAY", "KEY")
       reaper.SetExtState("OUT", "result", "[" .. lower .. "][" .. upper .. "]" .. size, false)
     `)
     expect(sim.model.globalExtState.get('OUT', 'result')).toBe('[][v]1')
@@ -54,12 +54,12 @@ describe('scripts', () => {
 
   it('enumerates project ext state until it runs out', async () => {
     sim = new ReaperSim()
-    sim.model.currentProject.extState.set('CSST', 'A', '1')
-    sim.model.currentProject.extState.set('CSST', 'B', '2')
+    sim.model.currentProject.extState.set('THRASHPLAY', 'A', '1')
+    sim.model.currentProject.extState.set('THRASHPLAY', 'B', '2')
     await sim.loadScript(`
       local seen, i = {}, 0
       while true do
-        local ok, key, value = reaper.EnumProjExtState(0, "CSST", i)
+        local ok, key, value = reaper.EnumProjExtState(0, "THRASHPLAY", i)
         if not ok then break end
         seen[#seen + 1] = key .. "=" .. value
         i = i + 1
@@ -97,20 +97,20 @@ describe('over HTTP', () => {
     sim = new ReaperSim()
     await sim.loadScript(`
       local function loop()
-        local ok, key, value = reaper.EnumProjExtState(0, "CSST", 0)
+        local ok, key, value = reaper.EnumProjExtState(0, "THRASHPLAY", 0)
         if ok then
-          reaper.SetProjExtState(0, "CSST", key, "")
-          reaper.SetExtState("CSST", "RES" .. key:sub(4), "echo:" .. value, false)
+          reaper.SetProjExtState(0, "THRASHPLAY", key, "")
+          reaper.SetExtState("THRASHPLAY", "RES" .. key:sub(4), "echo:" .. value, false)
         end
         reaper.defer(loop)
       end
       reaper.defer(loop)
     `)
     const base = await sim.listen()
-    await fetch(`${base}/_/SET/PROJEXTSTATE/CSST/REQ_1/${encodeURIComponent('{"command":"ping"}')}`)
+    await fetch(`${base}/_/SET/PROJEXTSTATE/THRASHPLAY/REQ_1/${encodeURIComponent('{"command":"ping"}')}`)
     sim.tick()
-    const reply = await (await fetch(`${base}/_/GET/EXTSTATE/CSST/RES_1`)).text()
-    expect(reply).toBe('EXTSTATE\tCSST\tRES_1\techo:{"command":"ping"}\n')
-    expect(sim.model.currentProject.extState.entries('CSST')).toEqual([])
+    const reply = await (await fetch(`${base}/_/GET/EXTSTATE/THRASHPLAY/RES_1`)).text()
+    expect(reply).toBe('EXTSTATE\tTHRASHPLAY\tRES_1\techo:{"command":"ping"}\n')
+    expect(sim.model.currentProject.extState.entries('THRASHPLAY')).toEqual([])
   })
 })

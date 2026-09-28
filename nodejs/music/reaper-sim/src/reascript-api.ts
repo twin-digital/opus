@@ -4,18 +4,26 @@ import { SimProject } from './project.js'
 
 export interface ReaScriptContext {
   model: ReaperModel
-  /** Queues a Lua function for the next tick. */
+  /**
+   * Queues a Lua function for the next tick.
+   */
   defer(fn: () => unknown): void
-  /** Seconds, as `time_precise` reports them. */
+  /**
+   * Seconds, as `time_precise` reports them.
+   */
   now(): number
   console: { text: string }
-  /** Records each call, for the simulator's journal. */
+  /**
+   * Records each call, for the simulator's journal.
+   */
   record(fn: string, args: unknown[]): void
 }
 
 const multi = (...values: unknown[]) => LuaMultiReturn.from(values)
 
-/** The `reaper` table a script sees: the ReaScript functions the simulator implements. */
+/**
+ * The `reaper` table a script sees: the ReaScript functions the simulator implements.
+ */
 type ReaScriptApi = Record<string, (...args: never[]) => unknown>
 
 export function createReaScriptApi(context: ReaScriptContext): ReaScriptApi {

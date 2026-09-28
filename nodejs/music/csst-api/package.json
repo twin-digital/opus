@@ -52,6 +52,7 @@
     "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
+    "eslint-plugin-jsdoc": "catalog:",
     "globals": "catalog:",
     "prettier": "catalog:",
     "prettier-package-json": "catalog:",
