@@ -3,7 +3,9 @@
  * REAPER, what scripts see, against what the simulator models. Each line prints PASS or FAIL where
  * the simulator models the behavior, and INFO where it only records it.
  *
- *   node probe/reaper-probe.ts http://[user:password@]<reaper host>:8080
+ *   node probe/reaper-probe.ts http://[user:password@]<reaper host>:8080 [--skip-rename]
+ *
+ * Partway through, it waits for an audio input channel to be renamed in REAPER; `--skip-rename` skips that.
  */
 
 const target = new URL(process.argv[2] ?? 'http://127.0.0.1:8080')
@@ -235,29 +237,62 @@ check(
   '{"text":"a\\\\tb"}\\t"q" \\\\ \\n é 🎹',
 )
 
-// requests sent together 200 ms into a one-second tick: does each wait for the tick to end?
-await send([`SET/PROJEXTSTATE/${S}/STEP/BUSY`])
-await sleep(200)
-const waitsForTick = async (commands: string[]) => {
+// An eight-second Lua tick with requests sent every 200 ms throughout, no signal needed: Lua logs, on
+// its own clock, when the web-written SEQ changes; Node watches the COUNTER Lua counts up; and each
+// request's latency shows whether it waited for the tick.
+await send([`SET/PROJEXTSTATE/${S}/STEP/SPIN`])
+const latencies: number[] = []
+const counters: string[] = []
+const readsOwnWrite: boolean[] = []
+const timedSend = async (commands: string[]) => {
   const started = performance.now()
-  await send(commands)
-  return performance.now() - started > 500
+  const reply = await send(commands, { timeoutMs: 15_000 }).catch(() => ({ body: '' }))
+  latencies.push(Math.round(performance.now() - started))
+  return reply.body
 }
-const waited = await Promise.all([
-  waitsForTick(['TRANSPORT']),
-  waitsForTick([`GET/EXTSTATE/${S}/MIXED_KEY`]),
-  waitsForTick([`SET/PROJEXTSTATE/${S}/MIDTICK/1`]),
-])
-for (let i = 0; i < 100 && (await readGlobal('R_ACK')) !== 'BUSY'; i++) {
+const traffic: Promise<unknown>[] = []
+let sequence = 0
+const spinStarted = Date.now()
+while (Date.now() - spinStarted < 11_000) {
+  sequence += 1
+  const n = String(sequence)
+  traffic.push(
+    timedSend([`SET/PROJEXTSTATE/${S}/SEQ/${n}`]),
+    timedSend([`GET/EXTSTATE/${S}/COUNTER`]).then((body) => counters.push(field(body))),
+    timedSend([`SET/EXTSTATE/${S}/RYW/${n}`, `GET/EXTSTATE/${S}/RYW`]).then((body) =>
+      readsOwnWrite.push(field(body) === n),
+    ),
+  )
+  await sleep(200)
+}
+await Promise.all(traffic)
+for (let i = 0; i < 100 && (await readGlobal('R_ACK')) !== 'SPIN'; i++) {
   await sleep(50)
 }
-// REAPER answers at once; the simulator, on one thread, answers once the tick ends
-check('during a busy Lua tick, requests wait: TRANSPORT, ext-state GET, ext-state SET', waited)
-check('Lua sees a web remote write land during its tick', await readGlobal('R_MIDTICK'), 'before= after=')
+const spin = await readGlobal('R_SPIN')
+// REAPER answered at once in earlier runs; the simulator, on one thread, answers once the tick ends
+check('longest request latency during the spin, in ms', Math.max(...latencies))
 check(
-  'a web remote write sent during a tick lands after it',
-  field((await send([`GET/PROJEXTSTATE/${S}/MIDTICK`])).body),
-  '1',
+  'requests answered within 250 ms, of all',
+  `${String(latencies.filter((ms) => ms <= 250).length)}/${String(latencies.length)}`,
+)
+check(
+  'Lua sees web remote writes land during its tick (SEQ changes it logged mid-spin)',
+  spin.replace(/ counted=.*/, ''),
+  'changes=[]',
+)
+check(
+  'COUNTER values the web remote read during the spin (live reads show them climbing)',
+  [...new Set(counters)].join(','),
+)
+check(
+  'requests that read back their own write',
+  `${String(readsOwnWrite.filter(Boolean).length)}/${String(readsOwnWrite.length)}`,
+)
+check(
+  'the last write sent during the tick lands after it',
+  field((await send([`GET/PROJEXTSTATE/${S}/SEQ`])).body),
+  String(sequence),
 )
 
 const wall2 = await step('BIG')
@@ -268,6 +303,26 @@ const luaSeconds = Number(await readGlobal('R_T2')) - Number(await readGlobal('R
 const ratio = luaSeconds / ((wall2 - wall1) / 1000)
 check('time_precise counts seconds (ratio to wall time within 25%)', Math.abs(ratio - 1) < 0.25, true)
 check('time_precise seconds per wall second', Number(ratio.toFixed(3)))
+
+await step('INPUTS.1')
+const channelNames = await readGlobal('R_INPUTS')
+check('audio input channel names', channelNames)
+if (!process.argv.includes('--skip-rename')) {
+  console.log(
+    '\nNow rename an audio input channel in REAPER (Preferences > Audio > Device, input channel names), then close\n' +
+      'the preferences. Waiting up to 3 minutes for a change...',
+  )
+  let renamed = channelNames
+  for (let i = 2; i < 90 && renamed === channelNames; i++) {
+    await sleep(2000)
+    // REAPER may not answer while its preferences are open
+    renamed = await step(`INPUTS.${String(i)}`).then(
+      () => readGlobal('R_INPUTS'),
+      () => channelNames,
+    )
+  }
+  check('audio input channel names after the rename (unchanged: GetInputChannelName ignores it)', renamed)
+}
 
 await send([`SET/PROJEXTSTATE/rpp_web_section/rpp_web_key/w`])
 await step('TABS')

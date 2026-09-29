@@ -6,6 +6,10 @@ import { SimProject } from './project.js'
  */
 export class ReaperModel {
   readonly globalExtState = new ExtStateStore(false)
+  /**
+   * Names of the audio device's input channels, as `GetInputChannelName` reports them.
+   */
+  audioInputs: string[] = ['Input 1', 'Input 2']
   readonly projects: SimProject[] = [new SimProject()]
   private current: SimProject = this.projects[0]
 

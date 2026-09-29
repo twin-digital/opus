@@ -73,6 +73,8 @@ export const createReaScriptApi = (context: ReaScriptContext): ReaScriptApi => {
       return p === undefined ? multi(undefined, '') : multi(p, p.path)
     },
     GetProjectName: (proj: unknown) => project(proj).name,
+    GetNumAudioInputs: () => model.audioInputs.length,
+    GetInputChannelName: (channel: number) => multi(model.audioInputs[channel]),
     Main_openProject: (name: string) => {
       model.openProjectInTab(name.replace(/^noprompt:/, ''))
     },

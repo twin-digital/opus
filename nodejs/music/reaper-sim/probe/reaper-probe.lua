@@ -8,7 +8,7 @@ local LUA_SECTION, LUA_KEY = "Probe_Lua_Section", "Probe_Lua_Key"
 local BIG_SIZES = { 2000, 5000, 20000, 100000 }
 local REPORTS = {
   "READY", "ACK", "DIRTY_LUA", "PROJKEYS", "GLOBAL", "LUA_CASE", "DIRTY_WEB", "KEYS", "ORDER", "EMPTY", "SCRIPT",
-  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS", "MIDTICK",
+  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS", "SPIN", "INPUTS",
 }
 
 local DIR = debug.getinfo(1, "S").source:match("^@?(.*[/\\])") or ""
@@ -106,13 +106,37 @@ local handlers = {
   ESCAPE = function()
     reaper.SetExtState(S, "LUA_ESC", '{"text":"a\\tb"}\t"q" \\ \n é 🎹', false)
   end,
-  -- a one-second tick, noting whether a web remote write lands during it
-  BUSY = function()
-    local _, before = reaper.GetProjExtState(0, S, "MIDTICK")
+  -- an eight-second tick: log each change of the web-written SEQ against this script's clock, and
+  -- count up a global COUNTER for the Node half to watch
+  SPIN = function()
+    local changes = {}
+    local _, seen = reaper.GetProjExtState(0, S, "SEQ")
     local start = reaper.time_precise()
-    while reaper.time_precise() - start < 1.0 do end
-    local _, after = reaper.GetProjExtState(0, S, "MIDTICK")
-    report("MIDTICK", "before=" .. before .. " after=" .. after)
+    local lastRead, lastCount, count = start, start, 0
+    while true do
+      local now = reaper.time_precise()
+      if now - start >= 8 then break end
+      if now - lastRead >= 0.05 then
+        lastRead = now
+        local _, value = reaper.GetProjExtState(0, S, "SEQ")
+        if value ~= seen then
+          seen = value
+          changes[#changes + 1] = string.format("%.2f:%s", now - start, value)
+        end
+      end
+      if now - lastCount >= 0.1 then
+        lastCount, count = now, count + 1
+        reaper.SetExtState(S, "COUNTER", tostring(count), false)
+      end
+    end
+    report("SPIN", "changes=[" .. table.concat(changes, ",") .. "] counted=" .. count)
+  end,
+  INPUTS = function()
+    local names = {}
+    for i = 0, reaper.GetNumAudioInputs() - 1 do
+      names[#names + 1] = i .. "=" .. tostring(reaper.GetInputChannelName(i))
+    end
+    report("INPUTS", table.concat(names, " | "))
   end,
   BIG = function()
     for _, n in ipairs(BIG_SIZES) do
@@ -168,6 +192,8 @@ local function cleanup()
   for _, n in ipairs(BIG_SIZES) do reaper.DeleteExtState(S, "BIG" .. n, false) end
   reaper.DeleteExtState(S, "MIXED_KEY", false)
   reaper.DeleteExtState(S, "LUA_ESC", false)
+  reaper.DeleteExtState(S, "COUNTER", false)
+  reaper.DeleteExtState(S, "RYW", false)
   reaper.DeleteExtState(LUA_SECTION, LUA_KEY, false)
 end
 
@@ -183,7 +209,8 @@ local function loop()
       reaper.ShowConsoleMsg("[probe] done; ending with a deliberate error to test atexit\n")
       error("deliberate probe error: the probe finished")
     end
-    local handler = handlers[step]
+    -- a step may carry ".<n>" so the Node half can repeat it
+    local handler = handlers[step:match("^[^.]*")]
     if handler then handler() end
     report("ACK", step)
   end
