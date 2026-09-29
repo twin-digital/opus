@@ -131,9 +131,20 @@ check(
 // REAPER answers 200 with no reply; the simulator answers 501 on purpose
 check('unknown commands', await send(['NOT/A/COMMAND']))
 
-for (const key of ['KEY.DOT', 'KEY-DASH', 'KEY%3DEQUALS', 'KEY%20SPACE', 'KEY%2FSLASH']) {
+// SET decodes a key's percent-escapes and GET doesn't, so encoded keys can be written but not read back
+for (const [key, readsBack] of [
+  ['KEY.DOT', '1'],
+  ['KEY-DASH', '1'],
+  ['KEY%3DEQUALS', ''],
+  ['KEY%20SPACE', ''],
+  ['KEY%2FSLASH', ''],
+]) {
   await send([`SET/PROJEXTSTATE/${KEYS_SECTION}/${key}/1`])
-  check(`a key spelled ${key} reads back`, field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/${key}`])).body))
+  check(
+    `a key spelled ${key} reads back`,
+    field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/${key}`])).body),
+    readsBack,
+  )
 }
 
 await send([
@@ -154,15 +165,15 @@ check('project dirty state, before and after a Lua project ext-state write', awa
 
 await step('CASE')
 check(
-  'Lua sees web-written project keys upper-cased only',
+  'Lua enumerates web-written project keys upper-cased, finding the section in any case',
   await readGlobal('R_PROJKEYS'),
-  'upper=[MIXED_KEY,STEP] lower=[]',
+  'upper=[MIXED_KEY,STEP] lower=[MIXED_KEY,STEP]',
 )
-check('Lua reads web-written global keys case-sensitively', await readGlobal('R_GLOBAL'), 'upper=g1 asWritten= lower=')
+check('Lua reads web-written global keys in any case', await readGlobal('R_GLOBAL'), 'upper=g1 asWritten=g1 lower=g1')
 check(
-  'Lua reads its own mixed-case keys case-sensitively',
+  'Lua reads its own mixed-case keys in another case',
   await readGlobal('R_LUA_CASE'),
-  'projectOtherCase= globalOtherCase=',
+  'projectOtherCase=p globalOtherCase=g',
 )
 check('project dirty after web remote project ext-state writes', await readGlobal('R_DIRTY_WEB'))
 for (const [kind, value] of [
@@ -186,13 +197,17 @@ for (const [kind, value] of [
 }
 
 await step('KEYS')
-check('odd keys as Lua enumerates them', await readGlobal('R_KEYS'))
+check(
+  'odd keys as Lua enumerates them, decoded',
+  await readGlobal('R_KEYS'),
+  'KEY SPACE | KEY-DASH | KEY.DOT | KEY/SLASH | KEY=EQUALS',
+)
 
 for (const key of ['ZETA', 'ALPHA', 'MIDDLE']) {
   await send([`SET/PROJEXTSTATE/${S}/${key}/1`])
 }
 await step('ORDER')
-check('EnumProjExtState order (written ZETA, ALPHA, MIDDLE)', await readGlobal('R_ORDER'), 'ZETA,ALPHA,MIDDLE')
+check('EnumProjExtState sorts keys (written ZETA, ALPHA, MIDDLE)', await readGlobal('R_ORDER'), 'ALPHA,MIDDLE,ZETA')
 
 await send([
   `SET/EXTSTATE/${S}/WEB_EMPTY/x`,
@@ -202,9 +217,9 @@ await send([
 ])
 await step('EMPTY')
 check(
-  'an empty value deletes the key, from Lua or the web remote',
+  'an empty value keeps a global key but deletes a project key, from Lua or the web remote',
   await readGlobal('R_EMPTY'),
-  'luaEmptyKeeps=false webEmptyKeeps=false webProjectEmptyKeeps=false',
+  'luaEmptyKeeps=true webEmptyKeeps=true webProjectEmptyKeeps=false',
 )
 
 const wall1 = await step('SCRIPT')
@@ -220,15 +235,24 @@ check(
   '{"text":"a\\\\tb"}\\t"q" \\\\ \\n é 🎹',
 )
 
+// requests sent together 200 ms into a one-second tick: does each wait for the tick to end?
 await send([`SET/PROJEXTSTATE/${S}/STEP/BUSY`])
 await sleep(200)
-const started = performance.now()
-await send(['TRANSPORT'])
-const waited = performance.now() - started
+const waitsForTick = async (commands: string[]) => {
+  const started = performance.now()
+  await send(commands)
+  return performance.now() - started > 500
+}
+const waited = await Promise.all([
+  waitsForTick(['TRANSPORT']),
+  waitsForTick([`GET/EXTSTATE/${S}/MIXED_KEY`]),
+  waitsForTick([`SET/PROJEXTSTATE/${S}/MIDTICK/1`]),
+])
 for (let i = 0; i < 100 && (await readGlobal('R_ACK')) !== 'BUSY'; i++) {
   await sleep(50)
 }
-check('a request waits out a busy Lua tick (same thread)', waited > 500, true)
+check('during a busy Lua tick, requests wait: TRANSPORT, ext-state GET, ext-state SET', waited, [true, true, true])
+check('Lua sees a web remote write land during its tick', await readGlobal('R_MIDTICK'), 'before= after=')
 
 const wall2 = await step('BIG')
 for (const n of [2000, 5000, 20000, 100000]) {
@@ -245,7 +269,7 @@ check('how a saved project file stores ext state', await readGlobal('R_RPP'))
 check(
   'opening another file, then the same file again, in the tab',
   await readGlobal('R_TABS'),
-  'openSameHandle=false openPathChanged=true reopenSameHandle=false reopenSamePath=true',
+  'openSameHandle=true openPathChanged=true reopenSameHandle=true reopenSamePath=true',
 )
 
 await send([`SET/PROJEXTSTATE/${S}/STEP/DONE`])

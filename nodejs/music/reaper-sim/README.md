@@ -40,47 +40,45 @@ The simulator encodes what we believe about REAPER. Keep this list current as be
 thing: `probe/` checks each modeled behavior against a running REAPER (see its README), and passes against the
 simulator itself.
 
-**Confirmed** (REAPER on Windows, probe runs of 2026-09-29)
+**Confirmed** (REAPER on Windows, probe run of 2026-09-29)
 
-- Ext-state sections and keys are stored upper-cased, whether Lua or the web remote writes them, and every lookup,
-  from Lua or the web remote, finds them in any case. The web remote echoes the section and key as asked.
+- Ext-state sections and keys are stored upper-cased, whether Lua or the web remote writes them (a saved `.rpp`
+  holds `<PROBE_LUA_SECTION` / `PROBE_LUA_KEY p` for a Lua write of `Probe_Lua_Section` / `Probe_Lua_Key`), and every
+  lookup, from Lua or the web remote, finds them in any case. The web remote echoes the section and key as asked.
 - `EnumProjExtState` enumerates keys in sorted order.
 - An empty value deletes a project key, from Lua or the web remote, but keeps a global key, which then reads as
-  empty and `HasExtState` still reports; `DeleteExtState` deletes a global key. `SetProjExtState` with an empty key
-  deletes the section.
+  empty and `HasExtState` still reports; `DeleteExtState` deletes a global key.
 - The web remote's `SET` decodes percent-escapes in the section and key and its `GET` doesn't, so a key with `=`, a
   space or an encoded `/` can be written but not read back. `.` and `-` read back.
 - Replies are tab-separated lines, one record per line. Fields escape tabs, newlines and backslashes (`\t`, `\n`,
-  `\\`), in values the web remote or Lua wrote, and pass UTF-8 through. `GET` of a missing key replies with an
-  empty value.
+  `\\`), in values the web remote or Lua wrote, and pass UTF-8 through.
+- `GET` of a missing key replies with an empty value.
 - Each command is cut off at 1023 characters as sent (URL-encoded, counting the `SET/<kind>/<section>/<key>/` prefix)
-  and the request succeeds as usual. Other commands in the same request are unaffected; a 3.5 KB request of short
-  commands applies them all.
-- `SetProjExtState` with an empty value deletes the key; with an empty key, the section.
-
-**Assumed** (the probe checks each)
-
-- Web remote reads find a key under any spelling, including a Lua-written mixed-case key asked for in neither its
-  own spelling nor upper case; the web remote doesn't just try the exact and upper-case spellings.
-- Lua's `GetExtState` matches case-sensitively, like `GetProjExtState`, including for keys Lua wrote.
-- A cut that splits a UTF-8 character reads back as a replacement character (REAPER may store the raw byte, which
-  decodes the same), and a cut-short `%` escape stays literal.
-- An empty value deletes the key, whether Lua or the web remote writes it, in global and project ext state.
-- `EnumProjExtState` enumerates in insertion order.
-- REAPER runs web remote requests and deferred script functions on its main thread, so neither interrupts the other.
+  and the request succeeds as usual; a cut-short `%` escape stays literal. A cut through a UTF-8 character stores the
+  partial bytes, which decode as a replacement character; the simulator stores the replacement character.
+- Replies carry values of at least 100,000 characters whole.
 - `time_precise` counts seconds.
-- `EnumProjects(-1)` returns handles that compare equal while the project stays current.
-- `Main_openProject` replaces the tab's project with a new handle, even when reopening the same file.
-- `EnumerateFiles` lists a directory's files in name order, with or without a trailing separator, then returns `nil`.
-- `debug.getinfo(1, "S").source` is `@` followed by the script's path.
+- `EnumProjects(-1)` handles compare equal while a tab stays current, and a tab keeps its handle when
+  `Main_openProject` opens another file in it; only the path changes, and reopening the same file changes neither.
+- Ext-state writes, from Lua or the web remote, don't mark a project changed.
+- `EnumerateFiles` lists a directory the same with or without a trailing separator, then returns `nil`.
+- `debug.getinfo(1, "S").source` is `@` followed by the script's path (backslash-separated on Windows).
 - Scripts have Lua 5.4's standard libraries, `io` included.
 - `atexit` functions don't run when a script dies of an error.
+- REAPER answers an unknown web remote command with 200 and no reply line.
+
+**Open**
+
+- Threading. A `TRANSPORT` request sent during a one-second Lua tick was answered without waiting for it, so the web
+  remote doesn't simply run on the main thread between ticks. The probe now checks whether ext-state reads and writes
+  wait too, and whether Lua sees a web write land mid-tick; the simulator runs everything on one thread, so each tick
+  and each request is atomic.
 
 **Not modeled** (the probe records each)
 
-- The largest request that gets a reply; the simulator answers any the HTTP server accepts.
-- The longest value a reply carries whole; the simulator replies with any length.
-- `IsProjectDirty` always answers 0, whatever ext state is written.
-- How keys with `.`, `-`, `=`, a space or an encoded `/` are stored; the simulator decodes and upper-cases them.
-- Project files: `Main_SaveProjectEx` writes nothing, so nothing shows how a `.rpp` stores ext state.
+- The largest request that gets a reply: about 6,400 characters on REAPER; the simulator answers any the HTTP server
+  accepts.
+- `EnumerateFiles` order: REAPER's is the file system's, not sorted; the simulator's is sorted.
+- `IsProjectDirty` always answers 0.
+- Project files: `Main_SaveProjectEx` writes nothing.
 - The web remote's username and password.

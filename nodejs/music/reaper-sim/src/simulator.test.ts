@@ -44,23 +44,25 @@ describe('scripts', () => {
     ])
   })
 
-  it('opens a project in the current tab, replacing the one there', async () => {
+  it('opens a project in the current tab, which keeps its handle', async () => {
     sim = new ReaperSim()
     const other = sim.model.openProject('/songs/other.rpp')
-    const replaced = sim.model.openProject('/songs/a.rpp')
+    const tab = sim.model.openProject('/songs/a.rpp')
+    tab.extState.set('S', 'K', 'from a')
     await sim.loadScript(`
       local before = reaper.EnumProjects(-1)
       reaper.Main_openProject("noprompt:/songs/b.rpp")
       local after, path = reaper.EnumProjects(-1)
       reaper.SetExtState("OUT", "open", tostring(before == after) .. " " .. path, false)
     `)
-    expect(sim.model.globalExtState.get('OUT', 'open')).toBe('false /songs/b.rpp')
+    expect(sim.model.globalExtState.get('OUT', 'open')).toBe('true /songs/b.rpp')
     expect(sim.model.projects.map((project) => project.path)).toEqual(['', '/songs/other.rpp', '/songs/b.rpp'])
-    expect(sim.model.projects).not.toContain(replaced)
-    expect(sim.model.projects).toContain(other)
+    expect(sim.model.currentProject).toBe(tab)
+    expect(tab.extState.entries('S')).toEqual([])
+    expect(other.path).toBe('/songs/other.rpp')
   })
 
-  it('reads project ext state case-sensitively, so web remote writes are upper-case', async () => {
+  it('matches sections and keys ignoring case, storing them upper-cased', async () => {
     sim = new ReaperSim()
     await sim.fetch('http://reaper/_/SET/PROJEXTSTATE/thrashplay/web_key/w')
     await sim.loadScript(`

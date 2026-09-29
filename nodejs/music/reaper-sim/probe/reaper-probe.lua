@@ -8,7 +8,7 @@ local LUA_SECTION, LUA_KEY = "Probe_Lua_Section", "Probe_Lua_Key"
 local BIG_SIZES = { 2000, 5000, 20000, 100000 }
 local REPORTS = {
   "READY", "ACK", "DIRTY_LUA", "PROJKEYS", "GLOBAL", "LUA_CASE", "DIRTY_WEB", "KEYS", "ORDER", "EMPTY", "SCRIPT",
-  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS",
+  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS", "MIDTICK",
 }
 
 local DIR = debug.getinfo(1, "S").source:match("^@?(.*[/\\])") or ""
@@ -28,6 +28,7 @@ local function enumKeys(section)
   return keys
 end
 
+-- counts only: the directory may hold anything, so its names stay out of the report
 local function listFiles(dir)
   local names, i = {}, 0
   while true do
@@ -36,7 +37,11 @@ local function listFiles(dir)
     names[#names + 1] = name
     i = i + 1
   end
-  return table.concat(names, ",") .. " (then " .. tostring(reaper.EnumerateFiles(dir, i)) .. ")"
+  local sorted = true
+  for j = 2, #names do
+    if names[j - 1] > names[j] then sorted = false end
+  end
+  return names, "count=" .. #names .. " sorted=" .. tostring(sorted) .. " then=" .. tostring(reaper.EnumerateFiles(dir, i))
 end
 
 local function contains(list, value)
@@ -89,7 +94,9 @@ local handlers = {
   SCRIPT = function()
     local source = debug.getinfo(1, "S").source
     report("SCRIPT", "version=" .. _VERSION .. " io=" .. tostring(io ~= nil) .. " source=" .. source)
-    report("FILES", "slash=" .. listFiles(DIR) .. " | noSlash=" .. listFiles(DIR:sub(1, -2)))
+    local withSlash, summary = listFiles(DIR)
+    local withoutSlash = listFiles(DIR:sub(1, -2))
+    report("FILES", summary .. " sameWithoutSlash=" .. tostring(table.concat(withSlash, "\0") == table.concat(withoutSlash, "\0")))
     local a, pathA = reaper.EnumProjects(-1)
     local b = reaper.EnumProjects(-1)
     report("PROJECTS", "sameHandle=" .. tostring(a == b) .. " path=" .. tostring(pathA) .. " name=" .. tostring(reaper.GetProjectName(a)))
@@ -99,9 +106,13 @@ local handlers = {
   ESCAPE = function()
     reaper.SetExtState(S, "LUA_ESC", '{"text":"a\\tb"}\t"q" \\ \n é 🎹', false)
   end,
+  -- a one-second tick, noting whether a web remote write lands during it
   BUSY = function()
+    local _, before = reaper.GetProjExtState(0, S, "MIDTICK")
     local start = reaper.time_precise()
     while reaper.time_precise() - start < 1.0 do end
+    local _, after = reaper.GetProjExtState(0, S, "MIDTICK")
+    report("MIDTICK", "before=" .. before .. " after=" .. after)
   end,
   BIG = function()
     for _, n in ipairs(BIG_SIZES) do

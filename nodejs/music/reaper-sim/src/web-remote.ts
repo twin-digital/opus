@@ -29,21 +29,20 @@ class UnsupportedCommand extends Error {}
 
 const runCommand = (model: ReaperModel, parts: string[]): string | undefined => {
   const [verb = '', kind = '', rawSection = '', rawKey = ''] = parts
-  const section = decode(rawSection)
-  const key = decode(rawKey)
   const value = () => decode(parts.slice(4).join('/'))
 
+  // SET decodes the section and key; GET looks them up, and echoes them, as sent
   switch (`${verb}/${kind}`) {
     case 'GET/PROJEXTSTATE':
-      return `PROJEXTSTATE\t${section}\t${key}\t${escape(findIgnoringCase(model.currentProject.extState, section, key) ?? '')}`
+      return `PROJEXTSTATE\t${rawSection}\t${rawKey}\t${escape(model.currentProject.extState.get(rawSection, rawKey) ?? '')}`
     case 'SET/PROJEXTSTATE':
-      model.currentProject.extState.set(section.toUpperCase(), key.toUpperCase(), value())
+      model.currentProject.extState.set(decode(rawSection), decode(rawKey), value())
       return undefined
     case 'GET/EXTSTATE':
-      return `EXTSTATE\t${section}\t${key}\t${escape(findIgnoringCase(model.globalExtState, section, key) ?? '')}`
+      return `EXTSTATE\t${rawSection}\t${rawKey}\t${escape(model.globalExtState.get(rawSection, rawKey) ?? '')}`
     case 'SET/EXTSTATE':
     case 'SET/EXTSTATEPERSIST':
-      model.globalExtState.set(section.toUpperCase(), key.toUpperCase(), value())
+      model.globalExtState.set(decode(rawSection), decode(rawKey), value())
       return undefined
     default:
       throw new UnsupportedCommand(`Unsupported web remote command: ${parts.join('/')}`)
