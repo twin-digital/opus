@@ -240,15 +240,27 @@ check(
 // An eight-second Lua tick with requests sent every 200 ms throughout, no signal needed: Lua logs, on
 // its own clock, when the web-written SEQ changes; Node watches the COUNTER Lua counts up; and each
 // request's latency shows whether it waited for the tick.
-await send([`SET/PROJEXTSTATE/${S}/STEP/SPIN`])
+// the request that starts the spin isn't awaited: how long its own reply takes is a finding
+const spinRequestStarted = performance.now()
+const spinRequest = send([`SET/PROJEXTSTATE/${S}/STEP/SPIN`], { timeoutMs: 20_000 }).then(
+  () => `answered after ${String(Math.round(performance.now() - spinRequestStarted))} ms`,
+  () => `no reply within ${String(Math.round(performance.now() - spinRequestStarted))} ms`,
+)
 const latencies: number[] = []
 const counters: string[] = []
 const readsOwnWrite: boolean[] = []
+const failed: string[] = []
 const timedSend = async (commands: string[]) => {
   const started = performance.now()
-  const reply = await send(commands, { timeoutMs: 15_000 }).catch(() => ({ body: '' }))
-  latencies.push(Math.round(performance.now() - started))
-  return reply.body
+  try {
+    const reply = await send(commands, { timeoutMs: 15_000 })
+    latencies.push(Math.round(performance.now() - started))
+    return reply.body
+  } catch (error) {
+    const cause = (error as Error & { cause?: { code?: string } }).cause
+    failed.push(`${(error as Error).name}${cause?.code === undefined ? '' : ` (${cause.code})`}`)
+    return undefined
+  }
 }
 const traffic: Promise<unknown>[] = []
 let sequence = 0
@@ -258,20 +270,34 @@ while (Date.now() - spinStarted < 11_000) {
   const n = String(sequence)
   traffic.push(
     timedSend([`SET/PROJEXTSTATE/${S}/SEQ/${n}`]),
-    timedSend([`GET/EXTSTATE/${S}/COUNTER`]).then((body) => counters.push(field(body))),
-    timedSend([`SET/EXTSTATE/${S}/RYW/${n}`, `GET/EXTSTATE/${S}/RYW`]).then((body) =>
-      readsOwnWrite.push(field(body) === n),
-    ),
+    timedSend([`GET/EXTSTATE/${S}/COUNTER`]).then((body) => {
+      if (body !== undefined) {
+        counters.push(field(body))
+      }
+    }),
+    timedSend([`SET/EXTSTATE/${S}/RYW/${n}`, `GET/EXTSTATE/${S}/RYW`]).then((body) => {
+      if (body !== undefined) {
+        readsOwnWrite.push(field(body) === n)
+      }
+    }),
   )
   await sleep(200)
 }
 await Promise.all(traffic)
-for (let i = 0; i < 100 && (await readGlobal('R_ACK')) !== 'SPIN'; i++) {
-  await sleep(50)
+await sleep(2000)
+for (let i = 0; i < 100 && (await readGlobal('R_ACK').catch(() => '')) !== 'SPIN'; i++) {
+  await sleep(100)
 }
 const spin = await readGlobal('R_SPIN')
-// REAPER answered at once in earlier runs; the simulator, on one thread, answers once the tick ends
+// requests sent during the tick wait for it to end; after a long one, REAPER can apply them out of order
+check('reply to the request that started the spin', await spinRequest)
+check(
+  'requests during the spin that got no reply',
+  `${String(failed.length)}/${String(failed.length + latencies.length)}`,
+)
+check('how those requests failed', [...new Set(failed)].join(', '))
 check('longest request latency during the spin, in ms', Math.max(...latencies))
+check('latencies, sorted (ms)', [...latencies].sort((a, b) => a - b).join(','))
 check(
   'requests answered within 250 ms, of all',
   `${String(latencies.filter((ms) => ms <= 250).length)}/${String(latencies.length)}`,

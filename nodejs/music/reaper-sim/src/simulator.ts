@@ -52,7 +52,7 @@ export class SimScript {
 /**
  * An in-memory REAPER: hosts ReaScript Lua scripts against a model of REAPER's state, and serves
  * the web remote against the same state. Everything runs on one thread, so each tick and each
- * request is atomic. REAPER answers requests during a tick, before their writes take effect.
+ * request is atomic; REAPER, too, answers no request until a script's tick ends.
  */
 export class ReaperSim {
   readonly model = new ReaperModel()

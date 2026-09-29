@@ -66,17 +66,20 @@ simulator itself.
 - Scripts have Lua 5.4's standard libraries, `io` included.
 - `atexit` functions don't run when a script dies of an error.
 - REAPER answers an unknown web remote command with 200 and no reply line.
-- A web remote write sent during a script's tick is answered before it takes effect: in one run, a `SET` answered
-  during a one-second tick was still invisible to the script at the tick's end.
-
-**Assumed** (the next probe run checks it)
-
-- A write answered during a tick lands once the tick ends; it isn't dropped or held longer.
+- REAPER answers no web remote request while a script's tick is busy; each waits for the tick to end, as in the
+  simulator. In an eight-second tick with requests every 200 ms, none was answered during it, including the request
+  whose write started the tick (8,063 ms), and the script saw no write land during it.
+- The commands in one request run in order: a `SET` then `GET` of one key reads back its own write.
+- Web remote reads see Lua's ext-state writes (a script's `SetExtState` is visible to the next request).
+- `GetInputChannelName` reports the audio driver's channel names (e.g. `VM-VAIO 1`); whether it reports a channel
+  renamed in REAPER's preferences is untested.
 
 **Not modeled** (the probe records each)
 
-- REAPER answers web remote requests, reads and writes alike, without waiting for a script's tick to end; the
-  simulator runs everything on one thread, so a request waits for the tick.
+- After a long tick, REAPER works through the requests that waited in bursts about a second apart, while requests
+  arriving afresh are answered at once, so writes can land out of the order they were sent: of writes 1–55 to one
+  key, 24 was the last to land. Some requests that waited failed outright (21 of 165, a connection-level error).
+  The simulator answers waiting requests in the order they arrived, and none fails.
 - The largest request that gets a reply: about 6,400 characters on REAPER; the simulator answers any the HTTP server
   accepts.
 - `EnumerateFiles` order: REAPER's is the file system's, not sorted; the simulator's is sorted.
