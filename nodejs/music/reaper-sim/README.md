@@ -66,16 +66,17 @@ simulator itself.
 - Scripts have Lua 5.4's standard libraries, `io` included.
 - `atexit` functions don't run when a script dies of an error.
 - REAPER answers an unknown web remote command with 200 and no reply line.
+- A web remote write sent during a script's tick is answered before it takes effect: in one run, a `SET` answered
+  during a one-second tick was still invisible to the script at the tick's end.
 
-**Open**
+**Assumed** (the next probe run checks it)
 
-- Threading. A `TRANSPORT` request sent during a one-second Lua tick was answered without waiting for it, so the web
-  remote doesn't simply run on the main thread between ticks. The probe now checks whether ext-state reads and writes
-  wait too, and whether Lua sees a web write land mid-tick; the simulator runs everything on one thread, so each tick
-  and each request is atomic.
+- A write answered during a tick lands once the tick ends; it isn't dropped or held longer.
 
 **Not modeled** (the probe records each)
 
+- REAPER answers web remote requests, reads and writes alike, without waiting for a script's tick to end; the
+  simulator runs everything on one thread, so a request waits for the tick.
 - The largest request that gets a reply: about 6,400 characters on REAPER; the simulator answers any the HTTP server
   accepts.
 - `EnumerateFiles` order: REAPER's is the file system's, not sorted; the simulator's is sorted.

@@ -251,8 +251,14 @@ const waited = await Promise.all([
 for (let i = 0; i < 100 && (await readGlobal('R_ACK')) !== 'BUSY'; i++) {
   await sleep(50)
 }
-check('during a busy Lua tick, requests wait: TRANSPORT, ext-state GET, ext-state SET', waited, [true, true, true])
+// REAPER answers at once; the simulator, on one thread, answers once the tick ends
+check('during a busy Lua tick, requests wait: TRANSPORT, ext-state GET, ext-state SET', waited)
 check('Lua sees a web remote write land during its tick', await readGlobal('R_MIDTICK'), 'before= after=')
+check(
+  'a web remote write sent during a tick lands after it',
+  field((await send([`GET/PROJEXTSTATE/${S}/MIDTICK`])).body),
+  '1',
+)
 
 const wall2 = await step('BIG')
 for (const n of [2000, 5000, 20000, 100000]) {
