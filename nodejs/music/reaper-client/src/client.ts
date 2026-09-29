@@ -1,5 +1,6 @@
 import { ReaperError } from './errors.js'
 import {
+  CANCEL_PREFIX,
   COMMAND_LIMIT,
   PROTOCOL_VERSION,
   REQUEST_PREFIX,
@@ -70,7 +71,7 @@ export interface ReaperClient {
 
 const DEFAULT_TIMEOUT_MS = 5000
 const DEFAULT_POLL_INTERVAL_MS = 50
-const WITHDRAW_TIMEOUT_MS = 1000
+const CANCEL_TIMEOUT_MS = 1000
 
 /**
  * Undoes the web remote's escaping of reply fields.
@@ -90,6 +91,9 @@ const newId = () =>
     Date.now().toString(36).padStart(9, '0') +
     Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) => (byte % 36).toString(36)).join('')
   ).toUpperCase()
+
+const randomHex = (bytes: number) =>
+  Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (byte) => byte.toString(16).padStart(2, '0')).join('')
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -113,6 +117,9 @@ export const createReaperClient = ({
     auth === undefined ?
       {}
     : { authorization: `Basic ${Buffer.from(`${auth.username}:${auth.password}`).toString('base64')}` }
+
+  const clientId = randomHex(8)
+  let seq = 0
 
   const deadlineFor = (request?: RequestOptions) =>
     Date.now() + Math.min(clientTimeoutMs, request?.timeoutMs ?? clientTimeoutMs)
@@ -176,7 +183,7 @@ export const createReaperClient = ({
     runCommand: async <T>(command: string, options?: Record<string, unknown>, request?: RequestOptions): Promise<T> => {
       const deadline = deadlineFor(request)
       const id = newId()
-      const body: WatcherRequest = { v: PROTOCOL_VERSION, generation, command, options }
+      const body: WatcherRequest = { v: PROTOCOL_VERSION, client: clientId, seq: seq++, generation, command, options }
       const key = `${REQUEST_PREFIX}${id}`
       const set = `SET/PROJEXTSTATE/${SECTION}/${key}/${encodeURIComponent(JSON.stringify(body))}`
       if (set.length > COMMAND_LIMIT) {
@@ -209,7 +216,21 @@ export const createReaperClient = ({
         }
       }
 
-      const raw = await exchange()
+      // a request REAPER may yet run: its cancel wins wherever it lands, since the watcher checks first
+      const cancel = () =>
+        send([`SET/PROJEXTSTATE/${SECTION}/${CANCEL_PREFIX}${id}/1`], Date.now() + CANCEL_TIMEOUT_MS).catch(
+          () => undefined,
+        )
+
+      let raw: string | undefined
+      try {
+        raw = await exchange()
+      } catch (error) {
+        if (error instanceof ReaperError && error.code === 'REAPER_UNREACHABLE') {
+          await cancel()
+        }
+        throw error
+      }
       if (raw !== undefined) {
         const response = parse(raw, `response to ${command}`) as WatcherResponse
         checkVersion(response.v)
@@ -219,8 +240,7 @@ export const createReaperClient = ({
         return response.result as T
       }
 
-      // withdraw the request if the watcher hasn't claimed it; it may already have run
-      await send([`SET/PROJEXTSTATE/${SECTION}/${key}/`], Date.now() + WITHDRAW_TIMEOUT_MS).catch(() => undefined)
+      await cancel()
       throw new ReaperError('TIMEOUT', `The watcher did not answer ${command} in time; it may still have run`)
     },
   })

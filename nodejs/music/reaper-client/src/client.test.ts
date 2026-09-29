@@ -52,6 +52,32 @@ describe('commands', () => {
     expect(await client.project(generation).runCommand('echo', { x: 1 })).toEqual({ x: 1 })
   })
 
+  it('numbers its requests, under one client id', async () => {
+    const bodies: { client: string; seq: number }[] = []
+    const client = await connect({
+      fetch: (url) => {
+        const match = /\/REQ_[0-9A-Z]+\/(.+)$/.exec(url)
+        if (match?.[1] !== undefined) {
+          bodies.push(JSON.parse(decodeURIComponent(match[1])) as { client: string; seq: number })
+        }
+        return watcher.sim.fetch(url)
+      },
+    })
+    const project = await client.currentProject()
+    await project.runCommand('echo', { a: 1 })
+    await project.runCommand('echo', { b: 2 })
+    expect(bodies.map((body) => body.seq)).toEqual([0, 1])
+    expect(bodies[0]?.client).toMatch(/^[0-9a-f]{16}$/)
+    expect(bodies[1]?.client).toBe(bodies[0]?.client)
+  })
+
+  it('rejects with an error code a command raises', async () => {
+    const client = await connect()
+    const project = await client.currentProject()
+    const error = await rejection(project.runCommand('refuses'))
+    expect(error).toMatchObject({ code: 'TRACK_NOT_FOUND', message: 'no such track', details: { id: '{TRACK}' } })
+  })
+
   it('rejects with the watcher error code', async () => {
     const client = await connect()
     const project = await client.currentProject()
@@ -82,16 +108,22 @@ describe('commands', () => {
 })
 
 describe('timeouts', () => {
-  it('rejects with TIMEOUT when the watcher never answers, and withdraws the request', async () => {
+  it('rejects with TIMEOUT when the watcher never answers, and cancels the request', async () => {
     const client = await connect({ timeoutMs: 100 }, { ticking: false })
     watcher.sim.tick()
     const project = await client.currentProject()
-    const error = await rejection(project.runCommand('echo'))
+    const error = await rejection(project.runCommand('record', { mark: 'x' }))
     expect(error.code).toBe('TIMEOUT')
-    expect(watcher.requests()).toEqual([])
+    // the request lands late, with its cancel beside it
+    const requests = watcher.requests()
+    expect(requests).toHaveLength(1)
+    const cancel = requests.join('').replace('REQ_', 'CANCEL_')
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, cancel)).toBe('1')
+    watcher.sim.tick()
+    expect(watcher.sim.model.globalExtState.get('TEST', 'marks')).toBeUndefined()
   })
 
-  it('withdraws the request when the deadline passes during a poll', async () => {
+  it('cancels the request when the deadline passes during a poll', async () => {
     const stalling: FetchLike = (url, init) =>
       url.includes('RES_') ?
         new Promise((_, reject) => {
@@ -103,8 +135,20 @@ describe('timeouts', () => {
     const client = await connect({ timeoutMs: 100, fetch: stalling }, { ticking: false })
     watcher.sim.tick()
     const project = await client.currentProject()
-    expect((await rejection(project.runCommand('echo'))).code).toBe('TIMEOUT')
-    expect(watcher.requests()).toEqual([])
+    expect((await rejection(project.runCommand('record', { mark: 'x' }))).code).toBe('TIMEOUT')
+    watcher.sim.tick()
+    expect(watcher.sim.model.globalExtState.get('TEST', 'marks')).toBeUndefined()
+  })
+
+  it('cancels the request when REAPER stops answering after it was sent', async () => {
+    const failing: FetchLike = (url) =>
+      url.includes('RES_') ? Promise.reject(new TypeError('fetch failed')) : watcher.sim.fetch(url)
+    const client = await connect({ fetch: failing }, { ticking: false })
+    watcher.sim.tick()
+    const project = await client.currentProject()
+    expect((await rejection(project.runCommand('record', { mark: 'x' }))).code).toBe('REAPER_UNREACHABLE')
+    watcher.sim.tick()
+    expect(watcher.sim.model.globalExtState.get('TEST', 'marks')).toBeUndefined()
   })
 
   it('caps a request timeout at the client timeout', async () => {

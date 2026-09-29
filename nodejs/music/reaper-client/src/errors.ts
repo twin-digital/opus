@@ -1,10 +1,13 @@
 import type { WatcherErrorCode } from './protocol.js'
 
 /**
- * Why a client operation failed: a watcher error code, or one the client raises itself.
+ * Why a client operation failed: a watcher error code, one the client raises itself, or one a
+ * command defines.
  */
 export type ReaperErrorCode =
   | WatcherErrorCode
+  // any string, without losing the known codes' completions
+  | (string & {})
   | 'REQUEST_TOO_LARGE'
   | 'TIMEOUT'
   | 'WATCHER_NOT_RUNNING'

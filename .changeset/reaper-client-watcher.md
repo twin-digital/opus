@@ -3,4 +3,5 @@
 ---
 
 New package: a client for REAPER's web remote and the Lua watcher that runs its commands inside REAPER, with the
-request, response and status protocol and per-project generations. No commands yet.
+request, response and status protocol, per-project generations, cancels, per-subject ordering and command-defined
+error codes. No commands yet.

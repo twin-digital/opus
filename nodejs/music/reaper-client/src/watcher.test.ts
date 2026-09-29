@@ -8,8 +8,11 @@ afterEach(async () => {
   await watcher.sim.close()
 })
 
-const request = (command: string, options?: object) => ({
+let seq = 0
+const request = (command: string, options?: object, { client = 'client-a', at = seq++ } = {}) => ({
   v: 1,
+  client,
+  seq: at,
   generation: watcher.generation(),
   command,
   options,
@@ -167,9 +170,15 @@ describe('requests', () => {
     ['another protocol', { v: 2, generation: 'g', command: 'echo' }, 'unsupported protocol version: 2'],
     ['no generation', { v: 1, command: 'echo' }, 'request needs a generation and a command'],
     ['no command', { v: 1, generation: 'g' }, 'request needs a generation and a command'],
+    ['no client', { v: 1, seq: 0, generation: 'g', command: 'echo' }, 'request needs a client and an integer seq'],
+    [
+      'a seq that is not an integer',
+      { v: 1, client: 'c', seq: 1.5, generation: 'g', command: 'echo' },
+      'request needs a client and an integer seq',
+    ],
     [
       'options that are not an object',
-      { v: 1, generation: 'g', command: 'echo', options: 3 },
+      { v: 1, client: 'c', seq: 0, generation: 'g', command: 'echo', options: 3 },
       'options must be an object',
     ],
   ])('answers BAD_REQUEST for %s', async (_, body, message) => {
@@ -245,7 +254,7 @@ describe('failures', () => {
 
   it.each([
     ['does not compile', 'broken', /^command failed to load: .*broken\.lua/],
-    ['does not return a function', 'not-a-function', /^command failed to load: module did not return a function$/],
+    ['does not return a command', 'not-a-function', /^command failed to load: module did not return a command$/],
   ])('answers FAILED for a command file that %s', async (_, command, message) => {
     watcher = await startWatcher()
     await watcher.post('A1', request(command))
@@ -265,5 +274,120 @@ describe('responses', () => {
     watcher.advance(1)
     watcher.sim.tick()
     expect(watcher.response('A1')).toBeUndefined()
+  })
+})
+
+describe('cancels', () => {
+  it('cancels a request whose cancel marker is waiting beside it', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('record', { mark: 'x' }))
+    await watcher.sim.fetch('/_/SET/PROJEXTSTATE/thrashplay/CANCEL_A1/1')
+    watcher.sim.tick()
+    expect(watcher.response('A1')).toEqual({
+      v: 1,
+      ok: false,
+      error: { code: 'CANCELLED', message: 'the client withdrew this request' },
+    })
+    expect(watcher.sim.model.globalExtState.get('TEST', 'marks')).toBeUndefined()
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, 'CANCEL_A1')).toBeUndefined()
+  })
+
+  it('cancels a request that lands after its cancel marker', async () => {
+    watcher = await startWatcher()
+    await watcher.sim.fetch('/_/SET/PROJEXTSTATE/thrashplay/CANCEL_A1/1')
+    watcher.sim.tick()
+    watcher.advance(300)
+    watcher.sim.tick()
+    await watcher.post('A1', request('record', { mark: 'x' }))
+    watcher.sim.tick()
+    expect(watcher.response('A1')).toMatchObject({ ok: false, error: { code: 'CANCELLED' } })
+    expect(watcher.sim.model.globalExtState.get('TEST', 'marks')).toBeUndefined()
+  })
+
+  it('deletes a cancel marker whose request never lands, after ten minutes', async () => {
+    watcher = await startWatcher()
+    await watcher.sim.fetch('/_/SET/PROJEXTSTATE/thrashplay/CANCEL_A1/1')
+    watcher.sim.tick()
+    watcher.advance(599)
+    watcher.sim.tick()
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, 'CANCEL_A1')).toBe('1')
+    watcher.advance(1)
+    watcher.sim.tick()
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, 'CANCEL_A1')).toBeUndefined()
+  })
+})
+
+describe('subjects', () => {
+  it('refuses a request older than one it already ran for the same subject', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'on' }, { at: 2 }))
+    watcher.sim.tick()
+    await watcher.post('A2', request('touch', { thing: 'lamp', mark: 'off' }, { at: 1 }))
+    watcher.sim.tick()
+    expect(watcher.response('A2')).toEqual({
+      v: 1,
+      ok: false,
+      error: {
+        code: 'STALE',
+        message: 'a newer request for thing:lamp already ran',
+        details: { subject: 'thing:lamp' },
+      },
+    })
+    expect(watcher.sim.model.globalExtState.get('TEST', 'lamp')).toBe('on')
+  })
+
+  it('refuses the older of two requests for a subject that land in one tick, out of order', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'newer' }, { at: 2 }))
+    await watcher.post('A2', request('touch', { thing: 'lamp', mark: 'older' }, { at: 1 }))
+    watcher.sim.tick()
+    expect(watcher.response('A2')).toMatchObject({ ok: false, error: { code: 'STALE' } })
+    expect(watcher.sim.model.globalExtState.get('TEST', 'lamp')).toBe('newer')
+  })
+
+  it('orders requests only within a subject and a client', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'a' }, { at: 5 }))
+    await watcher.post('A2', request('touch', { thing: 'door', mark: 'b' }, { at: 1 }))
+    await watcher.post('A3', request('touch', { thing: 'lamp', mark: 'c' }, { client: 'client-b', at: 1 }))
+    await watcher.post('A4', request('record', { mark: 'd' }, { at: 0 }))
+    watcher.sim.tick()
+    for (const id of ['A1', 'A2', 'A3', 'A4']) {
+      expect(watcher.response(id)).toMatchObject({ ok: true })
+    }
+  })
+
+  it('forgets a client idle for an hour', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'a' }, { at: 5 }))
+    watcher.sim.tick()
+    watcher.advance(3600)
+    watcher.sim.tick()
+    await watcher.post('A2', request('touch', { thing: 'lamp', mark: 'b' }, { at: 1 }))
+    watcher.sim.tick()
+    expect(watcher.response('A2')).toMatchObject({ ok: true })
+  })
+
+  it('answers FAILED when a command cannot name its subject', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('touch', { thing: 'unnamed', mark: 'x' }))
+    watcher.sim.tick()
+    expect(watcher.response('A1')).toMatchObject({
+      ok: false,
+      error: { code: 'FAILED', message: expect.stringMatching(/^command could not name its subject: /) as unknown },
+    })
+  })
+})
+
+describe('command errors', () => {
+  it('answers with the error code a command raises', async () => {
+    watcher = await startWatcher()
+    await watcher.post('A1', request('refuses'))
+    watcher.sim.tick()
+    expect(watcher.response('A1')).toEqual({
+      v: 1,
+      ok: false,
+      error: { code: 'TRACK_NOT_FOUND', message: 'no such track', details: { id: '{TRACK}' } },
+    })
   })
 })

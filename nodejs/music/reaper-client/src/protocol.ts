@@ -19,6 +19,11 @@ export const STATUS_KEY = 'WATCHER'
 export const REQUEST_PREFIX = 'REQ_'
 
 /**
+ * Project ext-state key prefix of a client's cancel of a request.
+ */
+export const CANCEL_PREFIX = 'CANCEL_'
+
+/**
  * Global ext-state key prefix of a response.
  */
 export const RESPONSE_PREFIX = 'RES_'
@@ -30,19 +35,27 @@ export const COMMAND_LIMIT = 1023
 
 export interface WatcherRequest {
   v: number
+  /**
+   * Names the client instance; with `seq`, orders its requests.
+   */
+  client: string
+  /**
+   * Counts up with each request the client sends.
+   */
+  seq: number
   generation: string
   command: string
   options?: Record<string, unknown>
 }
 
 /**
- * An error code the watcher answers with.
+ * An error code the watcher itself answers with; commands add their own.
  */
-export type WatcherErrorCode = 'BAD_REQUEST' | 'WRONG_PROJECT' | 'UNKNOWN_COMMAND' | 'FAILED'
+export type WatcherErrorCode = 'BAD_REQUEST' | 'WRONG_PROJECT' | 'UNKNOWN_COMMAND' | 'STALE' | 'CANCELLED' | 'FAILED'
 
 export type WatcherResponse =
   | { v: number; ok: true; result?: unknown }
-  | { v: number; ok: false; error: { code: WatcherErrorCode; message: string; details?: unknown } }
+  | { v: number; ok: false; error: { code: string; message: string; details?: unknown } }
 
 export interface WatcherProject {
   /**
