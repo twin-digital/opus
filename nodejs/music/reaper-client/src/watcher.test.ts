@@ -74,6 +74,29 @@ describe('status', () => {
     expect(seen.size).toBe(5)
   })
 
+  it('marks the current project with its generation', async () => {
+    watcher = await startWatcher()
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, 'GENERATION')).toBe(watcher.generation())
+  })
+
+  it('makes a new generation when an unsaved project replaces another in the same tab', async () => {
+    watcher = await startWatcher()
+    const generation = watcher.generation()
+    // same handle, same empty path: only the missing marker shows the change
+    watcher.sim.model.openProjectInTab('')
+    watcher.sim.tick()
+    expect(watcher.generation()).not.toBe(generation)
+    expect(watcher.sim.model.currentProject.extState.get(SECTION, 'GENERATION')).toBe(watcher.generation())
+  })
+
+  it('makes a new generation for a project carrying another marker, as a reopened file does', async () => {
+    watcher = await startWatcher()
+    const generation = watcher.generation()
+    watcher.sim.model.currentProject.extState.set(SECTION, 'GENERATION', '0123456789abcdef')
+    watcher.sim.tick()
+    expect(watcher.generation()).not.toBe(generation)
+  })
+
   it('clears its status when stopped', async () => {
     watcher = await startWatcher()
     watcher.sim.stopScript(watcher.script)
@@ -104,7 +127,7 @@ describe('requests', () => {
     await watcher.post('A1', request('throws'))
     await watcher.post('A2', request('echo', { x: 1 }))
     watcher.sim.tick()
-    expect(watcher.sim.model.currentProject.extState.entries(SECTION)).toEqual([])
+    expect(watcher.requests()).toEqual([])
     watcher.sim.tick()
     expect(
       watcher.sim.calls.filter((call) => call.fn === 'SetExtState' && String(call.args[1]).startsWith('RES_')),

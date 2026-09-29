@@ -34,6 +34,14 @@ export const startWatcher = async () => {
       const body = typeof request === 'string' ? request : JSON.stringify(request)
       await sim.fetch(`/_/SET/PROJEXTSTATE/thrashplay/REQ_${id}/${encodeURIComponent(body)}`)
     },
+    /**
+     * Keys of the requests waiting in the current project.
+     */
+    requests: () =>
+      sim.model.currentProject.extState
+        .entries(SECTION)
+        .map(([key]) => key)
+        .filter((key) => key.startsWith('REQ_')),
     response: (id: string) => {
       const raw = sim.model.globalExtState.get(SECTION, `RES_${id}`)
       return raw === undefined ? undefined : (JSON.parse(raw) as WatcherResponse)

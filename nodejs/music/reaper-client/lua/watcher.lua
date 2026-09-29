@@ -1,19 +1,23 @@
 -- Thrashplay REAPER watcher: runs the commands clients post to the current project's ext state.
 --
--- Everything lives in ext-state section THRASHPLAY (the web remote upper-cases what clients write):
+-- Everything lives in ext-state section THRASHPLAY (REAPER stores sections and keys upper-cased):
 --   request   project ext state  REQ_<id>  {"v":1,"generation":"...","command":"...","options":{...}}
 --   response  global ext state   RES_<id>  {"v":1,"ok":true,"result":...}
 --                                          {"v":1,"ok":false,"error":{"code":"...","message":"...","details":...}}
 --   status    global ext state   WATCHER   {"v":1,"version":"...","generation":"...","heartbeat":n,"project":{...}}
+--   marker    project ext state  GENERATION  the generation the watcher gave this project
 --
 -- A generation names the current project for as long as it stays current; any project change makes
--- a new one, and a request carrying another is refused. Commands are the modules in commands/, each
+-- a new one, and a request carrying another is refused. A tab keeps its handle when another project
+-- opens in it, and unsaved projects share an empty path, so the watcher also marks each project it
+-- names: a project without the current generation's marker is a new one. Commands are the modules in commands/, each
 -- returning function(options, context).
 
 local PROTOCOL = 1
 local SECTION = "THRASHPLAY"
 local STATUS_KEY = "WATCHER"
 local INSTANCE_KEY = "WATCHER_INSTANCE"
+local GENERATION_KEY = "GENERATION"
 local REQUEST_PREFIX = "REQ_"
 local RESPONSE_PREFIX = "RES_"
 local RESPONSE_TTL = 60
@@ -93,11 +97,13 @@ local function publishStatus()
   }), false)
 end
 
--- tab switches, opening a file and new projects all change the handle or the path
+-- ext-state writes don't mark a project changed, so the marker costs the user nothing
 local function projectChanged()
   local project, path = reaper.EnumProjects(-1)
-  if project == current.project and path == current.path then return false end
+  local _, marker = reaper.GetProjExtState(0, SECTION, GENERATION_KEY)
+  if project == current.project and path == current.path and marker == current.generation then return false end
   current.project, current.path, current.generation = project, path, token()
+  reaper.SetProjExtState(0, SECTION, GENERATION_KEY, current.generation)
   return true
 end
 
@@ -161,8 +167,11 @@ local function processInbox()
   table.sort(ids)
   for _, id in ipairs(ids) do
     local _, raw = reaper.GetProjExtState(0, SECTION, REQUEST_PREFIX .. id)
-    reaper.SetProjExtState(0, SECTION, REQUEST_PREFIX .. id, "")
-    respond(id, handle(raw))
+    -- empty when the client withdrew it after this tick listed it
+    if raw ~= "" then
+      reaper.SetProjExtState(0, SECTION, REQUEST_PREFIX .. id, "")
+      respond(id, handle(raw))
+    end
   end
 end
 

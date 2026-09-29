@@ -4,7 +4,7 @@
 export const PROTOCOL_VERSION = 1
 
 /**
- * Ext-state section of every protocol key, in the upper case the web remote stores.
+ * Ext-state section of every protocol key, spelled as REAPER stores it.
  */
 export const SECTION = 'THRASHPLAY'
 

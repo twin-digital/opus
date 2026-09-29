@@ -21,25 +21,31 @@ command may still have run.
 ## Projects and generations
 
 The watcher names the current project with a random _generation_, made anew whenever the current project changes
-(switching tabs, opening a file, a new project, the watcher starting) and never saved anywhere. A project handle
+(switching tabs, opening a file, a new project, the watcher starting). It marks the project with it, in project ext
+state `GENERATION`: a tab keeps its handle when another project opens in it, and unsaved projects share an empty
+path, so a project without the current generation's marker is how the watcher tells a replaced project apart. A
+saved marker never matches a later session's generation, so a file reopened later, or a copy of one, gets a new one. A project handle
 carries the generation it was made with, and the watcher refuses its commands with `WRONG_PROJECT` once the project
 changes, even back to the same file. A caller that acts on what it showed a user holds on to the handle, or to its
 generation (`reaper.project(generation)`), and gets a fresh one only when it's ready to act on the new project.
 
 ## Protocol
 
-All keys live in ext-state section `THRASHPLAY`, the upper case the web remote stores.
+All keys live in ext-state section `THRASHPLAY`. REAPER stores sections and keys upper-cased and finds them in any
+case; both sides use the upper-case spelling.
 
-| Key        | Where             | Written by | Value                                                                                       |
-| ---------- | ----------------- | ---------- | ------------------------------------------------------------------------------------------- |
-| `REQ_<id>` | project ext state | client     | `{"v":1,"generation":"…","command":"…","options":{…}}`                                      |
-| `RES_<id>` | global ext state  | watcher    | `{"v":1,"ok":true,"result":…}` or `{"v":1,"ok":false,"error":{"code","message","details"}}` |
-| `WATCHER`  | global ext state  | watcher    | `{"v":1,"version":"…","generation":"…","heartbeat":n,"project":{"name":"…","path":"…"}}`    |
+| Key          | Where             | Written by | Value                                                                                       |
+| ------------ | ----------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `REQ_<id>`   | project ext state | client     | `{"v":1,"generation":"…","command":"…","options":{…}}`                                      |
+| `RES_<id>`   | global ext state  | watcher    | `{"v":1,"ok":true,"result":…}` or `{"v":1,"ok":false,"error":{"code","message","details"}}` |
+| `GENERATION` | project ext state | watcher    | the generation the watcher gave this project                                                |
+| `WATCHER`    | global ext state  | watcher    | `{"v":1,"version":"…","generation":"…","heartbeat":n,"project":{"name":"…","path":"…"}}`    |
 
 - **Requests** go to the project that is current when REAPER receives them, one key each, so writers never race. An
   id is 13 upper-case base-36 digits: milliseconds, then 4 random digits. The web remote cuts each command off at
   1023 characters, so the client refuses a longer one with `REQUEST_TOO_LARGE` rather than send it.
-- **The watcher** reads the inbox every tick, in id order, deleting each request before running it. It checks for a
+- **The watcher** reads the inbox every tick, in id order, deleting each request before running it; a request the
+  client withdrew after the tick listed it reads back empty and is skipped. It checks for a
   project change before reading, so a request posted just before one is judged against the new project.
 - **Responses** go to global ext state, which a project switch can't hide and REAPER never saves. The client polls
   for its own key; the watcher deletes responses nobody collected after a minute.

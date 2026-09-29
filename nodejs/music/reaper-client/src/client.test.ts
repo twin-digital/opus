@@ -88,7 +88,7 @@ describe('timeouts', () => {
     const project = await client.currentProject()
     const error = await rejection(project.runCommand('echo'))
     expect(error.code).toBe('TIMEOUT')
-    expect(watcher.sim.model.currentProject.extState.entries(SECTION)).toEqual([])
+    expect(watcher.requests()).toEqual([])
   })
 
   it('withdraws the request when the deadline passes during a poll', async () => {
@@ -104,7 +104,7 @@ describe('timeouts', () => {
     watcher.sim.tick()
     const project = await client.currentProject()
     expect((await rejection(project.runCommand('echo'))).code).toBe('TIMEOUT')
-    expect(watcher.sim.model.currentProject.extState.entries(SECTION)).toEqual([])
+    expect(watcher.requests()).toEqual([])
   })
 
   it('caps a request timeout at the client timeout', async () => {
