@@ -1,11 +1,13 @@
 import * as path from 'node:path'
 import { ExtStateStore } from './ext-state.js'
+import type { SimTrack } from './track.js'
 
 /**
  * A project tab: a ReaScript `ReaProject` handle and the project open in it.
  */
 export class SimProject {
   readonly extState = new ExtStateStore(true)
+  readonly tracks: SimTrack[] = []
 
   /**
    * @param path The `.rpp` file, or empty for an unsaved project.
@@ -25,5 +27,6 @@ export class SimProject {
   open(path: string): void {
     this.path = path
     this.extState.clear()
+    this.tracks.length = 0
   }
 }

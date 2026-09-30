@@ -40,6 +40,8 @@ local HEARTBEAT_INTERVAL = 1
 local DIR = debug.getinfo(1, "S").source:match("^@?(.*[/\\])") or ""
 local SEP = DIR:sub(-1) == "\\" and "\\" or "/"
 local json = dofile(DIR .. "lib" .. SEP .. "json.lua")
+-- code shared between commands lives in commands/lib/, for them to require
+package.path = DIR .. "commands" .. SEP .. "lib" .. SEP .. "?.lua;" .. package.path
 
 -- tokens must differ across REAPER launches and between copies, however REAPER's Lua seeds by default
 math.randomseed(math.random(1 << 30) ~ os.time(), math.random(1 << 30) ~ math.floor(reaper.time_precise() * 1000000))

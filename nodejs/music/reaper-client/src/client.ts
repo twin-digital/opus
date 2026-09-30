@@ -1,4 +1,5 @@
 import { ReaperError } from './errors.js'
+import { type TrackCommands, trackCommands } from './tracks.js'
 import {
   CANCEL_PREFIX,
   COMMAND_LIMIT,
@@ -49,7 +50,7 @@ export interface RequestOptions {
  * A project as the client last saw it. Its commands are refused with `WRONG_PROJECT` once REAPER's
  * current project changes, even back to the same file; get a fresh handle to act on the new one.
  */
-export interface ReaperProject {
+export interface ReaperProject extends TrackCommands {
   readonly generation: string
   runCommand<T = unknown>(command: string, options?: Record<string, unknown>, request?: RequestOptions): Promise<T>
 }
@@ -178,9 +179,12 @@ export const createReaperClient = ({
     return status
   }
 
-  const project = (generation: string): ReaperProject => ({
-    generation,
-    runCommand: async <T>(command: string, options?: Record<string, unknown>, request?: RequestOptions): Promise<T> => {
+  const project = (generation: string): ReaperProject => {
+    const runCommand = async <T>(
+      command: string,
+      options?: Record<string, unknown>,
+      request?: RequestOptions,
+    ): Promise<T> => {
       const deadline = deadlineFor(request)
       const id = newId()
       const body: WatcherRequest = { v: PROTOCOL_VERSION, client: clientId, seq: seq++, generation, command, options }
@@ -242,8 +246,9 @@ export const createReaperClient = ({
 
       await cancel()
       throw new ReaperError('TIMEOUT', `The watcher did not answer ${command} in time; it may still have run`)
-    },
-  })
+    }
+    return { generation, runCommand, ...trackCommands(runCommand) }
+  }
 
   return {
     getWatcherStatus,
