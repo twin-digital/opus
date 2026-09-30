@@ -1,0 +1,64 @@
+{
+  "private": true,
+  "name": "@thrashplay/reaper-sim",
+  "version": "0.0.0",
+  "description": "In-memory REAPER simulator: hosts ReaScript Lua scripts and serves the web remote, for testing and developing against REAPER without running it.",
+  "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "./index": null,
+    "./index.js": null,
+    "./*": {
+      "import": {
+        "source": "./src/*.ts",
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "test": "opus-test",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "wasmoon": "^1.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-jsdoc": "catalog:",
+    "globals": "catalog:",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

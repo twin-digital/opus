@@ -17,6 +17,12 @@ live here.
 - `launchpad-sim` (`@thrashplay/launchpad-sim`) — browser-based hardware stand-in: a Vite app that
   renders the Launchpad grid on a canvas and an on-screen piano (Web MIDI + soundfont-player), so
   programs can be developed without the physical devices.
+- `csst-api` (`@thrashplay/csst-api`) — the API backend for CS Studio, the web interface replacing
+  the studio touch page prototype. A Hono app (`createApp`; `AppType` is the route surface a typed
+  `hc` client builds from); `src/main.ts` serves it on `CSST_API_PORT` (default `8766`).
+- `reaper-sim` (`@thrashplay/reaper-sim`) — an in-memory REAPER for tests and development: hosts ReaScript Lua
+  scripts (wasmoon) against a model of REAPER's state and serves the web remote against the same state, in process
+  (`fetch`) or over HTTP. Its README lists which REAPER behaviors it models are confirmed against REAPER.
 - `music/reaper/` — shipped in the package, not code. `studio/`: the ReaScript that runs inside REAPER for
   the recording studio (clip regions, silent-tail trim, runaway-recording backstop, a clip library
   beside the project, and an Outbox of per-clip mixes, MIDI files, and a manifest rendered while
