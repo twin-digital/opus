@@ -20,7 +20,13 @@ sim.tick() // one pass of REAPER's main loop: runs every deferred function once
 const stop = sim.run() // or tick on a ~30 Hz timer
 sim.stopScript(script) // end a script as a user does; its atexit functions run
 
+// set up REAPER's devices
+sim.model.audioInputs = ['In 1', 'In 2']
+sim.model.midiInputs = [{ name: 'Digital Piano', present: true }]
+
 sim.model.currentProject.extState.entries('THRASHPLAY') // assert on state
+sim.model.currentProject.tracks // tracks, with their record settings
+sim.model.undoPoints // undo points scripts made
 sim.calls // or on the journal of ReaScript calls
 sim.webRequests // and web remote commands
 await sim.close()
@@ -74,6 +80,13 @@ simulator itself.
 - `GetInputChannelName` reports the audio driver's channel names (e.g. `VM-VAIO 1`); whether it reports a channel
   renamed in REAPER's preferences is untested.
 
+**Assumed** (the probe checks each)
+
+- A new track (`InsertTrackAtIndex` with defaults) has no name, records audio input channel 0 mono (`I_RECINPUT`
+  0), is unarmed, monitors (`I_RECMON` 1), and has two channels. REAPER's actual defaults follow its preferences.
+- Each `I_RECINPUT` value the track commands write reads back unchanged, following REAPER's documented encoding.
+- Track GUIDs are braced, hyphenated upper-case hex.
+
 **Not modeled** (the probe records each)
 
 - After a long tick, REAPER works through the requests that waited in bursts about a second apart, while requests
@@ -86,3 +99,6 @@ simulator itself.
 - `IsProjectDirty` always answers 0.
 - Project files: `Main_SaveProjectEx` writes nothing.
 - The web remote's username and password.
+- Tracks carry only their GUID, name, `I_RECINPUT`, `I_RECARM`, `I_RECMON` and `I_NCHAN`; other track parameters
+  are a Lua error. Undo blocks record one undo point each, in `model.undoPoints`, and `PreventUIRefresh` does
+  nothing.

@@ -10,6 +10,15 @@ export class ReaperModel {
    * Names of the audio device's input channels, as `GetInputChannelName` reports them.
    */
   audioInputs: string[] = ['Input 1', 'Input 2']
+  /**
+   * MIDI input devices by index, as `GetMIDIInputName` reports them; a device REAPER knows but
+   * can't find is absent.
+   */
+  midiInputs: ({ name: string; present: boolean } | undefined)[] = [{ name: 'Digital Piano', present: true }]
+  /**
+   * Undo points scripts made, by description, oldest first.
+   */
+  readonly undoPoints: string[] = []
   readonly projects: SimProject[] = [new SimProject()]
   private current: SimProject = this.projects[0]
 

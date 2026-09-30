@@ -330,6 +330,19 @@ const ratio = luaSeconds / ((wall2 - wall1) / 1000)
 check('time_precise counts seconds (ratio to wall time within 25%)', Math.abs(ratio - 1) < 0.25, true)
 check('time_precise seconds per wall second', Number(ratio.toFixed(3)))
 
+await step('TRACKS')
+check(
+  "a new track's defaults",
+  await readGlobal('R_NEWTRACK'),
+  'name= input=0 armed=0 monitor=1 channels=2 guidShaped=true',
+)
+check(
+  'each I_RECINPUT the track commands write reads back unchanged',
+  await readGlobal('R_RECINPUT'),
+  '-1=-1,0=0,5=5,1024=1024,1025=1025,2048=2048,512=512,4096=4096,4099=4099,6112=6112,6096=6096',
+)
+check('MIDI input devices REAPER lists', await readGlobal('R_MIDI'))
+
 await step('INPUTS.1')
 const channelNames = await readGlobal('R_INPUTS')
 check('audio input channel names', channelNames)

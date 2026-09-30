@@ -67,9 +67,36 @@ case; both sides use the upper-case spelling.
   the `manifest.json` an install writes beside it; `dev` without one). The watcher clears it when stopped, and
   hands over to a newer copy started beside it.
 
+## Tracks
+
+A project handle carries the track commands, which address tracks by REAPER's track GUID (a track's `id`):
+
+```ts
+const inputs = await project.listInputs() // { audio: [{ channel, name }], midi: [{ device, name, present }] }
+const choices = inputChoices(inputs) // [{ group, label, input }], e.g. "VM-VAIO 1 / VM-VAIO 2"
+const track = await project.createTrack({ name: 'Piano', input: choices[0].input, armed: true })
+await project.updateTrack({ track: track.id, armed: false }) // fields left out stay as they are
+const tracks = await project.listTracks()
+```
+
+- **Inputs** are `none`, `audio` (a 0-based `channel`, `mono` or `stereo`, stereo also recording the next channel),
+  or `midi` (a `device` number, `all` or `virtual-keyboard`; a `channel` 1–16 or `all`). A track's input reads back
+  with REAPER's encoded `I_RECINPUT` value as `raw`; one set up in REAPER that the commands can't give
+  (multichannel, ReaRoute) reads as `{ kind: 'other', raw }`.
+- **`inputChoices`** offers each audio channel mono, each even-aligned pair stereo, each present MIDI device on all
+  channels, all MIDI devices, and the virtual keyboard, labeled with the audio driver's channel names and the MIDI
+  device names.
+- **Writes** (`createTrack`, `updateTrack`) answer with the track as REAPER then has it, each as one undo point in
+  REAPER ("CS Studio: create track"). They check everything before changing anything, failing with `BAD_REQUEST`
+  for a malformed field, `INPUT_NOT_FOUND` for an input the audio device or MIDI setup lacks, and `TRACK_NOT_FOUND`
+  for a track the current project lacks. `updateTrack`'s target is its track.
+
+The Lua behind them is in `lua/commands/`, with the `I_RECINPUT` encoding in `lua/commands/lib/recinput.lua`.
+
 ## Commands
 
-A command is a module in `lua/commands/`, named by its file, returning `function(options, context)`, or
+A command is a module in `lua/commands/`, named by its file (code shared between commands goes in
+`lua/commands/lib/`, for them to `require`), returning `function(options, context)`, or
 `{ run = function(options, context), target = function(options) }` for one that writes to one thing;
 `context.project` is the current project. Its return value is the result, encoded with
 [rxi/json.lua](https://github.com/rxi/json.lua) (`lua/lib/json.lua`), which encodes an empty table as `[]`.
