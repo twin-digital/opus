@@ -8,7 +8,7 @@ local LUA_SECTION, LUA_KEY = "Probe_Lua_Section", "Probe_Lua_Key"
 local BIG_SIZES = { 2000, 5000, 20000, 100000 }
 local REPORTS = {
   "READY", "ACK", "DIRTY_LUA", "PROJKEYS", "GLOBAL", "LUA_CASE", "DIRTY_WEB", "KEYS", "ORDER", "EMPTY", "SCRIPT",
-  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS", "SPIN", "INPUTS",
+  "FILES", "PROJECTS", "T1", "T2", "RPP", "TABS", "SPIN", "INPUTS", "NEWTRACK", "RECINPUT", "MIDI",
 }
 
 local DIR = debug.getinfo(1, "S").source:match("^@?(.*[/\\])") or ""
@@ -143,6 +143,30 @@ local handlers = {
       reaper.SetExtState(S, "BIG" .. n, string.rep("x", n), false)
     end
     report("T2", reaper.time_precise())
+  end,
+  -- a new track's defaults, each I_RECINPUT the track commands write (read back), and the MIDI
+  -- devices REAPER lists; the track is deleted after
+  TRACKS = function()
+    reaper.InsertTrackAtIndex(reaper.CountTracks(0), true)
+    local track = reaper.GetTrack(0, reaper.CountTracks(0) - 1)
+    local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
+    local value = function(parameter) return math.floor(reaper.GetMediaTrackInfo_Value(track, parameter)) end
+    report("NEWTRACK", string.format("name=%s input=%d armed=%d monitor=%d channels=%d guidShaped=%s", name,
+      value("I_RECINPUT"), value("I_RECARM"), value("I_RECMON"), value("I_NCHAN"),
+      tostring(reaper.GetTrackGUID(track):match("^{%x+%-%x+%-%x+%-%x+%-%x+}$") ~= nil)))
+    local readBack = {}
+    for _, raw in ipairs({ -1, 0, 5, 1024, 1025, 2048, 512, 4096, 4099, 6112, 6096 }) do
+      reaper.SetMediaTrackInfo_Value(track, "I_RECINPUT", raw)
+      readBack[#readBack + 1] = raw .. "=" .. value("I_RECINPUT")
+    end
+    report("RECINPUT", table.concat(readBack, ","))
+    local midi = {}
+    for device = 0, reaper.GetNumMIDIInputs() - 1 do
+      local present, deviceName = reaper.GetMIDIInputName(device, "")
+      if deviceName ~= "" then midi[#midi + 1] = device .. ":" .. tostring(present) .. ":" .. deviceName end
+    end
+    report("MIDI", "slots=" .. reaper.GetNumMIDIInputs() .. " " .. table.concat(midi, " | "))
+    reaper.DeleteTrack(track)
   end,
   -- how a saved project file stores ext state, then what opening files in this tab does to the handle and path
   TABS = function()
