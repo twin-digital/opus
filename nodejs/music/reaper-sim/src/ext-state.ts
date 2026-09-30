@@ -1,49 +1,59 @@
 /**
- * Ext-state values by key within named sections. Sections and keys match case-sensitively.
+ * Ext-state values by key within named sections, as REAPER keeps them: sections and keys are stored
+ * upper-cased, so every lookup ignores case, and a section's keys enumerate in sorted order.
  */
 export class ExtStateStore {
   private readonly sections = new Map<string, Map<string, string>>()
 
+  /**
+   * @param emptyDeletes Whether storing an empty value deletes the key, as it does in project ext
+   *   state; global ext state keeps the key with an empty value.
+   */
+  constructor(private readonly emptyDeletes: boolean) {}
+
   get(section: string, key: string): string | undefined {
-    return this.sections.get(section)?.get(key)
+    return this.sections.get(section.toUpperCase())?.get(key.toUpperCase())
   }
 
-  /**
-   * Stores a value; an empty value deletes the key.
-   */
   set(section: string, key: string, value: string): void {
-    if (value === '') {
+    if (value === '' && this.emptyDeletes) {
       this.delete(section, key)
       return
     }
-    let values = this.sections.get(section)
+    const name = section.toUpperCase()
+    let values = this.sections.get(name)
     if (values === undefined) {
       values = new Map()
-      this.sections.set(section, values)
+      this.sections.set(name, values)
     }
-    values.set(key, value)
+    values.set(key.toUpperCase(), value)
   }
 
   delete(section: string, key: string): void {
-    const values = this.sections.get(section)
-    values?.delete(key)
+    const name = section.toUpperCase()
+    const values = this.sections.get(name)
+    values?.delete(key.toUpperCase())
     if (values?.size === 0) {
-      this.sections.delete(section)
+      this.sections.delete(name)
     }
   }
 
   deleteSection(section: string): void {
-    this.sections.delete(section)
+    this.sections.delete(section.toUpperCase())
   }
 
-  sectionNames(): string[] {
-    return [...this.sections.keys()]
+  clear(): void {
+    this.sections.clear()
   }
 
   /**
-   * A section's entries in insertion order.
+   * A section's entries, as stored, in sorted key order.
    */
   entries(section: string): [key: string, value: string][] {
-    return [...(this.sections.get(section) ?? [])]
+    return [...(this.sections.get(section.toUpperCase()) ?? [])].sort(([a], [b]) =>
+      a < b ? -1
+      : a > b ? 1
+      : 0,
+    )
   }
 }

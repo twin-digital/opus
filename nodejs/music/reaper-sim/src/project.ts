@@ -5,7 +5,7 @@ import { ExtStateStore } from './ext-state.js'
  * An open project: a ReaScript `ReaProject` handle and its state.
  */
 export class SimProject {
-  readonly extState = new ExtStateStore()
+  readonly extState = new ExtStateStore(true)
 
   /**
    * @param path The `.rpp` file, or empty for an unsaved project.

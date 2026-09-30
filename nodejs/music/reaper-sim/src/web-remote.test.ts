@@ -45,6 +45,18 @@ describe('web remote', () => {
     )
   })
 
+  it('looks keys up as sent, without decoding them', async () => {
+    const sim = new ReaperSim()
+    await send(sim, 'SET/PROJEXTSTATE/THRASHPLAY/KEY%3DEQUALS/1;SET/PROJEXTSTATE/THRASHPLAY/KEY.DOT/2')
+    expect(sim.model.currentProject.extState.entries('THRASHPLAY')).toEqual([
+      ['KEY.DOT', '2'],
+      ['KEY=EQUALS', '1'],
+    ])
+    expect((await send(sim, 'GET/PROJEXTSTATE/THRASHPLAY/KEY%3DEQUALS;GET/PROJEXTSTATE/THRASHPLAY/KEY.DOT')).body).toBe(
+      'PROJEXTSTATE\tTHRASHPLAY\tKEY%3DEQUALS\t\nPROJEXTSTATE\tTHRASHPLAY\tKEY.DOT\t2\n',
+    )
+  })
+
   it('deletes a key written empty', async () => {
     const sim = new ReaperSim()
     await send(sim, 'SET/PROJEXTSTATE/THRASHPLAY/K/v;SET/PROJEXTSTATE/THRASHPLAY/K/')

@@ -5,7 +5,7 @@ import { SimProject } from './project.js'
  * REAPER's state as scripts and the web remote see it. There is always a current project.
  */
 export class ReaperModel {
-  readonly globalExtState = new ExtStateStore()
+  readonly globalExtState = new ExtStateStore(false)
   readonly projects: SimProject[] = [new SimProject()]
   private current: SimProject = this.projects[0]
 

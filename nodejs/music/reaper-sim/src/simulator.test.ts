@@ -35,27 +35,45 @@ describe('scripts', () => {
       reaper.SetProjExtState(0, "S", "missing", tostring(missing))
     `)
     expect(song.extState.entries('S')).toEqual([
-      ['file', '/songs/song.rpp'],
-      ['name', 'song.rpp'],
-      ['missing', 'nil'],
+      ['FILE', '/songs/song.rpp'],
+      ['MISSING', 'nil'],
+      ['NAME', 'song.rpp'],
     ])
   })
 
-  it('reads project ext state case-sensitively, so web remote writes are upper-case', async () => {
+  it('matches sections and keys ignoring case, storing them upper-cased', async () => {
     sim = new ReaperSim()
-    await sim.fetch('http://reaper/_/SET/PROJEXTSTATE/thrashplay/key/v')
+    await sim.fetch('http://reaper/_/SET/PROJEXTSTATE/thrashplay/web_key/w')
     await sim.loadScript(`
-      local _, lower = reaper.GetProjExtState(0, "thrashplay", "key")
-      local size, upper = reaper.GetProjExtState(0, "THRASHPLAY", "KEY")
-      reaper.SetExtState("OUT", "result", "[" .. lower .. "][" .. upper .. "]" .. size, false)
+      reaper.SetProjExtState(0, "Thrashplay", "Lua_Key", "l")
+      reaper.SetExtState("Thrashplay", "Global_Key", "g", false)
+      local _, web = reaper.GetProjExtState(0, "Thrashplay", "Web_Key")
+      local _, lua = reaper.GetProjExtState(0, "THRASHPLAY", "lua_key")
+      reaper.SetExtState("OUT", "result", web .. lua .. reaper.GetExtState("thrashplay", "GLOBAL_KEY"), false)
     `)
-    expect(sim.model.globalExtState.get('OUT', 'result')).toBe('[][v]1')
+    expect(sim.model.globalExtState.get('OUT', 'result')).toBe('wlg')
+    expect(sim.model.currentProject.extState.entries('THRASHPLAY')).toEqual([
+      ['LUA_KEY', 'l'],
+      ['WEB_KEY', 'w'],
+    ])
   })
 
-  it('enumerates project ext state until it runs out', async () => {
+  it('keeps a global key written empty, but deletes a project key', async () => {
     sim = new ReaperSim()
-    sim.model.currentProject.extState.set('THRASHPLAY', 'A', '1')
+    await sim.loadScript(`
+      reaper.SetExtState("S", "G", "x", false)
+      reaper.SetExtState("S", "G", "", false)
+      reaper.SetProjExtState(0, "S", "P", "x")
+      reaper.SetProjExtState(0, "S", "P", "")
+      reaper.SetExtState("OUT", "result", tostring(reaper.HasExtState("S", "G")) .. " " .. tostring(reaper.EnumProjExtState(0, "S", 0)), false)
+    `)
+    expect(sim.model.globalExtState.get('OUT', 'result')).toBe('true false')
+  })
+
+  it('enumerates project ext state in key order until it runs out', async () => {
+    sim = new ReaperSim()
     sim.model.currentProject.extState.set('THRASHPLAY', 'B', '2')
+    sim.model.currentProject.extState.set('THRASHPLAY', 'A', '1')
     await sim.loadScript(`
       local seen, i = {}, 0
       while true do

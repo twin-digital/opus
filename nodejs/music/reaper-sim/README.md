@@ -31,29 +31,34 @@ fails loudly instead, so a test can't pass on a command it never ran.
 ## Fidelity
 
 The simulator encodes what we believe about REAPER. Keep this list current as behavior is checked against the real
-thing; `probe/` holds the in-REAPER half of a probe.
+thing.
 
-**Confirmed** (checked against a running REAPER)
+**Confirmed** (REAPER on Windows, probe runs of 2026-09-29)
 
-- The web remote upper-cases the section and key of `SET/PROJEXTSTATE` and `SET/EXTSTATE`; `GET/PROJEXTSTATE` and
-  `GET/EXTSTATE` match them ignoring case, echoing the section and key as asked.
-- `GetProjExtState` from Lua matches case-sensitively, so Lua reads web remote writes under the upper-case spelling.
+- Ext-state sections and keys are stored upper-cased, whether Lua or the web remote writes them, and every lookup,
+  from Lua or the web remote, finds them in any case. The web remote echoes the section and key as asked.
+- `EnumProjExtState` enumerates keys in sorted order.
+- An empty value deletes a project key, from Lua or the web remote, but keeps a global key, which then reads as
+  empty and `HasExtState` still reports; `DeleteExtState` deletes a global key. `SetProjExtState` with an empty key
+  deletes the section.
+- The web remote's `SET` decodes percent-escapes in the section and key and its `GET` doesn't, so a key with `=`, a
+  space or an encoded `/` can be written but not read back. `.` and `-` read back.
 - Replies are tab-separated lines, one record per line. Fields escape tabs, newlines and backslashes (`\t`, `\n`,
-  `\\`).
-- `GET` of a missing key replies with an empty value.
+  `\\`), in values the web remote or Lua wrote, and pass UTF-8 through. `GET` of a missing key replies with an
+  empty value.
 - Each command is cut off at 1023 characters as sent (URL-encoded, counting the `SET/<kind>/<section>/<key>/` prefix)
-  and the request succeeds as usual. Other commands in the same request are unaffected; a 3.5 KB request of short
-  commands applies them all.
-- `SetProjExtState` with an empty value deletes the key; with an empty key, the section.
-
-**Assumed**
-
-- REAPER runs web remote requests and deferred script functions on its main thread, so neither interrupts the other.
-- `GetExtState` from Lua matches case-sensitively, like `GetProjExtState`.
-- A cut that splits a UTF-8 character leaves a replacement character, and a cut-short `%` escape stays literal.
-- `EnumProjExtState` enumerates in insertion order.
-- `SetExtState` with an empty value deletes the key.
+  and the request succeeds as usual; a cut-short `%` escape stays literal. A cut through a UTF-8 character stores the
+  partial bytes, which decode as a replacement character; the simulator stores the replacement character.
+- Replies carry values of at least 100,000 characters whole.
+- REAPER answers no web remote request while a script's tick is busy; each waits for the tick to end, as in the
+  simulator. The commands in one request run in order.
+- `time_precise` counts seconds.
+- `EnumProjects(-1)` handles compare equal while a tab stays current.
+- REAPER answers an unknown web remote command with 200 and no reply line.
 
 **Not modeled**
 
-- A request of 16 KB or more gets no reply at all.
+- After a long tick, REAPER can apply the requests that waited out of the order they were sent, and some fail with a
+  connection-level error; the simulator answers them in arrival order.
+- The largest request that gets a reply: about 6,400 characters on REAPER; the simulator answers any the HTTP server
+  accepts.
