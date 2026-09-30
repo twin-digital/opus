@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import * as path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ReaperSim } from './simulator.js'
 
@@ -39,6 +42,24 @@ describe('scripts', () => {
       ['MISSING', 'nil'],
       ['NAME', 'song.rpp'],
     ])
+  })
+
+  it('opens a project in the current tab, which keeps its handle', async () => {
+    sim = new ReaperSim()
+    const other = sim.model.openProject('/songs/other.rpp')
+    const tab = sim.model.openProject('/songs/a.rpp')
+    tab.extState.set('S', 'K', 'from a')
+    await sim.loadScript(`
+      local before = reaper.EnumProjects(-1)
+      reaper.Main_openProject("noprompt:/songs/b.rpp")
+      local after, path = reaper.EnumProjects(-1)
+      reaper.SetExtState("OUT", "open", tostring(before == after) .. " " .. path, false)
+    `)
+    expect(sim.model.globalExtState.get('OUT', 'open')).toBe('true /songs/b.rpp')
+    expect(sim.model.projects.map((project) => project.path)).toEqual(['', '/songs/other.rpp', '/songs/b.rpp'])
+    expect(sim.model.currentProject).toBe(tab)
+    expect(tab.extState.entries('S')).toEqual([])
+    expect(other.path).toBe('/songs/other.rpp')
   })
 
   it('matches sections and keys ignoring case, storing them upper-cased', async () => {
@@ -107,6 +128,85 @@ describe('scripts', () => {
     sim = new ReaperSim({ clock: () => 12.5 })
     await sim.loadScript(`reaper.SetExtState("A", "t", tostring(reaper.time_precise()), false)`)
     expect(sim.model.globalExtState.get('A', 't')).toBe('12.5')
+  })
+})
+
+describe('script lifetime', () => {
+  it('ends a script once nothing is deferred, running its atexit functions', async () => {
+    sim = new ReaperSim()
+    const script = await sim.loadScript(`
+      reaper.atexit(function() reaper.SetExtState("A", "exit", "ran", false) end)
+      reaper.defer(function() end)
+    `)
+    expect(script.running).toBe(true)
+    sim.tick()
+    expect(script.running).toBe(false)
+    expect(sim.model.globalExtState.get('A', 'exit')).toBe('ran')
+  })
+
+  it('runs atexit functions when a script is stopped, or REAPER closes', async () => {
+    sim = new ReaperSim()
+    const source = `
+      reaper.atexit(function() reaper.SetExtState("A", "exits", reaper.GetExtState("A", "exits") .. "x", false) end)
+      local function loop() reaper.defer(loop) end
+      loop()
+    `
+    const stopped = await sim.loadScript(source)
+    await sim.loadScript(source)
+    sim.stopScript(stopped)
+    expect(sim.model.globalExtState.get('A', 'exits')).toBe('x')
+    await sim.close()
+    expect(sim.model.globalExtState.get('A', 'exits')).toBe('xx')
+  })
+
+  it('skips atexit functions when a script dies of an error', async () => {
+    sim = new ReaperSim()
+    await sim.loadScript(`
+      reaper.atexit(function() reaper.SetExtState("A", "exit", "ran", false) end)
+      reaper.defer(function() error("boom") end)
+    `)
+    expect(() => {
+      sim.tick()
+    }).toThrow(/boom/)
+    expect(sim.model.globalExtState.get('A', 'exit')).toBeUndefined()
+  })
+})
+
+describe('script files', () => {
+  it('runs a script from disk, which can load its siblings and list its directory', async () => {
+    sim = new ReaperSim()
+    const dir = await mkdtemp(path.join(tmpdir(), 'reaper-sim-'))
+    await mkdir(path.join(dir, 'lib'))
+    await writeFile(path.join(dir, 'lib', 'b.lua'), 'return "b"')
+    await writeFile(path.join(dir, 'lib', 'a.lua'), 'return "a"')
+    await writeFile(
+      path.join(dir, 'main.lua'),
+      `
+        local dir = debug.getinfo(1, "S").source:match("^@?(.*[/\\\\])")
+        local names, i = {}, 0
+        while true do
+          local name = reaper.EnumerateFiles(dir .. "lib", i)
+          if not name then break end
+          names[#names + 1] = name .. "=" .. assert(loadfile(dir .. "lib/" .. name))()
+          i = i + 1
+        end
+        reaper.SetExtState("OUT", "files", table.concat(names, ","), false)
+      `,
+    )
+    const script = await sim.loadScriptFile(path.join(dir, 'main.lua'))
+    expect(script.name).toBe('main.lua')
+    expect(sim.model.globalExtState.get('OUT', 'files')).toBe('a.lua=a,b.lua=b')
+  })
+
+  it('lists files mounted beside a script, with or without a trailing separator', async () => {
+    sim = new ReaperSim()
+    await sim.mountFile('/scripts/commands/one.lua', '')
+    await sim.mountFile('/scripts/commands/deeper/two.lua', '')
+    await sim.loadScript(`
+      reaper.SetExtState("OUT", "list",
+        tostring(reaper.EnumerateFiles("/scripts/commands/", 0)) .. "," .. tostring(reaper.EnumerateFiles("/scripts/commands", 1)), false)
+    `)
+    expect(sim.model.globalExtState.get('OUT', 'list')).toBe('one.lua,nil')
   })
 })
 

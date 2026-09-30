@@ -9,6 +9,14 @@ export interface ReaScriptContext {
    */
   defer(fn: () => unknown): void
   /**
+   * Registers a Lua function to run when the script ends.
+   */
+  atexit(fn: () => unknown): void
+  /**
+   * Names of the files directly inside a directory, sorted.
+   */
+  listFiles(directory: string): string[]
+  /**
    * Seconds, as `time_precise` reports them.
    */
   now(): number
@@ -26,7 +34,7 @@ const multi = (...values: unknown[]) => LuaMultiReturn.from(values)
  */
 type ReaScriptApi = Record<string, (...args: never[]) => unknown>
 
-export function createReaScriptApi(context: ReaScriptContext): ReaScriptApi {
+export const createReaScriptApi = (context: ReaScriptContext): ReaScriptApi => {
   const { model } = context
 
   const project = (proj: unknown): SimProject => {
@@ -44,7 +52,12 @@ export function createReaScriptApi(context: ReaScriptContext): ReaScriptApi {
       context.defer(fn)
       return true
     },
+    atexit: (fn: () => unknown) => {
+      context.atexit(fn)
+    },
     time_precise: () => context.now(),
+    EnumerateFiles: (directory: string, idx: number) =>
+      multi(context.listFiles(directory).at(idx < 0 ? Infinity : idx)),
     ShowConsoleMsg: (msg: string) => {
       context.console.text += msg
     },
@@ -60,6 +73,20 @@ export function createReaScriptApi(context: ReaScriptContext): ReaScriptApi {
       return p === undefined ? multi(undefined, '') : multi(p, p.path)
     },
     GetProjectName: (proj: unknown) => project(proj).name,
+    GetNumAudioInputs: () => model.audioInputs.length,
+    GetInputChannelName: (channel: number) => multi(model.audioInputs[channel]),
+    Main_openProject: (name: string) => {
+      model.openProjectInTab(name.replace(/^noprompt:/, ''))
+    },
+    // saving writes nothing: project files aren't modeled
+    Main_SaveProjectEx: (proj: unknown, _filename: string, _options: number) => {
+      project(proj)
+    },
+    // change tracking isn't modeled
+    IsProjectDirty: (proj: unknown) => {
+      project(proj)
+      return 0
+    },
 
     GetProjExtState: (proj: unknown, extname: string, key: string) => {
       const value = project(proj).extState.get(extname, key) ?? ''

@@ -6,6 +6,10 @@ import { SimProject } from './project.js'
  */
 export class ReaperModel {
   readonly globalExtState = new ExtStateStore(false)
+  /**
+   * Names of the audio device's input channels, as `GetInputChannelName` reports them.
+   */
+  audioInputs: string[] = ['Input 1', 'Input 2']
   readonly projects: SimProject[] = [new SimProject()]
   private current: SimProject = this.projects[0]
 
@@ -21,6 +25,15 @@ export class ReaperModel {
     this.projects.push(project)
     this.current = project
     return project
+  }
+
+  /**
+   * Opens a project in the current tab, replacing the project there, as `Main_openProject` does.
+   * The tab keeps its handle.
+   */
+  openProjectInTab(path = ''): SimProject {
+    this.current.open(path)
+    return this.current
   }
 
   selectProject(project: SimProject): void {
