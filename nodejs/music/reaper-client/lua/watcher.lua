@@ -13,13 +13,15 @@
 -- opens in it, and unsaved projects share an empty path, so the watcher also marks each project it
 -- names: a project without the current generation's marker is a new one.
 --
--- When REAPER is busy, requests wait and can then land out of order. A client that gives up on a
--- request cancels it, and the watcher checks for the cancel before running any request. A command
--- that writes to one thing names it as its subject; the watcher refuses a request for a subject
--- older (by the client's seq) than one it already ran for that client.
+-- When REAPER is busy, requests wait and can then land out of order. Two guarantees hold anyway:
+-- a request its client gave up on never runs, unless it already ran (the client cancels it, and the
+-- watcher checks for the cancel before running any request); and a client's writes to the same
+-- thing take effect in the order it sent them (a command that writes to one thing names it as its
+-- target, and the watcher refuses a request older, by the client's seq, than one it already ran for
+-- that client and target).
 --
 -- Commands are the modules in commands/, each returning function(options, context), or
--- { run = function(options, context), subject = function(options) }. A command fails with
+-- { run = function(options, context), target = function(options) }. A command fails with
 -- error({ code = "...", message = "...", details = ... }) to answer with its own error code.
 
 local PROTOCOL = 1
@@ -75,8 +77,8 @@ local function loadCommands()
       if ok and type(run) == "function" then
         commands[name] = { run = run }
       elseif ok and type(run) == "table" and type(run.run) == "function"
-          and (run.subject == nil or type(run.subject) == "function") then
-        commands[name] = { run = run.run, subject = run.subject }
+          and (run.target == nil or type(run.target) == "function") then
+        commands[name] = { run = run.run, target = run.target }
       else
         commands[name] = { loadError = ok and "module did not return a command" or tostring(run) }
       end
@@ -99,7 +101,7 @@ local current = { heartbeat = 0, lastBeat = reaper.time_precise() }
 local expiries = {}
 -- when each unmatched cancel was first seen, by request id
 local cancelsSeen = {}
--- the newest seq run per client and subject: { seq, at }
+-- the newest seq run per client and target: { seq, at }
 local sequences = {}
 
 local function projectInfo()
@@ -160,17 +162,17 @@ local function handle(raw)
   end
   local options = request.options or {}
 
-  if command.subject then
-    local named, subject = pcall(command.subject, options)
+  if command.target then
+    local named, target = pcall(command.target, options)
     if not named then
-      return failure("FAILED", "command could not name its subject: " .. tostring(subject))
+      return failure("FAILED", "command could not name its target: " .. tostring(target))
     end
-    if subject ~= nil then
-      subject = tostring(subject)
-      local key = request.client .. "\0" .. subject
+    if target ~= nil then
+      target = tostring(target)
+      local key = request.client .. "\0" .. target
       local newest = sequences[key]
       if newest and request.seq <= newest.seq then
-        return failure("STALE", "a newer request for " .. subject .. " already ran", { subject = subject })
+        return failure("STALE", "a newer request for " .. target .. " already ran", { target = target })
       end
       sequences[key] = { seq = request.seq, at = reaper.time_precise() }
     end

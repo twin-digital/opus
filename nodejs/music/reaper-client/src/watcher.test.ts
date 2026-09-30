@@ -317,8 +317,8 @@ describe('cancels', () => {
   })
 })
 
-describe('subjects', () => {
-  it('refuses a request older than one it already ran for the same subject', async () => {
+describe('targets', () => {
+  it('refuses a request older than one it already ran for the same target', async () => {
     watcher = await startWatcher()
     await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'on' }, { at: 2 }))
     watcher.sim.tick()
@@ -330,13 +330,13 @@ describe('subjects', () => {
       error: {
         code: 'STALE',
         message: 'a newer request for thing:lamp already ran',
-        details: { subject: 'thing:lamp' },
+        details: { target: 'thing:lamp' },
       },
     })
     expect(watcher.sim.model.globalExtState.get('TEST', 'lamp')).toBe('on')
   })
 
-  it('refuses the older of two requests for a subject that land in one tick, out of order', async () => {
+  it('refuses the older of two requests for a target that land in one tick, out of order', async () => {
     watcher = await startWatcher()
     await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'newer' }, { at: 2 }))
     await watcher.post('A2', request('touch', { thing: 'lamp', mark: 'older' }, { at: 1 }))
@@ -345,7 +345,7 @@ describe('subjects', () => {
     expect(watcher.sim.model.globalExtState.get('TEST', 'lamp')).toBe('newer')
   })
 
-  it('orders requests only within a subject and a client', async () => {
+  it('orders requests only within a target and a client', async () => {
     watcher = await startWatcher()
     await watcher.post('A1', request('touch', { thing: 'lamp', mark: 'a' }, { at: 5 }))
     await watcher.post('A2', request('touch', { thing: 'door', mark: 'b' }, { at: 1 }))
@@ -368,13 +368,13 @@ describe('subjects', () => {
     expect(watcher.response('A2')).toMatchObject({ ok: true })
   })
 
-  it('answers FAILED when a command cannot name its subject', async () => {
+  it('answers FAILED when a command cannot name its target', async () => {
     watcher = await startWatcher()
     await watcher.post('A1', request('touch', { thing: 'unnamed', mark: 'x' }))
     watcher.sim.tick()
     expect(watcher.response('A1')).toMatchObject({
       ok: false,
-      error: { code: 'FAILED', message: expect.stringMatching(/^command could not name its subject: /) as unknown },
+      error: { code: 'FAILED', message: expect.stringMatching(/^command could not name its target: /) as unknown },
     })
   })
 })

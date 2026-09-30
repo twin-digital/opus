@@ -49,16 +49,18 @@ case; both sides use the upper-case spelling.
   1023 characters, so the client refuses a longer one with `REQUEST_TOO_LARGE` rather than send it.
 - **The watcher** reads the inbox every tick, in id order, deleting each request before running it. It checks for a
   project change before reading, so a request posted just before one is judged against the new project.
-- **Cancels.** While REAPER is busy (a long script tick, a render, loading a project), web remote requests wait, and
-  can then land out of the order they were sent. So a client that gives up on a request (`TIMEOUT`, or
-  `REAPER_UNREACHABLE` once sent) doesn't delete it, which could land before the request itself: it writes
-  `CANCEL_<id>`, and the watcher answers any request with a cancel beside it `CANCELLED` rather than running it,
-  whichever landed first. The watcher deletes a cancel whose request never lands after ten minutes.
-- **Subjects.** A command that writes to one thing names it as its _subject_ (e.g. `track:<guid>`). Each request
-  carries its client's id and a `seq` that counts up, and the watcher remembers, per client and subject, the newest
-  `seq` it ran, answering an older one `STALE`, so a write delayed behind a newer one to the same thing never
-  overwrites it. Requests without a subject, and requests from different clients, are never ordered. The watcher
-  forgets a client idle for an hour.
+- **Busy REAPER.** While REAPER is busy (a long script tick, a render, loading a project), web remote requests wait,
+  and can then land out of the order they were sent. Two guarantees hold anyway:
+  - **A request its client gave up on never runs, unless it already ran.** A client that gives up on a request
+    (`TIMEOUT`, or `REAPER_UNREACHABLE` once sent) writes `CANCEL_<id>`, and the watcher answers any request with a
+    cancel beside it `CANCELLED` instead of running it, whichever of the two landed first. The watcher deletes a
+    cancel whose request never lands after ten minutes.
+  - **A client's writes to the same thing take effect in the order it sent them.** An older write that arrives late
+    is dropped with `STALE`. A command that writes to one thing names it as its _target_ (e.g. `track:<guid>`); each
+    request carries its client's id and a `seq` that counts up; and the watcher remembers, per client and target,
+    the newest `seq` it ran. Callers don't see any of this: the client numbers its requests itself. Requests without
+    a target, and requests from different clients, aren't ordered, and the watcher forgets a client idle for an
+    hour.
 - **Responses** go to global ext state, which a project switch can't hide and REAPER never saves. The client polls
   for its own key; the watcher deletes responses nobody collected after a minute.
 - **Status** carries the generation, a heartbeat that counts about once a second, and the watcher's version (from
@@ -68,7 +70,7 @@ case; both sides use the upper-case spelling.
 ## Commands
 
 A command is a module in `lua/commands/`, named by its file, returning `function(options, context)`, or
-`{ run = function(options, context), subject = function(options) }` for one that writes to one thing;
+`{ run = function(options, context), target = function(options) }` for one that writes to one thing;
 `context.project` is the current project. Its return value is the result, encoded with
 [rxi/json.lua](https://github.com/rxi/json.lua) (`lua/lib/json.lua`), which encodes an empty table as `[]`.
 
