@@ -2209,10 +2209,10 @@ importers:
         version: link:../shared
       '@hono/node-server':
         specifier: ^2.0.0
-        version: 2.1.1(hono@4.13.5)
+        version: 2.1.1(hono@4.13.7)
       '@hono/zod-validator':
         specifier: ^0.9.0
-        version: 0.9.0(hono@4.13.5)(zod@4.6.5)
+        version: 0.9.0(hono@4.13.7)(zod@4.6.5)
       better-sqlite3:
         specifier: ^13.0.0
         version: 13.0.3
@@ -2224,7 +2224,7 @@ importers:
         version: 173.0.0(supports-color@8.1.1)
       hono:
         specifier: ^4.10.6
-        version: 4.13.5
+        version: 4.13.7
       imapflow:
         specifier: ^1.7.1
         version: 1.7.6
@@ -2403,7 +2403,7 @@ importers:
         version: 2.1.1
       hono:
         specifier: ^4.10.6
-        version: 4.13.5
+        version: 4.13.7
       lucide-react:
         specifier: ^1.17.0
         version: 1.37.0(react@19.2.8)
@@ -8097,8 +8097,8 @@ packages:
   hnswlib-node@3.0.0:
     resolution: {integrity: sha512-fypn21qvVORassppC8/qNfZ5KAOspZpm/IbUkAtlqvbtDNnF5VVk5RWF7O5V6qwr7z+T3s1ePej6wQt5wRQ4Cg==}
 
-  hono@4.13.5:
-    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
+  hono@4.13.7:
+    resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.0.1:
@@ -12219,13 +12219,13 @@ snapshots:
 
   '@gwhitney/detect-indent@7.0.1': {}
 
-  '@hono/node-server@2.1.1(hono@4.13.5)':
+  '@hono/node-server@2.1.1(hono@4.13.7)':
     dependencies:
-      hono: 4.13.5
+      hono: 4.13.7
 
-  '@hono/zod-validator@0.9.0(hono@4.13.5)(zod@4.6.5)':
+  '@hono/zod-validator@0.9.0(hono@4.13.7)(zod@4.6.5)':
     dependencies:
-      hono: 4.13.5
+      hono: 4.13.7
       zod: 4.6.5
 
   '@humanfs/core@0.19.2':
@@ -16811,7 +16811,7 @@ snapshots:
       bindings: 1.5.0
       node-addon-api: 8.5.0
 
-  hono@4.13.5: {}
+  hono@4.13.7: {}
 
   hookable@6.0.1: {}
 
