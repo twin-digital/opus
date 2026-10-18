@@ -8,11 +8,19 @@ export const createLauncher = async (
   programs: (() => Program)[],
   {
     onProgramChanged,
+    overlays = [],
   }: {
     /**
      * Callback invoked when the current program is changed.
      */
     onProgramChanged?: (program: Program) => void
+
+    /**
+     * Programs drawn above the active program and the launcher chrome, and updated every frame. They
+     * persist across program changes, so they suit controls that must stay put (e.g. a recording
+     * transport). Their cells win over anything the active program draws at the same pads.
+     */
+    overlays?: Program[]
   } = {},
 ): Promise<Program> => {
   let activeProgramIndex: number
@@ -57,13 +65,16 @@ export const createLauncher = async (
     width: 9,
   })
 
+  const overlayUi = () => overlays.map((overlay) => overlay.getDrawable())
+
   return {
     getDrawable: () =>
       activeProgram === undefined ?
-        group(clearPad, launcherUi)
-      : group(clearPad, activeProgram.getDrawable(), launcherUi),
+        group(clearPad, launcherUi, ...overlayUi())
+      : group(clearPad, activeProgram.getDrawable(), launcherUi, ...overlayUi()),
     update: (elapsedSeconds) => {
       activeProgram?.update?.(elapsedSeconds)
+      overlays.forEach((overlay) => overlay.update?.(elapsedSeconds))
     },
   }
 }

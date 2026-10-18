@@ -1,0 +1,335 @@
+#!/usr/bin/env node
+
+import { Events } from '../typed-event-emitter.js'
+import { createStudioServer } from '../studio/studio-server.js'
+import type { ClipInfo } from '../studio/outbox.js'
+import { ReaperClient } from '../studio/reaper-client.js'
+import { StudioService } from '../studio/studio-service.js'
+import { getConfig } from '../config.js'
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { bundledHelperHash } from '../studio/helper.js'
+import {
+  parseTakeName,
+  sanitizeLabel,
+  type StudioApi,
+  type StudioEventMap,
+  type StudioState,
+  type Take,
+} from '../studio/studio-service.js'
+import type { InstrumentSelection } from '../app/sound-picker/sound-picker-program.js'
+
+/**
+ * Runs the studio touch page without the Launchpad or the piano. With MUSIC_REAPER_URL set it drives that REAPER for
+ * real (transport, clips, renames); otherwise it runs against a simulated studio, so the page can be looked at and
+ * poked with nothing else running: takes accumulate as you record, playback runs for the take's length, the level bar
+ * wobbles, and the instrument name cycles. MUSIC_STUDIO_PORT picks the port (default 8765); MUSIC_STUDIO_HOST the
+ * bind address (default 127.0.0.1, use 0.0.0.0 to reach it from another device).
+ */
+
+const instruments: InstrumentSelection[] = [
+  { split: false, instrument: 'Acoustic Grand Piano' },
+  { split: false, instrument: 'Church Organ' },
+  { split: true, left: 'Standard Kit', right: 'Electric Piano 1' },
+  { split: false, instrument: 'Minecraft Note Block' },
+]
+
+/** Clip facts the fake studio keeps in memory, where the real app reads the manifest. */
+const fakeInfo = new Map<number, ClipInfo>()
+let fakeAlbumName: string | undefined
+const fakeClipInfo = () => Promise.resolve({ clips: fakeInfo, displayName: fakeAlbumName })
+
+/** A few days of example clips, so the list can be judged as it really fills up. */
+const exampleTakes = (): Take[] => {
+  const names = [
+    'THE MINECRAFT CAVE BUT HARDCORE',
+    'LABUBU FUNK REMIX',
+    'live i remember you',
+    'AXEL F 2',
+    'DRUM AND PIANO SONG',
+    'VERY SHORT SONG',
+  ]
+  const takes: Take[] = []
+  let number = 40
+  let start = 4000
+  for (let daysAgo = 0; daysAgo < 3; daysAgo += 1) {
+    for (let i = 0; i < 8; i += 1) {
+      const at = new Date(Date.now() - daysAgo * 86_400_000 - (i + 1) * 1_500_000)
+      const named = i % 2 === 0
+      const label =
+        named ?
+          (names[(number + i) % names.length] ?? 'Song')
+        : at.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      const name = `Clip ${String(number)} - ${label}`
+      const duration = named ? 45 + ((number * 37) % 120) : 4 + (number % 20)
+      takes.push({ id: String(number), name, ...parseTakeName(name), start, end: start + duration, duration })
+      fakeInfo.set(number, {
+        createdAt: at.toISOString(),
+        starred: named && number % 3 === 0,
+        deleted: !named && number % 4 === 0,
+      })
+      number -= 1
+      start -= duration + 2
+    }
+  }
+  return takes
+}
+
+const makeFakeStudio = (): StudioApi => {
+  const events = new Events<StudioEventMap>()
+  let takeCount = 40
+  let recordingStartedAt: number | undefined
+  let playingUntil: number | undefined
+  let state: StudioState = {
+    connected: true,
+    transport: 'stopped',
+    recordingElapsed: 0,
+    level: 0,
+    meters: [
+      { name: 'Piano', level: 0 },
+      { name: 'Samples', level: 0 },
+      { name: 'Vocal', level: 0 },
+      { name: 'Master', level: 0 },
+    ],
+    position: 0,
+    takes: exampleTakes(),
+    playingTake: undefined,
+    instruments: instruments[0],
+    projectName: 'Piano Corner 2026',
+    helper: { version: 'preview', hash: 'preview', matches: true },
+  }
+
+  const update = (patch: Partial<StudioState>) => {
+    state = { ...state, ...patch }
+    events.emit('change', state)
+  }
+
+  const stop = () => {
+    if (state.transport === 'recording' && recordingStartedAt !== undefined) {
+      const duration = (Date.now() - recordingStartedAt) / 1000
+      const start = (state.takes[0]?.end ?? -2) + 2
+      takeCount += 1
+      const name = `Clip ${String(takeCount)} - ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+      const take: Take = {
+        id: String(takeCount),
+        name,
+        ...parseTakeName(name),
+        start,
+        end: start + duration,
+        duration,
+      }
+      fakeInfo.set(takeCount, { createdAt: new Date().toISOString(), starred: false, deleted: false })
+      update({
+        transport: 'stopped',
+        recordingElapsed: 0,
+        level: 0,
+        meters: meters(0, 0),
+        takes: [take, ...state.takes],
+      })
+    } else {
+      update({ transport: 'stopped', level: 0, meters: meters(0, 0), position: 0, playingTake: undefined })
+    }
+    recordingStartedAt = undefined
+    playingUntil = undefined
+  }
+
+  let playingFrom = 0
+  const play = (take: Take, at = 0) => {
+    playingFrom = Date.now() - at * 1000
+    playingUntil = playingFrom + take.duration * 1000
+    update({ transport: 'playing', playingTake: take, position: at })
+  }
+
+  const wobble = (base: number) => (base === 0 ? 0 : Math.min(1, Math.max(0, base + (Math.random() - 0.5) * 0.3)))
+  const meters = (piano: number, vocal: number) => [
+    { name: 'Piano', level: wobble(piano) },
+    { name: 'Samples', level: wobble(piano * 0.4) },
+    { name: 'Vocal', level: wobble(vocal) },
+    { name: 'Master', level: wobble(Math.max(piano, vocal)) },
+  ]
+
+  setInterval(() => {
+    if (state.transport === 'recording' && recordingStartedAt !== undefined) {
+      const t = (Date.now() - recordingStartedAt) / 1000
+      const piano = 0.35 + 0.35 * Math.abs(Math.sin(t * 1.3))
+      update({ recordingElapsed: t, level: wobble(piano), meters: meters(piano, 0.25) })
+    } else if (state.transport === 'playing') {
+      if (playingUntil !== undefined && Date.now() >= playingUntil) {
+        stop()
+      } else {
+        const t = (Date.now() - playingFrom) / 1000
+        const piano = 0.3 + 0.4 * Math.abs(Math.sin(t * 1.1))
+        update({ position: t, level: wobble(piano), meters: meters(piano, 0.5) })
+      }
+    }
+  }, 50)
+
+  let instrumentIndex = 0
+  setInterval(() => {
+    instrumentIndex = (instrumentIndex + 1) % instruments.length
+    update({ instruments: instruments[instrumentIndex] })
+  }, 6000)
+
+  const studio: StudioApi = {
+    events,
+    getState: () => state,
+    record: () => {
+      recordingStartedAt = Date.now()
+      update({ transport: 'recording', playingTake: undefined, recordingElapsed: 0 })
+      return Promise.resolve()
+    },
+    stopTransport: () => {
+      stop()
+      return Promise.resolve()
+    },
+    playLatest: () => {
+      const latest = state.takes.at(0)
+      if (latest !== undefined) {
+        play(latest)
+      }
+      return Promise.resolve()
+    },
+    playTake: (id, atSeconds) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take !== undefined) {
+        play(take, atSeconds)
+      }
+      return Promise.resolve()
+    },
+    toggleRecord: () => (state.transport === 'recording' ? studio.stopTransport() : studio.record()),
+    togglePlayLatest: () => (state.transport === 'playing' ? studio.stopTransport() : studio.playLatest()),
+    renameAlbum: (label) => {
+      const clean = sanitizeLabel(label)
+      if (clean !== '') {
+        setTimeout(() => {
+          fakeAlbumName = clean
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
+    setStarred: (id, on) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take?.number !== undefined) {
+        const info = fakeInfo.get(take.number) ?? { starred: false, deleted: false }
+        // the real watcher takes a tick; the page shows its own optimistic state meanwhile
+        setTimeout(() => {
+          fakeInfo.set(take.number ?? 0, { ...info, starred: on })
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
+    setDeleted: (id, on) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take?.number !== undefined) {
+        const info = fakeInfo.get(take.number) ?? { starred: false, deleted: false }
+        setTimeout(() => {
+          fakeInfo.set(take.number ?? 0, { ...info, deleted: on })
+          update({})
+        }, 400)
+      }
+      return Promise.resolve()
+    },
+    renameTake: (id, label) => {
+      const clean = sanitizeLabel(label)
+      // the real watcher takes a poll or two; mimic that
+      setTimeout(() => {
+        update({
+          takes: state.takes.map((take) => {
+            if (take.id !== id || clean === '') {
+              return take
+            }
+            const name = `Clip ${String(take.number ?? 0)} - ${clean}`
+            return { ...take, name, ...parseTakeName(name) }
+          }),
+        })
+      }, 400)
+      return Promise.resolve()
+    },
+    seekTake: (id, atSeconds) => {
+      const take = state.takes.find((candidate) => candidate.id === id)
+      if (take !== undefined) {
+        play(take, atSeconds)
+      }
+      return Promise.resolve()
+    },
+    reloadHelper: () => Promise.resolve(),
+    setInstruments: (selection) => {
+      update({ instruments: selection })
+    },
+  }
+  return studio
+}
+
+const makeRealStudio = async (baseUrl: string): Promise<StudioApi> => {
+  const studio = new StudioService({
+    client: new ReaperClient({ baseUrl }),
+    expectedHelperHash: await bundledHelperHash(),
+  })
+  studio.start()
+  studio.setInstruments({ split: false, instrument: 'Acoustic Grand Piano' })
+  console.log(`Driving REAPER at ${baseUrl}`)
+  return studio
+}
+
+/** A short synthetic recording (a few decaying notes), so the waveform has something to draw. */
+const syntheticClip = async (seconds: number): Promise<string> => {
+  const rate = 22050
+  const frames = Math.floor(seconds * rate)
+  const data = Buffer.alloc(frames * 2)
+  for (let i = 0; i < frames; i++) {
+    const t = i / rate
+    const note = Math.floor(t / 0.8)
+    const phase = t - note * 0.8
+    const freq = 220 * 2 ** (((note * 5) % 12) / 12)
+    const env = Math.exp(-phase * 2.5)
+    const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.8
+    data.writeInt16LE(Math.round(sample * 32767), i * 2)
+  }
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0)
+  header.writeUInt32LE(36 + data.length, 4)
+  header.write('WAVEfmt ', 8)
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(1, 22)
+  header.writeUInt32LE(rate, 24)
+  header.writeUInt32LE(rate * 2, 28)
+  header.writeUInt16LE(2, 32)
+  header.writeUInt16LE(16, 34)
+  header.write('data', 36)
+  header.writeUInt32LE(data.length, 40)
+  const file = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'studio-preview-')), 'clip.wav')
+  await fs.writeFile(file, Buffer.concat([header, data]))
+  return file
+}
+
+const { reaperUrl } = getConfig()
+const fake = reaperUrl === undefined
+const service = fake ? makeFakeStudio() : await makeRealStudio(reaperUrl)
+// one synthetic file per clip length, so the waveform is as long as the clip it stands for
+const clips = new Map<number, Promise<string>>()
+const clipFor = (id: string) => {
+  const take = service.getState().takes.find((candidate) => candidate.id === id)
+  if (take === undefined) {
+    return Promise.resolve(undefined)
+  }
+  const seconds = Math.max(1, Math.round(take.duration * 10) / 10)
+  let file = clips.get(seconds)
+  if (file === undefined) {
+    file = syntheticClip(seconds)
+    clips.set(seconds, file)
+    file.catch(() => clips.delete(seconds))
+  }
+  return file
+}
+const server = await createStudioServer({
+  service,
+  clipFile: fake ? clipFor : undefined,
+  clipInfo: fake ? fakeClipInfo : undefined,
+  port: Number(process.env.MUSIC_STUDIO_PORT ?? '8765'),
+  host: process.env.MUSIC_STUDIO_HOST ?? '127.0.0.1',
+})
+console.log(`Studio page preview: ${server.url}`)

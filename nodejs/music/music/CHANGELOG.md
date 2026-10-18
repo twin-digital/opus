@@ -1,5 +1,96 @@
 # @thrashplay/music
 
+## 0.10.1
+
+### Patch Changes
+
+- 899343e: Studio watcher: an idle studio costs almost nothing. The library and Outbox pass runs when the project changed or once a second, not every tick; requests from the page are scanned only when the app has written one (it bumps a sequence with each) or every two seconds; a clip file's presence is remembered for a few seconds. REAPER sat near 40% CPU at idle before, which also made it answer the web remote late enough for an end-of-clip stop to go astray.
+
+## 0.10.0
+
+### Minor Changes
+
+- 648c569: Studio touch page: an album view behind the album name, showing the open project as a tile with its song count and first date, and a name of its own that he can set from there (kept in the clip library, carried by the manifest). Making and switching albums is previewed as a disabled tile; the REAPER side is unchanged apart from recording the name.
+
+### Patch Changes
+
+- 46e2005: Producer import: runs as a background job, copying stems a chunk at a time between REAPER timer ticks, so REAPER stays responsive during a large import; progress per clip in the console, one undo step per clip.
+
+## 0.9.0
+
+### Minor Changes
+
+- d0fc487: Studio touch page: the clip list has a name search, a deleted filter, day headings, a star and a trash can per card (one tap; the recording stays in REAPER and the deleted view brings it back), and unnamed clips sit back a little. Star and delete reach the watcher as flags and live in the library and manifest; the producer import skips deleted clips. The list takes about 70% of the width.
+
+### Patch Changes
+
+- 9e448b4: Studio watcher: a take in which nothing was detected (no input activity, every recorded file scanned silent) is discarded rather than kept as an "(empty)" clip; `keep_empty_takes = true` restores the old behaviour. Routine events (auto-stops, untrimmed takes, a stop with no items) no longer open REAPER's console, which stole the screen from the touch page; only real problems do.
+
+## 0.8.4
+
+### Patch Changes
+
+- de70b58: Studio: REAPER counts as unreachable after two seconds without an answer rather than after three polls, so a render or a save no longer flashes the offline overlay; a stop at a take's end that went astray is retried every 250 ms with one warning, so it lands well inside the gap before the next take; `localhost` in MUSIC_REAPER_URL is sent as 127.0.0.1.
+- ccf3cc1: Studio watcher: a clip whose library entry has no source files (from before the library, or a region made by hand) gets them from the items under its region, so the producer import has its stems.
+
+## 0.8.3
+
+### Patch Changes
+
+- 994d883: Studio watcher: only one copy runs (a later start supersedes an earlier one), and a failure right after a take's region is made can no longer make the region a second time.
+
+## 0.8.2
+
+### Patch Changes
+
+- dcb18d4: Studio: the page's track meters show playback. REAPER meters an armed track from its input, so the watcher publishes each track's playback level from its items at the play position, and each meter shows the louder of input and playback.
+
+## 0.8.1
+
+### Patch Changes
+
+- 8ec8269: Studio: a take that was just started is kept while REAPER still reports the cursor's old position, and the stop at a take's end is sent again if it went astray, so playback shows on the page and stops at the take's end again.
+
+## 0.8.0
+
+### Minor Changes
+
+- fb2c619: Studio touch page visuals: a strip under the header shows the playing clip's waveform (wavesurfer.js over the clip's Outbox mix, served at `/clips/<id>.wav`) with a cursor that follows REAPER and seeks on tap, a live level graph while recording, and per-track meters with peak hold whenever the transport moves. The service polls every 50 ms while playing or recording and exposes per-track levels and the position within the playing clip; `playTake` accepts an offset. The on-screen keyboard is half width, centered. `MUSIC_STUDIO_OUTBOX` points the app at the watcher's Outbox. The watcher renders clips up to `render_now_seconds` (3 min) the moment they end, so their waveforms appear almost at once, and renders under a temporary name that is renamed into place, so a mix in the Outbox is always whole.
+
+## 0.7.0
+
+### Minor Changes
+
+- d0c3e59: The Outbox is one folder per project, and each clip's files are named `<YYYYMMDD> - <0012> - <name>` (recording date, padded clip number, given name or "Clip 12"), with `manifest.json` in the project's folder.
+
+  The package's `reaper/` folder splits into `studio/` (the watcher, installed by the app) and `producer/`: `cs-studio-import.lua` blesses clips into the open REAPER project on the review machine: every clip named in the studio, at least `min_seconds` long, and not imported before (recorded in the project), as one muted folder track at time zero with the stems copied into the project's media folder and the MIDI rebuilt from the Outbox file; `cs-studio-import-watch.lua` does the same continuously, with `install-producer.ps1` to install it and write its config. The manifest gains the project folder name and each source item's start time.
+
+## 0.6.0
+
+### Minor Changes
+
+- 1524da7: The studio app ships and installs its REAPER watcher: on start it writes `cs-studio-watcher.lua`, a user-owned `cs-studio-config.lua`, and the startup hook into REAPER's resource path, asks a running watcher of a different version to reload itself, and refuses to start when REAPER is not running the shipped file (`--ignore-helper-mismatch` downgrades that to a warning and a banner on the touch page). The watcher's settings move to `cs-studio-config.lua`. The `reaper/` folder moves into the package.
+- 0d5b32d: The studio watcher keeps a clip library (`cs-studio-library.json` beside the project: number, label, bounds, how the take ended, source files, render record) and fills an Outbox while the studio is idle: a rendered mix and a MIDI file per clip, and a manifest. Renames move the files, trims re-render, deletions remove them. The app tolerates the short stall a render causes instead of flagging REAPER offline.
+
+## 0.5.1
+
+### Patch Changes
+
+- 3c19696: The studio watcher now finds rename requests written through REAPER's web remote (which upper-cases ext-state keys), reports its version and errors on the ReaScript console, and uses wall-clock time. `music-studio-preview` drives a real REAPER when `MUSIC_REAPER_URL` is set. Adds `reaper-probe.mjs` / `.ps1`, dependency-free checks of the REAPER web remote and the watcher round trip.
+- 550ff5d: The studio touch page lists every clip instead of the newest twelve.
+
+## 0.5.0
+
+### Minor Changes
+
+- 9b413e9: Add the recording studio: a REAPER web-remote client, a polling `StudioService` that owns transport state, the list of recorded takes (project regions), and record / stop / play-take actions, a two-pad Launchpad transport overlay (record, play my last one) drawn above every program, and a touchscreen page (record, stop, recent takes, level) served on `MUSIC_STUDIO_PORT` with state streamed over server-sent events. `createLauncher` accepts persistent `overlays`; `createLauncherProgram` takes a `studio` service and adds the transport. Enabled by `MUSIC_REAPER_URL`. For capture, `MUSIC_MIDI_MIRROR` mirrors everything sent to the piano to a second MIDI port and `MUSIC_SAMPLE_OUTPUT` picks the audio device sound-board samples play through; the CLI restores the piano's Local Control on exit. The page shows the sounding instrument and the project name, records with a single toggling button, plays clips by tapping them, and names clips through an on-screen keyboard (simple-keyboard) with the watcher renaming the region; `music-studio-preview` runs the page against a simulated studio.
+
+## 0.4.3
+
+### Patch Changes
+
+- c16c3e3: The sound picker no longer speaks the instrument name when an instrument is selected. Side and split announcements are unchanged.
+
 ## 0.4.2
 
 ### Patch Changes

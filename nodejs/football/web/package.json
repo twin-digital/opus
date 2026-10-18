@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/football-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Draft-day web UI for the fantasy football app: live board server with ESPN draft polling, manual-pick fallback, and on-demand ingest refresh.",
   "license": "UNLICENSED",
   "type": "module",

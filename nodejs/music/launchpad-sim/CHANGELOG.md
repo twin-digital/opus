@@ -1,5 +1,101 @@
 # @thrashplay/launchpad-sim
 
+## 0.2.23
+
+### Patch Changes
+
+- Updated dependencies [899343e]
+  - @thrashplay/music@0.10.1
+
+## 0.2.22
+
+### Patch Changes
+
+- Updated dependencies [648c569]
+- Updated dependencies [46e2005]
+  - @thrashplay/music@0.10.0
+
+## 0.2.21
+
+### Patch Changes
+
+- Updated dependencies [d0fc487]
+- Updated dependencies [9e448b4]
+  - @thrashplay/music@0.9.0
+
+## 0.2.20
+
+### Patch Changes
+
+- Updated dependencies [de70b58]
+- Updated dependencies [ccf3cc1]
+  - @thrashplay/music@0.8.4
+
+## 0.2.19
+
+### Patch Changes
+
+- Updated dependencies [994d883]
+  - @thrashplay/music@0.8.3
+
+## 0.2.18
+
+### Patch Changes
+
+- Updated dependencies [dcb18d4]
+  - @thrashplay/music@0.8.2
+
+## 0.2.17
+
+### Patch Changes
+
+- Updated dependencies [8ec8269]
+  - @thrashplay/music@0.8.1
+
+## 0.2.16
+
+### Patch Changes
+
+- Updated dependencies [fb2c619]
+  - @thrashplay/music@0.8.0
+
+## 0.2.15
+
+### Patch Changes
+
+- Updated dependencies [d0c3e59]
+  - @thrashplay/music@0.7.0
+
+## 0.2.14
+
+### Patch Changes
+
+- Updated dependencies [1524da7]
+- Updated dependencies [0d5b32d]
+  - @thrashplay/music@0.6.0
+
+## 0.2.13
+
+### Patch Changes
+
+- Updated dependencies [3c19696]
+- Updated dependencies [550ff5d]
+  - @thrashplay/music@0.5.1
+
+## 0.2.12
+
+### Patch Changes
+
+- Updated dependencies [9b413e9]
+  - @thrashplay/music@0.5.0
+
+## 0.2.11
+
+### Patch Changes
+
+- Updated dependencies [c16c3e3]
+  - @thrashplay/music@0.4.3
+
 ## 0.2.10
 
 ### Patch Changes

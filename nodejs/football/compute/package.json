@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@twin-digital/football-compute",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Draft-day compute layer for the fantasy football app: consensus projections, league-exact rescoring, VOR with FLEX-aware replacement, tier breaks, make-it-back odds, and the draft board query.",
   "license": "UNLICENSED",
   "type": "module",

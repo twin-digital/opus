@@ -1,5 +1,13 @@
 # @thrashplay/fw-chronicler
 
+## 0.1.5
+
+### Patch Changes
+
+- 54ad708: fix(deps): update all non-major dependencies
+  - @thrashplay/fw-core@0.0.2
+  - @thrashplay/fw-simulation@0.1.1
+
 ## 0.1.4
 
 ### Patch Changes
