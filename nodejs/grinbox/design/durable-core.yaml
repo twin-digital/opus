@@ -1,0 +1,98 @@
+# The computed durable core: every surface with a consumer outside this workspace's
+# regeneration reach. Each entry names its consumer — what concretely breaks without it.
+# Nothing here is asserted by judgment; to regenerate, re-run the walk each entry names.
+#
+# Everything not reachable from these surfaces is regenerable interior.
+
+state:
+  sqlite_database:
+    consumer: >
+      the prod state file at GRINBOX_DB_PATH on prod-grinbox (deployed 0.5.0); it survives
+      every deploy and is the whole of what backup covers
+    walk: nodejs/grinbox/server/src/db/schema.ts Database interface; migrations/ registry
+    tables:
+      [users, accounts, credentials, pipelines, operators, operator_credential_references,
+       limits, limit_counters_window, limit_counters_message, messages, tags,
+       current_triages, triages, triage_operator_runs, triage_events, digest_runs,
+       notification_cooldowns, notification_pushes, pending_archives, change_log,
+       schema_migrations]
+    notes:
+      - migrations are forward-only; there is no down path against prod data
+      - CHECK-constrained vocabularies (pending_archives.status, triage_events.event_type)
+        require a table rebuild to change
+      - operators.config_json rows are stored user configuration; a stored configuration
+        keeps triaging under later code
+      - credentials rows are encrypted under GRINBOX_TOKEN_ENC_KEY; unreadable without it
+
+  user_mailboxes:
+    consumer: the user's own mail accounts — state grinbox wrote outside itself
+    surfaces:
+      - grinbox-owned categories applied to messages (Gmail labels / IMAP keywords)
+      - archived messages' placement, out of the inbox and otherwise intact
+
+wire:
+  http_api:
+    consumer: >
+      the web artifact, compiled against the server's ApiRoutes type and shipped
+      separately; the two meet only at this surface, paired by lockstep version
+    walk: nodejs/grinbox/server/src/http/api/index.ts route chain
+    routes:
+      [/api/accounts, /api/credentials, /api/pipelines, /api/messages, /api/operators,
+       /api/limits, /api/cooldowns, /api/models, /api/activity, /api/dashboard,
+       /api/sync, imap account routes, write routes]
+    notes:
+      - additive response fields are safe under lockstep versioning; shape changes are not
+      - /healthz is the unauthenticated liveness path, consumed by monitoring
+
+  public_callback:
+    consumer: >
+      the mail provider's registered redirect URI, and the reverse proxy exposing exactly
+      this one path publicly
+    path: GET /oauth/callback (POST /oauth/start stays internal)
+
+  shared_vocabulary:
+    consumer: both tiers import @grinbox/shared; stored and wire values validate against it
+    walk: nodejs/grinbox/shared/src/index.ts exports
+    exports:
+      [resource + operation declarations, operator config schemas, contract derivation,
+       refusal envelope, match vocabulary + expression compiler, limit definitions and
+       DEFAULT_LIMITS, folders, backend capabilities, notification kinds + cooldowns,
+       pending-archive shapes]
+
+deployment:
+  env_vars:
+    consumer: >
+      infrastructure repo, ansible role apps/grinbox — grinbox.env.j2 template plus the
+      sealed env written by seal-bundle.yml
+    walk: nodejs/grinbox/server/src/config.ts reads vs the infra template's sets
+    set_by_deployment:
+      [GRINBOX_DB_PATH, GRINBOX_HTTP_HOST, GRINBOX_HTTP_PORT, GRINBOX_BEDROCK_REGION,
+       GRINBOX_OAUTH_CLIENT_ID, GRINBOX_OAUTH_REDIRECT_URI, GRINBOX_OAUTH_OPENER_ORIGIN,
+       GRINBOX_HEARTBEAT_SECONDS, GRINBOX_OPERATOR_TIMEOUT_MS, GRINBOX_WORKER_POOL_SIZE]
+    sealed_secrets: [GRINBOX_TOKEN_ENC_KEY, GRINBOX_OAUTH_CLIENT_SECRET]
+    code_defaulted_only:
+      [GRINBOX_DIGEST_TIMEOUT_MS, GRINBOX_RECONCILE_INTERVAL_SECONDS, GRINBOX_WEB_DIST]
+    notes:
+      - adding a required var, or renaming any, is a coordinated infrastructure change
+
+  release_artifacts:
+    consumer: >
+      infra stage-release.yml fetches each asset by URL from the release and verifies it
+      against the published SHA256SUMS
+    layout:
+      server_bundle: "server/ + bin/ + systemd/ + production manifest and lockfile
+        (built by server/scripts/build-release-bundle.js)"
+      web_bundle: web/ static assets
+    notes:
+      - the daemon resolves the interface at web/ beside its entry point; GRINBOX_WEB_DIST
+        overrides
+
+  key_custody:
+    consumer: >
+      the deployment's seal — the encryption key is host-bound and kept out of state
+      backups, so a rebuilt machine reads old credentials only if the deployment
+      re-supplies the key
+  oauth_scopes:
+    consumer: >
+      consents already granted — the whole permission set is asked at first consent, so
+      widening the scope set forces every account through consent again

@@ -1,0 +1,129 @@
+# The spine: system-wide invariants that are grinbox's product identity. An invariant's
+# standing is its check — `verified: true` means the named assertion was read and confirmed
+# to test the property; `verified: pending` means the file was located but the assertion
+# not yet confirmed. Nothing here is ruled; a pending check is a debt, not an authority.
+#
+# trace: links to directives.md once the owner has spoken them; until then the old fold's
+# id is noted as provenance of the claim, not as authority.
+
+invariants:
+  - id: no-arrival-lost
+    expr: >
+      every message a poll lists is recorded and its triage enqueued before the account's
+      cursor advances; a failure leaves the cursor unadvanced and the next poll re-lists
+    provenance: old fold r-ls4dvyj7, d-sj4u6eyj
+    check:
+      - file: server/src/poll/poll-cycle.test.ts
+        assertion: "'advances cursor + last_polled_at atomically'; 'listCandidates-failure cursor-unadvanced contract'"
+        verified: true
+
+  - id: digested-once
+    expr: >
+      a message appears in at most one digest; an occurrence is claimed by unique insert
+      per edition, account, and cue before any work, and a claim is never fired twice
+    provenance: old fold r-j2wn9xtb, d-w5jc8rbn
+    check:
+      - file: server/src/digest/digest-scheduler.test.ts
+        assertion: "'an already-claimed occurrence is never fired twice (INSERT claim)'"
+        verified: true
+
+  - id: no-secret-out
+    expr: >
+      no interface response carries stored credential material in any encoding; credential
+      surfaces answer with identifying metadata alone
+    provenance: old fold r-0kn0oida, d-8yht1ei9
+    check:
+      - file: server/src/http/api/credentials.test.ts
+        assertion: "'never exposes the encrypted blob (data_enc absent)'"
+        verified: true
+
+  - id: effect-once-across-retriage
+    expr: >
+      re-triaging a message never repeats an outside effect: the per-message limit counter
+      the first effect spent is already spent when the replay reaches it
+    provenance: old fold r-zagpfz75, d-isyan49o
+    check:
+      - file: server/src/resources/limits.test.ts
+        assertion: per-message scope denies the second attempt across triages
+        verified: pending
+
+  - id: seeded-limits-bind
+    expr: >
+      every limited operation has a seeded limit that no user configuration can remove or
+      loosen; user limits layer on top and only tighten
+    provenance: old fold r-q8vm3xtk, d-b6zt4kpn
+    check:
+      - file: server/src/resources/limits.test.ts
+        assertion: engine runs against seedDefaultLimits
+        verified: true
+      - file: server/src/http/api/limits.test.ts
+        assertion: editing or deleting a seeded limit is refused
+        verified: pending
+
+  - id: failure-isolation
+    expr: >
+      a failed operator skips only the operators that declared its outputs as inputs;
+      independent operators run and their outputs are kept; the triage settles partial
+    provenance: old fold r-2qw8xj5m, d-16geyxco
+    check:
+      - file: server/src/execution/classify-inputs.test.ts
+        assertion: dependents skip, independents run
+        verified: pending
+
+  - id: digest-accounting
+    expr: >
+      an occurrence asserts rendered items = selected messages and fails rather than send
+      a digest that lost one; covered-but-unrendered mail is counted with its reason
+    provenance: old fold r-vd9mu8od, d-tm2dbemu
+    check:
+      - file: server/src/digest/digest-runner.test.ts
+        assertion: accounting assertion failure aborts the send
+        verified: pending
+
+  - id: config-is-never-code
+    expr: >
+      nothing a user writes into configuration reaches a language runtime; rules compile
+      through grinbox's own expression reader against a closed vocabulary
+    provenance: old fold r-ut5mdtpx, d-c7fs3wlz
+    check:
+      - file: shared/src/match-expression.test.ts
+        assertion: compileMatch evaluates the closed vocabulary only
+        verified: pending
+
+  - id: message-text-never-markup
+    expr: >
+      text taken from a message reaches the user as the characters it is, in both digest
+      renditions; only grinbox-authored markup exists in the rich rendition
+    provenance: old fold r-8sg01qdd, d-h5ycq7rm
+    check:
+      - file: server/src/digest/rendition.test.ts
+        assertion: message-derived text is escaped in the rich rendition
+        verified: pending
+
+  - id: mailbox-loses-nothing
+    expr: >
+      no mailbox operation grinbox declares can delete a message or remove metadata it did
+      not put there; archive removes inbox placement only
+    provenance: old fold r-ziitim35, d-ypmi8g3g
+    check:
+      - file: server/src/resources/make-resource-client.ts
+        assertion: structural — the mailbox client's declared operation set contains no delete
+        verified: pending
+
+  - id: tags-belong-to-their-triage
+    expr: >
+      a triage starts from an empty tag set and no triage reads another's tags; what the
+      user sees as a message's tags is its latest settled triage's output in full
+    provenance: old fold d-urdglhb6
+    check:
+      - file: server/src/pipeline/persist.test.ts
+        assertion: current_triages flips wholesale on settle
+        verified: pending
+
+  - id: one-standing-pending-archive
+    expr: at most one standing pending archive per message
+    provenance: old fold d-0tajzoy7; modeled in model/pending-archive.yaml
+    check:
+      - file: server/src/migrations/20260812000000_pending_archives.ts
+        assertion: partial UNIQUE index idx_pending_archives_standing
+        verified: true
