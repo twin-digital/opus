@@ -107,17 +107,169 @@ describe('createTriggerServer', () => {
     })
   })
 
-  it('throttles when the rate limiter is exhausted, before hitting the sidecar', async () => {
-    harness = await start({ limiter: { tryAcquire: () => false } })
+  it('throttles when the rate limiter is exhausted and no refresh is pending approval', async () => {
+    harness = await start({
+      limiter: { tryAcquire: () => false },
+      upstream: vi.fn(
+        (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { refresh_pending: false } }),
+      ),
+    })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
     expect(res.status).toBe(429)
-    expect(harness.upstream).not.toHaveBeenCalled()
+    // pending: false is the page's license to say "none is awaiting approval"
+    expect(await res.json()).toEqual({ error: expect.any(String), pending: false })
+    // only the side-effect-free pending probe reaches the sidecar — never the refresh itself
+    expect(harness.upstream).toHaveBeenCalledExactlyOnceWith('GET', '/status')
     expect(harness.audits).toContainEqual({
       event: 'refresh',
       source: expect.any(String),
       authorized: true,
       outcome: 'rate_limited',
     })
+  })
+
+  it('re-presents the outstanding prompt when throttled while a refresh is pending approval', async () => {
+    const upstream = vi.fn(
+      (method: string): Promise<UpstreamResponse> =>
+        method === 'GET' ?
+          Promise.resolve({ status: 200, body: { refresh_pending: true } })
+        : Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, upstream })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ prompts: [{ user_code: 'WXYZ-1234' }], in_flight: true })
+    // exactly one side-effect-free probe, then exactly one relay — in that order
+    expect(upstream.mock.calls).toEqual([
+      ['GET', '/status'],
+      ['POST', '/refresh'],
+    ])
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'ok_in_flight',
+    })
+  })
+
+  it('falls back to a 429 with pending unknown when the throttled pending-probe fails', async () => {
+    harness = await start({
+      limiter: { tryAcquire: () => false },
+      upstream: vi.fn((): Promise<UpstreamResponse> => Promise.reject(new Error('socket down'))),
+    })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(429)
+    // the trigger could not verify the pending state, and must not claim it did — and the
+    // audit outcome must not disguise a sidecar outage as routine rate limiting
+    expect(await res.json()).toEqual({ error: expect.any(String), pending: 'unknown' })
+    // the failed probe must be the only upstream call — never the refresh itself
+    expect(harness.upstream).toHaveBeenCalledExactlyOnceWith('GET', '/status')
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'rate_limited_probe_failed',
+    })
+  })
+
+  it('treats a throttled probe 200 without a JSON object body as a failed probe', async () => {
+    harness = await start({
+      limiter: { tryAcquire: () => false },
+      upstream: vi.fn((): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: undefined })),
+    })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(429)
+    expect(await res.json()).toEqual({ error: expect.any(String), pending: 'unknown' })
+    expect(harness.upstream).toHaveBeenCalledExactlyOnceWith('GET', '/status')
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'rate_limited_probe_failed',
+    })
+  })
+
+  it('maps an in-flight relay failure to 502, never ok_in_flight', async () => {
+    const upstream = vi.fn(
+      (method: string): Promise<UpstreamResponse> =>
+        method === 'GET' ?
+          Promise.resolve({ status: 200, body: { refresh_pending: true } })
+        : Promise.reject(new Error('socket down')),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, upstream })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(502)
+    expect(await res.json()).toEqual({ error: 'upstream unreachable' })
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'upstream_error',
+    })
+    expect(harness.audits.map((a) => a.outcome)).not.toContain('ok_in_flight')
+  })
+
+  it('maps an in-flight relay non-200 to 502, never ok_in_flight', async () => {
+    const upstream = vi.fn(
+      (method: string): Promise<UpstreamResponse> =>
+        method === 'GET' ?
+          Promise.resolve({ status: 200, body: { refresh_pending: true } })
+        : Promise.resolve({ status: 500, body: { error: 'boom' } }),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, upstream })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(502)
+    expect(await res.json()).toEqual({ error: 'upstream error' })
+    expect(harness.audits.map((a) => a.outcome)).not.toContain('ok_in_flight')
+  })
+
+  it('routes the throttled pending probe through the dedicated probe client when provided', async () => {
+    const probe = vi.fn(
+      (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { refresh_pending: true } }),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, probe })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(200)
+    // probe traffic and refresh traffic stay on their own clients (the probe's timeout is short)
+    expect(probe).toHaveBeenCalledExactlyOnceWith('GET', '/status')
+    expect(harness.upstream).toHaveBeenCalledExactlyOnceWith('POST', '/refresh')
+  })
+
+  it('reports an upstream error when the refresh returns 200 without a JSON object body', async () => {
+    harness = await start({
+      upstream: vi.fn((): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: undefined })),
+    })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(502)
+    expect(await res.json()).toEqual({ error: 'upstream error' })
+    expect(harness.audits).toContainEqual({
+      event: 'refresh',
+      source: expect.any(String),
+      authorized: true,
+      outcome: 'upstream_error',
+    })
+  })
+
+  it('reports an upstream error when the in-flight relay returns 200 with an array body', async () => {
+    const upstream = vi.fn(
+      (method: string): Promise<UpstreamResponse> =>
+        method === 'GET' ?
+          Promise.resolve({ status: 200, body: { refresh_pending: true } })
+        : Promise.resolve({ status: 200, body: [{ user_code: 'WXYZ-1234' }] }),
+    )
+    harness = await start({ limiter: { tryAcquire: () => false }, upstream })
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    // spreading an array would mangle it into an index-keyed object; refuse instead
+    expect(res.status).toBe(502)
+    expect(await res.json()).toEqual({ error: 'upstream error' })
+    expect(harness.audits.map((a) => a.outcome)).not.toContain('ok_in_flight')
+  })
+
+  it('does not mark an unthrottled refresh as in-flight', async () => {
+    harness = await start()
+    const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ prompts: [{ user_code: 'WXYZ-1234' }] })
   })
 
   it('proxies an authorized GET /status', async () => {
