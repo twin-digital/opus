@@ -40,6 +40,11 @@ export const handler = withObservability(
         password: secrets.lynxPassword,
         userId: config.userId,
         cache: tokenCache,
+        // Counted at call time (not run end) so a login on a later-failing run still
+        // flushes — the observability wrapper publishes metrics on the error path too.
+        onLogin: () => {
+          context.metrics.addMetric('LynxLogins', MetricUnit.Count, 1)
+        },
       })
       const lodgify = new LodgifyClient({ apiKey: secrets.lodgifyApiKey })
 

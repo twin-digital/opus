@@ -13,8 +13,8 @@ import { LockLinkStack } from './stack.js'
 describe('LockLinkStack', () => {
   const template = Template.fromStack(new LockLinkStack(new App(), 'Test'))
 
-  it('creates all five CloudWatch alarms', () => {
-    template.resourceCountIs('AWS::CloudWatch::Alarm', 5)
+  it('creates all seven CloudWatch alarms', () => {
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 7)
   })
 
   it('pins POWERTOOLS_METRICS_NAMESPACE on the sync Lambda env — alarms depend on this exact value', () => {
@@ -31,7 +31,7 @@ describe('LockLinkStack', () => {
     // Renaming `SERVICE_NAME` re-targets every alarm on the next synth; this test catches
     // a partial-rename regression (constant renamed, one alarm still hard-codes the old
     // value) or a dropped `dimensionsMap`.
-    for (const metricName of ['CodesWritten', 'Escalated', 'GapsFound']) {
+    for (const metricName of ['CodesWritten', 'Escalated', 'GapsFound', 'LynxLogins']) {
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         Namespace: 'lock-link',
         MetricName: metricName,
@@ -53,7 +53,7 @@ describe('LockLinkStack', () => {
   })
 
   it('every EMF alarm uses NOT_BREACHING (the intentional default — steady state ≠ fault)', () => {
-    for (const metricName of ['CodesWritten', 'Escalated', 'GapsFound']) {
+    for (const metricName of ['CodesWritten', 'Escalated', 'GapsFound', 'LynxLogins']) {
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         Namespace: 'lock-link',
         MetricName: metricName,
@@ -68,6 +68,24 @@ describe('LockLinkStack', () => {
       EvaluationPeriods: 7,
       DatapointsToAlarm: 7,
       Threshold: 0,
+    })
+  })
+
+  it('token-churn alarms cover both shapes: a same-day burst and 2+ login days in a week', () => {
+    // Together these implement "more than one login per week" — one CloudWatch alarm
+    // can't sum across a week (max period is a day), so the semantics are split.
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      MetricName: 'LynxLogins',
+      EvaluationPeriods: 1,
+      Threshold: 2,
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+    })
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      MetricName: 'LynxLogins',
+      EvaluationPeriods: 7,
+      DatapointsToAlarm: 2,
+      Threshold: 1,
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold',
     })
   })
 })

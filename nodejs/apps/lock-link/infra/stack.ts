@@ -225,5 +225,29 @@ export class LockLinkStack extends Stack {
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       alarmDescription: 'lock-link surfaced >25 gaps in one hour — likely upstream data anomaly',
     })
+
+    // Token churn — the Lynx JWT lasts ~95 days and is cached durably in SSM, so the
+    // auth endpoint should be hit ~4 times a year. More than once in a week means the
+    // cache isn't doing its job (silent SSM write-back failure, repeated 401 re-mints)
+    // or credentials are being rejected upstream. `LynxLogins` counts every call to the
+    // auth endpoint (successful or not), at call time, so mints on failing runs still
+    // register. Two alarms because a CloudWatch alarm can't sum across a week in one
+    // expression (max period is one day): a same-day burst, and logins on two or more
+    // distinct days inside a week.
+    alarm('LynxLoginsDailyBurst', {
+      metric: appMetric('LynxLogins', Duration.hours(24)),
+      threshold: 2,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: 'lock-link minted 2+ Lynx tokens in one day — token cache churn',
+    })
+    new Alarm(this, 'LynxLoginsWeeklyChurn', {
+      metric: appMetric('LynxLogins', Duration.hours(24)),
+      threshold: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      evaluationPeriods: 7,
+      datapointsToAlarm: 2,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+      alarmDescription: 'lock-link minted Lynx tokens on 2+ days within a week — token cache churn',
+    }).addAlarmAction(snsAction)
   }
 }
