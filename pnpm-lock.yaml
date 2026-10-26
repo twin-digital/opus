@@ -3028,7 +3028,7 @@ importers:
     dependencies:
       '@julusian/midi':
         specifier: ^3.6.1
-        version: 3.8.0
+        version: 3.8.1
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -3612,6 +3612,7 @@ packages:
 
   '@browserbasehq/stagehand@1.14.0':
     resolution: {integrity: sha512-Hi/EzgMFWz+FKyepxHTrqfTPjpsuBS4zRy3e9sbMpBgLPv+9c0R+YZEvS7Bw4mTS66QtvvURRT6zgDGFotthVQ==}
+    deprecated: This version is no longer maintained. Please upgrade to the latest version of @browserbasehq/stagehand.
     peerDependencies:
       '@playwright/test': ^1.42.1
       deepmerge: ^4.3.1
@@ -4115,8 +4116,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@julusian/midi@3.8.0':
-    resolution: {integrity: sha512-zlOEsgDry/Wj1df1U6SfR2Z2RDHAZjXl9vFdV84DaaxmkA/7p6l1qX6yvCRAhKl9EnIpiAy+MrNrisKv+0N8Vw==}
+  '@julusian/midi@3.8.1':
+    resolution: {integrity: sha512-T+Ecn2pWTFu0G81PUa64Tk7yqzS6KlW61BKIaWVCBeXKXtXQ8ARgn6NcqmH6kABOM3FA8DV7XaPcw7VDBtgxKQ==}
     engines: {node: '>=14.15'}
 
   '@langchain/classic@1.0.34':
@@ -12318,7 +12319,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@julusian/midi@3.8.0':
+  '@julusian/midi@3.8.1':
     dependencies:
       node-addon-api: 6.1.0
       pkg-prebuilds: 1.1.0
@@ -15715,7 +15716,7 @@ snapshots:
   css-tree@3.2.1:
     dependencies:
       mdn-data: 2.27.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   css.escape@1.5.1: {}
 
@@ -15876,7 +15877,7 @@ snapshots:
 
   easymidi@3.2.0:
     dependencies:
-      '@julusian/midi': 3.8.0
+      '@julusian/midi': 3.8.1
 
   ecdsa-sig-formatter@1.0.11:
     dependencies:
