@@ -8,7 +8,7 @@ record. A session that skips a step says so explicitly rather than improvising a
 
 1. **No facts from priors.** Any fact entering a decision — a player's NFL team, bye,
    opponent, kickoff time, injury status, depth-chart role — comes from the ESPN API
-   (`proTeamId`, status tags, projections) or an official page fetched *this week*. Real-world
+   (`proTeamId`, status tags, projections) or an official page fetched _this week_. Real-world
    knowledge is a hypothesis to verify, never a source. (Cost of violating: the Carlson pick —
    wrong team, wrong bye, a narrative invented to defend it.)
 2. **Two sources for load-bearing status claims.** OUT/ACTIVE/practice-participation claims
@@ -68,8 +68,8 @@ number for contested decisions:
      vs my Jets 15.0 was built a week earlier when I streamed his opponent.)
    - Same-game correlations among my starters (stack or hedge — know which).
    - My D/ST or IDP-equivalents vs the fantasy opponent's players, and theirs vs mine.
-   - If a block/snipe is on the table: trace the opponent's *actual next-best option and its
-     specific matchup* — never price a block against "shelf depth" in the abstract. (The
+   - If a block/snipe is on the table: trace the opponent's _actual next-best option and its
+     specific matchup_ — never price a block against "shelf depth" in the abstract. (The
      declined Brissett snipe would have pushed Walker onto Watson, who played into my own
      Jets D/ST — a visible ~15-point interaction, missed.)
 
@@ -85,9 +85,9 @@ number for contested decisions:
    State the bust probability next to the pick (a −10 favorite ≈ 80–85%, i.e. 1-in-6 bust).
 2. **Discount injury-inflated spreads.** A big number that exists because of a backup QB or
    short-week situation is the profile Vegas misprices most — prefer a slightly smaller
-   number against a *structurally* bad team over a bigger number created by a transient
+   number against a _structurally_ bad team over a bigger number created by a transient
    injury. (TB +10 with a backup QB beat Dallas outright and ended a 4-0 run.)
-3. Check the *favorite's* health too (the week-3 Purdy downgrade nearly busted the ARI pick).
+3. Check the _favorite's_ health too (the week-3 Purdy downgrade nearly busted the ARI pick).
 4. Record pick + two alternates with probabilities in the log before lock.
 5. Hoard policy unchanged: structurally bad teams are renewable; take the best sound number.
 

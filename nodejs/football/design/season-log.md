@@ -23,15 +23,15 @@ the thesis model: open · advanced · resolved · dead.
 
 **Thesis verdicts:**
 
-| Player     | Verdict     | Evidence                                                                                            |
-| ---------- | ----------- | --------------------------------------------------------------------------------------------------- |
-| Lloyd      | advanced    | Jacobs on Commissioner's Exempt List (depth-4); Lloyd depth-1; OC named him the committee lead. ESPN jumped him to 11.7 — the lag window is mostly closed. Week-1 snap share is the resolving observation. |
-| Allgeier   | advanced    | Listed as ARI's starting RB for the opener; Conner (foot) and Benson (knee) on IR. Love (Q, ankle) trending available and would split. ESPN still 6.1 — lag intact.                                     |
-| Breece     | advanced    | Practicing (positional drills); HC "trending toward playing" Sunday. Verdict lands at Sunday inactives.                                                                                                 |
-| Evans      | open        | Fully cleared (off the injury report). Week 1–2 verdict window per plan.                                                                                                                               |
-| Vele       | open        | Locked in as NO WR2 next to Olave; Schefter sleeper mention. On script.                                                                                                                                |
-| Dell       | open        | On IR as scripted; GM: "closer"; took a pay cut to stay — roster commitment signal. Week-5 window intact.                                                                                              |
-| Washington | open        | Jeanty Questionable (knee — thesis said ankle) at depth-1; Washington depth-2. Week 1–2 verdict window; watch Raiders inactives + workload split.                                                       |
+| Player     | Verdict  | Evidence                                                                                                                                                                                                   |
+| ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lloyd      | advanced | Jacobs on Commissioner's Exempt List (depth-4); Lloyd depth-1; OC named him the committee lead. ESPN jumped him to 11.7 — the lag window is mostly closed. Week-1 snap share is the resolving observation. |
+| Allgeier   | advanced | Listed as ARI's starting RB for the opener; Conner (foot) and Benson (knee) on IR. Love (Q, ankle) trending available and would split. ESPN still 6.1 — lag intact.                                        |
+| Breece     | advanced | Practicing (positional drills); HC "trending toward playing" Sunday. Verdict lands at Sunday inactives.                                                                                                    |
+| Evans      | open     | Fully cleared (off the injury report). Week 1–2 verdict window per plan.                                                                                                                                   |
+| Vele       | open     | Locked in as NO WR2 next to Olave; Schefter sleeper mention. On script.                                                                                                                                    |
+| Dell       | open     | On IR as scripted; GM: "closer"; took a pay cut to stay — roster commitment signal. Week-5 window intact.                                                                                                  |
+| Washington | open     | Jeanty Questionable (knee — thesis said ankle) at depth-1; Washington depth-2. Week 1–2 verdict window; watch Raiders inactives + workload split.                                                          |
 
 Zero dead theses. Both Lloyd and Vele appeared in Schefter's week-1 value/sleeper column —
 the room is beginning to price the tickets.
@@ -56,23 +56,23 @@ the room is beginning to price the tickets.
 **Won 124.1 – 74.7.** Starters beat projection 124.1 vs ~105; bench left 14 on the table
 (Vele 16.4 vs McLaurin 2.4 — not knowable ex ante; FP had McLaurin 40 ranks higher).
 
-| Player | Line | Verdict movement |
-| --- | --- | --- |
-| Allen | 35.7 | — |
-| JSN | 22.2 (8/122/1) | — |
-| Breece | 18.8, full workload | **resolved-hit** (healthy-enough workhorse confirmed) |
-| Vele | 16.4 (7/69/1 on 9 tgt, #2 behind Olave) | **resolved-hit** — full starter at near-WR2 volume |
-| Skattebo | 14.1 (18/81/1) | — |
-| Evans | 13.9 (6/49/1 on 7 tgt) | advanced; one more featured week resolves it |
-| Lloyd | 3.7 — but 13 of 20 committee carries (Brooks 7, Johnson 0) in a 39–22 blowout loss | advanced: **role confirmed, production script-killed.** ESPN's 11.9 was the trap; FLEX call (Evans) saved ~10. |
-| Allgeier | 8.0 — 17 carries vs Love's 11, led the backfield **with Love active**; ARI upset LAC as +9.5 dogs | advanced |
-| Washington | 4.1 — 7 carries (5.9 avg); Jeanty healthy and dominant (23/102 + 2 rec TD) | **trending dead** — "Jeanty lingers" path closed; only the standalone-rookie path remains. Wk-2 usage decides replace-from-wire. |
-| Pitts | 0.0 on 1 target | watch — ATL QB situation in flux (Tagovailoa out per news); one bad week at a dead-tier price is not a falsification |
-| McLaurin | 2.4 (2/14 on 4 tgt) | dud vs PHI, no injury; no action |
-| Boutte | 2.6 (bench) | quiet debut; hold |
-| Bates 7.0 · Lions DST 10.0 | both fine | streams performed |
+| Player                     | Line                                                                                              | Verdict movement                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Allen                      | 35.7                                                                                              | —                                                                                                                                |
+| JSN                        | 22.2 (8/122/1)                                                                                    | —                                                                                                                                |
+| Breece                     | 18.8, full workload                                                                               | **resolved-hit** (healthy-enough workhorse confirmed)                                                                            |
+| Vele                       | 16.4 (7/69/1 on 9 tgt, #2 behind Olave)                                                           | **resolved-hit** — full starter at near-WR2 volume                                                                               |
+| Skattebo                   | 14.1 (18/81/1)                                                                                    | —                                                                                                                                |
+| Evans                      | 13.9 (6/49/1 on 7 tgt)                                                                            | advanced; one more featured week resolves it                                                                                     |
+| Lloyd                      | 3.7 — but 13 of 20 committee carries (Brooks 7, Johnson 0) in a 39–22 blowout loss                | advanced: **role confirmed, production script-killed.** ESPN's 11.9 was the trap; FLEX call (Evans) saved ~10.                   |
+| Allgeier                   | 8.0 — 17 carries vs Love's 11, led the backfield **with Love active**; ARI upset LAC as +9.5 dogs | advanced                                                                                                                         |
+| Washington                 | 4.1 — 7 carries (5.9 avg); Jeanty healthy and dominant (23/102 + 2 rec TD)                        | **trending dead** — "Jeanty lingers" path closed; only the standalone-rookie path remains. Wk-2 usage decides replace-from-wire. |
+| Pitts                      | 0.0 on 1 target                                                                                   | watch — ATL QB situation in flux (Tagovailoa out per news); one bad week at a dead-tier price is not a falsification             |
+| McLaurin                   | 2.4 (2/14 on 4 tgt)                                                                               | dud vs PHI, no injury; no action                                                                                                 |
+| Boutte                     | 2.6 (bench)                                                                                       | quiet debut; hold                                                                                                                |
+| Bates 7.0 · Lions DST 10.0 | both fine                                                                                         | streams performed                                                                                                                |
 
-Loser pool: WSH lost 24–22 at PHI — pick survived (narrowly). ARI *won* outright as +9.5 —
+Loser pool: WSH lost 24–22 at PHI — pick survived (narrowly). ARI _won_ outright as +9.5 —
 burning a hoarded big-dog this week would have busted the pool. Policy validated.
 
 ## Week 2 — results / Week 3 — moves (2026-09-24)
@@ -123,7 +123,7 @@ play against him Monday night.
 
 **Thesis verdicts:** Pitts-dead premise was wrong — Penix returned from ACL (season debut) —
 but the verdict held: real QB back and Pitts still invisible while Hooper took the lone TE
-touchdown. That's the recall trigger fired *and failed* → **recall watch closed.** Boutte
+touchdown. That's the recall trigger fired _and failed_ → **recall watch closed.** Boutte
 audition round 3 **failed**: 3.1 with Nico out again, the clean-slate week spent; Collins
 likely back wk4, ramp nearly out of runway. FLEX rule fired right: Evans 10.9 (limited Fri →
 start) vs Shaheed 2.4; SF won 36–30, far closer than −8.5.
@@ -145,8 +145,8 @@ hadn't distributed) and Kendre Miller (6 touches in the Etienne-less game; wire-
 
 **Lineup process, validated twice:** McLaurin picked up a Friday-practice hamstring (Q, 9:30
 London lock); Evans ribs (DNP×2, 27%). Both benched for sure-thing floor (Meyers, Vele) on the
-absentee-default rule: *the Q guy with the early lock is the worst default; a Monday-night
-bench player is free insurance.* McLaurin went OUT; Evans gutted it out for 10.1 — and the
+absentee-default rule: _the Q guy with the early lock is the worst default; a Monday-night
+bench player is free insurance._ McLaurin went OUT; Evans gutted it out for 10.1 — and the
 Vele default (**14.4** at FLEX) beat him anyway. Right process, and this week also the right
 result.
 
@@ -230,3 +230,76 @@ smothered game ≠ 21.7% TS), Nix, Breece.
 
 Loser pool: out (unless strikes). Value lane: FP API live but free tier caps at top-10/pos —
 full lane needs the Phase-1/2 build.
+
+## Week 6 — results (2026-10-21) / Week 7 — memo
+
+**Lost 65.0–90.36** to Lettow. 3-3. Optimal lineup (84.3, delta 19.3) **still loses** —
+the week was unwinnable, but three of the four zeros have process notes. Per-call verdicts:
+Skattebo 0.0 on **zero carries, "not by design"** per the coach — unforeseeable, variance.
+Lloyd 1.0 — **process miss**: his 55% snap week was the peak, not the trend (44% in wk5 with
+Pierre Strong emerging); the Tuesday usage table ran points, not snaps. Fannin 1.4 — CLE
+offense cratered (46 first-half yards); snaps near-100% but **targets vanished** two straight
+weeks; thesis weakened, not dead. **Pierce tripwire miss (named error)**: pass trigger
+("Shipley injury news, nothing less") fired Friday — Shipley to IR — while attention was on
+Evans/McLaurin; Lettow grabbed Pierce, who scored 13.0 at FLEX _against us_. Protocol
+amendment: **named tripwires get re-checked in every news sweep**. Vele 5.7 over benched
+Meyers 10.8 (EV-correct at lock, coin-flip tails); Evans 10.9 benched Q (defensible). McLaurin
+3.2, left MNF with an **ankle injury, now OUT** — bye wk7 masks it; wk8 watch.
+
+**Week 7 state:** opponent **Jefferson Airplane (4-2, league-high PF 634)** — their proj
+~115–120 (Chase back from bye, Maye, Javonte+Irving, Collins). We project ~90 → **clear dog,
+ceiling posture**. Byes hit as architected: Allen/McLaurin/Meyers out, Cousins ✓ QB (home vs
+LAR 4:25), JSN/Vele + FLEX fill WR. **Jacobs owned by Cache, slotted FLEX, DAY_TO_DAY —
+room prices his return Sunday (GB@DET); Lloyd proj collapsed to 2.7. Lloyd thesis: DEAD**
+(runway closed, not falsified — exempt ruling ended it). Breece **Q, proj 14.3**, was at
+individual drills 10/15 — active → RB2. Evans **Q, proj 0.0, Achilles soreness** on top of
+the rib — plan assumes out until Wed practice says otherwise. Skattebo role post-zero-carry:
+unverified, Wednesday beat check.
+
+**Moves:** drop **Lloyd → add Germie Bernard** (PIT WR, proj 10.8, top FA WR, szn 41.1;
+PIT @ NO locks 9:30 AM Sun). No waiver claim — free-add after the Wed 11:00 run per policy
+(cost of losing him ≈ 2 pts vs Douglas/Shaheed fallback; #3 priority held). Lineup plan:
+Cousins QB; Skattebo RB1; Breece RB2 _if active_ else Allgeier; JSN + Vele WR; FLEX
+Bernard; Fannin TE (vs TEN, plus matchup — one more week on the weakened thesis); Jets
+D/ST hold (home vs MIA, 7.7 tops the FA list; mild Breece same-game stack); Gay hold.
+Value-lane notes: FP top-10 QB excludes Rodgers (ESPN 20.1 is room-lane only — declined);
+JSN FP WR2 overall (14.2). Opponent's K is on bye (forced add; K pool deep, no snipe value).
+Loser pool: out (busted wk5). Trade radar: Saquon (Rob 0-6) now hamstring-injured — scout
+only; Wilson window unchanged.
+
+**Wed night update (2026-10-22):** Bernard claimed by Purple Reign in the 11:00 run (fallback
+branch fires; #3 priority held, correctly). Revised move — **drop Lloyd → add Roschon Johnson**
+(CHI, proj 8.4, FA) over the Flournoy plan. Sean's flag; my FA pull had hidden him by sorting
+on own% before projecting (query-shape error, fixed: sort the pool by projection). Case:
+Monangai OUT for Thu vs NE, Roschon 13-carry TD game last week as the 2, Swift chronically
+listed (hip/knee) — floor ≈ RB2 duties 8.4 > Allgeier 6.5/Flournoy 7.1, ceiling = lead back
+if Swift sits. Dog posture wants exactly this leveraged variance; Thursday lock accepted.
+FLEX Roschon, RB Skattebo+Allgeier, Breece swap-in decision unchanged (Sun 12:55). Allgeier
+kept (wk8 RB2 with Skattebo on bye). Flournoy skipped — second drop would cost wk8 depth.
+Watch: Swift's final status before 8:15 PM Thu.
+
+## Week 7 — results (2026-10-28) / Week 8 — memo
+
+**Lost 106.5–126.94** to Jefferson Airplane. 3-4 (8th; PF 723.9, 5th). **Good process,
+variance loss**: 106.5 was within ~2 of optimal (bench scored 0.0); opponent detonated
+(Maye 28.4, Irving 23.5, Javonte 21.5). Calls that landed: Cousins 20.4 > Rodgers' road dud
+(value-lane discipline), JSN 26.8, Skattebo 18.6 (doghouse exited), Vele 13.9, Fannin 10.1
+(thesis rebound — TS watch continues but dead is off the table). Busts: Roschon 1.3 (Swift
+played; ticket priced correctly, lost), Jets D/ST 1.0, Breece 4th straight miss. Loser pool:
+still out.
+
+**Week 8 state:** byes Skattebo/Vele/Evans/Dell(+HOU); McLaurin OUT again (ankle).
+Opponent Vinz Clortho (4-3, ~105 proj; their TE slot emptied by NYG bye, DJ Moore + Golden
+both Q) — near-even matchup. **Dell activated off NFL IR** (stash paid; 5.0 from the IR slot
+wk7). Moves (all free adds post-Wed-run, #3 priority held; Sean's McLaurin→IR idea made it
+four spots): **McLaurin → IR slot**; **Roschon → Treylon Burks** (WSH 7.8 — self-liquidating
+stash: he IS the McLaurin vacuum, and becomes the drop when McLaurin activates);
+**Cousins → Flournoy** (Allen back; FLEX + wk11 JSN/Fannin-bye cover); **Vele → Vidal**
+(Breece-sits insurance — without it a 5th miss leaves one startable RB). Pierce (8.1 proj)
+declined: Q himself, value contingent on Saquon staying out, and Lettow's one-week drop is
+negative information. Caleb Douglas claimed by Sophomore slump pre-run.
+
+**Open:** FLEX = Burks vs Flournoy (Friday, practice reports; 0.4 gap). Breece: first
+practice since wk3 → real play probability; Sunday 12:55 rule, Vidal the swap. Evans
+(Achilles) = wk9 question. Lettow wk7 lesson re-applied: query FA pools sorted by
+projection, not ownership (Roschon was Sean's catch, hidden by my sort).

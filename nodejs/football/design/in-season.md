@@ -16,15 +16,15 @@ surface; it stays draft-shaped until a need emerges.
 
 Two scheduled runs drive the season:
 
-| Run             | When              | Output                                                                       |
-| --------------- | ----------------- | ---------------------------------------------------------------------------- |
+| Run             | When                           | Output                                                                              |
+| --------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
 | **Weekly memo** | Tue (waivers process Wed ~3am) | week review, thesis verdicts, waiver claims + drop pairings, trade radar, scorecard |
-| **Lineup card** | Thu + Sun morning | optimal lineup, risk flags, stream confirmations, disagreement callouts      |
+| **Lineup card** | Thu + Sun morning              | optimal lineup, risk flags, stream confirmations, disagreement callouts             |
 
 ## Architecture principles
 
-1. **Two valuation lanes.** The *value lane* — FantasyPros-anchored consensus of multiple
-   sources, rescored under exact league rules, debiased — prices players. The *room lane*
+1. **Two valuation lanes.** The _value lane_ — FantasyPros-anchored consensus of multiple
+   sources, rescored under exact league rules, debiased — prices players. The _room lane_
    — ESPN's numbers — predicts the other eleven owners: what the wire will contest, what
    the trade market believes. Every projection row is tagged with its source; every
    feature declares which lane it reads. ESPN weekly projections drive no decision
@@ -39,13 +39,13 @@ Two scheduled runs drive the season:
 
 ## The weekly loop
 
-| When        | Step                                                                                        |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| Tue         | Ingest (stats, rosters, projections, news) → weekly memo → human submits waiver claims       |
-| Wed         | Post-waiver resync; confirm claims; refresh ROS values against the new roster                |
-| Wed–Sat     | News watch (existing pipeline); trade radar follow-ups; evaluate any incoming offers         |
-| Thu         | Lineup card for Thursday players                                                             |
-| Sun morning | Full lineup card: final injury statuses, weather, stream confirmation                        |
+| When        | Step                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------- |
+| Tue         | Ingest (stats, rosters, projections, news) → weekly memo → human submits waiver claims |
+| Wed         | Post-waiver resync; confirm claims; refresh ROS values against the new roster          |
+| Wed–Sat     | News watch (existing pipeline); trade radar follow-ups; evaluate any incoming offers   |
+| Thu         | Lineup card for Thursday players                                                       |
+| Sun morning | Full lineup card: final injury statuses, weather, stream confirmation                  |
 
 Standing calendar entries feed the memo automatically: **week 6** — plan the week-7 QB
 stream for Allen's bye (FA add, no waiver priority; six startable QBs went undrafted);
@@ -56,15 +56,15 @@ K/DST/QB streams ride free agency.
 
 New entities (extending `data-models.md`; SQLite migrations in `data`):
 
-| Entity              | Key fields                                                                                          | Source                       |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `Team`              | `teamId`, `name`, `owner`, `standing {wins, losses, pointsFor}`                                     | ESPN `mTeam`                 |
-| `RosterEntry`       | `teamId`, `playerId`, `lineupSlot`, `acquisitionType`, `asOf`                                       | ESPN `mRoster`               |
-| `Matchup`           | `week`, `homeTeamId`, `awayTeamId`, `homeScore`, `awayScore`                                        | ESPN `mMatchup`              |
-| `WeeklyProjection`  | `playerId`, `source`, `season`, `week`, `stats`, `prescored`                                        | ESPN (kept per-week), FP, Sleeper |
-| `HistoricalGameStat`| as specced in `data-models.md`: week, opponent, stats, usage (target/air-yards/wopr/snap share)     | nflverse (lifted from `realized-capture`) |
-| `NflGame`           | `season`, `week`, `team`, `opponent`, `kickoff`, `homeAway`                                         | nflverse schedules           |
-| `PlayerThesis`      | `playerId`, `thesis`, `falsification`, `verdictWindow`, `status: open\|advanced\|resolved\|dead`, `log[] {asOf, note}` | seeded from `season-strategy.md`; updated by weekly verdicts |
+| Entity               | Key fields                                                                                                             | Source                                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `Team`               | `teamId`, `name`, `owner`, `standing {wins, losses, pointsFor}`                                                        | ESPN `mTeam`                                                 |
+| `RosterEntry`        | `teamId`, `playerId`, `lineupSlot`, `acquisitionType`, `asOf`                                                          | ESPN `mRoster`                                               |
+| `Matchup`            | `week`, `homeTeamId`, `awayTeamId`, `homeScore`, `awayScore`                                                           | ESPN `mMatchup`                                              |
+| `WeeklyProjection`   | `playerId`, `source`, `season`, `week`, `stats`, `prescored`                                                           | ESPN (kept per-week), FP, Sleeper                            |
+| `HistoricalGameStat` | as specced in `data-models.md`: week, opponent, stats, usage (target/air-yards/wopr/snap share)                        | nflverse (lifted from `realized-capture`)                    |
+| `NflGame`            | `season`, `week`, `team`, `opponent`, `kickoff`, `homeAway`                                                            | nflverse schedules                                           |
+| `PlayerThesis`       | `playerId`, `thesis`, `falsification`, `verdictWindow`, `status: open\|advanced\|resolved\|dead`, `log[] {asOf, note}` | seeded from `season-strategy.md`; updated by weekly verdicts |
 
 The free-agent pool is derived: players on no `RosterEntry`. `myTeamId` comes from
 `mTeam`, replacing the draft-order inference.
@@ -94,8 +94,8 @@ sell and drop suggestions.
 The boost-wave pattern from the draft, run weekly: scan the week's injuries, suspensions,
 and role changes (news pipeline + injury statuses + usage deltas); map beneficiaries via
 depth context; check whether consensus has caught up; rank by inherited volume × lag.
-Output: ranked adds with drop pairings, each tagged *contested* (spend priority) or
-*uncontested* (FA add) using the room lane — ESPN %rostered and ESPN projection jumps
+Output: ranked adds with drop pairings, each tagged _contested_ (spend priority) or
+_uncontested_ (FA add) using the room lane — ESPN %rostered and ESPN projection jumps
 predict what the room will chase.
 
 ### 3. Start/sit optimizer
@@ -122,7 +122,7 @@ Second-order use of the room lane. For every rostered player compute the gap
 - **Sell windows**: our players with negative gap — the room overvalues them. Open-thesis
   tickets are excluded regardless of gap.
 - **Proposal generation**: pair our surplus against a team whose need matches, and value
-  the package double-lens — it must gain *our* lineup in the value lane and *their* lineup
+  the package double-lens — it must gain _our_ lineup in the value lane and _their_ lineup
   in the room lane, since that is the lens each side actually evaluates with. Incoming
   offers are scored the same way.
 
