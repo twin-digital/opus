@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import { ExtStateStore } from './ext-state.js'
 
 /**
- * An open project: a ReaScript `ReaProject` handle and its state.
+ * A project tab: a ReaScript `ReaProject` handle and the project open in it.
  */
 export class SimProject {
   readonly extState = new ExtStateStore(true)
@@ -17,5 +17,13 @@ export class SimProject {
    */
   get name(): string {
     return this.path === '' ? '' : path.basename(this.path)
+  }
+
+  /**
+   * Replaces the project in this tab; the handle stays the same, as it does in REAPER.
+   */
+  open(path: string): void {
+    this.path = path
+    this.extState.clear()
   }
 }

@@ -20,9 +20,14 @@ live here.
 - `csst-api` (`@thrashplay/csst-api`) — the API backend for CS Studio, the web interface replacing
   the studio touch page prototype. A Hono app (`createApp`; `AppType` is the route surface a typed
   `hc` client builds from); `src/main.ts` serves it on `CSST_API_PORT` (default `8766`).
+- `reaper-client` (`@thrashplay/reaper-client`) — the client for REAPER's web remote and the Lua watcher (`lua/`)
+  that runs its commands inside REAPER: requests go into project ext state, responses come back in global ext state,
+  and a per-project generation stops a command meant for one project running in another. Its README documents the
+  protocol; tests run the real watcher in `reaper-sim`.
 - `reaper-sim` (`@thrashplay/reaper-sim`) — an in-memory REAPER for tests and development: hosts ReaScript Lua
   scripts (wasmoon) against a model of REAPER's state and serves the web remote against the same state, in process
-  (`fetch`) or over HTTP. Its README lists which REAPER behaviors it models are confirmed against REAPER.
+  (`fetch`) or over HTTP. Its README lists which REAPER behaviors it models are confirmed and which assumed, and
+  `probe/` checks them against a running REAPER.
 - `music/reaper/` — shipped in the package, not code. `studio/`: the ReaScript that runs inside REAPER for
   the recording studio (clip regions, silent-tail trim, runaway-recording backstop, a clip library
   beside the project, and an Outbox of per-clip mixes, MIDI files, and a manifest rendered while
