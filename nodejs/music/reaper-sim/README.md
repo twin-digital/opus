@@ -48,8 +48,11 @@ simulator itself.
 - `EnumProjExtState` enumerates keys in sorted order.
 - An empty value deletes a project key, from Lua or the web remote, but keeps a global key, which then reads as
   empty and `HasExtState` still reports; `DeleteExtState` deletes a global key.
-- The web remote's `SET` decodes percent-escapes in the section and key and its `GET` doesn't, so a key with `=`, a
-  space or an encoded `/` can be written but not read back. `.` and `-` read back.
+- The web remote's `SET` decodes percent-escapes in the section and key: `KEY%3DEQUALS`, `KEY%20SPACE` and
+  `KEY%2FSLASH` are stored as `KEY=EQUALS`, `KEY SPACE` and `KEY/SLASH`, as Lua enumerates them. A `GET` spelled the
+  way the key was written finds nothing; `KEY.DOT` and `KEY-DASH` read back. The simulator models this as `GET`
+  looking the key up as spelled, without decoding; the probe's raw-`=` read and its read of a Lua-written `PCT%41`
+  key settle whether that is so (not yet run on REAPER).
 - Replies are tab-separated lines, one record per line. Fields escape tabs, newlines and backslashes (`\t`, `\n`,
   `\\`), in values the web remote or Lua wrote, and pass UTF-8 through.
 - `GET` of a missing key replies with an empty value.

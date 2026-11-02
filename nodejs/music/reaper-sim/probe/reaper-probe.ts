@@ -133,7 +133,8 @@ check(
 // REAPER answers 200 with no reply; the simulator answers 501 on purpose
 check('unknown commands', await send(['NOT/A/COMMAND']))
 
-// SET decodes a key's percent-escapes and GET doesn't, so encoded keys can be written but not read back
+// SET decodes a key's percent-escapes; GET looks the key up as spelled, so an encoded key isn't found,
+// but the decoded spelling (a raw `=`) is
 for (const [key, readsBack] of [
   ['KEY.DOT', '1'],
   ['KEY-DASH', '1'],
@@ -142,12 +143,15 @@ for (const [key, readsBack] of [
   ['KEY%2FSLASH', ''],
 ]) {
   await send([`SET/PROJEXTSTATE/${KEYS_SECTION}/${key}/1`])
-  check(
-    `a key spelled ${key} reads back`,
-    field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/${key}`])).body),
-    readsBack,
-  )
+  const reply = (await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/${key}`])).body
+  check(`a key spelled ${key} reads back`, field(reply), readsBack)
+  check(`the reply line for ${key}`, reply)
 }
+check(
+  'a key written as KEY%3DEQUALS reads back as KEY=EQUALS',
+  field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/KEY=EQUALS`])).body),
+  '1',
+)
 
 await send([
   `SET/EXTSTATE/${S}/ESC/`,
@@ -203,6 +207,15 @@ check(
   'odd keys as Lua enumerates them, decoded',
   await readGlobal('R_KEYS'),
   'KEY SPACE | KEY-DASH | KEY.DOT | KEY/SLASH | KEY=EQUALS',
+)
+// Lua wrote a key holding a literal `%41`; GET finds it as spelled, not decoded to PCTA
+check(
+  'web GET of a Lua-written key PCT%41: as spelled, decoded',
+  [
+    field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/PCT%41`])).body),
+    field((await send([`GET/PROJEXTSTATE/${KEYS_SECTION}/PCTA`])).body),
+  ],
+  ['1', ''],
 )
 
 for (const key of ['ZETA', 'ALPHA', 'MIDDLE']) {

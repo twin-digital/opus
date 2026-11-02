@@ -74,6 +74,8 @@ local handlers = {
   end,
   KEYS = function()
     report("KEYS", table.concat(enumKeys(KEYS_SECTION), " | "))
+    -- a key holding a literal percent-escape, for the Node half to read in both spellings
+    reaper.SetProjExtState(0, KEYS_SECTION, "PCT%41", "1")
   end,
   ORDER = function()
     local seen = {}
