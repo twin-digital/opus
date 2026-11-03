@@ -110,8 +110,8 @@ describe('createTriggerServer', () => {
   it('throttles when the rate limiter is exhausted and no refresh is pending approval', async () => {
     harness = await start({
       limiter: { tryAcquire: () => false },
-      upstream: vi.fn(
-        (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { refresh_pending: false } }),
+      upstream: vi.fn((): Promise<UpstreamResponse> =>
+        Promise.resolve({ status: 200, body: { refresh_pending: false } }),
       ),
     })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
@@ -129,11 +129,10 @@ describe('createTriggerServer', () => {
   })
 
   it('re-presents the outstanding prompt when throttled while a refresh is pending approval', async () => {
-    const upstream = vi.fn(
-      (method: string): Promise<UpstreamResponse> =>
-        method === 'GET' ?
-          Promise.resolve({ status: 200, body: { refresh_pending: true } })
-        : Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
+    const upstream = vi.fn((method: string): Promise<UpstreamResponse> =>
+      method === 'GET' ?
+        Promise.resolve({ status: 200, body: { refresh_pending: true } })
+      : Promise.resolve({ status: 200, body: { prompts: [{ user_code: 'WXYZ-1234' }] } }),
     )
     harness = await start({ limiter: { tryAcquire: () => false }, upstream })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
@@ -190,11 +189,10 @@ describe('createTriggerServer', () => {
   })
 
   it('maps an in-flight relay failure to 502, never ok_in_flight', async () => {
-    const upstream = vi.fn(
-      (method: string): Promise<UpstreamResponse> =>
-        method === 'GET' ?
-          Promise.resolve({ status: 200, body: { refresh_pending: true } })
-        : Promise.reject(new Error('socket down')),
+    const upstream = vi.fn((method: string): Promise<UpstreamResponse> =>
+      method === 'GET' ?
+        Promise.resolve({ status: 200, body: { refresh_pending: true } })
+      : Promise.reject(new Error('socket down')),
     )
     harness = await start({ limiter: { tryAcquire: () => false }, upstream })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
@@ -210,11 +208,10 @@ describe('createTriggerServer', () => {
   })
 
   it('maps an in-flight relay non-200 to 502, never ok_in_flight', async () => {
-    const upstream = vi.fn(
-      (method: string): Promise<UpstreamResponse> =>
-        method === 'GET' ?
-          Promise.resolve({ status: 200, body: { refresh_pending: true } })
-        : Promise.resolve({ status: 500, body: { error: 'boom' } }),
+    const upstream = vi.fn((method: string): Promise<UpstreamResponse> =>
+      method === 'GET' ?
+        Promise.resolve({ status: 200, body: { refresh_pending: true } })
+      : Promise.resolve({ status: 500, body: { error: 'boom' } }),
     )
     harness = await start({ limiter: { tryAcquire: () => false }, upstream })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
@@ -224,8 +221,8 @@ describe('createTriggerServer', () => {
   })
 
   it('routes the throttled pending probe through the dedicated probe client when provided', async () => {
-    const probe = vi.fn(
-      (): Promise<UpstreamResponse> => Promise.resolve({ status: 200, body: { refresh_pending: true } }),
+    const probe = vi.fn((): Promise<UpstreamResponse> =>
+      Promise.resolve({ status: 200, body: { refresh_pending: true } }),
     )
     harness = await start({ limiter: { tryAcquire: () => false }, probe })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
@@ -251,11 +248,10 @@ describe('createTriggerServer', () => {
   })
 
   it('reports an upstream error when the in-flight relay returns 200 with an array body', async () => {
-    const upstream = vi.fn(
-      (method: string): Promise<UpstreamResponse> =>
-        method === 'GET' ?
-          Promise.resolve({ status: 200, body: { refresh_pending: true } })
-        : Promise.resolve({ status: 200, body: [{ user_code: 'WXYZ-1234' }] }),
+    const upstream = vi.fn((method: string): Promise<UpstreamResponse> =>
+      method === 'GET' ?
+        Promise.resolve({ status: 200, body: { refresh_pending: true } })
+      : Promise.resolve({ status: 200, body: [{ user_code: 'WXYZ-1234' }] }),
     )
     harness = await start({ limiter: { tryAcquire: () => false }, upstream })
     const res = await fetch(`${harness.base}/refresh`, { method: 'POST', headers: auth })
