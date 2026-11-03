@@ -16,7 +16,7 @@ reviewed as a PR, archived into the main specs on merge.
 | `reaper-sim/probe`                | Keep, extend     | The only source of truth about REAPER.                                                                                                       |
 | `reaper-client` Lua               | Rebuild, reusing | Command-module shape, `refuse.lua`, `recinput.lua` (encoding verified against the docs), `tracks.lua` logic. Protocol changes per design.md. |
 | `reaper-client` TS                | Rebuild, reusing | `inputChoices`, the typed command surface. Must be browser-safe. Needs built-in `TRANSPORT`/`TRACK` parsing from the prototype for reads.    |
-| `csst-api`                        | Drop             | A scaffold with one route; nothing needs it yet.                                                                                             |
+| `csst-api`                        | Rebuild          | The hosted API on the studio machine: sole client of the watcher, serves the UI, fans out live state. The scaffold is replaced.              |
 | Prototype `cs-studio-watcher.lua` | Mine, don't port | Its domain logic is the spec for clips and the Outbox; its loop, request handling, and in-tick renders are not.                              |
 | Prototype `src/studio/`           | Mine             | `reaper-client.ts` built-in parsing; `studio-service.ts` retry and transport lessons.                                                        |
 
@@ -24,8 +24,8 @@ The repo currently holds two REAPER clients and two watchers. The rebuild ends w
 
 ## Status of the first stack
 
-Proposed, not yet decided: merge #440 with `csst-api` removed, so the simulator and probe land
-reviewed; close #443 and #444 unmerged as reference. Review threads on #440 and #443 are all
+Proposed, not yet decided: merge #440 so the simulator and probe land reviewed, with the `csst-api`
+scaffold either dropped from it or replaced in a later change; close #443 and #444 unmerged as reference. Review threads on #440 and #443 are all
 answered; #444 was never reviewed.
 
 Outstanding on the probe, in `reaper-tracks` (#444):
@@ -51,8 +51,6 @@ Each numbered item is a candidate OpenSpec change. Items within a group are inde
 - `TRACKS` step with an audio device active.
 - A write of an absent MIDI device index.
 - `os.time()` availability and value, for the deadline clock.
-- www root: arbitrary file names, a subdirectory, `Content-Type` for `.json`/`.wav`/`.mp3`/`.woff2`,
-  a 30 MB file with and without `Range`, and a fetch during a busy tick.
 - Turn the write-reordering check from PASS/FAIL into INFO; it is listed as not modeled.
 
 **3. Watcher core** (brainstorm first)
@@ -71,11 +69,13 @@ Each numbered item is a candidate OpenSpec change. Items within a group are inde
 - Simulator: items, takes, regions, markers, project info as records; journaled transport, render,
   save.
 
-**5. Hosting and the UI** (brainstorm first; depends on the www-root probe results)
+**5. The API and the UI** (brainstorm first)
 
-- Decide `reaper_www_root` versus a Node host on the studio machine.
+- `csst-api`: the HTTP API over the track commands, the live channel for transport and meters,
+  static serving of the UI, as the sole client of `reaper-client`.
+- Built-in `TRANSPORT`/`TRACK` reads in the API for live state and meters.
 - The browser UI: tracks, inputs, arm, record, play back.
-- Built-in `TRANSPORT`/`TRACK` reads for live state and meters.
+- The Launchpad app moved onto the API.
 
 **6. Clips and the Outbox** (brainstorm first)
 
@@ -84,6 +84,6 @@ Each numbered item is a candidate OpenSpec change. Items within a group are inde
 
 **7. Deployment**
 
-- Installer for the watcher, commands, and UI files on the studio machine.
+- Installer for the watcher and commands into REAPER on the studio machine; the API and UI ship by npm.
 - Command reload, if an installer makes it worth having.
 - Retire the prototype's studio code and watcher.

@@ -24,26 +24,29 @@ Two REAPER machines, with different constraints:
 ## Architecture
 
 ```
-iPad (browser)  ──HTTP──▶  host on the studio machine  ──HTTP──▶  REAPER web remote (8080)
-Launchpad app   ──────────────────────────────────────────────▶        │
-                                                              watcher.lua + commands/
+iPad (browser)  ──HTTP/WS──▶  csst-api (Node, studio machine)  ──HTTP──▶  REAPER web remote (8080)
+Launchpad app   ──HTTP/WS──▶        │                                            │
+                              reaper-client (SDK)                      watcher.lua + commands/
 ```
 
-- **REAPER is driven through its web remote and a Lua watcher.** Clients write requests into project
-  ext state (`THRASHPLAY/REQ_<id>`) over the web remote; the watcher runs them inside REAPER each
-  tick and answers in global ext state (`RES_<id>`). ReaScript has no sockets, so this is the only
-  channel that needs nothing installed beside REAPER, and it is the one channel for every write.
+- **A hosted API on the studio machine, `csst-api`, is the only thing that talks to REAPER.** It
+  links `@thrashplay/reaper-client` as its SDK, serves the browser UI's files, and offers the
+  browser and the Launchpad app one HTTP API plus a live channel for transport, meters, and the
+  selected track. Cross-client state lives in the API, not in each client. It runs on the studio
+  machine, so it sees recorded files and the Outbox directly.
+- **REAPER is driven through its web remote and a Lua watcher.** The API writes requests into
+  project ext state (`THRASHPLAY/REQ_<id>`) over the web remote; the watcher runs them inside
+  REAPER each tick and answers in global ext state (`RES_<id>`). ReaScript has no sockets, so this
+  is the only channel that needs nothing installed beside REAPER, and it is the one channel for every
+  write.
 - **Reads that need to be fast** (transport state, meters) use the web remote's built-in `TRANSPORT`
-  and `TRACK` replies plus a status key the watcher publishes, not the request channel.
-- **The browser UI runs on an iPad.** The web remote is GET-only and sends no CORS headers (measured
-  2026-11-02), so a browser can reach it only same-origin. Either the page is served from REAPER's
-  `reaper_www_root`, or a Node host on the studio machine serves the page and proxies the web
-  remote. Which one is an open question (below); the UI is built so that either works.
+  and `TRACK` replies plus a status key the watcher publishes, polled once by the API and fanned out
+  to clients.
+- **The browser UI runs on an iPad** and talks only to the API. The web remote is GET-only and
+  sends no CORS headers (measured 2026-11-02), so a browser could never reach it from another
+  origin; the API is its path.
 - **The Launchpad stays a standalone Node app** on the studio machine, as `@thrashplay/music` is
-  today. It is a second client of the watcher protocol, not a feature of the browser UI. Shared
-  state between the two clients lives in REAPER ext state via the watcher.
-- **`csst-api` does not exist until something needs it.** The watcher commands are the API both
-  clients share.
+  today, and becomes a client of the API rather than of REAPER.
 
 ## Watcher protocol
 
@@ -110,19 +113,14 @@ tested without REAPER. `probe/` checks every modeled behavior against a running 
 
 ## Deployment
 
-- An installer copies the watcher, its command modules, and the browser UI's files to the studio
-  machine. Nothing deploys by hand.
-- The Launchpad app deploys as `@thrashplay/music` does today, through npm.
+- An installer copies the watcher and its command modules into REAPER's resource path on the
+  studio machine. Nothing deploys by hand.
+- `csst-api`, with the browser UI's files, and the Launchpad app deploy as `@thrashplay/music` does
+  today, through npm.
 
 ## Open questions
 
-- **Where the browser UI is served from.** `reaper_www_root` means no server beside REAPER, but a
-  flat directory, a short MIME table (`.json`, audio, fonts arrive as `application/octet-stream`),
-  no Range requests, and REAPER's single-threaded server handing out mixes. A Node host on the
-  studio machine serves files properly and can see recorded files and the Outbox directly. Settle in
-  the first brainstorm; probe checks for the www root are listed in
-  [rebuild.md](rebuild.md).
 - **Clip, library, and Outbox behavior.** The prototype watcher's rules (clip regions after each
   recording, trimming by activity, stop on silence, the manifest, atomic renders, MIDI export,
-  renames) are the domain knowledge to carry over, re-expressed as commands and idle-loop steps.
-  Not yet designed here.
+  renames) are the domain knowledge to carry over, re-expressed as commands and idle-loop steps, with
+  the API serving the results. Not yet designed here.

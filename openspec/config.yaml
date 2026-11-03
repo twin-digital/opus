@@ -4,7 +4,8 @@ context: |
   CS Studio: design decisions are in docs/cs-studio/design.md and the plan in docs/cs-studio/rebuild.md;
   read both before proposing a change. REAPER behaviors the simulator models are listed in
   nodejs/music/reaper-sim/README.md as Confirmed or Assumed; that README is the only record of them.
-  The studio (deployment) machine runs REAPER and Node. The dev REAPER machine runs no Node; this is
+  The studio (deployment) machine runs REAPER and Node; csst-api runs there as the only client of
+  REAPER, and the browser UI and Launchpad app are clients of csst-api. The dev REAPER machine runs no Node; this is
   a soft, dev-time constraint and never shapes product requirements.
   A change that adds simulator surface adds its probe step and a dated Assumed bullet in the same change.
   An Assumed bullet moves to Confirmed only with the date of a probe run on REAPER.
