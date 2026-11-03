@@ -16,7 +16,7 @@ import { installProtection, PROTECTED_TYPE_IDS } from './protection.js'
 
 // The enum is a value export of `@minecraft/server`, which ships no runtime module, so a cause is
 // named by its own string.
-const cause = (name: string): EntityDamageCause => name as EntityDamageCause
+const cause = (name: string): EntityDamageCause => name as unknown as EntityDamageCause
 
 const MAX_HEALTH = 20
 /** More than any protected mob's health, so an unprotected subject dies of one hit. */

@@ -178,9 +178,8 @@ describe('the 032–034 dialects validate (d-rk99dwty, d-amueiyj2, d-hl3l8df0, d
 
 describe('fact@2 and run@2 carry generated ids and free-text retirement (d-vkudjo4x)', () => {
   const ajv = new Ajv2020({ strict: false, allErrors: true })
-  for (const [path, content] of Object.entries(poolFiles())) {
+  for (const content of Object.values(poolFiles())) {
     const schema = parse(content) as Record<string, unknown> & { $id: string }
-    void path
     ajv.addSchema(schema, schema.$id)
   }
   const validFact = {

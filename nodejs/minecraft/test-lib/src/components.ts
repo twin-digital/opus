@@ -24,6 +24,7 @@ import {
   type TypeFamilyComponentId,
 } from './ids.js'
 import { construct } from './runtime/construct.js'
+import { enumMember } from './runtime/enum-member.js'
 import { CORPSE_INVALIDATION_TICKS, invalidateAtTick } from './scheduler.js'
 import { assertLiveEntity, isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
 import { dataOf, entityDataOf, type AttributeValues, type ComponentState, type EntityData } from './runtime/state.js'
@@ -162,9 +163,9 @@ const numberOf = (fake: object, field: keyof AttributeValues): number => {
 }
 
 /** The damage source a cascade carries, as the payloads declare it. */
-const sourceOf = (cause: string, from?: Partial<MC.EntityDamageSource>): MC.EntityDamageSource => ({
+const sourceOf = (cause: `${MC.EntityDamageCause}`, from?: Partial<MC.EntityDamageSource>): MC.EntityDamageSource => ({
   ...from,
-  cause: cause as MC.EntityDamageCause,
+  cause: enumMember<MC.EntityDamageCause>(cause),
 })
 
 /**

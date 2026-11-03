@@ -6,6 +6,7 @@
 import type * as MC from '@minecraft/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import { addComponent, removeComponent } from './components.js'
 import { createEntity, invalidate } from './entity.js'
 import { createServer, type FakeServer } from './create-server.js'
@@ -13,7 +14,7 @@ import { advanceTicks } from './scheduler.js'
 import { InvalidEntityError, UnsetValueError } from './errors.js'
 
 /** `EntityDamageCause` is types-only at runtime, so a cause is written as its string value. */
-const cause = (value: string): MC.EntityDamageCause => value as MC.EntityDamageCause
+const cause = enumMember<MC.EntityDamageCause>
 
 /** The payload each recorded signal delivers. */
 interface PayloadBySignal {

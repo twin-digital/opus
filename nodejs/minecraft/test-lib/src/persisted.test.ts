@@ -1,6 +1,7 @@
 import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import {
   createEntity,
   createServer,
@@ -13,10 +14,10 @@ import {
 } from './index.js'
 
 /** `DisplaySlotId` and its siblings are types-only, so a test names their values as strings. */
-const SIDEBAR = 'Sidebar' as MC.DisplaySlotId
-const BELOW_NAME = 'BelowName' as MC.DisplaySlotId
-const LIST = 'List' as MC.DisplaySlotId
-const DESCENDING = 1 as MC.ObjectiveSortOrder
+const SIDEBAR = enumMember<MC.DisplaySlotId>('Sidebar')
+const BELOW_NAME = enumMember<MC.DisplaySlotId>('BelowName')
+const LIST = enumMember<MC.DisplaySlotId>('List')
+const DESCENDING = enumMember<MC.ObjectiveSortOrder>(1)
 
 /** The error a call threw, so a case can assert on its class and its fields. */
 const thrownBy = (call: () => unknown): unknown => {

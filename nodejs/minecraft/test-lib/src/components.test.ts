@@ -8,6 +8,7 @@
 import type * as MC from '@minecraft/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import { addComponent, removeComponent } from './components.js'
 import { createEntity, invalidate } from './entity.js'
 import { createServer, type FakeServer } from './create-server.js'
@@ -22,7 +23,7 @@ import { COMPONENT_CLASS_BY_ID } from './generated/manifests.js'
 import { ATTRIBUTE_COMPONENT_IDS, TYPE_FAMILY_COMPONENT_ID, type EntityComponentId } from './ids.js'
 
 /** `EntityDamageCause` is types-only at runtime, so a cause is written as its string value. */
-const cause = (value: string): MC.EntityDamageCause => value as MC.EntityDamageCause
+const cause = enumMember<MC.EntityDamageCause>
 
 /** Every declared component id, and the 60 the library models nothing of. */
 const ALL_COMPONENT_IDS = Object.keys(COMPONENT_CLASS_BY_ID) as EntityComponentId[]

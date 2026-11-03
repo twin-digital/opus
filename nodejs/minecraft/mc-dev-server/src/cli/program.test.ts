@@ -29,7 +29,9 @@ const program = (): {
   command.exitOverride()
 
   return {
-    run: async (argv) => void (await command.parseAsync(['node', 'minecraft-server', ...argv])),
+    run: async (argv) => {
+      await command.parseAsync(['node', 'minecraft-server', ...argv])
+    },
     lines,
     contexts,
   }
