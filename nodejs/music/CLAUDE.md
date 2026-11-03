@@ -28,6 +28,13 @@ live here.
   (FNV-1a hash, computed identically in Lua and TypeScript); `--ignore-helper-mismatch` turns
   a mismatch into a warning.
 
+## CS Studio
+
+The studio control surface is being rebuilt. Design decisions: `docs/cs-studio/design.md`; plan and
+the status of the first stack of PRs: `docs/cs-studio/rebuild.md`. Changes go through `openspec/`.
+The `src/studio/` and `reaper/studio/` code here is the prototype it replaces, kept as the reference
+for clip and Outbox behavior until each piece is rebuilt.
+
 ## Running it
 
 - Against hardware: `pnpm --filter @thrashplay/music dev` (requires the Launchpad and a MIDI piano
