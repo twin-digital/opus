@@ -11,6 +11,7 @@
 import type * as MC from '@minecraft/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import {
   addComponent,
   createEntity,
@@ -91,10 +92,10 @@ describe('allowedDamageCauses', () => {
       (event) => {
         seen.push(event.damageSource.cause)
       },
-      { allowedDamageCauses: ['entityAttack' as MC.EntityDamageCause] },
+      { allowedDamageCauses: [enumMember<MC.EntityDamageCause>('entityAttack')] },
     )
-    sheep.applyDamage(1, { cause: 'entityAttack' as MC.EntityDamageCause })
-    sheep.applyDamage(1, { cause: 'fall' as MC.EntityDamageCause })
+    sheep.applyDamage(1, { cause: enumMember<MC.EntityDamageCause>('entityAttack') })
+    sheep.applyDamage(1, { cause: enumMember<MC.EntityDamageCause>('fall') })
     expect(seen).toEqual(['entityAttack'])
   })
 })

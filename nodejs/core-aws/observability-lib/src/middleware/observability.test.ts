@@ -56,6 +56,8 @@ vi.mock('@twin-digital/logger-lib', () => ({
 }))
 
 describe('observabilityMiddleware', () => {
+  // The deprecated callback-style members `Context` still declares; nothing under test calls them.
+  const legacyCallbacks = { done: vi.fn(), fail: vi.fn(), succeed: vi.fn() }
   const mockContext: Context = {
     awsRequestId: 'test-aws-request-id',
     functionName: 'test-function',
@@ -66,9 +68,7 @@ describe('observabilityMiddleware', () => {
     logStreamName: 'test-stream',
     callbackWaitsForEmptyEventLoop: true,
     getRemainingTimeInMillis: () => 30000,
-    done: vi.fn(),
-    fail: vi.fn(),
-    succeed: vi.fn(),
+    ...legacyCallbacks,
   }
 
   beforeEach(() => {

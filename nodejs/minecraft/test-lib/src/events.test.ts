@@ -1,6 +1,7 @@
 import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import { dispatchAfter } from './events.js'
 import {
   addComponent,
@@ -679,17 +680,20 @@ describe('before-event payload writes', () => {
     emit(world.beforeEvents.playerBreakBlock, breakBlock)
     expect(breakBlock.itemStack).toBe(stack)
 
-    const gameMode = payload<MC.PlayerGameModeChangeBeforeEvent>({ toGameMode: 'Survival' as MC.GameMode })
+    const gameMode = payload<MC.PlayerGameModeChangeBeforeEvent>({ toGameMode: enumMember<MC.GameMode>('Survival') })
     world.beforeEvents.playerGameModeChange.subscribe((event) => {
-      event.toGameMode = 'Creative' as MC.GameMode
+      event.toGameMode = enumMember<MC.GameMode>('Creative')
     })
     emit(world.beforeEvents.playerGameModeChange, gameMode)
     expect(gameMode.toGameMode).toBe('Creative')
 
-    const weather = payload<MC.WeatherChangeBeforeEvent>({ duration: 10, newWeather: 'Clear' as MC.WeatherType })
+    const weather = payload<MC.WeatherChangeBeforeEvent>({
+      duration: 10,
+      newWeather: enumMember<MC.WeatherType>('Clear'),
+    })
     world.beforeEvents.weatherChange.subscribe((event) => {
       event.duration = 20
-      event.newWeather = 'Thunder' as MC.WeatherType
+      event.newWeather = enumMember<MC.WeatherType>('Thunder')
     })
     emit(world.beforeEvents.weatherChange, weather)
     expect(weather.duration).toBe(20)

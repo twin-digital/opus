@@ -23,6 +23,12 @@ export interface MockLambdaContextOptions {
 }
 
 /**
+ * No-op stand-ins for the deprecated callback-style members `Context` still declares. Nothing under
+ * test calls them; they exist only to complete the type.
+ */
+const legacyCallbacks = { done: () => undefined, fail: () => undefined, succeed: () => undefined }
+
+/**
  * Create a mock AWS Lambda Context object for testing.
  *
  * @example
@@ -62,9 +68,7 @@ export function createMockLambdaContext(options: MockLambdaContextOptions = {}):
     logGroupName,
     logStreamName,
     getRemainingTimeInMillis: () => remainingTimeMs,
-    done: () => undefined,
-    fail: () => undefined,
-    succeed: () => undefined,
+    ...legacyCallbacks,
   }
 }
 
