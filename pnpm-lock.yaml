@@ -1412,7 +1412,7 @@ importers:
         version: 4.18.1
       mobx:
         specifier: ^7.0.0
-        version: 7.0.3
+        version: 7.0.6
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1570,10 +1570,10 @@ importers:
         version: 14.1.0
       mobx:
         specifier: ^7.0.0
-        version: 7.0.3
+        version: 7.0.6
       mobx-react-lite:
         specifier: ^5.0.0
-        version: 5.0.3(mobx@7.0.3)(react@19.2.8)
+        version: 5.1.0(mobx@7.0.6)(react@19.2.8)
       react:
         specifier: ^19.2.0
         version: 19.2.8
@@ -5915,7 +5915,9 @@ packages:
   '@smithy/core@3.33.3':
     resolution: {integrity: sha512-CsOeKq/9kA3y6VJHt+/+VTCtBaxJ4OTFpgrjIUhPpDIKxBci1k2bJaQASF2h/ELWrulGp+t97DZ0mevfAD8idg==}
     engines: {node: '>=18.0.0'}
-    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -9087,14 +9089,14 @@ packages:
   mnemonist@0.38.3:
     resolution: {integrity: sha512-2K9QYubXx/NAjv4VLq1d1Ly8pWNC5L3BrixtdkyTegXWJIqY+zLNDhhX/A+ZwWt70tB1S8H4BE8FLYEFyNoOBw==}
 
-  mobx-react-lite@5.0.3:
-    resolution: {integrity: sha512-8qT/d/8Cg8ljt+heKhoFHNoqgedyeSGzdTixT0lgbFMMFlWfHUcXHZ8UD63eQi3ELjkxaH1VU07lXWhRwM0cVA==}
+  mobx-react-lite@5.1.0:
+    resolution: {integrity: sha512-++LQTCRr4FJCWuaEvYl5gCtGBwOpOwrnWjm9uhCUDI5nmkzLR8eT1jgMeYfJ8wc88YOYyC/ygjw2KpYPBYGsww==}
     peerDependencies:
       mobx: ^7.0.0
       react: ^18 || ^19
 
-  mobx@7.0.3:
-    resolution: {integrity: sha512-KopyyzqZ8xT1fqxFNl8ItKKMpGifRe2ySaNAHs80/cx0mL1bpJtJ46S+FSyzXKRjW0TODWj5zwq/Y9hUdJUy4w==}
+  mobx@7.0.6:
+    resolution: {integrity: sha512-VJwjVS5K/rojqPSOoDYlXaYl38Lj+gDfLOFeJ/3Pbdh5ITbAO4ks9RgL0TeRI0bydRZ7b/7WrtPPb9Onuj/pcA==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -17693,12 +17695,12 @@ snapshots:
     dependencies:
       obliterator: 1.6.1
 
-  mobx-react-lite@5.0.3(mobx@7.0.3)(react@19.2.8):
+  mobx-react-lite@5.1.0(mobx@7.0.6)(react@19.2.8):
     dependencies:
-      mobx: 7.0.3
+      mobx: 7.0.6
       react: 19.2.8
 
-  mobx@7.0.3: {}
+  mobx@7.0.6: {}
 
   ms@2.1.3: {}
 
