@@ -79,8 +79,8 @@ catalogs:
       specifier: ^6.0.0
       version: 6.0.0
     dotenv:
-      specifier: ^17.2.3
-      version: 17.4.2
+      specifier: ^18.0.0
+      version: 18.0.10
     eslint:
       specifier: ^10.0.0
       version: 10.9.1
@@ -174,7 +174,7 @@ importers:
         version: 4.2.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       fastify:
         specifier: ^5.6.2
         version: 5.12.6
@@ -466,7 +466,7 @@ importers:
         version: 6.0.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       express:
         specifier: ^5.2.1
         version: 5.2.1(supports-color@8.1.1)
@@ -1351,7 +1351,7 @@ importers:
         version: 14.27.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       lodash-es:
         specifier: ^4.17.21
         version: 4.18.1
@@ -1473,7 +1473,7 @@ importers:
         version: 3.1121.0
       '@langchain/community':
         specifier: ^1.0.0
-        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1121.0)(@aws-sdk/client-s3@3.1121.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.7.3)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@30.0.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)
+        version: 1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1121.0)(@aws-sdk/client-s3@3.1121.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@18.0.10)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.7.3)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@30.0.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)
       '@langchain/core':
         specifier: ^1.0.3
         version: 1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)
@@ -1494,7 +1494,7 @@ importers:
         version: 14.27.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       hnswlib-node:
         specifier: ^3.0.0
         version: 3.0.0
@@ -1552,7 +1552,7 @@ importers:
         version: 6.0.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       fullscreen-ink:
         specifier: ^0.1.0
         version: 0.1.0(@types/react@19.2.18)
@@ -1932,7 +1932,7 @@ importers:
         version: link:../data
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -1990,7 +1990,7 @@ importers:
         version: 13.0.3
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       ulid:
         specifier: ^3.0.1
         version: 3.0.2
@@ -2057,7 +2057,7 @@ importers:
         version: link:../data
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -3031,7 +3031,7 @@ importers:
         version: 3.8.0
       dotenv:
         specifier: 'catalog:'
-        version: 17.4.2
+        version: 18.0.10
       easymidi:
         specifier: ^3.1.0
         version: 3.2.0
@@ -7385,9 +7385,10 @@ packages:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
-  dotenv@17.4.2:
-    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
+  dotenv@18.0.10:
+    resolution: {integrity: sha512-89FAA1xchzK2mxVWdr5F/0rldwiueXs6zJM86rO66EzekR1iBdiXRthyG+m5GvkJaFH3C2LESzamTkgndmLT2A==}
     engines: {node: '>=12'}
+    hasBin: true
 
   dts-resolver@2.1.3:
     resolution: {integrity: sha512-bihc7jPC90VrosXNzK0LTE2cuLP6jr0Ro8jk+kMugHReJVLIpHz/xadeq3MhuwyO4TD4OA3L1Q8pBBFRc08Tsw==}
@@ -11768,13 +11769,13 @@ snapshots:
       - encoding
       - utf-8-validate
 
-  '@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7)':
+  '@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@18.0.10)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7)':
     dependencies:
       '@anthropic-ai/sdk': 0.27.3(encoding@0.1.13)
       '@browserbasehq/sdk': 2.14.1(encoding@0.1.13)
       '@playwright/test': 1.56.1
       deepmerge: 4.3.1
-      dotenv: 17.4.2
+      dotenv: 18.0.10
       openai: 6.42.0(ws@8.21.2)(zod@4.6.7)
       ws: 8.21.2
       zod: 4.6.7
@@ -12358,9 +12359,9 @@ snapshots:
       - '@opentelemetry/sdk-trace-base'
       - peggy
 
-  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1121.0)(@aws-sdk/client-s3@3.1121.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.7.3)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@30.0.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)':
+  '@langchain/community@1.1.29(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-dynamodb@3.1121.0)(@aws-sdk/client-s3@3.1121.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.14.1(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@18.0.10)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7))(@ibm-cloud/watsonx-ai@1.7.3(supports-color@8.1.1))(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2))(@smithy/protocol-http@5.4.6)(@smithy/signature-v4@5.7.3)(@smithy/util-utf8@4.3.6)(better-sqlite3@12.11.1)(discord.js@14.27.0)(fast-xml-parser@5.7.3)(google-auth-library@10.9.1(supports-color@8.1.1))(googleapis@173.0.0(supports-color@8.1.1))(hnswlib-node@3.0.0)(ibm-cloud-sdk-core@5.4.4(supports-color@8.1.1))(ignore@7.0.6)(jsdom@30.0.1)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)':
     dependencies:
-      '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7)
+      '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.56.1)(deepmerge@4.3.1)(dotenv@18.0.10)(encoding@0.1.13)(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(zod@4.6.7)
       '@ibm-cloud/watsonx-ai': 1.7.3(supports-color@8.1.1)
       '@langchain/classic': 1.0.34(@langchain/core@1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2))(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)
       '@langchain/core': 1.2.9(openai@6.42.0(ws@8.21.2)(zod@4.6.7))(ws@8.21.2)
@@ -15809,7 +15810,7 @@ snapshots:
 
   dotenv@16.6.1: {}
 
-  dotenv@17.4.2: {}
+  dotenv@18.0.10: {}
 
   dts-resolver@2.1.3: {}
 
