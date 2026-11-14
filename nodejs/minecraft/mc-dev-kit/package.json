@@ -62,7 +62,7 @@
     "@twin-digital/tsconfig": "workspace:*",
     "@twin-digital/tsdown-config": "workspace:*",
     "@twin-digital/vitest-config": "workspace:*",
-    "@types/adm-zip": "^0.5.7",
+    "@types/adm-zip": "^0.6.0",
     "@types/node": "catalog:",
     "@types/semver": "^7.7.1",
     "@vitest/coverage-istanbul": "catalog:",
