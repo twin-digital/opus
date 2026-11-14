@@ -36,7 +36,7 @@ jobs:
       # can't source that container script). Keep the two in sync; if this changes again, take a hard
       # look at consolidating.
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.GH_APP_MINTER_ROLE_ARN }}
           # Fall back to us-east-1 (the KMS key's region) if AWS_REGION is unset.
@@ -197,7 +197,7 @@ jobs:
         run: pnpm run artifact --filter=${{ matrix.package.name }}
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
