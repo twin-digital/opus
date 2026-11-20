@@ -58,7 +58,7 @@
   },
   "engines": {
     "node": "24.x",
-    "pnpm": "11.x"
+    "pnpm": "12.x"
   },
   "oclif": {
     "bin": "sls-dev-tools",

@@ -303,7 +303,7 @@ features:
           patch: |
             engines:
               node: 24.x
-              pnpm: 11.x
+              pnpm: 12.x
   - name: eslint
     actions:
       - action: write-file
