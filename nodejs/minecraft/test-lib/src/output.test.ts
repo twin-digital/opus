@@ -1,6 +1,7 @@
 import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import {
   createPlayer,
   createServer,
@@ -220,7 +221,7 @@ describe('output side effects', () => {
         display.hideAllExcept([])
       }),
     ).toBeInstanceOf(NotImplementedError)
-    expect(thrownBy(() => display.isForcedHidden(6))).toBeInstanceOf(NotImplementedError)
+    expect(thrownBy(() => display.isForcedHidden(enumMember<MC.HudElement>(6)))).toBeInstanceOf(NotImplementedError)
     expect(
       thrownBy(() => {
         display.resetHudElementsVisibility()
@@ -228,7 +229,7 @@ describe('output side effects', () => {
     ).toBeInstanceOf(NotImplementedError)
     expect(
       thrownBy(() => {
-        display.setHudVisibility(0)
+        display.setHudVisibility(enumMember<MC.HudVisibility>(0))
       }),
     ).toBeInstanceOf(NotImplementedError)
   })

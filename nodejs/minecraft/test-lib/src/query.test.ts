@@ -1,6 +1,7 @@
 import type * as MC from '@minecraft/server'
 import { describe, expect, it } from 'vitest'
 
+import { enumMember } from './runtime/enum-member.js'
 import { createServer, type FakeServer } from './create-server.js'
 import { createEntity, createPlayer, invalidate } from './entity.js'
 import { InvalidEntityError, NotImplementedError, UnsetValueError } from './errors.js'
@@ -319,8 +320,8 @@ const UNHONOURED: [string, MC.EntityQueryOptions][] = [
   ['maxDistance', { maxDistance: 10 }],
   ['minDistance', { minDistance: 1 }],
   ['volume', { volume: { x: 1, y: 1, z: 1 } }],
-  ['gameMode', { gameMode: 'Survival' as MC.GameMode }],
-  ['excludeGameModes', { excludeGameModes: ['Survival' as MC.GameMode] }],
+  ['gameMode', { gameMode: enumMember<MC.GameMode>('Survival') }],
+  ['excludeGameModes', { excludeGameModes: [enumMember<MC.GameMode>('Survival')] }],
   ['minLevel', { minLevel: 1 }],
   ['maxLevel', { maxLevel: 30 }],
   ['minHorizontalRotation', { minHorizontalRotation: 0 }],
@@ -373,7 +374,7 @@ describe('matchesQuery - the sixteen unhonoured fields', () => {
   it('scans the query own fields ahead of the filter fields it inherits', () => {
     const { server, overworld } = setup()
     expectThrown(
-      () => sheep(server, overworld).matches({ gameMode: 'Survival' as MC.GameMode, closest: 1 }),
+      () => sheep(server, overworld).matches({ gameMode: enumMember<MC.GameMode>('Survival'), closest: 1 }),
       NotImplementedError,
       notImplementedMessage('EntityQueryOptions.closest'),
     )
@@ -393,7 +394,7 @@ describe('matchesQuery - the sixteen unhonoured fields', () => {
     const { server, overworld } = setup()
     createPlayer(server, { dimension: overworld })
     expectThrown(
-      () => overworld.getPlayers({ gameMode: 'Survival' as MC.GameMode }),
+      () => overworld.getPlayers({ gameMode: enumMember<MC.GameMode>('Survival') }),
       NotImplementedError,
       notImplementedMessage('EntityQueryOptions.gameMode'),
     )

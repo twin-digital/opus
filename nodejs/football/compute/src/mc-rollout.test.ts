@@ -190,8 +190,7 @@ describe('evaluateCandidatesMC — rejection coupling', () => {
       candidates: [w1.id, w2.id],
       samples,
       continuation: 'greedy',
-      instrument: (id, scenario, roomPicks) => {
-        void scenario
+      instrument: (id, _scenario, roomPicks) => {
         paths.get(id)?.push([...roomPicks])
       },
     })

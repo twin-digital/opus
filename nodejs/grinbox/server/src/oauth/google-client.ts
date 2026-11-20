@@ -185,7 +185,10 @@ export function makeGoogleOAuthClient(config: GoogleOAuthClientConfig): GoogleOA
         scope: [...GMAIL_SCOPES],
         state: params.state,
         code_challenge: params.codeChallenge,
-        code_challenge_method: 'S256' as CodeChallengeMethod,
+        // googleapis exposes this enum's value only from a different google-auth-library than the
+        // client's (see OAuth2Client above), so the member is named by its string
+
+        code_challenge_method: 'S256' as unknown as CodeChallengeMethod,
       })
     },
 

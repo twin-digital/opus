@@ -18,14 +18,15 @@ afterEach(() => {
 // jsdom lacks matchMedia (used by the theme provider for OS preference) and the
 // observer/pointer APIs Radix primitives probe. Stub them for the smoke test.
 if (!window.matchMedia) {
+  // The deprecated listener pair `MediaQueryList` still declares; nothing calls it.
+  const legacyListeners = { addListener: () => {}, removeListener: () => {} }
   window.matchMedia = (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
     addEventListener: () => {},
     removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
+    ...legacyListeners,
     dispatchEvent: () => false,
   })
 }

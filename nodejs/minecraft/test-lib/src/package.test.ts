@@ -506,12 +506,11 @@ const typeChecks = {
   objectLiteralIsNotARegistry: (): void => {
     // @ts-expect-error an object literal carries no `prototype`, which the static side declares
     const _registry: typeof MC.BiomeTypes = { get: () => undefined, getAll: () => [] }
-    void _registry
   },
 
   serverCarriesNothingTheModuleLacks: (): void => {
     // @ts-expect-error the server's names mirror the module's exports
-    void createServer().Block
+    const _block = createServer().Block
   },
 
   entityIsAssignable: (server: ReturnType<typeof createServer>): MC.Entity =>
@@ -535,7 +534,6 @@ const typeChecks = {
   attributeIdsRejectAnythingElse: (): void => {
     // @ts-expect-error not an attribute-shaped component id
     const _bad: readonly CanonicalAttributeComponentId[] = ['minecraft:not_an_attribute']
-    void _bad
   },
 
   attributeIdsCountSeven: (): 7 => ATTRIBUTE_COMPONENT_IDS.length,

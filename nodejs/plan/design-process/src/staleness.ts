@@ -19,9 +19,6 @@ const FROZEN_CLAIMS = ['r-wgtyrh2r', 'd-vkudjo4x']
 /** The substance of a pool entry: everything but the one edit retirement is allowed to make. */
 const substance = (item: PoolItem): string => {
   const { status, reason, superseded_by, ...rest } = item.data
-  void status
-  void reason
-  void superseded_by
   return canonicalize(rest)
 }
 

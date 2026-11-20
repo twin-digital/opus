@@ -18,6 +18,7 @@ import { deliver, dispatchAfter } from './events.js'
 import { canonicalId, type EntityComponentId } from './ids.js'
 import { matchesQuery } from './query.js'
 import { construct } from './runtime/construct.js'
+import { enumMember } from './runtime/enum-member.js'
 import { isValidFake, registerBehaviour, stateOf, type ClassBehaviour } from './runtime/member.js'
 import {
   dataOf,
@@ -136,7 +137,7 @@ export const killWithoutHealth = (entity: MC.Entity): void => {
   stateOf(entity).valid = false
   dispatchAfter(server, 'entityDie', {
     deadEntity: entity,
-    damageSource: { cause: 'selfDestruct' as MC.EntityDamageCause },
+    damageSource: { cause: enumMember<MC.EntityDamageCause>('selfDestruct') },
   })
 }
 
@@ -229,7 +230,7 @@ registerBehaviour('Dimension', {
       )
     }
     const { entity } = create(server, { typeId: type.id, dimension: fake as MC.Dimension, location }, false)
-    dispatchAfter(server, 'entitySpawn', { entity, cause: 'Spawned' as MC.EntityInitializationCause })
+    dispatchAfter(server, 'entitySpawn', { entity, cause: enumMember<MC.EntityInitializationCause>('Spawned') })
     return entity
   },
 })

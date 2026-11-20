@@ -194,7 +194,6 @@ export const projectProductData = (tree: FileTree, productId: string, options: P
       return entry
     }
     const { commentary, ...rest } = entry
-    void commentary
     return rest as T
   }
   const adopted = resolvePresetClosure(product, productsTree, fold).presets
