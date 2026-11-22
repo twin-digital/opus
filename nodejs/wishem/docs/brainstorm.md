@@ -155,12 +155,6 @@ Candidates were checked on 2026-11-22 against the npm registry, GitHub account n
 - The origin story can mention the golem legend, in which a shem is the word that animates a golem.
 - Wishem is also the name of the agent. Short forms are 'shem and 'shemmy.
 
-## After the brainstorm
-
-- **Product description.** The owner replaced "the agent-powered framework" with a standard line: Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe.
-- **Worked examples.** The owner replaced the forest screen with a quarry room that teaches the grapple. The follow-on examples use the same room: the flute became the shift whistle, the moved tree became moved rubble, and the hookshot statement became "cannot cross the cut without the grapple". The mockup in `mockups/` was redrawn to match. The sections above record the examples as they were discussed.
-- **Brand.** `brand.md` was added in a separate session.
-
 ## Not covered
 
 - The order of the roadmap projects. The partner planned to lay out options, and the naming discussion came first.
