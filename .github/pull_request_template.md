@@ -1,3 +1,8 @@
+<table>
+  <tr><td><strong>Issue</strong></td><td><a href="https://github.com/twin-digital/opus/issues/123">Issue title</a></td></tr>
+  <tr><td><strong>OpenSpec</strong></td><td><a href="https://github.com/twin-digital/opus/tree/SHA/openspec/changes/archive/2026-11-22-change-id">change-id</a></td></tr>
+</table>
+
 ## Summary
 
 <!-- 1-2 paragraph summary of the PR's motivation and a summary changes, drawn from the OpenSpec proposal (when available) -->
@@ -5,6 +10,10 @@
 ## Changes
 
 <!-- list of key changes in the pull request; omit if only one and summary describes it fully -->
+
+## Verification
+
+<!-- only verification a reviewer can't see from CI or the tests in this PR: manual testing and its result, preview-stage or deployed-environment checks, checks against real external services or devices; omit if none -->
 
 ## Notes
 

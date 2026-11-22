@@ -41,6 +41,7 @@ Scope to one package with turbo filters, e.g. `pnpm build --filter @twin-digital
 - **Public surface** is a barrel `src/index.ts`; subpath exports map to `src/*.ts`.
 - **Formatting** is Prettier; lint-staged + husky run it on commit. Don't hand-format against it.
 - **Comments & docs describe the final design**, not the path to it. Don't narrate approaches tried and discarded _within the change_ — the squash erases that churn, so it's just clutter. Contrasting with behavior the change supersedes (that predates it) is fine.
+- **Pull requests:** write titles and bodies with the `writing-pull-requests` skill, following `.github/pull_request_template.md`.
 
 ## Config is repo-kit–managed — do not hand-edit generated files
 
