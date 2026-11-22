@@ -1,11 +1,16 @@
 # Tasks
 
-## 1. <!-- Task Group Name -->
+## Task 1: <!-- Deliverable name -->
 
-- [ ] 1.1 <!-- Task description -->
-- [ ] 1.2 <!-- Task description -->
+Files: <!-- paths to create or modify -->
+Interfaces: <!-- optional: what this task consumes from / produces for other tasks -->
 
-## 2. <!-- Task Group Name -->
+- [ ] 1.1 <!-- Step description, with how to verify it -->
+- [ ] 1.2 <!-- Step description, with how to verify it -->
 
-- [ ] 2.1 <!-- Task description -->
-- [ ] 2.2 <!-- Task description -->
+## Task 2: <!-- Deliverable name -->
+
+Files: <!-- paths to create or modify -->
+
+- [ ] 2.1 <!-- Step description, with how to verify it -->
+- [ ] 2.2 <!-- Step description, with how to verify it -->
