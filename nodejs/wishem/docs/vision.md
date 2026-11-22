@@ -14,6 +14,13 @@ The agent does the work. It creates the room, sizes the cut, generates the ring,
 
 The goal in one phrase: to "speak a game into existence" through an agent that is integrated with the engine.
 
+## What makes it different
+
+- **The agent works inside the game, not on top of an editor.** It reads and changes the game's own model directly. It does not operate a tool that was made for human hands.
+- **Your words are the source.** Behaviors, assets, and requirements are stored as what you asked for. The code and the content are derived from them.
+- **The agent can replay what happened.** Pause after a missed jump and say "make the jump high enough so I would have made this". The agent runs your exact inputs again with a new value.
+- **Nothing exists until a design needs it.** The model and the tools start nearly empty and grow with the game. Each game gets its own.
+
 ## What Wishem does
 
 - **Develops the game model as it is needed.** The agent adds a concept, such as a status or an item, when a design first needs it.
@@ -22,16 +29,6 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 - **Creates the tools to see and change the model.** Inspectors, tables, and overlays appear when the game has something for them to show.
 - **Adjusts, observes, and queries the model and the game state from inside the running game.** The agent can also rewind play and run it again with a changed value.
 - **Automates tests and checks design constraints that are written in natural language.** The agent checks each change against the constraints that the designer wrote.
-
-## What makes it different
-
-**The agent speaks the game's own model.** Existing engine integrations let an agent operate an editor that was made for human hands. In Wishem the agent reads and changes scenes, entities, components, rules, physics values, and play history directly.
-
-**The agent can reason about what happened.** A designer can pause after a missed jump and say "make the player jump height high enough so I would have made this". The agent has the recorded inputs and the game state. It can run the same inputs again with a new value and see the result.
-
-**The designer's words are the source.** A behavior is stored as the prompt that describes it. The agent writes the function behind the prompt. A generated sprite or room layout is stored with the prompt that produced it. Designer statements such as "cannot cross the cut without the grapple" are stored with the room they describe.
-
-**The engine and the tools grow with the game.** Wishem starts nearly empty. A concept such as "status" appears when a design first needs it. An editor panel such as a list of statuses appears when statuses exist. Each game can end with its own model and its own tools.
 
 ## Who uses it
 
