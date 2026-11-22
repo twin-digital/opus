@@ -303,3 +303,87 @@ negative information. Caleb Douglas claimed by Sophomore slump pre-run.
 practice since wk3 → real play probability; Sunday 12:55 rule, Vidal the swap. Evans
 (Achilles) = wk9 question. Lettow wk7 lesson re-applied: query FA pools sorted by
 projection, not ownership (Roschon was Sean's catch, hidden by my sort).
+
+## Week 8 — results / Week 9 — memo (2026-11-05, Thu)
+
+**WON 122.36–103.5** over Vinz Clortho. 4-4 (tied 5th–8th, PF 846.3). Sean missed the Sunday
+Breece checkpoint (inactive 5th straight) — cost only 4.0 (Vidal's bench score) in an 18.9-pt
+win; the absentee-default architecture did its job. Heroes: **Allgeier 33.6** (ARI lead-back
+watch opened), Allen 27.6, JSN 20.8, **Fannin 18.4 — verdict game passed, thesis ALIVE**.
+Burks 9.6 at FLEX (Flournoy 11.6 benched, coin-flip tails again). Duds: Meyers 3.4, Jets −1.0.
+Kelce question resolved itself: held Fannin, right call.
+
+**Week 9 state (vs King Kong, 2-6):** their lineup has two zero slots (J.Love IR at RB2, Henry
+Q-0.0 at TE) and Lawrence 21.0 idles on their bench — slight favorite, **floor posture**.
+Byes PIT/TEN touch nothing of mine. McLaurin now on real NFL IR (slot legal). Q tags to track:
+Skattebo (hamstring from wk7, "day-to-day", NYG had the bye; Singletary the handcuff if out),
+Burks (no report found yet), Fannin (9.2 proj; CLE QB situation churning — Shedeur 15.8 proj
+on the wire implies a change). **Meyers locks tonight 8:15 (JAX@BAL): stays in at WR2** (9.1,
+top option, floor posture banks it).
+
+**Move:** Jets D/ST → **Bills D/ST** (5.7 @ KC vs 7.4 @ MIN vs Wentz; weekly-matchup rule;
+Monday lock). Free add. No other wire moves — Kendre Miller 8.7 < need, Zvada +1.1 over Gay
+not worth churn, nothing beats current WRs. No snipe on KK's holes (their deltas ~1 pt,
+poor-process owner may not even fix them).
+
+**Defaults set:** RB Breece + Allgeier, FLX Vidal (4:05 lock, certain), Burks/Skattebo bench.
+Sunday 12:55: Skattebo active (1:00 inactives) → in for Vidal; Burks only on an emphatic
+Friday report. Allen + Bills lock Monday.
+
+## Week 9 — results / Week 10 — memo (2026-11-10)
+
+**LOST 88.98–87.26 (−1.72)** to King Kong. 4-5, 9th (PF 933.5, 6th). The margin was the
+Sunday-morning Flournoy-over-Breece swap: Flournoy 6.3 started, Breece 10.2 benched (−3.9).
+The twin swap won big (Estime 14.2 over Vidal 3.1, +11.1, on confirmed Miller-off-roster) —
+net +7 on the morning, but the loss lands on the half of it that was reasoned from an
+_unexplained_ projection spike (Pickens OUT explained the role, not the targets: Dak spread
+it). Lesson appended: a role vacancy is necessary but not sufficient — without a target-share
+history in that role, it's a coin flip, and coin flips don't displace a declared starter.
+Other verdicts: Dell 13.6 BENCHED (proj 4.2, zero signals — right process, stash thesis now
+live); JSN 8.6 on 10 targets/51 yds (usage intact, depth-of-target variance — no concern);
+Fannin 11.2 (two straight, thesis solid); Giants DST 12.0 (stream hit); Allen 13.8 dud.
+Walker renamed: "No one healthy..." → **"Sign the Corgi. Stat!"**
+
+**Week 10 state (vs Purple Reign, 5-4, PF 1012):** their Puka DOUBTFUL + Waddle on DEN bye,
+but Boston (10.8) likely slots in → opp ≈ 115–122 → **clear dog, ceiling posture**. No byes
+hit me (CHI/DEN/PHI/TB). Skattebo OUT again (hamstring, 2nd week). Evans OUT (Achilles drags
+on). McLaurin: on IR, **21-day window NOT yet opened** — hold, no action. Breece back to full
+role (11.0).
+
+**Lineup:** Breece + Estime RB, JSN + Meyers WR, **Dell FLEX** (ceiling call over Allgeier's
+7.7 — Dell 13.6 on ascending role, ARI backfield murky), Fannin, Gay. Bench Allgeier,
+Skattebo, Evans.
+
+**Wed 11:01 free adds (no claims, #3 held):** Flournoy → **Germie Bernard** (8.4, PIT bye
+done = wk11 cover; Flournoy's best-case setup produced 6.3, Pickens returns soon; fallback
+Hutchinson/A.Williams). Vidal → **Brenton Strange** (7.7, JAX bye done = **the wk11 TE for
+Fannin's bye**; RB room is 4 deep without Vidal; fallback Waller). Giants DST → **Ravens**
+(6.5 → 8.1 weekly rule; fallback Lions/Bengals — not Packers, GB bye11). Wk11 crunch
+pre-solved: TE Strange, WR Meyers/Dell/Bernard cover JSN+Fannin byes.
+
+## Week 10 — results / Week 11 — memo (2026-11-17)
+
+**WON 121.04–77.46** over Purple Reign (their Puka-less floor collapsed, as the sim said it
+could). **5-5, four-way tie for seats 4–7** (PF tiebreak: Cache 1190 > Purple 1090 > us
+1054.6 > Sophomore 1002). Four regular-season games left. Box: JSN 27.1, **Skattebo 25.7**
+(the Thursday 55/45 start — biggest call-win of the season), Allen 23.3, Breece 12.8, Fannin
+12.6. Sunday swap Dell 3.6 > Estimé 1.6 (+2.0, right call). Kicker discipline validated
+again: held Gay through three FA temptations; the Boswell-for-Evans trade was priced by a
+200k-run Monte Carlo at **+0.26% win probability** and declined — sim also formalized the
+own-DST rule: correlation hedges help the bad tail as a favorite, cost the good one, net ~0;
+it's a dog-posture rule, not a law. Evans HELD — and his wk11 proj jumped to 10.0 (Q):
+return imminent, exactly when JSN's bye needs him.
+
+**Week 11 state (vs Amon-Raff Shape, 3-7, PF 974):** byes JSN + Fannin (planned: Strange TE,
+Meyers/Dell/Evans WR). Opponent ~103 proj (ARSB, Coleman 17.8 — the DEN back we passed on
+wk8, now their RB1) vs our ~99 → near-even. Their frailties: Hockenson Q, DeVonta Smith
+IR-stashed Q, Marks DOUBTFUL. Estimé proj collapsed to 4.2 (NO backfield re-shuffled; spike
+captured, exit clean); Bernard collapsed to 2.5 (PIT role gone — two-week rental, 9.6 banked).
+
+**Moves:** CLAIM (Wed 11:00, spending priority #3 — with 4 weeks left the hoard's option
+value is expiring): **Xavier Hutchinson (HOU, 9.4, szn 68.1, 9% own) drop Bernard** — top
+byeless FA WR, Evans-setback insurance; Lettow (A.J. Brown + Adams both on bye) is the
+competing bidder to beat. If lost: free-add Flournoy (8.0, szn 83.9 — he kept producing).
+Free swaps after the run: **Bengals → Jets D/ST** (6.5 → 7.6, weekly rule); consider
+Flournoy-for-Estimé if both clear. Lineup: Allen, Breece + Skattebo, Meyers + Evans (Friday
+practice gate; Dell if not), FLX Dell, Strange, Jets, Gay.
