@@ -51,8 +51,10 @@ The first game is a top-down adventure in a 3/4 perspective and a 16-bit console
 
 ## The name
 
-"Wishem" reads as "wish 'em": the designer wishes game elements into existence.
+"Wishem" reads as "wish 'em": the designer wishes game elements into existence. This is the main meaning.
 
-The name also contains _shem_. In the golem legend, a shem is the word placed in a golem that brings it to life. _Shem_ is the Hebrew word for "name". In Wishem, the designer's words are what bring the game to life.
+The name also contains _shem_. This second meaning is hidden. In golem folklore, a shem is a word that is placed in a golem and brings it to life. _Shem_ is the Hebrew word for "name". In Wishem, the designer's words are what bring the game to life.
+
+Tell the story of the shem as "a word that brings things to life". Do not describe the shem as a holy name or a divine name. `brand.md` tells the same story in the brand voice.
 
 Wishem is the name of the product and the name of the agent.

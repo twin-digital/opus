@@ -29,6 +29,7 @@ Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec ch
 | Task                                         | Read                                   |
 | -------------------------------------------- | -------------------------------------- |
 | Learn what Wishem is                         | `vision.md`                            |
+| Design how Wishem looks or how it talks      | `brand.md`                             |
 | Use the correct words                        | `glossary.md`                          |
 | Design or build any part of Wishem           | `rules.md`, then `concepts.md`         |
 | Understand what a designer expects to happen | `interactions.md`, `mockups/`          |
@@ -39,6 +40,7 @@ Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec ch
 ## Files
 
 - `vision.md`: what Wishem is, who uses it, what it is not, and where the name comes from.
+- `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
 - `concepts.md`: the entity and component model, the three kinds of stored words, slots, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys.

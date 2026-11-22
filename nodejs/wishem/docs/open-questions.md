@@ -39,3 +39,9 @@ These questions are not settled. Each one names the roadmap project that must an
 19. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
 20. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
 21. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
+
+## Brand
+
+22. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
+23. **What is the illustration style?** (Project 6)
+24. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)

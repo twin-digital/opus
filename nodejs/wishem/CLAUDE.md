@@ -10,6 +10,7 @@ No Wishem code exists. The `docs/` folder holds the blueprint.
 2. `docs/rules.md`: the rules that every part of Wishem obeys.
 3. `docs/glossary.md`: the exact terms to use.
 4. `docs/decisions/`: questions that are already settled.
+5. `docs/brand.md`: before you design a user interface or write what the agent says to the designer.
 
 ## How to work
 
