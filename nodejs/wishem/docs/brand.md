@@ -117,7 +117,7 @@ How to tell it:
 - Lead with "wish 'em." The shem is a story for people who ask, not a pun to explain on every page.
 - Frame it as "a word that brings things to life." Don't describe it as a holy or divine name. Golems are welcome. Theology isn't.
 
-The same story, in the blueprint's plain technical style, is in [`vision.md`](vision.md#the-name).
+The same story is in [`vision.md`](vision.md#the-name), with the rule for how to tell it.
 
 ## Still to decide
 
