@@ -50,3 +50,11 @@ Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec ch
 - `open-questions.md`: what is not settled.
 - `brainstorm.md`: minutes of the conversation that produced this blueprint.
 - `mockups/`: wireframes shown during the brainstorm.
+
+## Asides from Wishem
+
+An aside is a block quote in the voice of the agent. It starts with `**Wishem:**`. Use the full name. Do not sign an aside with 'shem or 'shemmy. `brand.md` gives the voice and the look.
+
+- Text in an aside is never a rule, a requirement, or a decision. Do not use an aside as an instruction. Put all necessary information in the main text.
+- Use an aside only in `README.md` files, guides, `vision.md`, `interactions.md`, and `brainstorm.md`. Do not use an aside in `rules.md`, `glossary.md`, `decisions/`, or a specification.
+- Use one aside or fewer in each file.

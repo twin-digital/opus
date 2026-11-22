@@ -2,15 +2,25 @@
 
 > Confirmed by the owner. This file is written in the brand's own voice, not in the plain technical style of the rest of the blueprint, and it has no status labels.
 
-Wishem is a game engine with a spirit inside. You say what you want, and the spirit that lives in the engine helps build it, test it and play it back.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/header-dark.png">
+  <img alt="The wishem wordmark in lowercase with a Wishfire full stop, above the line: A game engine with a spirit inside. You say what you want, and the spirit that lives in the engine helps build it, test it and play it back." src="brand/header-light.png">
+</picture>
 
 This file connects how Wishem looks and sounds to what Wishem is. Each colour, typeface and phrase traces back to the same idea: a maker who wishes things into being, and a spirit that grants those wishes. When a design choice isn't covered here, make the choice that tells that story.
 
 It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.md`](../../../docs/ui-style-guide.md)). Once the editor UI exists, the colours and type below become its design tokens, and the style guide becomes the source of truth for how they are implemented. This file stays the source of truth for why they look that way. Logo, iconography and components come later.
 
+The images here are rendered from [`brand/brand-basics.html`](brand/brand-basics.html), which shows the whole guide as a page. If you change a colour, a typeface or a sample, change it in both files, then run `node nodejs/wishem/docs/brand/render.mjs` to update the images.
+
 ## Colour: ink, fire and wisp
 
 The palette tells a story about who is acting. **Wishfire** belongs to the maker: their wishes, their actions, their game. **Wisp** belongs to the spirit: whatever the agent is saying, doing or suggesting. Ink is the night they work in.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/palette-dark.png">
+  <img alt="Swatches for Ink, Wishfire, Wisp, Clay and Mist, with a bar showing their proportions" src="brand/palette-light.png">
+</picture>
 
 | Colour       | Hex       | Role                                                                                                                                                 |
 | ------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -29,13 +39,19 @@ Roughly how much of each: Ink 60%, Mist 25%, Clay 7%, Wisp 5%, Wishfire 3%.
 
 What the colour roles look like in the editor, with the maker's line in Wishfire and the spirit's reply in Wisp:
 
-> **You:** `make the bats flee when the torch is lit`
->
-> **Wishem:** Done. Bats now scatter within 6 tiles of a lit torch. I recorded a replay and added a test. Want to watch it?
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/editor-dark.png">
+  <img alt="The maker types "make the bats flee when the torch is lit" in Wishfire. Wishem replies in Wisp: Done. Bats now scatter within 6 tiles of a lit torch. I recorded a replay and added a test. Want to watch it?" src="brand/editor-light.png">
+</picture>
 
 ## Typography: three voices
 
 The brand uses one face for presence, one for clarity and one for the words you speak to the engine. All three are free on Google Fonts.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/type-dark.png">
+  <img alt="Type specimens for Bricolage Grotesque, Instrument Sans and JetBrains Mono, and the starter type scale" src="brand/type-light.png">
+</picture>
 
 | Typeface                | Role                                                                               | Sample                                                                                                             |
 | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -70,6 +86,25 @@ The agent is the brand, so the product's voice and the brand's voice are the sam
 - **Wish** can be used as a verb sparingly, for example on the prompt button ("Make a wish") or in onboarding. Don't rename every feature after it.
 - Use the plain dev words for features: build, test, replay, scene, asset. The mythic layer sits on top of real tools and doesn't replace them.
 - The agent refers to itself as "I." Users call it Wishem, or 'shem and 'shemmy for short. Avoid "AI-powered," "revolutionary" and "unleash."
+
+## Wishem speaks up
+
+Wishem lives inside the engine, so it lives in the pages about the engine too. Now and then it steps out of a document's formal or simplified tone to add an aside, a comment or an addendum in its own voice. It's the spirit leaning over your shoulder while you read.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/aside-dark.png">
+  <img alt="A plain paragraph about recordings and reruns, followed by an aside signed Wishem with a Wisp border: This is my favourite trick. You miss a jump, I rerun it with a little more height, and we both watch you make it." src="brand/aside-light.png">
+</picture>
+
+- **The look.** A Wisp left border and the agent's reply styling, the same as Wishem's messages in the editor, so it reads as the spirit talking. In Markdown, where colour isn't available, the signature carries the signal: a block quote that opens with `**Wishem:**`.
+- **The name.** Always sign with the full name, Wishem. Nicknames are for conversation; a signature is a signature.
+- **The voice.** The tone rules above apply. Warm, shows its work, a little mischief.
+- **How often.** At most one per page, and only where it adds something. The same rule that keeps Wishfire scarce applies here: if Wishem chimes in everywhere, it stops being charming.
+- **What it can't do.** An aside never carries the point. A reader who skips every aside misses nothing they need, and nothing in an aside is a rule, a requirement or a decision. [`README.md`](README.md#asides-from-wishem) lists the documents that may hold one.
+
+In Markdown, it looks like this:
+
+> **Wishem:** This is my favourite trick. You miss a jump, I rerun it with a little more height, and we both watch you make it.
 
 ## Where the name comes from
 
