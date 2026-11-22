@@ -4,11 +4,11 @@
 
 ## What Wishem is
 
-Wishem is an environment in which a designer and an agent make a game by conversation while the game runs.
+Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe.
 
 The designer gives direction in the words of a designer:
 
-> "Let's create a new screen, east of the Water Palace. It's a forest biome, but I want to include a special golden tree. Generate a new sprite for that, and place it in the center of the screen. Scatter standard trees around, and populate the area with Elf Ghosts."
+> "I need a room between the Weighbridge and the Kiln that teaches the grapple before the player needs it under pressure. Quarry biome. One cut too wide to jump, with an iron ring bolted to the far wall in plain view: generate the ring so it reads as something you can hook. No enemies until the player has crossed. After that, two goats, so the second crossing happens with something chasing."
 
 The agent does the work. It creates the screen, generates the sprite, places the trees, and adds the ghosts. The designer sees the result in the running game.
 
