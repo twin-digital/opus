@@ -25,7 +25,7 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 
 - **Develops the game model as it is needed.** The agent adds a concept, such as a status or an item, when a design first needs it.
 - **Writes behaviors from natural language.** The designer describes what a thing does. The agent writes the code behind the description and keeps the two in agreement.
-- **Generates the assets that the model defines.** These are sprites, room layouts, maps, and each other kind of content that the game has. Each asset is stored with the prompt that made it.
+- **Generates the assets that the model defines.** These are sprites, room layouts, maps, and every other kind of content that the game has. Each asset is stored with the prompt that made it.
 - **Creates the tools to see and change the model.** Inspectors, tables, and overlays appear when the game has something for them to show.
 - **Adjusts, observes, and queries the model and the game state from inside the running game.** The agent can also rewind play and run it again with a changed value.
 - **Automates tests and checks design constraints that are written in natural language.** The agent checks each change against the constraints that the designer wrote.
@@ -45,13 +45,13 @@ The first game is a top-down adventure in a 3/4 perspective and a 16-bit console
 
 ## Technology
 
-- Wishem is written in TypeScript. Although the agent (not the designer0 writes most of the game code, so the language is mainly the agent's concern.
+Wishem is written in TypeScript. The agent, not the designer, writes most of the game code, so the language is mainly the agent's concern.
 
 ## The name
 
 "Wishem" reads as "wish 'em": the designer wishes game elements into existence. This is the main meaning.
 
-There's a second meaning hidden inside. In golem folklore, a shem (Hebrew for "name") is a word placed in a creation that brings it to life. In Wishem, your words do the same: what you say becomes the game.
+There's a second meaning hidden inside. In golem folklore, a _shem_ (Hebrew for "name") is a word placed in a creation that brings it to life. In Wishem, your words do the same: what you say becomes the game.
 
 Tell the story of the shem as "a word that brings things to life". Do not describe the shem as a holy name or a divine name. `brand.md` tells the same story in the brand voice.
 
