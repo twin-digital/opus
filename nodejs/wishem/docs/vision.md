@@ -14,6 +14,15 @@ The agent does the work. It creates the room, sizes the cut, generates the ring,
 
 The goal in one phrase: to "speak a game into existence" through an agent that is integrated with the engine.
 
+## What Wishem does
+
+- **Develops the game model as it is needed.** The agent adds a concept, such as a status or an item, when a design first needs it.
+- **Writes behaviors from natural language.** The designer describes what a thing does. The agent writes the code behind the description and keeps the two in agreement.
+- **Generates the assets that the model defines.** These are sprites, room layouts, maps, and each other kind of content that the game has. Each asset is stored with the prompt that made it.
+- **Creates the tools to see and change the model.** Inspectors, tables, and overlays appear when the game has something for them to show.
+- **Adjusts, observes, and queries the model and the game state from inside the running game.** The agent can also rewind play and run it again with a changed value.
+- **Automates tests and checks design constraints that are written in natural language.** The agent checks each change against the constraints that the designer wrote.
+
 ## What makes it different
 
 **The agent speaks the game's own model.** Existing engine integrations let an agent operate an editor that was made for human hands. In Wishem the agent reads and changes scenes, entities, components, rules, physics values, and play history directly.
