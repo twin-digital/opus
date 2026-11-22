@@ -30,13 +30,6 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 - **Adjusts, observes, and queries the model and the game state from inside the running game.** The agent can also rewind play and run it again with a changed value.
 - **Automates tests and checks design constraints that are written in natural language.** The agent checks each change against the constraints that the designer wrote.
 
-## Who uses it
-
-- **The designer.** A person who directs the game. The designer does not need to read code.
-- **The agent.** The designer calls the agent Wishem, 'shem, or 'shemmy.
-
-The first designers are the owner of the project and a young collaborator.
-
 ## What Wishem is not
 
 - It is not a general game engine that is built in full before a game uses it.
@@ -52,14 +45,13 @@ The first game is a top-down adventure in a 3/4 perspective and a 16-bit console
 
 ## Technology
 
-- Wishem is written in TypeScript. (**Agreed**)
-- The agent writes most of the game code, so the language is mainly the agent's concern. The designer reads little of it. (**Proposed**)
+- Wishem is written in TypeScript. Although the agent (not the designer0 writes most of the game code, so the language is mainly the agent's concern.
 
 ## The name
 
 "Wishem" reads as "wish 'em": the designer wishes game elements into existence. This is the main meaning.
 
-The name also contains _shem_. This second meaning is hidden. In golem folklore, a shem is a word that is placed in a golem and brings it to life. _Shem_ is the Hebrew word for "name". In Wishem, the designer's words are what bring the game to life.
+There's a second meaning hidden inside. In golem folklore, a shem (Hebrew for "name") is a word placed in a creation that brings it to life. In Wishem, your words do the same: what you say becomes the game.
 
 Tell the story of the shem as "a word that brings things to life". Do not describe the shem as a holy name or a divine name. `brand.md` tells the same story in the brand voice.
 
