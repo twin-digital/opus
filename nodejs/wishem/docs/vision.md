@@ -10,7 +10,7 @@ The designer gives direction in the words of a designer:
 
 > "I need a room between the Weighbridge and the Kiln that teaches the grapple before the player needs it under pressure. Quarry biome. One cut too wide to jump, with an iron ring bolted to the far wall in plain view: generate the ring so it reads as something you can hook. No enemies until the player has crossed. After that, two goats, so the second crossing happens with something chasing."
 
-The agent does the work. It creates the screen, generates the sprite, places the trees, and adds the ghosts. The designer sees the result in the running game.
+The agent does the work. It creates the room, sizes the cut, generates the ring, and sets the goats to appear after the first crossing. The designer sees the result in the running game.
 
 The goal in one phrase: to "speak a game into existence" through an agent that is integrated with the engine.
 
@@ -20,7 +20,7 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 
 **The agent can reason about what happened.** A designer can pause after a missed jump and say "make the player jump height high enough so I would have made this". The agent has the recorded inputs and the game state. It can run the same inputs again with a new value and see the result.
 
-**The designer's words are the source.** A behavior is stored as the prompt that describes it. The agent writes the function behind the prompt. A generated sprite or room layout is stored with the prompt that produced it. Designer statements such as "cannot cross without hookshot" are stored with the room they describe.
+**The designer's words are the source.** A behavior is stored as the prompt that describes it. The agent writes the function behind the prompt. A generated sprite or room layout is stored with the prompt that produced it. Designer statements such as "cannot cross the cut without the grapple" are stored with the room they describe.
 
 **The engine and the tools grow with the game.** Wishem starts nearly empty. A concept such as "status" appears when a design first needs it. An editor panel such as a list of statuses appears when statuses exist. Each game can end with its own model and its own tools.
 

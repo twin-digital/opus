@@ -1,6 +1,6 @@
 # Wishem blueprint
 
-Wishem is a tool that lets a designer wish game elements into existence. The designer talks to an agent while the game runs. The agent builds and changes the game through the game's own model.
+Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the game runs. The agent builds and changes the game through the game's own model.
 
 This folder is the blueprint for Wishem. It records the vision, the concepts, the rules, and the roadmap that came out of the first brainstorm.
 

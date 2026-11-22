@@ -6,7 +6,7 @@
 
 ## Decision
 
-Wishem, the agent-powered framework, is the product. The first game is a consumer of Wishem.
+Wishem, the just-in-time game development environment, is the product. The first game is a consumer of Wishem.
 
 Wishem is a personal project that is used to build a real game first. It can become a product for other people later.
 

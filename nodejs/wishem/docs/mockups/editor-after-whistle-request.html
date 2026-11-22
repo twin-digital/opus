@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Wishem mockup: editor after the flute request</title>
+    <title>Wishem mockup: editor after the whistle request</title>
     <style>
       body {
         margin: 24px;
@@ -24,17 +24,6 @@
       code {
         color: #d6dbe1;
       }
-    </style>
-  </head>
-  <body>
-    <h1>Editor after the flute request</h1>
-    <p class="subtitle">
-      Wireframe from the Wishem brainstorm of 2026-11-22. It shows what the designer looks at after the agent builds the
-      golden tree screen and the flute behavior. It is a sketch, not a design. See <code>../interactions.md</code>,
-      example 3.
-    </p>
-
-    <style>
       .ed {
         display: grid;
         grid-template-columns: 250px 1fr 270px;
@@ -107,51 +96,69 @@
         width: 512px;
         height: 352px;
         margin: 10px auto 0;
-        background: #2f5d3a;
+        background: #6b6257;
         background-image:
           linear-gradient(#0002 1px, transparent 1px), linear-gradient(90deg, #0002 1px, transparent 1px);
         background-size: 32px 32px;
         outline: 2px solid #0d1117;
+        overflow: hidden;
       }
-      .t {
+      .cut {
         position: absolute;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: #1d4027;
-        border: 2px solid #14301c;
+        left: 224px;
+        top: 0;
+        width: 64px;
+        height: 352px;
+        background: #1b1814;
+        border-left: 2px solid #3a342c;
+        border-right: 2px solid #3a342c;
       }
-      .gold {
+      .rubble {
         position: absolute;
-        left: 232px;
-        top: 144px;
-        width: 48px;
-        height: 48px;
+        width: 26px;
+        height: 20px;
+        border-radius: 9px 12px 6px 8px;
+        background: #4a433a;
+        border: 2px solid #37312a;
+      }
+      .ringpost {
+        position: absolute;
+        left: 292px;
+        top: 164px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
-        background: #e3b341;
-        border: 3px solid #fff;
+        border: 4px solid #c9d1d9;
         box-shadow: 0 0 0 2px #1f6feb;
       }
-      .gh {
+      .goat {
         position: absolute;
-        width: 22px;
-        height: 22px;
-        border-radius: 6px 6px 2px 2px;
+        width: 26px;
+        height: 20px;
+        border-radius: 6px;
         border: 2px dashed #c9d1d9;
-        opacity: 0.75;
+        opacity: 0.8;
       }
-      .ring {
+      .whistle {
         position: absolute;
-        left: 160px;
-        top: 72px;
-        width: 192px;
-        height: 192px;
+        left: 448px;
+        top: 40px;
+        width: 12px;
+        height: 22px;
+        background: #e3b341;
+        border: 2px solid #fff;
+      }
+      .range {
+        position: absolute;
+        left: 198px;
+        top: -205px;
+        width: 512px;
+        height: 512px;
         border-radius: 50%;
         border: 1px dashed #e3b341;
       }
       .exit {
         position: absolute;
-        left: -4px;
         top: 150px;
         width: 8px;
         height: 52px;
@@ -167,7 +174,7 @@
       }
       .kv {
         display: grid;
-        grid-template-columns: 92px 1fr;
+        grid-template-columns: 96px 1fr;
         gap: 3px 8px;
       }
       .kv span:nth-child(odd) {
@@ -210,7 +217,7 @@
       }
       .map {
         display: grid;
-        grid-template-columns: repeat(4, 44px);
+        grid-template-columns: repeat(4, 50px);
         gap: 3px;
         padding: 10px;
       }
@@ -225,21 +232,25 @@
         text-align: center;
       }
       .map .here {
-        background: #2f5d3a;
+        background: #6b6257;
         outline: 2px solid #1f6feb;
         color: #fff;
-      }
-      .map .wp {
-        background: #1c4a6e;
       }
       .map .none {
         background: transparent;
       }
     </style>
+  </head>
+  <body>
+    <h1>Editor after the whistle request</h1>
+    <p class="subtitle">
+      Wireframe for the Wishem blueprint. It shows what the designer looks at after the agent builds the quarry room and
+      the whistle behavior. It is a sketch, not a design. See <code>../interactions.md</code>, example 3.
+    </p>
 
     <div class="ed">
       <div class="bar">
-        <b>Golden Grove</b> <span>forest biome</span> <span class="pill on">Edit</span
+        <b>Quarry Cut</b> <span>quarry biome</span> <span class="pill on">Edit</span
         ><span class="pill">Play from here</span><span class="pill">Step</span><span class="pill">Rewind</span>
         <span style="margin-left: auto" class="ask">3 assumptions to review</span>
       </div>
@@ -247,79 +258,76 @@
       <div>
         <h4>Agent</h4>
         <div class="pad">
-          <div class="msg me">
-            <small>You</small>The Elf Ghosts should stay invisible until the player plays the flute near the golden
-            tree.
-          </div>
+          <div class="msg me"><small>You</small>The goats stay docile until the shift whistle blows.</div>
           <div class="msg">
-            <small>Agent</small>Built it. I made these calls:
-            <div class="q">Invisible ghosts cannot be hit and do not hurt the player.</div>
-            <div class="q">"Near" is 3 tiles from the tree. Shown as the ring.</div>
-            <div class="q">The flute has placeholder art and no source yet.</div>
-            Where does the player get the flute?
+            <small>Wishem</small>Built it. I made these calls:
+            <div class="q">Docile goats do not chase and do not hurt the player.</div>
+            <div class="q">The whistle carries 8 tiles. Shown as the ring.</div>
+            <div class="q">The whistle has placeholder art and nothing blows it yet.</div>
+            What makes the whistle blow?
           </div>
           <div class="msg me"><small>You</small>▍</div>
         </div>
       </div>
 
       <div>
-        <h4>Screen view</h4>
+        <h4>Room view</h4>
         <div class="scene">
-          <div class="exit"></div>
-          <span class="tag" style="left: 8px; top: 168px">exit → Water Palace</span>
-          <div class="ring"></div>
-          <div class="t" style="left: 40px; top: 30px"></div>
-          <div class="t" style="left: 110px; top: 60px"></div>
-          <div class="t" style="left: 400px; top: 40px"></div>
-          <div class="t" style="left: 450px; top: 110px"></div>
-          <div class="t" style="left: 60px; top: 270px"></div>
-          <div class="t" style="left: 150px; top: 300px"></div>
-          <div class="t" style="left: 380px; top: 280px"></div>
-          <div class="t" style="left: 440px; top: 230px"></div>
-          <div class="t" style="left: 300px; top: 20px"></div>
-          <div class="t" style="left: 210px; top: 310px"></div>
-          <div class="gold"></div>
-          <span class="tag" style="left: 218px; top: 198px">golden_tree</span>
-          <div class="gh" style="left: 120px; top: 150px"></div>
-          <div class="gh" style="left: 350px; top: 110px"></div>
-          <div class="gh" style="left: 330px; top: 230px"></div>
-          <span class="tag" style="left: 108px; top: 178px">elf_ghost · invisible</span>
+          <div class="exit" style="left: -4px"></div>
+          <span class="tag" style="left: 8px; top: 168px">exit → Weighbridge</span>
+          <div class="exit" style="right: -4px"></div>
+          <span class="tag" style="right: 8px; top: 206px">exit → Kiln</span>
+          <div class="range"></div>
+          <div class="cut"></div>
+          <span class="tag" style="left: 232px; top: 8px">the cut</span>
+          <div class="rubble" style="left: 60px; top: 50px"></div>
+          <div class="rubble" style="left: 130px; top: 270px"></div>
+          <div class="rubble" style="left: 40px; top: 250px"></div>
+          <div class="rubble" style="left: 150px; top: 90px"></div>
+          <div class="ringpost"></div>
+          <span class="tag" style="left: 296px; top: 188px">iron_ring</span>
+          <div class="goat" style="left: 370px; top: 120px"></div>
+          <div class="goat" style="left: 410px; top: 250px"></div>
+          <span class="tag" style="left: 352px; top: 146px">goat · docile</span>
+          <div class="whistle"></div>
+          <span class="tag" style="left: 404px; top: 68px">shift_whistle</span>
         </div>
       </div>
 
       <div>
-        <h4>Inspector: elf_ghost #2</h4>
+        <h4>Inspector: goat #2</h4>
         <div class="pad kv">
-          <span>kind</span><span>enemy</span> <span>position</span><span>11, 3</span> <span>health</span><span>2</span>
-          <span>statuses</span><span class="new">invisible (new)</span> <span>behaviors</span
-          ><span>wander, <span class="new">reveal_on_flute (new)</span></span>
+          <span>kind</span><span>enemy</span> <span>position</span><span>12, 7</span> <span>appears</span
+          ><span>after first crossing</span> <span>statuses</span><span class="new">docile (new)</span>
+          <span>behaviors</span><span>charge, <span class="new">wake_on_whistle (new)</span></span>
         </div>
-        <h4>Status: invisible</h4>
+        <h4>Status: docile</h4>
         <div class="pad kv">
-          <span>drawn</span><span>no (outline in editor)</span> <span>can be hit</span
-          ><span class="ask">no · assumed</span> <span>deals damage</span><span class="ask">no · assumed</span>
-          <span>blocks path</span><span>no</span>
+          <span>chases player</span><span class="ask">no · assumed</span> <span>contact damage</span
+          ><span class="ask">no · assumed</span> <span>can be hit</span><span>yes</span> <span>blocks path</span
+          ><span>yes</span>
         </div>
-        <h4>Rule: reveal_on_flute</h4>
+        <h4>Behavior: wake_on_whistle</h4>
         <div class="pad">
-          on spawn → add <b>invisible</b><br />when <b>flute_played</b> within <span class="ask">3 tiles</span> of
-          <b>golden_tree</b> → remove <b>invisible</b>
+          on spawn → add <b>docile</b><br />when <b>shift_whistle</b> blows within <span class="ask">8 tiles</span> →
+          remove
+          <b>docile</b>
         </div>
       </div>
 
       <div>
         <h4>World</h4>
         <div class="map">
-          <div>Cliff</div>
-          <div>Lake</div>
+          <div>Tip</div>
+          <div>Crusher</div>
           <div class="none"></div>
           <div class="none"></div>
-          <div>Marsh</div>
-          <div class="wp">Water Palace</div>
-          <div class="here">Golden Grove</div>
+          <div>Weighbridge</div>
+          <div class="here">Quarry Cut</div>
+          <div>Kiln</div>
           <div class="none"></div>
-          <div>Village</div>
-          <div>Field</div>
+          <div>Yard</div>
+          <div>Sidings</div>
           <div class="none"></div>
           <div class="none"></div>
         </div>
@@ -327,8 +335,8 @@
 
       <div style="grid-column: 2 / 4">
         <div class="tabs">
-          <span>Entities</span><span class="on">Statuses</span><span>Items</span><span>Rules</span><span>Sprites</span
-          ><span>Biomes</span>
+          <span>Entities</span><span class="on">Statuses</span><span>Items</span><span>Behaviors</span
+          ><span>Sprites</span><span>Biomes</span><span>Statements</span>
         </div>
         <table class="db">
           <tr>
@@ -341,28 +349,28 @@
           <tr>
             <td>burning</td>
             <td>1 damage per second, lights dark rooms</td>
-            <td>torch, fire bat</td>
+            <td>kiln fire, torch</td>
             <td>game</td>
             <td></td>
           </tr>
           <tr>
-            <td>frozen</td>
-            <td>cannot move, can be pushed</td>
-            <td>ice rod</td>
-            <td>game</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td class="new">invisible</td>
-            <td>not drawn, cannot be hit, deals no damage</td>
-            <td>elf_ghost</td>
+            <td class="new">docile</td>
+            <td>does not chase, deals no contact damage</td>
+            <td>goat</td>
             <td>game</td>
             <td class="new">added just now</td>
           </tr>
           <tr>
+            <td>hooked</td>
+            <td>pulled toward the grapple target</td>
+            <td>grapple</td>
+            <td>game</td>
+            <td></td>
+          </tr>
+          <tr>
             <td>stunned</td>
             <td>cannot act for 2 seconds</td>
-            <td>boomerang</td>
+            <td>rockfall</td>
             <td>game</td>
             <td></td>
           </tr>
@@ -372,7 +380,7 @@
 
     <p class="subtitle" style="margin-top: 14px">
       Green marks what the agent just added. Amber marks what the agent assumed without asking. The assumption list and
-      the Play, Step, and Rewind controls are proposals that the designer did not confirm.
+      the Play, Step, and Rewind controls are proposals that the owner did not confirm.
     </p>
   </body>
 </html>

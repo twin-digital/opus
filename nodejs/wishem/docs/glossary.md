@@ -70,7 +70,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Hand edit**: A direct change by the designer to a generated thing, such as a drag.
 
-**Designer statement**: A requirement in the designer's words, stored with the thing it describes. Example: "cannot cross without hookshot".
+**Designer statement**: A requirement in the designer's words, stored with the thing it describes. Example: "cannot cross the cut without the grapple".
 
 **Check**: A repeatable test that the agent writes from a behavior prompt or a designer statement.
 

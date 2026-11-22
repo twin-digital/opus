@@ -8,7 +8,7 @@ The game model is the part of a game that holds all game truth. It runs with no 
 
 ### Entities and components (**Proposed** as the fixed core)
 
-- An **entity** is a thing in the game: the hero, an Elf Ghost, a tree, a door.
+- An **entity** is a thing in the game: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
 - A **component type** is the declaration of a component: its name, its fields, and what it can affect.
 
@@ -21,8 +21,8 @@ Earlier ideas map onto this model:
 | Idea from the brainstorm              | In the model                                          |
 | ------------------------------------- | ----------------------------------------------------- |
 | "Declare and register a concept"      | Define a component type                               |
-| The `invisible` status                | A component, or an entry in a `Statuses` component    |
-| The rule that reveals the ghosts      | A behavior on a component                             |
+| The `docile` status                   | A component, or an entry in a `Statuses` component    |
+| The rule that wakes the goats         | A behavior on a component                             |
 | An inspector and tables in the editor | Tools derived from the declared fields                |
 | A "self-constructing engine"          | A library of component types that grows with the game |
 
@@ -30,14 +30,14 @@ Earlier ideas map onto this model:
 
 Every component type and every other kind of thing is registered (rule R6). The agent queries the registry to learn what exists and what each kind can do.
 
-Example: before the agent adds an `invisible` status, it asks what a status can affect. The answer can be "is drawn", "can be hit", "deals damage", and "blocks movement". The agent fills in the values. It asks the designer where the value is a design choice.
+Example: before the agent adds a `docile` status, it asks what a status can affect. The answer can be "chases the player", "deals damage on contact", "can be hit", and "blocks movement". The agent fills in the values. It asks the designer where the value is a design choice.
 
 ### Two graphs
 
 A game has two structures that look alike and are different.
 
-- The **game graph** uses the game's words: "Elf Ghost, invisible, in Golden Grove". The model owns it. The agent speaks it.
-- The **render graph** uses the renderer's words: "sprite, alpha 0, layer 3". The renderer owns it. It is built again from the game graph.
+- The **game graph** uses the game's words: "goat, docile, in the Quarry Cut". The model owns it. The agent speaks it.
+- The **render graph** uses the renderer's words: "sprite, frame 2, layer 3". The renderer owns it. It is built again from the game graph.
 
 In a 3/4 perspective the two also disagree on order. Drawing order follows the y position. The grouping of the game graph does not.
 
@@ -95,8 +95,8 @@ Two kinds of problem have two different fixes (rule R9):
 
 More proposals:
 
-- **Fields from answers.** If the agent asks what "near" means and the answer is 3 tiles, `distance = 3` becomes a field. The designer can change the field by hand without a request to the agent. (**Proposed**)
-- **Names are links.** "Flute", "golden tree", and "invisible" in a prompt point at registered things. If the meaning of `invisible` changes, the agent knows which behaviors to check again. (**Proposed**)
+- **Fields from answers.** If the agent asks how far the whistle carries and the answer is 8 tiles, `range = 8` becomes a field. The designer can change the field by hand without a request to the agent. (**Proposed**)
+- **Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. (**Proposed**)
 - **Kept output.** A changed prompt changes the existing code and leaves the rest alone (rule R11). (**Proposed**)
 
 ### Native behaviors
@@ -105,21 +105,21 @@ A designer can view and edit the code behind a behavior. That action probably tu
 
 ### Generation prompts
 
-A generation prompt has a one-time effect. "Scatter standard trees around" places trees once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
+A generation prompt has a one-time effect. "Break up the floor with rubble piles" places rubble once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
 
 - The prompt is always stored with its result. (**Agreed**)
 - The agent records what the run produced, so that a reapply can remove it. (**Agreed**)
 - The designer can change the prompt and select **reapply**. (**Agreed**)
 - The designer can also edit the result by hand, for example by a drag. (**Agreed**)
 - A hand edit is lost on a reapply unless the prompt was changed to match. The system warns first. (**Agreed**)
-- A hand edit is not written back into the prompt. Why the designer moved a tree is not obvious: nearer to one thing, farther from another. A guess is brittle. (**Agreed**)
-- The record is kept for each generated thing. Each tree knows which prompt made it and if a hand changed it since. The warning can then name the one changed tree. (**Proposed**)
+- A hand edit is not written back into the prompt. Why the designer moved a rubble pile is not obvious: nearer to one thing, farther from another. A guess is brittle. (**Agreed**)
+- The record is kept for each generated thing. Each rubble pile knows which prompt made it and if a hand changed it since. The warning can then name the one changed pile. (**Proposed**)
 
 Random map generation that runs during play is a different case. It is a behavior, not a generation prompt.
 
 ### Designer statements
 
-A designer statement is a requirement in the designer's words, stored with the thing it describes. Example on a room: "cannot cross without hookshot".
+A designer statement is a requirement in the designer's words, stored with the thing it describes. Example on a room: "cannot cross the cut without the grapple".
 
 - The agent checks a change against the statements that the change can affect. It does this the way a tester does manual testing. (**Agreed**)
 - The agent can turn a statement into a deterministic automated test. (**Agreed**)

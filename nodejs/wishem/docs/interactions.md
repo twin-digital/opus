@@ -2,61 +2,66 @@
 
 > Blueprint, not a specification. See `README.md` for the status labels.
 
-Each example gives what the designer says, what the designer expects, and what Wishem needs for that to work. The designer's requests come from the brainstorm.
+Each example gives what the designer says, what the designer expects, and what Wishem needs for that to work. The examples follow one room, the quarry room, through its life.
 
 The examples start in a project that already has content. The first minute of an empty project is not designed. See `open-questions.md`.
 
-## 1. Golden Grove: a new screen
+## 1. The quarry room: a room with a purpose
 
 **Designer:**
 
-> "Let's create a new screen, east of the Water Palace. It's a forest biome, but I want to include a special golden tree. Generate a new sprite for that, and place it in the center of the screen. Scatter standard trees around, and populate the area with Elf Ghosts."
+> "I need a room between the Weighbridge and the Kiln that teaches the grapple before the player needs it under pressure. Quarry biome. One cut too wide to jump, with an iron ring bolted to the far wall in plain view: generate the ring so it reads as something you can hook. No enemies until the player has crossed. After that, two goats, so the second crossing happens with something chasing."
+
+The designer states a purpose and constraints. The designer does not give a layout.
 
 **What Wishem needs:**
 
-- **A world with named places.** "East of the Water Palace" means that screens have names and neighbors. The agent adds the screen and an exit on the shared edge.
-- **Biomes as a registered kind.** "Forest" resolves to a tileset, a ground pattern, and a "standard tree".
-- **A catalog of things that exist.** The agent finds "Elf Ghost" by name.
-- **Placement by intent.** The agent turns "center", "scatter", and "populate" into positions. It then checks that the screen can be walked and that the exits can be reached.
-- **Asset generation in the conversation.** The new sprite arrives in the game's style, size, and palette, with a collision footprint. "Golden tree" is a registered name from then on.
+- **A world with named places.** "Between the Weighbridge and the Kiln" means that rooms have names and neighbors. The agent adds the room and an exit to each neighbor.
+- **Biomes as a registered kind.** "Quarry" resolves to a tileset, a ground pattern, and standard scenery.
+- **A catalog of things that exist.** The agent finds "grapple" and "goat" by name.
+- **Layout from intent.** "Too wide to jump" and "something you can hook" are measurements. The agent reads the jump distance and the grapple range from the game model. It sizes the cut between the two.
+- **Sightlines.** "In plain view" means that the player sees the ring from the entrance. The agent checks this.
+- **Pacing.** "No enemies until the player has crossed" means that the goats appear after the first crossing. The agent adds that trigger.
+- **Proof by play.** The agent runs the room with no window. It confirms that a jump fails, that the grapple crosses, and that the goats chase on the way back.
+- **Asset generation in the conversation.** The ring sprite arrives in the game's style, size, and palette. It is registered as a grapple target, and "iron ring" is a name from then on.
 
-**What is stored:** the generation prompt for the layout, the generation prompt for the sprite, and an origin record for each placed thing.
+**What is stored:** the generation prompt for the room, the generation prompt for the sprite, and an origin record for each placed thing.
 
-## 2. The flute: a concept that does not exist
+## 2. The shift whistle: a concept that does not exist
 
-**Designer:** "The Elf Ghosts should stay invisible until the player plays the flute near the golden tree."
+**Designer:** "The goats stay docile until the shift whistle blows."
 
-No flute exists. Nothing can be invisible.
+No whistle exists. Nothing in the game can be docile.
 
 **What the designer expects:**
 
-1. The agent understands that "invisible" is a status, or asks questions until it does.
+1. The agent understands that "docile" is a status, or asks questions until it does.
 2. The agent learns the mechanical effects that a status can have from the game model, and registers the new status.
-3. The agent creates a "flute" item. It asks what art to use or generate and where the player gets the flute.
-4. The agent suggests a distance for "near".
-5. The agent builds a behavior for the ghosts. The behavior adds the `invisible` status on spawn and removes it when the flute is played near the tree.
+3. The agent creates a "shift whistle". It asks what art to use or generate and what makes the whistle blow.
+4. The agent suggests how far the whistle carries.
+5. The agent builds a behavior for the goats. The behavior adds the `docile` status on spawn and removes it when the whistle blows in range.
 
 **What Wishem needs:**
 
-- The agent adds new members to registered kinds: a status, an item, a behavior.
+- The agent adds new members to registered kinds: a status, a thing in the world, a behavior.
 - The registry reports what a status can affect, so that the agent can fill in the mechanics.
-- The agent knows when it lacks information. It asks about creative gaps (the flute art, where the flute comes from). It proposes values for mechanical gaps (the distance).
+- The agent knows when it lacks information. It asks about creative gaps (the whistle art, what blows it). It proposes values for mechanical gaps (the range).
 - The result is a behavior whose prompt is the designer's sentence.
 
 ## 3. After the agent says "done"
 
 **What the designer expects:**
 
-- a rendering of the game, as in the Unity editor, that shows the new screen and where the agent put the entities and assets
+- a rendering of the game, as in the Unity editor, that shows the new room and where the agent put the entities and assets
 - the ability to inspect an entity and see its status
 - a database view of all statuses, items, and triggers that exist
 
-See `mockups/editor-after-flute-request.html`. It shows:
+See `mockups/editor-after-whistle-request.html`. It shows:
 
 - the conversation with the agent
-- the screen, with the golden tree, the trees, the ghosts, and a ring for "near"
-- an inspector for the selected ghost, its status, and its behavior
-- a world map of screens
+- the room, with the cut, the iron ring, the rubble, the goats, and a ring for the range of the whistle
+- an inspector for the selected goat, its status, and its behavior
+- a world map of rooms
 - tables of the registered kinds
 
 In the mockup, green marks what the agent added. Amber marks what the agent assumed. The assumption list and the Play, Step, and Rewind controls are **Proposed**.
@@ -84,40 +89,42 @@ The agent changes the value in the running game and writes the change to the aut
 - The agent moves the platform in the running game.
 - The agent writes the new position to the room in the authored state.
 
-## 6. The hookshot gap: a change with a distant effect
+## 6. The cut: a change with a distant effect
 
-The designer raises the jump height to reach one ledge. The same jump now crosses a gap in an earlier screen. That gap was meant to need the hookshot. Nobody is looking at that screen.
+In example 4 the designer raises the jump to reach a ledge in another room. The same jump now crosses the cut in the quarry room. That room exists to teach the grapple. Nobody is looking at it.
 
 **What the designer expects:**
 
 - The agent does not simulate every gap in the game with every power-up. The agent does not know what the designer intends to be possible.
-- The designer can add a statement to a room, such as "cannot cross without hookshot".
+- The designer can add a statement to a room, such as "cannot cross the cut without the grapple".
 - The agent checks a change against the statements, in the way that a tester does manual testing.
 - The agent can also build deterministic automated tests from the statements.
 
 **Result:**
 
-- If the room has the designer statement "cannot cross without hookshot", the agent checks the jump change against it and reports the conflict.
+- If the quarry room has the designer statement "cannot cross the cut without the grapple", the agent checks the jump change against it and reports the conflict.
 - If the room has no statement, the agent makes no promise about that room.
 
-## 7. The moved tree: a hand edit to a generated layout
+## 7. The moved rubble: a hand edit to a generated layout
 
-The agent placed ten trees for "scatter standard trees around". One tree blocks a path that the designer likes.
+**Designer:** "Break up the floor on the near side with rubble piles."
 
-**Option 1: change the prompt.** The designer adds "no trees on the east path" to the generation prompt and selects reapply. The agent removes what the last run placed and places the trees again.
+The agent places six piles. One pile blocks the run-up to the cut.
 
-**Option 2: drag the tree.** The designer moves the tree by hand. Nothing else happens. The generation prompt does not change.
+**Option 1: change the prompt.** The designer adds "keep the run-up to the cut clear" to the generation prompt and selects reapply. The agent removes what the last run placed and places the rubble again.
 
-If the designer later reapplies the prompt, the moved tree is one of the things the reapply replaces. The system warns first. To keep the edit, the designer changes the prompt to match.
+**Option 2: drag the pile.** The designer moves the pile by hand. Nothing else happens. The generation prompt does not change.
+
+If the designer later reapplies the prompt, the moved pile is one of the things the reapply replaces. The system warns first. To keep the edit, the designer changes the prompt to match.
 
 ## 8. A behavior the designer does not like
 
-This example was written for the blueprint to show rule R9. It did not come up in the brainstorm.
+This example shows rule R9.
 
-The ghosts appear the instant the flute plays. The prompt says only "stay invisible until the player plays the flute". The code is correct.
+The goats charge the instant the whistle blows. The prompt says only "stay docile until the shift whistle blows". The code is correct.
 
-**Designer:** adds to the behavior prompt: "They fade in over one second."
+**Designer:** adds to the behavior prompt: "They paw the ground for one second before they charge."
 
 The agent changes the function. The behavior history now shows both prompts. This is a design change, not a bug.
 
-If the ghosts stayed invisible after the flute played, that is a bug. The agent changes the code and the prompt stays the same.
+If the goats stayed docile after the whistle blew, that is a bug. The agent changes the code and the prompt stays the same.

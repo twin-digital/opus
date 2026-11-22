@@ -31,10 +31,10 @@ The partner observed that the notes describe three different things: a game, an 
 
 ## 2. What speaking a game looks like
 
-- The owner could not describe the first moment of a project, and gave an example from a project that already has content: a request for a new forest screen east of the Water Palace, with a generated golden tree in the center, scattered trees, and Elf Ghosts. The request is in `interactions.md`, example 1.
+- The owner could not describe the first moment of a project, and gave an example from a project that already has content: a request for a new forest screen east of the Water Palace, with a generated golden tree in the center, scattered trees, and Elf Ghosts.
 - The partner read five needs from it: a world with named places, biomes as a concept, a catalog of things, placement by intent, and asset generation inside the conversation.
 - The partner asked about a request that needs concepts that do not exist: ghosts that stay invisible until the player plays a flute near the golden tree.
-- The owner described the expected steps: the agent adds a status and learns its mechanics from the engine, creates a flute item, asks about art and source, suggests a distance, and builds a behavior. The steps are in `interactions.md`, example 2.
+- The owner described the expected steps: the agent adds a status and learns its mechanics from the engine, creates a flute item, asks about art and source, suggests a distance, and builds a behavior.
 
 **Outcomes:**
 
@@ -44,7 +44,7 @@ The partner observed that the notes describe three different things: a game, an 
 ## 3. What the designer sees
 
 - The owner expects a rendering of the game as in the Unity editor, with inspection of entities and a database view of statuses, items, and triggers.
-- The partner showed a wireframe. It is stored in `mockups/editor-after-flute-request.html`.
+- The partner showed a wireframe of an editor after the flute request: a conversation panel, a view of the screen, an inspector, a world map, and tables of the registered kinds.
 - The owner did not comment on the details of the wireframe.
 
 ## 4. Self-construction
@@ -154,6 +154,12 @@ Candidates were checked on 2026-11-22 against the npm registry, GitHub account n
 - The main meaning is "wish 'em": a tool that lets designers wish game elements into existence.
 - The origin story can mention the golem legend, in which a shem is the word that animates a golem.
 - Wishem is also the name of the agent. Short forms are 'shem and 'shemmy.
+
+## After the brainstorm
+
+- **Product description.** The owner replaced "the agent-powered framework" with a standard line: Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe.
+- **Worked examples.** The owner replaced the forest screen with a quarry room that teaches the grapple. The follow-on examples use the same room: the flute became the shift whistle, the moved tree became moved rubble, and the hookshot statement became "cannot cross the cut without the grapple". The mockup in `mockups/` was redrawn to match. The sections above record the examples as they were discussed.
+- **Brand.** `brand.md` was added in a separate session.
 
 ## Not covered
 

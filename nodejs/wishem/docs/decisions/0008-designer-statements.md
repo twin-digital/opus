@@ -6,7 +6,7 @@
 
 ## Decision
 
-A designer writes requirements in natural language and attaches them to the thing they describe, for example "cannot cross without hookshot" on a room. The agent checks its changes against these statements. It can turn a statement into a deterministic automated test.
+A designer writes requirements in natural language and attaches them to the thing they describe, for example "cannot cross the cut without the grapple" on a room. The agent checks its changes against these statements. It can turn a statement into a deterministic automated test.
 
 The agent does not search the whole game for effects that no statement covers.
 
