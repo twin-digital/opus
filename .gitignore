@@ -84,3 +84,6 @@ nodejs/dolmenwood/refbash/.data
 core
 core.[0-9]*
 nodejs/football/overrides.json
+
+# git worktrees created by the Superpowers using-git-worktrees skill
+.worktrees/
