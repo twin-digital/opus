@@ -1,7 +1,5 @@
 # Vision
 
-> Blueprint, not a specification. See `README.md` for the status labels.
-
 ## What Wishem is
 
 Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe.
@@ -12,7 +10,7 @@ The designer gives direction in the words of a designer:
 
 The agent does the work. It creates the room, sizes the cut, generates the ring, and sets the goats to appear after the first crossing. The designer sees the result in the running game.
 
-The goal in one phrase: to "speak a game into existence" through an agent that is integrated with the engine.
+The goal in one phrase: to "speak a game into existence" through an agent that is integrated directly into the game itself.
 
 ## What makes it different
 
