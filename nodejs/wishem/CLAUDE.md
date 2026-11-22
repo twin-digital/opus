@@ -1,0 +1,20 @@
+# Wishem
+
+Wishem is a tool that lets a designer wish game elements into existence. The designer talks to an agent while the game runs. The agent builds and changes the game through the game's own model.
+
+No Wishem code exists. The `docs/` folder holds the blueprint.
+
+## Read before you design or build
+
+1. `docs/README.md`: the status labels and what to read for each task.
+2. `docs/rules.md`: the rules that every part of Wishem obeys.
+3. `docs/glossary.md`: the exact terms to use.
+4. `docs/decisions/`: questions that are already settled.
+
+## How to work
+
+- Plan each roadmap project as an OpenSpec change. The blueprint is the input.
+- A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
+- Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
+- When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
+- A design that breaks a rule in `docs/rules.md` needs a new file in `docs/decisions/` first.
