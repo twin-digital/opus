@@ -28,22 +28,28 @@ These questions are not settled. Each one names the roadmap project that must an
 14. **Are fields, checks, and links part of every behavior?** Proposed. (Project 3)
 15. **How are conflicts handled on a reapply?** The brainstorm noted this risk and did not resolve it. (Project 4)
 16. **How precise must an expectation be before it becomes an automated test?** (Project 5)
+17. **How does the agent check an expectation that says something is not possible?** "Cannot cross the cut without the grapple" says that no inputs get the player across. One failed jump does not show that. The agent must search over ways to play, or reason from values such as the jump distance. (Project 5)
+18. **Where does a check of an expectation start?** The player must be in the correct place with the correct items. This depends on the question about kept bookmarks. (Project 5)
+19. **How does the agent know which expectations a change can affect?** (Project 5)
+20. **What does a failed expectation do?** It can block the change, give a warning, or ask the designer. (Project 5)
+21. **Who writes an expectation?** Only the designer, or also the agent when a prompt implies one, as "too wide to jump" does. (Project 5)
+22. **What happens when the designer breaks an expectation on purpose?** (Project 5)
 
 ## Assembly
 
-17. **Which libraries fill each slot for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
-18. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
-19. **Which image model generates sprites, and how is one style kept?** (Project 4)
-20. **How is sound and music generated or imported?** Not discussed. (Later)
+23. **Which libraries fill each slot for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
+24. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
+25. **Which image model generates sprites, and how is one style kept?** (Project 4)
+26. **How is sound and music generated or imported?** Not discussed. (Later)
 
 ## Project
 
-21. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
-22. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
-23. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
+27. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
+28. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
+29. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
 
 ## Brand
 
-24. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
-25. **What is the illustration style?** (Project 6)
-26. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)
+30. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
+31. **What is the illustration style?** (Project 6)
+32. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)

@@ -149,6 +149,8 @@ Random map generation that runs during play is a different case. It is a behavio
 
 ### Expectations
 
+The idea of an expectation is agreed. The mechanism is not designed. The points below say what an expectation is for. They do not say how the agent checks one. See `open-questions.md`.
+
 An expectation states, in natural language, something that must stay true. It is stored with the thing it describes. Example on a room: "cannot cross the cut without the grapple".
 
 - The agent checks a change against the expectations that the change can affect. It does this the way a tester does manual testing. (**Agreed**)

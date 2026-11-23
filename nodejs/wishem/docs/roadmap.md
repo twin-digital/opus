@@ -22,6 +22,7 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 Notes:
 
 - Project 4 depends on an outside image model. Pixel art in one consistent style is the least certain part of the plan. An earlier prototype already generated sprites with PixelLab and Retro Diffusion, which lowers that risk.
+- Project 5 needs the most design work before it can be specified. The blueprint records what an expectation is for and not how the agent checks one. Project 5 also depends on the answer to the open question about kept bookmarks.
 - Project 7 stays parked until a second engine is wanted. Rule R1 keeps it possible.
 
 ## Order
