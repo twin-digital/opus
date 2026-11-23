@@ -340,8 +340,17 @@ apply:
        worktree. If it does not, or if the change files exist only as
        uncommitted files in the main checkout, STOP and tell the user. Do
        not copy or move the files yourself. If the branch is behind
-       `origin/main`, tell the user before you start. Run `pnpm install`
-       in the worktree if dependencies are not installed.
+       `origin/main`, tell the user before you start. If you cannot create
+       or enter the worktree, STOP and tell the user. Do not work in the
+       main checkout as a fallback.
+
+       Run `pnpm install` in the worktree if dependencies are not
+       installed. Then check the baseline before you change anything: run
+       `pnpm build` and `pnpm test` with a `--filter` for each package the
+       change touches (design.md Package Impact, or the `Files:` lines in
+       tasks.md). Skip the baseline if the change touches no package. If
+       the baseline fails, report the failures and ask the user whether to
+       proceed or investigate.
 
     2. **Execute**: invoke `superpowers:subagent-driven-development`, using
        tasks.md as the plan (each `## Task N:` section is one task), with
