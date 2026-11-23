@@ -87,7 +87,7 @@ sequenceDiagram
 - The core of the game holds only the game model. It serves the running game at its own address.
 - The core of the workbench holds the workbench model, such as the panels and their layout. It serves the workbench at a second address.
 - The **subject** of a workbench is the game that the workbench shows and changes.
-- The workbench reads and changes its subject through the same interface that the agent uses. The workbench has no private way into the game. See [Agent access](../add-agent-access/README.md).
+- The workbench reads and changes its subject through the same interface that the agent uses. The workbench has no private way into the game. See [Agent access](../480-add-agent-access/README.md).
 - A view of the workbench draws from two sources: the state of the workbench, and the state of the subject. The page of the workbench connects directly to the two cores. The workbench model holds no copy of game data.
 - A rewind of the workbench shows the earlier layout of the tools over the current game.
 - A panel of the workbench can show the address of the running game in a frame.
@@ -170,7 +170,7 @@ flowchart TB
 
 - The game is the subject of the workbench. The workbench page attaches to the two cores. The two cores do not connect to each other.
 - The game page and the workbench page get their views from the core that serves them.
-- Where the designer talks to the agent is an open question. See [Agent access](../add-agent-access/README.md).
+- Where the designer talks to the agent is an open question. See [Agent access](../480-add-agent-access/README.md).
 
 ## Open questions
 

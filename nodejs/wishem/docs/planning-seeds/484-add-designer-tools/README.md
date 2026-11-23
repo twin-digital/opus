@@ -14,7 +14,7 @@ This project makes the designer's view of the game: the tools to see and change 
 
 ## Depends on
 
-[Core model](../add-core-model/README.md), [Agent access](../add-agent-access/README.md).
+[Core model](../479-add-core-model/README.md), [Agent access](../480-add-agent-access/README.md).
 
 ## What is agreed
 
@@ -60,8 +60,8 @@ Levels 2 and 3 are what makes Wishem different. Level 4 is the custom inspector 
 
 - How does the agent's activity move on the screen? See [Brand identity](../define-brand-identity/README.md).
 - The logo mark and the illustration style. See [Brand identity](../define-brand-identity/README.md).
-- Where does the conversation with the agent happen? See [Agent access](../add-agent-access/README.md).
-- How does the designer review the agent's assumptions? See [Behavior prompts](../add-behavior-prompts/README.md).
+- Where does the conversation with the agent happen? See [Agent access](../480-add-agent-access/README.md).
+- How does the designer review the agent's assumptions? See [Behavior prompts](../481-add-behavior-prompts/README.md).
 
 ## Notes
 

@@ -43,18 +43,20 @@ The blueprint only.
 
 ## Open questions
 
-1. **What happens in the first minute of an empty project?** The brainstorm started from a project that already has content. What does the designer say first, and what exists before that sentence? Also for: [Agent access](../add-agent-access/README.md).
+1. **What happens in the first minute of an empty project?** The brainstorm started from a project that already has content. What does the designer say first, and what exists before that sentence? Also for: [Agent access](../480-add-agent-access/README.md).
 2. **Is "all state lives in declared fields" a hard rule?** Proposed as rule R4.
 3. **What scopes exist for a registered thing?** The brainstorm mentioned scene scope and game scope and settled neither.
 4. **Which relations between entities are in every game?** A room contains entities, and an entity can be attached to another. Which relations exist in every game, and which a game adds, is not settled.
 5. **What kinds of reference exist, and what are they called?** The cases are a reference to a different component of the same entity, to a different entity, and to a component of a different entity, in the same subsystem or in different subsystems. It is also not settled if names need a namespace for each subsystem. See "References" in `concepts.md`.
 6. **What belongs to the core and not to a subsystem?** The core runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings. The exact line between the core and the built-in subsystems is not settled.
-7. **How does a kept bookmark stay valid when the game model changes?** A bookmark that is stored as a snapshot goes out of date when a component changes. A bookmark that is stored as a recording from the start always loads, but the same inputs can lead to a different place after a rule changes. The answer affects checks of expectations. Also for: [Expectations](../add-expectations/README.md).
-8. **How is a field identified and named?** The proposal is an ID that code uses and a label that the designer can change. It is not settled how an ID is made, when the designer sees it, and if the same applies to each registered thing. Also for: [Behavior prompts](../add-behavior-prompts/README.md).
+7. **How does a kept bookmark stay valid when the game model changes?** A bookmark that is stored as a snapshot goes out of date when a component changes. A bookmark that is stored as a recording from the start always loads, but the same inputs can lead to a different place after a rule changes. The answer affects checks of expectations. Also for: [Expectations](../483-add-expectations/README.md).
+8. **How is a field identified and named?** The proposal is an ID that code uses and a label that the designer can change. It is not settled how an ID is made, when the designer sees it, and if the same applies to each registered thing. Also for: [Behavior prompts](../481-add-behavior-prompts/README.md).
 9. **Which libraries provide each subsystem for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified.
-10. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch.
+10. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. The [first workbench UI slice](../477-first-workbench-ui-slice/README.md) answers this question.
 
 ## Notes
+
+- The [first workbench UI slice](../477-first-workbench-ui-slice/README.md) builds thin parts of this project first: the registry, declared component types, entities, components, and the storage of authored state. The brainstorm for this project starts from what that slice built.
 
 - The owner expects a base to exist at the start of each game: entities and components, basic parts for input, sound, and graphics, the loading of resources, animation, the generation of assets and behaviors, and a toolkit for tools.
 - The lines that start with "Rejected:" in [`rules.md`](../../rules.md) give the alternatives that are closed for this project. See rules R1, R2, R4, R5, R7, R17, and R18.

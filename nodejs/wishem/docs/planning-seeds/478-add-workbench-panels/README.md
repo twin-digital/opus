@@ -69,10 +69,10 @@ The names in the table and the example are illustrations. They are not requireme
 
 ## Open questions
 
-1. **How is the authored state laid out in files, and how does the core write it?** The first slice only reads one JSON file. This slice writes. It is not settled what happens when a hand edit and a request change the file at the same time. See question 2 in [Agent access](../add-agent-access/README.md).
+1. **How is the authored state laid out in files, and how does the core write it?** The first slice only reads one JSON file. This slice writes. It is not settled what happens when a hand edit and a request change the file at the same time. See question 2 in [Agent access](../480-add-agent-access/README.md).
 2. **Does the form stay outside the game model?** The form can later become a tool that is made from the game model of the workbench.
 
 ## Notes
 
-- This slice is level 2 of "tools are built as a game needs them", done by the designer and not by the agent. See [Tools](../add-designer-tools/README.md).
+- This slice is level 2 of "tools are built as a game needs them", done by the designer and not by the agent. See [Tools](../484-add-designer-tools/README.md).
 - The game view of a later game can be one element in a panel of the workbench, with the HTML of the workbench around it.

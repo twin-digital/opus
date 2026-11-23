@@ -20,9 +20,9 @@ This topic is the parts of the Wishem brand that are not decided. It is not on t
 
 1. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure.
 2. **What is the illustration style?**
-3. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. Also for: [Tools](../add-designer-tools/README.md).
+3. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. Also for: [Tools](../484-add-designer-tools/README.md).
 
 ## Notes
 
-- The tools must follow the brand. See [Tools](../add-designer-tools/README.md).
+- The tools must follow the brand. See [Tools](../484-add-designer-tools/README.md).
 - [Product name](../settle-product-name/README.md) is a different seed.

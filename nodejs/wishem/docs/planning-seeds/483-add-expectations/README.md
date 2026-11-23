@@ -14,7 +14,7 @@ This project lets the designer write what must stay true, in natural language, a
 
 ## Depends on
 
-[Core model](../add-core-model/README.md), [Agent access](../add-agent-access/README.md).
+[Core model](../479-add-core-model/README.md), [Agent access](../480-add-agent-access/README.md).
 
 ## What is agreed
 
@@ -39,8 +39,8 @@ This project lets the designer write what must stay true, in natural language, a
 
 ## Open questions in other seeds
 
-- How does a kept bookmark stay valid when the game model changes? See [Core model](../add-core-model/README.md).
-- How does the agent write and run a check for a behavior? See [Behavior prompts](../add-behavior-prompts/README.md).
+- How does a kept bookmark stay valid when the game model changes? See [Core model](../479-add-core-model/README.md).
+- How does the agent write and run a check for a behavior? See [Behavior prompts](../481-add-behavior-prompts/README.md).
 
 ## Notes
 

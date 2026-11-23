@@ -8,7 +8,7 @@ This topic is the user interface that a player sees in a game: menus, dialog box
 
 ## What is agreed
 
-- A toolkit for the tools of the designer is part of the base. See [Tools](../add-designer-tools/README.md).
+- A toolkit for the tools of the designer is part of the base. See [Tools](../484-add-designer-tools/README.md).
 - A renderer can draw the parts of an in-game user interface with no help from Wishem.
 
 ## Open questions

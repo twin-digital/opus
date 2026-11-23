@@ -9,7 +9,7 @@ This topic is how a game gets its sound effects and its music. It is not on the 
 ## What is agreed
 
 - Sound is an output subsystem. It holds no game state. See [Subsystems](../../concepts.md#subsystems).
-- An asset prompt can produce each kind of content that the game model defines. A sound is an asset. See [Asset prompts](../add-asset-prompts/README.md).
+- An asset prompt can produce each kind of content that the game model defines. A sound is an asset. See [Asset prompts](../482-add-asset-prompts/README.md).
 
 ## What is proposed
 

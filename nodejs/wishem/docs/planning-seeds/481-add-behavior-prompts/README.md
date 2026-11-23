@@ -15,7 +15,7 @@ This project lets the designer describe what a thing does in natural language. T
 
 ## Depends on
 
-[Core model](../add-core-model/README.md), [Agent access](../add-agent-access/README.md).
+[Core model](../479-add-core-model/README.md), [Agent access](../480-add-agent-access/README.md).
 
 ## What is agreed
 
@@ -35,15 +35,15 @@ This project lets the designer describe what a thing does in natural language. T
 
 ## Open questions
 
-1. **How does the designer review the agent's assumptions?** The mockup shows a list. The owner did not confirm it. Also for: [Tools](../add-designer-tools/README.md).
+1. **How does the designer review the agent's assumptions?** The mockup shows a list. The owner did not confirm it. Also for: [Tools](../484-add-designer-tools/README.md).
 2. **Does a rule system exist as data, on top of behaviors as code?** A system of triggers and effects can be read without running it. The proposal is that the agent adds one when a game has enough behaviors of that shape.
 3. **What happens to a hand-written version of a behavior when a new prompt follows it?** The proposal is that the agent starts from the hand-written code. It is not settled if the designer gets a warning, as for a hand edit to a generated room, and if the checks stay.
 4. **How is a name in a prompt linked to a registered thing?** It is not settled how the agent identifies the correct thing, how the link is stored, and what happens when the thing gets a new name or is removed.
-5. **How does the agent write and run a check for a behavior?** Also for: [Expectations](../add-expectations/README.md).
+5. **How does the agent write and run a check for a behavior?** Also for: [Expectations](../483-add-expectations/README.md).
 
 ## Open questions in other seeds
 
-- How is a field identified and named? See [Core model](../add-core-model/README.md).
+- How is a field identified and named? See [Core model](../479-add-core-model/README.md).
 
 ## Notes
 

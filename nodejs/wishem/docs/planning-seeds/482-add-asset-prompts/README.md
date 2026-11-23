@@ -14,7 +14,7 @@ This project lets the designer ask for assets in natural language: sprites, room
 
 ## Depends on
 
-[Core model](../add-core-model/README.md), [Agent access](../add-agent-access/README.md).
+[Core model](../479-add-core-model/README.md), [Agent access](../480-add-agent-access/README.md).
 
 ## What is agreed
 

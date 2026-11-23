@@ -12,7 +12,7 @@ This project lets a renderer in another engine, such as Unity or Godot, show a s
 
 ## Depends on
 
-[Core model](../add-core-model/README.md).
+[Core model](../479-add-core-model/README.md).
 
 ## What is agreed
 

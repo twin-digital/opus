@@ -6,15 +6,15 @@ A planning seed is the start of the brainstorm for one roadmap project. It colle
 
 The name of each folder is the expected name of the OpenSpec change for the project. When a seed has a GitHub issue, the name of its folder starts with the number of the issue, for example `477-first-workbench-ui-slice`. `README.md` is the main file of a seed. A seed gets more files only when it needs them.
 
-| Seed                                                     | Project          |
-| -------------------------------------------------------- | ---------------- |
-| [`add-core-model`](add-core-model/README.md)             | Core model       |
-| [`add-agent-access`](add-agent-access/README.md)         | Agent access     |
-| [`add-behavior-prompts`](add-behavior-prompts/README.md) | Behavior prompts |
-| [`add-asset-prompts`](add-asset-prompts/README.md)       | Asset prompts    |
-| [`add-expectations`](add-expectations/README.md)         | Expectations     |
-| [`add-designer-tools`](add-designer-tools/README.md)     | Tools            |
-| [`add-engine-protocol`](add-engine-protocol/README.md)   | Other engines    |
+| Seed                                                             | Project          |
+| ---------------------------------------------------------------- | ---------------- |
+| [`479-add-core-model`](479-add-core-model/README.md)             | Core model       |
+| [`480-add-agent-access`](480-add-agent-access/README.md)         | Agent access     |
+| [`481-add-behavior-prompts`](481-add-behavior-prompts/README.md) | Behavior prompts |
+| [`482-add-asset-prompts`](482-add-asset-prompts/README.md)       | Asset prompts    |
+| [`483-add-expectations`](483-add-expectations/README.md)         | Expectations     |
+| [`484-add-designer-tools`](484-add-designer-tools/README.md)     | Tools            |
+| [`485-add-engine-protocol`](485-add-engine-protocol/README.md)   | Other engines    |
 
 These seeds are not roadmap projects yet:
 

@@ -15,7 +15,7 @@ This project gives the agent its tools for a simulation. With them the agent rea
 
 ## Depends on
 
-[Core model](../add-core-model/README.md).
+[Core model](../479-add-core-model/README.md).
 
 ## What is agreed
 
@@ -31,12 +31,12 @@ This project gives the agent its tools for a simulation. With them the agent rea
 
 ## Open questions
 
-1. **Where does the conversation with the agent happen?** In a panel inside the tools, in a terminal with a coding agent, or both. Also for: [Tools](../add-designer-tools/README.md).
+1. **Where does the conversation with the agent happen?** In a panel inside the tools, in a terminal with a coding agent, or both. Also for: [Tools](../484-add-designer-tools/README.md).
 2. **How is a change in a paused game written back to authored state?** What happens when the live change conflicts with a file?
 
 ## Open questions in other seeds
 
-- What happens in the first minute of an empty project? See [Core model](../add-core-model/README.md).
+- What happens in the first minute of an empty project? See [Core model](../479-add-core-model/README.md).
 
 ## Notes
 
