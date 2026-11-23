@@ -8,7 +8,7 @@ This folder is the blueprint for Wishem. It records the vision, the concepts, th
 
 - The blueprint is analysis. It is not a specification.
 - Formal specifications live in `openspec/specs/wishem/`. When a specification exists for a topic, the specification overrides the blueprint.
-- Each roadmap project starts with its own OpenSpec change. Use the planning seed of the project as the input to that change.
+- Each roadmap project starts with its own OpenSpec change. Use the GitHub issue of the project as the input to that change.
 
 ## How to read the status labels
 
@@ -18,7 +18,7 @@ Each rule has one of these labels. In the other files, a label applies to the se
 | -------------- | ------------------------------------------------------------------------------- |
 | **Agreed**     | The owner stated it or confirmed it.                                            |
 | **Proposed**   | The agent proposed it. The owner did not reject it and did not confirm it.      |
-| **Open**       | Not settled. See the planning seed for the topic in `planning-seeds/`.          |
+| **Open**       | Not settled. See the GitHub issue for the topic.                                |
 | **Unverified** | A fact about an outside library or product, stated from memory and not checked. |
 
 Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec change that depends on it.
@@ -29,17 +29,17 @@ Text with no label has no status. It is explanation, an example, or the reading 
 
 ## What to read
 
-| Task                                         | Read                               |
-| -------------------------------------------- | ---------------------------------- |
-| Learn what Wishem is                         | `vision.md`                        |
-| Design how Wishem looks or how it talks      | `brand.md`                         |
-| Use the correct words                        | `glossary.md`                      |
-| Design or build any part of Wishem           | `rules.md`, then `concepts.md`     |
-| Understand what a designer expects to happen | `examples/`                        |
-| Choose what to build next                    | `roadmap.md`                       |
-| Start the brainstorm for a project           | `planning-seeds/`                  |
-| Check if a question is already settled       | `rules.md`, then `planning-seeds/` |
-| Learn why the design has this shape          | `brainstorm.md`                    |
+| Task                                         | Read                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------ |
+| Learn what Wishem is                         | `vision.md`                                                        |
+| Design how Wishem looks or how it talks      | `brand.md`                                                         |
+| Use the correct words                        | `glossary.md`                                                      |
+| Design or build any part of Wishem           | `rules.md`, then `concepts.md`                                     |
+| Understand what a designer expects to happen | `examples/`                                                        |
+| Choose what to build next                    | `roadmap.md`                                                       |
+| Start the brainstorm for a project           | The GitHub issue of the project. See `roadmap.md`.                 |
+| Check if a question is already settled       | `rules.md`, then the GitHub issue for the topic. See `roadmap.md`. |
+| Learn why the design has this shape          | `brainstorm.md`                                                    |
 
 ## Files
 
@@ -50,7 +50,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 - `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.
 - `examples/`: worked examples of a designer and the agent, and a wireframe of the editor. An example is an illustration. It is not a rule or a requirement.
 - `roadmap.md`: the projects, their dependencies, and the first game.
-- `planning-seeds/`: one folder for each roadmap project and for each other topic that is not settled. A seed holds what is known, the open questions, and the ideas. It is the start of the brainstorm for that topic.
+- GitHub issues with the label `app:wishem`: one issue for each roadmap project and for each other topic that is not settled. An issue holds what is known, the open questions, and the ideas. It is the start of the brainstorm for that topic. The blueprint has no list of open questions. `roadmap.md` gives the issues.
 - `brainstorm.md`: minutes of the conversation that produced this blueprint.
 
 ## Asides from Wishem

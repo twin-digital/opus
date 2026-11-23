@@ -8,18 +8,22 @@ This file is the only part of the blueprint that describes future work. Each pro
 
 The list of projects is **Agreed**. The order after project 0 is **Open**.
 
-| #   | Project                                                               | Result                                                                                                                     | Depends on |
-| --- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 0   | **Blueprint**                                                         | This folder.                                                                                                               | None       |
-| 1   | [**Core model**](planning-seeds/add-core-model/README.md)             | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun, bookmarks. A first renderer adapter. | 0          |
-| 2   | [**Agent access**](planning-seeds/add-agent-access/README.md)         | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.           | 1          |
-| 3   | [**Behavior prompts**](planning-seeds/add-behavior-prompts/README.md) | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                            | 1, 2       |
-| 4   | [**Asset prompts**](planning-seeds/add-asset-prompts/README.md)       | Room layouts and sprites from prompts. Provenance, reapply, and the hand-edit warning.                                     | 1, 2       |
-| 5   | [**Expectations**](planning-seeds/add-expectations/README.md)         | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.          | 1, 2       |
-| 6   | [**Tools**](planning-seeds/add-designer-tools/README.md)              | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.            | 1, 2       |
-| 7   | [**Other engines**](planning-seeds/add-engine-protocol/README.md)     | A wire protocol between the game model and a renderer in another engine. **Parked.**                                       | 1          |
+| #   | Project                                                                 | Result                                                                                                                     | Depends on |
+| --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 0   | **Blueprint**                                                           | This folder.                                                                                                               | None       |
+| 1   | [**Core model**](https://github.com/twin-digital/opus/issues/479)       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun, bookmarks. A first renderer adapter. | 0          |
+| 2   | [**Agent access**](https://github.com/twin-digital/opus/issues/480)     | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.           | 1          |
+| 3   | [**Behavior prompts**](https://github.com/twin-digital/opus/issues/481) | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                            | 1, 2       |
+| 4   | [**Asset prompts**](https://github.com/twin-digital/opus/issues/482)    | Room layouts and sprites from prompts. Provenance, reapply, and the hand-edit warning.                                     | 1, 2       |
+| 5   | [**Expectations**](https://github.com/twin-digital/opus/issues/483)     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.          | 1, 2       |
+| 6   | [**Tools**](https://github.com/twin-digital/opus/issues/484)            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.            | 1, 2       |
+| 7   | [**Other engines**](https://github.com/twin-digital/opus/issues/485)    | A wire protocol between the game model and a renderer in another engine. **Parked.**                                       | 1          |
 
-Each project has a planning seed in `planning-seeds/`. A seed holds what is known about the project, its open questions, and its notes. The name of a seed folder is the expected name of the OpenSpec change.
+Each project has a GitHub issue and a milestone. The issue holds what is known about the project, its open questions, and its notes. The name of the OpenSpec change starts with the number of the issue.
+
+Two topics have an issue and are not roadmap projects: the in-game user interface ([#487](https://github.com/twin-digital/opus/issues/487)), and sound and music ([#488](https://github.com/twin-digital/opus/issues/488)).
+
+The first work is the milestone "Bootstrap workbench UI". It is not a roadmap project. It builds thin parts of projects 1, 2, and 6 for the first slices of the workbench: [#476](https://github.com/twin-digital/opus/issues/476), [#477](https://github.com/twin-digital/opus/issues/477), and [#478](https://github.com/twin-digital/opus/issues/478).
 
 ## Order
 

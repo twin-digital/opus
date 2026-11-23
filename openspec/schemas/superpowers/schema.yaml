@@ -13,6 +13,12 @@ artifacts:
     instruction: |
       Create the proposal document that establishes WHY this change is needed.
 
+      Find the primary issue first. Each change belongs to one issue in the
+      project's issue tracker. If no issue exists for this work, create it
+      before you create the change. The project config says how to classify
+      the issue, how to name the change after it, and how proposal.md refers
+      to it.
+
       Brainstorm first unless the design is already settled. If the problem,
       scope, or approach is still open, invoke `superpowers:brainstorming` with
       the Skill tool before writing anything. Its output belongs in this

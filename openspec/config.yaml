@@ -24,6 +24,13 @@ context: |
   Every product with a UI has a `<product>/design-system/component-catalog` spec and a dev-only
   in-app style guide, per `docs/ui-style-guide.md`.
 
+  Issue tracking: each change has one primary GitHub issue in `twin-digital/opus`, and each issue
+  has at most one change. The issue must exist before the change is created. The change name starts
+  with the issue number: `<issue-number>-<kebab-name>` (e.g. `221-add-in-game-ui`). The issue has
+  one GitHub issue type (`Feature`, `Bug`, or `Task`) and one product label (`app:<product>`), and
+  can belong to one milestone. Relations between issues (blocked by, sub-issue) are recorded on the
+  issues in GitHub, never in change artifacts.
+
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 # Example:
@@ -35,6 +42,11 @@ context: |
 #       - Break tasks into chunks of max 2 hours
 rules:
   proposal:
+    - >-
+      Start proposal.md with YAML frontmatter that has two keys: `issue`, the full URL of the
+      primary GitHub issue of the change, and `milestone`, the full URL of the milestone of that
+      issue (e.g. `https://github.com/twin-digital/opus/milestone/1`). Omit `milestone` when the
+      issue has no milestone. List only the primary issue.
     - List new and modified capabilities using their full `<product>/<area>/<capability>` IDs.
     - >-
       When the change adds or changes UI, the look and feel is never already settled: brainstorm
