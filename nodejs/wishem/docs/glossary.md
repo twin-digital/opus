@@ -140,7 +140,7 @@ Terms in each group are in alphabetical order.
 
 | Do not use                                | Use                                            | Reason                                                                                                       |
 | ----------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Client and server                         | Game model and renderer                        | No wire protocol exists. See `decisions/0004`.                                                               |
+| Client and server                         | Game model and renderer                        | No wire protocol exists. See rule R17.                                                                       |
 | Designer statement                        | Expectation                                    | One word for the concept.                                                                                    |
 | Engine, for Wishem as a whole             | Wishem, or the game model                      | No engine is built ahead of a game.                                                                          |
 | Game truth                                | Game state and rules                           | Plain words for the same thing.                                                                              |

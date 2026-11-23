@@ -44,4 +44,5 @@ This project makes the designer's view of the game: the tools to see and change 
 
 ## Notes
 
+- The editor in the wireframe is where a project arrives. It is not the first thing to deliver.
 - The wireframe is an example. Its layout is not a requirement.

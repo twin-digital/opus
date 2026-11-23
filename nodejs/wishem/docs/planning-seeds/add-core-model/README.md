@@ -21,16 +21,16 @@ The blueprint only.
 ## What is agreed
 
 - The game model has definitions, behaviors, and authored state. A simulation is one running instance of it. See [The game model](../../concepts.md#the-game-model).
-- All game state and all game rules are in the game model and its simulations. See rules R1 and R2 in [`rules.md`](../../rules.md) and [decision 0002](../../decisions/0002-model-holds-state-and-rules.md).
+- All game state and all game rules are in the game model and its simulations. See rules R1 and R2 in [`rules.md`](../../rules.md).
 - A simulation can be stepped, recorded, replayed, and rewound. The same inputs give the same result. See rule R3 and [Time](../../concepts.md#time).
-- The entity and component model is the same in every game. Each component has a component type. See rule R5 and [decision 0009](../../decisions/0009-entity-and-component-model.md).
+- The entity and component model is the same in every game. Each component has a component type. See rule R5.
 - Relations between entities are declared fields.
 - Bookmarks are named points in a recording. The game makes them automatically at registered events.
 - Each kind of thing is declared and registered. See rule R6.
 - A game is assembled from subsystems. Some are built in. The core is not a subsystem. See [Subsystems](../../concepts.md#subsystems).
-- A library can hold game state only if it passes the model contract. Each game picks its own model libraries. See [decision 0003](../../decisions/0003-no-single-interface-over-model-libraries.md).
-- The first renderer is one library behind an adapter. No wire protocol is built. See [decision 0004](../../decisions/0004-one-renderer-first-protocol-later.md).
-- Nothing is built before a design needs it. See rule R7 and [decision 0005](../../decisions/0005-self-construction.md).
+- A library can hold game state only if it passes the model contract. Each game picks its own model libraries. See rule R18.
+- The first renderer is one library behind an adapter. No wire protocol is built. See rule R17 in [`rules.md`](../../rules.md).
+- Nothing is built before a design needs it. See rule R7.
 - Wishem is written in TypeScript.
 
 ## What is proposed
@@ -56,6 +56,8 @@ The blueprint only.
 
 ## Notes
 
+- The owner expects a base to exist at the start of each game: entities and components, basic parts for input, sound, and graphics, the loading of resources, animation, the generation of assets and behaviors, and a toolkit for tools.
+- The lines that start with "Rejected:" in [`rules.md`](../../rules.md) give the alternatives that are closed for this project. See rules R1, R2, R4, R5, R7, R17, and R18.
 - The ways to refer from one thing to another need a brainstorm. See [References](../../concepts.md#references-open).
 - The facts about outside libraries in `concepts.md` are unverified. Check them before a library is selected.
 - A top-down game in a 16-bit style does not need a physics engine. Its movement is tile collision.

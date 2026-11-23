@@ -19,7 +19,7 @@ This project lets the designer ask for assets in natural language: sprites, room
 ## What is agreed
 
 - A prompt is always stored with its result. See rule R8.
-- An asset prompt has a one-time effect. It is not a behavior. See [Asset prompts](../../concepts.md#asset-prompts) and [decision 0007](../../decisions/0007-asset-prompts-and-hand-edits.md).
+- An asset prompt has a one-time effect. It is not a behavior. See [Asset prompts](../../concepts.md#asset-prompts).
 - Hand edits are allowed. They are not written back into the prompt. The system warns before a reapply destroys one. See rule R12.
 - Each generated thing has provenance: what made it, and what changed it since. See rule R13 and [Provenance](../../concepts.md#provenance-agreed).
 - Generated output is kept. A stored asset is replaced only when the designer asks. See rule R11.
@@ -43,6 +43,7 @@ This project lets the designer ask for assets in natural language: sprites, room
 
 ## Notes
 
+- Rule R12 in [`rules.md`](../../rules.md) gives the alternatives that are closed for this project.
 - Two proposed areas need a brainstorm in this project: the kinds of reapply, and the managed execution of a prompt.
 - This project depends on an outside image model. Pixel art in one consistent style is the least certain part of the roadmap.
 - An earlier prototype generated sprites with PixelLab and Retro Diffusion. It also showed the need for a stored recipe for each asset: the tool, the prompt, the seed, and the selected result.

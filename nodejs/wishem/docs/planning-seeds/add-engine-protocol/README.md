@@ -16,7 +16,7 @@ This project lets a renderer in another engine, such as Unity or Godot, show a s
 
 ## What is agreed
 
-- A game uses one renderer behind an adapter, and no wire protocol is built now. See [decision 0004](../../decisions/0004-one-renderer-first-protocol-later.md).
+- A game uses one renderer behind an adapter, and no wire protocol is built now. See rule R17 in [`rules.md`](../../rules.md).
 - Rule R1 keeps this project possible, because the game model and a simulation never depend on a renderer.
 - The export of a game to a native project in another engine is a different, later idea.
 

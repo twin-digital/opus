@@ -19,7 +19,7 @@ This project lets the designer describe what a thing does in natural language. T
 
 ## What is agreed
 
-- The prompt is the source of a behavior, and the code is derived. See rule R9 and [decision 0006](../../decisions/0006-prompt-first-behaviors.md).
+- The prompt is the source of a behavior, and the code is derived. See rule R9.
 - The history of a behavior holds each version. The agent wrote a version from a prompt, or a person wrote it by hand. See rule R10.
 - The code for a behavior is stored. A prompt change edits the stored code. See rule R11.
 - An answer to a question of the agent becomes a field that the designer can change by hand.
@@ -47,5 +47,6 @@ This project lets the designer describe what a thing does in natural language. T
 
 ## Notes
 
+- Rule R9 in [`rules.md`](../../rules.md) gives the alternatives that are closed for this project.
 - How the agent writes and runs a check is not designed. The same question applies to expectations.
 - The replacement of code in a running simulation depends on rule R4, which is proposed.

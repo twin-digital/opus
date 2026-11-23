@@ -7,10 +7,9 @@ The `docs/` folder holds the blueprint.
 ## Read before you design or build
 
 1. `docs/README.md`: the status labels and what to read for each task.
-2. `docs/rules.md`: the rules that every part of Wishem obeys.
+2. `docs/rules.md`: the rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected.
 3. `docs/glossary.md`: the exact terms to use.
-4. `docs/decisions/`: questions that are already settled.
-5. `docs/brand.md`: before you design a user interface or write what the agent says to the designer.
+4. `docs/brand.md`: before you design a user interface or write what the agent says to the designer.
 
 ## How to work
 
@@ -19,5 +18,6 @@ The `docs/` folder holds the blueprint.
 - A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
 - Only text marked **Agreed** is settled. Text with no label has no status. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
 - When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
-- A design that breaks a rule in `docs/rules.md` needs a new file in `docs/decisions/` first.
+- A design that breaks a rule in `docs/rules.md` needs the agreement of the owner and a change to the rule first.
+- Before you propose a change, read the lines that start with "Rejected:" in `docs/rules.md`.
 - A block quote that starts with `**Wishem:**` is an aside. It is never a requirement. To write one, follow `docs/README.md` and `docs/brand.md`.

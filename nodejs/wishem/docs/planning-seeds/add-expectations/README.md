@@ -18,7 +18,7 @@ This project lets the designer write what must stay true, in natural language, a
 
 ## What is agreed
 
-- An expectation records intent, and the agent checks changes against it. See rule R14 and [decision 0008](../../decisions/0008-expectations.md).
+- An expectation records intent, and the agent checks changes against it. See rule R14.
 - The agent can turn an expectation into a deterministic automated test.
 - The agent does not search the whole game for effects that no expectation covers. See rule R15.
 - The idea is agreed. The mechanism is not designed. See [Expectations](../../concepts.md#expectations).
@@ -44,6 +44,7 @@ This project lets the designer write what must stay true, in natural language, a
 
 ## Notes
 
+- Rule R15 in [`rules.md`](../../rules.md) gives the alternatives that are closed for this project.
 - This project needs the most design work before it can be specified.
 - It depends on the answer to the question about kept bookmarks in the seed for the core model.
 

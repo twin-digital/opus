@@ -11,7 +11,7 @@ This folder holds examples. An example shows what Wishem is for. It is not a rul
 
 - Use an example to understand what a designer expects.
 - Do not build from an example as if it were a specification. The words of a request, the names of the things, and the layout of the wireframe are illustrations.
-- If an example disagrees with `../rules.md`, `../concepts.md`, or a file in `../decisions/`, that file is correct and the example is wrong. Correct the example.
+- If an example disagrees with `../rules.md` or `../concepts.md`, that file is correct and the example is wrong. Correct the example.
 
 ## What comes from the owner
 

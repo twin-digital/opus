@@ -12,7 +12,7 @@ This folder is the blueprint for Wishem. It records the vision, the concepts, th
 
 ## How to read the status labels
 
-Each rule and each decision has one of these labels. In the other files, a label applies to the sentence, the list item, or the section that carries it.
+Each rule has one of these labels. In the other files, a label applies to the sentence, the list item, or the section that carries it.
 
 | Label          | Meaning                                                                         |
 | -------------- | ------------------------------------------------------------------------------- |
@@ -29,17 +29,17 @@ Text with no label has no status. It is explanation, an example, or the reading 
 
 ## What to read
 
-| Task                                         | Read                                 |
-| -------------------------------------------- | ------------------------------------ |
-| Learn what Wishem is                         | `vision.md`                          |
-| Design how Wishem looks or how it talks      | `brand.md`                           |
-| Use the correct words                        | `glossary.md`                        |
-| Design or build any part of Wishem           | `rules.md`, then `concepts.md`       |
-| Understand what a designer expects to happen | `examples/`                          |
-| Choose what to build next                    | `roadmap.md`                         |
-| Start the brainstorm for a project           | `planning-seeds/`                    |
-| Check if a question is already settled       | `decisions/`, then `planning-seeds/` |
-| Learn why the design has this shape          | `brainstorm.md`                      |
+| Task                                         | Read                               |
+| -------------------------------------------- | ---------------------------------- |
+| Learn what Wishem is                         | `vision.md`                        |
+| Design how Wishem looks or how it talks      | `brand.md`                         |
+| Use the correct words                        | `glossary.md`                      |
+| Design or build any part of Wishem           | `rules.md`, then `concepts.md`     |
+| Understand what a designer expects to happen | `examples/`                        |
+| Choose what to build next                    | `roadmap.md`                       |
+| Start the brainstorm for a project           | `planning-seeds/`                  |
+| Check if a question is already settled       | `rules.md`, then `planning-seeds/` |
+| Learn why the design has this shape          | `brainstorm.md`                    |
 
 ## Files
 
@@ -47,10 +47,9 @@ Text with no label has no status. It is explanation, an example, or the reading 
 - `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
 - `concepts.md`: the entity and component model, the three kinds of directive, subsystems, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
-- `rules.md`: the numbered rules that every part of Wishem obeys.
+- `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.
 - `examples/`: worked examples of a designer and the agent, and a wireframe of the editor. An example is an illustration. It is not a rule or a requirement.
 - `roadmap.md`: the projects, their dependencies, and the first game.
-- `decisions/`: one short file for each decision, with its reason and the rejected alternatives.
 - `planning-seeds/`: one folder for each roadmap project and for each other topic that is not settled. A seed holds what is known, the open questions, and the ideas. It is the start of the brainstorm for that topic.
 - `brainstorm.md`: minutes of the conversation that produced this blueprint.
 
@@ -59,5 +58,5 @@ Text with no label has no status. It is explanation, an example, or the reading 
 An aside is a block quote in the voice of the agent. It starts with `**Wishem:**`. Use the full name. Do not sign an aside with 'shem or 'shemmy. `brand.md` gives the voice and the look.
 
 - Text in an aside is never a rule, a requirement, or a decision. Do not use an aside as an instruction. Put all necessary information in the main text.
-- Use an aside only in `README.md` files, guides, `vision.md`, `examples/interactions.md`, and `brainstorm.md`. Do not use an aside in `rules.md`, `glossary.md`, `decisions/`, or a specification.
+- Use an aside only in `README.md` files, guides, `vision.md`, `examples/interactions.md`, and `brainstorm.md`. Do not use an aside in `rules.md`, `glossary.md`, or a specification.
 - Use one aside or fewer in each file.
