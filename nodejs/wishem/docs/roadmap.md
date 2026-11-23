@@ -22,8 +22,60 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 Notes:
 
 - Project 4 depends on an outside image model. Pixel art in one consistent style is the least certain part of the plan. An earlier prototype already generated sprites with PixelLab and Retro Diffusion, which lowers that risk.
-- Project 5 needs the most design work before it can be specified. The blueprint records what an expectation is for and not how the agent checks one. Project 5 also depends on the answer to the open question about kept bookmarks.
+- Project 5 needs the most design work before it can be specified. See "Ideas for project 5" below. The blueprint records what an expectation is for and not how the agent checks one. Project 5 also depends on the answer to the open question about kept bookmarks.
 - Project 7 stays parked until a second engine is wanted. Rule R1 keeps it possible.
+
+## Ideas for project 5: Expectations
+
+These ideas came from a short exploration. They are not agreed and not designed. Use them as the starting point for the brainstorm of project 5.
+
+### What an expectation can be about
+
+- **Possibility.** "Cannot cross the cut without the grapple." "The player can always get back to the Weighbridge." "Every room can be reached."
+- **Teaching and sequence.** "The player has used the grapple one time or more before the Kiln."
+- **Pacing.** "A new player completes this room in less than two minutes."
+- **Difficulty.** "A careless player with three hearts survives two goats."
+- **What the player can see.** "The ring is visible from the entrance." "No exit is hidden behind scenery."
+- **Look.** "Each sprite uses the sixteen-color palette." "Nothing is taller than three tiles."
+- **Tone.** "Nothing appears suddenly next to the player." "No enemy is faster than the hero."
+- **Economy.** "The player can pay for the lantern before the mine."
+- **Technical limits.** "No room has more than forty active entities."
+
+### Where an expectation can attach
+
+An expectation can attach to one entity, a room, a region, a kind of asset, or the whole game. An expectation on the whole game is a design pillar: a rule that the game never breaks.
+
+### How strong an expectation can be
+
+- **Must.** A failure stops the change.
+- **Should.** A failure is reported.
+- **Watch.** There is no pass or fail. The agent measures a value after each change and shows how it moves. Example: the time to complete a room.
+
+### How the agent can check an expectation
+
+- **From values.** The agent compares the jump distance with the width of the cut. No play is necessary.
+- **With a scripted run** from a bookmark.
+- **With a search.** A bot tries many ways to play. An expectation that says something is not possible needs this.
+- **With player profiles.** Examples: a careful player, a fast player, a new player. Pacing and difficulty depend on the player.
+- **From a screenshot,** for what the player can see and for the look.
+- **From the designer's recordings.** "The recording in which I completed this room must still succeed." The designer makes this expectation by play, with no text.
+- **By judgment.** "This room feels too small." This is an opinion of the agent and must be shown as an opinion.
+
+### What expectations make possible
+
+- **An end condition for the agent's work.** The agent builds a room, checks it, and builds it again until the expectations pass.
+- **Proof by replay.** When an expectation fails, the agent shows a bookmark and a replay of the failure.
+- **Conflicts between expectations.** "Too wide to jump" and "can be reached with no items" cannot both be true. The agent reports this before it builds.
+- **Suggested expectations.** The agent offers an expectation when a prompt implies one, or when a change breaks something that was not recorded.
+- **A coverage view.** The view shows which rooms have no expectations.
+- **History and waivers.** These record why an expectation changed, or why the designer broke one on purpose.
+
+### Highest value first
+
+1. An end condition for the agent's work. It changes what the agent can do with no person present.
+2. Proof by replay. It uses rewind and bookmarks.
+3. The designer's recordings as expectations. They cost the designer nothing to make.
+4. Design pillars on the whole game.
 
 ## Order
 
