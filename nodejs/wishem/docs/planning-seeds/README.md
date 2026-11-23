@@ -4,14 +4,9 @@
 
 A planning seed is the start of the brainstorm for one topic that has no GitHub issue. It collects what the blueprint knows about the topic and the questions that the topic must answer.
 
-`README.md` is the main file of a seed. A seed gets more files only when it needs them.
+A seed is a folder in this folder. `README.md` is the main file of a seed. A seed gets more files only when it needs them.
 
-| Seed                                                       | Topic                  |
-| ---------------------------------------------------------- | ---------------------- |
-| [`add-in-game-ui`](add-in-game-ui/README.md)               | In-game user interface |
-| [`add-sound-and-music`](add-sound-and-music/README.md)     | Sound and music        |
-| [`define-brand-identity`](define-brand-identity/README.md) | Brand identity         |
-| [`settle-product-name`](settle-product-name/README.md)     | Product name           |
+No seed exists now. Each topic has an issue.
 
 ## Topics that have an issue
 
@@ -29,6 +24,8 @@ When a topic gets a GitHub issue, the content of its seed moves to the issue and
 | [#483](https://github.com/twin-digital/opus/issues/483) | Expectations             |
 | [#484](https://github.com/twin-digital/opus/issues/484) | Tools                    |
 | [#485](https://github.com/twin-digital/opus/issues/485) | Other engines            |
+| [#487](https://github.com/twin-digital/opus/issues/487) | In-game user interface   |
+| [#488](https://github.com/twin-digital/opus/issues/488) | Sound and music          |
 
 ## Where to record a thing that is not settled
 
