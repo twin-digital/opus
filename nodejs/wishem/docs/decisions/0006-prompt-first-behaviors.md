@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 A behavior is stored as the designer's prompt. The agent writes the function behind the prompt. The history of prompts is stored with the behavior.

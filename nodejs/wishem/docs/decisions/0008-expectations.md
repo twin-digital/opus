@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 A designer writes expectations in natural language and attaches each one to the thing it describes, for example "cannot cross the gap without the grapple" on a room. The agent checks its changes against these expectations. It can turn an expectation into a deterministic automated test.

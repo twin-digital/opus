@@ -12,15 +12,20 @@ This folder is the blueprint for Wishem. It records the vision, the concepts, th
 
 ## How to read the status labels
 
-Text with no label is agreed: the owner stated it or confirmed it. Only the exceptions have a label.
+Each rule and each decision has one of these labels. In the other files, a label applies to the sentence, the list item, or the section that carries it.
 
 | Label          | Meaning                                                                         |
 | -------------- | ------------------------------------------------------------------------------- |
+| **Agreed**     | The owner stated it or confirmed it.                                            |
 | **Proposed**   | The agent proposed it. The owner did not reject it and did not confirm it.      |
 | **Open**       | Not settled. See `open-questions.md`.                                           |
 | **Unverified** | A fact about an outside library or product, stated from memory and not checked. |
 
 Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec change that depends on it.
+
+Text with no label has no status. It is explanation, an example, or the reading of the agent that wrote it. Do not treat it as settled. Example: the "What Wishem needs" lists in `interactions.md`.
+
+`vision.md` has no labels. The owner wrote its final text, and all of it is agreed.
 
 ## What to read
 

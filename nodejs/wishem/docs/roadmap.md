@@ -6,7 +6,7 @@ This file is the only part of the blueprint that describes future work. Each pro
 
 ## Projects
 
-The order after project 0 is **Open**.
+The list of projects is **Agreed**. The order after project 0 is **Open**.
 
 | #   | Project              | Result                                                                                                                     | Depends on |
 | --- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
@@ -87,19 +87,19 @@ The owner did not confirm this order.
 
 ## The first game
 
-- A top-down adventure in a 3/4 perspective and a 16-bit console style.
-- The owner builds it with a young collaborator.
-- The game is a consumer of Wishem and is its own separate product. Wishem is the product that this blueprint describes.
-- The game has its own product folder in this repository. It is not inside `nodejs/wishem/`.
-- The game is built from scratch on Wishem.
+- A top-down adventure in a 3/4 perspective and a 16-bit console style. (**Agreed**)
+- The owner builds it with a young collaborator. (**Agreed**)
+- The game is a consumer of Wishem and is its own separate product. Wishem is the product that this blueprint describes. (**Agreed**)
+- The game has its own product folder in this repository. It is not inside `nodejs/wishem/`. (**Agreed**)
+- The game is built from scratch on Wishem. (**Agreed**)
 - The game's world, characters, and art are original. It uses the mechanics of its genre only. (From the notes that started the brainstorm.)
 
 ### Relation to the earlier prototype
 
 An earlier prototype of a game of the same kind exists in a separate repository. It is a throwaway.
 
-- Its art assets are likely to move to the first game.
-- Its code and workflows do not move.
+- Its art assets are likely to move to the first game. (**Agreed**)
+- Its code and workflows do not move. (**Agreed**)
 
 Things in the prototype that agree with this blueprint, as evidence and not as a base to build on:
 
@@ -109,6 +109,6 @@ Things in the prototype that agree with this blueprint, as evidence and not as a
 
 ## Planning method
 
-- Each project is planned as an OpenSpec change in this repository.
-- Formal specifications live in `openspec/specs/wishem/<area>/<capability>/spec.md`.
+- Each project is planned as an OpenSpec change in this repository. (**Agreed**)
+- Formal specifications live in `openspec/specs/wishem/<area>/<capability>/spec.md`. (**Agreed**, from the repository convention)
 - The blueprint is the input to each change. When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.

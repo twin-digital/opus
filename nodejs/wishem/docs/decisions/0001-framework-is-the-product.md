@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 Wishem, the just-in-time game development environment, _is_ the product. Any game produced is a consumer of Wishem, and would be its own separate product.

@@ -6,15 +6,15 @@ These rules apply to every part of Wishem and to every game made with it. A desi
 
 ## State and time
 
-**R1. The game model holds all game state and all game rules.**
+**R1. The game model holds all game state and all game rules.** (**Agreed**)
 The model never depends on a renderer, a sound system, or an input device.
 Reason: the agent must be able to read, change, and rerun the game without a window.
 
-**R2. A library can hold game state only if it passes the model contract.**
+**R2. A library can hold game state only if it passes the model contract.** (**Agreed**)
 The contract is in `concepts.md`. An I/O subsystem holds no game state and follows lighter rules.
 Reason: a library that hides state makes rewind and rerun impossible.
 
-**R3. Game time can be stepped, recorded, replayed, and rewound.**
+**R3. Game time can be stepped, recorded, replayed, and rewound.** (**Agreed**)
 The same starting state and the same inputs always give the same result.
 Reason: "make the jump high enough so I would have made this" needs the agent to run the designer's exact inputs again.
 
@@ -23,45 +23,45 @@ Reason: a snapshot must contain the whole game. Code with no state can be replac
 
 ## Concepts
 
-**R5. The entity and component model is the same in every game.**
+**R5. The entity and component model is the same in every game.** (**Agreed**)
 An entity is a set of components. A component is declared state with optional behavior. This model is the language that the agent speaks. What stores it is a built-in subsystem.
 Reason: the agent needs one stable language across games. The model contract is written in its terms.
 
-**R6. Every kind of thing is declared and registered.**
+**R6. Every kind of thing is declared and registered.** (**Agreed**)
 The agent can always ask what kinds exist, what fields they have, and what they can affect.
 Reason: the agent must discover the game's vocabulary. Tools such as tables and inspectors are derived from the declarations.
 
-**R7. Nothing is built before a design needs it.**
+**R7. Nothing is built before a design needs it.** (**Agreed**)
 The model, the tools, and the library adapters grow when a game first needs them.
 Reason: the engine is meant to "self-construct" as features are needed to support a design.
 
 ## Directives
 
-**R8. A prompt is always stored with its result.**
+**R8. A prompt is always stored with its result.** (**Agreed**)
 This applies to behaviors, generated sprites, generated room layouts, and every later kind of generated thing.
 
-**R9. For a behavior, the prompt is the source and the code is derived.**
+**R9. For a behavior, the prompt is the source and the code is derived.** (**Agreed**)
 Code that does not do what the prompt says is a bug. The fix is a code change. Code that does what the prompt says and that the designer dislikes is a design change. The fix is a prompt change.
 
-**R10. The history of prompts for a behavior is stored with the behavior.**
+**R10. The history of prompts for a behavior is stored with the behavior.** (**Agreed**)
 
-**R11. Generated output is kept, not regenerated.**
+**R11. Generated output is kept, not regenerated.** (**Agreed**)
 The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. A stored asset is replaced only when the designer asks.
 Reason: two generations from one prompt differ. Tuned behavior and accepted art must not change by accident.
 
-**R12. Hand edits to generated things are allowed. The system warns before a reapply destroys one.**
+**R12. Hand edits to generated things are allowed. The system warns before a reapply destroys one.** (**Agreed**)
 Hand edits are not written back into the prompt. To keep an edit across a reapply, the designer changes the prompt.
 Reason: a drag does not say why the designer moved the thing.
 
-**R13. The agent records what each generation run produced.**
+**R13. The agent records what each generation run produced.** (**Agreed**)
 The record lets a reapply remove the old result and detect hand edits.
 
 ## Intent and checking
 
-**R14. Expectations record intent, and the agent checks changes against them.**
+**R14. Expectations record intent, and the agent checks changes against them.** (**Agreed**)
 An expectation states, in natural language, something that must stay true. It is stored with the thing it describes.
 
-**R15. The agent does not search the whole game for side effects that no expectation covers.**
+**R15. The agent does not search the whole game for side effects that no expectation covers.** (**Agreed**)
 Reason: the agent does not know what the designer intends to be possible or impossible.
 
 **R16. The agent states the assumptions it made.** (**Proposed**)
@@ -69,8 +69,8 @@ When the agent chooses a value or a meaning without asking, the designer can see
 
 ## Scope
 
-**R17. The first renderer is one off-the-shelf library behind an adapter. Other engines wait.**
+**R17. The first renderer is one off-the-shelf library behind an adapter. Other engines wait.** (**Agreed**)
 See `decisions/0004-one-renderer-first-protocol-later.md`.
 
-**R18. No single interface hides different model libraries.**
+**R18. No single interface hides different model libraries.** (**Agreed**)
 Each game picks its own model libraries. See `decisions/0003-no-single-interface-over-model-libraries.md`.

@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 A prompt that places things at design time is an asset prompt. Its result is an asset, the same as a generated sprite.

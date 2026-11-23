@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 Anything that holds game state or game rules must be fully open to Wishem: it can be read, changed, saved, and rerun. Anything that only shows or plays the game can come off the shelf as it is.

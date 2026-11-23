@@ -2,20 +2,20 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-One file for each decision. Each file gives the decision, its reason, and the alternatives that were rejected. Read these before you reopen a question. A decision is agreed unless it has a status line that says otherwise.
+One file for each decision. Each file gives the decision, its reason, and the alternatives that were rejected. Read these before you reopen a question.
 
-| #    | Decision                                                                                       |
-| ---- | ---------------------------------------------------------------------------------------------- |
-| 0001 | [The framework is the product](0001-framework-is-the-product.md)                               |
-| 0002 | [The game model holds all game state and rules](0002-model-holds-state-and-rules.md)           |
-| 0003 | [No single interface over model libraries](0003-no-single-interface-over-model-libraries.md)   |
-| 0004 | [One renderer first, protocol later](0004-one-renderer-first-protocol-later.md)                |
-| 0005 | [Nothing is built before a design needs it](0005-self-construction.md)                         |
-| 0006 | [Behaviors are prompt-first](0006-prompt-first-behaviors.md)                                   |
-| 0007 | [Asset prompts and hand edits](0007-asset-prompts-and-hand-edits.md)                           |
-| 0008 | [Expectations bound the agent's checking](0008-expectations.md)                                |
-| 0009 | [The entity and component model is the same in every game](0009-entity-and-component-model.md) |
-| 0010 | [The first game starts from scratch](0010-first-game-from-scratch.md)                          |
-| 0011 | [Blueprint first, then OpenSpec](0011-blueprint-then-openspec.md)                              |
+| #    | Decision                                                                                       | Status     |
+| ---- | ---------------------------------------------------------------------------------------------- | ---------- |
+| 0001 | [The framework is the product](0001-framework-is-the-product.md)                               | **Agreed** |
+| 0002 | [The game model holds all game state and rules](0002-model-holds-state-and-rules.md)           | **Agreed** |
+| 0003 | [No single interface over model libraries](0003-no-single-interface-over-model-libraries.md)   | **Agreed** |
+| 0004 | [One renderer first, protocol later](0004-one-renderer-first-protocol-later.md)                | **Agreed** |
+| 0005 | [Nothing is built before a design needs it](0005-self-construction.md)                         | **Agreed** |
+| 0006 | [Behaviors are prompt-first](0006-prompt-first-behaviors.md)                                   | **Agreed** |
+| 0007 | [Asset prompts and hand edits](0007-asset-prompts-and-hand-edits.md)                           | **Agreed** |
+| 0008 | [Expectations bound the agent's checking](0008-expectations.md)                                | **Agreed** |
+| 0009 | [The entity and component model is the same in every game](0009-entity-and-component-model.md) | **Agreed** |
+| 0010 | [The first game starts from scratch](0010-first-game-from-scratch.md)                          | **Agreed** |
+| 0011 | [Blueprint first, then OpenSpec](0011-blueprint-then-openspec.md)                              | **Agreed** |
 
 To add a decision, use the next number and the same four headings: Decision, Reason, Rejected alternatives, Consequences.

@@ -16,7 +16,7 @@ The `docs/` folder holds the blueprint.
 
 - Plan each roadmap project as an OpenSpec change. The blueprint is the input.
 - A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
-- Text with no status label is agreed. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
+- Only text marked **Agreed** is settled. Text with no label has no status. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
 - When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
 - A design that breaks a rule in `docs/rules.md` needs a new file in `docs/decisions/` first.
 - A block quote that starts with `**Wishem:**` is an aside. It is never a requirement. To write one, follow `docs/README.md` and `docs/brand.md`.

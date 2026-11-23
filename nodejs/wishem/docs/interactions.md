@@ -4,6 +4,8 @@
 
 Each example gives what the designer says, what the designer expects, and what Wishem needs for that to work. The examples follow one room, the quarry room, through its life.
 
+The designer's words and the "What the designer expects" lists come from the owner. The "What Wishem needs" lists are the reading of the agent that wrote this file. They are not agreed.
+
 The examples start in a project that already has content. The first minute of an empty project is not designed. See `open-questions.md`.
 
 ## 1. The quarry room: a room with a purpose

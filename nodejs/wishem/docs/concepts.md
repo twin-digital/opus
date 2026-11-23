@@ -8,7 +8,7 @@ The examples in this file use the quarry room from `interactions.md`. That room 
 
 The game model is the part of a game that holds all game state and all game rules. It runs with no window. The renderer draws a picture of the model and never owns any of it.
 
-### Entities and components
+### Entities and components (**Agreed**)
 
 - An **entity** is a thing in the game: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
@@ -36,7 +36,7 @@ Every component type and every other kind of thing is registered (rule R6). The 
 
 Example: before the agent adds a `docile` status, it asks what a status can affect. The answer can be "chases the player", "deals damage on contact", "can be hit", and "blocks movement". The agent fills in the values. It asks the designer where the value is a design choice.
 
-### Relations between entities
+### Relations between entities (**Agreed**)
 
 Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
@@ -68,7 +68,7 @@ These operations follow from that:
 
 A rerun with a changed value answers a question such as "would I have made the jump".
 
-### Bookmarks
+### Bookmarks (**Agreed**)
 
 A **bookmark** is a named point in a recording. Rewind and rerun use a bookmark as their target.
 
@@ -98,7 +98,7 @@ A bookmark inside one play session is simple. A bookmark that is kept for a long
 
 ## Directives
 
-A **directive** is natural-language text from the designer that Wishem stores and keeps the game in agreement with. There are three kinds.
+A **directive** is natural-language text from the designer that Wishem stores and keeps the game in agreement with. There are three kinds. (**Agreed**)
 
 "Directive" is an internal term. The tools and the agent use the names of the three kinds with the designer.
 
@@ -112,7 +112,7 @@ A **directive** is natural-language text from the designer that Wishem stores an
 
 Where a traditional editor has a code editor with a function, Wishem has a text area with the designer's description of the behavior (the "behavior prompt"). The agent writes the function behind it.
 
-A behavior has these parts:
+A behavior has these parts (**Agreed**):
 
 | Part        | Content                                                         |
 | ----------- | --------------------------------------------------------------- |
@@ -129,28 +129,28 @@ Two kinds of problem have two different fixes (rule R9):
 - The code does not do what the prompt says. This is a bug. The agent changes the code.
 - The code does what the prompt says, and the designer does not like it. The designer changes the prompt or adds to it.
 
-**Kept code.** The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. It does not write the code again from the start (rule R11).
+**Kept code.** The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. It does not write the code again from the start (rule R11). (**Agreed**)
 
-**Fields from answers.** If the agent asks how far the whistle carries and the answer is 8 tiles, `range = 8` becomes a field. The designer can change the field by hand without a request to the agent.
+**Fields from answers.** If the agent asks how far the whistle carries and the answer is 8 tiles, `range = 8` becomes a field. The designer can change the field by hand without a request to the agent. (**Agreed**)
 
-**Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. The tools show these links to the designer. See "Recognized names in text". The details are open.
+**Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. The tools show these links to the designer. See "Recognized names in text". (**Agreed**. The details are open.)
 
 **IDs and labels (Proposed).** Each registered thing has an ID and a label. A field is the first case. Code and links use the ID. The designer sees the label and can change it at any time. The ID is not usually shown.
 
 ### Native behaviors
 
-A designer can view and edit the code behind a behavior. That action probably turns the behavior into a **native behavior**, and its prompt becomes locked. The details are open.
+A designer can view and edit the code behind a behavior. That action probably turns the behavior into a **native behavior**, and its prompt becomes locked. (**Agreed** as the likely direction. The details are open.)
 
 ### Asset prompts
 
 An asset prompt has a one-time effect. "Break up the floor with rubble piles" places rubble once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
 
-- The prompt is always stored with its result.
-- The agent records what the run produced, so that a reapply can remove it.
-- The designer can change the prompt and select **reapply**.
-- The designer can also edit the result by hand, for example by a drag.
-- A hand edit is lost on a reapply unless the prompt was changed to match. The system warns first.
-- A hand edit is not written back into the prompt. Why the designer moved a rubble pile is not obvious: nearer to one thing, farther from another. A guess is brittle.
+- The prompt is always stored with its result. (**Agreed**)
+- The agent records what the run produced, so that a reapply can remove it. (**Agreed**)
+- The designer can change the prompt and select **reapply**. (**Agreed**)
+- The designer can also edit the result by hand, for example by a drag. (**Agreed**)
+- A hand edit is lost on a reapply unless the prompt was changed to match. The system warns first. (**Agreed**)
+- A hand edit is not written back into the prompt. Why the designer moved a rubble pile is not obvious: nearer to one thing, farther from another. A guess is brittle. (**Agreed**)
 - The record is kept for each generated thing. Each rubble pile knows which prompt made it and if a hand changed it since. The warning can then name the one changed pile. (**Proposed**)
 
 Random map generation that runs during play is a different case. It is a behavior, not an asset prompt.
@@ -161,14 +161,14 @@ The idea of an expectation is agreed. The mechanism is not designed. The points 
 
 An expectation states, in natural language, something that must stay true. It is stored with the thing it describes. Example on a room: "cannot cross the gap without the grapple".
 
-- The agent checks a change against the expectations that the change can affect. It does this the way a tester does manual testing.
-- The agent can turn an expectation into a deterministic automated test.
-- The agent does not simulate the whole game with every power-up to find effects that no expectation covers.
+- The agent checks a change against the expectations that the change can affect. It does this the way a tester does manual testing. (**Agreed**)
+- The agent can turn an expectation into a deterministic automated test. (**Agreed**)
+- The agent does not simulate the whole game with every power-up to find effects that no expectation covers. (**Agreed**)
 - When the agent notices such an effect, it tells the designer as a remark and does not block the change. (**Proposed**)
 
 ## Subsystems
 
-A game is assembled from subsystems. A **subsystem** is a part of a game that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter.
+A game is assembled from subsystems. A **subsystem** is a part of a game that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter. (**Agreed**)
 
 - A **built-in subsystem** is a subsystem that Wishem provides. It is in every game. Examples: the storage for entities and components, and the storage for authored state, which holds the registry and the directives.
 - Each game chooses its other subsystems. Examples: physics, the renderer, sound.
@@ -219,7 +219,7 @@ The game model is a record with one key for each model subsystem. Each model sub
 
 ### I/O subsystems
 
-An I/O subsystem connects the game model to the player. It holds no game state.
+An I/O subsystem connects the game model to the player. It holds no game state. (**Agreed**)
 
 These rules apply (**Proposed**):
 
@@ -254,9 +254,9 @@ A built-in subsystem needs no adapter. A library can replace a built-in subsyste
 
 The designer sees the game through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. See `mockups/`.
 
-- Tools are built as the project needs them. Each game can have tools that only it uses.
+- Tools are built as the project needs them. Each game can have tools that only it uses. (**Agreed**)
 - A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)
-- A toolkit exists so that the agent can add a tool without building an editor from nothing.
+- A toolkit exists so that the agent can add a tool without building an editor from nothing. (**Agreed** as an expected part of the base)
 
 ### Recognized names in text (**Proposed**)
 

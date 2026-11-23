@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 A game uses one renderer behind an adapter. The game model imports nothing from the renderer and runs with no window. No wire protocol between the model and the renderer is built now.

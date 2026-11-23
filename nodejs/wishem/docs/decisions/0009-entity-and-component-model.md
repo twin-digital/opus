@@ -2,6 +2,8 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
+**Status:** Agreed
+
 ## Decision
 
 The entity and component model is the same in every game. An entity is a set of components. A component is declared state with optional behavior. This model is the language that the agent speaks.
