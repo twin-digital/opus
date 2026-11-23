@@ -14,7 +14,8 @@ The `docs/` folder holds the blueprint.
 
 ## How to work
 
-- Plan each roadmap project as an OpenSpec change. The blueprint is the input.
+- Plan each roadmap project as an OpenSpec change. Start from the planning seed of the project in `docs/planning-seeds/`.
+- Record each thing that is not settled in a planning seed. The blueprint has no other list of open questions.
 - A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
 - Only text marked **Agreed** is settled. Text with no label has no status. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
 - When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
