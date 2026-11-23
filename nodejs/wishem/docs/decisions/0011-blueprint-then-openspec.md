@@ -2,8 +2,6 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-**Status:** Agreed
-
 ## Decision
 
 The first Wishem project is this blueprint: one file for each purpose in `nodejs/wishem/docs/`. Each later project is planned as an OpenSpec change, and formal specifications live in `openspec/specs/wishem/`.

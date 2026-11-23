@@ -2,8 +2,6 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-**Status:** Agreed
-
 ## Decision
 
 A behavior is stored as the designer's prompt. The agent writes the function behind the prompt. The history of prompts is stored with the behavior.
@@ -25,4 +23,5 @@ The owner wants natural-language behaviors. Where a traditional editor has a cod
 
 - The same idea applies to generated assets. See decision 0007.
 - The code for a behavior is stored. A prompt change edits the stored code and does not write it again from the start.
-- Proposed additions that the owner did not confirm: answers to questions become fields, the agent writes checks from the prompt, and names in a prompt are links to registered things.
+- A behavior also has fields and checks. Answers to questions become fields. The agent writes checks from the prompt.
+- Names in a prompt are links to registered things. The details are open.

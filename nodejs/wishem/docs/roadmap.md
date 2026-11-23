@@ -6,18 +6,18 @@ This file is the only part of the blueprint that describes future work. Each pro
 
 ## Projects
 
-The list of projects is **Agreed**. The order after project 0 is **Open**.
+The order after project 0 is **Open**.
 
-| #   | Project              | Result                                                                                                            | Depends on |
-| --- | -------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------- |
-| 0   | **Blueprint**        | This folder.                                                                                                      | None       |
-| 1   | **Core model**       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun. A first renderer adapter.   | 0          |
-| 2   | **Agent access**     | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.  | 1          |
-| 3   | **Behavior prompts** | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                   | 1, 2       |
-| 4   | **Asset prompts**    | Room layouts and sprites from prompts. Origin records, reapply, and the hand-edit warning.                        | 1, 2       |
-| 5   | **Expectations**     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests. | 1, 2       |
-| 6   | **Tools**            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.   | 1, 2       |
-| 7   | **Other engines**    | A wire protocol between the game model and a renderer in another engine. **Parked.**                              | 1          |
+| #   | Project              | Result                                                                                                                     | Depends on |
+| --- | -------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 0   | **Blueprint**        | This folder.                                                                                                               | None       |
+| 1   | **Core model**       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun, bookmarks. A first renderer adapter. | 0          |
+| 2   | **Agent access**     | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.           | 1          |
+| 3   | **Behavior prompts** | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                            | 1, 2       |
+| 4   | **Asset prompts**    | Room layouts and sprites from prompts. Origin records, reapply, and the hand-edit warning.                                 | 1, 2       |
+| 5   | **Expectations**     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.          | 1, 2       |
+| 6   | **Tools**            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.            | 1, 2       |
+| 7   | **Other engines**    | A wire protocol between the game model and a renderer in another engine. **Parked.**                                       | 1          |
 
 Notes:
 
@@ -31,7 +31,7 @@ These ideas came from a short exploration. They are not agreed and not designed.
 
 ### What an expectation can be about
 
-- **Possibility.** "Cannot cross the cut without the grapple." "The player can always get back to the Weighbridge." "Every room can be reached."
+- **Possibility.** "Cannot cross the gap without the grapple." "The player can always get back to the Weighbridge." "Every room can be reached."
 - **Teaching and sequence.** "The player has used the grapple one time or more before the Kiln."
 - **Pacing.** "A new player completes this room in less than two minutes."
 - **Difficulty.** "A careless player with three hearts survives two goats."
@@ -53,7 +53,7 @@ An expectation can attach to one entity, a room, a region, a kind of asset, or t
 
 ### How the agent can check an expectation
 
-- **From values.** The agent compares the jump distance with the width of the cut. No play is necessary.
+- **From values.** The agent compares the jump distance with the width of the gap. No play is necessary.
 - **With a scripted run** from a bookmark.
 - **With a search.** A bot tries many ways to play. An expectation that says something is not possible needs this.
 - **With player profiles.** Examples: a careful player, a fast player, a new player. Pacing and difficulty depend on the player.
@@ -87,18 +87,19 @@ The owner did not confirm this order.
 
 ## The first game
 
-- A top-down adventure in a 3/4 perspective and a 16-bit console style. (**Agreed**)
-- The owner builds it with a young collaborator. (**Agreed**)
-- The game is the first consumer of Wishem. Wishem is the product. The game is incidental. (**Agreed**)
-- The game is built from scratch on Wishem. (**Agreed**)
+- A top-down adventure in a 3/4 perspective and a 16-bit console style.
+- The owner builds it with a young collaborator.
+- The game is a consumer of Wishem and is its own separate product. Wishem is the product that this blueprint describes.
+- The game has its own product folder in this repository. It is not inside `nodejs/wishem/`.
+- The game is built from scratch on Wishem.
 - The game's world, characters, and art are original. It uses the mechanics of its genre only. (From the notes that started the brainstorm.)
 
 ### Relation to the earlier prototype
 
 An earlier prototype of a game of the same kind exists in a separate repository. It is a throwaway.
 
-- Its art assets are likely to move to the first game. (**Agreed**)
-- Its code and workflows do not move. (**Agreed**)
+- Its art assets are likely to move to the first game.
+- Its code and workflows do not move.
 
 Things in the prototype that agree with this blueprint, as evidence and not as a base to build on:
 
@@ -108,6 +109,6 @@ Things in the prototype that agree with this blueprint, as evidence and not as a
 
 ## Planning method
 
-- Each project is planned as an OpenSpec change in this repository. (**Agreed**)
-- Formal specifications live in `openspec/specs/wishem/<area>/<capability>/spec.md`. (**Agreed**, from the repository convention)
+- Each project is planned as an OpenSpec change in this repository.
+- Formal specifications live in `openspec/specs/wishem/<area>/<capability>/spec.md`.
 - The blueprint is the input to each change. When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.

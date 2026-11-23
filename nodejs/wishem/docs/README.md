@@ -6,18 +6,16 @@ This folder is the blueprint for Wishem. It records the vision, the concepts, th
 
 ## Status
 
-- No Wishem code exists.
 - The blueprint is analysis. It is not a specification.
 - Formal specifications live in `openspec/specs/wishem/`. When a specification exists for a topic, the specification overrides the blueprint.
 - Each roadmap project starts with its own OpenSpec change. Use the blueprint as the input to that change.
 
 ## How to read the status labels
 
-Each rule, concept, and decision has one of these labels.
+Text with no label is agreed: the owner stated it or confirmed it. Only the exceptions have a label.
 
 | Label          | Meaning                                                                         |
 | -------------- | ------------------------------------------------------------------------------- |
-| **Agreed**     | The owner stated it or confirmed it in the brainstorm.                          |
 | **Proposed**   | The agent proposed it. The owner did not reject it and did not confirm it.      |
 | **Open**       | Not settled. See `open-questions.md`.                                           |
 | **Unverified** | A fact about an outside library or product, stated from memory and not checked. |

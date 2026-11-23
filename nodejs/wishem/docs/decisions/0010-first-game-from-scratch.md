@@ -2,15 +2,13 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-**Status:** Agreed
-
 ## Decision
 
 The first game is built from scratch on Wishem. An earlier prototype of the game is a throwaway. Its art assets are likely to move to the first game. Its code and workflows do not.
 
 ## Reason
 
-The first game is the first consumer of Wishem. The owner wants to build it from scratch and not integrate the prototype step by step.
+The first game is a consumer of Wishem and is its own product. The owner wants to build it from scratch and not integrate the prototype step by step.
 
 ## Rejected alternatives
 

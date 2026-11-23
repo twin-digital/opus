@@ -2,8 +2,6 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-**Status:** Agreed
-
 ## Decision
 
 Wishem starts nearly empty. Concepts, tools, and adapters are added when a design first needs them. Each game can end with its own model and its own tools.

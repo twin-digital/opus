@@ -52,7 +52,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Directive**: Natural-language text from the designer that Wishem stores and keeps the game in agreement with. The three kinds are behavior prompt, asset prompt, and expectation. This is an internal term. Do not use it with the designer.
 
-**Behavior**: Something a component does during play. A behavior has a prompt, code, and a history. Fields and checks are proposed parts.
+**Behavior**: Something a component does during play. A behavior has a prompt, code, fields, checks, and a history.
 
 **Behavior prompt**: The designer's description of a behavior. It is the source of the behavior.
 
@@ -68,7 +68,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Hand edit**: A direct change by the designer to a generated thing, such as a drag.
 
-**Expectation**: Natural-language text from the designer that states something that must stay true. It is stored with the thing it describes. Example: "cannot cross the cut without the grapple".
+**Expectation**: Natural-language text from the designer that states something that must stay true. It is stored with the thing it describes. Example: "cannot cross the gap without the grapple".
 
 **Check**: A repeatable test that the agent writes from a behavior prompt or an expectation.
 
@@ -76,7 +76,11 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 ## Assembly
 
-**Subsystem**: A part of a game that a library provides. It is chosen for each game.
+**Subsystem**: A part of a game that has one job. Wishem provides it, or a library provides it through an adapter.
+
+**Built-in subsystem**: A subsystem that Wishem provides. It is in every game.
+
+**Core**: The part of Wishem that is not a subsystem. It steps the subsystems, joins their parts into the game model, and keeps time and recordings.
 
 **Model subsystem**: A subsystem that holds game state. Examples: physics, authored scenes.
 

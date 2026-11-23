@@ -2,8 +2,6 @@
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
-**Status:** Agreed
-
 ## Decision
 
 Each game picks its own model libraries. Wishem does not provide one interface that hides several physics engines or several state stores.

@@ -6,9 +6,9 @@ Wishem is a just-in-time game development environment, assembled by an agent tha
 
 The designer gives direction in the words of a designer:
 
-> "I need a room between the Weighbridge and the Kiln that teaches the grapple before the player needs it under pressure. Quarry biome. One cut too wide to jump, with an iron ring bolted to the far wall in plain view: generate the ring so it reads as something you can hook. No enemies until the player has crossed. After that, two goats, so the second crossing happens with something chasing."
+> "I need a room between the Weighbridge and the Kiln that teaches the grapple before the player needs it under pressure. Quarry biome. One gap too wide to jump, with an iron ring bolted to the far wall in plain view: generate the ring so it reads as something you can hook. No enemies until the player has crossed. After that, two goats, so the second crossing happens with something chasing."
 
-The agent does the work. It creates the room, sizes the cut, generates the ring, and sets the goats to appear after the first crossing. The designer sees the result in the running game.
+The agent does the work. It creates the room, sizes the gap, generates the ring, and sets the goats to appear after the first crossing. The designer sees the result in the running game.
 
 The goal in one phrase: to "speak a game into existence" through an agent that is integrated directly into the game itself.
 
