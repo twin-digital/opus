@@ -125,7 +125,7 @@ Two kinds of problem have two different fixes (rule R9):
 More proposals:
 
 - **Fields from answers.** If the agent asks how far the whistle carries and the answer is 8 tiles, `range = 8` becomes a field. The designer can change the field by hand without a request to the agent. (**Proposed**)
-- **Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. (**Proposed**)
+- **Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. The tools show these links to the designer. See "Recognized names in text". (**Proposed**)
 - **Kept output.** A changed prompt changes the existing code and leaves the rest alone (rule R11). (**Proposed**)
 
 ### Native behaviors
@@ -217,3 +217,25 @@ The designer sees the game through tools: a view of the screen, an inspector, ta
 - Tools are built as the project needs them. Each game can have tools that only it uses. (**Agreed**)
 - A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)
 - A toolkit exists so that the agent can add a tool without building an editor from nothing. (**Agreed** as an expected part of the base)
+
+### Recognized names in text (**Proposed**)
+
+The tools highlight each known name in text. This applies to directives, to the designer's messages, and to the agent's replies. It also applies while the designer types.
+
+A name is known if it is in one of these sets:
+
+- the names of things in the game, such as "goat" and "the Kiln"
+- the kinds that the game registered, such as "status" and "item"
+- the terms of Wishem, such as "expectation", "bookmark", and "reapply"
+
+The highlight has these effects:
+
+- **Confirmation.** The designer sees that a name refers to the intended thing.
+- **A signal for a new thing.** A name with no highlight is not known. In "the goats stay docile until the shift whistle blows", no highlight on "shift whistle" shows that the agent must create it or ask about it.
+- **A way to the thing.** The designer selects a highlight to open the thing that it names.
+
+There are two levels of recognition. A match against the registry is immediate and needs no agent. After the agent reads the text, it confirms what each name refers to, and the tools show that the link is confirmed.
+
+A highlight means that a name is known. It does not mean that the agent understood the sentence.
+
+For a directive, the confirmed links are stored with the text. When a thing gets a new name, the agent can then update or report each directive that refers to it.
