@@ -4,7 +4,7 @@
 
 These rules apply to every part of Wishem and to every product made with it. A design that breaks a rule needs the agreement of the owner and a change to the rule first.
 
-> This file is the record of what is decided until a specification exists. Each rule has its reason. A line that starts with "Rejected:" gives an alternative that was considered and not selected. Read those lines before you propose a change. When an OpenSpec change for a project is archived, the rules that it covers move into its specification and leave this file.
+> This file is the record of what is decided until a specification exists. Each rule has its reason. A line that starts with "Rejected:" gives an alternative that was considered and not selected. Read those lines before you propose a change. When the OpenSpec change for a roadmap change is archived, the rules that it covers move into its specification and leave this file.
 
 ## State and time
 
