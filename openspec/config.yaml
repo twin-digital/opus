@@ -44,8 +44,9 @@ rules:
   proposal:
     - >-
       Start proposal.md with YAML frontmatter that has two keys: `issue`, the full URL of the
-      primary GitHub issue of the change, and `milestone`, the title of the milestone of that
-      issue. Omit `milestone` when the issue has no milestone. List only the primary issue.
+      primary GitHub issue of the change, and `milestone`, the full URL of the milestone of that
+      issue (e.g. `https://github.com/twin-digital/opus/milestone/1`). Omit `milestone` when the
+      issue has no milestone. List only the primary issue.
     - List new and modified capabilities using their full `<product>/<area>/<capability>` IDs.
     - >-
       When the change adds or changes UI, the look and feel is never already settled: brainstorm
