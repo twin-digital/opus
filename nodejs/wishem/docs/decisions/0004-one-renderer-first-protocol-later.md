@@ -6,7 +6,7 @@
 
 ## Decision
 
-A game uses one renderer behind an adapter. The game model imports nothing from the renderer and runs with no window. No wire protocol between the model and the renderer is built now.
+A game uses one renderer behind an adapter. The game model imports nothing from the renderer, and a simulation runs with no window. No wire protocol between the model and the renderer is built now.
 
 If a renderer in another engine is wanted later, a protocol is extracted along the line between the model and the adapter.
 

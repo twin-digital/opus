@@ -20,13 +20,15 @@ Terms in each group are in alphabetical order.
 
 ## The model
 
-**Authored state**: What is stored in files: rooms, entity definitions, prompts, expectations, assets.
+**Authored state**: What is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the game model.
 
 **Behavior**: Something a component does during play. A behavior has a prompt, code, fields, checks, and a history.
 
 **Component**: A declared set of fields with optional behavior, attached to an entity. Each component has a component type.
 
 **Component type**: The declaration of a component: its name and its fields. A component type can have behaviors. A component type that only one entity uses is normal.
+
+**Definitions**: The declared kinds in a game model: component types, entity definitions, and relations. They say what can exist. The registry reports them.
 
 **Entity**: A thing in the game. An entity is the set of its components. The components of one entity can be in different subsystems.
 
@@ -36,17 +38,19 @@ Terms in each group are in alphabetical order.
 
 **Field**: One declared value in a component.
 
-**Game model**: The part of a game that holds all game state and all game rules. It runs with no window.
+**Game model**: What the game is: its definitions, its behaviors, and its authored state.
+
+**Game state**: The authored state and the live state together.
 
 **ID** (**Proposed**): The name of a registered thing that code and links use. It does not change.
 
 **Label** (**Proposed**): The name of a registered thing that the designer sees. The designer can change it.
 
-**Live state**: The state of the running game.
+**Live state**: The state of one simulation.
 
 **Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt.
 
-**Registry**: The record of every declared kind in a game: the component types and the other kinds. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state.
+**Registry**: The record of the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state.
 
 **Relation**: A declared field that refers to another entity. Examples: a room contains an entity, and a held item is attached to the hero.
 
@@ -54,19 +58,21 @@ Terms in each group are in alphabetical order.
 
 **Bookmark**: A named point in a recording. Rewind and rerun use it as their target.
 
-**Play session**: One period of play, from its start to its end. A recording holds it.
+**Play session**: A simulation with a player at the controls.
 
-**Recording**: The seed and the inputs of a play session.
+**Recording**: The seed and the inputs of a simulation.
 
-**Rerun**: To run a recording again, with or without a changed value.
+**Rerun**: To run a recording again in a new simulation, with or without a changed value.
 
 **Restore**: To load a snapshot.
 
 **Rewind**: To return to an earlier point of the current play session.
 
-**Snapshot**: The whole live state, saved as data.
+**Simulation**: One running instance of a game model. It has its own live state, position in time, source of inputs, and recording. The core advances it in steps. It runs with no window. This is an internal term. With the designer, say "the game".
 
-**Step**: One fixed advance of the game model.
+**Snapshot**: The whole live state of a simulation, saved as data.
+
+**Step**: One fixed advance of a simulation.
 
 ## Directives
 
@@ -108,7 +114,7 @@ Terms in each group are in alphabetical order.
 
 **Built-in subsystem**: A subsystem that Wishem provides. It is in every game.
 
-**Core**: The part of Wishem that is not a subsystem. It steps the subsystems, joins their parts into the game model, and keeps time and recordings.
+**Core**: The part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
 
 **I/O subsystem**: An output subsystem or an input subsystem.
 
@@ -118,9 +124,9 @@ Terms in each group are in alphabetical order.
 
 **Model library**: A library that provides a model subsystem.
 
-**Model subsystem**: A subsystem that holds game state. Examples: physics, authored scenes.
+**Model subsystem**: A subsystem that holds game state or game rules. Examples: physics, authored scenes.
 
-**Output subsystem**: A subsystem that shows or plays the game model. Examples: renderer, sound.
+**Output subsystem**: A subsystem that shows or plays a simulation. Examples: renderer, sound.
 
 **Renderer contract**: The four things a renderer must do.
 
@@ -144,7 +150,7 @@ Terms in each group are in alphabetical order.
 | Presentation slot                         | Output subsystem or input subsystem            | Input is not presentation.                                                                                   |
 | Scene graph                               | Game model, or the renderer's objects          | Use "game model" for entities and components. Use "the renderer's objects" for the display side.             |
 | Script                                    | Behavior                                       | The prompt is the source, not a script.                                                                      |
-| Sim                                       | Game model                                     | One term for the concept.                                                                                    |
+| Sim                                       | Simulation                                     | Write the word in full.                                                                                      |
 | Slot                                      | Subsystem                                      | Games use "slot" for equipment and saved games.                                                              |
 | Stored words                              | Directive                                      | Internal term for the three kinds together.                                                                  |
 | Truth slot, truth library, truth contract | Model subsystem, model library, model contract | Plain words for the same things.                                                                             |

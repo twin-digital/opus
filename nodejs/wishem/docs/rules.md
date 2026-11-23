@@ -6,8 +6,8 @@ These rules apply to every part of Wishem and to every game made with it. A desi
 
 ## State and time
 
-**R1. The game model holds all game state and all game rules.** (**Agreed**)
-The model never depends on a renderer, a sound system, or an input device.
+**R1. All game state and all game rules are in the game model and its simulations.** (**Agreed**)
+None is in an I/O subsystem. The game model and a simulation never depend on a renderer, a sound system, or an input device.
 Reason: the agent must be able to read, change, and rerun the game without a window.
 
 **R2. A library can hold game state only if it passes the model contract.** (**Agreed**)

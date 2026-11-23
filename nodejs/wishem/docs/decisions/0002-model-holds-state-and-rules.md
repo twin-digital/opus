@@ -1,4 +1,4 @@
-# 0002. The game model holds all game state and rules
+# 0002. The game model and its simulations hold all game state and rules
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
@@ -24,5 +24,5 @@ Off-the-shelf libraries are acceptable only if everything in them can be exposed
 
 ## Consequences
 
-- The renderer's object tree is a picture of the game model and is built again from it.
+- The renderer's object tree is a picture of a simulation and is built again from it.
 - Each library is judged against a contract before a game adopts it.

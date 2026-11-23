@@ -20,7 +20,7 @@ These questions are not settled. Each one names the roadmap project that must an
 9. **How is a change in a paused game written back to authored state?** What happens when the live change conflicts with a file? (Project 2)
 10. **Which relations between entities are in every game?** A room contains entities, and an entity can be attached to another. Which relations exist in every game, and which a game adds, is not settled. (Project 1)
 11. **What kinds of reference exist, and what are they called?** The cases are a reference to a different component of the same entity, to a different entity, and to a component of a different entity, in the same subsystem or in different subsystems. It is also not settled if names need a namespace for each subsystem. See "References" in `concepts.md`. (Project 1)
-12. **What belongs to the core and not to a subsystem?** The core steps the subsystems, joins their parts into the game model, and keeps time and recordings. The exact line between the core and the built-in subsystems is not settled. (Project 1)
+12. **What belongs to the core and not to a subsystem?** The core runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings. The exact line between the core and the built-in subsystems is not settled. (Project 1)
 13. **How does a kept bookmark stay valid when the game model changes?** A bookmark that is stored as a snapshot goes out of date when a component changes. A bookmark that is stored as a recording from the start always loads, but the same inputs can lead to a different place after a rule changes. The answer affects checks of expectations. (Projects 1, 5)
 
 ## Directives

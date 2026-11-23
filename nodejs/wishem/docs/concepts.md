@@ -6,7 +6,19 @@ The examples in this file use the quarry room from `interactions.md`. That room 
 
 ## The game model
 
-The game model is the part of a game that holds all game state and all game rules. It runs with no window. The renderer draws a picture of the model and never owns any of it.
+The **game model** is what the game is. It has three parts:
+
+- the **definitions**: the declared kinds, such as component types, entity definitions, and relations. They say what can exist.
+- the behaviors: the code that changes state during play.
+- the authored state: the things that are stored in files. The game starts from them.
+
+A **simulation** is one running instance of the game model. It has its own live state, its own position in time, its own source of inputs, and its own recording. The core advances a simulation in steps. A simulation runs with no window. An I/O subsystem can be attached to a simulation and is not part of it.
+
+More than one simulation of the same game model can run at the same time. The designer plays in one simulation while the agent runs others, for example to rerun a jump or to do checks.
+
+"Simulation" is an internal term. With the designer, the agent says "the game".
+
+The renderer draws a picture of a simulation and never owns any of it.
 
 ### Entities and components (**Agreed**)
 
@@ -35,7 +47,7 @@ Earlier ideas map onto this model:
 
 Every component type and every other kind of thing is registered (rule R6). The agent queries the registry to learn what kinds exist, what fields each kind has, and which behaviors read or change each kind.
 
-The registry does not hold the things themselves. The things are in the authored state and the live state.
+The registry reports the definitions. It does not hold the things themselves. The things are in the authored state and the live state.
 
 Example: before the agent adds a `docile` status, it asks which behaviors read the statuses of an entity. The answer can be the chase behavior, the contact damage behavior, and the movement behavior. The agent then knows what a status is able to change. It asks the designer where the answer is a design choice.
 
@@ -70,25 +82,27 @@ A component is in one subsystem. An entity is not in a subsystem, because its co
 
 ### Authored state and live state
 
-- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets.
-- **Live state** is the state of the running game.
+- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the game model.
+- **Live state** is the state of one simulation. A simulation makes its live state from the authored state when it starts.
+
+"Game state" means the authored state and the live state together.
 
 A change that the agent makes in a paused game is written back to the authored state, so that the change is still there the next day.
 
 ## Time
 
-The model advances in fixed steps. Random values come from a seed. Every input is recorded. (rule R3)
+A simulation advances in fixed steps. Random values come from a seed. Every input is recorded. (rule R3)
 
 These operations follow from that:
 
-| Operation    | Meaning                                                     |
-| ------------ | ----------------------------------------------------------- |
-| **Step**     | Advance the model by a number of steps with given inputs.   |
-| **Snapshot** | Save the whole live state as data.                          |
-| **Restore**  | Load a snapshot.                                            |
-| **Rewind**   | Return to an earlier point of the current play session.     |
-| **Rerun**    | Run recorded inputs again, with or without a changed value. |
-| **Bookmark** | Give a name to a point in a recording.                      |
+| Operation    | Meaning                                                                         |
+| ------------ | ------------------------------------------------------------------------------- |
+| **Step**     | Advance a simulation by a number of steps with given inputs.                    |
+| **Snapshot** | Save the whole live state of a simulation as data.                              |
+| **Restore**  | Load a snapshot.                                                                |
+| **Rewind**   | Return to an earlier point of the current play session.                         |
+| **Rerun**    | Run recorded inputs again in a new simulation, with or without a changed value. |
+| **Bookmark** | Give a name to a point in a recording.                                          |
 
 A rerun with a changed value answers a question such as "would I have made the jump".
 
@@ -250,21 +264,21 @@ A game is assembled from subsystems. A **subsystem** is a part of a game that ha
 - A **built-in subsystem** is a subsystem that Wishem provides. It is in every game. Examples: the storage for entities and components, and the storage for authored state, which holds the registry and the directives.
 - Each game chooses its other subsystems. Examples: physics, the renderer, sound.
 
-The **core** is the part of Wishem that is not a subsystem. It steps the subsystems, joins their parts into the game model, and keeps time and recordings.
+The **core** is the part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
 
 There are three kinds of subsystem.
 
 | Kind                 | What it does                                       | Examples                                     |
 | -------------------- | -------------------------------------------------- | -------------------------------------------- |
-| **Model subsystem**  | Holds game state.                                  | Live state storage, authored scenes, physics |
-| **Output subsystem** | Shows or plays the game model.                     | Renderer, sound                              |
+| **Model subsystem**  | Holds game state or game rules.                    | Live state storage, authored scenes, physics |
+| **Output subsystem** | Shows or plays a simulation.                       | Renderer, sound                              |
 | **Input subsystem**  | Changes what the player does into recorded inputs. | Gamepad, keyboard, touch                     |
 
 Output subsystems and input subsystems together are the **I/O subsystems**.
 
 ### Model subsystems
 
-A model subsystem holds game state. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
+A model subsystem holds game state or game rules. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
 
 1. Its whole state can be read and written as data.
 2. Its state can be saved and restored exactly.
@@ -285,39 +299,39 @@ Candidates discussed (**Unverified**):
 
 A top-down game in a 16-bit style does not need a physics engine. Its movement is tile collision with integer positions.
 
-### How the game model is composed (**Proposed**)
+### How the live state is composed (**Proposed**)
 
-The game model is a record with one key for each model subsystem. Each model subsystem contributes its part of the model. The game model is the view over all the parts. A built-in model subsystem contributes its part in the same way as one that a library provides.
+The live state of a simulation is a record with one key for each model subsystem. Each model subsystem contributes its part. The live state is the view over all the parts. A built-in model subsystem contributes its part in the same way as one that a library provides.
 
-- A snapshot of the game model is the snapshot of each model subsystem, under the same keys.
-- The registry reports each kind of thing together with the model subsystem that owns it.
-- The game model passes the model contract when each model subsystem passes it.
+- A snapshot is the snapshot of each model subsystem, under the same keys.
+- The registry reports each definition together with the model subsystem that owns it.
+- A simulation passes the model contract when each model subsystem passes it.
 - The entity is what joins the parts. The physics part and the state storage part refer to the same goat by one entity.
 
 ### I/O subsystems
 
-An I/O subsystem connects the game model to the player. It holds no game state. (**Agreed**)
+An I/O subsystem connects a simulation to the player. It holds no game state. (**Agreed**)
 
 These rules apply (**Proposed**):
 
 - **I/O rule.** The game gives the same result when an I/O subsystem is removed.
 - **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
-- **Input rule.** Each thing that an input subsystem sends to the game model is recorded. A recording or the agent can take the place of an input subsystem.
+- **Input rule.** Each thing that an input subsystem sends to a simulation is recorded. A recording or the agent can take the place of an input subsystem.
 
-What an output subsystem holds is derived from the game model and can be built again from it at any time.
+What an output subsystem holds is derived from the live state and can be built again from it at any time.
 
 ### The renderer contract
 
 A renderer is an output subsystem with more requirements. It follows the **renderer contract**:
 
-1. It draws from the game model.
+1. It draws from the live state of a simulation.
 2. It gives a screenshot on request.
 3. It maps a point on the screen back to the entity drawn there.
 4. It draws tool overlays, such as a ring that shows a distance.
 
 Item 3 is what resolves "the platform to my right" and a click to inspect.
 
-The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the game model has no such order.
+The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the live state has no such order.
 
 Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
 
