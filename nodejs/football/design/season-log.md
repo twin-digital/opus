@@ -387,3 +387,19 @@ competing bidder to beat. If lost: free-add Flournoy (8.0, szn 83.9 — he kept 
 Free swaps after the run: **Bengals → Jets D/ST** (6.5 → 7.6, weekly rule); consider
 Flournoy-for-Estimé if both clear. Lineup: Allen, Breece + Skattebo, Meyers + Evans (Friday
 practice gate; Dell if not), FLX Dell, Strange, Jets, Gay.
+
+**Midweek execution (2026-11-18 → 11-20):** The Hutchinson claim WON — first priority spent
+all season (#3 → #12), uncontested in the end: Lettow shopped names (Douglas, Tate, Rice
+back from IR) while 68.1 season points sat at 9% ownership. The backup Flournoy claim
+auto-cancelled as designed; he was claimed elsewhere. Executed free swaps: Bengals → Jets
+D/ST; **Gay → Boswell** (structural, not a spike chase: Gay's wk13 bye lands in a possible
+elimination week, Boswell is byeless top-8 quality — kicker closed for the season; prior
+three K declines stand as correct). **Dell verdict: demoted.** Line since return: 5.0, 18.5,
+3.6, 4.2 — a low-floor spike player in a four-man HOU rotation, not an ascending WR2; FLEX
+of last resort, climbing the drop list. Thursday HOU dud banked Dell 4.2 + Hutchinson 2.3.
+Friday WR scramble: Evans proj whiplashed 10.0 → 0.0 → 9.5 (Q, SNF lock); Meyers took and
+cleared a Q; with JSN+Fannin on bye and both HOU WRs locked, a both-out Sunday would have
+left a WR slot unfillable. Insurance: **drop Estimé → add Malik Washington** (MIA, 71.2 szn
+at 32% own — the Hutchinson playbook again), Evans pre-benched. Sunday 12:55 decision rule:
+Evans (9.5 × ~0.75) vs Washington (certain 6.0) — flip to Evans only on an affirmative
+morning report, else take the certainty. Estimé exit clean (spike captured, role gone).
