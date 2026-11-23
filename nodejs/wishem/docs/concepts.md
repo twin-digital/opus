@@ -2,7 +2,7 @@
 
 > Blueprint, not a specification. See `README.md` for the status labels. Terms are defined in `glossary.md`.
 
-The examples in this file use the quarry room from `interactions.md`. That room has a gap that the player crosses with a grapple, two goats, and a shift whistle.
+The examples in this file use the quarry room from `examples/interactions.md`. That room has a gap that the player crosses with a grapple, two goats, and a shift whistle.
 
 ## The game model
 
@@ -343,7 +343,7 @@ A built-in subsystem needs no adapter. A library can replace a built-in subsyste
 
 ## Tools
 
-The designer sees the game through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. See `mockups/`.
+The designer sees the game through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. See the wireframe in `examples/`.
 
 - Tools are built as the project needs them. Each game can have tools that only it uses. (**Agreed**)
 - A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)

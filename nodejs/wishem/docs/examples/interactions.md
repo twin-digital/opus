@@ -1,6 +1,6 @@
 # Interactions
 
-> Blueprint, not a specification. See `README.md` for the status labels.
+> Blueprint, not a specification. See `../README.md` for the status labels. This file is an example. See `README.md` in this folder.
 
 Each example gives what the designer says, what the designer expects, and what Wishem needs for that to work. The examples follow one room, the quarry room, through its life.
 
@@ -58,7 +58,7 @@ No whistle exists. Nothing in the game can be docile.
 - the ability to inspect an entity and see its status
 - a database view of all statuses, items, and triggers that exist
 
-See `mockups/editor-after-whistle-request.html`. It shows:
+See `editor-after-whistle-request.html`. It shows:
 
 - the conversation with the agent
 - the room, with the gap, the iron ring, the rubble, the goats, and a ring for the range of the whistle
