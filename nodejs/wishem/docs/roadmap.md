@@ -21,6 +21,8 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 
 Each project has a GitHub issue and a milestone. The issue holds what is known about the project, its open questions, and its notes. The name of the OpenSpec change starts with the number of the issue.
 
+Two topics have an issue and are not roadmap projects: the in-game user interface ([#487](https://github.com/twin-digital/opus/issues/487)), and sound and music ([#488](https://github.com/twin-digital/opus/issues/488)).
+
 The first work is the milestone "Bootstrap workbench UI". It is not a roadmap project. It builds thin parts of projects 1, 2, and 6 for the first slices of the workbench: [#476](https://github.com/twin-digital/opus/issues/476), [#477](https://github.com/twin-digital/opus/issues/477), and [#478](https://github.com/twin-digital/opus/issues/478).
 
 ## Order

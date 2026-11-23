@@ -1,4 +1,4 @@
 ---
 ---
 
-Move the Wishem planning seeds that have a GitHub issue to their issues.
+Move the Wishem planning seeds to GitHub issues and remove the `planning-seeds` folder.

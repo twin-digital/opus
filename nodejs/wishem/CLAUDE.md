@@ -14,7 +14,7 @@ The `docs/` folder holds the blueprint.
 ## How to work
 
 - Plan each roadmap project as an OpenSpec change. Start from the GitHub issue of the project. `docs/roadmap.md` gives the issue of each project.
-- Record each thing that is not settled in the GitHub issue of its topic. If the topic has no issue, record it in a planning seed in `docs/planning-seeds/`. The blueprint has no other list of open questions.
+- Record each thing that is not settled in the GitHub issue of its topic. If the topic has no issue, create one with the label `app:wishem`. The blueprint has no list of open questions. To find the issues, use the label `app:wishem` or the [Wishem project](https://github.com/orgs/twin-digital/projects/5).
 - A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
 - Only text marked **Agreed** is settled. Text with no label has no status. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.
 - When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
