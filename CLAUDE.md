@@ -72,10 +72,11 @@ Feature work is planned with **OpenSpec** and executed with the **Superpowers** 
 
 - **proposal** brainstorms with `superpowers:brainstorming` when the design isn't settled;
 - **tasks** are written as `## Task N: <name>` sections, each a coherent, independently testable deliverable, because each becomes one implementer subagent plus one review;
-- **apply** runs in a git worktree via `superpowers:subagent-driven-development` (TDD + per-task code review) with pinned subagent models (haiku for transcription-only tasks, sonnet for other implementers and reviews, opus for the final review and stuck-task escalation), then verifies, adds the changeset, archives, and finishes with `superpowers:finishing-a-development-branch`.
+- **apply** runs in the worktree of the change via `superpowers:subagent-driven-development` (TDD + per-task code review) with pinned subagent models (haiku for transcription-only tasks, sonnet for other implementers and reviews, opus for the final review and stuck-task escalation), then verifies, adds the changeset, archives, and finishes with `superpowers:finishing-a-development-branch`.
 
 Repo conventions for artifacts (spec layout, required design sections, UI rules) live in `openspec/config.yaml` (`context` and `rules`), not the schema. Specs live in `openspec/specs/`, in-flight changes in `openspec/changes/<name>/`.
 
+- **Workspace:** do all work on a change in one git worktree on a new branch off `main`. This includes brainstorming, `/openspec-explore`, and `/openspec-propose`. Create the worktree before you write a change file or run `openspec new change`. Use the native worktree tool, which puts the worktree in `.claude/worktrees/`. Do not write change files in the main checkout. Apply uses the same worktree. If that worktree is gone, apply makes a new worktree from the branch of the change, or from `main` if the plan is merged.
 - **Setup (once per environment):** `claude plugin install superpowers@claude-plugins-official` (`.claude/settings.json` enables it, but enabling does not install). The CLI is a root devDependency: `pnpm exec openspec …`.
 - **Skills:** `/openspec-propose` (start a change), `/openspec-explore` (think before proposing), `/openspec-apply-change`, `/openspec-update-change`, `/openspec-sync-specs`, `/openspec-archive-change`.
 - **When to use it:** new features/capabilities, architectural or breaking changes, cross-system contracts. **Skip it** (direct PR) for bug fixes without contract changes, test backfill, lint/config tweaks, dependency bumps, typos, and docs.
