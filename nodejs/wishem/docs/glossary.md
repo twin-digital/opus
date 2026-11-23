@@ -48,6 +48,8 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Rerun**: To run a recording again, with or without a changed value.
 
+**Bookmark**: A named point in a recording. Rewind and rerun use it as their target.
+
 ## Stored words
 
 **Behavior**: Something a component does during play. A behavior has a prompt, code, and a history. Fields and checks are proposed parts.

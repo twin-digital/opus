@@ -63,6 +63,34 @@ These operations follow from that:
 
 A rerun with a changed value answers a question such as "would I have made the jump".
 
+### Bookmarks (**Proposed**)
+
+A **bookmark** is a named point in a recording. Rewind and rerun use a bookmark as their target.
+
+A bookmark gives the designer and the agent a shared name for a moment, in the way that an entity name gives them a shared name for a thing:
+
+- "Go back to before the cut."
+- "Rerun from where I picked up the grapple, with the higher jump."
+
+The game makes bookmarks automatically at registered events. Examples:
+
+- the player enters a room
+- the player gets an item or an ability
+- the player takes damage or fails
+- the designer pauses the game
+- the agent makes a change: one bookmark before the change and one after it
+- a check of a designer statement fails
+
+Each game registers its own events, so each game has its own automatic bookmarks.
+
+A bookmark has more uses:
+
+- **Play from here.** The designer starts play at a bookmark.
+- **A start for a check.** A check of "cannot cross the cut without the grapple" starts from a bookmark at the edge of the cut.
+- **A report.** "It breaks here" is a bookmark that the agent can open.
+
+A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the game changes. See `open-questions.md`.
+
 ## Stored words
 
 Wishem stores three kinds of designer words as data. (**Agreed**)
