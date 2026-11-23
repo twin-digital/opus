@@ -78,34 +78,41 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 ## Assembly
 
-**Slot**: A part of a game that is chosen for each game.
+**Subsystem**: A part of a game that a library provides. It is chosen for each game.
 
-**Truth slot**: A slot that holds game truth. Examples: physics, authored scenes.
+**Model subsystem**: A subsystem that holds game state. Examples: physics, authored scenes.
 
-**Presentation slot**: A slot that holds no game truth. Examples: renderer, sound, input.
+**Output subsystem**: A subsystem that shows or plays the game model. Examples: renderer, sound.
 
-**Truth contract**: The four conditions a library must pass to fill a truth slot.
+**Input subsystem**: A subsystem that changes what the player does into recorded inputs. Examples: gamepad, keyboard.
 
-**Presentation contract**: The four things a library must do to fill a presentation slot.
+**I/O subsystem**: An output subsystem or an input subsystem.
 
-**Truth library**: A library that fills a truth slot.
+**Model contract**: The four conditions a library must pass to provide a model subsystem.
 
-**Adapter**: The code that connects a library to a slot.
+**Renderer contract**: The four things a renderer must do.
+
+**Model library**: A library that provides a model subsystem.
+
+**Adapter**: The code that connects a library to a subsystem.
 
 **Tool**: A part of the designer's view of the game: a screen view, an inspector, a table, an overlay.
 
 ## Terms that are not used
 
-| Do not use                         | Use                                   | Reason                                                                                                       |
-| ---------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Scene graph                        | Game model, or the renderer's objects | Use "game model" for entities and components. Use "the renderer's objects" for the display side.             |
-| Invariant, constraint, requirement | Expectation                           | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
-| Designer statement                 | Expectation                           | One word for the concept.                                                                                    |
-| Generation prompt                  | Asset prompt                          | Shorter, and it pairs with "behavior prompt".                                                                |
-| Stored words                       | Directive                             | Internal term for the three kinds together.                                                                  |
-| Engine, for Wishem as a whole      | Wishem, or the game model             | No engine is built ahead of a game.                                                                          |
-| Sim                                | Game model                            | One term for the concept.                                                                                    |
-| Script                             | Behavior                              | The prompt is the source, not a script.                                                                      |
-| Provenance                         | Origin record                         | Simpler word for the same record.                                                                            |
-| Regenerate, for a room or image    | Reapply                               | Reapply names the designer's action and its warning.                                                         |
-| Client and server                  | Game model and renderer               | No wire protocol exists. See `decisions/0004`.                                                               |
+| Do not use                                | Use                                            | Reason                                                                                                       |
+| ----------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Scene graph                               | Game model, or the renderer's objects          | Use "game model" for entities and components. Use "the renderer's objects" for the display side.             |
+| Invariant, constraint, requirement        | Expectation                                    | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
+| Designer statement                        | Expectation                                    | One word for the concept.                                                                                    |
+| Generation prompt                         | Asset prompt                                   | Shorter, and it pairs with "behavior prompt".                                                                |
+| Stored words                              | Directive                                      | Internal term for the three kinds together.                                                                  |
+| Engine, for Wishem as a whole             | Wishem, or the game model                      | No engine is built ahead of a game.                                                                          |
+| Sim                                       | Game model                                     | One term for the concept.                                                                                    |
+| Script                                    | Behavior                                       | The prompt is the source, not a script.                                                                      |
+| Provenance                                | Origin record                                  | Simpler word for the same record.                                                                            |
+| Regenerate, for a room or image           | Reapply                                        | Reapply names the designer's action and its warning.                                                         |
+| Slot                                      | Subsystem                                      | Games use "slot" for equipment and saved games.                                                              |
+| Truth slot, truth library, truth contract | Model subsystem, model library, model contract | Plain words for the same things.                                                                             |
+| Presentation slot                         | Output subsystem or input subsystem            | Input is not presentation.                                                                                   |
+| Client and server                         | Game model and renderer                        | No wire protocol exists. See `decisions/0004`.                                                               |

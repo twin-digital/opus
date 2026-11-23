@@ -37,7 +37,7 @@ These questions are not settled. Each one names the roadmap project that must an
 
 ## Assembly
 
-23. **Which libraries fill each slot for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
+23. **Which libraries provide each subsystem for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
 24. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
 25. **Which image model generates sprites, and how is one style kept?** (Project 4)
 26. **How is sound and music generated or imported?** Not discussed. (Later)

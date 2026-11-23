@@ -41,7 +41,7 @@ Do not treat a **Proposed** item as a requirement. Confirm it in the OpenSpec ch
 
 - `vision.md`: what Wishem is, what makes it different, what it does, what it is not, and where the name comes from.
 - `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
-- `concepts.md`: the entity and component model, the three kinds of directive, slots, and contracts.
+- `concepts.md`: the entity and component model, the three kinds of directive, subsystems, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys.
 - `interactions.md`: worked examples of a designer and the agent.

@@ -1,4 +1,4 @@
-# 0003. No single interface over truth libraries
+# 0003. No single interface over model libraries
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
@@ -6,13 +6,13 @@
 
 ## Decision
 
-Each game picks its own truth libraries. Wishem does not provide one interface that hides several physics engines or several state stores.
+Each game picks its own model libraries. Wishem does not provide one interface that hides several physics engines or several state stores.
 
 ## Reason
 
 Such an interface makes the API portable and leaves the game not portable. The same jump value gives a different path in each physics engine. Every tuned value, every recording, and every check breaks when the library changes. The interface also offers only the features that all libraries share.
 
-The owner preferred that each game picks its truth libraries.
+The owner preferred that each game picks its model libraries.
 
 ## Rejected alternatives
 
@@ -21,6 +21,6 @@ The owner preferred that each game picks its truth libraries.
 
 ## Consequences
 
-- A truth library becomes part of that game's model.
-- Presentation libraries are also chosen for each game, under the presentation contract.
+- A model library becomes part of that game's model.
+- Libraries for I/O subsystems are also chosen for each game.
 - Renderer adapters are small and are the route to portability across JavaScript renderers.

@@ -158,20 +158,26 @@ An expectation states, in natural language, something that must stay true. It is
 - The agent does not simulate the whole game with every power-up to find effects that no expectation covers. (**Agreed**)
 - When the agent notices such an effect, it tells the designer as a remark and does not block the change. (**Proposed**)
 
-## Slots
+## Subsystems
 
 A game is assembled from a fixed core and a set of choices. (**Agreed** as the shape)
 
 - **Fixed in every game:** the entity and component model, time, the registry, the directives.
-- **Chosen for each game:** everything that plugs into the model. Each choice fills a **slot**.
+- **Chosen for each game:** the subsystems. A **subsystem** is a part of a game that a library provides.
 
-There are two classes of slot.
+There are three kinds of subsystem.
 
-### Truth slots
+| Kind                 | What it does                                       | Examples                                     |
+| -------------------- | -------------------------------------------------- | -------------------------------------------- |
+| **Model subsystem**  | Holds game state.                                  | Live state storage, authored scenes, physics |
+| **Output subsystem** | Shows or plays the game model.                     | Renderer, sound                              |
+| **Input subsystem**  | Changes what the player does into recorded inputs. | Gamepad, keyboard, touch                     |
 
-A truth slot holds game truth. Examples: live state storage, authored scenes, movement or physics, rules.
+Output subsystems and input subsystems together are the **I/O subsystems**.
 
-A library that fills a truth slot must pass the **truth contract**:
+### Model subsystems
+
+A model subsystem holds game state. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
 
 1. Its whole state can be read and written as data.
 2. Its state can be saved and restored exactly.
@@ -180,23 +186,42 @@ A library that fills a truth slot must pass the **truth contract**:
 
 Candidates discussed (**Unverified**):
 
-| Candidate                     | Truth contract | Notes                                                               |
+| Candidate                     | Model contract | Notes                                                               |
 | ----------------------------- | -------------- | ------------------------------------------------------------------- |
 | ECS library such as bitECS    | Passes         | State is plain arrays. Components are declared.                     |
 | Rapier physics (WASM)         | Passes         | Has snapshot and restore, and a deterministic build.                |
 | Matter.js, Planck.js          | Partly         | Runs with no window. Save and restore needs custom work.            |
 | Phaser Arcade physics         | Fails          | Tied to Phaser scenes and frame timing. No snapshot.                |
-| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable for presentation only.                  |
+| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable as an output subsystem only.            |
 | Three.js `Object3D` tree      | Partly         | Works with no renderer and has a JSON format. Uses renderer words.  |
 | LDtk or Tiled level files     | Passes         | For authored scenes. LDtk has a world grid of rooms with neighbors. |
 
 A top-down game in a 16-bit style does not need a physics engine. Its movement is tile collision with integer positions.
 
-### Presentation slots
+### How the game model is composed (**Proposed**)
 
-A presentation slot holds no truth. Examples: renderer, sound, input.
+The game model is a record with one key for each model subsystem. Each model subsystem contributes its part of the model. The game model is the view over all the parts.
 
-A library that fills a presentation slot follows the **presentation contract**:
+- A snapshot of the game model is the snapshot of each model subsystem, under the same keys.
+- The registry reports each kind of thing together with the model subsystem that owns it.
+- The game model passes the model contract when each model subsystem passes it.
+- The entity is what joins the parts. The physics part and the state storage part refer to the same goat by one entity.
+
+### I/O subsystems
+
+An I/O subsystem connects the game model to the player. It holds no game state. (**Agreed**)
+
+These rules apply (**Proposed**):
+
+- **I/O rule.** The game gives the same result when an I/O subsystem is removed.
+- **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
+- **Input rule.** Each thing that an input subsystem sends to the game model is recorded. A recording or the agent can take the place of an input subsystem.
+
+What an output subsystem holds is derived from the game model and can be built again from it at any time.
+
+### The renderer contract
+
+A renderer is an output subsystem with more requirements. It follows the **renderer contract**:
 
 1. It draws from the game model.
 2. It gives a screenshot on request.
@@ -205,13 +230,13 @@ A library that fills a presentation slot follows the **presentation contract**:
 
 Item 3 is what resolves "the platform to my right" and a click to inspect.
 
-The renderer keeps its own objects, such as sprites, layers, and draw order. They are derived from the game model and can be built again from it at any time. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the game model has no such order.
+The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the game model has no such order.
 
 Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
 
 ### Adapters
 
-An adapter connects a library to a slot. An adapter is written when a game first picks that library (rule R7). The first game pays for one adapter in each slot.
+An adapter connects a library to a subsystem. An adapter is written when a game first picks that library (rule R7). The first game pays for one adapter in each subsystem.
 
 ## Tools
 

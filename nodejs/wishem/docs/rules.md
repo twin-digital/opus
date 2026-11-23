@@ -10,8 +10,8 @@ These rules apply to every part of Wishem and to every game made with it. A desi
 Game truth is any state or rule that can change what happens in the game. The model never depends on a renderer, a sound system, or an input device.
 Reason: the agent must be able to read, change, and rerun the game without a window.
 
-**R2. A library can hold game truth only if it passes the truth contract.** (**Agreed**)
-The contract is in `concepts.md`. A library that only presents the game follows the lighter presentation contract.
+**R2. A library can hold game truth only if it passes the model contract.** (**Agreed**)
+The contract is in `concepts.md`. An I/O subsystem holds no game state and follows lighter rules.
 Reason: a library that hides state makes rewind and rerun impossible.
 
 **R3. Game time can be stepped, recorded, replayed, and rewound.** (**Agreed**)
@@ -72,5 +72,5 @@ When the agent chooses a value or a meaning without asking, the designer can see
 **R17. The first renderer is one off-the-shelf library behind an adapter. Other engines wait.** (**Agreed**)
 See `decisions/0004-one-renderer-first-protocol-later.md`.
 
-**R18. No single interface hides different truth libraries.** (**Agreed**)
-Each game picks its own truth libraries. See `decisions/0003-no-truth-adapters.md`.
+**R18. No single interface hides different model libraries.** (**Agreed**)
+Each game picks its own model libraries. See `decisions/0003-no-single-interface-over-model-libraries.md`.

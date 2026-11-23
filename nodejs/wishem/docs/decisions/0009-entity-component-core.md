@@ -18,7 +18,7 @@ The rule about state is what allows snapshot, rewind, and the replacement of cod
 
 ## Rejected alternatives
 
-- **The entity model as one more slot for each game.** The agent would have no stable language.
+- **The entity model as one more subsystem for each game.** The agent would have no stable language.
 - **Unity-style components with free state.** A snapshot would not contain the whole game.
 
 ## Consequences

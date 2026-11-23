@@ -85,7 +85,7 @@ The agent changes the value in the running game and writes the change to the aut
 
 **What Wishem needs:**
 
-- The agent resolves "my right" against the live game. The presentation contract gives the mapping from the screen to entities.
+- The agent resolves "my right" against the live game. The renderer contract gives the mapping from the screen to entities.
 - The agent moves the platform in the running game.
 - The agent writes the new position to the room in the authored state.
 

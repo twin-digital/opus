@@ -8,7 +8,7 @@
 
 Anything that holds truth about the game is native to the agent. Anything that only presents that truth can come off the shelf.
 
-A library can hold game truth only if it passes the truth contract in `../concepts.md`. A renderer, a sound system, or an input device follows the lighter presentation contract.
+A library can hold game truth only if it passes the model contract in `../concepts.md`. A renderer, a sound system, or an input device is an I/O subsystem and follows lighter rules.
 
 ## Reason
 
