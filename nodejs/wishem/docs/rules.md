@@ -28,7 +28,7 @@ An entity is a set of components. A component is declared state with optional be
 Reason: the agent needs one stable language across games. The model contract is written in its terms.
 
 **R6. Every kind of thing is declared and registered.** (**Agreed**)
-The agent can always ask what kinds exist, what fields they have, and what they can affect.
+The agent can always ask what kinds exist, what fields they have, and which behaviors read or change them. Each component has a component type.
 Reason: the agent must discover the game's vocabulary. Tools such as tables and inspectors are derived from the declarations.
 
 **R7. Nothing is built before a design needs it.** (**Agreed**)
@@ -43,7 +43,8 @@ This applies to behaviors, generated sprites, generated room layouts, and every 
 **R9. For a behavior, the prompt is the source and the code is derived.** (**Agreed**)
 Code that does not do what the prompt says is a bug. The fix is a code change. Code that does what the prompt says and that the designer dislikes is a design change. The fix is a prompt change.
 
-**R10. The history of prompts for a behavior is stored with the behavior.** (**Agreed**)
+**R10. The history of a behavior is stored with the behavior.** (**Agreed**)
+The history holds each version. The agent wrote a version from a prompt, or a person wrote it by hand.
 
 **R11. Generated output is kept, not regenerated.** (**Agreed**)
 The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. A stored asset is replaced only when the designer asks.

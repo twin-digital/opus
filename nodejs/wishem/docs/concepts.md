@@ -12,7 +12,8 @@ The game model is the part of a game that holds all game state and all game rule
 
 - An **entity** is a thing in the game: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
-- A **component type** is the declaration of a component: its name, its fields, and what it can affect.
+- A **component type** is the declaration of a component: its name and its fields. A component type can have behaviors.
+- Each component has a component type. No component exists without a type. A component type that only one entity uses is normal.
 
 This is the model that Unity developers know: game objects with attached components that carry state and behavior. Making a game is mostly the work of creating and managing the correct components. That is also the work of the agent.
 
@@ -32,9 +33,11 @@ Earlier ideas map onto this model:
 
 ### The registry
 
-Every component type and every other kind of thing is registered (rule R6). The agent queries the registry to learn what exists and what each kind can do.
+Every component type and every other kind of thing is registered (rule R6). The agent queries the registry to learn what kinds exist, what fields each kind has, and which behaviors read or change each kind.
 
-Example: before the agent adds a `docile` status, it asks what a status can affect. The answer can be "chases the player", "deals damage on contact", "can be hit", and "blocks movement". The agent fills in the values. It asks the designer where the value is a design choice.
+The registry does not hold the things themselves. The things are in the authored state and the live state.
+
+Example: before the agent adds a `docile` status, it asks which behaviors read the statuses of an entity. The answer can be the chase behavior, the contact damage behavior, and the movement behavior. The agent then knows what a status is able to change. It asks the designer where the answer is a design choice.
 
 ### Relations between entities (**Agreed**)
 
@@ -43,6 +46,27 @@ Entities relate to each other. A room contains the entities in it. An entity can
 A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
 Which relations exist in every game, and which a game adds, is an open question.
+
+### References (**Open**)
+
+The blueprint has several ways for one thing to point at another, and no shared terms for them. This needs a brainstorm in roadmap project 1.
+
+The ways that exist now:
+
+- a relation: a field of one entity refers to another entity
+- a link: a name in a prompt refers to a registered thing
+- an ID: the name that code and links use
+- a link from a thing that is made during play to the thing in the authored state that made it
+- provenance: a thing in the authored state refers to the prompt that made it
+
+The cases to list in the brainstorm:
+
+- a reference to a different component of the same entity
+- a reference to a different entity
+- a reference to a component of a different entity
+- each of these when the two components are in the same subsystem, and when they are in different subsystems
+
+A component is in one subsystem. An entity is not in a subsystem, because its components can be in different subsystems. The brainstorm must decide if names need a namespace for each subsystem.
 
 ### Authored state and live state
 
@@ -114,13 +138,13 @@ Where a traditional editor has a code editor with a function, Wishem has a text 
 
 A behavior has these parts (**Agreed**):
 
-| Part        | Content                                                         |
-| ----------- | --------------------------------------------------------------- |
-| **Prompt**  | The designer's description. This is the source.                 |
-| **Code**    | The function that the agent wrote from the prompt.              |
-| **History** | Every prompt that shaped the behavior, viewable over time.      |
-| **Fields**  | Declared values. Answers to clarifying questions become fields. |
-| **Checks**  | Small repeatable tests that the agent writes from the prompt.   |
+| Part        | Content                                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Prompt**  | The designer's description. This is the source.                                                                           |
+| **Code**    | The function that the agent wrote from the prompt.                                                                        |
+| **History** | Every version of the behavior, viewable over time. The agent wrote a version from a prompt, or a person wrote it by hand. |
+| **Fields**  | Declared values. Answers to clarifying questions become fields.                                                           |
+| **Checks**  | Small repeatable tests that the agent writes from the prompt.                                                             |
 
 How the agent writes and runs a check is not designed. See `open-questions.md`.
 
@@ -139,7 +163,11 @@ Two kinds of problem have two different fixes (rule R9):
 
 ### Native behaviors
 
-A designer can view and edit the code behind a behavior. That action probably turns the behavior into a **native behavior**, and its prompt becomes locked. (**Agreed** as the likely direction. The details are open.)
+A person can view and edit the code behind a behavior. The edit makes a new version in the history, written by hand. A behavior whose current version was written by hand is a **native behavior**. (**Agreed**)
+
+A native behavior is not locked. The designer can give it a new prompt. The agent then writes a new version, and the behavior is not native. (**Agreed**)
+
+The agent starts the new version from the current code, as for each other prompt change (rule R11). A hand edit to code has the same problems as a hand edit to a generated room: the prompt does not describe it, and a later change can remove it. (**Proposed**)
 
 ### Asset prompts
 

@@ -22,6 +22,7 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 Notes:
 
 - Project 4 depends on an outside image model. Pixel art in one consistent style is the least certain part of the plan. An earlier prototype already generated sprites with PixelLab and Retro Diffusion, which lowers that risk.
+- Project 1 needs a brainstorm on references between entities and components. See "References" in `concepts.md`.
 - Project 4 needs a brainstorm on two proposed areas in `concepts.md`: the kinds of reapply (refresh and regenerate), and the managed execution of a prompt.
 - Project 5 needs the most design work before it can be specified. See "Ideas for project 5" below. The blueprint records what an expectation is for and not how the agent checks one. Project 5 also depends on the answer to the open question about kept bookmarks.
 - Project 7 stays parked until a second engine is wanted. Rule R1 keeps it possible.

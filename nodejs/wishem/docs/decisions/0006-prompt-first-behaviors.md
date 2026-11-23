@@ -6,11 +6,11 @@
 
 ## Decision
 
-A behavior is stored as the designer's prompt. The agent writes the function behind the prompt. The history of prompts is stored with the behavior.
+A behavior is stored as the designer's prompt. The agent writes the function behind the prompt. The history of versions is stored with the behavior.
 
 - Code that does not do what the prompt says is a bug. The code changes.
 - Code that does what the prompt says and that the designer dislikes is a design change. The prompt changes.
-- A person can view and edit the code. That probably makes the behavior a native behavior with a locked prompt.
+- A person can view and edit the code. The edit is a version in the history that was written by hand, and the behavior is then a native behavior. A new prompt from the designer makes it a prompt-first behavior again.
 
 ## Reason
 

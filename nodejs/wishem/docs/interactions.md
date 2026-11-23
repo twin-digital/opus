@@ -46,7 +46,7 @@ No whistle exists. Nothing in the game can be docile.
 **What Wishem needs:**
 
 - The agent adds new members to registered kinds: a status, a thing in the world, a behavior.
-- The registry reports what a status can affect, so that the agent can fill in the mechanics.
+- The registry reports which behaviors read a status, so that the agent can fill in the mechanics.
 - The agent knows when it lacks information. It asks about creative gaps (the whistle art, what blows it). It proposes values for mechanical gaps (the range).
 - The result is a behavior whose prompt is the designer's sentence.
 
