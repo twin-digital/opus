@@ -132,7 +132,7 @@ A bookmark has more uses:
 - **A start for a check.** A check of "cannot cross the gap without the grapple" starts from a bookmark at the edge of the gap.
 - **A report.** "It breaks here" is a bookmark that the agent can open.
 
-A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the game changes. See `planning-seeds/479-add-core-model/README.md`.
+A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the game changes. See [#479](https://github.com/twin-digital/opus/issues/479).
 
 ## Directives
 
@@ -160,7 +160,7 @@ A behavior has these parts (**Agreed**):
 | **Fields**  | Declared values. Answers to clarifying questions become fields.                                                           |
 | **Checks**  | Small repeatable tests that the agent writes from the prompt.                                                             |
 
-How the agent writes and runs a check is not designed. See `planning-seeds/481-add-behavior-prompts/README.md`.
+How the agent writes and runs a check is not designed. See [#481](https://github.com/twin-digital/opus/issues/481).
 
 Two kinds of problem have two different fixes (rule R9):
 
@@ -248,7 +248,7 @@ This is a placeholder for a design. The agent does not only run an asset prompt.
 
 ### Expectations
 
-The idea of an expectation is agreed. The mechanism is not designed. The points below say what an expectation is for. They do not say how the agent checks one. See `planning-seeds/483-add-expectations/README.md`.
+The idea of an expectation is agreed. The mechanism is not designed. The points below say what an expectation is for. They do not say how the agent checks one. See [#483](https://github.com/twin-digital/opus/issues/483).
 
 An expectation states, in natural language, something that must stay true. It is stored with the thing it describes. Example on a room: "cannot cross the gap without the grapple".
 

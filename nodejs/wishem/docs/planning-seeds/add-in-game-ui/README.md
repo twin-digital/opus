@@ -1,6 +1,6 @@
 # In-game user interface
 
-> Planning seed, not a specification. It collects what the blueprint knows about this topic, as the start of its brainstorm. The folder name is the expected name of the OpenSpec change. See `../../README.md` for the status labels.
+> Planning seed, not a specification. It collects what the blueprint knows about this topic, as the start of its brainstorm. See `../../README.md` for the status labels.
 
 ## Goal
 
@@ -8,7 +8,7 @@ This topic is the user interface that a player sees in a game: menus, dialog box
 
 ## What is agreed
 
-- A toolkit for the tools of the designer is part of the base. See [Tools](../484-add-designer-tools/README.md).
+- A toolkit for the tools of the designer is part of the base. See [Tools](https://github.com/twin-digital/opus/issues/484).
 - A renderer can draw the parts of an in-game user interface with no help from Wishem.
 
 ## Open questions

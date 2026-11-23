@@ -6,7 +6,7 @@ Each example gives what the designer says, what the designer expects, and what W
 
 The designer's words and the "What the designer expects" lists come from the owner. The "What Wishem needs" lists are the reading of the agent that wrote this file. They are not agreed.
 
-The examples start in a project that already has content. The first minute of an empty project is not designed. See `../planning-seeds/479-add-core-model/README.md`.
+The examples start in a project that already has content. The first minute of an empty project is not designed. See [#479](https://github.com/twin-digital/opus/issues/479).
 
 ## 1. The quarry room: a room with a purpose
 

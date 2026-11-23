@@ -1,4 +1,4 @@
 ---
 ---
 
-Add the Wishem planning seeds for the core and host and for the first two workbench slices. Record how GitHub issues, milestones, and OpenSpec changes relate.
+Record how GitHub issues, milestones, and OpenSpec changes relate. Move the Wishem planning seeds that have an issue to their issues.
