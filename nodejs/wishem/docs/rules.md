@@ -35,7 +35,7 @@ Reason: the agent must discover the game's vocabulary. Tools such as tables and 
 The model, the tools, and the library adapters grow when a game first needs them.
 Reason: the engine is meant to "self-construct" as features are needed to support a design.
 
-## Stored words
+## Directives
 
 **R8. A prompt is always stored with its result.** (**Agreed**)
 This applies to behaviors, generated sprites, generated room layouts, and every later kind of generated thing.
@@ -58,10 +58,10 @@ The record lets a reapply remove the old result and detect hand edits.
 
 ## Intent and checking
 
-**R14. Designer statements record intent, and the agent checks changes against them.** (**Agreed**)
-A statement is a requirement in the designer's words that is stored with the thing it describes.
+**R14. Expectations record intent, and the agent checks changes against them.** (**Agreed**)
+An expectation states, in natural language, something that must stay true. It is stored with the thing it describes.
 
-**R15. The agent does not search the whole game for side effects that no statement covers.** (**Agreed**)
+**R15. The agent does not search the whole game for side effects that no expectation covers.** (**Agreed**)
 Reason: the agent does not know what the designer intends to be possible or impossible.
 
 **R16. The agent states the assumptions it made.** (**Proposed**)

@@ -42,7 +42,7 @@ Which relations exist in every game, and which a game adds, is an open question.
 
 ### Authored state and live state
 
-- **Authored state** is what is stored in files: rooms, entity definitions, prompts, statements, assets.
+- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets.
 - **Live state** is the state of the running game.
 
 A change that the agent makes in a paused game is written back to the authored state, so that the change is still there the next day.
@@ -79,7 +79,7 @@ The game makes bookmarks automatically at registered events. Examples:
 - the player takes damage or fails
 - the designer pauses the game
 - the agent makes a change: one bookmark before the change and one after it
-- a check of a designer statement fails
+- a check of an expectation fails
 
 Each game registers its own events, so each game has its own automatic bookmarks.
 
@@ -91,15 +91,17 @@ A bookmark has more uses:
 
 A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the game changes. See `open-questions.md`.
 
-## Stored words
+## Directives
 
-Wishem stores three kinds of designer words as data. (**Agreed**)
+A **directive** is natural-language text from the designer that Wishem stores and keeps the game in agreement with. There are three kinds. (**Agreed**)
 
-| Kind                   | What it produces                  | Runs                    |
-| ---------------------- | --------------------------------- | ----------------------- |
-| **Behavior prompt**    | A function                        | Again and again in play |
-| **Generation prompt**  | An asset: a sprite, a room layout | Once, and on a reapply  |
-| **Designer statement** | Nothing. It constrains.           | When the agent checks   |
+"Directive" is an internal term. The tools and the agent use the names of the three kinds with the designer.
+
+| Kind                | What it produces                  | Runs                    |
+| ------------------- | --------------------------------- | ----------------------- |
+| **Behavior prompt** | A function                        | Again and again in play |
+| **Asset prompt**    | An asset: a sprite, a room layout | Once, and on a reapply  |
+| **Expectation**     | Nothing. It constrains.           | When the agent checks   |
 
 ### Behavior prompts
 
@@ -130,9 +132,9 @@ More proposals:
 
 A designer can view and edit the code behind a behavior. That action probably turns the behavior into a **native behavior**, and its prompt becomes locked. (**Agreed** as the likely direction. The details are open.)
 
-### Generation prompts
+### Asset prompts
 
-A generation prompt has a one-time effect. "Break up the floor with rubble piles" places rubble once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
+An asset prompt has a one-time effect. "Break up the floor with rubble piles" places rubble once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
 
 - The prompt is always stored with its result. (**Agreed**)
 - The agent records what the run produced, so that a reapply can remove it. (**Agreed**)
@@ -142,22 +144,22 @@ A generation prompt has a one-time effect. "Break up the floor with rubble piles
 - A hand edit is not written back into the prompt. Why the designer moved a rubble pile is not obvious: nearer to one thing, farther from another. A guess is brittle. (**Agreed**)
 - The record is kept for each generated thing. Each rubble pile knows which prompt made it and if a hand changed it since. The warning can then name the one changed pile. (**Proposed**)
 
-Random map generation that runs during play is a different case. It is a behavior, not a generation prompt.
+Random map generation that runs during play is a different case. It is a behavior, not an asset prompt.
 
-### Designer statements
+### Expectations
 
-A designer statement is a requirement in the designer's words, stored with the thing it describes. Example on a room: "cannot cross the cut without the grapple".
+An expectation states, in natural language, something that must stay true. It is stored with the thing it describes. Example on a room: "cannot cross the cut without the grapple".
 
-- The agent checks a change against the statements that the change can affect. It does this the way a tester does manual testing. (**Agreed**)
-- The agent can turn a statement into a deterministic automated test. (**Agreed**)
-- The agent does not simulate the whole game with every power-up to find effects that no statement covers. (**Agreed**)
+- The agent checks a change against the expectations that the change can affect. It does this the way a tester does manual testing. (**Agreed**)
+- The agent can turn an expectation into a deterministic automated test. (**Agreed**)
+- The agent does not simulate the whole game with every power-up to find effects that no expectation covers. (**Agreed**)
 - When the agent notices such an effect, it tells the designer as a remark and does not block the change. (**Proposed**)
 
 ## Slots
 
 A game is assembled from a fixed core and a set of choices. (**Agreed** as the shape)
 
-- **Fixed in every game:** the entity and component model, time, the registry, the stored words.
+- **Fixed in every game:** the entity and component model, time, the registry, the directives.
 - **Chosen for each game:** everything that plugs into the model. Each choice fills a **slot**.
 
 There are two classes of slot.

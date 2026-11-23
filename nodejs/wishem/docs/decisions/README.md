@@ -12,8 +12,8 @@ One file for each decision. Each file gives the decision, its reason, and the al
 | 0004 | [One renderer first, protocol later](0004-one-renderer-first-protocol-later.md) | **Agreed**   |
 | 0005 | [Nothing is built before a design needs it](0005-self-construction.md)          | **Agreed**   |
 | 0006 | [Behaviors are prompt-first](0006-prompt-first-behaviors.md)                    | **Agreed**   |
-| 0007 | [Generation prompts and hand edits](0007-generation-prompts-and-hand-edits.md)  | **Agreed**   |
-| 0008 | [Designer statements bound the agent's checking](0008-designer-statements.md)   | **Agreed**   |
+| 0007 | [Asset prompts and hand edits](0007-asset-prompts-and-hand-edits.md)            | **Agreed**   |
+| 0008 | [Expectations bound the agent's checking](0008-expectations.md)                 | **Agreed**   |
 | 0009 | [Entities and components are the fixed core](0009-entity-component-core.md)     | **Proposed** |
 | 0010 | [The first game starts from scratch](0010-first-game-from-scratch.md)           | **Agreed**   |
 | 0011 | [Blueprint first, then OpenSpec](0011-blueprint-then-openspec.md)               | **Agreed**   |

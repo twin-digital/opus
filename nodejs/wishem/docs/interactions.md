@@ -25,7 +25,7 @@ The designer states a purpose and constraints. The designer does not give a layo
 - **Proof by play.** The agent runs the room with no window. It confirms that a jump fails, that the grapple crosses, and that the goats chase on the way back.
 - **Asset generation in the conversation.** The ring sprite arrives in the game's style, size, and palette. It is registered as a grapple target, and "iron ring" is a name from then on.
 
-**What is stored:** the generation prompt for the room, the generation prompt for the sprite, and an origin record for each placed thing.
+**What is stored:** the asset prompt for the room, the asset prompt for the sprite, and an origin record for each placed thing.
 
 ## 2. The shift whistle: a concept that does not exist
 
@@ -96,14 +96,14 @@ In example 4 the designer raises the jump to reach a ledge in another room. The 
 **What the designer expects:**
 
 - The agent does not simulate every gap in the game with every power-up. The agent does not know what the designer intends to be possible.
-- The designer can add a statement to a room, such as "cannot cross the cut without the grapple".
-- The agent checks a change against the statements, in the way that a tester does manual testing.
-- The agent can also build deterministic automated tests from the statements.
+- The designer can add an expectation to a room, such as "cannot cross the cut without the grapple".
+- The agent checks a change against the expectations, in the way that a tester does manual testing.
+- The agent can also build deterministic automated tests from the expectations.
 
 **Result:**
 
-- If the quarry room has the designer statement "cannot cross the cut without the grapple", the agent checks the jump change against it and reports the conflict.
-- If the room has no statement, the agent makes no promise about that room.
+- If the quarry room has the expectation "cannot cross the cut without the grapple", the agent checks the jump change against it and reports the conflict.
+- If the room has no expectation, the agent makes no promise about that room.
 
 ## 7. The moved rubble: a hand edit to a generated layout
 
@@ -111,9 +111,9 @@ In example 4 the designer raises the jump to reach a ledge in another room. The 
 
 The agent places six piles. One pile blocks the run-up to the cut.
 
-**Option 1: change the prompt.** The designer adds "keep the run-up to the cut clear" to the generation prompt and selects reapply. The agent removes what the last run placed and places the rubble again.
+**Option 1: change the prompt.** The designer adds "keep the run-up to the cut clear" to the asset prompt and selects reapply. The agent removes what the last run placed and places the rubble again.
 
-**Option 2: drag the pile.** The designer moves the pile by hand. Nothing else happens. The generation prompt does not change.
+**Option 2: drag the pile.** The designer moves the pile by hand. Nothing else happens. The asset prompt does not change.
 
 If the designer later reapplies the prompt, the moved pile is one of the things the reapply replaces. The system warns first. To keep the edit, the designer changes the prompt to match.
 

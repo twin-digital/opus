@@ -19,15 +19,15 @@ These questions are not settled. Each one names the roadmap project that must an
 8. **Does a rule system exist as data, on top of behaviors as code?** A system of triggers and effects can be read without running it. The proposal is that the agent adds one when a game has enough behaviors of that shape. (Project 3)
 9. **How is a change in a paused game written back to authored state?** What happens when the live change conflicts with a file? (Project 2)
 10. **Which relations between entities are part of the fixed core?** A room contains entities, and an entity can be attached to another. Which relations exist in every game, and which a game adds, is not settled. (Project 1)
-11. **How does a kept bookmark stay valid when the game model changes?** A bookmark that is stored as a snapshot goes out of date when a component changes. A bookmark that is stored as a recording from the start always loads, but the same inputs can lead to a different place after a rule changes. The answer affects checks of designer statements. (Projects 1, 5)
+11. **How does a kept bookmark stay valid when the game model changes?** A bookmark that is stored as a snapshot goes out of date when a component changes. A bookmark that is stored as a recording from the start always loads, but the same inputs can lead to a different place after a rule changes. The answer affects checks of expectations. (Projects 1, 5)
 
-## Stored words
+## Directives
 
 12. **What exactly happens when a person edits the code of a behavior?** The likely direction is a native behavior with a locked prompt. Can a native behavior return to a prompt? (Project 3)
 13. **Are fields, checks, and links part of every behavior?** Proposed. (Project 3)
 14. **Is generated output kept and edited, or regenerated?** Proposed as rule R11. (Projects 3, 4)
 15. **How are conflicts handled on a reapply?** The brainstorm noted this risk and did not resolve it. (Project 4)
-16. **How precise must a designer statement be before it becomes an automated test?** (Project 5)
+16. **How precise must an expectation be before it becomes an automated test?** (Project 5)
 
 ## Assembly
 

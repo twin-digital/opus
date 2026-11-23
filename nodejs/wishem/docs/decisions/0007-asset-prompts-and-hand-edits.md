@@ -1,4 +1,4 @@
-# 0007. Generation prompts and hand edits
+# 0007. Asset prompts and hand edits
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
@@ -6,7 +6,7 @@
 
 ## Decision
 
-A prompt that places things at design time is a generation prompt. Its result is an asset, the same as a generated sprite.
+A prompt that places things at design time is an asset prompt. Its result is an asset, the same as a generated sprite.
 
 - The prompt is always stored with its result.
 - The agent records what a run produced.
@@ -17,7 +17,7 @@ A prompt that places things at design time is a generation prompt. Its result is
 
 ## Reason
 
-A generation prompt has a one-time effect. It does not create a function that runs again and again. Feeding a hand edit back into the prompt is brittle, because the reason for the edit is not obvious.
+An asset prompt has a one-time effect. It does not create a function that runs again and again. Feeding a hand edit back into the prompt is brittle, because the reason for the edit is not obvious.
 
 ## Rejected alternatives
 

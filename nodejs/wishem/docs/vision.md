@@ -15,7 +15,7 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 ## What makes it different
 
 - **The agent works inside the game, not on top of an editor.** It reads and changes the game's own model directly. It does not operate a tool that was made for human hands.
-- **Your words are the source.** Behaviors, assets, and requirements are stored as what you asked for. The code and the content are derived from them.
+- **Your words are the source.** Behaviors, assets, and expectations are stored as what you asked for. The code and the content are derived from them.
 - **The agent can replay what happened.** Pause after a missed jump and say "make the jump high enough so I would have made this". The agent runs your exact inputs again with a new value.
 - **Nothing exists until a design needs it.** The model and the tools start nearly empty and grow with the game. Each game gets its own.
 
@@ -26,7 +26,7 @@ The goal in one phrase: to "speak a game into existence" through an agent that i
 - **Generates the assets that the model defines.** These are sprites, room layouts, maps, and every other kind of content that the game has. Each asset is stored with the prompt that made it.
 - **Creates the tools to see and change the model.** Inspectors, tables, and overlays appear when the game has something for them to show.
 - **Adjusts, observes, and queries the model and the game state from inside the running game.** The agent can also rewind play and run it again with a changed value.
-- **Automates tests and checks design constraints that are written in natural language.** The agent checks each change against the constraints that the designer wrote.
+- **Automates tests and checks expectations that are written in natural language.** An expectation states something that must stay true. The agent checks each change against the expectations that the designer wrote.
 
 ## What Wishem is not
 

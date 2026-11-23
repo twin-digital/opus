@@ -8,16 +8,16 @@ This file is the only part of the blueprint that describes future work. Each pro
 
 The list of projects is **Agreed**. The order after project 0 is **Open**.
 
-| #   | Project                 | Result                                                                                                           | Depends on |
-| --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------- |
-| 0   | **Blueprint**           | This folder.                                                                                                     | None       |
-| 1   | **Core model**          | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun. A first renderer adapter.  | 0          |
-| 2   | **Agent access**        | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state. | 1          |
-| 3   | **Behavior prompts**    | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                  | 1, 2       |
-| 4   | **Generation prompts**  | Room layouts and sprites from prompts. Origin records, reapply, and the hand-edit warning.                       | 1, 2       |
-| 5   | **Designer statements** | Statements stored with rooms and other things. The agent checks changes against them and turns them into tests.  | 1, 2       |
-| 6   | **Tools**               | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.  | 1, 2       |
-| 7   | **Other engines**       | A wire protocol between the game model and a renderer in another engine. **Parked.**                             | 1          |
+| #   | Project              | Result                                                                                                            | Depends on |
+| --- | -------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------- |
+| 0   | **Blueprint**        | This folder.                                                                                                      | None       |
+| 1   | **Core model**       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun. A first renderer adapter.   | 0          |
+| 2   | **Agent access**     | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.  | 1          |
+| 3   | **Behavior prompts** | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                   | 1, 2       |
+| 4   | **Asset prompts**    | Room layouts and sprites from prompts. Origin records, reapply, and the hand-edit warning.                        | 1, 2       |
+| 5   | **Expectations**     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests. | 1, 2       |
+| 6   | **Tools**            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.   | 1, 2       |
+| 7   | **Other engines**    | A wire protocol between the game model and a renderer in another engine. **Parked.**                              | 1          |
 
 Notes:
 
