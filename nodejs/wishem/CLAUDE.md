@@ -1,6 +1,6 @@
 # Wishem
 
-Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the game runs. The agent builds and changes the game through the game's own model.
+Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the product runs. The agent builds and changes the product through the model of the product.
 
 The `docs/` folder holds the blueprint.
 
@@ -13,7 +13,7 @@ The `docs/` folder holds the blueprint.
 
 ## How to work
 
-- Plan each roadmap project as an OpenSpec change. Start from the GitHub issue of the project. `docs/roadmap.md` gives the issue of each project.
+- Plan each change as an OpenSpec change. Start from the GitHub issue of the change. `docs/roadmap.md` gives the milestones and their issues.
 - Record each thing that is not settled in the GitHub issue of its topic. If the topic has no issue, create one with the label `app:wishem`. The blueprint has no list of open questions. To find the issues, use the label `app:wishem` or the [Wishem project](https://github.com/orgs/twin-digital/projects/5).
 - A specification in `openspec/specs/wishem/` overrides the blueprint on the same topic.
 - Only text marked **Agreed** is settled. Text with no label has no status. Do not treat an item marked **Proposed** as a requirement. Confirm it with the owner in the change that depends on it.

@@ -21,7 +21,7 @@ The designer states a purpose and constraints. The designer does not give a layo
 - **A world with named places.** "Between the Weighbridge and the Kiln" means that rooms have names and neighbors. The agent adds the room and an exit to each neighbor.
 - **Biomes as a registered kind.** "Quarry" resolves to a tileset, a ground pattern, and standard scenery.
 - **A catalog of things that exist.** The agent finds "grapple" and "goat" by name.
-- **Layout from intent.** "Too wide to jump" and "something you can hook" are measurements. The agent reads the jump distance and the grapple range from the game model. It sizes the gap between the two.
+- **Layout from intent.** "Too wide to jump" and "something you can hook" are measurements. The agent reads the jump distance and the grapple range from the model. It sizes the gap between the two.
 - **Sightlines.** "In plain view" means that the player sees the ring from the entrance. The agent checks this.
 - **Pacing.** "No enemies until the player has crossed" means that the goats appear after the first crossing. The agent adds that trigger.
 - **Proof by play.** The agent runs the room with no window. It confirms that a jump fails, that the grapple crosses, and that the goats chase on the way back.
@@ -38,7 +38,7 @@ No whistle exists. Nothing in the game can be docile.
 **What the designer expects:**
 
 1. The agent understands that "docile" is a status, or asks questions until it does.
-2. The agent learns the mechanical effects that a status can have from the game model, and registers the new status.
+2. The agent learns the mechanical effects that a status can have from the model, and registers the new status.
 3. The agent creates a "shift whistle". It asks what art to use or generate and what makes the whistle blow.
 4. The agent suggests how far the whistle carries.
 5. The agent builds a behavior for the goats. The behavior adds the `docile` status on spawn and removes it when the whistle blows in range.
