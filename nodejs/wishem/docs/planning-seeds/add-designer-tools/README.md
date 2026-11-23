@@ -34,12 +34,11 @@ This project makes the designer's view of the game: the tools to see and change 
 
 1. **Which changes does the designer make by hand, and which by request?** A drag is agreed. Editing a field value in an inspector is proposed.
 2. **How are recognized names in text handled when a match is not certain?** A common word such as "gap" or "ring" can also be a name. A name can match more than one thing. The tools must also show the difference between an immediate match and a link that the agent confirmed.
-3. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`.
-4. **What is the illustration style?**
-5. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed.
 
 ## Open questions in other seeds
 
+- How does the agent's activity move on the screen? See [Brand identity](../define-brand-identity/README.md).
+- The logo mark and the illustration style. See [Brand identity](../define-brand-identity/README.md).
 - Where does the conversation with the agent happen? See [Agent access](../add-agent-access/README.md).
 - How does the designer review the agent's assumptions? See [Behavior prompts](../add-behavior-prompts/README.md).
 

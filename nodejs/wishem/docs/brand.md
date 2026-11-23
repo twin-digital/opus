@@ -121,4 +121,4 @@ The same story is in [`vision.md`](vision.md#the-name), with the rule for how to
 
 ## Still to decide
 
-The logo mark (a spark, a lantern or a little clay figure?), the illustration style and the motion language for agent activity. These are tracked in [the planning seed for the tools](planning-seeds/add-designer-tools/README.md#open-questions).
+The logo mark (a spark, a lantern or a little clay figure?), the illustration style and the motion language for agent activity. These are tracked in [the planning seed for the brand identity](planning-seeds/define-brand-identity/README.md#open-questions).

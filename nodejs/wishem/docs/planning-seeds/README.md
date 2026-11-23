@@ -18,11 +18,12 @@ The name of each folder is the expected name of the OpenSpec change for the proj
 
 These seeds are not roadmap projects yet:
 
-| Seed                                                   | Topic                  |
-| ------------------------------------------------------ | ---------------------- |
-| [`add-in-game-ui`](add-in-game-ui/README.md)           | In-game user interface |
-| [`add-sound-and-music`](add-sound-and-music/README.md) | Sound and music        |
-| [`settle-product-name`](settle-product-name/README.md) | Product name           |
+| Seed                                                       | Topic                  |
+| ---------------------------------------------------------- | ---------------------- |
+| [`add-in-game-ui`](add-in-game-ui/README.md)               | In-game user interface |
+| [`add-sound-and-music`](add-sound-and-music/README.md)     | Sound and music        |
+| [`define-brand-identity`](define-brand-identity/README.md) | Brand identity         |
+| [`settle-product-name`](settle-product-name/README.md)     | Product name           |
 
 Record each thing that is not settled in a seed: a question, an idea, or a proposal that needs a brainstorm. If no seed fits, make a new one. The blueprint has no other list of open questions.
 
