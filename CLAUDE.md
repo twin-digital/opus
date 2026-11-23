@@ -72,7 +72,8 @@ Work is tracked in GitHub issues in `twin-digital/opus`.
 
 - **One milestone has many issues.** A milestone is a product outcome. An issue belongs to one milestone or to none.
 - **One issue has one OpenSpec change.** Each change has one primary issue. Create the issue before the change. The change name is `<issue-number>-<kebab-name>`, for example `221-add-in-game-ui`. The frontmatter of `proposal.md` records the issue and the milestone. See `openspec/config.yaml`.
-- **Labels.** Each issue has one type label (`feature` or `bug`) and one product label (`app:<product>`, for example `app:wishem`). All type labels have the same colour. All product labels have the same colour. Give a new label the colour of its group.
+- **Type.** Each issue has one GitHub issue type: `Feature`, `Bug`, or `Task`. Do not use a label for the type. `gh issue create` cannot set the type. Set it after you create the issue: `gh api --method PATCH repos/twin-digital/opus/issues/<number> -f type=Feature`.
+- **Product label.** Each issue has one product label (`app:<product>`, for example `app:wishem`). All product labels have the same colour. Do not put the product name in the title of the issue.
 - **Relations.** Set each relation between issues (blocked by, sub-issue) on the issues in GitHub. Do not record a relation in a change artifact.
 - **Boards.** Each product has one GitHub project. Add each issue of the product to that project.
 - **Work that skips OpenSpec.** Work that goes directly to a pull request (a bug fix, a config change, docs) also gets an issue when it is planned before it starts.

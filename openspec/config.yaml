@@ -27,8 +27,8 @@ context: |
   Issue tracking: each change has one primary GitHub issue in `twin-digital/opus`, and each issue
   has at most one change. The issue must exist before the change is created. The change name starts
   with the issue number: `<issue-number>-<kebab-name>` (e.g. `221-add-in-game-ui`). The issue has
-  one type label (`feature` or `bug`) and one product label (`app:<product>`), and can belong to
-  one milestone. Relations between issues (blocked by, sub-issue) are recorded on the issues in
+  one GitHub issue type (`Feature`, `Bug`, or `Task`) and one product label (`app:<product>`), and
+  can belong to one milestone. Relations between issues (blocked by, sub-issue) are recorded on the issues in
   GitHub, never in change artifacts.
 
 # Per-artifact rules (optional)
