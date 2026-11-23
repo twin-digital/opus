@@ -30,10 +30,6 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Registry**: The record of every declared kind of thing in a game. The agent queries it.
 
-**Game graph**: The entities and their relations, in the game's words. The model owns it.
-
-**Render graph**: The renderer's objects, in the renderer's words. It is built from the game graph.
-
 **Authored state**: What is stored in files: rooms, definitions, prompts, statements, assets.
 
 **Live state**: The state of the running game.
@@ -96,13 +92,13 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 ## Terms that are not used
 
-| Do not use                      | Use                        | Reason                                               |
-| ------------------------------- | -------------------------- | ---------------------------------------------------- |
-| Scene graph                     | Game graph or render graph | The term hides which of the two graphs is meant.     |
-| Invariant                       | Designer statement         | The designer writes it in natural language.          |
-| Engine, for Wishem as a whole   | Wishem, or the game model  | No engine is built ahead of a game.                  |
-| Sim                             | Game model                 | One term for the concept.                            |
-| Script                          | Behavior                   | The prompt is the source, not a script.              |
-| Provenance                      | Origin record              | Simpler word for the same record.                    |
-| Regenerate, for a room or image | Reapply                    | Reapply names the designer's action and its warning. |
-| Client and server               | Game model and renderer    | No wire protocol exists. See `decisions/0004`.       |
+| Do not use                      | Use                                   | Reason                                                                                           |
+| ------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Scene graph                     | Game model, or the renderer's objects | Use "game model" for entities and components. Use "the renderer's objects" for the display side. |
+| Invariant                       | Designer statement                    | The designer writes it in natural language.                                                      |
+| Engine, for Wishem as a whole   | Wishem, or the game model             | No engine is built ahead of a game.                                                              |
+| Sim                             | Game model                            | One term for the concept.                                                                        |
+| Script                          | Behavior                              | The prompt is the source, not a script.                                                          |
+| Provenance                      | Origin record                         | Simpler word for the same record.                                                                |
+| Regenerate, for a room or image | Reapply                               | Reapply names the designer's action and its warning.                                             |
+| Client and server               | Game model and renderer               | No wire protocol exists. See `decisions/0004`.                                                   |

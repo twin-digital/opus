@@ -24,5 +24,5 @@ Off-the-shelf libraries are acceptable only if everything in them can be exposed
 
 ## Consequences
 
-- The renderer's object tree is a picture of the game graph and is built again from it.
+- The renderer's object tree is a picture of the game model and is built again from it.
 - Each library is judged against a contract before a game adopts it.

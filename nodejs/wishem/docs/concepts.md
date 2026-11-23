@@ -32,14 +32,13 @@ Every component type and every other kind of thing is registered (rule R6). The 
 
 Example: before the agent adds a `docile` status, it asks what a status can affect. The answer can be "chases the player", "deals damage on contact", "can be hit", and "blocks movement". The agent fills in the values. It asks the designer where the value is a design choice.
 
-### Two graphs
+### Relations between entities (**Proposed**)
 
-A game has two structures that look alike and are different.
+Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
-- The **game graph** uses the game's words: "goat, docile, in the Quarry Cut". The model owns it. The agent speaks it.
-- The **render graph** uses the renderer's words: "sprite, frame 2, layer 3". The renderer owns it. It is built again from the game graph.
+A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
-In a 3/4 perspective the two also disagree on order. Drawing order follows the y position. The grouping of the game graph does not.
+Which relations exist in every game, and which a game adds, is an open question.
 
 ### Authored state and live state
 
@@ -154,7 +153,7 @@ Candidates discussed (**Unverified**):
 | Rapier physics (WASM)         | Passes         | Has snapshot and restore, and a deterministic build.                |
 | Matter.js, Planck.js          | Partly         | Runs with no window. Save and restore needs custom work.            |
 | Phaser Arcade physics         | Fails          | Tied to Phaser scenes and frame timing. No snapshot.                |
-| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable as a render graph only.                 |
+| PixiJS or Phaser display tree | Fails          | Holds GPU objects. Suitable for presentation only.                  |
 | Three.js `Object3D` tree      | Partly         | Works with no renderer and has a JSON format. Uses renderer words.  |
 | LDtk or Tiled level files     | Passes         | For authored scenes. LDtk has a world grid of rooms with neighbors. |
 
@@ -172,6 +171,8 @@ A library that fills a presentation slot follows the **presentation contract**:
 4. It draws tool overlays, such as a ring that shows a distance.
 
 Item 3 is what resolves "the platform to my right" and a click to inspect.
+
+The renderer keeps its own objects, such as sprites, layers, and draw order. They are derived from the game model and can be built again from it at any time. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the game model has no such order.
 
 Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
 
