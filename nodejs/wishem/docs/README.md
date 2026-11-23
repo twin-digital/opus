@@ -1,6 +1,6 @@
 # Wishem blueprint
 
-Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the game runs. The agent builds and changes the game through the game's own model.
+Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the product runs. The agent builds and changes the product through the model of the product.
 
 This folder is the blueprint for Wishem. It records the vision, the concepts, the rules, and the roadmap that came out of the first brainstorm.
 
@@ -45,7 +45,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 
 - `vision.md`: what Wishem is, what makes it different, what it does, what it is not, and where the name comes from.
 - `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
-- `concepts.md`: the entity and component model, the three kinds of directive, subsystems, and contracts.
+- `concepts.md`: the project and its two parts, the entity and component model, the three kinds of directive, subsystems, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.
 - `examples/`: worked examples of a designer and the agent, and a wireframe of the editor. An example is an illustration. It is not a rule or a requirement.

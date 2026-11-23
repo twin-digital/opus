@@ -4,44 +4,57 @@
 
 The examples in this file use the quarry room from `examples/interactions.md`. That room has a gap that the player crosses with a grapple, two goats, and a shift whistle.
 
-## The game model
+## The project (**Agreed**)
 
-The **game model** is what the game is. It has three parts:
+A **project** is what a designer makes with Wishem. It has two parts:
+
+- the **product**: the part that the designer ships.
+- the **workbench**: the part that the designer uses to make the product.
+
+Each part is a model, and each model has its own core.
+
+The workbench is a model that is made with Wishem. It is not a game. The workbench shows and changes the product.
+
+"Product" is an internal term. With the designer, the agent says the word for the kind of product, such as "the game".
+
+## The model
+
+The **model** is what a core runs. It has three parts:
 
 - the **definitions**: the declared kinds, such as component types, entity definitions, and relations. They say what can exist.
 - the behaviors: the code that changes state during play.
-- the authored state: the things that are stored in files. The game starts from them.
+- the authored state: the things that are stored in files. A simulation starts from them.
 
-A **simulation** is one running instance of the game model. It has its own live state, its own position in time, its own source of inputs, and its own recording. The core advances a simulation in steps. A simulation runs with no window. An I/O subsystem can be attached to a simulation and is not part of it.
+A **simulation** is one running instance of the model. It has its own live state, its own position in time, its own source of inputs, and its own recording. The core advances a simulation in steps. A simulation runs with no window. An I/O subsystem can be attached to a simulation and is not part of it.
 
-More than one simulation of the same game model can run at the same time. The designer plays in one simulation while the agent runs others, for example to rerun a jump or to do checks.
+More than one simulation of the same model can run at the same time. The designer plays in one simulation while the agent runs others, for example to rerun a jump or to do checks.
 
-"Simulation" is an internal term. With the designer, the agent says "the game".
+"Simulation" is an internal term. With the designer, the agent says the word for the kind of product, such as "the game".
 
 The renderer draws a picture of a simulation and never owns any of it.
 
 ### Entities and components (**Agreed**)
 
-- An **entity** is a thing in the game: the hero, a goat, an iron ring, a door.
+- An **entity** is a thing in a model: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
 - A **component type** is the declaration of a component: its name and its fields. A component type can have behaviors.
 - Each component has a component type. No component exists without a type. A component type that only one entity uses is normal.
 
 This is the model that Unity developers know: game objects with attached components that carry state and behavior. Making a game is mostly the work of creating and managing the correct components. That is also the work of the agent.
 
-The entity and component model is the language that the agent speaks. It is the same in every game (rule R5). What stores the entities and components is a built-in subsystem. See "Subsystems".
+The entity and component model is the language that the agent speaks. It is the same in every product (rule R5). What stores the entities and components is a built-in subsystem. See "Subsystems".
 
-There is one difference from Unity (**Proposed**). All state lives in declared fields, and behavior code keeps no state of its own (rule R4). This is what allows a snapshot, a rewind, and the replacement of code in a running game.
+There is one difference from Unity (**Proposed**). All state lives in declared fields, and behavior code keeps no state of its own (rule R4). This is what allows a snapshot, a rewind, and the replacement of code in a running product.
 
 Earlier ideas map onto this model:
 
-| Idea from the brainstorm              | In the model                                          |
-| ------------------------------------- | ----------------------------------------------------- |
-| "Declare and register a concept"      | Define a component type                               |
-| The `docile` status                   | A component, or an entry in a `Statuses` component    |
-| The rule that wakes the goats         | A behavior on a component                             |
-| An inspector and tables in the editor | Tools derived from the declared fields                |
-| A "self-constructing engine"          | A library of component types that grows with the game |
+| Idea from the brainstorm              | In the model                                             |
+| ------------------------------------- | -------------------------------------------------------- |
+| "Declare and register a concept"      | Define a component type                                  |
+| The `docile` status                   | A component, or an entry in a `Statuses` component       |
+| The rule that wakes the goats         | A behavior on a component                                |
+| An inspector and tables in the editor | Tools derived from the declared fields                   |
+| A "self-constructing engine"          | A library of component types that grows with the product |
 
 ### The registry
 
@@ -57,7 +70,7 @@ Entities relate to each other. A room contains the entities in it. An entity can
 
 A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
-Which relations exist in every game, and which a game adds, is an open question.
+Which relations exist in every product, and which a product adds, is an open question.
 
 ### References (**Open**)
 
@@ -82,12 +95,12 @@ A component is in one subsystem. An entity is not in a subsystem, because its co
 
 ### Authored state and live state
 
-- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the game model.
+- **Authored state** is what is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the model.
 - **Live state** is the state of one simulation. A simulation makes its live state from the authored state when it starts.
 
-"Game state" means the authored state and the live state together.
+"State" means the authored state and the live state together.
 
-A change that the agent makes in a paused game is written back to the authored state, so that the change is still there the next day.
+A change that the agent makes in a paused simulation is written back to the authored state, so that the change is still there the next day.
 
 ## Time
 
@@ -115,16 +128,16 @@ A bookmark gives the designer and the agent a shared name for a moment, in the w
 - "Go back to when I entered the room."
 - "Rerun from where I picked up the grapple, with the higher jump."
 
-The game makes bookmarks automatically at registered events. Examples:
+A simulation makes bookmarks automatically at registered events. Examples:
 
 - the player enters a room
 - the player gets an item or an ability
 - the player takes damage or fails
-- the designer pauses the game
+- the designer pauses the simulation
 - the agent makes a change: one bookmark before the change and one after it
 - a check of an expectation fails
 
-Each game registers its own events, so each game has its own automatic bookmarks.
+Each product registers its own events, so each product has its own automatic bookmarks.
 
 A bookmark has more uses:
 
@@ -132,11 +145,11 @@ A bookmark has more uses:
 - **A start for a check.** A check of "cannot cross the gap without the grapple" starts from a bookmark at the edge of the gap.
 - **A report.** "It breaks here" is a bookmark that the agent can open.
 
-A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the game changes. See [#479](https://github.com/twin-digital/opus/issues/479).
+A bookmark inside one play session is simple. A bookmark that is kept for a long time is not, because the product changes. See [#479](https://github.com/twin-digital/opus/issues/479).
 
 ## Directives
 
-A **directive** is natural-language text from the designer that Wishem stores and keeps the game in agreement with. There are three kinds. (**Agreed**)
+A **directive** is natural-language text from the designer that Wishem stores and keeps the product in agreement with. There are three kinds. (**Agreed**)
 
 "Directive" is an internal term. The tools and the agent use the names of the three kinds with the designer.
 
@@ -211,7 +224,7 @@ A request with no stored prompt cannot be applied again. For a reapply, it has t
 
 Provenance applies to authored state only. A thing that is made during play has no provenance. It has a link to the thing in the authored state that made it. Example: a goat that appears after the first crossing links to the rule that made it appear, and that rule has provenance.
 
-A change that the agent makes in a paused game gets provenance when it is written to the authored state.
+A change that the agent makes in a paused simulation gets provenance when it is written to the authored state.
 
 A long chain of links between things that are made during play can make the first source slow to find. This is not a problem now, and no design exists for it.
 
@@ -259,10 +272,10 @@ An expectation states, in natural language, something that must stay true. It is
 
 ## Subsystems
 
-A game is assembled from subsystems. A **subsystem** is a part of a game that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter. (**Agreed**)
+A product is assembled from subsystems. A **subsystem** is a part of a product that has one job. Wishem provides a subsystem itself, or a library provides it through an adapter. (**Agreed**)
 
-- A **built-in subsystem** is a subsystem that Wishem provides. It is in every game. Examples: the storage for entities and components, and the storage for authored state, which holds the registry and the directives.
-- Each game chooses its other subsystems. Examples: physics, the renderer, sound.
+- A **built-in subsystem** is a subsystem that Wishem provides. It is in every product. Examples: the storage for entities and components, and the storage for authored state, which holds the registry and the directives.
+- Each product chooses its other subsystems. Examples: physics, the renderer, sound.
 
 The **core** is the part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
 
@@ -270,7 +283,7 @@ There are three kinds of subsystem.
 
 | Kind                 | What it does                                       | Examples                                     |
 | -------------------- | -------------------------------------------------- | -------------------------------------------- |
-| **Model subsystem**  | Holds game state or game rules.                    | Live state storage, authored scenes, physics |
+| **Model subsystem**  | Holds state or rules.                              | Live state storage, authored scenes, physics |
 | **Output subsystem** | Shows or plays a simulation.                       | Renderer, sound                              |
 | **Input subsystem**  | Changes what the player does into recorded inputs. | Gamepad, keyboard, touch                     |
 
@@ -278,7 +291,7 @@ Output subsystems and input subsystems together are the **I/O subsystems**.
 
 ### Model subsystems
 
-A model subsystem holds game state or game rules. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
+A model subsystem holds state or rules. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
 
 1. Its whole state can be read and written as data.
 2. Its state can be saved and restored exactly.
@@ -310,11 +323,11 @@ The live state of a simulation is a record with one key for each model subsystem
 
 ### I/O subsystems
 
-An I/O subsystem connects a simulation to the player. It holds no game state. (**Agreed**)
+An I/O subsystem connects a simulation to the player. It holds no state. (**Agreed**)
 
 These rules apply (**Proposed**):
 
-- **I/O rule.** The game gives the same result when an I/O subsystem is removed.
+- **I/O rule.** A simulation gives the same result when an I/O subsystem is removed.
 - **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
 - **Input rule.** Each thing that an input subsystem sends to a simulation is recorded. A recording or the agent can take the place of an input subsystem.
 
@@ -337,15 +350,15 @@ Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.j
 
 ### Adapters
 
-An adapter connects a library to a subsystem. An adapter is written when a game first picks that library (rule R7). The first game pays for one adapter in each subsystem that a library provides.
+An adapter connects a library to a subsystem. An adapter is written when a product first picks that library (rule R7). The first game pays for one adapter in each subsystem that a library provides.
 
 A built-in subsystem needs no adapter. A library can replace a built-in subsystem through an adapter. Example: an ECS library as the storage for entities and components.
 
 ## Tools
 
-The designer sees the game through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. See the wireframe in `examples/`.
+The designer sees the product through tools: a view of the screen, an inspector, tables of the registered kinds, a world map. The workbench holds the tools. See the wireframe in `examples/`.
 
-- Tools are built as the project needs them. Each game can have tools that only it uses. (**Agreed**)
+- Tools are built as the project needs them. Each project can have tools that only it uses. (**Agreed**)
 - A table and an inspector for any registered kind are derived from its declaration. A hand-built panel is the exception. (**Proposed**)
 - A toolkit exists so that the agent can add a tool without building an editor from nothing. (**Agreed** as an expected part of the base)
 
@@ -355,8 +368,8 @@ The tools highlight each known name in text. This applies to directives, to the 
 
 A name is known if it is in one of these sets:
 
-- the names of things in the game, such as "goat" and "the Kiln"
-- the kinds that the game registered, such as "status" and "item"
+- the names of things in the product, such as "goat" and "the Kiln"
+- the kinds that the product registered, such as "status" and "item"
 - the terms of Wishem, such as "expectation", "bookmark", and "reapply"
 
 The highlight has these effects:

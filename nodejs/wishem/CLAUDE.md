@@ -1,6 +1,6 @@
 # Wishem
 
-Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the game runs. The agent builds and changes the game through the game's own model.
+Wishem is a just-in-time game development environment, assembled by an agent that lives inside your game and makes what you describe. The designer talks to the agent while the product runs. The agent builds and changes the product through the model of the product.
 
 The `docs/` folder holds the blueprint.
 

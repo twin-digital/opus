@@ -4,23 +4,31 @@
 
 Use one term for each concept. Use these exact terms in specifications and in code.
 
-The designer sees only some of these terms. The agent and the tools use the terms for the things that a designer makes and does: behavior prompt, asset prompt, expectation, bookmark, reapply. The other terms are internal. With the designer, the agent uses the words of the game.
+The designer sees only some of these terms. The agent and the tools use the terms for the things that a designer makes and does: behavior prompt, asset prompt, expectation, bookmark, reapply. The other terms are internal. With the designer, the agent uses the words of the product. Example: the agent says "the game" when the product is a game.
 
 Terms in each group are in alphabetical order.
 
 ## People and roles
 
-**Agent**: The AI that builds and changes the game for the designer. The designer can call it Wishem, 'shem, or 'shemmy.
+**Agent**: The AI that builds and changes the product for the designer. The designer can call it Wishem, 'shem, or 'shemmy.
 
-**Designer**: The person who directs the game. The designer gives direction in natural language and does not need to read code.
+**Designer**: The person who directs the product. The designer gives direction in natural language and does not need to read code.
 
 **Owner**: The person who owns the Wishem project and confirms its decisions.
 
-**Wishem**: The product. Also the name of the agent.
+**Wishem**: The environment that a designer uses to make a project. Also the name of the agent.
+
+## The project
+
+**Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
+
+**Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. Each part is a model, and each model has its own core.
+
+**Workbench**: The part of a project that the designer uses to make the product. The workbench shows and changes the product. It holds the tools. A workbench is a model that is made with Wishem. It is not a game.
 
 ## The model
 
-**Authored state**: What is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the game model.
+**Authored state**: What is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the model.
 
 **Behavior**: Something a component does during play. A behavior has a prompt, code, fields, checks, and a history.
 
@@ -28,19 +36,15 @@ Terms in each group are in alphabetical order.
 
 **Component type**: The declaration of a component: its name and its fields. A component type can have behaviors. A component type that only one entity uses is normal.
 
-**Definitions**: The declared kinds in a game model: component types, entity definitions, and relations. They say what can exist. The registry reports them.
+**Definitions**: The declared kinds in a model: component types, entity definitions, and relations. They say what can exist. The registry reports them.
 
-**Entity**: A thing in the game. An entity is the set of its components. The components of one entity can be in different subsystems.
+**Entity**: A thing in a model. An entity is the set of its components. The components of one entity can be in different subsystems.
 
 **Entity definition** (**Proposed**): The declaration of a kind of entity, such as "goat": its name and its component types.
 
-**Event** (**Proposed**): Something that happens in the game at one step. A behavior can respond to an event. The game can make a bookmark at an event.
+**Event** (**Proposed**): Something that happens in a simulation at one step. A behavior can respond to an event. A simulation can make a bookmark at an event.
 
 **Field**: One declared value in a component.
-
-**Game model**: What the game is: its definitions, its behaviors, and its authored state.
-
-**Game state**: The authored state and the live state together.
 
 **ID** (**Proposed**): The name of a registered thing that code and links use. It does not change.
 
@@ -48,11 +52,15 @@ Terms in each group are in alphabetical order.
 
 **Live state**: The state of one simulation.
 
+**Model**: What a core runs: its definitions, its behaviors, and its authored state. The product and the workbench of a project are each a model.
+
 **Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt.
 
 **Registry**: The record of the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state.
 
 **Relation**: A declared field that refers to another entity. Examples: a room contains an entity, and a held item is attached to the hero.
+
+**State**: The authored state and the live state together.
 
 ## Time
 
@@ -68,7 +76,7 @@ Terms in each group are in alphabetical order.
 
 **Rewind**: To return to an earlier point of the current play session.
 
-**Simulation**: One running instance of a game model. It has its own live state, position in time, source of inputs, and recording. The core advances it in steps. It runs with no window. This is an internal term. With the designer, say "the game".
+**Simulation**: One running instance of a model. It has its own live state, position in time, source of inputs, and recording. The core advances it in steps. It runs with no window. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
 **Snapshot**: The whole live state of a simulation, saved as data.
 
@@ -80,13 +88,13 @@ Terms in each group are in alphabetical order.
 
 **Behavior prompt**: The designer's description of a behavior. It is the source of the behavior.
 
-**Directive**: Natural-language text from the designer that Wishem stores and keeps the game in agreement with. The three kinds are behavior prompt, asset prompt, and expectation. This is an internal term.
+**Directive**: Natural-language text from the designer that Wishem stores and keeps the product in agreement with. The three kinds are behavior prompt, asset prompt, and expectation. This is an internal term.
 
 **Expectation**: Natural-language text from the designer that states something that must stay true. It is stored with the thing it describes. Example: "cannot cross the gap without the grapple".
 
 ## Generated things
 
-**Asset**: A generated or imported thing that the game uses: a sprite, a room layout, a sound.
+**Asset**: A generated or imported thing that the product uses: a sprite, a room layout, a sound.
 
 **Hand edit**: A direct change by the designer to a generated thing, such as a drag.
 
@@ -112,7 +120,7 @@ Terms in each group are in alphabetical order.
 
 **Adapter**: The code that connects a library to a subsystem.
 
-**Built-in subsystem**: A subsystem that Wishem provides. It is in every game.
+**Built-in subsystem**: A subsystem that Wishem provides. It is in every product.
 
 **Core**: The part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
 
@@ -124,33 +132,37 @@ Terms in each group are in alphabetical order.
 
 **Model library**: A library that provides a model subsystem.
 
-**Model subsystem**: A subsystem that holds game state or game rules. Examples: physics, authored scenes.
+**Model subsystem**: A subsystem that holds state or rules. Examples: physics, authored scenes.
 
 **Output subsystem**: A subsystem that shows or plays a simulation. Examples: renderer, sound.
 
 **Renderer contract**: The four things a renderer must do.
 
-**Subsystem**: A part of a game that has one job. Wishem provides it, or a library provides it through an adapter.
+**Subsystem**: A part of a product that has one job. Wishem provides it, or a library provides it through an adapter.
 
 ## Tools
 
-**Tool**: A part of the designer's view of the game: a screen view, an inspector, a table, an overlay.
+**Tool**: A part of the designer's view of the product: a screen view, an inspector, a table, an overlay.
 
 ## Terms that are not used
 
-| Do not use                                | Use                                            | Reason                                                                                                       |
-| ----------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Client and server                         | Game model and renderer                        | No wire protocol exists. See rule R17.                                                                       |
-| Designer statement                        | Expectation                                    | One word for the concept.                                                                                    |
-| Engine, for Wishem as a whole             | Wishem, or the game model                      | No engine is built ahead of a game.                                                                          |
-| Game truth                                | Game state and rules                           | Plain words for the same thing.                                                                              |
-| Generation prompt                         | Asset prompt                                   | Shorter, and it pairs with "behavior prompt".                                                                |
-| Invariant, constraint, requirement        | Expectation                                    | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
-| Origin record                             | Provenance                                     | Provenance is the usual term for this record.                                                                |
-| Presentation slot                         | Output subsystem or input subsystem            | Input is not presentation.                                                                                   |
-| Scene graph                               | Game model, or the renderer's objects          | Use "game model" for entities and components. Use "the renderer's objects" for the display side.             |
-| Script                                    | Behavior                                       | The prompt is the source, not a script.                                                                      |
-| Sim                                       | Simulation                                     | Write the word in full.                                                                                      |
-| Slot                                      | Subsystem                                      | Games use "slot" for equipment and saved games.                                                              |
-| Stored words                              | Directive                                      | Internal term for the three kinds together.                                                                  |
-| Truth slot, truth library, truth contract | Model subsystem, model library, model contract | Plain words for the same things.                                                                             |
+| Do not use                                      | Use                                                           | Reason                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Attachment interface                            | The interface of the core                                     | A core has one interface. No formal "attachment" object exists.                                              |
+| Client and server                               | Model and renderer                                            | No wire protocol exists. See rule R17.                                                                       |
+| Designer statement                              | Expectation                                                   | One word for the concept.                                                                                    |
+| Engine, for Wishem as a whole                   | Wishem, or the model                                          | No engine is built ahead of a product.                                                                       |
+| Game model                                      | Model                                                         | A model is not always the model of a game. The workbench is a model, and it is not a game.                   |
+| Game state                                      | State                                                         | The state of a model is not always the state of a game.                                                      |
+| Game truth                                      | State and rules                                               | Plain words for the same thing.                                                                              |
+| Generation prompt                               | Asset prompt                                                  | Shorter, and it pairs with "behavior prompt".                                                                |
+| Invariant, constraint, requirement              | Expectation                                                   | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
+| Origin record                                   | Provenance                                                    | Provenance is the usual term for this record.                                                                |
+| Presentation slot                               | Output subsystem or input subsystem                           | Input is not presentation.                                                                                   |
+| Scene graph                                     | Model, or the renderer's objects                              | Use "model" for entities and components. Use "the renderer's objects" for the display side.                  |
+| Script                                          | Behavior                                                      | The prompt is the source, not a script.                                                                      |
+| Sim                                             | Simulation                                                    | Write the word in full.                                                                                      |
+| Slot                                            | Subsystem                                                     | Games use "slot" for equipment and saved games.                                                              |
+| Stored words                                    | Directive                                                     | Internal term for the three kinds together.                                                                  |
+| Subject, for what a workbench shows and changes | No term. Write "the workbench shows and changes the product". | The sentence gives the relation in plain words. A second term for the product is not necessary.              |
+| Truth slot, truth library, truth contract       | Model subsystem, model library, model contract                | Plain words for the same things.                                                                             |
