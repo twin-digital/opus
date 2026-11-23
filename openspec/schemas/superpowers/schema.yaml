@@ -3,8 +3,8 @@ version: 1
 description: >
   OpenSpec's spec-driven workflow (proposal → specs → design → tasks), forked from
   OpenSpec 2.1.1, with Superpowers skills for design exploration and execution:
-  brainstorming feeds the proposal, and apply runs in a git worktree via
-  subagent-driven development (TDD + code review) before finishing the branch.
+  brainstorming feeds the proposal, and apply runs in the change's git worktree
+  via subagent-driven development (TDD + code review) before finishing the branch.
 artifacts:
   - id: proposal
     generates: proposal.md
@@ -322,9 +322,26 @@ apply:
     `claude plugin install superpowers@claude-plugins-official` - do not fall
     back to implementing without them unless the user explicitly says to.
 
-    1. **Workspace**: invoke `superpowers:using-git-worktrees` to create an
-       isolated worktree for this change (under `.worktrees/`, which is
-       gitignored), and run `pnpm install` in it.
+    1. **Workspace**: work in a git worktree under `.claude/worktrees/`
+       (gitignored), never in the main checkout. Use the first case that
+       applies:
+       - The session is in the worktree of this change: use it.
+       - `git worktree list` shows a worktree for this change: enter it.
+       - No worktree exists, and a local or remote branch that is not
+         merged into `main` contains `openspec/changes/<name>/`: run
+         `git fetch`, then create a worktree at
+         `.claude/worktrees/<name>` on that branch and enter it.
+       - `origin/main` contains `openspec/changes/<name>/` (the plan was
+         merged before apply): invoke `superpowers:using-git-worktrees` to
+         create a worktree on a new branch off `origin/main` with the
+         native worktree tool.
+
+       Then confirm that `openspec/changes/<name>/tasks.md` exists in the
+       worktree. If it does not, or if the change files exist only as
+       uncommitted files in the main checkout, STOP and tell the user. Do
+       not copy or move the files yourself. If the branch is behind
+       `origin/main`, tell the user before you start. Run `pnpm install`
+       in the worktree if dependencies are not installed.
 
     2. **Execute**: invoke `superpowers:subagent-driven-development`, using
        tasks.md as the plan (each `## Task N:` section is one task), with
