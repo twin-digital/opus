@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wishem Brand Basics</title>
+    <!-- Visual companion to ../brand.md. Render images with: node brand/render.mjs -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <style>
+      /* Layout: single reading column; swatches and specimens break into wrapping grids. */
+      :root {
+        /* Brand colours: fixed in both themes */
+        --ink: #17172a;
+        --wishfire: #f2a93b;
+        --wishfire-deep: #a8620f;
+        --wisp: #7fd6c6;
+        --wisp-deep: #23786b;
+        --clay: #c8b9a9;
+        --mist: #f2f2f6;
+
+        /* Page tokens: light */
+        --bg: #f7f7fa;
+        --surface: #ffffff;
+        --fg: #1c1c2e;
+        --muted: #5b5b70;
+        --line: #dedee7;
+        --fire-text: var(--wishfire-deep);
+        --wisp-text: var(--wisp-deep);
+        --on-dark: #f2f2f6;
+        --on-light: #17172a;
+
+        --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+        --body: 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #121222;
+          --surface: #1b1b30;
+          --fg: #ececf3;
+          --muted: #a3a3b8;
+          --line: #2d2d46;
+          --fire-text: var(--wishfire);
+          --wisp-text: var(--wisp);
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #121222;
+        --surface: #1b1b30;
+        --fg: #ececf3;
+        --muted: #a3a3b8;
+        --line: #2d2d46;
+        --fire-text: var(--wishfire);
+        --wisp-text: var(--wisp);
+        color-scheme: dark;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--body);
+        font-size: 16px;
+        line-height: 1.6;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+      }
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding-block: 48px 80px;
+        display: grid;
+        gap: 64px;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: var(--display);
+        text-wrap: balance;
+        margin: 0;
+        line-height: 1.1;
+      }
+      h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      p {
+        margin: 0;
+        max-width: 65ch;
+      }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      section {
+        display: grid;
+        gap: 20px;
+      }
+      .lede {
+        color: var(--muted);
+      }
+
+      /* Header */
+      header {
+        display: grid;
+        gap: 16px;
+      }
+      .wordmark {
+        font-family: var(--display);
+        font-weight: 800;
+        font-size: clamp(3.5rem, 12vw, 6rem);
+        letter-spacing: -0.035em;
+        line-height: 0.9;
+        position: relative;
+      }
+      .wordmark .i {
+        position: relative;
+      }
+      .spark {
+        color: var(--fire-text);
+      }
+      .tagline {
+        font-size: 1.2rem;
+        max-width: 52ch;
+      }
+
+      /* Swatches */
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .swatch {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--surface);
+        display: grid;
+        grid-template-rows: 110px auto;
+      }
+      .chip {
+        border-bottom: 1px solid var(--line);
+        padding: 14px;
+        display: flex;
+        align-items: flex-end;
+        font-family: var(--mono);
+        font-size: 0.8rem;
+      }
+      .swatch .meta {
+        padding: 14px;
+        display: grid;
+        gap: 6px;
+        align-content: start;
+      }
+      .swatch .meta p {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .ratio {
+        display: flex;
+        height: 18px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .ratio span {
+        display: block;
+      }
+
+      /* Rules list */
+      .rules {
+        display: grid;
+        gap: 10px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+      .rules li {
+        padding-left: 18px;
+        position: relative;
+        max-width: 65ch;
+      }
+      .rules li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.65em;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+
+      /* Who-is-acting demo */
+      .demo {
+        background: var(--ink);
+        color: var(--on-dark);
+        border-radius: 12px;
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+        font-size: 0.95rem;
+      }
+      .demo .row {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 12px;
+        align-items: baseline;
+      }
+      .demo .who {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .demo .you {
+        color: var(--wishfire);
+      }
+      .demo .agent {
+        color: var(--wisp);
+      }
+      .demo .prompt {
+        font-family: var(--mono);
+        border-left: 2px solid var(--wishfire);
+        padding-left: 10px;
+      }
+      .demo .reply {
+        border-left: 2px solid var(--wisp);
+        padding-left: 10px;
+      }
+
+      /* Type specimens */
+      .specimens {
+        display: grid;
+        gap: 16px;
+      }
+      .spec {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 16px;
+      }
+      .spec .label {
+        display: grid;
+        gap: 4px;
+        align-content: start;
+      }
+      .spec .label strong {
+        font-size: 0.95rem;
+      }
+      .spec .label span {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      .spec .sample {
+        min-width: 0;
+      }
+      .s-display {
+        font-family: var(--display);
+        font-weight: 800;
+        font-size: 2.4rem;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+      }
+      .s-body {
+        font-family: var(--body);
+        font-size: 1.05rem;
+      }
+      .s-mono {
+        font-family: var(--mono);
+        font-size: 0.95rem;
+        overflow-wrap: anywhere;
+      }
+      .scale {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: baseline;
+        font-family: var(--display);
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      /* Tone */
+      .traits {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .trait {
+        display: grid;
+        gap: 6px;
+      }
+      .trait h3 {
+        color: var(--fg);
+      }
+      .trait p {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 520px;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td.yes {
+        color: var(--fg);
+      }
+      td.no {
+        color: var(--muted);
+        text-decoration: line-through;
+        text-decoration-color: var(--line);
+      }
+      .note {
+        border-left: 3px solid var(--wisp-text);
+        padding: 4px 0 4px 14px;
+        color: var(--muted);
+        max-width: 65ch;
+      }
+      footer {
+        color: var(--muted);
+        font-size: 0.9rem;
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+      }
+
+      @media (max-width: 560px) {
+        .spec {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .demo .row {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+      }
+
+      /* Aside from Wishem */
+      .aside {
+        border-left: 3px solid var(--wisp-text);
+        background: var(--surface);
+        border-radius: 0 10px 10px 0;
+        padding: 14px 18px;
+        display: grid;
+        gap: 4px;
+        max-width: 65ch;
+      }
+      .aside .who {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--wisp-text);
+      }
+      .aside p {
+        color: var(--fg);
+      }
+      .doc-sample {
+        display: grid;
+        gap: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .doc-sample p.plain {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .shot {
+        padding: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header id="shot-header" class="shot">
+        <div class="eyebrow">Brand basics</div>
+        <div class="wordmark" aria-label="wishem">w<span class="i">i</span>shem<span class="spark">.</span></div>
+        <p class="tagline">
+          A game engine with a spirit inside. You say what you want, and the spirit that lives in the engine helps build
+          it, test it and play it back.
+        </p>
+        <p class="lede">
+          This is a starting point for early design work, not a finished system. It covers colour, type and tone. Logo,
+          iconography and components come later.
+        </p>
+      </header>
+
+      <section aria-labelledby="c">
+        <div class="eyebrow">01 · Colour</div>
+        <h2 id="c">Ink, fire and wisp</h2>
+        <p>
+          The palette tells a story about who is acting. <strong>Wishfire</strong> belongs to the maker: their wishes,
+          their actions, their game. <strong>Wisp</strong> belongs to the spirit: whatever the agent is saying, doing or
+          suggesting. Ink is the night they work in.
+        </p>
+
+        <div id="shot-palette" class="shot" style="display: grid; gap: 16px">
+          <div class="swatches">
+            <div class="swatch">
+              <div class="chip" style="background: var(--ink); color: var(--on-dark)">#17172A</div>
+              <div class="meta">
+                <h3>Ink</h3>
+                <p>Primary ground. Dark mode base, the editor, hero surfaces. The engine feels at home at night.</p>
+              </div>
+            </div>
+            <div class="swatch">
+              <div class="chip" style="background: var(--wishfire); color: var(--on-light)">#F2A93B</div>
+              <div class="meta">
+                <h3>Wishfire</h3>
+                <p>
+                  The maker's colour. Primary actions, the prompt box, the cursor, "make it so" moments. Use
+                  <code>#A8620F</code> for text on light surfaces.
+                </p>
+              </div>
+            </div>
+            <div class="swatch">
+              <div class="chip" style="background: var(--wisp); color: var(--on-light)">#7FD6C6</div>
+              <div class="meta">
+                <h3>Wisp</h3>
+                <p>
+                  The spirit's colour. Agent messages, suggestions, test and replay activity, "the agent is working"
+                  states. Use <code>#23786B</code> for text on light.
+                </p>
+              </div>
+            </div>
+            <div class="swatch">
+              <div class="chip" style="background: var(--clay); color: var(--on-light)">#C8B9A9</div>
+              <div class="meta">
+                <h3>Clay</h3>
+                <p>
+                  Warm neutral, for the golem's material. Illustration, borders on dark, subtle texture. It's a
+                  supporting colour, never a headline.
+                </p>
+              </div>
+            </div>
+            <div class="swatch">
+              <div class="chip" style="background: var(--mist); color: var(--on-light)">#F2F2F6</div>
+              <div class="meta">
+                <h3>Mist</h3>
+                <p>
+                  Light ground and text on Ink. A slightly cool white, so Wishfire stays the only warm thing on the
+                  screen.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="ratio" role="img" aria-label="Proportions: Ink 60%, Mist 25%, Clay 7%, Wisp 5%, Wishfire 3%">
+            <span style="width: 60%; background: var(--ink)"></span>
+            <span style="width: 25%; background: var(--mist)"></span>
+            <span style="width: 7%; background: var(--clay)"></span>
+            <span style="width: 5%; background: var(--wisp)"></span>
+            <span style="width: 3%; background: var(--wishfire)"></span>
+          </div>
+        </div>
+        <ul class="rules">
+          <li>Wishfire is scarce on purpose. If everything glows, nothing feels granted.</li>
+          <li>
+            Never let Wishfire and Wisp swap roles. A user button in Wisp, or an agent message in Wishfire, breaks the
+            "who did this?" signal.
+          </li>
+          <li>
+            Keep success, warning and error colours separate from the brand pair. Don't use Wishfire as a warning
+            colour.
+          </li>
+          <li>
+            Avoid purple-to-blue gradients, sparkle emoji and generic "AI magic" glows. The spirit is a warm presence,
+            not a light show.
+          </li>
+        </ul>
+
+        <div id="shot-editor" class="demo" aria-label="Example of colour roles in an editor">
+          <div class="row">
+            <span class="who you">You</span><span class="prompt">make the bats flee when the torch is lit</span>
+          </div>
+          <div class="row">
+            <span class="who agent">Wishem</span
+            ><span class="reply"
+              >Done. Bats now scatter within 6 tiles of a lit torch. I recorded a replay and added a test. Want to watch
+              it?</span
+            >
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="t">
+        <div class="eyebrow">02 · Typography</div>
+        <h2 id="t">Three voices</h2>
+        <p>
+          The brand uses one face for presence, one for clarity and one for the words you speak to the engine. All three
+          are free on Google Fonts.
+        </p>
+
+        <div id="shot-type" class="shot" style="display: grid; gap: 20px">
+          <div class="specimens">
+            <div class="spec">
+              <div class="label">
+                <strong>Bricolage Grotesque</strong
+                ><span>Display. Headlines, the wordmark, big moments. Weight 800, tight tracking.</span>
+              </div>
+              <div class="sample s-display">Say it. Watch it spawn.</div>
+            </div>
+            <div class="spec">
+              <div class="label">
+                <strong>Instrument Sans</strong><span>Body and UI. Docs, menus, agent replies. Weights 400–600.</span>
+              </div>
+              <div class="sample s-body">
+                Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and the replays
+                are ready.
+              </div>
+            </div>
+            <div class="spec">
+              <div class="label">
+                <strong>JetBrains Mono</strong
+                ><span>Prompts, code, logs, labels. Whatever the user types to the spirit is set in mono.</span>
+              </div>
+              <div class="sample s-mono">&gt; give the boss a second phase at half health</div>
+            </div>
+          </div>
+
+          <div class="scale" aria-label="Type scale in pixels">
+            <span style="font-size: 12px">12</span><span style="font-size: 14px">14</span
+            ><span style="font-size: 16px">16</span><span style="font-size: 20px">20</span
+            ><span style="font-size: 25px">25</span><span style="font-size: 31px">31</span
+            ><span style="font-size: 39px">39</span><span style="font-size: 49px">49</span>
+          </div>
+        </div>
+        <ul class="rules">
+          <li>
+            Use a 1.25 ratio from a 16px base. Keep display sizes for headings, the wordmark and hero lines. In UI,
+            Instrument Sans does almost all the work.
+          </li>
+          <li>
+            Write the wordmark in lowercase: <em>wishem</em>. Its spark is a Wishfire full stop or the dot of the i.
+            Don't split it to show "shem." The hidden meaning stays hidden.
+          </li>
+          <li>Use sentence case everywhere. Uppercase is for small mono labels only, with letter spacing.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="v">
+        <div class="eyebrow">03 · Tone</div>
+        <h2 id="v">How Wishem sounds</h2>
+        <p>
+          The agent is the brand, so the product's voice and the brand's voice are the same voice. Think of a capable
+          familiar: it's on your side, a little playful, and it gets the job done.
+        </p>
+
+        <div class="traits">
+          <div class="trait">
+            <h3>Warm, not cute</h3>
+            <p>
+              Friendly and encouraging, but never baby talk or exclamation-mark spam. It respects people who are
+              building real games.
+            </p>
+          </div>
+          <div class="trait">
+            <h3>Magic in moments, precision everywhere else</h3>
+            <p>
+              Allow one touch of wonder where it lands, like the first spawn or a granted wish. Status, errors and docs
+              stay plain and exact.
+            </p>
+          </div>
+          <div class="trait">
+            <h3>Shows its work</h3>
+            <p>
+              The spirit says what it changed, what it tested, and what it isn't sure about. Trust comes from receipts,
+              not from mystique.
+            </p>
+          </div>
+          <div class="trait">
+            <h3>Mischief, lightly</h3>
+            <p>
+              A wink is allowed, such as "Wish granted. The bats are not happy about it." Use it once, not in every
+              sentence.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Moment</th>
+                <th>Say</th>
+                <th>Avoid</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Task done</td>
+                <td class="yes">Done. The door now locks after the cutscene. I added a test for it.</td>
+                <td class="no">✨ Your wish is my command, master! ✨</td>
+              </tr>
+              <tr>
+                <td>Unsure</td>
+                <td class="yes">I can do this two ways. A is faster to build, B handles co-op. Which one?</td>
+                <td class="no">The spirits are uncertain…</td>
+              </tr>
+              <tr>
+                <td>Error</td>
+                <td class="yes">
+                  The build failed: <code>player.ts</code> references a sprite that no longer exists. Restore it, or
+                  should I swap in a placeholder?
+                </td>
+                <td class="no">Oops! Something went wrong 😅</td>
+              </tr>
+              <tr>
+                <td>Empty project</td>
+                <td class="yes">What are we making? Describe a game, a level or a single mechanic.</td>
+                <td class="no">Welcome to the future of AI-powered game development.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Vocabulary</h3>
+        <ul class="rules">
+          <li>
+            <strong>Wish</strong> can be used as a verb sparingly, for example on the prompt button ("Make a wish") or
+            in onboarding. Don't rename every feature after it.
+          </li>
+          <li>
+            Use the plain dev words for features: build, test, replay, scene, asset. The mythic layer sits on top of
+            real tools and doesn't replace them.
+          </li>
+          <li>
+            The agent refers to itself as "I." Users call it Wishem, or 'shem and 'shemmy for short. Avoid "AI-powered,"
+            "revolutionary" and "unleash."
+          </li>
+        </ul>
+
+        <h3>Wishem speaks up</h3>
+        <p>
+          Now and then Wishem steps out of a document's formal tone to add an aside in its own voice. It's signed with
+          the full name and drawn in Wisp, like the agent's messages in the editor.
+        </p>
+        <div id="shot-aside" class="doc-sample">
+          <p class="plain">
+            A recording is the seed and the inputs of a play session. A rerun runs a recording again, with or without a
+            changed value.
+          </p>
+          <div class="aside">
+            <span class="who">Wishem</span>
+            <p>
+              This is my favourite trick. You miss a jump, I rerun it with a little more height, and we both watch you
+              make it.
+            </p>
+          </div>
+        </div>
+
+        <p class="note">
+          On the origin story: in golem folklore, a <em>shem</em> (Hebrew for "name") is a word that brings a creation
+          to life. If you tell this story, frame it as "a word that brings things to life." Don't describe it as a holy
+          or divine name. Golems are welcome. Theology isn't.
+        </p>
+      </section>
+
+      <footer>
+        Open questions for the next round: logo mark (spark, lantern or a little clay figure?), illustration style,
+        motion language for agent activity, and whether the engine and agent share one name or two.
+      </footer>
+    </div>
+  </body>
+</html>

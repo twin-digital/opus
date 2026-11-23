@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Wishem mockup: editor after the whistle request</title>
+    <style>
+      body {
+        margin: 24px;
+        background: #0d1117;
+        color: #d6dbe1;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+        color: #fff;
+      }
+      .subtitle {
+        color: #8b949e;
+        max-width: 1040px;
+      }
+      code {
+        color: #d6dbe1;
+      }
+      .ed {
+        display: grid;
+        grid-template-columns: 250px 1fr 270px;
+        grid-template-rows: 36px 400px 230px;
+        gap: 1px;
+        background: #30363d;
+        border: 1px solid #30363d;
+        font:
+          12px/1.4 system-ui,
+          sans-serif;
+        color: #d6dbe1;
+      }
+      .ed > div {
+        background: #161b22;
+        overflow: hidden;
+      }
+      .ed .bar {
+        grid-column: 1 / 4;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 12px;
+        background: #0d1117;
+      }
+      .ed .bar b {
+        color: #fff;
+      }
+      .ed .pill {
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #21262d;
+      }
+      .ed .pill.on {
+        background: #1f6feb;
+        color: #fff;
+      }
+      .ed h4 {
+        margin: 0;
+        padding: 7px 10px;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #8b949e;
+        border-bottom: 1px solid #30363d;
+      }
+      .ed .pad {
+        padding: 8px 10px;
+      }
+      .msg {
+        margin: 0 0 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: #21262d;
+      }
+      .msg.me {
+        background: #1c2f4a;
+      }
+      .msg small {
+        display: block;
+        color: #8b949e;
+        margin-bottom: 2px;
+      }
+      .q {
+        border-left: 3px solid #d29922;
+        padding-left: 7px;
+        margin: 6px 0;
+      }
+      .scene {
+        position: relative;
+        width: 512px;
+        height: 352px;
+        margin: 10px auto 0;
+        background: #6b6257;
+        background-image:
+          linear-gradient(#0002 1px, transparent 1px), linear-gradient(90deg, #0002 1px, transparent 1px);
+        background-size: 32px 32px;
+        outline: 2px solid #0d1117;
+        overflow: hidden;
+      }
+      .cut {
+        position: absolute;
+        left: 224px;
+        top: 0;
+        width: 64px;
+        height: 352px;
+        background: #1b1814;
+        border-left: 2px solid #3a342c;
+        border-right: 2px solid #3a342c;
+      }
+      .rubble {
+        position: absolute;
+        width: 26px;
+        height: 20px;
+        border-radius: 9px 12px 6px 8px;
+        background: #4a433a;
+        border: 2px solid #37312a;
+      }
+      .ringpost {
+        position: absolute;
+        left: 292px;
+        top: 164px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 4px solid #c9d1d9;
+        box-shadow: 0 0 0 2px #1f6feb;
+      }
+      .goat {
+        position: absolute;
+        width: 26px;
+        height: 20px;
+        border-radius: 6px;
+        border: 2px dashed #c9d1d9;
+        opacity: 0.8;
+      }
+      .whistle {
+        position: absolute;
+        left: 448px;
+        top: 40px;
+        width: 12px;
+        height: 22px;
+        background: #e3b341;
+        border: 2px solid #fff;
+      }
+      .range {
+        position: absolute;
+        left: 198px;
+        top: -205px;
+        width: 512px;
+        height: 512px;
+        border-radius: 50%;
+        border: 1px dashed #e3b341;
+      }
+      .exit {
+        position: absolute;
+        top: 150px;
+        width: 8px;
+        height: 52px;
+        background: #58a6ff;
+      }
+      .tag {
+        position: absolute;
+        font-size: 10px;
+        background: #0d1117cc;
+        padding: 1px 4px;
+        border-radius: 3px;
+        white-space: nowrap;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 3px 8px;
+      }
+      .kv span:nth-child(odd) {
+        color: #8b949e;
+      }
+      .new {
+        color: #3fb950;
+      }
+      .ask {
+        color: #d29922;
+      }
+      table.db {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      table.db td,
+      table.db th {
+        text-align: left;
+        padding: 4px 10px;
+        border-bottom: 1px solid #21262d;
+      }
+      table.db th {
+        color: #8b949e;
+        font-weight: 500;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+        padding: 6px 8px 0;
+        border-bottom: 1px solid #30363d;
+      }
+      .tabs span {
+        padding: 4px 10px;
+        border-radius: 5px 5px 0 0;
+        background: #21262d;
+      }
+      .tabs span.on {
+        background: #30363d;
+        color: #fff;
+      }
+      .map {
+        display: grid;
+        grid-template-columns: repeat(4, 50px);
+        gap: 3px;
+        padding: 10px;
+      }
+      .map div {
+        height: 34px;
+        border-radius: 3px;
+        background: #21262d;
+        font-size: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .map .here {
+        background: #6b6257;
+        outline: 2px solid #1f6feb;
+        color: #fff;
+      }
+      .map .none {
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Editor after the whistle request</h1>
+    <p class="subtitle">
+      Wireframe for the Wishem blueprint. It shows what the designer looks at after the agent builds the quarry room and
+      the whistle behavior. It is a sketch, not a design. See <code>interactions.md</code>, example 3.
+    </p>
+
+    <div class="ed">
+      <div class="bar">
+        <b>Quarry Cut</b> <span>quarry biome</span> <span class="pill on">Edit</span
+        ><span class="pill">Play from here</span><span class="pill">Step</span><span class="pill">Rewind</span>
+        <span style="margin-left: auto" class="ask">3 assumptions to review</span>
+      </div>
+
+      <div>
+        <h4>Agent</h4>
+        <div class="pad">
+          <div class="msg me"><small>You</small>The goats stay docile until the shift whistle blows.</div>
+          <div class="msg">
+            <small>Wishem</small>Built it. I made these calls:
+            <div class="q">Docile goats do not chase and do not hurt the player.</div>
+            <div class="q">The whistle carries 8 tiles. Shown as the ring.</div>
+            <div class="q">The whistle has placeholder art and nothing blows it yet.</div>
+            What makes the whistle blow?
+          </div>
+          <div class="msg me"><small>You</small>▍</div>
+        </div>
+      </div>
+
+      <div>
+        <h4>Room view</h4>
+        <div class="scene">
+          <div class="exit" style="left: -4px"></div>
+          <span class="tag" style="left: 8px; top: 168px">exit → Weighbridge</span>
+          <div class="exit" style="right: -4px"></div>
+          <span class="tag" style="right: 8px; top: 206px">exit → Kiln</span>
+          <div class="range"></div>
+          <div class="cut"></div>
+          <span class="tag" style="left: 232px; top: 8px">the gap</span>
+          <div class="rubble" style="left: 60px; top: 50px"></div>
+          <div class="rubble" style="left: 130px; top: 270px"></div>
+          <div class="rubble" style="left: 40px; top: 250px"></div>
+          <div class="rubble" style="left: 150px; top: 90px"></div>
+          <div class="ringpost"></div>
+          <span class="tag" style="left: 296px; top: 188px">iron_ring</span>
+          <div class="goat" style="left: 370px; top: 120px"></div>
+          <div class="goat" style="left: 410px; top: 250px"></div>
+          <span class="tag" style="left: 352px; top: 146px">goat · docile</span>
+          <div class="whistle"></div>
+          <span class="tag" style="left: 404px; top: 68px">shift_whistle</span>
+        </div>
+      </div>
+
+      <div>
+        <h4>Inspector: goat #2</h4>
+        <div class="pad kv">
+          <span>kind</span><span>enemy</span> <span>position</span><span>12, 7</span> <span>appears</span
+          ><span>after first crossing</span> <span>statuses</span><span class="new">docile (new)</span>
+          <span>behaviors</span><span>charge, <span class="new">wake_on_whistle (new)</span></span>
+        </div>
+        <h4>Status: docile</h4>
+        <div class="pad kv">
+          <span>chases player</span><span class="ask">no · assumed</span> <span>contact damage</span
+          ><span class="ask">no · assumed</span> <span>can be hit</span><span>yes</span> <span>blocks path</span
+          ><span>yes</span>
+        </div>
+        <h4>Behavior: wake_on_whistle</h4>
+        <div class="pad">
+          on spawn → add <b>docile</b><br />when <b>shift_whistle</b> blows within <span class="ask">8 tiles</span> →
+          remove
+          <b>docile</b>
+        </div>
+      </div>
+
+      <div>
+        <h4>World</h4>
+        <div class="map">
+          <div>Tip</div>
+          <div>Crusher</div>
+          <div class="none"></div>
+          <div class="none"></div>
+          <div>Weighbridge</div>
+          <div class="here">Quarry Cut</div>
+          <div>Kiln</div>
+          <div class="none"></div>
+          <div>Yard</div>
+          <div>Sidings</div>
+          <div class="none"></div>
+          <div class="none"></div>
+        </div>
+      </div>
+
+      <div style="grid-column: 2 / 4">
+        <div class="tabs">
+          <span>Entities</span><span class="on">Statuses</span><span>Items</span><span>Behaviors</span
+          ><span>Sprites</span><span>Biomes</span><span>Expectations</span>
+        </div>
+        <table class="db">
+          <tr>
+            <th>Status</th>
+            <th>Effects</th>
+            <th>Used by</th>
+            <th>Scope</th>
+            <th></th>
+          </tr>
+          <tr>
+            <td>burning</td>
+            <td>1 damage per second, lights dark rooms</td>
+            <td>kiln fire, torch</td>
+            <td>game</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="new">docile</td>
+            <td>does not chase, deals no contact damage</td>
+            <td>goat</td>
+            <td>game</td>
+            <td class="new">added just now</td>
+          </tr>
+          <tr>
+            <td>hooked</td>
+            <td>pulled toward the grapple target</td>
+            <td>grapple</td>
+            <td>game</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>stunned</td>
+            <td>cannot act for 2 seconds</td>
+            <td>rockfall</td>
+            <td>game</td>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <p class="subtitle" style="margin-top: 14px">
+      Green marks what the agent just added. Amber marks what the agent assumed without asking. The assumption list and
+      the Play, Step, and Rewind controls are proposals that the owner did not confirm.
+    </p>
+  </body>
+</html>
