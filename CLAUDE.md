@@ -66,6 +66,17 @@ In the development workspace, agents hold only **short-lived (≤1h), pre-scoped
 - **When auth fails** (`ExpiredToken` from AWS, or `gh`/`git` suddenly unauthenticated plus a stderr breadcrumb): vending has stalled, usually because the human's SSO session expired. Check `cat /creds/status/*`. The fix is human-only (`docker exec -it admin-sidecar aws-refresh-sso <profile>` from a host terminal; fresh creds appear ≤60s later). Don't try to work around missing credentials — surface it and wait.
 - Scope changes (more repos, roles, permissions) happen in the sidecar's config, never from here. Full design: `/workspace/.devcontainer/README.md` (outside this repo).
 
+## Work tracking
+
+Work is tracked in GitHub issues in `twin-digital/opus`.
+
+- **One milestone has many issues.** A milestone is a product outcome. An issue belongs to one milestone or to none.
+- **One issue has one OpenSpec change.** Each change has one primary issue. Create the issue before the change. The change name is `<issue-number>-<kebab-name>`, for example `221-add-in-game-ui`. The frontmatter of `proposal.md` records the issue and the milestone. See `openspec/config.yaml`.
+- **Labels.** Each issue has one type label (`feature` or `bug`) and one product label (`app:<product>`, for example `app:wishem`). All type labels have the same colour. All product labels have the same colour. Give a new label the colour of its group.
+- **Relations.** Set each relation between issues (blocked by, sub-issue) on the issues in GitHub. Do not record a relation in a change artifact.
+- **Boards.** Each product has one GitHub project. Add each issue of the product to that project.
+- **Work that skips OpenSpec.** Work that goes directly to a pull request (a bug fix, a config change, docs) also gets an issue when it is planned before it starts.
+
 ## Spec-driven workflow (OpenSpec + Superpowers)
 
 Feature work is planned with **OpenSpec** and executed with the **Superpowers** plugin, joined by the project schema `openspec/schemas/superpowers/` (the default in `openspec/config.yaml`). It is OpenSpec's built-in `spec-driven` schema (proposal → specs → design → tasks) forked via `openspec schema fork`, changed so that:
