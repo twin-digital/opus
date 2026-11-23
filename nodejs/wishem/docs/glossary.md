@@ -16,9 +16,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 ## The model
 
-**Game model**: The part of a game that holds all game truth. It runs with no window.
-
-**Game truth**: Any state or rule that can change what happens in the game.
+**Game model**: The part of a game that holds all game state and all game rules. It runs with no window.
 
 **Entity**: A thing in the game. An entity is the set of its components.
 
@@ -113,6 +111,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 | Provenance                                | Origin record                                  | Simpler word for the same record.                                                                            |
 | Regenerate, for a room or image           | Reapply                                        | Reapply names the designer's action and its warning.                                                         |
 | Slot                                      | Subsystem                                      | Games use "slot" for equipment and saved games.                                                              |
+| Game truth                                | Game state and rules                           | Plain words for the same thing.                                                                              |
 | Truth slot, truth library, truth contract | Model subsystem, model library, model contract | Plain words for the same things.                                                                             |
 | Presentation slot                         | Output subsystem or input subsystem            | Input is not presentation.                                                                                   |
 | Client and server                         | Game model and renderer                        | No wire protocol exists. See `decisions/0004`.                                                               |

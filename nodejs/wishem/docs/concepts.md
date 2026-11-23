@@ -4,7 +4,7 @@
 
 ## The game model
 
-The game model is the part of a game that holds all game truth. It runs with no window. The renderer draws a picture of the model and never owns any of it.
+The game model is the part of a game that holds all game state and all game rules. It runs with no window. The renderer draws a picture of the model and never owns any of it.
 
 ### Entities and components (**Proposed** as the fixed core)
 

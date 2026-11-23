@@ -1,4 +1,4 @@
-# 0002. The game model owns truth
+# 0002. The game model holds all game state and rules
 
 > Blueprint, not a specification. See `../README.md` for the status labels.
 
@@ -6,9 +6,9 @@
 
 ## Decision
 
-Anything that holds truth about the game is native to the agent. Anything that only presents that truth can come off the shelf.
+Anything that holds game state or game rules is native to the agent. Anything that only shows or plays the game can come off the shelf.
 
-A library can hold game truth only if it passes the model contract in `../concepts.md`. A renderer, a sound system, or an input device is an I/O subsystem and follows lighter rules.
+A library can hold game state only if it passes the model contract in `../concepts.md`. A renderer, a sound system, or an input device is an I/O subsystem and follows lighter rules.
 
 ## Reason
 
@@ -18,8 +18,8 @@ Off-the-shelf libraries are acceptable only if everything in them can be exposed
 
 ## Rejected alternatives
 
-- **Take scene graph, physics, and animation from PixiJS or Phaser as they are.** The agent proposed this and the owner rejected it. These parts hold game truth.
-- **Ban off-the-shelf libraries for game truth.** Too strict. Some libraries pass the contract.
+- **Take scene graph, physics, and animation from PixiJS or Phaser as they are.** The agent proposed this and the owner rejected it. These parts hold game state.
+- **Ban off-the-shelf libraries that hold game state.** Too strict. Some libraries pass the contract.
 - **An agent that drives an existing engine through its MCP server.** Fast to start. It cannot rewind or rerun.
 
 ## Consequences

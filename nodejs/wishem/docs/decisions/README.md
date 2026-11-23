@@ -7,7 +7,7 @@ One file for each decision. Each file gives the decision, its reason, and the al
 | #    | Decision                                                                                     | Status       |
 | ---- | -------------------------------------------------------------------------------------------- | ------------ |
 | 0001 | [The framework is the product](0001-framework-is-the-product.md)                             | **Agreed**   |
-| 0002 | [The game model owns truth](0002-model-owns-truth.md)                                        | **Agreed**   |
+| 0002 | [The game model holds all game state and rules](0002-model-holds-state-and-rules.md)         | **Agreed**   |
 | 0003 | [No single interface over model libraries](0003-no-single-interface-over-model-libraries.md) | **Agreed**   |
 | 0004 | [One renderer first, protocol later](0004-one-renderer-first-protocol-later.md)              | **Agreed**   |
 | 0005 | [Nothing is built before a design needs it](0005-self-construction.md)                       | **Agreed**   |

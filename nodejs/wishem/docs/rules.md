@@ -4,13 +4,13 @@
 
 These rules apply to every part of Wishem and to every game made with it. A design that breaks a rule needs a new decision in `decisions/` first.
 
-## Truth and time
+## State and time
 
-**R1. The game model owns all game truth.** (**Agreed**)
-Game truth is any state or rule that can change what happens in the game. The model never depends on a renderer, a sound system, or an input device.
+**R1. The game model holds all game state and all game rules.** (**Agreed**)
+The model never depends on a renderer, a sound system, or an input device.
 Reason: the agent must be able to read, change, and rerun the game without a window.
 
-**R2. A library can hold game truth only if it passes the model contract.** (**Agreed**)
+**R2. A library can hold game state only if it passes the model contract.** (**Agreed**)
 The contract is in `concepts.md`. An I/O subsystem holds no game state and follows lighter rules.
 Reason: a library that hides state makes rewind and rerun impossible.
 
