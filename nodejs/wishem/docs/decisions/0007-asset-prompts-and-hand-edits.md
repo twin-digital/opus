@@ -28,4 +28,5 @@ An asset prompt has a one-time effect. It does not create a function that runs a
 ## Consequences
 
 - Reapply can conflict with other changes. This is an open question.
-- Proposed: the origin record is kept for each generated thing, so that the warning names the exact things a hand changed.
+- Each generated thing has its own provenance, so that the warning names the exact things that a hand changed.
+- Proposed: a reapply can be a refresh or a regenerate, and the agent manages the run. See `../concepts.md`.

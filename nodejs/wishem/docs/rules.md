@@ -53,8 +53,8 @@ Reason: two generations from one prompt differ. Tuned behavior and accepted art 
 Hand edits are not written back into the prompt. To keep an edit across a reapply, the designer changes the prompt.
 Reason: a drag does not say why the designer moved the thing.
 
-**R13. The agent records what each generation run produced.** (**Agreed**)
-The record lets a reapply remove the old result and detect hand edits.
+**R13. The agent records the provenance of each thing that a run of an asset prompt produced.** (**Agreed**)
+Provenance lets a reapply replace the old result and detect hand edits.
 
 ## Intent and checking
 

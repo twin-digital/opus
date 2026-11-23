@@ -146,14 +146,63 @@ A designer can view and edit the code behind a behavior. That action probably tu
 An asset prompt has a one-time effect. "Break up the floor with rubble piles" places rubble once. It does not create a function that runs during play. Prompts that seed a map are asset-generating prompts, the same as prompts that make sprites.
 
 - The prompt is always stored with its result. (**Agreed**)
-- The agent records what the run produced, so that a reapply can remove it. (**Agreed**)
+- The agent records the provenance of each thing that the run produced, so that a reapply can replace it. (**Agreed**)
 - The designer can change the prompt and select **reapply**. (**Agreed**)
 - The designer can also edit the result by hand, for example by a drag. (**Agreed**)
 - A hand edit is lost on a reapply unless the prompt was changed to match. The system warns first. (**Agreed**)
 - A hand edit is not written back into the prompt. Why the designer moved a rubble pile is not obvious: nearer to one thing, farther from another. A guess is brittle. (**Agreed**)
-- The record is kept for each generated thing. Each rubble pile knows which prompt made it and if a hand changed it since. The warning can then name the one changed pile. (**Proposed**)
 
 Random map generation that runs during play is a different case. It is a behavior, not an asset prompt.
+
+### Provenance (**Agreed**)
+
+**Provenance** is the record of what made a thing in the authored state and what changed it since. Each rubble pile has its own provenance, so a warning can name the one changed pile.
+
+Provenance has two facts. Each fact has one of three sources.
+
+| Fact                 | An asset prompt                        | The designer, by hand                 | The agent, on a request with no stored prompt |
+| -------------------- | -------------------------------------- | ------------------------------------- | --------------------------------------------- |
+| **Made by**          | "Break up the floor with rubble piles" | The designer puts a goat in the room. | "Add a goat by the east wall."                |
+| **Changed since by** | A later prompt that adjusts the thing  | A drag                                | "Move the platform to my right."              |
+
+A request with no stored prompt cannot be applied again. For a reapply, it has the same effect as a hand edit.
+
+Provenance applies to authored state only. A thing that is made during play has no provenance. It has a link to the thing in the authored state that made it. Example: a goat that appears after the first crossing links to the rule that made it appear, and that rule has provenance.
+
+A change that the agent makes in a paused game gets provenance when it is written to the authored state.
+
+A long chain of links between things that are made during play can make the first source slow to find. This is not a problem now, and no design exists for it.
+
+### What a reapply affects (**Proposed**)
+
+A reapply can affect three groups of things.
+
+| Group                 | What is in it                                                                                                                            | Known from                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 1. Made by the run    | The walls of the room, the gap, the iron ring                                                                                            | Provenance                 |
+| 2. Depends on group 1 | Things that were put in the room later, and things attached to them or put in position against them                                      | Relations between entities |
+| 3. Refers to group 1  | Exits from other rooms, expectations on the room, behaviors with prompts that name the ring, bookmarks and checks that start in the room | Links by ID                |
+
+The agent can find all three groups only if provenance, declared relations, and IDs all exist.
+
+Two kinds of reapply are possible. This area needs a brainstorm in roadmap project 4.
+
+- **Refresh.** The agent replaces only the things that the run made. The subject of the prompt, such as the room, keeps its ID. A thing that is still there after the change keeps its ID.
+- **Regenerate.** The agent makes the result again from the start.
+
+The designer selects the kind, or the agent selects it from the change to the prompt.
+
+### Managed execution of a prompt (**Proposed**)
+
+This is a placeholder for a design. The agent does not only run an asset prompt. It manages the run. The work has these parts:
+
+1. Select the kind of reapply.
+2. Find what the run affects, in the three groups.
+3. Show the designer what will change before it changes.
+4. Keep the IDs of the things that stay.
+5. Make the change.
+6. Find the errors that the change caused, such as a thing in a position that is no longer correct or an expectation that fails.
+7. Report those errors to the designer.
 
 ### Expectations
 

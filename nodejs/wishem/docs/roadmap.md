@@ -14,7 +14,7 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 | 1   | **Core model**       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun, bookmarks. A first renderer adapter. | 0          |
 | 2   | **Agent access**     | The tools an agent uses on a running game: query, edit, pause, step, rerun, and write changes to authored state.           | 1          |
 | 3   | **Behavior prompts** | Behaviors with prompt, code, and history. Code is replaced while the game runs.                                            | 1, 2       |
-| 4   | **Asset prompts**    | Room layouts and sprites from prompts. Origin records, reapply, and the hand-edit warning.                                 | 1, 2       |
+| 4   | **Asset prompts**    | Room layouts and sprites from prompts. Provenance, reapply, and the hand-edit warning.                                     | 1, 2       |
 | 5   | **Expectations**     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.          | 1, 2       |
 | 6   | **Tools**            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.            | 1, 2       |
 | 7   | **Other engines**    | A wire protocol between the game model and a renderer in another engine. **Parked.**                                       | 1          |
@@ -22,6 +22,7 @@ The list of projects is **Agreed**. The order after project 0 is **Open**.
 Notes:
 
 - Project 4 depends on an outside image model. Pixel art in one consistent style is the least certain part of the plan. An earlier prototype already generated sprites with PixelLab and Retro Diffusion, which lowers that risk.
+- Project 4 needs a brainstorm on two proposed areas in `concepts.md`: the kinds of reapply (refresh and regenerate), and the managed execution of a prompt.
 - Project 5 needs the most design work before it can be specified. See "Ideas for project 5" below. The blueprint records what an expectation is for and not how the agent checks one. Project 5 also depends on the answer to the open question about kept bookmarks.
 - Project 7 stays parked until a second engine is wanted. Rule R1 keeps it possible.
 

@@ -62,9 +62,15 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 
 **Asset**: A generated or imported thing that the game uses: a sprite, a room layout, a sound.
 
-**Origin record**: The record of which asset prompt made a thing and if a hand changed it since.
+**Provenance**: For a thing in the authored state, the record of what made it and what changed it since. The source is an asset prompt, the designer by hand, or the agent on a request with no stored prompt.
 
-**Reapply**: To run an asset prompt again and replace what its last run produced.
+**Reapply**: To run an asset prompt again. A refresh and a regenerate are the two proposed kinds.
+
+**Refresh** (proposed): A reapply that replaces only the things that the run made, and keeps the IDs of the things that stay.
+
+**Regenerate** (proposed): A reapply that makes the result again from the start.
+
+**Managed execution** (proposed): The work that the agent does around a run of an asset prompt: select the kind of reapply, find what the run affects, keep IDs, and report errors.
 
 **Hand edit**: A direct change by the designer to a generated thing, such as a drag.
 
@@ -112,8 +118,7 @@ Use one term for each concept. Use these exact terms in specifications, code, an
 | Engine, for Wishem as a whole             | Wishem, or the game model                      | No engine is built ahead of a game.                                                                          |
 | Sim                                       | Game model                                     | One term for the concept.                                                                                    |
 | Script                                    | Behavior                                       | The prompt is the source, not a script.                                                                      |
-| Provenance                                | Origin record                                  | Simpler word for the same record.                                                                            |
-| Regenerate, for a room or image           | Reapply                                        | Reapply names the designer's action and its warning.                                                         |
+| Origin record                             | Provenance                                     | Provenance is the usual term for this record.                                                                |
 | Slot                                      | Subsystem                                      | Games use "slot" for equipment and saved games.                                                              |
 | Game truth                                | Game state and rules                           | Plain words for the same thing.                                                                              |
 | Truth slot, truth library, truth contract | Model subsystem, model library, model contract | Plain words for the same things.                                                                             |

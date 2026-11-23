@@ -27,7 +27,7 @@ The designer states a purpose and constraints. The designer does not give a layo
 - **Proof by play.** The agent runs the room with no window. It confirms that a jump fails, that the grapple crosses, and that the goats chase on the way back.
 - **Asset generation in the conversation.** The ring sprite arrives in the game's style, size, and palette. It is registered as a grapple target, and "iron ring" is a name from then on.
 
-**What is stored:** the asset prompt for the room, the asset prompt for the sprite, and an origin record for each placed thing.
+**What is stored:** the asset prompt for the room, the asset prompt for the sprite, and the provenance of each placed thing.
 
 ## 2. The shift whistle: a concept that does not exist
 

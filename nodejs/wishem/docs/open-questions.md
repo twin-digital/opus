@@ -29,29 +29,34 @@ These questions are not settled. Each one names the roadmap project that must an
 15. **How is a name in a prompt linked to a registered thing?** It is not settled how the agent identifies the correct thing, how the link is stored, and what happens when the thing gets a new name or is removed. (Project 3)
 16. **How does the agent write and run a check for a behavior?** (Projects 3, 5)
 17. **How are conflicts handled on a reapply?** The brainstorm noted this risk and did not resolve it. (Project 4)
-18. **How precise must an expectation be before it becomes an automated test?** (Project 5)
-19. **How does the agent check an expectation that says something is not possible?** "Cannot cross the gap without the grapple" says that no inputs get the player across. One failed jump does not show that. The agent must search over ways to play, or reason from values such as the jump distance. (Project 5)
-20. **Where does a check of an expectation start?** The player must be in the correct place with the correct items. This depends on the question about kept bookmarks. (Project 5)
-21. **How does the agent know which expectations a change can affect?** (Project 5)
-22. **What does a failed expectation do?** It can block the change, give a warning, or ask the designer. (Project 5)
-23. **Who writes an expectation?** Only the designer, or also the agent when a prompt implies one, as "too wide to jump" does. (Project 5)
-24. **What happens when the designer breaks an expectation on purpose?** (Project 5)
+18. **When is a reapply a refresh, and when is it a regenerate?** The designer can select the kind, or the agent can select it from the change to the prompt. (Project 4)
+19. **What happens on a reapply to a thing that the run did not make?** Example: a thing that was put in the room later. It can stay, the agent can put it in position again, or it can be removed with a warning. (Project 4)
+20. **How does a thing keep its ID across a reapply?** The agent must decide which new thing is the same as an old thing. (Project 4)
+21. **How does one asset prompt depend on another?** The rubble prompt ran on the room that a different prompt made. A reapply of the room can make a new run of the rubble prompt necessary. (Project 4)
+22. **How is the first source found through a long chain of things that are made during play?** No design exists. This is not a problem now. (Later)
+23. **How precise must an expectation be before it becomes an automated test?** (Project 5)
+24. **How does the agent check an expectation that says something is not possible?** "Cannot cross the gap without the grapple" says that no inputs get the player across. One failed jump does not show that. The agent must search over ways to play, or reason from values such as the jump distance. (Project 5)
+25. **Where does a check of an expectation start?** The player must be in the correct place with the correct items. This depends on the question about kept bookmarks. (Project 5)
+26. **How does the agent know which expectations a change can affect?** (Project 5)
+27. **What does a failed expectation do?** It can block the change, give a warning, or ask the designer. (Project 5)
+28. **Who writes an expectation?** Only the designer, or also the agent when a prompt implies one, as "too wide to jump" does. (Project 5)
+29. **What happens when the designer breaks an expectation on purpose?** (Project 5)
 
 ## Assembly
 
-25. **Which libraries provide each subsystem for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
-26. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
-27. **Which image model generates sprites, and how is one style kept?** (Project 4)
-28. **How is sound and music generated or imported?** Not discussed. (Later)
+30. **Which libraries provide each subsystem for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
+31. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
+32. **Which image model generates sprites, and how is one style kept?** (Project 4)
+33. **How is sound and music generated or imported?** Not discussed. (Later)
 
 ## Project
 
-29. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
-30. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
-31. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
+34. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
+35. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
+36. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
 
 ## Brand
 
-32. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
-33. **What is the illustration style?** (Project 6)
-34. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)
+37. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
+38. **What is the illustration style?** (Project 6)
+39. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)
