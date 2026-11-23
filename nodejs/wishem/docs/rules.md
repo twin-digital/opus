@@ -45,8 +45,8 @@ Code that does not do what the prompt says is a bug. The fix is a code change. C
 
 **R10. The history of prompts for a behavior is stored with the behavior.** (**Agreed**)
 
-**R11. Generated output is kept, not regenerated.** (**Proposed**)
-A changed prompt changes the existing code and leaves the rest alone. A stored image is replaced only when the designer asks.
+**R11. Generated output is kept, not regenerated.** (**Agreed**)
+The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. A stored asset is replaced only when the designer asks.
 Reason: two generations from one prompt differ. Tuned behavior and accepted art must not change by accident.
 
 **R12. Hand edits to generated things are allowed. The system warns before a reapply destroys one.** (**Agreed**)

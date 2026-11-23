@@ -24,4 +24,5 @@ The owner wants natural-language behaviors. Where a traditional editor has a cod
 ## Consequences
 
 - The same idea applies to generated assets. See decision 0007.
-- Proposed additions that the owner did not confirm: generated code is kept and edited, answers to questions become fields, the agent writes checks from the prompt, and names in a prompt are links to registered things.
+- The code for a behavior is stored. A prompt change edits the stored code and does not write it again from the start.
+- Proposed additions that the owner did not confirm: answers to questions become fields, the agent writes checks from the prompt, and names in a prompt are links to registered things.

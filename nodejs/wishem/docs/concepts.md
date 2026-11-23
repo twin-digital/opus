@@ -122,11 +122,12 @@ Two kinds of problem have two different fixes (rule R9):
 - The code does not do what the prompt says. This is a bug. The agent changes the code.
 - The code does what the prompt says, and the designer does not like it. The designer changes the prompt or adds to it.
 
+**Kept code.** The code for a behavior is stored. When the prompt changes, the agent edits the stored code and changes only what the new prompt requires. It does not write the code again from the start (rule R11).
+
 More proposals:
 
 - **Fields from answers.** If the agent asks how far the whistle carries and the answer is 8 tiles, `range = 8` becomes a field. The designer can change the field by hand without a request to the agent. (**Proposed**)
 - **Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. The tools show these links to the designer. See "Recognized names in text". (**Proposed**)
-- **Kept output.** A changed prompt changes the existing code and leaves the rest alone (rule R11). (**Proposed**)
 
 ### Native behaviors
 

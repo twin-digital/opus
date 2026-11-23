@@ -26,25 +26,24 @@ These questions are not settled. Each one names the roadmap project that must an
 
 13. **What exactly happens when a person edits the code of a behavior?** The likely direction is a native behavior with a locked prompt. Can a native behavior return to a prompt? (Project 3)
 14. **Are fields, checks, and links part of every behavior?** Proposed. (Project 3)
-15. **Is generated output kept and edited, or regenerated?** Proposed as rule R11. (Projects 3, 4)
-16. **How are conflicts handled on a reapply?** The brainstorm noted this risk and did not resolve it. (Project 4)
-17. **How precise must an expectation be before it becomes an automated test?** (Project 5)
+15. **How are conflicts handled on a reapply?** The brainstorm noted this risk and did not resolve it. (Project 4)
+16. **How precise must an expectation be before it becomes an automated test?** (Project 5)
 
 ## Assembly
 
-18. **Which libraries fill each slot for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
-19. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
-20. **Which image model generates sprites, and how is one style kept?** (Project 4)
-21. **How is sound and music generated or imported?** Not discussed. (Later)
+17. **Which libraries fill each slot for the first game?** Renderer: PixiJS or Phaser. Live state: an ECS library or custom code. Authored scenes: LDtk, Tiled, or a custom format. The facts about these libraries are unverified. (Project 1)
+18. **Is a toolkit for in-game user interface part of the base?** The owner is not sure. (Later)
+19. **Which image model generates sprites, and how is one style kept?** (Project 4)
+20. **How is sound and music generated or imported?** Not discussed. (Later)
 
 ## Project
 
-22. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
-23. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
-24. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
+21. **What is the order of the roadmap projects?** See the proposal in `roadmap.md`.
+22. **What npm scope do the packages use?** This repository uses `@twin-digital/*` for most products and `@thrashplay/*` for Farwatch. (Project 1)
+23. **Is Wishem the final name?** The owner chose it as a working name. No product, npm package, or GitHub account with the name was found on 2026-11-22. Wishew, an iOS app, is one letter away. Trademarks were not checked.
 
 ## Brand
 
-25. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
-26. **What is the illustration style?** (Project 6)
-27. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)
+24. **What is the logo mark?** The options from the brand basics are a spark, a lantern, and a small clay figure. See `brand.md`. (Project 6)
+25. **What is the illustration style?** (Project 6)
+26. **How does the agent's activity move on the screen?** The brand gives the agent the color Wisp. The motion is not designed. (Project 6)
