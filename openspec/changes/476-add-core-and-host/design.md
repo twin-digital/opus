@@ -146,13 +146,15 @@ export type Snapshot = Model
 export interface Problem {
   severity: 'error' | 'warning'
   message: string
-  /** Where the problem is: a file that the host gave, and a path in the data. */
+  /** Where the problem is in the model data, such as `['definitions', 0, 'fields', 1, 'type']`. */
+  path: (string | number)[]
+  /** The file that has the problem. The host sets it. The core does not. */
   source?: string
 }
 
 export type ValidationResult = { ok: true; model: Model; warnings: Problem[] } | { ok: false; problems: Problem[] }
 
-/** Checks data of an unknown shape against the rules of the model-files specification. */
+/** Checks data of an unknown shape against the rules of the `wishem/core/model` specification. */
 export const validateModel: (data: unknown) => ValidationResult
 
 export interface Core {
@@ -272,7 +274,7 @@ nodejs/wishem/workbench/model/
 }
 ```
 
-The host puts the content of each definition file into `definitions` and the `entities` of `state.json` into `entities`. That value is the data that the core checks.
+The host puts the content of each definition file into `definitions` and the `entities` of `state.json` into `entities`. That value is the data that the core checks. The host keeps the file of each item of `definitions`. When the core gives a problem, the host uses the `path` of the problem to set its `source`: a path in `definitions` gives the definition file of that item, and a path in `entities` gives `state.json`.
 
 ## Main flow
 

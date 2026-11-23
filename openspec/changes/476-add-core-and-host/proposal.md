@@ -33,9 +33,10 @@ Not in this change: a page, a renderer, a view, the link between a view and a co
 
 ### New Capabilities
 
-- `wishem/model/model-files`: the file format of a model folder, the IDs and labels, and the rules that make a model correct.
+- `wishem/core/model`: the data of a model, the IDs and labels, and the rules that make a model correct.
 - `wishem/core/snapshot`: what a snapshot holds, and how a core gives the current snapshot and each later snapshot to a thing outside the core.
-- `wishem/host/start-command`: the command that starts a core for a model folder, watches the folder, serves the snapshot on a local port, and reports problems.
+- `wishem/host-nodejs/model-folder`: how the Node.js host stores a model as files in a model folder.
+- `wishem/host-nodejs/start-command`: the command that starts a core for a model folder, watches the folder, serves the snapshot on a local port, and reports problems.
 
 ### Modified Capabilities
 
