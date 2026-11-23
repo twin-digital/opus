@@ -28,8 +28,8 @@ context: |
   has at most one change. The issue must exist before the change is created. The change name starts
   with the issue number: `<issue-number>-<kebab-name>` (e.g. `221-add-in-game-ui`). The issue has
   one GitHub issue type (`Feature`, `Bug`, or `Task`) and one product label (`app:<product>`), and
-  can belong to one milestone. Relations between issues (blocked by, sub-issue) are recorded on the issues in
-  GitHub, never in change artifacts.
+  can belong to one milestone. Relations between issues (blocked by, sub-issue) are recorded on the
+  issues in GitHub, never in change artifacts.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

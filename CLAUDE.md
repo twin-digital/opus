@@ -75,7 +75,7 @@ Work is tracked in GitHub issues in `twin-digital/opus`.
 - **Type.** Each issue has one GitHub issue type: `Feature`, `Bug`, or `Task`. Do not use a label for the type. `gh issue create` cannot set the type. Set it after you create the issue: `gh api --method PATCH repos/twin-digital/opus/issues/<number> -f type=Feature`.
 - **Product label.** Each issue has one product label (`app:<product>`, for example `app:wishem`). All product labels have the same colour. Do not put the product name in the title of the issue.
 - **Relations.** Set each relation between issues (blocked by, sub-issue) on the issues in GitHub. Do not record a relation in a change artifact.
-- **Boards.** Each product has one GitHub project. Add each issue of the product to that project.
+- **Boards.** A product can have one GitHub project in the `twin-digital` organization. When the product has a project, add each issue of the product to it. Wishem has the project [Wishem](https://github.com/orgs/twin-digital/projects/5).
 - **Work that skips OpenSpec.** Work that goes directly to a pull request (a bug fix, a config change, docs) also gets an issue when it is planned before it starts.
 
 ## Spec-driven workflow (OpenSpec + Superpowers)
