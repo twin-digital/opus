@@ -144,6 +144,12 @@ Terms in each group are in alphabetical order.
 
 **Tool**: A part of the designer's view of the product: a screen view, an inspector, a table, an overlay.
 
+## Planning
+
+**Change**: A unit of work. A change is always an OpenSpec change. Each GitHub issue is planned as one change.
+
+**Milestone**: One row of the roadmap, such as "Core model". A milestone has one or more changes. It agrees with a GitHub milestone, such as "Wishem: Core model".
+
 ## Terms that are not used
 
 | Do not use                                      | Use                                                           | Reason                                                                                                       |
@@ -159,7 +165,7 @@ Terms in each group are in alphabetical order.
 | Invariant, constraint, requirement              | Expectation                                                   | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
 | Origin record                                   | Provenance                                                    | Provenance is the usual term for this record.                                                                |
 | Presentation slot                               | Output subsystem or input subsystem                           | Input is not presentation.                                                                                   |
-| Project, for a unit of roadmap work             | Change                                                        | A project is what a designer makes with Wishem. "Change" agrees with the OpenSpec term.                      |
+| Project, for a row of the roadmap               | Milestone                                                     | A project is what a designer makes with Wishem. "Milestone" agrees with the GitHub milestones.               |
 | Scene graph                                     | Model, or the renderer's objects                              | Use "model" for entities and components. Use "the renderer's objects" for the display side.                  |
 | Script                                          | Behavior                                                      | The prompt is the source, not a script.                                                                      |
 | Sim                                             | Simulation                                                    | Write the word in full.                                                                                      |

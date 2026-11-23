@@ -8,7 +8,7 @@ This folder is the blueprint for Wishem. It records the vision, the concepts, th
 
 - The blueprint is analysis. It is not a specification.
 - Formal specifications live in `openspec/specs/wishem/`. When a specification exists for a topic, the specification overrides the blueprint.
-- Each roadmap change starts with its own OpenSpec change. Use the GitHub issue of the roadmap change as the input to that OpenSpec change.
+- Each milestone of the roadmap has one or more changes. Each change is planned as an OpenSpec change. Use the GitHub issue of the change as the input.
 
 ## How to read the status labels
 
@@ -37,7 +37,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 | Design or build any part of Wishem           | `rules.md`, then `concepts.md`                                     |
 | Understand what a designer expects to happen | `examples/`                                                        |
 | Choose what to build next                    | `roadmap.md`                                                       |
-| Start the brainstorm for a roadmap change    | The GitHub issue of the roadmap change. See `roadmap.md`.          |
+| Start the brainstorm for a milestone         | The GitHub issue of the milestone. See `roadmap.md`.               |
 | Check if a question is already settled       | `rules.md`, then the GitHub issue for the topic. See `roadmap.md`. |
 | Learn why the design has this shape          | `brainstorm.md`                                                    |
 
@@ -49,8 +49,8 @@ Text with no label has no status. It is explanation, an example, or the reading 
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.
 - `examples/`: worked examples of a designer and the agent, and a wireframe of the editor. An example is an illustration. It is not a rule or a requirement.
-- `roadmap.md`: the roadmap changes, their dependencies, and the first game.
-- GitHub issues with the label `app:wishem`: one issue for each roadmap change and for each other topic that is not settled. An issue holds what is known, the open questions, and the ideas. It is the start of the brainstorm for that topic. The blueprint has no list of open questions. `roadmap.md` gives the issues.
+- `roadmap.md`: the milestones, their dependencies, and the first game.
+- GitHub issues with the label `app:wishem`: one issue for each milestone and for each other topic that is not settled. An issue holds what is known, the open questions, and the ideas. It is the start of the brainstorm for that topic. The blueprint has no list of open questions. `roadmap.md` gives the issues.
 - `brainstorm.md`: minutes of the conversation that produced this blueprint.
 
 ## Asides from Wishem

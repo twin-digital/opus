@@ -74,7 +74,7 @@ Which relations exist in every product, and which a product adds, is an open que
 
 ### References (**Open**)
 
-The blueprint has several ways for one thing to point at another, and no shared terms for them. This needs a brainstorm in roadmap change 1.
+The blueprint has several ways for one thing to point at another, and no shared terms for them. This needs a brainstorm in milestone 1.
 
 The ways that exist now:
 
@@ -240,7 +240,7 @@ A reapply can affect three groups of things.
 
 The agent can find all three groups only if provenance, declared relations, and IDs all exist.
 
-Two kinds of reapply are possible. This area needs a brainstorm in roadmap change 4.
+Two kinds of reapply are possible. This area needs a brainstorm in milestone 4.
 
 - **Refresh.** The agent replaces only the things that the run made. The subject of the prompt, such as the room, keeps its ID. A thing that is still there after the change keeps its ID.
 - **Regenerate.** The agent makes the result again from the start.

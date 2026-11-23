@@ -2,13 +2,13 @@
 
 > Blueprint, not a specification. See `README.md` for the status labels.
 
-This file is the only part of the blueprint that describes future work. Each change in the roadmap is planned as one OpenSpec change, with its own brainstorm, when its turn comes.
+This file is the only part of the blueprint that describes future work. Each milestone has one or more changes. Each change is planned as an OpenSpec change, with its own brainstorm, from its GitHub issue.
 
-## Changes
+## Milestones
 
-The list of changes is **Agreed**. The order after change 0 is **Open**.
+The list of milestones is **Agreed**. The order after milestone 0 is **Open**.
 
-| #   | Change                                                                  | Result                                                                                                                     | Depends on |
+| #   | Milestone                                                               | Result                                                                                                                     | Depends on |
 | --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | 0   | **Blueprint**                                                           | This folder.                                                                                                               | None       |
 | 1   | [**Core model**](https://github.com/twin-digital/opus/issues/479)       | Entities and components with declared fields. Step, snapshot, restore, rewind, rerun, bookmarks. A first renderer adapter. | 0          |
@@ -19,17 +19,17 @@ The list of changes is **Agreed**. The order after change 0 is **Open**.
 | 6   | [**Tools**](https://github.com/twin-digital/opus/issues/484)            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.            | 1, 2       |
 | 7   | [**Other engines**](https://github.com/twin-digital/opus/issues/485)    | A wire protocol between the model and a renderer in another engine. **Parked.**                                            | 1          |
 
-Each roadmap change has a GitHub issue and a milestone. The issue holds what is known about the roadmap change, its open questions, and its notes. The name of the OpenSpec change starts with the number of the issue.
+Each milestone has a GitHub issue and a GitHub milestone. The issue holds what is known about the milestone, its open questions, and its notes. The name of an OpenSpec change starts with the number of its GitHub issue.
 
-Two topics have an issue and are not roadmap changes: the in-game user interface ([#487](https://github.com/twin-digital/opus/issues/487)), and sound and music ([#488](https://github.com/twin-digital/opus/issues/488)).
+Two topics have an issue and are not milestones: the in-game user interface ([#487](https://github.com/twin-digital/opus/issues/487)), and sound and music ([#488](https://github.com/twin-digital/opus/issues/488)).
 
-The first work is the milestone "Bootstrap workbench UI". It is not a roadmap change. It builds thin parts of roadmap changes 1, 2, and 6 for the first slices of the workbench: [#476](https://github.com/twin-digital/opus/issues/476), [#477](https://github.com/twin-digital/opus/issues/477), and [#478](https://github.com/twin-digital/opus/issues/478).
+The first work is the GitHub milestone "Bootstrap workbench UI". It is not a row of the roadmap. It builds thin parts of milestones 1, 2, and 6 for the first slices of the workbench: [#476](https://github.com/twin-digital/opus/issues/476), [#477](https://github.com/twin-digital/opus/issues/477), and [#478](https://github.com/twin-digital/opus/issues/478).
 
 ## Order
 
-**Proposed:** do not finish one roadmap change before the next one starts. Let the first game pull a thin thread through roadmap changes 1 to 4 early: one room, one hero, one behavior prompt, one generated sprite, one change made from a paused game. Then widen each roadmap change.
+**Proposed:** do not finish one milestone before the next one starts. Let the first game pull a thin thread through milestones 1 to 4 early: one room, one hero, one behavior prompt, one generated sprite, one change made from a paused game. Then widen each milestone.
 
-Reason: the roadmap changes exist to serve one conversation between a designer and the agent. A thin thread proves that conversation before any one part is complete.
+Reason: the milestones exist to serve one conversation between a designer and the agent. A thin thread proves that conversation before any one part is complete.
 
 The owner did not confirm this order.
 
@@ -57,6 +57,6 @@ Things in the prototype that agree with this blueprint, as evidence and not as a
 
 ## Planning method
 
-- Each roadmap change is planned as one OpenSpec change in this repository. (**Agreed**)
+- Each change is planned as an OpenSpec change in this repository. (**Agreed**)
 - Formal specifications live in `openspec/specs/wishem/<area>/<capability>/spec.md`. (**Agreed**, from the repository convention)
 - The blueprint is the input to each change. When a change settles a **Proposed** or **Open** item, update the blueprint in the same change.
