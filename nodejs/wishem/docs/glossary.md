@@ -34,7 +34,7 @@ Terms in each group are in alphabetical order.
 
 **Component**: A declared set of fields with optional behavior, attached to an entity. Each component has a component type.
 
-**Component type**: The declaration of a component: its name and its fields. A component type can have behaviors. A component type that only one entity uses is normal.
+**Component type**: The declaration of a component: its label and its fields. The declaration is data (JSON), not code. A component type can have behaviors. A component type that only one entity uses is normal.
 
 **Definitions**: The declared kinds in a model: component types, entity definitions, and relations. They say what can exist. The registry reports them.
 
@@ -46,9 +46,9 @@ Terms in each group are in alphabetical order.
 
 **Field**: One declared value in a component.
 
-**ID** (**Proposed**): The name of a registered thing that code and links use. It does not change.
+**ID** (**Agreed** for a component type, a field, and an entity): The name of a registered thing that code and links use. It does not change. It has a prefix for the kind of thing, an underscore, and a UUID in lowercase. Prefixes: `ct_` for a component type, `fld_` for a field, `e_` for an entity.
 
-**Label** (**Proposed**): The name of a registered thing that the designer sees. The designer can change it.
+**Label** (**Agreed** for a component type and a field): The name of a registered thing that the designer sees. The designer can change it.
 
 **Live state**: The state of one simulation.
 
@@ -123,6 +123,8 @@ Terms in each group are in alphabetical order.
 **Built-in subsystem**: A subsystem that Wishem provides. It is in every product.
 
 **Core**: The part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
+
+**Host** (**Proposed**): The part that assembles one core and its subsystems in one arrangement. `host-nodejs` is the host for Node.js.
 
 **I/O subsystem**: An output subsystem or an input subsystem.
 
