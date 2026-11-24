@@ -3176,6 +3176,161 @@ importers:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.11)(jsdom@30.0.1)(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.0))
 
+  nodejs/wishem/core:
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.11(supports-color@8.1.1)(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.9.1(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      globals:
+        specifier: 'catalog:'
+        version: 17.12.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.68.0(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.11)(jsdom@30.0.1)(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.1))
+
+  nodejs/wishem/host-nodejs:
+    dependencies:
+      '@thrashplay/wishem-core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.11(supports-color@8.1.1)(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.9.1(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      globals:
+        specifier: 'catalog:'
+        version: 17.12.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.68.0(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.11)(jsdom@30.0.1)(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.1))
+
+  nodejs/wishem/workbench:
+    dependencies:
+      '@thrashplay/wishem-core':
+        specifier: workspace:*
+        version: link:../core
+      '@thrashplay/wishem-host-nodejs':
+        specifier: workspace:*
+        version: link:../host-nodejs
+    devDependencies:
+      '@eslint/js':
+        specifier: 'catalog:'
+        version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@twin-digital/eslint-config':
+        specifier: workspace:*
+        version: link:../../devtools/eslint-config
+      '@twin-digital/opus-scripts':
+        specifier: workspace:*
+        version: link:../../../tooling/scripts
+      '@twin-digital/tsconfig':
+        specifier: workspace:*
+        version: link:../../devtools/tsconfig
+      '@twin-digital/vitest-config':
+        specifier: workspace:*
+        version: link:../../devtools/vitest-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      '@vitest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 4.1.11(supports-color@8.1.1)(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 10.9.1(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-config-prettier:
+        specifier: 'catalog:'
+        version: 10.1.8(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      globals:
+        specifier: 'catalog:'
+        version: 17.12.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
+      prettier-package-json:
+        specifier: 'catalog:'
+        version: 2.8.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      typescript-eslint:
+        specifier: 'catalog:'
+        version: 8.68.0(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.11)(jsdom@30.0.1)(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.1))
+
   tooling/renovate-tools:
     dependencies:
       yaml:

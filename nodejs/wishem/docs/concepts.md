@@ -37,7 +37,7 @@ The renderer draws a picture of a simulation and never owns any of it.
 
 - An **entity** is a thing in a model: the hero, a goat, an iron ring, a door.
 - A **component** is a declared set of fields with optional behavior. An entity is the set of its components.
-- A **component type** is the declaration of a component: its name and its fields. A component type can have behaviors.
+- A **component type** is the declaration of a component: its label and its fields. The declaration is data in the model folder, not code. A component type can have behaviors.
 - Each component has a component type. No component exists without a type. A component type that only one entity uses is normal.
 
 This is the model that Unity developers know: game objects with attached components that carry state and behavior. Making a game is mostly the work of creating and managing the correct components. That is also the work of the agent.
@@ -186,7 +186,7 @@ Two kinds of problem have two different fixes (rule R9):
 
 **Names are links.** "Shift whistle", "goat", and "docile" in a prompt point at registered things. If the meaning of `docile` changes, the agent knows which behaviors to check again. The tools show these links to the designer. See "Recognized names in text". (**Agreed**. The details are open.)
 
-**IDs and labels (Proposed).** Each registered thing has an ID and a label. A field is the first case. Code and links use the ID. The designer sees the label and can change it at any time. The ID is not usually shown.
+**IDs and labels (Agreed for a component type, a field, and an entity).** A component type, a field, and an entity each have an ID that does not change. The ID has a prefix for the kind of thing, an underscore, and a UUID. A component type and a field each have a label. The designer sees the label and can change it at any time. Code and links use the ID. The authored state refers to component types and fields by ID. The ID is not usually shown.
 
 ### Native behaviors
 
