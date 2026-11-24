@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Wishem workbench style guide preview</title>
-    <!-- Static preview of the workbench design system: tokens, typography, components, and states. Follows the color scheme of the system. -->
+    <!-- Static preview of the workbench design system: tokens, typography, components, and states. Starts in the color scheme of the system. A button changes the theme. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -60,24 +60,29 @@
         --shadow-sm: 0 1px 2px #17172a14;
         --shadow-md: 0 4px 14px #17172a1f;
       }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --ground: #121222;
-          --surface: #1b1b30;
-          --fg: #ececf3;
-          --fg-muted: #a3a3b8;
-          --line: #2d2d46;
-          --maker-text: var(--wishfire);
-          --spirit-text: var(--wisp);
-          --accent-text: var(--moonlight);
-          --success-text: var(--success);
-          --warning-text: var(--warning);
-          --danger-text: #f2666a;
-          --info-text: var(--info);
-          --shadow-sm: 0 1px 2px #0006;
-          --shadow-md: 0 4px 14px #0008;
-          color-scheme: dark;
-        }
+      :root[data-theme='dark'] {
+        --ground: #121222;
+        --surface: #1b1b30;
+        --fg: #ececf3;
+        --fg-muted: #a3a3b8;
+        --line: #2d2d46;
+        --maker-text: var(--wishfire);
+        --spirit-text: var(--wisp);
+        --accent-text: var(--moonlight);
+        --success-text: var(--success);
+        --warning-text: var(--warning);
+        --danger-text: #f2666a;
+        --info-text: var(--info);
+        --shadow-sm: 0 1px 2px #0006;
+        --shadow-md: 0 4px 14px #0008;
+        color-scheme: dark;
+      }
+      #theme {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 9;
+        box-shadow: var(--shadow-md);
       }
       * {
         box-sizing: border-box;
@@ -679,6 +684,7 @@
     </style>
   </head>
   <body>
+    <button id="theme" class="btn neutral" type="button">Switch to dark mode</button>
     <div class="appbar">
       <p>Wishem<i>.</i></p>
     </div>
@@ -688,7 +694,7 @@
         <p class="note">
           Principles. The workbench is quiet and its surfaces are flat. Colour says who acted. <code>maker</code> is the
           designer, <code>spirit</code> is Wishem, and <code>accent</code> belongs to no one. On a bright fill, text is
-          always Ink. This page follows the colour scheme of the system.
+          always Ink. The button at the bottom right changes between light mode and dark mode.
         </p>
       </section>
 
@@ -1129,5 +1135,18 @@ onLit(torch) {
         </div>
       </section>
     </div>
+    <script>
+      // Starts in the color scheme of the system. The button changes the theme.
+      const root = document.documentElement
+      const button = document.getElementById('theme')
+      const setTheme = (theme) => {
+        root.dataset.theme = theme
+        button.textContent = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+      }
+      setTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      button.addEventListener('click', () => {
+        setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark')
+      })
+    </script>
   </body>
 </html>
