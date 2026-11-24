@@ -86,3 +86,6 @@ core.[0-9]*
 # A folder with the name `core` is source, not a dump.
 !core/
 nodejs/football/overrides.json
+
+# Scratch files of the Superpowers plugin.
+.superpowers/

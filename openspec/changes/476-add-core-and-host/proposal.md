@@ -12,7 +12,7 @@ Wishem has a blueprint and no code. Each later change needs a core that holds a 
 ## What Changes
 
 - Add three packages in `nodejs/wishem/`, with the npm scope `@thrashplay`:
-  - `@thrashplay/wishem-core` in `core`: the model data types, the validation of the structure of a model, the snapshot, and the read operations of the interface of the core.
+  - `@thrashplay/wishem-core` in `core`: the model data types, the validation of the structure of a model, the snapshot, and the read operations of the interface of the core. A shipped product runs the core in a web browser, so a check of the repository fails when the source code of the core uses a Node.js API.
   - `@thrashplay/wishem-host-nodejs` in `host-nodejs`: the `wishem start` command, the read and the watch of a model folder, and the local HTTP port.
   - `@thrashplay/wishem-workbench` in `workbench`: the model of the base workbench.
 - Define the file format of a model folder. A definition is data, not code:

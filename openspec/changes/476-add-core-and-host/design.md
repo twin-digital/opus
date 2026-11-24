@@ -44,7 +44,7 @@ The name `host-nodejs` shows that other hosts can exist, such as the page of a p
 
 Rejected: one package with subpath exports. Nothing stops an import of a Node.js API into the core.
 
-To hold the boundary, the `tsconfig` of the core does not include the Node.js types (call of the agent). Thus an import of `node:fs` in the core is a type error.
+A check holds the boundary, because a shipped product runs the core in a web browser, and no test in development shows a Node.js import there. The check compiles the source files of the core, without the test files, with a TypeScript configuration that does not include the Node.js types. Thus an import of a Node.js module and a use of a Node.js global are type errors. The test files stay out of that configuration, because the test framework brings the Node.js types with it. If this configuration cannot hold the boundary, an ESLint rule holds it: `no-restricted-imports` for each Node.js module with and without the `node:` prefix, and `no-restricted-globals` for the Node.js globals.
 
 ### D2. The npm scope is `@thrashplay`
 
