@@ -110,3 +110,58 @@ describe('subscribe and setModel', () => {
     expect(core.getSnapshot().entities[0]?.components[CT]?.[FLD]).toBe('After')
   })
 })
+
+describe('snapshot protection', () => {
+  it('throws a TypeError when a caller changes the snapshot, and keeps the model', () => {
+    const core = createCore(workbench())
+    const snapshot = core.getSnapshot() as unknown as { entities: { id: string }[] }
+    expect(() => {
+      snapshot.entities[0].id = 'changed'
+    }).toThrow(TypeError)
+    expect(() => {
+      snapshot.entities.push({ id: 'extra' })
+    }).toThrow(TypeError)
+    expect(core.getSnapshot().entities).toHaveLength(1)
+    expect(core.getSnapshot().entities[0]?.id).toBe(ENT)
+  })
+
+  it('throws a TypeError when a listener changes the snapshot, and keeps the model', () => {
+    const core = createCore(workbench())
+    const attempts: unknown[] = []
+    core.subscribe((snapshot) => {
+      try {
+        ;(snapshot as unknown as { entities: unknown[] }).entities.length = 0
+      } catch (error) {
+        attempts.push(error)
+      }
+    })
+    core.setModel(workbench('Next'))
+    expect(attempts[0]).toBeInstanceOf(TypeError)
+    expect(core.getSnapshot().entities).toHaveLength(1)
+    expect(core.getSnapshot().entities[0]?.components[CT]?.[FLD]).toBe('Next')
+  })
+})
+
+describe('a listener that throws', () => {
+  it('lets every listener run, throws an AggregateError, and keeps the new model', () => {
+    const core = createCore(workbench())
+    const first = vi.fn()
+    const third = vi.fn()
+    core.subscribe(first)
+    core.subscribe(() => {
+      throw new Error('listener failed')
+    })
+    core.subscribe(third)
+    let thrown: unknown
+    try {
+      core.setModel(workbench('Next'))
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(AggregateError)
+    expect((thrown as AggregateError).errors).toHaveLength(1)
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(third).toHaveBeenCalledTimes(1)
+    expect(core.getSnapshot().entities[0]?.components[CT]?.[FLD]).toBe('Next')
+  })
+})

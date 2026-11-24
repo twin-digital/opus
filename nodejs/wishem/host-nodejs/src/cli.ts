@@ -3,10 +3,9 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { ModelError } from '@thrashplay/wishem-core'
 import { describeCounts, formatProblem } from './format.js'
-import { startHost } from './start-host.js'
+import { DEFAULT_PORT, startHost } from './start-host.js'
 
 const USAGE = 'usage: wishem start <folder> [--port <number>]'
-const DEFAULT_PORT = 4747
 
 const say = (line: string) => {
   console.log(line)
@@ -33,8 +32,12 @@ const main = async () => {
     return usageError()
   }
 
-  const port = parsed.values.port === undefined ? DEFAULT_PORT : Number(parsed.values.port)
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+  const portText = parsed.values.port
+  const port =
+    portText === undefined ? DEFAULT_PORT
+    : /^\d+$/.test(portText) ? Number(portText)
+    : NaN
+  if (!Number.isInteger(port) || port > 65535) {
     return usageError(`the port must be a number from 0 to 65535, not "${parsed.values.port ?? ''}"`)
   }
 

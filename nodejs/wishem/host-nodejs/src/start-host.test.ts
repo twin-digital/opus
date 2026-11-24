@@ -239,6 +239,20 @@ describe('startHost', () => {
       await eventually(() => title(host) === 'Renamed')
     })
 
+    it('logs a failed listener, keeps the new model, and keeps running', async () => {
+      const host = await start()
+      host.core.subscribe(() => {
+        throw new Error('listener broke')
+      })
+      await write('state.json', state('First'))
+      await eventually(() => lines.some((line) => line.includes('a listener failed: ')))
+      expect(lines.some((line) => line.includes('listener broke'))).toBe(true)
+      expect(lines.some((line) => line.includes('cannot read the model'))).toBe(false)
+      expect(title(host)).toBe('First')
+      await write('state.json', state('Second'))
+      await eventually(() => title(host) === 'Second')
+    })
+
     it('prints a warning for two component types with the same label', async () => {
       await start()
       await write('definitions/other.json', definition('AppBar', CT2))

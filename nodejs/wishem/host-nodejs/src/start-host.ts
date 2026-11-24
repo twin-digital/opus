@@ -1,4 +1,5 @@
 import { watch } from 'node:fs'
+import type { FSWatcher } from 'node:fs'
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -25,7 +26,7 @@ export interface Host {
   close(): Promise<void>
 }
 
-const DEFAULT_PORT = 4747
+export const DEFAULT_PORT = 4747
 const HOST_ADDRESS = '127.0.0.1'
 const SETTLE_MS = 50
 
@@ -102,11 +103,20 @@ export const startHost = async (options: HostOptions): Promise<Host> => {
     throw error
   })
 
+  const closeServer = () =>
+    new Promise<void>((resolve) => {
+      server.close(() => {
+        resolve()
+      })
+      server.closeAllConnections()
+    })
+
   let timer: NodeJS.Timeout | undefined
   let reading: Promise<void> = Promise.resolve()
   let correct = true
 
-  const reload = async () => {
+  /** Reads the folder again. `quiet` skips the warnings when the model did not change. */
+  const reload = async (quiet = false) => {
     const result = await readModelFolder(folder)
     const { problems, warnings } = check(result)
     if (problems.length > 0 || result.data === undefined) {
@@ -117,28 +127,53 @@ export const startHost = async (options: HostOptions): Promise<Host> => {
       correct = false
       return
     }
-    core.setModel(result.data)
-    warnings.forEach((warning) => {
-      log(formatProblem(warning))
-    })
+    const before = core.getSnapshot()
+    try {
+      core.setModel(result.data)
+    } catch (error) {
+      const failures = error instanceof AggregateError ? (error.errors as unknown[]) : [error]
+      failures.forEach((failure) => {
+        log(`wishem: a listener failed: ${failure instanceof Error ? failure.message : String(failure)}`)
+      })
+    }
+    if (!quiet || core.getSnapshot() !== before) {
+      warnings.forEach((warning) => {
+        log(formatProblem(warning))
+      })
+    }
     if (!correct) {
       log(`wishem: the model is correct: ${describeCounts(core.getSnapshot())}`)
     }
     correct = true
   }
 
-  const watcher = watch(folder, { recursive: true }, () => {
+  const scheduleReload = (quiet = false) => {
     clearTimeout(timer)
     timer = setTimeout(() => {
-      reading = reading.then(reload).catch((error: unknown) => {
-        log(`wishem: cannot read the model: ${String(error)}`)
-      })
+      reading = reading
+        .then(() => reload(quiet))
+        .catch((error: unknown) => {
+          log(`wishem: cannot read the model: ${String(error)}`)
+        })
     }, SETTLE_MS)
-  })
+  }
+
+  let watcher: FSWatcher
+  try {
+    watcher = watch(folder, { recursive: true }, () => {
+      scheduleReload()
+    })
+  } catch (error) {
+    unsubscribe()
+    await closeServer()
+    throw error
+  }
   watcher.on('error', (error) => {
     log(`wishem: the watch failed: ${error.message}`)
     options.onWatchError?.(error)
   })
+  // Picks up a change made between the first read and the start of the watch.
+  scheduleReload(true)
 
   return {
     url: `http://${HOST_ADDRESS}:${(server.address() as AddressInfo).port}`,
@@ -150,12 +185,7 @@ export const startHost = async (options: HostOptions): Promise<Host> => {
       await reading
       streams.forEach((stream) => stream.end())
       streams.clear()
-      await new Promise<void>((resolve) => {
-        server.close(() => {
-          resolve()
-        })
-        server.closeAllConnections()
-      })
+      await closeServer()
     },
   }
 }

@@ -1,12 +1,11 @@
-import { execFile, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const cli = path.join(packageRoot, 'dist', 'cli.js')
@@ -51,10 +50,6 @@ describe('wishem command', () => {
     running.push(process_)
     return process_
   }
-
-  beforeAll(async () => {
-    await promisify(execFile)('pnpm', ['exec', 'tsc', '-p', 'tsconfig.build.json'], { cwd: packageRoot })
-  }, 120_000)
 
   beforeEach(async () => {
     running = []
@@ -136,6 +131,16 @@ describe('wishem command', () => {
     expect(await process_.exit).not.toBe(0)
     expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
   })
+
+  it.each(['', '0x10', '1e3', ' 5000 ', '70000', '-1'])(
+    'prints the usage and exits with a non-zero code for --port "%s"',
+    async (value) => {
+      const process_ = start(['start', folder, '--port', value])
+      expect(await process_.exit).not.toBe(0)
+      expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+      expect(process_.stdout()).not.toContain('snapshot at')
+    },
+  )
 
   it('shows a problem during a run, and that the model is correct again', async () => {
     const process_ = start(['start', folder, '--port', '0'])
