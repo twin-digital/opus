@@ -71,7 +71,7 @@ export const startHost = async (options: HostOptions): Promise<Host> => {
   }
 
   const handle = (request: IncomingMessage, response: ServerResponse) => {
-    const pathname = new URL(request.url ?? '/', 'http://localhost').pathname
+    const pathname = (request.url ?? '/').split('?')[0] ?? '/'
     if (pathname !== '/snapshot' && pathname !== '/snapshots') {
       sendJson(response, 404, { error: `No such path: ${pathname}` })
     } else if (request.method !== 'GET') {

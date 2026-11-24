@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
+import { request } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -139,6 +140,26 @@ describe('startHost', () => {
       const response = await fetch(`${host.url}/panels`)
       expect(response.status).toBe(404)
       expect(await response.json()).toEqual({ error: 'No such path: /panels' })
+    })
+
+    it('gives 404 with a JSON error for a request target that is not a valid URL path', async () => {
+      const host = await start()
+      const { status, body } = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+        const req = request({ host: '127.0.0.1', port: Number(new URL(host.url).port), path: '//' }, (res) => {
+          let text = ''
+          res.on('data', (chunk: Buffer) => {
+            text += chunk.toString()
+          })
+          res.on('end', () => {
+            resolve({ status: res.statusCode ?? 0, body: text })
+          })
+        })
+        req.on('error', reject)
+        req.end()
+      })
+      expect(status).toBe(404)
+      expect(JSON.parse(body)).toHaveProperty('error')
+      expect((await fetch(`${host.url}/snapshot`)).status).toBe(200)
     })
 
     it('gives 405 with a JSON error for a method that is not GET', async () => {
