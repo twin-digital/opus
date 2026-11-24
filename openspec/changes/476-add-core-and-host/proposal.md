@@ -7,12 +7,12 @@ milestone: https://github.com/twin-digital/opus/milestone/1
 
 ## Why
 
-Wishem has a blueprint and no code. Each later change needs a core that holds a model and gives that model to the things outside the core. This change builds the first core and the first host, with no window, so that the [first workbench UI slice](https://github.com/twin-digital/opus/issues/477) can add a page on a working base.
+Wishem has a blueprint and no code. Each later change needs a core that holds a model and gives that model to the code that uses it, such as a host, a renderer, or an agent. This change builds the first core and the first host, so that the [first workbench UI slice](https://github.com/twin-digital/opus/issues/477) can add a page on a working base.
 
 ## What Changes
 
 - Add three packages in `nodejs/wishem/`, with the npm scope `@thrashplay`:
-  - `@thrashplay/wishem-core` in `core`: the model data types, the check of a model, the snapshot, and the read operations of the interface of the core. It imports no Node.js API.
+  - `@thrashplay/wishem-core` in `core`: the model data types, the validation of the structure of a model, the snapshot, and the read operations of the interface of the core.
   - `@thrashplay/wishem-host-nodejs` in `host-nodejs`: the `wishem start` command, the read and the watch of a model folder, and the local HTTP port.
   - `@thrashplay/wishem-workbench` in `workbench`: the model of the base workbench.
 - Define the file format of a model folder. A definition is data, not code:
@@ -34,7 +34,7 @@ Not in this change: a page, a renderer, a view, the link between a view and a co
 ### New Capabilities
 
 - `wishem/core/model`: the data of a model, the IDs and labels, and the rules that make a model correct.
-- `wishem/core/snapshot`: what a snapshot holds, and how a core gives the current snapshot and each later snapshot to a thing outside the core.
+- `wishem/core/snapshot`: what a snapshot holds, and how a core gives the current snapshot and each later snapshot to the code that uses it, such as a host or a renderer.
 - `wishem/host-nodejs/model-folder`: how the Node.js host stores a model as files in a model folder.
 - `wishem/host-nodejs/start-command`: the command that starts a core for a model folder, watches the folder, serves the snapshot on a local port, and reports problems.
 

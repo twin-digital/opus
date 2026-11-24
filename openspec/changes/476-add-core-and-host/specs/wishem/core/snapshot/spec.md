@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Defines what a snapshot of a Wishem model holds, and how a core gives the current snapshot and each later snapshot to a thing outside the core.
+Defines what a snapshot of a Wishem model holds, and how a core gives the current snapshot and each later snapshot to the code that uses it, such as a host or a renderer.
 
 ## ADDED Requirements
 
 ### Requirement: A snapshot holds the definitions and the authored state
 
-A snapshot SHALL be one JSON value with two keys: `definitions`, the list of the component types of the model, and `entities`, the list of the entities of the authored state. A snapshot SHALL hold IDs and labels as the model files give them. A thing outside the core SHALL need no other source to read the model.
+A snapshot SHALL be one JSON value with two keys: `definitions`, the list of the component types of the model, and `entities`, the list of the entities of the authored state. A snapshot SHALL hold IDs and labels as the model files give them. A caller SHALL need no other source to read the model.
 
 #### Scenario: The snapshot of the base workbench
 
@@ -21,32 +21,32 @@ A core SHALL give its current snapshot at any time after it starts. The request 
 
 #### Scenario: Two requests with no change between them
 
-- **WHEN** a thing outside the core gets the snapshot two times and the model does not change
+- **WHEN** a caller gets the snapshot two times and the model does not change
 - **THEN** the two snapshots are equal
 
 ### Requirement: A core sends each new snapshot
 
-A thing outside the core SHALL be able to register for changes and to stop. After each change to the model, the core SHALL send the full new snapshot to each registered thing. The core SHALL NOT send a snapshot when the new model is equal to the current model.
+A caller SHALL be able to register a listener for changes and to remove it. After each change to the model, the core SHALL send the full new snapshot to each registered listener. The core SHALL NOT send a snapshot when the new model is equal to the current model.
 
 #### Scenario: A change to the authored state
 
-- **WHEN** a registered thing exists and the title of the app bar changes from `Wishem` to `Wishem workbench`
-- **THEN** the registered thing gets one snapshot that holds `Wishem workbench`
+- **WHEN** a listener is registered and the title of the app bar changes from `Wishem` to `Wishem workbench`
+- **THEN** the listener gets one snapshot that holds `Wishem workbench`
 
 #### Scenario: A change to a definition
 
-- **WHEN** a registered thing exists and the label of a component type changes
-- **THEN** the registered thing gets one snapshot that holds the new label
+- **WHEN** a listener is registered and the label of a component type changes
+- **THEN** the listener gets one snapshot that holds the new label
 
-#### Scenario: A thing stops
+#### Scenario: A listener is removed
 
-- **WHEN** a registered thing stops, and then the model changes
-- **THEN** that thing gets no snapshot, and the core continues
+- **WHEN** a listener is removed, and then the model changes
+- **THEN** that listener gets no snapshot, and the core continues
 
 #### Scenario: A model that is equal
 
 - **WHEN** the core gets a model that is equal to its current model
-- **THEN** no registered thing gets a snapshot
+- **THEN** no listener gets a snapshot
 
 ### Requirement: A core holds only a correct model
 
@@ -60,7 +60,7 @@ A core SHALL NOT start with a model that is not correct. When a running core get
 #### Scenario: A model that is not correct during a run
 
 - **WHEN** a running core holds a correct model and gets a model that is not correct
-- **THEN** the snapshot of the core does not change, no registered thing gets a snapshot, and the caller gets the problems
+- **THEN** the snapshot of the core does not change, no listener gets a snapshot, and the caller gets the problems
 
 #### Scenario: A correct model after a model that is not correct
 

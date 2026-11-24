@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Defines the command that starts a Wishem core for one model folder with no window, keeps the core in agreement with the files, and serves the snapshot on a local port.
+Defines the command that starts a Wishem core for one model folder, keeps the core in agreement with the files, and serves the snapshot on a local port.
 
 ## ADDED Requirements
 
 ### Requirement: One command starts a core for a model folder
 
-The command `wishem start <folder>` SHALL read the model folder, start one core with that model, serve the snapshot on a local port, and print the address. The command SHALL run with no window and with no web browser. The command SHALL run until it gets an interrupt signal, and then it SHALL close the port and stop with exit code 0.
+The command `wishem start <folder>` SHALL read the model folder, start one core with that model, serve the snapshot on a local port, and print the address. The command SHALL NOT need a web browser. The command SHALL run until it gets an interrupt signal, and then it SHALL close the port and stop with exit code 0.
 
 #### Scenario: A correct model
 

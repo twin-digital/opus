@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how the Node.js host stores a Wishem model as files in a model folder, and how the host changes those files into the model data that a core checks.
+Defines how the Node.js host stores a Wishem model as files in a model folder, and how the host changes those files into the model data that a core validates.
 
 ## ADDED Requirements
 

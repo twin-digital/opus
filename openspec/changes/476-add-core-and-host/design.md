@@ -27,7 +27,7 @@ Constraints from the blueprint:
 - The write, time, and input operations of the interface of the core.
 - Live state, steps, the clock, recordings, and behaviors. See issue #479.
 - A persisted lookup file. The core builds its lookup when it gets a model.
-- Problems that a thing outside the core can read. See the note in issue #480.
+- Problems that an agent or a page can read through the interface of the core. See the note in issue #480.
 - A command that starts a full project with two cores.
 
 ## Decisions
@@ -77,9 +77,9 @@ Cost: `state.json` is not easy to read. A person finds a line by its value, not 
 
 ### D5. The interface of the core has two read operations
 
-`getSnapshot()` and `subscribe()`. The core does not know what kind of thing is connected. No "attachment" object exists.
+`getSnapshot()` and `subscribe()`. The core does not know what kind of caller uses it. No "attachment" object exists.
 
-The host gives a new model to the core with `setModel()`. This operation is for the host that owns the storage. It is not a write operation of the interface for things outside the core. Issue #478 designs the write operations.
+The host gives a new model to the core with `setModel()`. This operation is for the host that owns the storage. It is not a write operation of the interface for a renderer, an agent, or a workbench. Issue #478 designs the write operations.
 
 ### D6. HTTP and Server-Sent Events
 
@@ -154,7 +154,7 @@ export interface Problem {
 
 export type ValidationResult = { ok: true; model: Model; warnings: Problem[] } | { ok: false; problems: Problem[] }
 
-/** Checks data of an unknown shape against the rules of the `wishem/core/model` specification. */
+/** Validates data of an unknown shape against the rules of the `wishem/core/model` specification. */
 export const validateModel: (data: unknown) => ValidationResult
 
 export interface Core {
@@ -274,7 +274,7 @@ nodejs/wishem/workbench/model/
 }
 ```
 
-The host puts the content of each definition file into `definitions` and the `entities` of `state.json` into `entities`. That value is the data that the core checks. The host keeps the file of each item of `definitions`. When the core gives a problem, the host uses the `path` of the problem to set its `source`: a path in `definitions` gives the definition file of that item, and a path in `entities` gives `state.json`.
+The host puts the content of each definition file into `definitions` and the `entities` of `state.json` into `entities`. That value is the data that the core validates. The host keeps the file of each item of `definitions`. When the core gives a problem, the host uses the `path` of the problem to set its `source`: a path in `definitions` gives the definition file of that item, and a path in `entities` gives `state.json`.
 
 ## Main flow
 
@@ -410,7 +410,7 @@ This change settles these items, so the same change updates the blueprint:
 - [`state.json` is hard to read because its keys are UUIDs] → Accepted. The snapshot holds the definitions, so a tool can show labels. Issue #478 adds a form.
 - [A typed view in issue #477 cannot get its prop types from a JSON definition] → Recorded as open question 5 in issue #477.
 - [The blueprint says that time belongs to the core, and issue #479 has an open option to move the clock out] → This change builds no time, so it does not limit that decision.
-- [`setModel` is public on the core, and a thing outside the core could call it] → Accepted for this change. The write operations of issue #478 decide the final shape.
+- [`setModel` is public on the core, and a renderer or an agent could call it] → Accepted for this change. The write operations of issue #478 decide the final shape.
 
 ## Open Questions
 
