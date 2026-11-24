@@ -44,7 +44,11 @@ The name `host-nodejs` shows that other hosts can exist, such as the page of a p
 
 Rejected: one package with subpath exports. Nothing stops an import of a Node.js API into the core.
 
-A check holds the boundary, because a shipped product runs the core in a web browser, and no test in development shows a Node.js import there. The check compiles the source files of the core, without the test files, with a TypeScript configuration that does not include the Node.js types. Thus an import of a Node.js module and a use of a Node.js global are type errors. The test files stay out of that configuration, because the test framework brings the Node.js types with it. If this configuration cannot hold the boundary, an ESLint rule holds it: `no-restricted-imports` for each Node.js module with and without the `node:` prefix, and `no-restricted-globals` for the Node.js globals.
+A check holds the boundary, because a shipped product runs the core in a web browser, and no test in development shows a Node.js import there. The check compiles the source files of the core, without the test files, with a TypeScript configuration that does not include the Node.js types. Thus an import of a Node.js module and a use of a Node.js global are type errors. The test files stay out of that configuration, because the test framework brings the Node.js types with it.
+
+The check is the build of the package. `nodejs/wishem/core/tsconfig.options.json` sets `"types": []`, and the two generated configurations extend that file. `pnpm build --filter @thrashplay/wishem-core` compiles the source files with `tsconfig.build.json`, which excludes the test files, and it fails on a Node.js module or a Node.js global. The pull request checks run the build.
+
+Limit: a dependency of the core whose types include the Node.js types makes the Node.js globals visible again. The core has no dependency.
 
 ### D2. The npm scope is `@thrashplay`
 
@@ -181,7 +185,12 @@ export interface ModelFolderResult {
   data?: unknown
   /** Problems of files: a missing `state.json`, or text that is not valid JSON. */
   problems: Problem[]
+  /** The file of each item of `definitions`, in the same order. Empty when `data` is absent. */
+  definitionFiles: string[]
 }
+
+/** Sets `source` on each problem from the core, by the `path` of the problem. */
+export const withSource: (problems: Problem[], result: Pick<ModelFolderResult, 'definitionFiles'>) => Problem[]
 
 export const readModelFolder: (folder: string) => Promise<ModelFolderResult>
 
@@ -191,6 +200,8 @@ export interface HostOptions {
   port?: number
   /** Default: write to the terminal. */
   log?: (line: string) => void
+  /** Called when the watch of the model folder fails. The command uses it to stop with exit code 1. */
+  onWatchError?: (error: Error) => void
 }
 
 export interface Host {
