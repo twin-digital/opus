@@ -14,7 +14,7 @@
       :root {
         --ink: #17172a;
         --wishfire: #f2a93b;
-        --wishfire-deep: #a8620f;
+        --wishfire-deep: #9e5b0c;
         --wisp: #7fd6c6;
         --wisp-deep: #23786b;
         --clay: #c8b9a9;
@@ -29,7 +29,7 @@
         --on-fill: var(--ink);
         --success: #8fcb3a;
         --warning: #e8d44d;
-        --danger: #e5484d;
+        --danger: #e8555a;
         --info: #7c9cf5;
         --display: 'Bricolage Grotesque', system-ui, sans-serif;
         --body: 'Inter', system-ui, sans-serif;
@@ -50,6 +50,7 @@
         --fg: #1c1c2e;
         --fg-muted: #5b5b70;
         --line: #dedee7;
+        --control-border: #85859a;
         --maker-text: var(--wishfire-deep);
         --spirit-text: var(--wisp-deep);
         --accent-text: var(--moonlight-deep);
@@ -66,6 +67,7 @@
         --fg: #ececf3;
         --fg-muted: #a3a3b8;
         --line: #2d2d46;
+        --control-border: #6b6b88;
         --maker-text: var(--wishfire);
         --spirit-text: var(--wisp);
         --accent-text: var(--moonlight);
@@ -250,7 +252,7 @@
       }
       .btn.neutral {
         background: var(--surface);
-        border-color: var(--line);
+        border-color: var(--control-border);
       }
       .btn.quiet {
         color: var(--fg-muted);
@@ -292,7 +294,7 @@
         font: 400 var(--fs-ctl) var(--body);
         color: var(--fg);
         background: var(--ground);
-        border: 1px solid var(--line);
+        border: 1px solid var(--control-border);
         border-radius: var(--r-sm);
         padding: 5px 8px;
         width: 100%;
@@ -335,7 +337,7 @@
       }
 
       .prompt {
-        border: 1px solid var(--line);
+        border: 1px solid var(--control-border);
         border-radius: var(--r-md);
         background: var(--ground);
         padding: 10px 12px 8px;
@@ -567,7 +569,7 @@
         display: inline-block;
         width: 16px;
         height: 16px;
-        border: 1.5px solid var(--fg-muted);
+        border: 1.5px solid var(--control-border);
         border-radius: var(--r-sm);
         background: var(--ground);
         position: relative;
@@ -579,7 +581,7 @@
       .cb.on,
       .cb.mix {
         background: var(--maker);
-        border-color: var(--maker);
+        border-color: var(--maker-text);
       }
       .cb.on::after {
         content: '';
@@ -718,6 +720,7 @@
           <div class="sw"><b style="background: var(--surface)"></b><span>surface</span></div>
           <div class="sw"><b style="background: var(--night)"></b><span>night</span></div>
           <div class="sw"><b style="background: var(--line)"></b><span>line</span></div>
+          <div class="sw"><b style="background: var(--control-border)"></b><span>control-border</span></div>
         </div>
         <p class="sub">Fills</p>
         <div class="sws">
