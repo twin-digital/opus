@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Wishem workbench style guide preview</title>
+    <!-- Static preview of the workbench design system: tokens, typography, components, and states. Follows the color scheme of the system. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+    <style>
+      :root {
+        --ink: #17172a;
+        --wishfire: #f2a93b;
+        --wishfire-deep: #a8620f;
+        --wisp: #7fd6c6;
+        --wisp-deep: #23786b;
+        --clay: #c8b9a9;
+        --moonlight: #c2d0ea;
+        --moonlight-deep: #3f5682;
+        --mist: #f2f2f6;
+        --night: var(--ink);
+        --on-night: var(--mist);
+        --maker: var(--wishfire);
+        --spirit: var(--wisp);
+        --accent: var(--moonlight);
+        --on-fill: var(--ink);
+        --success: #8fcb3a;
+        --warning: #e8d44d;
+        --danger: #e5484d;
+        --info: #7c9cf5;
+        --display: 'Bricolage Grotesque', system-ui, sans-serif;
+        --body: 'Inter', system-ui, sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, monospace;
+        --r-sm: 4px;
+        --r-md: 8px;
+        --r-lg: 12px;
+        --fs-body: 18px;
+        --fs-lead: 22px;
+        --fs-h4: 22px;
+        --fs-ui: 16px;
+        --fs-ctl: 14px;
+        --fs-sm: 13px;
+      }
+      :root {
+        --ground: #f7f7fa;
+        --surface: #ffffff;
+        --fg: #1c1c2e;
+        --fg-muted: #5b5b70;
+        --line: #dedee7;
+        --maker-text: var(--wishfire-deep);
+        --spirit-text: var(--wisp-deep);
+        --accent-text: var(--moonlight-deep);
+        --success-text: #44700c;
+        --warning-text: #735f00;
+        --danger-text: #c62828;
+        --info-text: #2f52c4;
+        --shadow-sm: 0 1px 2px #17172a14;
+        --shadow-md: 0 4px 14px #17172a1f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ground: #121222;
+          --surface: #1b1b30;
+          --fg: #ececf3;
+          --fg-muted: #a3a3b8;
+          --line: #2d2d46;
+          --maker-text: var(--wishfire);
+          --spirit-text: var(--wisp);
+          --accent-text: var(--moonlight);
+          --success-text: var(--success);
+          --warning-text: var(--warning);
+          --danger-text: #f2666a;
+          --info-text: var(--info);
+          --shadow-sm: 0 1px 2px #0006;
+          --shadow-md: 0 4px 14px #0008;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--fg);
+        font: 400 var(--fs-ui)/1.5 var(--body);
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px 24px 96px;
+        display: grid;
+        gap: 56px;
+      }
+      .sec {
+        display: grid;
+        gap: 18px;
+      }
+      .sec > h2 {
+        font: 800 31px/1.1 var(--display);
+        letter-spacing: -0.01em;
+        margin: 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .sub {
+        font: 600 16px var(--body);
+        margin: 14px 0 0;
+      }
+      .label {
+        font: 500 12px var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+      .note {
+        color: var(--fg-muted);
+        max-width: 70ch;
+        margin: 0;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      code {
+        font: 500 0.92em var(--mono);
+        background: color-mix(in srgb, var(--fg) 8%, transparent);
+        padding: 1px 5px;
+        border-radius: var(--r-sm);
+      }
+
+      /* swatches */
+      .sws {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+      }
+      .sw b {
+        display: block;
+        height: 44px;
+        border-radius: var(--r-md);
+        border: 1px solid var(--line);
+      }
+      .sw span {
+        display: block;
+        font: 400 11px var(--mono);
+        margin-top: 4px;
+      }
+      .sw.t b {
+        display: grid;
+        place-items: center;
+        font: 600 15px var(--body);
+        background: var(--ground);
+      }
+
+      /* components */
+      .appbar {
+        background: var(--night);
+        color: var(--on-night);
+        height: 48px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .appbar p {
+        font: 800 20px var(--display);
+        letter-spacing: -0.02em;
+        text-transform: lowercase;
+        margin: 0;
+      }
+      .appbar i {
+        font-style: normal;
+        color: var(--maker);
+      }
+      .zero {
+        display: grid;
+        place-content: center;
+        text-align: center;
+        gap: 6px;
+        height: 150px;
+        color: var(--fg-muted);
+      }
+      .frame {
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        overflow: hidden;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+      }
+      .panel > header {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .panel > header h3 {
+        font: 600 var(--fs-ctl) var(--body);
+        margin: 0;
+      }
+      .panel > .body {
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .panel > footer {
+        padding: 8px 12px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .btn {
+        font: 500 var(--fs-ctl) var(--body);
+        border-radius: var(--r-sm);
+        padding: 6px 12px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        color: var(--fg);
+        background: none;
+      }
+      .btn.maker {
+        background: var(--maker);
+        color: var(--on-fill);
+        font-weight: 600;
+      }
+      .btn.neutral {
+        background: var(--surface);
+        border-color: var(--line);
+      }
+      .btn.quiet {
+        color: var(--fg-muted);
+      }
+      .btn.danger {
+        background: var(--danger);
+        color: var(--on-fill);
+        font-weight: 600;
+      }
+      .btn.hover.maker {
+        filter: brightness(1.08);
+      }
+      .btn.hover.neutral,
+      .btn.hover.quiet {
+        background: color-mix(in srgb, var(--fg) 8%, var(--surface));
+      }
+      .focus,
+      .btn:focus-visible,
+      .ctl:focus-visible {
+        outline: 2px solid var(--maker-text);
+        outline-offset: 2px;
+      }
+      .btn[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .spin {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        vertical-align: -1px;
+        margin-right: 6px;
+      }
+
+      .ctl {
+        font: 400 var(--fs-ctl) var(--body);
+        color: var(--fg);
+        background: var(--ground);
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        padding: 5px 8px;
+        width: 100%;
+        min-width: 0;
+      }
+      .ctl::placeholder {
+        color: var(--fg-muted);
+      }
+      .ctl.err {
+        border-color: var(--danger-text);
+      }
+      .ctl[disabled] {
+        opacity: 0.5;
+      }
+      input[type='checkbox'] {
+        accent-color: var(--maker);
+        width: 15px;
+        height: 15px;
+        margin: 0;
+      }
+      .errmsg {
+        color: var(--danger-text);
+        font-size: var(--fs-sm);
+        display: block;
+      }
+
+      .props {
+        display: grid;
+        grid-template-columns: minmax(90px, 38%) 1fr;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      .props label {
+        color: var(--fg-muted);
+        font-size: 13px;
+      }
+      .props .grp {
+        grid-column: 1/-1;
+        margin-top: 6px;
+      }
+
+      .prompt {
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        background: var(--ground);
+        padding: 10px 12px 8px;
+        display: grid;
+        gap: 8px;
+      }
+      .prompt.on {
+        border-color: var(--maker-text);
+        box-shadow: 0 0 0 1px var(--maker-text);
+      }
+      .prompt textarea {
+        font: 400 var(--fs-ui)/1.55 var(--mono);
+        color: var(--maker-text);
+        caret-color: var(--maker);
+        background: none;
+        border: 0;
+        outline: 0;
+        resize: none;
+        width: 100%;
+        min-height: 66px;
+        padding: 0;
+      }
+      .prompt textarea::placeholder {
+        color: var(--fg-muted);
+      }
+      .prompt .bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .quote {
+        border-left: 3px solid var(--accent);
+        padding: 2px 0 2px 14px;
+        margin: 0;
+        color: var(--fg);
+        font-style: italic;
+      }
+      .quote cite {
+        display: block;
+        font-style: normal;
+        color: var(--fg-muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .aside {
+        border-left: 3px solid var(--spirit);
+        padding: 8px 14px;
+        margin: 0;
+        background: color-mix(in srgb, var(--spirit) 9%, transparent);
+        border-radius: 0 var(--r-md) var(--r-md) 0;
+      }
+      .aside b {
+        color: var(--spirit-text);
+      }
+      .makerline {
+        font: 400 var(--fs-ui) var(--mono);
+        color: var(--maker-text);
+        margin: 0;
+      }
+      .spiritline {
+        color: var(--spirit-text);
+        margin: 0;
+      }
+
+      .callout {
+        border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line));
+        border-left: 3px solid var(--c);
+        background: color-mix(in srgb, var(--c) 10%, transparent);
+        border-radius: var(--r-md);
+        padding: 8px 12px;
+      }
+      .callout b {
+        color: var(--ct);
+      }
+      .badge {
+        font: 500 11px var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 99px;
+        border: 1px solid color-mix(in srgb, var(--ct, var(--fg-muted)) 50%, transparent);
+        color: var(--ct, var(--fg-muted));
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 4px 0;
+        width: 100%;
+      }
+      hr.accent {
+        border-top: 2px solid var(--accent);
+        width: 56px;
+        margin-left: 0;
+      }
+
+      /* focus on a field replaces the border */
+      .ctl.focus,
+      .ctl:focus-visible {
+        outline: 0;
+        border-color: var(--maker-text);
+        box-shadow: 0 0 0 1px var(--maker-text);
+      }
+      .ctl.err.focus,
+      .ctl.err:focus-visible {
+        border-color: var(--danger-text);
+        box-shadow: 0 0 0 1px var(--danger-text);
+      }
+      .field {
+        display: grid;
+        gap: 4px;
+      }
+      .field > label {
+        font-size: var(--fs-ctl);
+        font-weight: 500;
+      }
+      .prose {
+        font-size: var(--fs-body);
+        line-height: 1.6;
+        max-width: 68ch;
+        display: grid;
+        gap: 0.9em;
+      }
+      .prose p,
+      .prose ul {
+        margin: 0;
+      }
+      .prose h3 {
+        font: 600 25px/1.2 var(--display);
+        margin: 0.4em 0 0;
+      }
+      /* state matrix */
+      .mx {
+        display: grid;
+        grid-template-columns: var(--first, 110px) repeat(var(--cols), minmax(0, 1fr));
+        gap: 12px 12px;
+        align-items: start;
+        margin-top: 4px;
+      }
+      .mx > .label {
+        align-self: center;
+      }
+      .btn.active {
+        filter: brightness(0.88);
+        transform: translateY(1px);
+      }
+      .btn.neutral.active,
+      .btn.quiet.active {
+        filter: none;
+        background: color-mix(in srgb, var(--fg) 16%, var(--surface));
+      }
+      .btn.hover.danger {
+        filter: brightness(1.08);
+      }
+      .btn.busy {
+        cursor: progress;
+        opacity: 0.8;
+      }
+      .ctl.hover {
+        border-color: var(--fg-muted);
+      }
+      .ctl.ro {
+        background: transparent;
+        border-style: dashed;
+        color: var(--fg-muted);
+      }
+      textarea.ctl {
+        resize: vertical;
+        display: block;
+      }
+      .ctl.sel {
+        position: relative;
+        padding-right: 26px;
+        cursor: default;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ctl.sel::after {
+        content: '';
+        position: absolute;
+        right: 9px;
+        top: 50%;
+        width: 6px;
+        height: 6px;
+        border-right: 1.5px solid var(--fg-muted);
+        border-bottom: 1.5px solid var(--fg-muted);
+        transform: translateY(-70%) rotate(45deg);
+      }
+      .ctl.sel.err {
+        color: var(--fg-muted);
+      }
+      .ctl.dis {
+        opacity: 0.5;
+      }
+      .menu {
+        margin-top: 4px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-md);
+        padding: 4px;
+        font-size: var(--fs-ctl);
+      }
+      .menu .opt {
+        padding: 5px 8px 5px 24px;
+        border-radius: var(--r-sm);
+        position: relative;
+      }
+      .menu .opt.hov {
+        background: color-mix(in srgb, var(--fg) 9%, transparent);
+      }
+      .menu .opt.cur::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 8px;
+        width: 4px;
+        height: 8px;
+        border-right: 2px solid var(--maker-text);
+        border-bottom: 2px solid var(--maker-text);
+        transform: rotate(45deg);
+      }
+      .menu .opt.off {
+        color: var(--fg-muted);
+        opacity: 0.6;
+      }
+      .cb {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--fg-muted);
+        border-radius: var(--r-sm);
+        background: var(--ground);
+        position: relative;
+        vertical-align: middle;
+      }
+      .cb.hover {
+        border-color: var(--fg);
+      }
+      .cb.on,
+      .cb.mix {
+        background: var(--maker);
+        border-color: var(--maker);
+      }
+      .cb.on::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 4px;
+        height: 8px;
+        border-right: 2px solid var(--on-fill);
+        border-bottom: 2px solid var(--on-fill);
+        transform: rotate(45deg);
+      }
+      .cb.mix::after {
+        content: '';
+        position: absolute;
+        left: 3px;
+        right: 3px;
+        top: 5.5px;
+        height: 2px;
+        background: var(--on-fill);
+      }
+      .cb.on.hover,
+      .cb.mix.hover {
+        filter: brightness(1.1);
+      }
+      .cb.dis {
+        opacity: 0.45;
+      }
+      .prompt.busy {
+        border-color: var(--spirit);
+      }
+      .prompt.busy textarea {
+        color: var(--fg-muted);
+      }
+      /* type */
+      .t1 {
+        font: 800 39px/1.1 var(--display);
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .t2 {
+        font: 800 31px/1.1 var(--display);
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+      .t3 {
+        font: 600 25px/1.2 var(--display);
+        margin: 0;
+      }
+      .t4,
+      .prose h4 {
+        font: 600 var(--fs-h4)/1.3 var(--body);
+        margin: 0;
+      }
+      .prose h4 {
+        margin-top: 0.3em;
+      }
+      .lead {
+        font-size: var(--fs-lead);
+        line-height: 1.5;
+        color: var(--fg-muted);
+        margin: 0;
+      }
+      .b16 {
+        font-size: var(--fs-body);
+        line-height: 1.6;
+        margin: 0;
+        max-width: 65ch;
+      }
+      .sm {
+        font-size: var(--fs-sm);
+        color: var(--fg-muted);
+        margin: 0;
+      }
+      a {
+        color: var(--fg);
+        text-decoration: underline;
+        text-decoration-color: var(--accent);
+        text-underline-offset: 3px;
+        text-decoration-thickness: 2px;
+      }
+      pre {
+        font: 400 13px/1.6 var(--mono);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        padding: 12px;
+        margin: 0;
+        overflow: auto;
+      }
+      .spec {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 14px 16px;
+        align-items: baseline;
+      }
+      ul,
+      ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="appbar">
+      <p>Wishem<i>.</i></p>
+    </div>
+    <div class="wrap">
+      <section class="sec">
+        <span class="label">Style guide preview</span>
+        <p class="note">
+          Principles. The workbench is quiet and its surfaces are flat. Colour says who acted. <code>maker</code> is the
+          designer, <code>spirit</code> is Wishem, and <code>accent</code> belongs to no one. On a bright fill, text is
+          always Ink. This page follows the colour scheme of the system.
+        </p>
+      </section>
+
+      <section class="sec">
+        <h2>Tokens</h2>
+        <p class="sub">Palette (fixed)</p>
+        <div class="sws">
+          <div class="sw"><b style="background: var(--ink)"></b><span>ink</span></div>
+          <div class="sw"><b style="background: var(--wishfire)"></b><span>wishfire</span></div>
+          <div class="sw"><b style="background: var(--wishfire-deep)"></b><span>wishfire-deep</span></div>
+          <div class="sw"><b style="background: var(--wisp)"></b><span>wisp</span></div>
+          <div class="sw"><b style="background: var(--wisp-deep)"></b><span>wisp-deep</span></div>
+          <div class="sw"><b style="background: var(--clay)"></b><span>clay</span></div>
+          <div class="sw"><b style="background: var(--moonlight)"></b><span>moonlight</span></div>
+          <div class="sw"><b style="background: var(--moonlight-deep)"></b><span>moonlight-deep</span></div>
+          <div class="sw"><b style="background: var(--mist)"></b><span>mist</span></div>
+        </div>
+        <p class="sub">Surfaces and lines</p>
+        <div class="sws">
+          <div class="sw"><b style="background: var(--ground)"></b><span>ground</span></div>
+          <div class="sw"><b style="background: var(--surface)"></b><span>surface</span></div>
+          <div class="sw"><b style="background: var(--night)"></b><span>night</span></div>
+          <div class="sw"><b style="background: var(--line)"></b><span>line</span></div>
+        </div>
+        <p class="sub">Fills</p>
+        <div class="sws">
+          <div class="sw"><b style="background: var(--maker)"></b><span>maker</span></div>
+          <div class="sw"><b style="background: var(--spirit)"></b><span>spirit</span></div>
+          <div class="sw"><b style="background: var(--accent)"></b><span>accent</span></div>
+          <div class="sw"><b style="background: var(--success)"></b><span>success</span></div>
+          <div class="sw"><b style="background: var(--warning)"></b><span>warning</span></div>
+          <div class="sw"><b style="background: var(--danger)"></b><span>danger</span></div>
+          <div class="sw"><b style="background: var(--info)"></b><span>info</span></div>
+        </div>
+        <p class="sub">Text colours, on ground</p>
+        <div class="sws">
+          <div class="sw t"><b style="color: var(--fg)">Aa</b><span>fg</span></div>
+          <div class="sw t"><b style="color: var(--fg-muted)">Aa</b><span>fg-muted</span></div>
+          <div class="sw t"><b style="color: var(--maker-text)">Aa</b><span>maker-text</span></div>
+          <div class="sw t"><b style="color: var(--spirit-text)">Aa</b><span>spirit-text</span></div>
+          <div class="sw t"><b style="color: var(--accent-text)">Aa</b><span>accent-text</span></div>
+          <div class="sw t"><b style="color: var(--success-text)">Aa</b><span>success-text</span></div>
+          <div class="sw t"><b style="color: var(--warning-text)">Aa</b><span>warning-text</span></div>
+          <div class="sw t"><b style="color: var(--danger-text)">Aa</b><span>danger-text</span></div>
+          <div class="sw t"><b style="color: var(--info-text)">Aa</b><span>info-text</span></div>
+        </div>
+        <p class="sub">Radius and shadow</p>
+        <div class="row">
+          <div class="sw" style="width: 120px">
+            <b style="background: var(--surface); border-radius: var(--r-sm)"></b><span>radius-sm 4</span>
+          </div>
+          <div class="sw" style="width: 120px">
+            <b style="background: var(--surface); border-radius: var(--r-md)"></b><span>radius-md 8</span>
+          </div>
+          <div class="sw" style="width: 120px">
+            <b style="background: var(--surface); border-radius: var(--r-lg)"></b><span>radius-lg 12</span>
+          </div>
+          <div class="sw" style="width: 120px">
+            <b style="background: var(--surface); box-shadow: var(--shadow-sm)"></b><span>shadow-sm</span>
+          </div>
+          <div class="sw" style="width: 120px">
+            <b style="background: var(--surface); box-shadow: var(--shadow-md)"></b><span>shadow-md</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Typography</h2>
+        <div class="spec">
+          <span class="label">Heading 1 · 39</span>
+          <p class="t1">Say it. Watch it spawn.</p>
+          <span class="label">Heading 2 · 31</span>
+          <p class="t2">Recordings and reruns</p>
+          <span class="label">Heading 3 · 25</span>
+          <p class="t3">The bats in room 3</p>
+          <span class="label">Heading 4</span>
+          <p class="t4">Torch behaviour</p>
+          <span class="label">Lead</span>
+          <p class="lead">A game engine with a spirit inside.</p>
+          <span class="label">Body</span>
+          <p class="b16">
+            Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and
+            <a href="#">the replays are ready</a>.
+          </p>
+          <span class="label">UI text</span>
+          <p style="margin: 0">
+            The default size for text in the workbench. Wishem ran your level 40 times overnight, and two runs got stuck
+            behind the gate in room 3.
+          </p>
+          <span class="label">Small</span>
+          <p class="sm">Last run 4 minutes ago.</p>
+          <span class="label">Label · 12</span><span class="label">Mono label</span> <span class="label">Lists</span>
+          <div class="grid2">
+            <ul>
+              <li>Build</li>
+              <li>Test</li>
+              <li>Replay</li>
+            </ul>
+            <ol>
+              <li>Say it</li>
+              <li>Watch it</li>
+              <li>Tune it</li>
+            </ol>
+          </div>
+          <span class="label">Code</span>
+          <div style="display: grid; gap: 8px">
+            <p style="margin: 0">Inline: <code>player.ts</code> references a missing sprite.</p>
+            <pre>
+onLit(torch) {
+  bats.within(6).forEach(flee)
+}</pre>
+          </div>
+          <span class="label">Rule</span>
+          <div style="display: grid; gap: 10px">
+            <hr />
+            <hr class="accent" />
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Body text in use</h2>
+        <p class="note">
+          A page of prose at 18px, with a heading 3 and two heading 4 lines. The panel beside it uses UI text (16px) and
+          control text (14px), which do not change.
+        </p>
+        <div class="grid2" style="grid-template-columns: 1.5fr 1fr; align-items: start">
+          <div class="prose">
+            <p class="lead">A game engine with a spirit inside.</p>
+            <h3>Recordings and reruns</h3>
+            <p>
+              Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and
+              <a href="#">the replays are ready</a>. Every run can be stepped, recorded, replayed and rewound, so the
+              same starting state and the same inputs always give the same result.
+            </p>
+            <h4>When you miss a jump</h4>
+            <p>
+              When you miss a jump, say so. The spirit runs your exact inputs again with a little more height, and
+              reports what it changed, what it tested, and what it is not sure about.
+            </p>
+            <h4>What a run gives you</h4>
+            <ul>
+              <li>Build the level from a description.</li>
+              <li>Test it with recorded inputs.</li>
+              <li>Replay any run, one step at a time.</li>
+            </ul>
+            <blockquote class="aside">
+              <b>Wishem:</b> This is my favourite trick. You miss a jump, I rerun it with a little more height, and we
+              both watch you make it.
+            </blockquote>
+            <blockquote class="quote">A kit is what the first game leaves behind.<cite>rules.md, R7</cite></blockquote>
+            <p>Inline code such as <code>player.ts</code> follows the size of the text around it.</p>
+          </div>
+          <div class="panel">
+            <header>
+              <h3>Replays</h3>
+              <span class="badge" style="--ct: var(--accent-text)">New</span>
+            </header>
+            <div class="body">
+              <p style="margin: 0">Two runs got stuck behind the gate in room 3.</p>
+              <div class="field">
+                <label>Run</label>
+                <div class="ctl sel">Run 17, stuck at 0:42</div>
+              </div>
+              <p class="sm">Last run 4 minutes ago.</p>
+            </div>
+            <footer><button class="btn neutral">Step</button><button class="btn maker">Replay</button></footer>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>Components</h2>
+
+        <p class="sub">App bar and zero state</p>
+        <div class="frame">
+          <div class="appbar">
+            <p>Wishem<i>.</i></p>
+          </div>
+          <div class="zero"><span class="label">Workbench</span><span>Nothing to show yet.</span></div>
+        </div>
+
+        <p class="sub">Button states</p>
+        <div class="mx" style="--cols: 6">
+          <span></span><span class="label">Default</span><span class="label">Hover</span
+          ><span class="label">Active</span><span class="label">Focus</span><span class="label">Disabled</span
+          ><span class="label">Loading</span> <span class="label">Maker</span>
+          <div><button class="btn maker">Apply</button></div>
+          <div><button class="btn maker hover">Apply</button></div>
+          <div><button class="btn maker active">Apply</button></div>
+          <div><button class="btn maker focus">Apply</button></div>
+          <div><button class="btn maker" disabled>Apply</button></div>
+          <div>
+            <button class="btn maker busy"><span class="spin"></span>Apply</button>
+          </div>
+          <span class="label">Neutral</span>
+          <div><button class="btn neutral">Cancel</button></div>
+          <div><button class="btn neutral hover">Cancel</button></div>
+          <div><button class="btn neutral active">Cancel</button></div>
+          <div><button class="btn neutral focus">Cancel</button></div>
+          <div><button class="btn neutral" disabled>Cancel</button></div>
+          <div>
+            <button class="btn neutral busy"><span class="spin"></span>Cancel</button>
+          </div>
+          <span class="label">Quiet</span>
+          <div><button class="btn quiet">Reset</button></div>
+          <div><button class="btn quiet hover">Reset</button></div>
+          <div><button class="btn quiet active">Reset</button></div>
+          <div><button class="btn quiet focus">Reset</button></div>
+          <div><button class="btn quiet" disabled>Reset</button></div>
+          <div>
+            <button class="btn quiet busy"><span class="spin"></span>Reset</button>
+          </div>
+          <span class="label">Danger</span>
+          <div><button class="btn danger">Delete</button></div>
+          <div><button class="btn danger hover">Delete</button></div>
+          <div><button class="btn danger active">Delete</button></div>
+          <div><button class="btn danger focus">Delete</button></div>
+          <div><button class="btn danger" disabled>Delete</button></div>
+          <div>
+            <button class="btn danger busy"><span class="spin"></span>Delete</button>
+          </div>
+        </div>
+
+        <p class="sub">Panel</p>
+        <div class="grid2">
+          <div class="panel">
+            <header>
+              <h3>Panel with a header and a footer</h3>
+              <span class="badge">Draft</span>
+            </header>
+            <div class="body">
+              <p style="margin: 0">
+                A panel holds one tool. This paragraph is UI text at the selected size, so you can judge how a full line
+                of prose reads inside a panel.
+              </p>
+              <div class="field"><label>Name</label><input class="ctl" value="Cave bat" /></div>
+              <div class="field">
+                <label>Kind</label>
+                <div class="ctl sel">Enemy</div>
+              </div>
+              <div class="field">
+                <label>Speed</label><input class="ctl err" value="fast" /><span class="errmsg">Enter a number.</span>
+              </div>
+              <div class="row"><i class="cb on"></i><span>Flees light</span></div>
+            </div>
+            <footer><button class="btn quiet">Reset</button><button class="btn maker">Apply</button></footer>
+          </div>
+          <div style="display: grid; gap: 16px; align-content: start">
+            <div class="panel">
+              <header><h3>Plain panel</h3></header>
+              <div class="body">
+                <p style="margin: 0">The header and the footer are optional.</p>
+                <p class="sm">Last run 4 minutes ago.</p>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="body">
+                <div class="zero" style="height: 90px"><span>No entity selected.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="sub">Control states</p>
+        <div class="mx" style="--cols: 6">
+          <span></span><span class="label">Default</span><span class="label">Hover</span><span class="label">Focus</span
+          ><span class="label">Error</span><span class="label">Disabled</span><span class="label">Read-only</span>
+          <span class="label">Text input</span>
+          <div><input class="ctl" value="Cave bat" /></div>
+          <div><input class="ctl hover" value="Cave bat" /></div>
+          <div><input class="ctl focus" value="Cave bat" /></div>
+          <div><input class="ctl err" value="fast" /><span class="errmsg">Enter a number.</span></div>
+          <div><input class="ctl" value="Cave bat" disabled /></div>
+          <div><input class="ctl ro" value="e_c0d5e6f1" readonly /></div>
+          <span class="label">Empty input</span>
+          <div><input class="ctl" placeholder="Name" /></div>
+          <div><input class="ctl hover" placeholder="Name" /></div>
+          <div><input class="ctl focus" placeholder="Name" /></div>
+          <div><input class="ctl err" placeholder="Name" /><span class="errmsg">A name is required.</span></div>
+          <div><input class="ctl" placeholder="Name" disabled /></div>
+          <div></div>
+          <span class="label">Text area</span>
+          <div><textarea class="ctl" rows="2">Flees when a torch is lit.</textarea></div>
+          <div><textarea class="ctl hover" rows="2">Flees when a torch is lit.</textarea></div>
+          <div><textarea class="ctl focus" rows="2">Flees when a torch is lit.</textarea></div>
+          <div><textarea class="ctl err" rows="2"></textarea><span class="errmsg">Describe the behaviour.</span></div>
+          <div><textarea class="ctl" rows="2" disabled>Flees when a torch is lit.</textarea></div>
+          <div><textarea class="ctl ro" rows="2" readonly>Flees when a torch is lit.</textarea></div>
+          <span class="label">Select</span>
+          <div><div class="ctl sel">Enemy</div></div>
+          <div><div class="ctl sel hover">Enemy</div></div>
+          <div><div class="ctl sel focus">Enemy</div></div>
+          <div>
+            <div class="ctl sel err">Select a kind</div>
+            <span class="errmsg">Select a kind.</span>
+          </div>
+          <div><div class="ctl sel dis">Enemy</div></div>
+          <div></div>
+        </div>
+
+        <div class="row" style="align-items: flex-start">
+          <div style="width: 190px">
+            <input class="ctl err focus" value="fast" /><span class="errmsg">Enter a number.</span>
+            <p class="sm">Error with focus: the border stays red</p>
+          </div>
+          <div style="width: 190px">
+            <input class="ctl focus" value="Cave bat" />
+            <p class="sm">Focus: the border changes colour and gets thicker</p>
+          </div>
+          <div class="row">
+            <button class="btn maker focus">Apply</button><i class="cb on focus"></i>
+            <p class="sm">Button and checkbox: the ring stays outside</p>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <p class="sub">Select, open</p>
+            <div style="width: 200px; margin-top: 10px">
+              <div class="ctl sel focus">Enemy</div>
+              <div class="menu">
+                <div class="opt cur">Enemy</div>
+                <div class="opt hov">Prop</div>
+                <div class="opt">Pickup</div>
+                <div class="opt off">Boss (not available)</div>
+              </div>
+            </div>
+            <p class="sm" style="margin-top: 8px">
+              Selected option · hovered or keyboard-active option · option · disabled option
+            </p>
+          </div>
+          <div>
+            <p class="sub">Checkbox</p>
+            <div class="mx" style="--cols: 4; --first: 90px">
+              <span></span><span class="label">Default</span><span class="label">Hover</span
+              ><span class="label">Focus</span><span class="label">Disabled</span> <span class="label">Off</span>
+              <div><i class="cb"></i></div>
+              <div><i class="cb hover"></i></div>
+              <div><i class="cb focus"></i></div>
+              <div><i class="cb dis"></i></div>
+              <span class="label">On</span>
+              <div><i class="cb on"></i></div>
+              <div><i class="cb on hover"></i></div>
+              <div><i class="cb on focus"></i></div>
+              <div><i class="cb on dis"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="sub">Prompt box states</p>
+        <div class="grid2">
+          <div>
+            <div class="prompt">
+              <textarea placeholder="Describe a game, a level or a single mechanic."></textarea>
+              <div class="bar">
+                <span class="sm">Enter to send · Shift+Enter for a new line</span
+                ><button class="btn maker" disabled>Make a wish</button>
+              </div>
+            </div>
+            <p class="sm">Empty: the button is disabled</p>
+          </div>
+          <div>
+            <div class="prompt on">
+              <textarea>make the bats flee when the torch is lit</textarea>
+              <div class="bar">
+                <span class="sm">Enter to send · Shift+Enter for a new line</span
+                ><button class="btn maker">Make a wish</button>
+              </div>
+            </div>
+            <p class="sm">Focus, with text</p>
+          </div>
+          <div>
+            <div class="prompt busy">
+              <textarea readonly>make the bats flee when the torch is lit</textarea>
+              <div class="bar">
+                <span class="sm" style="color: var(--spirit-text)"><span class="spin"></span>Wishem is working</span
+                ><button class="btn neutral">Stop</button>
+              </div>
+            </div>
+            <p class="sm">Working: the text is locked and the status is in the spirit colour</p>
+          </div>
+          <div>
+            <div class="prompt" style="opacity: 0.5">
+              <textarea disabled placeholder="Describe a game, a level or a single mechanic."></textarea>
+              <div class="bar">
+                <span class="sm">Not connected</span><button class="btn maker" disabled>Make a wish</button>
+              </div>
+            </div>
+            <p class="sm">Disabled</p>
+          </div>
+        </div>
+
+        <p class="sub">Maker line, spirit reply and spirit aside</p>
+        <div class="panel">
+          <div class="body">
+            <p class="makerline">&gt; make the bats flee when the torch is lit</p>
+            <p class="spiritline">
+              Done. Bats now scatter within 6 tiles of a lit torch. I recorded a replay and added a test. Want to watch
+              it?
+            </p>
+          </div>
+        </div>
+        <blockquote class="aside">
+          <b>Wishem:</b> This is my favourite trick. You miss a jump, I rerun it with a little more height, and we both
+          watch you make it.
+        </blockquote>
+
+        <p class="sub">Quote (generic)</p>
+        <blockquote class="quote">A kit is what the first game leaves behind.<cite>rules.md, R7</cite></blockquote>
+
+        <p class="sub">Callout</p>
+        <div class="grid2">
+          <div class="callout" style="--c: var(--success); --ct: var(--success-text)">
+            <b>Passed.</b> 40 of 40 runs reached the exit.
+          </div>
+          <div class="callout" style="--c: var(--warning); --ct: var(--warning-text)">
+            <b>Check this.</b> Two runs got stuck in room 3.
+          </div>
+          <div class="callout" style="--c: var(--danger); --ct: var(--danger-text)">
+            <b>The build failed.</b> <code>player.ts</code> references a missing sprite.
+          </div>
+          <div class="callout" style="--c: var(--info); --ct: var(--info-text)">
+            <b>Note.</b> Replays are kept for 30 days.
+          </div>
+        </div>
+
+        <p class="sub">Badge</p>
+        <div class="row">
+          <span class="badge">Neutral</span>
+          <span class="badge" style="--ct: var(--maker-text)">Maker</span>
+          <span class="badge" style="--ct: var(--spirit-text)">Spirit</span>
+          <span class="badge" style="--ct: var(--accent-text)">Accent</span>
+          <span class="badge" style="--ct: var(--success-text)">Passed</span>
+          <span class="badge" style="--ct: var(--warning-text)">Stuck</span>
+          <span class="badge" style="--ct: var(--danger-text)">Failed</span>
+          <span class="badge" style="--ct: var(--info-text)">Info</span>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
