@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how the Node.js host stores a Wishem model as files in a model folder, and how the host changes those files into the model data that a core validates.
+Defines how the Node.js host stores a Wishem model as files in a model folder, how the host changes those files into the model data that a core validates, and how the core follows changes to the files.
 
 ## ADDED Requirements
 
@@ -12,7 +12,7 @@ A model folder SHALL hold a `definitions` folder and a `state.json` file. Each `
 
 #### Scenario: A model with one component type and one entity
 
-- **WHEN** a model folder holds `definitions/3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34.json` and `state.json`
+- **WHEN** a model folder holds `definitions/ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34.json` and `state.json`
 - **THEN** the model data has the component type of that file in `definitions`, and the entities of `state.json` in `entities`
 
 #### Scenario: No state file
@@ -41,8 +41,8 @@ The ID of a component type SHALL come only from the `id` in its definition file.
 
 #### Scenario: A file name that is different from the ID
 
-- **WHEN** a definition file has the name `app-bar.json` and holds the ID `3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
-- **THEN** the component type has the ID `3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
+- **WHEN** a definition file has the name `app-bar.json` and holds the ID `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
+- **THEN** the component type has the ID `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
 
 #### Scenario: A label changes
 
@@ -71,3 +71,41 @@ When the model data from a folder is not correct, each problem that comes from o
 
 - **WHEN** an entity in `state.json` uses a component type that no definition file declares
 - **THEN** the problem names `state.json`
+
+### Requirement: The core follows the model files
+
+The host SHALL watch `state.json` and the `definitions` folder. After a file changes, is added, or is removed, the host SHALL read the model folder again and give the model data to the core. A restart of the host SHALL NOT be necessary.
+
+#### Scenario: A hand edit to the authored state
+
+- **WHEN** the host runs, and a person changes the title in `state.json` from `Wishem` to `Wishem workbench` and saves the file
+- **THEN** the snapshot of the core holds `Wishem workbench`, in less than 2 seconds
+
+#### Scenario: A hand edit to a definition
+
+- **WHEN** the host runs, and a person changes the label of a component type in its definition file
+- **THEN** the snapshot of the core holds the new label
+
+#### Scenario: A new definition file
+
+- **WHEN** the host runs, and a person adds a correct definition file to `definitions`
+- **THEN** the snapshot of the core holds the new component type
+
+#### Scenario: A save through a temporary file
+
+- **WHEN** an editor saves `state.json` as a temporary file and then renames it to `state.json`
+- **THEN** the snapshot of the core holds the new content
+
+### Requirement: The last correct model stays
+
+When the model files are not correct during a run, the core SHALL keep the last correct model, and the host SHALL continue to run. When the files are correct again, the core SHALL hold the new model.
+
+#### Scenario: A file that is saved in part
+
+- **WHEN** the host runs and `state.json` is saved with text that is not valid JSON
+- **THEN** the snapshot of the core does not change
+
+#### Scenario: The file is corrected
+
+- **WHEN** `state.json` was not correct, and a person saves a correct `state.json`
+- **THEN** the snapshot of the core holds the new content

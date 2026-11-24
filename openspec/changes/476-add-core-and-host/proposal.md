@@ -18,7 +18,7 @@ Wishem has a blueprint and no code. Each later change needs a core that holds a 
 - Define the file format of a model folder. A definition is data, not code:
   - `definitions/<id>.json` holds one component type.
   - `state.json` holds the authored state.
-  - A component type, a field, and an entity each have an ID that does not change. The ID is a UUID. A component type and a field each have a label that can change.
+  - A component type, a field, and an entity each have an ID that does not change. The ID is a short prefix for the kind of thing, an underscore, and a UUID, such as `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`. A component type and a field each have a label that can change.
   - The authored state refers to a component type and to a field by ID.
 - Give the snapshot as one JSON document that holds the definitions and the authored state:
   - `GET /snapshot` returns the current snapshot.
@@ -34,9 +34,10 @@ Not in this change: a page, a renderer, a view, the link between a view and a co
 ### New Capabilities
 
 - `wishem/core/model`: the data of a model, the IDs and labels, and the rules that make a model correct.
-- `wishem/core/snapshot`: what a snapshot holds, and how a core gives the current snapshot and each later snapshot to the code that uses it, such as a host or a renderer.
-- `wishem/host-nodejs/model-folder`: how the Node.js host stores a model as files in a model folder.
-- `wishem/host-nodejs/start-command`: the command that starts a core for a model folder, watches the folder, serves the snapshot on a local port, and reports problems.
+- `wishem/core/snapshot`: what a snapshot holds, and the read operations of a core in the same process: get the current snapshot, and register a listener for each later snapshot. The transport to a different process is not in this capability.
+- `wishem/host-nodejs/model-folder`: how the Node.js host stores a model as files in a model folder, and how the core follows changes to those files.
+- `wishem/host-nodejs/cli`: the `wishem` command line: the `start` command, its options, its exit codes, and what it prints.
+- `wishem/host-nodejs/server`: the local HTTP server that gives the snapshot through `GET /snapshot` and through a stream of Server-Sent Events.
 
 ### Modified Capabilities
 

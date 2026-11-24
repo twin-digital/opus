@@ -63,7 +63,7 @@ Rejected: definitions as TypeScript code, such as `defineComponent('AppBar', { t
 
 ### D4. IDs and labels
 
-- A component type, a field, and an entity each have an `id`. The ID is a UUID from `crypto.randomUUID()`, which Node.js and a web browser both have. The ID does not change.
+- A component type, a field, and an entity each have an `id`. The ID does not change. It has a prefix for the kind of thing, an underscore, and a UUID in lowercase from `crypto.randomUUID()`, which Node.js and a web browser both have. The prefixes are `ct` for a component type, `fld` for a field, and `e` for an entity. Example: `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`. The prefix shows the kind of a key in `state.json`, and the validation finds an ID of one kind in the place of a different kind.
 - A component type and a field each have a `label`. The label can change.
 - The authored state refers to a component type and to a field by ID. Thus a change to a label does not change `state.json`.
 - An entity has no label in this change. Nothing needs to name an entity.
@@ -112,7 +112,7 @@ Rejected for this change: problems as a part of the snapshot. Nothing reads them
 Owner: `@thrashplay/wishem-core`.
 
 ```ts
-export type Id = string // a UUID in lowercase
+export type Id = string // `ct_`, `fld_`, or `e_`, then a UUID in lowercase
 
 export type FieldType = 'string'
 export type FieldValue = string
@@ -228,16 +228,16 @@ erDiagram
   FIELD_VALUE }o--|| FIELD : "refers by ID"
 
   COMPONENT_TYPE {
-    uuid id PK
+    string id PK "ct_ and a UUID"
     string label
   }
   FIELD {
-    uuid id PK
+    string id PK "fld_ and a UUID"
     string label
     string type
   }
   ENTITY {
-    uuid id PK
+    string id PK "e_ and a UUID"
   }
   FIELD_VALUE {
     string value
@@ -249,15 +249,15 @@ The files of the base workbench:
 ```
 nodejs/wishem/workbench/model/
   definitions/
-    3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34.json
+    ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34.json
   state.json
 ```
 
 ```json
 {
-  "id": "3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34",
+  "id": "ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34",
   "label": "AppBar",
-  "fields": [{ "id": "b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62", "label": "title", "type": "string" }]
+  "fields": [{ "id": "fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62", "label": "title", "type": "string" }]
 }
 ```
 
@@ -265,9 +265,9 @@ nodejs/wishem/workbench/model/
 {
   "entities": [
     {
-      "id": "c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2",
+      "id": "e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2",
       "components": {
-        "3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34": { "b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62": "Wishem" }
+        "ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34": { "fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62": "Wishem" }
       }
     }
   ]
@@ -358,7 +358,7 @@ A start with a model that is not correct:
 ```
 $ wishem start ./model
 wishem: model /workspace/opus/nodejs/wishem/workbench/model
-wishem: problem in state.json: entity c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2 has a component of the type 9a9a9a9a-0000-4000-8000-000000000000, which is not defined
+wishem: problem in state.json: entity e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2 has a component of the type ct_9a9a9a9a-0000-4000-8000-000000000000, which is not defined
 wishem: the model is not correct, so the core did not start
 $ echo $?
 1
@@ -368,7 +368,7 @@ A request and its response:
 
 ```
 $ curl -s http://127.0.0.1:4747/snapshot
-{"definitions":[{"id":"3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34","label":"AppBar","fields":[{"id":"b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62","label":"title","type":"string"}]}],"entities":[{"id":"c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2","components":{"3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34":{"b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62":"Wishem"}}}]}
+{"definitions":[{"id":"ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34","label":"AppBar","fields":[{"id":"fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62","label":"title","type":"string"}]}],"entities":[{"id":"e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2","components":{"ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34":{"fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62":"Wishem"}}}]}
 
 $ curl -s -i http://127.0.0.1:4747/panels
 HTTP/1.1 404 Not Found
@@ -400,14 +400,15 @@ No package that exists depends on these packages. No published package has a bre
 
 This change settles these items, so the same change updates the blueprint:
 
-- `glossary.md`: **ID** and **Label** are **Agreed** for a component type and a field, and the ID is a UUID. **Component type** says that the declaration is data. **Host** is added as a **Proposed** term.
+- `glossary.md`: **ID** and **Label** are **Agreed** for a component type and a field, and the ID is a prefix for the kind of thing, an underscore, and a UUID. **Component type** says that the declaration is data. **Host** is added as a **Proposed** term.
 - `concepts.md`: the declaration of a component type is data in the model folder, and the authored state refers to component types and fields by ID. The "IDs and labels" paragraph gets the new status.
 - `rules.md`: no rule changes. Rule R6 stays as it is.
 
 ## Risks / Trade-offs
 
 - [`fs.watch` in recursive mode behaves differently on each platform, and some editors save through a rename] → The host reads the full folder after each event and does not use the file name of the event. The tests save files in the two ways. If the tests are not reliable, add a watch library in this change.
-- [`state.json` is hard to read because its keys are UUIDs] → Accepted. The snapshot holds the definitions, so a tool can show labels. Issue #478 adds a form.
+- [`state.json` is hard to read because its keys are IDs, not labels] → Accepted. The prefix of an ID shows its kind. The snapshot holds the definitions, so a tool can show labels. Issue #478 adds a form.
+- [A prefix is permanent after files use it, and each new kind of registered thing needs a prefix] → Accepted. The list of prefixes is in the `wishem/core/model` specification, and a change that adds a kind adds its prefix there.
 - [A typed view in issue #477 cannot get its prop types from a JSON definition] → Recorded as open question 5 in issue #477.
 - [The blueprint says that time belongs to the core, and issue #479 has an open option to move the clock out] → This change builds no time, so it does not limit that decision.
 - [`setModel` is public on the core, and a renderer or an agent could call it] → Accepted for this change. The write operations of issue #478 decide the final shape.

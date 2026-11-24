@@ -31,7 +31,7 @@ A component type SHALL be declared as data with an `id`, a `label`, and a list o
 
 #### Scenario: A component type with one field
 
-- **WHEN** a definition is `{ "id": "3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34", "label": "AppBar", "fields": [{ "id": "b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62", "label": "title", "type": "string" }] }`
+- **WHEN** a definition is `{ "id": "ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34", "label": "AppBar", "fields": [{ "id": "fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62", "label": "title", "type": "string" }] }`
 - **THEN** the model has a component type with the label `AppBar` and one string field with the label `title`
 
 #### Scenario: A field type that is not known
@@ -41,14 +41,24 @@ A component type SHALL be declared as data with an `id`, a `label`, and a list o
 
 ### Requirement: IDs do not change and labels can change
 
-Each component type, field, and entity SHALL have an ID that is a UUID in lowercase. Each component type and each field SHALL have a label that is a string with one character or more. The authored state SHALL refer to a component type and to a field only by ID.
+Each component type, field, and entity SHALL have an ID with three parts: a prefix for the kind of thing, an underscore, and a UUID in lowercase. The prefix SHALL be `ct` for a component type, `fld` for a field, and `e` for an entity. Each component type and each field SHALL have a label that is a string with one character or more. The authored state SHALL refer to a component type and to a field only by ID.
 
 #### Scenario: A label changes
 
 - **WHEN** the label of a component type changes from `AppBar` to `Header`
 - **THEN** the model is correct with no change to the entities
 
-#### Scenario: An ID that is not a UUID
+#### Scenario: An ID with no prefix
+
+- **WHEN** a component type has the ID `3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
+- **THEN** the model is not correct, and the problem names the ID
+
+#### Scenario: An ID with the prefix of a different kind
+
+- **WHEN** a field has the ID `ct_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62`
+- **THEN** the model is not correct, and the problem names the field and the prefix that is necessary
+
+#### Scenario: An ID of the wrong form
 
 - **WHEN** a component type has the ID `app-bar`
 - **THEN** the model is not correct, and the problem names the ID
@@ -69,7 +79,7 @@ Each entity SHALL have an `id` and a `components` record. Each key of `component
 
 #### Scenario: An entity with one component
 
-- **WHEN** an entity is `{ "id": "c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2", "components": { "3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34": { "b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62": "Wishem" } } }` and the two IDs are a component type and its field
+- **WHEN** an entity is `{ "id": "e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2", "components": { "ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34": { "fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62": "Wishem" } } }` and the two IDs are a component type and its field
 - **THEN** the model is correct
 
 #### Scenario: A component type that is not defined

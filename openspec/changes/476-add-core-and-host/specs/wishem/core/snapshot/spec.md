@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines what a snapshot of a Wishem model holds, and how a core gives the current snapshot and each later snapshot to the code that uses it, such as a host or a renderer.
+Defines what a snapshot of a Wishem model holds, and the read operations that a core gives to code in the same process, such as a host or a renderer. The transport of a snapshot to a different process belongs to a host.
 
 ## ADDED Requirements
 
