@@ -7,6 +7,7 @@ const FLD = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
 const FLD2 = 'fld_11111111-2222-4333-8444-555555555555'
 const ENT = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
 const ENT2 = 'e_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+const CT3 = 'ct_55555555-6666-4777-8888-999999999999'
 
 const appBar = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: CT,
@@ -43,7 +44,9 @@ describe('validateModel', () => {
     })
 
     it('accepts an empty model', () => {
-      expect(validateModel({ definitions: [], entities: [] }).ok).toBe(true)
+      const result = validateModel({ definitions: [], entities: [] })
+      expect(result.ok && result.model).toEqual({ definitions: [], entities: [] })
+      expect(result.ok && result.warnings).toEqual([])
     })
 
     it('names `entities` when it is not a list', () => {
@@ -60,7 +63,14 @@ describe('validateModel', () => {
     })
 
     it('names `definitions` when it is missing', () => {
-      expect(errors({ entities: [] })[0]?.path).toEqual(['definitions'])
+      const problems = errors({ entities: [] })
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions'])
+      expect(problems[0]?.message).toContain('definitions')
+    })
+
+    it('names both lists when both are missing', () => {
+      expect(errors({}).map((problem) => problem.path)).toEqual([['definitions'], ['entities']])
     })
   })
 
@@ -86,16 +96,28 @@ describe('validateModel', () => {
     it('rejects a component type with no `fields` list', () => {
       const problems = errors(model([{ id: CT, label: 'AppBar' }], []))
       expect(problems[0]?.path).toEqual(['definitions', 0, 'fields'])
+      expect(problems[0]?.message).toContain('AppBar')
     })
 
     it('rejects a definition that is not an object', () => {
-      expect(errors(model(['x'], []))[0]?.path).toEqual(['definitions', 0])
+      const problems = errors(model(['x'], []))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 0])
+    })
+
+    it('rejects a field that is not an object', () => {
+      const problems = errors(model([appBar({ fields: ['x'] })], []))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 0, 'fields', 0])
     })
   })
 
   describe('IDs and labels', () => {
     it('accepts a change of label with no change to the entities', () => {
-      expect(validateModel(model([appBar({ label: 'Header' })])).ok).toBe(true)
+      const result = validateModel(model([appBar({ label: 'Header' })]))
+      expect(result.ok && result.model.definitions[0]?.label).toBe('Header')
+      expect(result.ok && result.model.definitions[0]?.id).toBe(CT)
+      expect(result.ok && result.model.entities).toEqual([{ id: ENT, components: { [CT]: { [FLD]: 'Wishem' } } }])
     })
 
     it('names an ID with no prefix', () => {
@@ -122,7 +144,38 @@ describe('validateModel', () => {
 
     it('rejects an ID with a UUID that is not in lowercase', () => {
       const id = 'ct_3F2A9C1E-8B47-4D0A-9E51-6C2F7A1B0D34'
-      expect(errors(model([appBar({ id })], []))[0]?.message).toContain(id)
+      const message = errors(model([appBar({ id })], []))[0]?.message
+      expect(message).toContain(id)
+      expect(message).toContain('UUID in lowercase')
+    })
+
+    it.each([
+      ['text before the prefix', `x${CT}`],
+      ['text after the UUID', `${CT}0`],
+      ['a hyphen in place of the underscore', CT.replace('_', '-')],
+      ['a first group of 7 characters', CT.replace('3f2a9c1e', '3f2a9c1')],
+      ['a last group of 11 characters', CT.slice(0, -1)],
+      ['a character that is not hexadecimal', CT.replace('3f2a9c1e', 'zf2a9c1e')],
+      ['no hyphen between the third and fourth group', CT.replace('4d0a-9e51', '4d0a9e51')],
+    ])('rejects an ID with %s', (_name, id) => {
+      const problems = errors(model([appBar({ id })], []))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 0, 'id'])
+      expect(problems[0]?.message).toContain(id)
+    })
+
+    it.each([
+      ['a component type', () => model([appBar({ id: 42 })], []), ['definitions', 0, 'id']],
+      [
+        'a field',
+        () => model([appBar({ fields: [{ id: 42, label: 'title', type: 'string' }] })], []),
+        ['definitions', 0, 'fields', 0, 'id'],
+      ],
+      ['an entity', () => model([appBar()], [entity({}, 42 as unknown as string)]), ['entities', 0, 'id']],
+    ])('rejects an ID that is not a string for %s', (_name, build, path) => {
+      const problems = errors(build())
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(path)
     })
 
     it('names the entity ID when it has the wrong prefix', () => {
@@ -133,7 +186,9 @@ describe('validateModel', () => {
 
     it('names a duplicate component type ID', () => {
       const problems = errors(model([appBar(), appBar({ label: 'Other' })], []))
-      expect(problems.some((p) => p.message.includes(CT) && p.path[1] === 1)).toBe(true)
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 1, 'id'])
+      expect(problems[0]?.message).toContain(CT)
     })
 
     it('names a duplicate field ID in one component type', () => {
@@ -144,7 +199,9 @@ describe('validateModel', () => {
         ],
       })
       const problems = errors(model([bad], []))
-      expect(problems.some((p) => p.message.includes(FLD))).toBe(true)
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 0, 'fields', 1, 'id'])
+      expect(problems[0]?.message).toContain(FLD)
     })
 
     it('accepts one field ID in two component types', () => {
@@ -154,7 +211,9 @@ describe('validateModel', () => {
 
     it('names a duplicate entity ID', () => {
       const problems = errors(model([appBar()], [entity(), entity()]))
-      expect(problems.some((p) => p.message.includes(ENT))).toBe(true)
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['entities', 1, 'id'])
+      expect(problems[0]?.message).toContain(ENT)
     })
 
     it('names the field with an empty label', () => {
@@ -167,6 +226,23 @@ describe('validateModel', () => {
     it('names the component type with an empty label', () => {
       const problems = errors(model([appBar({ label: '' })], []))
       expect(problems[0]?.path).toEqual(['definitions', 0, 'label'])
+    })
+
+    it.each([
+      ['a number', 42],
+      ['a missing label', undefined],
+      ['null', null],
+    ])('rejects a label that is %s', (_name, label) => {
+      const type = errors(model([appBar({ label })], []))
+      expect(type).toHaveLength(1)
+      expect(type[0]?.path).toEqual(['definitions', 0, 'label'])
+      const field = errors(model([appBar({ fields: [{ id: FLD, label, type: 'string' }] })], []))
+      expect(field).toHaveLength(1)
+      expect(field[0]?.path).toEqual(['definitions', 0, 'fields', 0, 'label'])
+    })
+
+    it('accepts a label of one character that is a space', () => {
+      expect(validateModel(model([appBar({ label: ' ' })], [])).ok).toBe(true)
     })
   })
 
@@ -205,6 +281,47 @@ describe('validateModel', () => {
     it('rejects an entity with no `components` record', () => {
       const problems = errors(model([appBar()], [{ id: ENT }]))
       expect(problems[0]?.path).toEqual(['entities', 0, 'components'])
+      expect(problems[0]?.message).toContain(ENT)
+    })
+
+    it.each([
+      ['a list', []],
+      ['a string', 'x'],
+      ['null', null],
+    ])('rejects `components` that is %s', (_name, components) => {
+      const problems = errors(model([appBar()], [{ id: ENT, components }]))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['entities', 0, 'components'])
+    })
+
+    it('rejects an entity that is not an object', () => {
+      const problems = errors(model([appBar()], ['x']))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['entities', 0])
+    })
+
+    it('names the entity and the component type for a component that is not an object', () => {
+      const problems = errors(model([appBar()], [entity({ [CT]: 'x' })]))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT])
+      expect(problems[0]?.message).toContain(ENT)
+      expect(problems[0]?.message).toContain('AppBar')
+    })
+
+    it.each([
+      ['null', null],
+      ['a boolean', true],
+      ['an object', {}],
+      ['a list', ['a']],
+    ])('rejects the value %s for a string field', (_name, value) => {
+      const problems = errors(model([appBar()], [entity({ [CT]: { [FLD]: value } })]))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD])
+    })
+
+    it('gives every problem of a model with more than one', () => {
+      const entities = [entity({ [CT]: { [FLD]: 1 } }), entity({ [CT]: { [FLD]: 2 } }, ENT2)]
+      expect(errors(model([appBar()], entities))).toHaveLength(2)
     })
 
     it('accepts two entities with different IDs', () => {
@@ -223,7 +340,23 @@ describe('validateModel', () => {
         expect(warning?.message).toContain('AppBar')
         expect(warning?.message).toContain(CT)
         expect(warning?.message).toContain(CT2)
+        expect(warning?.path).toEqual(['definitions'])
       }
+    })
+
+    it('warns for each component type that repeats a label', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2 }), appBar({ id: CT3 })], []))
+      expect(result.ok && result.warnings).toHaveLength(2)
+      if (result.ok) {
+        expect(result.warnings.every((warning) => warning.message.includes(CT))).toBe(true)
+        expect(result.warnings.some((warning) => warning.message.includes(CT2))).toBe(true)
+        expect(result.warnings.some((warning) => warning.message.includes(CT3))).toBe(true)
+      }
+    })
+
+    it('does not warn for component types with different labels', () => {
+      const result = validateModel(model([appBar(), appBar({ id: CT2, label: 'Other' })], []))
+      expect(result.ok && result.warnings).toEqual([])
     })
   })
 })
