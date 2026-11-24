@@ -23,9 +23,10 @@
     }
   },
   "bin": {
-    "wishem": "./dist/cli.js"
+    "wishem": "./bin/wishem.js"
   },
   "files": [
+    "bin",
     "dist",
     "!dist/**/*.d.ts.map"
   ],

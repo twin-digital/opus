@@ -23,4 +23,16 @@ describe('the base workbench model', () => {
     expect(result.model.entities).toHaveLength(1)
     expect(Object.keys(result.model.entities[0].components)).toEqual([type.id])
   })
+
+  it('gives the app bar the title Wishem', async () => {
+    const folder = await readModelFolder(modelFolder)
+    const result = validateModel(folder.data)
+    if (!result.ok) {
+      expect.fail(JSON.stringify(result.problems))
+    }
+
+    const type = result.model.definitions[0]
+    const title = type.fields[0]
+    expect(result.model.entities[0].components[type.id]).toEqual({ [title.id]: 'Wishem' })
+  })
 })

@@ -109,6 +109,20 @@
       ],
       "outputs": ["coverage.json"]
     },
+    "@thrashplay/wishem-workbench#test": {
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build"],
+      "inputs": [
+        "src/**",
+        "model/**",
+        "behavior_pack/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
+      "outputs": ["coverage.json"]
+    },
     "test:watch": {
       "dependsOn": ["@twin-digital/vitest-config#build"],
       "cache": false,
