@@ -162,10 +162,14 @@ export type ValidationResult = { ok: true; model: Model; warnings: Problem[] } |
 export const validateModel: (data: unknown) => ValidationResult
 
 export interface Core {
+  /** The snapshot is frozen. A change to it throws a `TypeError`. */
   getSnapshot(): Snapshot
-  /** Returns a function that stops the registration. */
+  /** Returns a function that stops the registration. The snapshot that a listener gets is frozen. */
   subscribe(listener: (snapshot: Snapshot) => void): () => void
-  /** For the host. Keeps the current model when the result is not ok. */
+  /**
+   * For the host. Keeps the current model when the result is not ok.
+   * Calls each listener. If one or more listeners throw, it throws one `AggregateError` after each listener ran.
+   */
   setModel(data: unknown): ValidationResult
 }
 
@@ -423,6 +427,7 @@ This change settles these items, so the same change updates the blueprint:
 - [A typed view in issue #477 cannot get its prop types from a JSON definition] → Recorded as open question 5 in issue #477.
 - [The blueprint says that time belongs to the core, and issue #479 has an open option to move the clock out] → This change builds no time, so it does not limit that decision.
 - [`setModel` is public on the core, and a renderer or an agent could call it] → Accepted for this change. The write operations of issue #478 decide the final shape.
+- [The tests of the command run the built `dist/cli.js`, so they need a build of the host and of the core] → `turbo.json` has an override: the `test` task of `@thrashplay/wishem-host-nodejs` depends on `build` and `^build`. The tests then run the real command with its shebang line.
 
 ## Open Questions
 
