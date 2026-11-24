@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -21,8 +21,16 @@ interface Run {
   exit: Promise<number | null>
 }
 
-const run = (args: string[]): Run => {
-  const child = spawn(process.execPath, [cli, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
+interface RunOptions {
+  nodeArgs?: string[]
+  cwd?: string
+}
+
+const run = (args: string[], options: RunOptions = {}): Run => {
+  const child = spawn(process.execPath, [...(options.nodeArgs ?? []), cli, ...args], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: options.cwd,
+  })
   let out = ''
   let err = ''
   child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()))
@@ -45,8 +53,8 @@ describe('wishem command', () => {
   let folder: string
   let running: Run[]
 
-  const start = (args: string[]) => {
-    const process_ = run(args)
+  const start = (args: string[], options?: RunOptions) => {
+    const process_ = run(args, options)
     running.push(process_)
     return process_
   }
@@ -82,11 +90,104 @@ describe('wishem command', () => {
     expect(((await response.json()) as { entities: unknown[] }).entities).toHaveLength(1)
   })
 
-  it('exits with code 0 after an interrupt signal', async () => {
+  it.each(['SIGINT', 'SIGTERM'] as const)('exits with code 0 after the signal %s', async (signal) => {
     const process_ = start(['start', folder, '--port', '0'])
+    await until(() => process_.stdout().includes('snapshot at'))
+    process_.child.kill(signal)
+    expect(await process_.exit).toBe(0)
+  })
+
+  it('stops the server before it exits after an interrupt signal', async () => {
+    const hook = path.join(folder, 'hook.mjs')
+    await writeFile(
+      hook,
+      [
+        "import http from 'node:http'",
+        'const close = http.Server.prototype.close',
+        'http.Server.prototype.close = function (...args) {',
+        "  console.log('test: server closed')",
+        '  return close.apply(this, args)',
+        '}',
+      ].join('\n'),
+    )
+    const process_ = start(['start', folder, '--port', '0'], { nodeArgs: ['--import', hook] })
     await until(() => process_.stdout().includes('snapshot at'))
     process_.child.kill('SIGINT')
     expect(await process_.exit).toBe(0)
+    expect(process_.stdout()).toContain('test: server closed')
+  })
+
+  it('prints the absolute path of a folder that is given as a relative path', async () => {
+    const parent = await realpath(path.dirname(folder))
+    const process_ = start(['start', path.basename(folder), '--port', '0'], { cwd: parent })
+    await until(() => process_.stdout().includes('snapshot at'))
+    expect(process_.stdout().split('\n')[0]).toBe(`wishem: model ${path.join(parent, path.basename(folder))}`)
+  })
+
+  it('exits with code 1 when the watch fails during a run', async () => {
+    const hook = path.join(folder, 'hook.mjs')
+    await writeFile(
+      hook,
+      [
+        "import { EventEmitter } from 'node:events'",
+        "import fs from 'node:fs'",
+        "import { syncBuiltinESMExports } from 'node:module'",
+        'fs.watch = () => {',
+        '  const watcher = new EventEmitter()',
+        '  watcher.close = () => undefined',
+        "  setTimeout(() => watcher.emit('error', new Error('watch broke')), 300)",
+        '  return watcher',
+        '}',
+        'syncBuiltinESMExports()',
+      ].join('\n'),
+    )
+    const process_ = start(['start', folder, '--port', '0'], { nodeArgs: ['--import', hook] })
+    expect(await process_.exit).toBe(1)
+    expect(process_.stdout()).toContain('wishem: the watch failed: watch broke')
+  })
+
+  it('prints the error and exits with code 1 when the watch cannot start', async () => {
+    const hook = path.join(folder, 'hook.mjs')
+    await writeFile(
+      hook,
+      [
+        "import fs from 'node:fs'",
+        "import { syncBuiltinESMExports } from 'node:module'",
+        'fs.watch = () => {',
+        "  throw new Error('no watcher')",
+        '}',
+        'syncBuiltinESMExports()',
+      ].join('\n'),
+    )
+    const process_ = start(['start', folder, '--port', '0'], { nodeArgs: ['--import', hook] })
+    expect(await process_.exit).toBe(1)
+    expect(process_.stderr()).toContain('wishem: no watcher')
+    expect(process_.stdout()).not.toContain('snapshot at')
+  })
+
+  it.each([
+    ['stop', 'folder'],
+    ['folder', 'start'],
+    ['starts', 'folder'],
+  ])('prints the usage and exits with a non-zero code for the command "%s %s"', async (first, second) => {
+    const arg = (name: string) => (name === 'folder' ? folder : name)
+    const process_ = start([arg(first), arg(second), '--port', '0'])
+    expect(await process_.exit).not.toBe(0)
+    expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+    expect(process_.stdout()).not.toContain('snapshot at')
+  })
+
+  it('prints the usage and exits with a non-zero code for an unknown option', async () => {
+    const process_ = start(['start', folder, '--nope'])
+    expect(await process_.exit).not.toBe(0)
+    expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+  })
+
+  it('accepts the highest port number', async () => {
+    const process_ = start(['start', folder, '--port', '65535'])
+    await until(() => process_.stdout().includes('snapshot at') || process_.stderr() !== '')
+    expect(process_.stderr()).not.toContain('usage:')
+    expect(process_.stderr()).not.toContain('the port must be')
   })
 
   it('uses the default port 4747 and --port to select another port', async () => {
@@ -96,9 +197,7 @@ describe('wishem command', () => {
     // Port 4747 can be in use on a development computer, so the test accepts both outcomes.
     const defaults = start(['start', folder])
     await until(() => defaults.stdout().includes('snapshot at') || defaults.stderr().includes('in use'))
-    if (defaults.stdout().includes('snapshot at')) {
-      expect(defaults.stdout()).toContain('http://127.0.0.1:4747/snapshot')
-    }
+    expect(defaults.stdout() + defaults.stderr()).toMatch(/http:\/\/127\.0\.0\.1:4747\/snapshot|port 4747 is in use/)
   })
 
   it('exits with code 1 and names the file for a model that is not correct', async () => {
@@ -106,6 +205,7 @@ describe('wishem command', () => {
     const process_ = start(['start', folder, '--port', '0'])
     expect(await process_.exit).toBe(1)
     expect(process_.stderr()).toContain('problem in state.json')
+    expect(process_.stderr()).toContain('wishem: the model is not correct, so the core did not start')
     expect(process_.stdout()).not.toContain('snapshot at')
   })
 
@@ -132,7 +232,7 @@ describe('wishem command', () => {
     expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
   })
 
-  it.each(['', '0x10', '1e3', ' 5000 ', '70000', '-1'])(
+  it.each(['', '0x10', '1e3', ' 5000 ', '65536', '70000', '-1'])(
     'prints the usage and exits with a non-zero code for --port "%s"',
     async (value) => {
       const process_ = start(['start', folder, '--port', value])
@@ -141,6 +241,12 @@ describe('wishem command', () => {
       expect(process_.stdout()).not.toContain('snapshot at')
     },
   )
+
+  it('says what a port is when the port is not a number', async () => {
+    const process_ = start(['start', folder, '--port', 'abc'])
+    expect(await process_.exit).not.toBe(0)
+    expect(process_.stderr()).toContain('the port must be a number from 0 to 65535, not "abc"')
+  })
 
   it('shows a problem during a run, and that the model is correct again', async () => {
     const process_ = start(['start', folder, '--port', '0'])

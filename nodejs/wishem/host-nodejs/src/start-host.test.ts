@@ -1,7 +1,8 @@
+import { writeFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { request } from 'node:http'
-import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
+import { createConnection, createServer } from 'node:net'
+import { networkInterfaces, tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ModelError } from '@thrashplay/wishem-core'
@@ -59,6 +60,15 @@ const eventually = async (check: () => boolean, ms = 2000) => {
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
 }
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** The first IPv4 address of the computer that is not the loopback address. */
+const externalAddress = Object.values(networkInterfaces())
+  .flat()
+  .find((entry) => entry?.family === 'IPv4' && !entry.internal)?.address
+
+const getTitle = (snapshot: Snapshot) => snapshot.entities[0]?.components[CT]?.[FLD]
 
 describe('startHost', () => {
   let folder: string
@@ -162,6 +172,57 @@ describe('startHost', () => {
       expect((await fetch(`${host.url}/snapshot`)).status).toBe(200)
     })
 
+    it('serves the current snapshot, not the first one', async () => {
+      const host = await start()
+      await pause(200)
+      await write('state.json', state('Changed'))
+      await eventually(() => title(host) === 'Changed')
+      const response = await fetch(`${host.url}/snapshot`)
+      expect(getTitle((await response.json()) as Snapshot)).toBe('Changed')
+    })
+
+    it('serves the snapshot when the path has a query', async () => {
+      const host = await start()
+      const response = await fetch(`${host.url}/snapshot?pretty=1`)
+      expect(response.status).toBe(200)
+      expect(((await response.json()) as Snapshot).entities).toHaveLength(1)
+    })
+
+    it('refuses a connection to an address that is not the loopback address', async (context) => {
+      if (externalAddress === undefined) {
+        context.skip()
+        return
+      }
+      const host = await start()
+      const port = Number(new URL(host.url).port)
+      const code = await new Promise<string>((resolve) => {
+        const socket = createConnection({ host: externalAddress, port })
+        socket.on('connect', () => {
+          socket.destroy()
+          resolve('connected')
+        })
+        socket.on('error', (error: NodeJS.ErrnoException) => {
+          resolve(error.code ?? 'error')
+        })
+      })
+      expect(code).toBe('ECONNREFUSED')
+    })
+
+    it.each(['PUT', 'DELETE', 'PATCH'])('gives 405 for %s on /snapshot, with an Allow header', async (method) => {
+      const host = await start()
+      const response = await fetch(`${host.url}/snapshot`, { method })
+      expect(response.status).toBe(405)
+      expect(response.headers.get('allow')).toBe('GET')
+      expect(await response.json()).toHaveProperty('error')
+    })
+
+    it('gives 405 for POST on /snapshots', async () => {
+      const host = await start()
+      const response = await fetch(`${host.url}/snapshots`, { method: 'POST' })
+      expect(response.status).toBe(405)
+      expect(response.headers.get('content-type')).toContain('application/json')
+    })
+
     it('gives 405 with a JSON error for a method that is not GET', async () => {
       const host = await start()
       const response = await fetch(`${host.url}/snapshot`, { method: 'POST' })
@@ -174,6 +235,18 @@ describe('startHost', () => {
       await expect(startHost({ folder, port: 0, log: () => undefined })).rejects.toBeInstanceOf(ModelError)
     })
 
+    it('rejects with problems that name their file', async () => {
+      await write('definitions/other.json', {
+        ...definition('Other', CT2),
+        fields: [{ id: FLD, label: 'x', type: 'number' }],
+      })
+      const error = await startHost({ folder, port: 0, log: () => undefined }).catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ModelError)
+      const problems = (error as ModelError).problems
+      expect(problems.length).toBeGreaterThan(0)
+      expect(problems.every((problem) => problem.source === path.join('definitions', 'other.json'))).toBe(true)
+    })
+
     it('rejects when the port is in use', async () => {
       const blocker = createServer()
       await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve))
@@ -181,6 +254,16 @@ describe('startHost', () => {
       const port = typeof address === 'object' && address ? address.port : 0
       await expect(startHost({ folder, port, log: () => undefined })).rejects.toThrow(/EADDRINUSE/)
       await new Promise((resolve) => blocker.close(resolve))
+    })
+
+    it('closes while a client holds an incomplete request', async () => {
+      const host = await start()
+      const socket = createConnection({ host: '127.0.0.1', port: Number(new URL(host.url).port) })
+      await new Promise<void>((resolve) => socket.on('connect', resolve))
+      socket.write('GET /snapshot HTTP/1.1\r\nHost: x')
+      await pause(50)
+      await host.close()
+      socket.destroy()
     })
 
     it('ends open streams and frees the port on close', async () => {
@@ -200,6 +283,7 @@ describe('startHost', () => {
       const host = await start()
       const stream = await openStream(host.url)
       await stream.next()
+      await pause(200)
       await write('state.json', state('Wishem workbench'))
       expect((await stream.next())?.data.entities[0]?.components[CT]?.[FLD]).toBe('Wishem workbench')
       expect(title(host)).toBe('Wishem workbench')
@@ -208,12 +292,14 @@ describe('startHost', () => {
 
     it('follows a changed label', async () => {
       const host = await start()
+      await pause(200)
       await write(`definitions/${CT}.json`, definition('Header'))
       await eventually(() => host.core.getSnapshot().definitions[0]?.label === 'Header')
     })
 
     it('follows a new definition file', async () => {
       const host = await start()
+      await pause(200)
       await write('definitions/other.json', definition('Other', CT2))
       await eventually(() => host.core.getSnapshot().definitions.length === 2)
     })
@@ -225,11 +311,39 @@ describe('startHost', () => {
       await eventually(() => lines.some((line) => line.includes('problem in state.json')))
       expect(lines).toContain('wishem: the last correct snapshot stays')
       expect(host.core.getSnapshot()).toBe(before)
+      expect(lines.some((line) => line.includes('the model is correct') || line.includes('listener failed'))).toBe(
+        false,
+      )
       await write('state.json', state('Fixed'))
       await eventually(() => title(host) === 'Fixed')
-      expect(lines.some((line) => line.startsWith('wishem: the model is correct: 1 component type, 1 entity'))).toBe(
-        true,
+      await eventually(() =>
+        lines.some((line) => line.startsWith('wishem: the model is correct: 1 component type, 1 entity')),
       )
+    })
+
+    it('says that the model is correct only after a problem, and once', async () => {
+      const host = await start()
+      await pause(200)
+      await write('state.json', state('One'))
+      await eventually(() => title(host) === 'One')
+      await write('state.json', '{')
+      await eventually(() => lines.some((line) => line.includes('problem in state.json')))
+      expect(lines.some((line) => line.includes('the model is correct'))).toBe(false)
+      await write('state.json', state('Two'))
+      await eventually(() => lines.filter((line) => line.includes('the model is correct')).length === 1)
+      await write('state.json', state('Three'))
+      await eventually(() => title(host) === 'Three')
+      await pause(200)
+      expect(lines.filter((line) => line.includes('the model is correct'))).toHaveLength(1)
+    })
+
+    it('names state.json in the problem of a state that is not correct', async () => {
+      const host = await start()
+      await pause(200)
+      await write('state.json', { entities: [{ id: E, components: { [CT2]: {} } }] })
+      await eventually(() => lines.some((line) => line.includes('problem in state.json')))
+      expect(lines).toContain('wishem: the last correct snapshot stays')
+      expect(title(host)).toBe('Wishem')
     })
 
     it('follows a save through a temporary file and a rename', async () => {
@@ -253,10 +367,84 @@ describe('startHost', () => {
       await eventually(() => title(host) === 'Second')
     })
 
+    it('logs each failed listener', async () => {
+      const host = await start()
+      host.core.subscribe(() => {
+        throw new Error('broke one')
+      })
+      host.core.subscribe(() => {
+        throw new Error('broke two')
+      })
+      await pause(200)
+      await write('state.json', state('First'))
+      await eventually(() => lines.some((line) => line.includes('broke two')))
+      expect(lines.some((line) => line.includes('a listener failed: broke one'))).toBe(true)
+      expect(lines.some((line) => line.includes('a listener failed: broke two'))).toBe(true)
+    })
+
     it('prints a warning for two component types with the same label', async () => {
       await start()
       await write('definitions/other.json', definition('AppBar', CT2))
       await eventually(() => lines.some((line) => line.includes('warning')))
+    })
+
+    it('prints a warning once at the start, and not again when nothing changes', async () => {
+      await write('definitions/other.json', definition('AppBar', CT2))
+      await start()
+      expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+      await pause(300)
+      expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+    })
+
+    it('does not print that the model is correct after a start or a valid change', async () => {
+      const host = await start()
+      await pause(200)
+      await write('state.json', state('Next'))
+      await eventually(() => title(host) === 'Next')
+      expect(lines.some((line) => line.includes('the model is correct'))).toBe(false)
+    })
+
+    it('joins the events of a burst of writes into one read', async () => {
+      await write('definitions/other.json', definition('AppBar', CT2))
+      const host = await start()
+      await pause(300)
+      const warnings = () => lines.filter((line) => line.includes('warning')).length
+      const before = warnings()
+      for (let index = 0; index < 8; index++) {
+        writeFileSync(path.join(folder, 'state.json'), JSON.stringify(state(`Burst ${index}`)))
+      }
+      await eventually(() => title(host) === 'Burst 7')
+      await pause(300)
+      expect(warnings() - before).toBe(1)
+    })
+
+    it('follows a change that is made between the first read and the start of the watch', async () => {
+      await write('definitions/other.json', definition('AppBar', CT2))
+      let raced = false
+      const host = await startHost({
+        folder,
+        port: 0,
+        log: (line) => {
+          lines.push(line)
+          if (!raced) {
+            raced = true
+            writeFileSync(path.join(folder, 'state.json'), JSON.stringify(state('Raced')))
+          }
+        },
+      })
+      hosts.push(host)
+      await eventually(() => title(host) === 'Raced')
+      // The warning shows at the start, and again for the model that changed.
+      await eventually(() => lines.filter((line) => line.includes('warning')).length === 2)
+    })
+
+    it('does not follow a change after close', async () => {
+      const host = await start()
+      await pause(200)
+      await host.close()
+      await write('state.json', state('After close'))
+      await pause(300)
+      expect(title(host)).toBe('Wishem')
     })
   })
 })

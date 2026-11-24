@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { validateModel } from '@thrashplay/wishem-core'
+import type { Problem } from '@thrashplay/wishem-core'
 import { readModelFolder, withSource } from './read-model-folder.js'
 
 const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
@@ -113,5 +114,74 @@ describe('readModelFolder', () => {
       const problems = withSource(validation.problems, result)
       expect(problems.some((problem) => problem.source === 'state.json')).toBe(true)
     }
+  })
+
+  it('reads the definition files in the order of their names', async () => {
+    const names = ['f', 'c', 'a', 'e', 'b', 'd']
+    for (const name of names) {
+      await write(`definitions/${name}.json`, { name })
+    }
+    await write('state.json', { entities: [] })
+    const result = await readModelFolder(folder)
+    const sorted = ['a', 'b', 'c', 'd', 'e', 'f']
+    expect(result.definitionFiles).toEqual(sorted.map((name) => path.join('definitions', `${name}.json`)))
+    expect((result.data as { definitions: unknown[] }).definitions).toEqual(sorted.map((name) => ({ name })))
+  })
+
+  it('gives a problem that names the path when the path is a file', async () => {
+    await write('model-file', 'text')
+    const target = path.join(folder, 'model-file')
+    const result = await readModelFolder(target)
+    expect(result.data).toBeUndefined()
+    expect(result.problems[0]?.source).toBe(target)
+  })
+
+  it('names the line of the error in text that is not valid JSON', async () => {
+    await write('state.json', '{\n"entities": [],\n  x}')
+    const result = await readModelFolder(folder)
+    expect(result.problems[0]?.message).toContain('line 3')
+  })
+
+  it('names the second definition file for a problem in the second definition', async () => {
+    await write('definitions/a.json', definition())
+    await write('definitions/b.json', { ...definition('number'), id: 'ct_9a9a9a9a-0000-4000-8000-000000000000' })
+    await write('state.json', { entities: [] })
+    const result = await readModelFolder(folder)
+    const validation = validateModel(result.data)
+    expect(validation.ok).toBe(false)
+    if (!validation.ok) {
+      const problems = withSource(validation.problems, result)
+      expect(problems.length).toBeGreaterThan(0)
+      expect(problems.every((problem) => problem.source === path.join('definitions', 'b.json'))).toBe(true)
+    }
+  })
+})
+
+describe('withSource', () => {
+  const problem = (pathOfProblem: (string | number)[], source?: string): Problem => ({
+    severity: 'error',
+    message: 'm',
+    path: pathOfProblem,
+    ...(source === undefined ? {} : { source }),
+  })
+  const files = { definitionFiles: ['definitions/a.json', 'definitions/b.json'] }
+
+  it('names the file at the index of a definition', () => {
+    const result = withSource([problem(['definitions', 0, 'id']), problem(['definitions', 1])], files)
+    expect(result.map((item) => item.source)).toEqual(['definitions/a.json', 'definitions/b.json'])
+  })
+
+  it('names state.json for an entity', () => {
+    expect(withSource([problem(['entities', 3])], files)[0]?.source).toBe('state.json')
+  })
+
+  it('keeps a source that is set', () => {
+    expect(withSource([problem(['entities', 0], 'x.json')], files)[0]?.source).toBe('x.json')
+    expect(withSource([problem(['definitions', 0], 'x.json')], files)[0]?.source).toBe('x.json')
+  })
+
+  it('sets no source for an index that has no file, or for another path', () => {
+    const result = withSource([problem(['definitions', 5]), problem(['other', 0]), problem([])], files)
+    expect(result.map((item) => item.source)).toEqual([undefined, undefined, undefined])
   })
 })
