@@ -348,7 +348,10 @@ describe('startHost', () => {
 
     it('follows a save through a temporary file and a rename', async () => {
       const host = await start()
+      await pause(200)
       await write('state.json.tmp', state('Renamed'))
+      await pause(200)
+      expect(title(host)).toBe('Wishem')
       await rename(path.join(folder, 'state.json.tmp'), path.join(folder, 'state.json'))
       await eventually(() => title(host) === 'Renamed')
     })

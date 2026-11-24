@@ -39,7 +39,7 @@ const run = (args: string[], options: RunOptions = {}): Run => {
   return { child, stdout: () => out, stderr: () => err, exit }
 }
 
-const until = async (check: () => boolean, ms = 5000) => {
+const until = async (check: () => boolean, ms = 4000) => {
   const deadline = Date.now() + ms
   while (!check()) {
     if (Date.now() > deadline) {
@@ -190,10 +190,18 @@ describe('wishem command', () => {
     expect(process_.stderr()).not.toContain('the port must be')
   })
 
-  it('uses the default port 4747 and --port to select another port', async () => {
-    const selected = start(['start', folder, '--port', '0'])
-    await until(() => selected.stdout().includes('snapshot at') || selected.stderr() !== '')
-    expect(selected.stdout()).not.toContain(':4747/')
+  it('prints the address with the port of --port', async () => {
+    const probe = createServer()
+    await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', resolve))
+    const address = probe.address()
+    const port = typeof address === 'object' && address ? address.port : 0
+    await new Promise((resolve) => probe.close(resolve))
+    const process_ = start(['start', folder, '--port', String(port)])
+    await until(() => process_.stdout().includes('snapshot at') || process_.stderr() !== '')
+    expect(process_.stdout()).toContain(`wishem: snapshot at http://127.0.0.1:${port}/snapshot`)
+  })
+
+  it('uses the port 4747 when --port is not given', async () => {
     // Port 4747 can be in use on a development computer, so the test accepts both outcomes.
     const defaults = start(['start', folder])
     await until(() => defaults.stdout().includes('snapshot at') || defaults.stderr().includes('in use'))
