@@ -84,7 +84,7 @@ Feature work is planned with **OpenSpec** and executed with the **Superpowers** 
 
 - **proposal** brainstorms with `superpowers:brainstorming` when the design isn't settled;
 - **tasks** are written as `## Task N: <name>` sections, each a coherent, independently testable deliverable, because each becomes one implementer subagent plus one review;
-- **apply** runs in the worktree of the change via `superpowers:subagent-driven-development` (TDD + per-task code review) with pinned subagent models (haiku for transcription-only tasks, sonnet for other implementers and reviews, opus for the final review and stuck-task escalation), then verifies, adds the changeset, archives, and finishes with `superpowers:finishing-a-development-branch`.
+- **apply** runs in the worktree of the change via `superpowers:subagent-driven-development` (TDD + per-task code review; an implementer report must show a failing run before the code) with pinned subagent models (haiku for transcription-only tasks, sonnet for other implementers and reviews, opus for the final review and stuck-task escalation), then break-tests each package that the change adds or that other packages depend on (the `break-test` skill) before the final review, then verifies, adds the changeset, archives, and finishes with `superpowers:finishing-a-development-branch`.
 
 Repo conventions for artifacts (spec layout, required design sections, UI rules) live in `openspec/config.yaml` (`context` and `rules`), not the schema. Specs live in `openspec/specs/`, in-flight changes in `openspec/changes/<name>/`.
 

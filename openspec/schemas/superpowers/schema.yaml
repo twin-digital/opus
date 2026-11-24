@@ -367,28 +367,60 @@ apply:
        specs or design - update those artifacts rather than silently
        diverging.
 
+       Test-first evidence: an implementer report is complete only when it
+       shows, for each step that adds behavior, a failing run before the
+       code and a passing run after it. If a report says that tests and
+       code were written together, or shows no failing run, do not treat
+       the tests of that package as proven: record the package for the
+       break-test in step 3, and name it in your final summary to the user.
+
        Models: this mapping replaces the skill's own Model Selection. Always
        set the model explicitly on every dispatch:
        - `haiku` - an implementer whose task text contains the complete code
          to write, or a single-file mechanical fix
        - `sonnet` - every other implementer, every per-task reviewer and
-         re-review, and fix-loop rounds 1-3
+         re-review, fix-loop rounds 1-3, and every break-test run (step 3)
        - `opus` - the final whole-branch review, and fix-loop escalation
          (rounds 4-5)
 
-    3. **Verify**: run `pnpm build`, `pnpm lint`, `pnpm typecheck`, and
+    3. **Break-test**: after the last task is complete, and before the
+       final whole-branch review of
+       `superpowers:subagent-driven-development`, check that the tests can
+       fail. Do this for each package that:
+       - the change adds, or
+       - other packages depend on, when the change adds or changes its
+         behavior, or
+       - step 2 recorded because a report had no test-first evidence.
+
+       If no package matches, skip this step and say so in your final
+       summary to the user.
+
+       For each such package, dispatch one subagent that follows the
+       `break-test` skill, and give it the package path and the paths of
+       its specs and design. Run the packages one at a time: each run
+       changes source files in the worktree. Do not commit, push, or
+       dispatch other work in the worktree during a run. If the
+       `break-test` skill is missing from your available skills, STOP and
+       tell the user.
+
+       The final review then reads the tests that the break-test added.
+       Put the first-pass totals of each run (mutations tried, killed,
+       survived; tests proven, weak, unable to fail) and each real defect
+       it found in your final summary to the user.
+
+    4. **Verify**: run `pnpm build`, `pnpm lint`, `pnpm typecheck`, and
        `pnpm test` (scoped with `--filter` where that covers everything the
        change touches), plus `openspec validate --strict` for this change.
        Every task in tasks.md must be checked, or the user must have agreed
        to drop it.
 
-    4. **Changeset**: add one with `pnpm exec changeset`, selecting every
+    5. **Changeset**: add one with `pnpm exec changeset`, selecting every
        impacted package including private ones (or `--empty` if no package
        changed).
 
-    5. **Archive**: archive the change (the `openspec-archive-change` skill)
+    6. **Archive**: archive the change (the `openspec-archive-change` skill)
        so the delta specs are synced into `openspec/specs/` and the change
        folder lands in the same PR as the code.
 
-    6. **Finish**: invoke `superpowers:finishing-a-development-branch` to
+    7. **Finish**: invoke `superpowers:finishing-a-development-branch` to
        open the PR or merge as the user chooses.
