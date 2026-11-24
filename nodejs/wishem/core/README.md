@@ -65,3 +65,7 @@ stop()
 - `core.getSnapshot()`: returns the current snapshot.
 - `core.subscribe(listener)`: registers a listener. Returns a function that removes it.
 - `core.setModel(data)`: gives a new model to the core. For the host that owns the storage.
+
+## No Node.js API
+
+The core uses no Node.js API, because it runs in a web browser. The command `pnpm build --filter @thrashplay/wishem-core` compiles the source files without the Node.js types. It fails when a source file uses a Node.js module or global. Test files can use Node.js APIs.
