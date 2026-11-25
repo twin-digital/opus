@@ -348,6 +348,30 @@ The renderer keeps its own objects, such as sprites, layers, and draw order. Wis
 
 Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.js, and a card game can pick plain HTML and CSS.
 
+### Views (**Agreed**)
+
+A renderer holds **views**. A view changes one component of an entity into the objects of that renderer.
+
+- Each renderer provides its own component types. Wishem does not define one set of visual components for all renderers.
+- A view is linked to its component type by the ID of the component type. A component type that has no view is not drawn.
+- The props of a view are the fields of its component type.
+- A view is a pure function of its props. A view holds no state.
+- A renderer imports the model. The model never imports a renderer (rule R1).
+
+A product has two sides (**Proposed**). The **model side** is the definitions, the behaviors, and the authored state. The **presentation side** is the views for one output subsystem. The presentation side is code of the product and is not part of the model. The I/O rule is the test: the model gives the same result when the output subsystem is removed. A workbench has the same two sides.
+
+A component of a renderer can hold **transient state**. State is transient when all three of these things are true:
+
+1. A reload of the page loses it with no harm to the designer.
+2. No other part of the page, and no behavior, reads it.
+3. The agent does not need it to know what the designer did.
+
+Examples of transient state: hover, focus, the open state of a select, the scroll position, the caret, and text in a control before the designer commits it. The text in the prompt box is transient now.
+
+Each other state is in the model. An event in a view sends an input or a write to the core.
+
+Reason: the web browser holds focus, hover, the scroll position, and the caret, so no HTML renderer can put them in the model. The workbench has authored state only, so each value in the model is a write to a file.
+
 ### Adapters
 
 An adapter connects a library to a subsystem. An adapter is written when a product first picks that library (rule R7). The first game pays for one adapter in each subsystem that a library provides.

@@ -20,6 +20,10 @@ Terms in each group are in alphabetical order.
 
 ## The project
 
+**Model side** (**Proposed**): The definitions, the behaviors, and the authored state of a product or of a workbench. The model side is the model.
+
+**Presentation side** (**Proposed**): The views of a product or of a workbench for one output subsystem. The presentation side is code of the product. It is not part of the model.
+
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
 **Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. Each part is a model, and each model has its own core.
@@ -141,6 +145,8 @@ Terms in each group are in alphabetical order.
 **Renderer contract**: The four things a renderer must do.
 
 **Subsystem**: A part of a product that has one job. Wishem provides it, or a library provides it through an adapter.
+
+**View** (**Agreed**): Code of a renderer that changes one component of an entity into the objects of that renderer. A view is a pure function of its props. A view is linked to its component type by ID.
 
 ## Tools
 

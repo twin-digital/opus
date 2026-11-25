@@ -87,6 +87,7 @@ When the agent chooses a value or a meaning without asking, the designer can see
 
 **R17. The first renderer is one off-the-shelf library behind an adapter. Other engines wait.** (**Agreed**)
 The model imports nothing from the renderer, and a simulation runs with no window. No wire protocol between a simulation and a renderer is built now. If a renderer in a different engine is wanted later, a protocol is made along the line between the simulation and the adapter.
+A renderer can run in a different process from the core when its runtime makes this necessary. The renderer then gets the core as an object, and only one client module knows the transport. The transport has no promise: it has no version, and it can change in any release. A protocol with a promise is the work of [Processes of a product and the protocol between them](https://github.com/twin-digital/opus/issues/503).
 Reason: this keeps each benefit for the agent, such as rerun and fast tests with no window, and it does not include the most expensive part of the first notes.
 Rejected: a wire protocol from the first day, with a second client to test it. It delays each part that makes Wishem different.
 
