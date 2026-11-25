@@ -64,6 +64,7 @@ process.on('exit', () => {
   cleanup?.()
 })
 for (const [signal, code] of /** @type {const} */ ([
+  ['SIGHUP', 129],
   ['SIGINT', 130],
   ['SIGTERM', 143],
 ])) {
@@ -75,10 +76,6 @@ for (const [signal, code] of /** @type {const} */ ([
     }
   })
 }
-process.on('uncaughtException', (error) => {
-  console.error(error)
-  process.exit(1)
-})
 
 // The test build: the only input is style-guide.html.
 const build = spawnSync('pnpm', ['exec', 'vite', 'build', '--mode', 'style-guide'], {
@@ -115,7 +112,14 @@ const browserHost = () => {
   return '127.0.0.1'
 }
 const host = browserHost()
-const publish = host === '127.0.0.1' ? `127.0.0.1::${BROWSER_PORT}` : `${BROWSER_PORT}`
+const isIpv6Loopback = host === '::1' || host === '[::1]'
+const isLoopback = isIpv6Loopback || host === 'localhost' || /^127(\.\d{1,3}){3}$/.test(host)
+const loopbackAddress =
+  isIpv6Loopback ? '[::1]'
+  : host === 'localhost' ? '127.0.0.1'
+  : host
+const publish = isLoopback ? `${loopbackAddress}::${BROWSER_PORT}` : `${BROWSER_PORT}`
+const urlHost = isIpv6Loopback ? '[::1]' : host
 const secretPath = `/${randomBytes(16).toString('hex')}`
 
 const removeContainer = () => {
@@ -144,17 +148,22 @@ if (started === undefined) {
 log(`started ${image} as ${container}`)
 
 /**
- * Polls until the check passes.
+ * Polls until the check passes. Stops early when the container, or the process named by `processName`, is not running.
  * @param {string} what
  * @param {() => boolean} check
+ * @param {string} [processName] Text in the command line of a process that must stay in the container.
  */
-const waitFor = async (what, check) => {
+const waitFor = async (what, check, processName) => {
   for (let attempt = 0; attempt < 120; attempt++) {
     if (check()) {
       return
     }
-    if (docker(['inspect', '-f', '{{.State.Running}}', container]) !== 'true') {
+    if (docker(['inspect', '-f', '{{.State.Running}}', container]) === 'false') {
       fail(`the browser container stopped before ${what} started. See: docker logs ${container}`)
+    }
+    const processes = processName === undefined ? undefined : docker(['top', container])
+    if (processName !== undefined && processes !== undefined && !processes.includes(processName)) {
+      fail(`${processName} stopped before ${what} started.`)
     }
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
@@ -183,10 +192,14 @@ const serving = docker(['exec', '-d', container, 'node', '/srv/static-server.js'
 if (serving === undefined) {
   fail('cannot start the static server in the browser container.')
 }
-await waitFor('the static server', () => {
-  const probe = `fetch('http://127.0.0.1:${STATIC_PORT}/style-guide.html').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))`
-  return docker(['exec', container, 'node', '-e', probe]) !== undefined
-})
+await waitFor(
+  'the static server',
+  () => {
+    const probe = `fetch('http://127.0.0.1:${STATIC_PORT}/style-guide.html').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))`
+    return docker(['exec', container, 'node', '-e', probe]) !== undefined
+  },
+  'static-server.js',
+)
 
 log(`the browser server is at ${host}:${port}`)
-run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${host}:${port}${secretPath}` })
+run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${urlHost}:${port}${secretPath}` })

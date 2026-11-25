@@ -29,11 +29,13 @@ The tests need Docker. They run in the Playwright image `mcr.microsoft.com/playw
 1. It makes the test build (`vite build --mode style-guide`) in `dist-style-guide/`.
 2. It starts the image on the Docker host and copies the test build into the container.
 3. It runs `playwright test` and connects to the browser in the container.
-4. It removes the container.
+4. It removes the container, also when the script gets SIGINT, SIGTERM, or SIGHUP.
 
 The job `ui-tests` of the pull request checks runs the same command on a runner that has Docker. A baseline from a development computer passes in the checks.
 
 The environment variable `WISHEM_BROWSER_HOST` replaces the host name of the browser server. By default, the host is the host of `DOCKER_HOST`. When `DOCKER_HOST` is not set, it is the host of the active Docker context. When the endpoint is not `ssh://` or `tcp://`, it is `127.0.0.1`.
+
+When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the script publishes the port of the browser server on the loopback address only. For another host, it publishes the port on all interfaces of the Docker host.
 
 ## Update the baselines
 
