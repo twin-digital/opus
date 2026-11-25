@@ -47,13 +47,13 @@ Read the requirements "The app bar", "The zero state", "Who acted decides the ro
 
 ## Task 4: The brand files and the blueprint
 
-Files: `nodejs/wishem/docs/brand.md`, `nodejs/wishem/docs/brand/brand-basics.html`, `nodejs/wishem/docs/brand/render.mjs`, `nodejs/wishem/docs/brand/*.png`, `nodejs/wishem/docs/README.md`, `README.md`
-Interfaces: consumes `scripts/browser-server.ts` of the package, to get a web browser for `render.mjs`
+Files: `nodejs/wishem/docs/brand.md`, `nodejs/wishem/docs/brand/brand-basics.html`, `nodejs/wishem/docs/brand/render.ts`, `nodejs/wishem/docs/brand/*.png`, `nodejs/wishem/docs/README.md`, `README.md`
+Interfaces: consumes `scripts/browser-server.ts` of the package, to get a web browser for `render.ts`
 
 Read `nodejs/wishem/docs/brand.md` in full first. That file uses the voice of the brand, not the plain style of the other documents. Keep that voice. The values are in the `component-catalog` specification.
 
 - [x] 4.1 Update `brand.md` and `brand-basics.html` together: add Moonlight (`#C2D0EA`, with `#3F5682` for text on a light surface) as a sixth color, with the role "the light of the night, which belongs to no one"; change the Wishfire value for text on a light surface to `#9E5B0C`; replace Instrument Sans with Inter; replace the type scale with the sizes 12, 13, 14, 16, 18, 22, 25, 31, 39, and 49, and remove the sentence about the 1.25 ratio; say that Clay has no role in the workbench; say that the style guide of the workbench now records how the colors and the type are implemented. Verify: a search for `Instrument`, `A8620F`, and `1.25` in the two files finds no match.
-- [x] 4.2 Change `render.mjs` as `design.md` D11 says, so that it works with the browser server. Make the brand images again. Verify: each image in `brand/` is new, and the palette image shows Moonlight in light mode and in dark mode.
+- [x] 4.2 Change `render.ts` as `design.md` D11 says, so that it works with the browser server. Make the brand images again. Verify: each image in `brand/` is new, and the palette image shows Moonlight in light mode and in dark mode.
 - [x] 4.3 Update `nodejs/wishem/docs/README.md`: the style guide of the workbench is the record of the implementation, and say how to start it. Run `pnpm update-readme` so that the package list of the root `README.md` has the new package. Verify: `pnpm update-readme` makes no more changes on a second run, and the merge check for the README passes.
 
 ## Workflow follow-up

@@ -261,7 +261,7 @@ Rejected: a job that runs in the image. The job would install each dependency of
 
 ### D11. The brand images
 
-`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.ts` runs each command that it gets, so a person runs `render.mjs` through it. The fonts of `brand-basics.html` come from the network, as they do now.
+`nodejs/wishem/docs/brand/render.ts` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.ts` runs each command that it gets, so a person runs `render.ts` through it. The fonts of `brand-basics.html` come from the network, as they do now.
 
 ## Interfaces
 
