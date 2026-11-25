@@ -31,7 +31,7 @@ The palette tells a story about who is acting. **Wishfire** belongs to the maker
 | **Clay**      | `#C8B9A9` | Warm neutral, for the golem's material. Illustration, borders on dark, subtle texture. It's a supporting colour, never a headline. The workbench gives it no role.                                   |
 | **Mist**      | `#F2F2F6` | Light ground and text on Ink. A slightly cool white, so Wishfire stays the only warm thing on the screen.                                                                                            |
 
-Roughly how much of each: Ink 60%, Mist 25%, Clay 7%, Wisp 5%, Wishfire 3%.
+Roughly how much of each: Ink 60%, Mist 25%, Clay 5%, Wisp 4%, Moonlight 3%, Wishfire 3%.
 
 - Moonlight is cool and quiet, so it never competes with the maker's fire or the spirit's wisp.
 - Wishfire is scarce on purpose. If everything glows, nothing feels granted.

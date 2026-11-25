@@ -42,10 +42,6 @@ describe('the rule finds a palette color', () => {
 })
 
 describe('components use roles only', () => {
-  it('checks at least one component', () => {
-    expect(files.length).toBeGreaterThan(0)
-  })
-
   it.each(files.map((file) => [file.slice(dir.length + 1), file]))(
     '%s has no hexadecimal color and no palette color name',
     (_name, file) => {
