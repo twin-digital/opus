@@ -1,17 +1,19 @@
 // Renders the images that ../brand.md embeds from brand-basics.html, in light and dark.
-// Needs Playwright with Chromium: node nodejs/wishem/docs/brand/render.mjs
-// With a global install: NODE_PATH="$(npm root -g)" node nodejs/wishem/docs/brand/render.mjs
+// Run: node nodejs/wishem/workbench-app/scripts/browser-server.js node ../docs/brand/render.mjs
+// Without WISHEM_BROWSER_WS_ENDPOINT, it launches a local Chromium.
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
-// Loaded with require so a global Playwright install is found through NODE_PATH.
-const { chromium } = createRequire(import.meta.url)('playwright')
 const here = dirname(fileURLToPath(import.meta.url))
-const page = pathToFileURL(join(here, 'brand-basics.html')).href
+// Playwright comes from the workbench-app package, which pins the version.
+const { chromium } = createRequire(join(here, '../../workbench-app/package.json'))('@playwright/test')
+const html = readFileSync(join(here, 'brand-basics.html'), 'utf8')
 const shots = ['header', 'palette', 'editor', 'type', 'aside']
+const endpoint = process.env.WISHEM_BROWSER_WS_ENDPOINT
 
-const browser = await chromium.launch()
+const browser = endpoint ? await chromium.connect(endpoint) : await chromium.launch()
 try {
   for (const colorScheme of ['light', 'dark']) {
     const context = await browser.newContext({
@@ -20,7 +22,8 @@ try {
       colorScheme,
     })
     const tab = await context.newPage()
-    await tab.goto(page, { waitUntil: 'networkidle' })
+    // The browser can run on another computer, so the page gets the HTML as text.
+    await tab.setContent(html, { waitUntil: 'networkidle' })
     await tab.evaluate(() => document.fonts.ready)
     for (const shot of shots) {
       await tab.locator(`#shot-${shot}`).screenshot({

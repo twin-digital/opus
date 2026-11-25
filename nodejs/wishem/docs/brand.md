@@ -9,9 +9,9 @@
 
 This file connects how Wishem looks and sounds to what Wishem is. Each colour, typeface and phrase traces back to the same idea: a maker who wishes things into being, and a spirit that grants those wishes. When a design choice isn't covered here, make the choice that tells that story.
 
-It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.md`](../../../docs/ui-style-guide.md)). Once the editor UI exists, the colours and type below become its design tokens, and the style guide becomes the source of truth for how they are implemented. This file stays the source of truth for why they look that way. Logo, iconography and components come later.
+It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.md`](../../../docs/ui-style-guide.md)). The colours and type below are the design tokens of the workbench, and its style guide is the record of how they are implemented. This file stays the source of truth for why they look that way. Logo, iconography and components come later.
 
-The images here are rendered from [`brand/brand-basics.html`](brand/brand-basics.html), which shows the whole guide as a page. If you change a colour, a typeface or a sample, change it in both files, then run `node nodejs/wishem/docs/brand/render.mjs` to update the images.
+The images here are rendered from [`brand/brand-basics.html`](brand/brand-basics.html), which shows the whole guide as a page. If you change a colour, a typeface or a sample, change it in both files, then run `node nodejs/wishem/workbench-app/scripts/browser-server.js node ../docs/brand/render.mjs` to update the images.
 
 ## Colour: ink, fire and wisp
 
@@ -19,19 +19,21 @@ The palette tells a story about who is acting. **Wishfire** belongs to the maker
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="brand/palette-dark.png">
-  <img alt="Swatches for Ink, Wishfire, Wisp, Clay and Mist, with a bar showing their proportions" src="brand/palette-light.png">
+  <img alt="Swatches for Ink, Wishfire, Wisp, Moonlight, Clay and Mist, with a bar showing their proportions" src="brand/palette-light.png">
 </picture>
 
-| Colour       | Hex       | Role                                                                                                                                                 |
-| ------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ink**      | `#17172A` | Primary ground. Dark mode base, the editor, hero surfaces. The engine feels at home at night.                                                        |
-| **Wishfire** | `#F2A93B` | The maker's colour. Primary actions, the prompt box, the cursor, "make it so" moments. Use `#A8620F` for text on light surfaces.                     |
-| **Wisp**     | `#7FD6C6` | The spirit's colour. Agent messages, suggestions, test and replay activity, "the agent is working" states. Use `#23786B` for text on light surfaces. |
-| **Clay**     | `#C8B9A9` | Warm neutral, for the golem's material. Illustration, borders on dark, subtle texture. It's a supporting colour, never a headline.                   |
-| **Mist**     | `#F2F2F6` | Light ground and text on Ink. A slightly cool white, so Wishfire stays the only warm thing on the screen.                                            |
+| Colour        | Hex       | Role                                                                                                                                                                                                 |
+| ------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ink**       | `#17172A` | Primary ground. Dark mode base, the editor, hero surfaces. The engine feels at home at night.                                                                                                        |
+| **Wishfire**  | `#F2A93B` | The maker's colour. Primary actions, the prompt box, the cursor, "make it so" moments. Use `#9E5B0C` for text on light surfaces.                                                                     |
+| **Wisp**      | `#7FD6C6` | The spirit's colour. Agent messages, suggestions, test and replay activity, "the agent is working" states. Use `#23786B` for text on light surfaces.                                                 |
+| **Moonlight** | `#C2D0EA` | The light of the night, which belongs to no one. Neither the maker nor the spirit owns it, so it carries focus, selection and the accent of the interface. Use `#3F5682` for text on light surfaces. |
+| **Clay**      | `#C8B9A9` | Warm neutral, for the golem's material. Illustration, borders on dark, subtle texture. It's a supporting colour, never a headline. The workbench gives it no role.                                   |
+| **Mist**      | `#F2F2F6` | Light ground and text on Ink. A slightly cool white, so Wishfire stays the only warm thing on the screen.                                                                                            |
 
 Roughly how much of each: Ink 60%, Mist 25%, Clay 7%, Wisp 5%, Wishfire 3%.
 
+- Moonlight is cool and quiet, so it never competes with the maker's fire or the spirit's wisp.
 - Wishfire is scarce on purpose. If everything glows, nothing feels granted.
 - Never let Wishfire and Wisp swap roles. A user button in Wisp, or an agent message in Wishfire, breaks the "who did this?" signal.
 - Keep success, warning and error colours separate from the brand pair. Don't use Wishfire as a warning colour.
@@ -50,18 +52,18 @@ The brand uses one face for presence, one for clarity and one for the words you 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="brand/type-dark.png">
-  <img alt="Type specimens for Bricolage Grotesque, Instrument Sans and JetBrains Mono, and the starter type scale" src="brand/type-light.png">
+  <img alt="Type specimens for Bricolage Grotesque, Inter and JetBrains Mono, and the type scale" src="brand/type-light.png">
 </picture>
 
 | Typeface                | Role                                                                               | Sample                                                                                                             |
 | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | **Bricolage Grotesque** | Display. Headlines, the wordmark, big moments. Weight 800, tight tracking.         | Say it. Watch it spawn.                                                                                            |
-| **Instrument Sans**     | Body and UI. Docs, menus, agent replies. Weights 400–600.                          | Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and the replays are ready. |
+| **Inter**               | Body and UI. Docs, menus, agent replies. Weights 400–600.                          | Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and the replays are ready. |
 | **JetBrains Mono**      | Prompts, code, logs, labels. Whatever the user types to the spirit is set in mono. | `> give the boss a second phase at half health`                                                                    |
 
-Starter scale, in pixels: 12, 14, 16, 20, 25, 31, 39, 49.
+Type scale, in pixels: 12, 13, 14, 16, 18, 22, 25, 31, 39, 49.
 
-- Use a 1.25 ratio from a 16px base. Keep display sizes for headings, the wordmark and hero lines. In UI, Instrument Sans does almost all the work.
+- Keep display sizes for headings, the wordmark and hero lines. In UI, Inter does almost all the work.
 - Write the wordmark in lowercase: _wishem_. Its spark is a Wishfire full stop or the dot of the i. Don't split it to show "shem." The hidden meaning stays hidden.
 - Use sentence case everywhere. Uppercase is for small mono labels only, with letter spacing.
 
