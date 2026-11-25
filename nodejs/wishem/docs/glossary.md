@@ -142,11 +142,15 @@ Terms in each group are in alphabetical order.
 
 **Output subsystem**: A subsystem that shows or plays a simulation. Examples: renderer, sound.
 
+**React view** (**Agreed**): The kind of view that the HTML renderer runs: a React component. A React view that has no sidecar is not attached to a component type.
+
 **Renderer contract**: The four things a renderer must do.
+
+**Sidecar** (**Agreed**): A data file beside a view. It holds the kind of the view and the ID of its component type.
 
 **Subsystem**: A part of a product that has one job. Wishem provides it, or a library provides it through an adapter.
 
-**View** (**Agreed**): Code of a renderer that changes one component of an entity into the objects of that renderer. A view is a pure function of its props. A view is linked to its component type by ID.
+**View** (**Agreed**): Code that a renderer runs to draw a component type. A view is content of the product, and it is not part of the renderer. Each renderer has its own kind of view. A view is a pure function of its props. A sidecar attaches a view to its component type.
 
 ## Tools
 
@@ -164,6 +168,7 @@ Terms in each group are in alphabetical order.
 | ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Attachment interface                            | The interface of the core                                     | A core has one interface. No formal "attachment" object exists.                                              |
 | Client and server                               | Model and renderer                                            | No wire protocol exists. See rule R17.                                                                       |
+| Component, for React code                       | View, or React view                                           | A component is a part of an entity in a model.                                                               |
 | Designer statement                              | Expectation                                                   | One word for the concept.                                                                                    |
 | Engine, for Wishem as a whole                   | Wishem, or the model                                          | No engine is built ahead of a product.                                                                       |
 | Game model                                      | Model                                                         | A model is not always the model of a game. The workbench is a model, and it is not a game.                   |

@@ -8,6 +8,7 @@
     "build": "build",
     "clean": "clean",
     "dev": "vite --host",
+    "generate": "node scripts/generate.ts",
     "lint": "lint",
     "lint:fix": "lint_fix",
     "preview": "vite preview",

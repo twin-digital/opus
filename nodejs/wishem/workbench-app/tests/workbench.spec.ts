@@ -8,6 +8,7 @@ const ENTITY = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
 const SECOND_ENTITY = 'e_5a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d'
 const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 const TITLE = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
+const SECOND_FIELD = 'fld_0c44a1d2-6e3b-4f70-9a18-2b5d7c9e1f03'
 
 const model = join(import.meta.dirname, '..', '.e2e-model')
 const statePath = join(model, 'state.json')
@@ -73,21 +74,45 @@ test('text that is not valid JSON keeps the title, and a correct file shows the 
   await expect(heading(page, 'Hello')).toBeVisible()
 })
 
-test('a definition with no title field gives one warning, and the app bar stays with an empty title', async ({
-  page,
-}) => {
+test('two labels that give one name give one warning, and the app bar stays', async ({ page }) => {
   const warnings: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'warning') {
       warnings.push(message.text())
     }
   })
-  await writeState(stateOf({ id: ENTITY, title: null }))
-  await writeFile(definitionPath, JSON.stringify({ id: APP_BAR, label: 'AppBar', fields: [] }))
+  await writeFile(
+    definitionPath,
+    JSON.stringify({
+      id: APP_BAR,
+      label: 'AppBar',
+      fields: [
+        { id: TITLE, label: 'title', type: 'string' },
+        { id: SECOND_FIELD, label: 'Title', type: 'string' },
+      ],
+    }),
+  )
   await expect.poll(() => warnings.length).toBe(1)
-  expect(warnings[0]).toContain('AppBar.tsx')
-  await expect(page.getByRole('banner')).toBeVisible()
+  expect(warnings[0]).toContain('AppBar.view.json')
+  expect(warnings[0]).toContain(TITLE)
+  expect(warnings[0]).toContain(SECOND_FIELD)
+  await expect(heading(page, 'Wishem')).toBeVisible()
+})
+
+test('a change of the label of the title field to heading empties the title, and a change back restores it', async ({
+  page,
+}) => {
+  const definition = JSON.parse(await readFile(definitionPath, 'utf8')) as { fields: { label: string }[] }
+  const relabel = (label: string) =>
+    writeFile(
+      definitionPath,
+      JSON.stringify({ ...definition, fields: definition.fields.map((field) => ({ ...field, label })) }),
+    )
+
+  await relabel('heading')
   await expect(page.getByRole('heading')).toHaveText('.')
+  await relabel('title')
+  await expect(heading(page, 'Wishem')).toBeVisible()
 })
 
 test('two entities with an AppBar component give two app bars', async ({ page }) => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, connect, type Server } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -20,6 +20,8 @@ vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
 
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
+const appBarSidecar = join(import.meta.dirname, 'views', 'AppBar.view.json')
+const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 
 interface Run {
   child: ChildProcess
@@ -67,11 +69,14 @@ const refuses = (host: string, port: number) =>
 describe('the start script of the workbench', () => {
   let folder = ''
   let model = ''
+  let views = ''
   const children: ChildProcess[] = []
   const blockers: Server[] = []
 
   const start = (args: string[]): Run => {
-    const child = spawn('node', [script, '--model', model, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn('node', [script, '--model', model, '--views', views, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
     children.push(child)
     let text = ''
     child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
@@ -103,6 +108,9 @@ describe('the start script of the workbench', () => {
     folder = mkdtempSync(join(tmpdir(), 'workbench-start-'))
     model = join(folder, 'model')
     cpSync(baseModel, model, { recursive: true })
+    views = join(folder, 'views')
+    mkdirSync(views)
+    cpSync(appBarSidecar, join(views, 'AppBar.view.json'))
   })
 
   afterEach(async () => {
@@ -128,7 +136,7 @@ describe('the start script of the workbench', () => {
   })
 
   it('resolves a relative --model against INIT_CWD', { timeout: 30000 }, async () => {
-    const child = spawn('node', [script, '--model', './model', '--port', '0', '--core-port', '0'], {
+    const child = spawn('node', [script, '--model', './model', '--views', views, '--port', '0', '--core-port', '0'], {
       env: { ...process.env, INIT_CWD: folder },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -242,7 +250,9 @@ describe('the start script of the workbench', () => {
   it('closes the core when the page server cannot be created', { timeout: 30000 }, async () => {
     const corePort = await freePort()
 
-    await expect(startWorkbench({ model, port: 0, corePort, log: () => undefined })).rejects.toThrow('plugin failed')
+    await expect(
+      startWorkbench({ model, views, viewTypes: false, port: 0, corePort, log: () => undefined }),
+    ).rejects.toThrow('plugin failed')
 
     expect(await refuses('127.0.0.1', corePort)).toBe(true)
   })
@@ -266,7 +276,9 @@ describe('the start script of the workbench', () => {
         close: () => Promise.reject(new Error('close failed')),
       })
 
-      await expect(startWorkbench({ model, port: 0, corePort, log: () => undefined })).rejects.toThrow('listen failed')
+      await expect(
+        startWorkbench({ model, views, viewTypes: false, port: 0, corePort, log: () => undefined }),
+      ).rejects.toThrow('listen failed')
 
       expect(await refuses('127.0.0.1', corePort)).toBe(true)
     },
@@ -281,7 +293,7 @@ describe('the start script of the workbench', () => {
       close: () => Promise.resolve(),
     })
 
-    const workbench = await startWorkbench({ model, log: () => undefined })
+    const workbench = await startWorkbench({ model, views, viewTypes: false, log: () => undefined })
 
     expect(hostModule.startHost).toHaveBeenCalledWith(expect.objectContaining({ port: 4747 }))
     expect(vite.createServer).toHaveBeenCalledWith(
@@ -326,7 +338,7 @@ describe('the start script of the workbench', () => {
       const lines: string[] = []
 
       await expect(
-        startWorkbench({ model, port: 4321, corePort, log: (line) => lines.push(line) }),
+        startWorkbench({ model, views, viewTypes: false, port: 4321, corePort, log: (line) => lines.push(line) }),
       ).rejects.toBeInstanceOf(StartError)
 
       expect(lines).toContain('wishem: port 4321 is in use')
@@ -345,7 +357,14 @@ describe('the start script of the workbench', () => {
     })
     const lines: string[] = []
 
-    const workbench = await startWorkbench({ model, port: 0, corePort, log: (line) => lines.push(line) })
+    const workbench = await startWorkbench({
+      model,
+      views,
+      viewTypes: false,
+      port: 0,
+      corePort,
+      log: (line) => lines.push(line),
+    })
 
     expect(workbench.pageUrl).toBe('http://127.0.0.1:5555/')
     expect(workbench.coreUrl).toBe(`http://127.0.0.1:${String(corePort)}`)
@@ -386,6 +405,149 @@ describe('the start script of the workbench', () => {
     await run.exit
 
     expect(run.output().match(/wishem: the model is not correct/g)).toHaveLength(1)
+  })
+
+  describe('the generated files of the views', () => {
+    const generated = () => join(views, 'AppBar.view.gen.ts')
+    const readGenerated = () => (existsSync(generated()) ? readFileSync(generated(), 'utf8') : '')
+    const definition = () => join(model, 'definitions', `${APP_BAR}.json`)
+    const setLabel = (label: string) => {
+      writeFileSync(
+        definition(),
+        readFileSync(definition(), 'utf8').replace(/"label": "(?:title|heading)"/, `"label": "${label}"`),
+      )
+    }
+    const generatedLines = (run: Run) =>
+      run
+        .output()
+        .split('\n')
+        .filter((line) => line.includes('.view.gen.ts'))
+    const waitFor = (check: () => boolean, run: Run) => until(check, () => run.output(), 20000)
+
+    /** Changes a label, adds a sidecar, and waits until the core holds the new definition. */
+    const expectNoWrites = async (core: string) => {
+      expect(existsSync(generated())).toBe(false)
+      writeFileSync(generated(), 'stale\n')
+      setLabel('heading')
+      writeFileSync(join(views, 'Header.view.json'), JSON.stringify({ kind: 'react', componentType: APP_BAR }))
+      await vi.waitFor(async () => {
+        expect(await (await fetch(new URL('snapshot', core))).text()).toContain('"heading"')
+      })
+      // The sidecar has no event to wait for. A short wait gives a wrong write time to happen.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      expect(readGenerated()).toBe('stale\n')
+      expect(existsSync(join(views, 'Header.view.gen.ts'))).toBe(false)
+    }
+
+    it('writes the generated file when the script starts', { timeout: 30000 }, async () => {
+      const { run } = await startReady()
+
+      await waitFor(() => existsSync(generated()), run)
+
+      expect(readGenerated()).toContain('readonly title: string | undefined')
+      await waitFor(() => run.output().includes('wishem: wrote AppBar.view.gen.ts: added title'), run)
+    })
+
+    it(
+      'writes the new member in less than 2 seconds and prints one line after a label changes',
+      { timeout: 30000 },
+      async () => {
+        const { run } = await startReady()
+        await waitFor(() => readGenerated().includes('readonly title'), run)
+
+        const started = Date.now()
+        setLabel('heading')
+        await waitFor(() => readGenerated().includes('readonly heading'), run)
+
+        expect(Date.now() - started).toBeLessThan(2000)
+        expect(readGenerated()).not.toContain('readonly title')
+        await waitFor(
+          () => run.output().includes('wishem: changed AppBar.view.gen.ts: added heading, removed title\n'),
+          run,
+        )
+        expect(generatedLines(run).filter((line) => line.includes('changed'))).toHaveLength(1)
+      },
+    )
+
+    it('changes no generated file and prints no line after a change to state.json', { timeout: 30000 }, async () => {
+      const { run, page } = await startReady()
+      await waitFor(() => readGenerated().includes('readonly title'), run)
+      const stale = `${readGenerated()}// stale\n`
+      writeFileSync(generated(), stale)
+
+      const file = join(model, 'state.json')
+      writeFileSync(file, readFileSync(file, 'utf8').replace('"Wishem"', '"Changed"'))
+      await waitFor(() => run.output().includes('wishem: core at'), run)
+      await vi.waitFor(async () => {
+        expect(await (await fetch(new URL('snapshot', page))).text()).toContain('"Changed"')
+      })
+      // A later change to a label proves that the earlier change ran no generator.
+      setLabel('heading')
+      await waitFor(() => readGenerated().includes('readonly heading'), run)
+      await waitFor(() => run.output().includes('added heading'), run)
+
+      expect(generatedLines(run).filter((line) => line.includes('changed'))).toEqual([
+        'wishem: changed AppBar.view.gen.ts: added heading, removed title',
+      ])
+    })
+
+    it('writes the generated file of a new sidecar', { timeout: 30000 }, async () => {
+      const { run } = await startReady()
+      await waitFor(() => existsSync(generated()), run)
+
+      writeFileSync(join(views, 'Header.view.json'), JSON.stringify({ kind: 'react', componentType: APP_BAR }))
+
+      await waitFor(() => existsSync(join(views, 'Header.view.gen.ts')), run)
+      await waitFor(() => run.output().includes('wishem: wrote Header.view.gen.ts: added title'), run)
+    })
+
+    it(
+      'prints the error and continues to serve the page when two labels give one name',
+      { timeout: 30000 },
+      async () => {
+        const { run, page } = await startReady()
+        await waitFor(() => readGenerated().includes('readonly title'), run)
+
+        const text = JSON.parse(readFileSync(definition(), 'utf8')) as { fields: object[] }
+        text.fields.push({ id: 'fld_0c44a1d2-6e3b-4f70-9a18-2b5d7c9e1f03', label: 'Title', type: 'string' })
+        writeFileSync(definition(), JSON.stringify(text))
+
+        await waitFor(() => run.output().includes('wishem: error: AppBar.view.json:'), run)
+        expect(run.output()).toContain('give the same name "title"')
+        expect(readGenerated()).toContain('readonly title')
+        expect((await fetch(page)).status).toBe(200)
+        expect(run.child.exitCode).toBeNull()
+      },
+    )
+
+    it('writes and changes no generated file with --no-view-types', { timeout: 30000 }, async () => {
+      const run = start(['--port', '0', '--core-port', '0', '--no-view-types'])
+      await waitFor(() => run.output().includes('wishem: workbench at'), run)
+      const core = /wishem: core at (http:\/\/127\.0\.0\.1:\d+)/.exec(run.output())?.[1] ?? ''
+
+      await expectNoWrites(core)
+
+      expect(generatedLines(run)).toEqual([])
+    })
+
+    it('writes and changes no generated file with viewTypes false', { timeout: 30000 }, async () => {
+      const actual = await vi.importActual<typeof import('vite')>('vite')
+      vite.createServer.mockImplementation(actual.createServer)
+      const workbench = await startWorkbench({
+        model,
+        views,
+        viewTypes: false,
+        port: 0,
+        corePort: 0,
+        log: () => undefined,
+      })
+      try {
+        await expectNoWrites(workbench.coreUrl)
+      } finally {
+        await workbench.close()
+      }
+    })
   })
 
   it('has a start script that names an existing file', () => {

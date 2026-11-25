@@ -5,15 +5,14 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Page, type PageProps } from './Page.js'
-import { collectViews } from './renderer/index.js'
-import appBar from './views/AppBar.js'
+import { collectAppViews } from './views.js'
 
 const modelFolder = resolve(import.meta.dirname, '../../workbench/model')
 const readJson = (path: string): unknown => JSON.parse(readFileSync(resolve(modelFolder, path), 'utf8'))
 const state = readJson('state.json') as { entities: unknown[] }
 const definition = readJson('definitions/ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34.json')
 
-const views = collectViews({ './views/AppBar.tsx': { default: appBar } })
+const views = collectAppViews()
 
 describe('Page', () => {
   let container: HTMLDivElement

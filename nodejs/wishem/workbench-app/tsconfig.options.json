@@ -3,6 +3,8 @@
     "jsx": "react-jsx",
     // Node.js runs scripts/*.ts by type stripping, which allows erasable syntax only.
     "erasableSyntaxOnly": true,
+    // Scripts import each other with the `.ts` extension, as Node.js needs. Nothing is emitted from them.
+    "allowImportingTsExtensions": true,
     // Nothing imports a browser application, so there are no declarations to emit.
     "declaration": false,
     "declarationMap": false

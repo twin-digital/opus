@@ -6,37 +6,23 @@ Defines how the HTML renderer changes a component of an entity into a picture: h
 
 ## Requirements
 
-### Requirement: A view is declared with defineView
-
-A view SHALL be declared with `defineView`. The declaration SHALL hold the ID of one component type, a declaration of the props, and a render function. For each prop, the declaration SHALL give the name of the prop in code, the ID of a field, and the type of the field. The types of the props of the render function SHALL come from the declaration, with no generated code.
-
-#### Scenario: The view of the app bar
-
-- **WHEN** a view declares the component type `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34` and a prop `title` for the field `fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62` of the type `string`
-- **THEN** the render function gets a prop `title` whose type is a string or no value
-
-#### Scenario: A prop that is not declared
-
-- **WHEN** the render function of a view reads a prop that its declaration does not have
-- **THEN** the type check of the package fails
-
 ### Requirement: A view file has one default export
 
-Each file in the `views` folder of a product SHALL have one default export, which is the result of `defineView`. The renderer SHALL collect each file of the folder. A view SHALL need no other registration. The name of the file SHALL have no meaning to the renderer.
+Each view file in the `views` folder of a product SHALL have one default export, which is a function from the props of the view to a picture. The view file SHALL state no ID of a component type and no ID of a field. The renderer SHALL collect each sidecar of the folder and the view file of each sidecar. A view SHALL need no other registration. The name of the file SHALL have no meaning to the renderer, apart from the link between a view file and its sidecar.
 
 #### Scenario: A new view file
 
-- **WHEN** a person adds a file to the `views` folder that exports a view for a component type
-- **THEN** the page draws each component of that type, and no other file changes
+- **WHEN** a person adds a view file and its sidecar to the `views` folder for a component type that has a definition
+- **THEN** the page draws each component of that type, and no other file of the renderer changes
 
 #### Scenario: A file that exports no view
 
-- **WHEN** a file in the `views` folder has no default export from `defineView`
-- **THEN** the page reports an error that names the file, and it draws no view
+- **WHEN** a view file that has a sidecar has no default export that is a function
+- **THEN** the page reports an error that names the sidecar file, and it draws no view
 
 ### Requirement: A view is linked to its component type by ID
 
-The renderer SHALL find the view of a component by the ID of the component type. The renderer SHALL NOT use the label of a component type or the name of a file. A component whose component type has no view SHALL NOT be drawn, and this SHALL NOT be an error.
+The renderer SHALL find the view of a component by the ID of the component type in the sidecar of the view. The renderer SHALL NOT use the label of a component type or the name of a file. A component whose component type has no view SHALL NOT be drawn, and this SHALL NOT be an error.
 
 #### Scenario: The label of a component type changes
 
@@ -50,26 +36,12 @@ The renderer SHALL find the view of a component by the ID of the component type.
 
 ### Requirement: Two views for one component type are an error
 
-When two view files declare the same component type ID, the page SHALL report one error that names the two files and the ID. The page SHALL draw no view.
+When two sidecars of the kind `react` name the same component type ID, the page SHALL report one error that names the two sidecar files and the ID. The page SHALL draw no view.
 
 #### Scenario: Two files with the same ID
 
-- **WHEN** `views/AppBar.tsx` and `views/Header.tsx` declare the same component type ID
-- **THEN** the error names `AppBar.tsx`, `Header.tsx`, and the ID
-
-### Requirement: A view gets the values of its declared fields
-
-The renderer SHALL give each prop of a view the value of its declared field in the component. A prop SHALL have no value when the component omits the field or when the definition of the component type does not have the field. The view SHALL decide what it draws for a prop that has no value.
-
-#### Scenario: A component with a title
-
-- **WHEN** an entity has an `AppBar` component whose `title` field holds `Wishem`
-- **THEN** the view gets the prop `title` with the value `Wishem`
-
-#### Scenario: A component that omits the field
-
-- **WHEN** an entity has an `AppBar` component with no value for the `title` field
-- **THEN** the view gets the prop `title` with no value, and the page draws the app bar with an empty title
+- **WHEN** `views/AppBar.view.json` and `views/Header.view.json` name the same component type ID
+- **THEN** the error names `AppBar.view.json`, `Header.view.json`, and the ID
 
 ### Requirement: A view is a pure function of its props
 
@@ -80,30 +52,82 @@ A view SHALL give the same picture for the same props. A view SHALL hold no stat
 - **WHEN** the render function of a view is called with props and no core runs
 - **THEN** it gives the same elements as it gives in the page for a component with those values
 
-### Requirement: The renderer compares each view with its definition
-
-On each snapshot, the renderer SHALL compare the declaration of each view with the definitions of the snapshot. A difference SHALL be one of these: the component type ID is not in the definitions, a declared field ID is not in the component type, or a declared field has a different type. A difference SHALL NOT be an error: the page SHALL continue to draw. A field of the definition that the view does not declare SHALL NOT be a difference.
-
-#### Scenario: A view for a component type that is not defined
-
-- **WHEN** a view declares a component type ID that no definition has
-- **THEN** the page draws the other views, and the browser console has a warning that names the view file and the ID
-
-#### Scenario: A field is removed from a definition while the page is open
-
-- **WHEN** a person removes the `title` field from the definition file of `AppBar` and from the authored state
-- **THEN** the browser console has a warning that names `AppBar.tsx` and the field ID, and the page draws the app bar with an empty title
-
 ### Requirement: A warning is given one time for each set of differences
 
-The renderer SHALL write the warnings to the browser console when the set of differences changes. The renderer SHALL NOT repeat the warnings for a snapshot that has the same set of differences.
+The renderer SHALL write the warnings to the browser console when the set of warnings changes. The renderer SHALL NOT repeat the warnings for a snapshot that has the same set of warnings.
 
 #### Scenario: Two changes to the authored state with the same difference
 
-- **WHEN** a view has a difference, and the authored state changes two times with no change to the definitions
+- **WHEN** a sidecar names a component type that is not defined, and the authored state changes two times with no change to the definitions
 - **THEN** the browser console has the warning one time
 
 #### Scenario: The difference is corrected
 
-- **WHEN** a view had a difference and a person corrects the definition file
+- **WHEN** a sidecar gave a warning and a person adds the definition file of its component type
 - **THEN** the next snapshot gives no warning
+
+### Requirement: A sidecar attaches a view to its component type
+
+A view SHALL be attached to a component type by a sidecar file in the same folder. The sidecar of the view file `<name>.tsx` SHALL be `<name>.view.json`. The sidecar SHALL be a JSON object with two entries: `kind`, the kind of the view, and `componentType`, the ID of one component type. The kind of a view that the HTML renderer runs SHALL be `react`. The model folder SHALL NOT name a view.
+
+#### Scenario: The sidecar of the app bar
+
+- **WHEN** the `views` folder has `AppBar.tsx` and `AppBar.view.json` with the kind `react` and the component type `ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34`
+- **THEN** the page draws each component of that type with the view of `AppBar.tsx`
+
+#### Scenario: A view file with no sidecar
+
+- **WHEN** the `views` folder has `Helper.tsx` and no `Helper.view.json`
+- **THEN** the page draws no component with that file and reports no error
+
+#### Scenario: A sidecar of a different kind
+
+- **WHEN** a sidecar in the `views` folder has a kind that is not `react`
+- **THEN** the HTML renderer does not use that sidecar and reports no error
+
+### Requirement: A sidecar that is not correct is an error
+
+When a sidecar of the kind `react` has no view file, or its view file has no default export that is a function, the page SHALL report one error that names the sidecar file. When a sidecar is not a JSON object with a `kind` and a `componentType` that are text, the page SHALL report one error that names the sidecar file. After such an error, the page SHALL draw no view.
+
+#### Scenario: A sidecar with no view file
+
+- **WHEN** the `views` folder has `Header.view.json` and no `Header.tsx`
+- **THEN** the page reports an error that names `Header.view.json`, and it draws no view
+
+#### Scenario: A sidecar with no component type
+
+- **WHEN** `AppBar.view.json` has a `kind` and no `componentType`
+- **THEN** the page reports an error that names `AppBar.view.json`, and it draws no view
+
+### Requirement: A view gets the fields of its component type by name
+
+The renderer SHALL give a view one prop for each field in the definition of its component type. The name of the prop SHALL be the name that the `wishem/renderer-html/view-types` specification gives for the label of the field. The value SHALL be the value of the field in the component. A prop SHALL have no value when the component omits the field. The view SHALL decide what it draws for a prop that has no value.
+
+#### Scenario: A component with a title
+
+- **WHEN** an entity has an `AppBar` component whose field with the label `title` holds `Wishem`
+- **THEN** the view gets the prop `title` with the value `Wishem`
+
+#### Scenario: A component that omits the field
+
+- **WHEN** an entity has an `AppBar` component with no value for the `title` field
+- **THEN** the view gets the prop `title` with no value, and the page draws the app bar with an empty title
+
+#### Scenario: The label of a field changes while the page is open
+
+- **WHEN** a person changes the label of the field `title` to `heading` in the definition file
+- **THEN** the view gets the value in the prop `heading` and gets no prop `title`
+
+### Requirement: The page warns about a sidecar or a field that it cannot use
+
+The page SHALL give a warning in the browser console, and SHALL continue to draw, in each of these cases: a sidecar names a component type that no definition has, or two fields of one component type have labels that give the same name. The warning SHALL name the sidecar file and the IDs. For a component type with no definition, the page SHALL draw nothing for that sidecar. For two fields with the same name, the prop SHALL have the value of the first field in the definition.
+
+#### Scenario: A sidecar for a component type that is not defined
+
+- **WHEN** `Header.view.json` names a component type ID that no definition has
+- **THEN** the page draws the other views, and the browser console has a warning that names `Header.view.json` and the ID
+
+#### Scenario: Two labels that give the same name
+
+- **WHEN** a component type has the fields `Max health` and `max-health`
+- **THEN** the browser console has a warning that names the sidecar file and the two field IDs, and the page continues to draw

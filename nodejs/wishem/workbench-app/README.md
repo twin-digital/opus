@@ -15,13 +15,17 @@ The script starts the core of the workbench and the page server in one Node.js p
 
 The page server listens on `127.0.0.1` only. It passes `GET /snapshot` and `GET /snapshots` to the core.
 
-| Option        | Default                                            | Meaning                                        |
-| ------------- | -------------------------------------------------- | ---------------------------------------------- |
-| `--model`     | the model folder of `@thrashplay/wishem-workbench` | The model folder.                              |
-| `--port`      | `5173`                                             | The port of the page. `0`: the system selects. |
-| `--core-port` | `4747`                                             | The port of the core. `0`: the system selects. |
+| Option            | Default                                            | Meaning                                         |
+| ----------------- | -------------------------------------------------- | ----------------------------------------------- |
+| `--model`         | the model folder of `@thrashplay/wishem-workbench` | The model folder.                               |
+| `--port`          | `5173`                                             | The port of the page. `0`: the system selects.  |
+| `--core-port`     | `4747`                                             | The port of the core. `0`: the system selects.  |
+| `--views`         | `src/views/` of the package                        | The folder of the sidecars and generated files. |
+| `--no-view-types` | off                                                | Do not keep the generated files current.        |
 
 For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` path starts from the folder where you run the command, not from the package folder.
+
+While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the core accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
 
 ### Change the picture by hand
 
@@ -40,15 +44,55 @@ git checkout -- nodejs/wishem/workbench/model/state.json
 ### Where a problem appears
 
 - A problem in a model file appears in the terminal that runs `start`. The page keeps the last correct picture.
-- A problem in a view or a view declaration appears in the browser console.
+- A problem in a sidecar, a sidecar with no component type definition, or two labels that give one prop name appears in the browser console.
+- The errors and the warnings of the generator appear in the terminal that runs `start`.
+- A sidecar that is not valid JSON stops the page in the web browser with an error of Vite. The generator names the file in the terminal.
 - When the model is not correct at the start, the script prints each problem and stops with exit code 1.
 - When a port is in use, the script prints the port and stops with exit code 1.
 
 ### Add a view
 
-1. Add one file to `src/views/`, for example `src/views/Header.tsx`.
-2. Export a view that `defineView` from `src/renderer/` returns. Use the IDs of the component type and the fields from the definition file in the model folder.
-3. Save the file. Vite reloads the page.
+1. Add the view file to `src/views/`, for example `src/views/Header.tsx`. The default export is a React component.
+2. Add the sidecar `src/views/Header.view.json` with the kind and the ID of the component type: `{ "kind": "react", "componentType": "ct_..." }`. Use the ID from the definition file in the model folder.
+3. Write the generated types: `pnpm --filter @thrashplay/wishem-workbench-app generate`.
+4. Import the type `Props` from `./Header.view.gen.js` in the view file.
+5. Save the files. Vite shows the new view in the page.
+
+## Views
+
+A view has three files in `src/views/`. The files have one base name, for example `AppBar`:
+
+- `AppBar.tsx`: the view file.
+- `AppBar.view.json`: the sidecar. It holds the kind of the view and the ID of its component type: `{ "kind": "react", "componentType": "ct_..." }`.
+- `AppBar.view.gen.ts`: the generated types. It exports the type `Props`, with one read-only member for each field of the component type.
+
+The name of a prop comes from the label of its field. The rule divides the label into words at each run of characters that are not ASCII letters or digits. The first word starts with a lower case letter. Each other word starts with an upper case letter. For example, the label `Max health` gives the prop `maxHealth`.
+
+### Write the generated types
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app generate
+```
+
+The script reads the model folder of `@thrashplay/wishem-workbench` and the sidecars in `src/views/`. It prints one line for each file that it wrote, changed, or removed. It prints nothing for a file that did not change.
+
+The script stops with exit code 1 when the model is not correct, when a sidecar is not valid JSON or has no `componentType`, when the `views` folder cannot be read, or when a label gives no usable name. A label gives no usable name when it gives an empty name, a name that starts with a digit, or the same name as another field of the component type. The script writes no file for that sidecar.
+
+Commit each generated file. A test of the package fails when a generated file is not current.
+
+| Option    | Default                                            | Meaning                                                       |
+| --------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| `--check` | off                                                | Change no file. Stop with exit code 1 for a file not current. |
+| `--model` | the model folder of `@thrashplay/wishem-workbench` | The model folder.                                             |
+| `--views` | `src/views/` of the package                        | The folder of the sidecars. The script writes the files here. |
+
+For example, to check that the files are current:
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app generate --check
+```
+
+A relative `--model` or `--views` path starts from the folder where you run the command.
 
 ## Start the style guide
 
@@ -92,7 +136,7 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
 
-The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, core port 0, and page port 4180.
+The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, core port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 
 The browser is in the container and has no network path to the test runner. The connection of the `workbench` project has `exposeNetwork: '<loopback>'`. The browser then sends each request to a loopback address through the control connection to the test runner. The stream of snapshots passes through the same connection.
 
@@ -102,7 +146,7 @@ Before each test, the test writes the original definition file and the original 
 
 ### What Vite does after a change to a view file
 
-Vite reloads the whole page. The default export of a view file is not a React component, so React Fast Refresh does not replace the module in place. The page connects again and draws the current snapshot. The test "an edit to the view of the app bar shows with no restart" proves that the page shows the change.
+The default export of a view file is a React component, and the renderer mounts it as a component. React Fast Refresh replaces the module in place, and the page shows the new picture with no reload. The test "an edit to the view of the app bar shows with no restart" proves that the page shows the change.
 
 ### Baselines of the page
 

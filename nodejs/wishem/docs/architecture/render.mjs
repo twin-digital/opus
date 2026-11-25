@@ -139,6 +139,7 @@ const icons = {
   file: `<path d="${FILE}M14 22h12M14 28h12"/>`,
   state: `<path d="${FILE}"/><circle cx="20" cy="26" r="4"/>`,
   viewFile: `<path d="${FILE}M17 21l-4 4 4 4M23 21l4 4-4 4"/>`,
+  sidecar: `<path d="${FILE}M17 21c-2 0-3 1-3 3v1.5c0 1-1 1.5-2 1.5 1 0 2 .5 2 1.5V29c0 2 1 3 3 3M23 21c2 0 3 1 3 3v1.5c0 1 1 1.5 2 1.5-1 0-2 .5-2 1.5V29c0 2-1 3-3 3"/>`,
   snapshot:
     '<path d="M6 14V9a3 3 0 0 1 3-3h5M26 6h5a3 3 0 0 1 3 3v5M34 26v5a3 3 0 0 1-3 3h-5M14 34H9a3 3 0 0 1-3-3v-5"/><circle cx="20" cy="20" r="5"/>',
   table: '<rect x="4" y="8" width="32" height="24" rx="3"/><path d="M4 16h32M4 24h32M16 8v24"/>',
@@ -472,9 +473,9 @@ const picture = {
   name: 'picture',
   title: 'From a file to a picture',
   description:
-    'The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The table of views comes from the view file. The renderer draws the app bar in a marked element.',
+    'The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file and its sidecar make the table of views. The sidecar gives the component type ID of the view. The renderer draws the app bar in a marked element.',
   width: 880,
-  height: 476,
+  height: 528,
   items: [
     // The model, then the snapshot
     { kind: 'card', x: 24, y: 24, w: 156, h: 90, title: 'Definition file', icon: 'file', iconSize: 32 },
@@ -483,9 +484,20 @@ const picture = {
     { kind: 'card', x: 476, y: 24, w: 128, h: 192, title: 'Snapshot', icon: 'snapshot', iconSize: 52 },
 
     // The views
-    { kind: 'card', x: 24, y: 312, w: 156, h: 140, title: 'View file', icon: 'viewFile' },
-    { kind: 'card', x: 254, y: 312, w: 148, h: 140, title: 'Table of views', icon: 'table' },
-    { kind: 'card', x: 476, y: 312, w: 128, h: 140, title: 'Renderer', icon: 'wand' },
+    { kind: 'card', x: 24, y: 312, w: 156, h: 90, title: 'View file', icon: 'viewFile', iconSize: 32 },
+    { kind: 'card', x: 24, y: 414, w: 156, h: 90, title: 'Sidecar', icon: 'sidecar', iconSize: 32 },
+    {
+      kind: 'card',
+      x: 254,
+      y: 312,
+      w: 148,
+      h: 192,
+      title: 'Table of views',
+      sub: 'by type ID',
+      icon: 'table',
+      iconSize: 52,
+    },
+    { kind: 'card', x: 476, y: 312, w: 128, h: 192, title: 'Renderer', icon: 'wand', iconSize: 52 },
 
     // The picture
     {
@@ -493,7 +505,7 @@ const picture = {
       x: 678,
       y: 24,
       w: 178,
-      h: 428,
+      h: 480,
       variant: 'marked',
       shadow: false,
       title: 'Marked element',
@@ -538,8 +550,8 @@ const picture = {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [604, 382],
-        [678, 382],
+        [604, 408],
+        [678, 408],
       ],
     },
 
@@ -547,15 +559,22 @@ const picture = {
     {
       kind: 'arrow',
       points: [
-        [180, 382],
-        [254, 382],
+        [180, 357],
+        [254, 357],
       ],
     },
     {
       kind: 'arrow',
       points: [
-        [402, 382],
-        [476, 382],
+        [180, 459],
+        [254, 459],
+      ],
+    },
+    {
+      kind: 'arrow',
+      points: [
+        [402, 408],
+        [476, 408],
       ],
     },
   ],

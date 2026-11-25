@@ -82,7 +82,9 @@ describe('workbench page', () => {
       const { ViewCollectionError } = await import('./renderer/index.js')
       return {
         collectAppViews: () => {
-          throw new ViewCollectionError('wishem: the file Bad.tsx has no view.', ['Bad.tsx'])
+          throw new ViewCollectionError('wishem: the sidecar Bad.view.json has no view file Bad.tsx.', [
+            'Bad.view.json',
+          ])
         },
       }
     })
@@ -96,7 +98,7 @@ describe('workbench page', () => {
       expect(document.querySelector('main')?.textContent).toContain('Nothing to show yet.')
     })
 
-    expect(error).toHaveBeenCalledExactlyOnceWith('wishem: the file Bad.tsx has no view.')
+    expect(error).toHaveBeenCalledExactlyOnceWith('wishem: the sidecar Bad.view.json has no view file Bad.tsx.')
     expect(document.querySelector('header')).toBeNull()
   })
 

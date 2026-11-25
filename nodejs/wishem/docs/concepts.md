@@ -350,11 +350,13 @@ Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.j
 
 ### Views (**Agreed**)
 
-A renderer holds **views**. A view changes one component of an entity into the objects of that renderer.
+A **view** is content of the product. A renderer supplies the code that loads, mounts, and runs views.
 
-- Each renderer provides its own component types. Wishem does not define one set of visual components for all renderers.
-- A view is linked to its component type by the ID of the component type. A component type that has no view is not drawn.
-- The props of a view are the fields of its component type.
+- Each renderer provides its own kind of view. Wishem does not define one set of visual components for all renderers.
+- A view has the shape of a behavior: code that is attached to a component type, with the fields of the component as its inputs. A view is not a behavior: a renderer runs a view, the core never loads it, and a view changes no state.
+- A sidecar attaches a view to its component type by the ID of the component type. A component type that has no view is not drawn.
+- The fields in the component type definition are the source. The types of the props of a view are generated.
+- A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
 - A view is a pure function of its props. A view holds no state.
 - A renderer imports the model. The model never imports a renderer (rule R1).
 
