@@ -1,7 +1,7 @@
 // Writes the SVG diagrams of the architecture documents.
 // Usage: node render.mjs
 // Each diagram is described once, below. The script writes one file for each theme.
-// Colors come from the role tokens of the workbench. Text uses the standard typefaces of the system.
+// Colors come from the role tokens of the workbench. Text uses the standard typeface of the system.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -79,7 +79,7 @@ const buildColors = (tokens, theme) => {
   return {
     ...c,
     groupFill: mix(c.ground, c.accentText, 0.07),
-    chipFill: mix(c.surface, c.accentText, 0.12),
+    tint: mix(c.surface, c.accentText, 0.12),
     markedFill: mix(c.surface, c.maker, 0.12),
     border: mix(c.line, c.fgMuted, 0.2),
     flow: c.makerText,
@@ -92,43 +92,25 @@ const buildColors = (tokens, theme) => {
 // ---------------------------------------------------------------------------
 
 const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace"
 
 // Width of a glyph as a share of the font size. The values assume a wide system font.
-const WIDTH = { sans: 0.6, bold: 0.66, mono: 0.62, upper: 0.74 }
+const WIDTH = { regular: 0.6, bold: 0.62, upper: 0.74 }
 
-const escapeXml = (text) =>
-  text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+const escapeXml = (value) =>
+  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
 
 const num = (value) => String(Math.round(value * 100) / 100)
 
-/** Splits a line on backticks. Odd parts are code. */
-const parts = (line) =>
-  line
-    .split('`')
-    .map((text, index) => ({ text, code: index % 2 === 1 }))
-    .filter((part) => part.text !== '')
-
-/** The size of code inside a line of text. */
-const codeSize = (size) => Math.max(12, size - 1)
-
 /** The estimated width of a line, for the overflow check. */
-const textWidth = (line, { size, weight = 400, spacing = 0, upper = false }) =>
-  parts(line).reduce((total, part) => {
-    if (part.code) {
-      return total + part.text.length * codeSize(size) * WIDTH.mono
-    }
-    const glyph =
-      upper ? WIDTH.upper
-      : weight >= 600 ? WIDTH.bold
-      : WIDTH.sans
-    return total + part.text.length * (size * glyph + spacing)
-  }, 0)
+const textWidth = (line, { size, weight = 400, spacing = 0, upper = false }) => {
+  const glyph =
+    upper ? WIDTH.upper
+    : weight >= 600 ? WIDTH.bold
+    : WIDTH.regular
+  return line.length * (size * glyph + spacing)
+}
 
-/**
- * Draws one line of text. A part between backticks uses the monospace stack.
- * `maxWidth` is the width that the text must fit in.
- */
+/** Draws one line of text. `maxWidth` is the width that the text must fit in. */
 const text = (
   c,
   { x, y, line, size = 13, weight = 400, color = c.fg, anchor = 'start', spacing = 0, upper = false, maxWidth },
@@ -136,26 +118,43 @@ const text = (
   if (maxWidth !== undefined && textWidth(line, { size, weight, spacing, upper }) > maxWidth) {
     throw new Error(`The text does not fit in ${String(maxWidth)} px: ${line}`)
   }
-  const inner = parts(line)
-    .map((part) =>
-      part.code ?
-        `<tspan font-family="${MONO}" font-weight="400" font-size="${num(codeSize(size))}" fill="${c.fg}">${escapeXml(part.text)}</tspan>`
-      : escapeXml(upper ? part.text.toUpperCase() : part.text),
-    )
-    .join('')
   const extra = spacing === 0 ? '' : ` letter-spacing="${num(spacing)}"`
-  return `<text x="${num(x)}" y="${num(y)}" font-family="${SANS}" font-weight="${String(weight)}" font-size="${num(size)}" fill="${color}" text-anchor="${anchor}"${extra}>${inner}</text>`
+  const content = escapeXml(upper ? line.toUpperCase() : line)
+  return `<text x="${num(x)}" y="${num(y)}" font-family="${SANS}" font-weight="${String(weight)}" font-size="${num(size)}" fill="${color}" text-anchor="${anchor}"${extra}>${content}</text>`
+}
+
+// ---------------------------------------------------------------------------
+// Icons: simple line icons on a 40 x 40 grid, drawn with one stroke weight
+// ---------------------------------------------------------------------------
+
+const FILE = 'M10 4h13l9 9v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM23 4v9h9'
+
+const icons = {
+  person: '<circle cx="20" cy="12" r="6.5"/><path d="M7 35c0-8 6-12 13-12s13 4 13 12"/>',
+  browser: '<rect x="4" y="7" width="32" height="26" rx="4"/><path d="M4 15h32M9 11h.01M13 11h.01M17 11h.01"/>',
+  bolt: '<path d="M23 4 11 22h8l-2 14 12-19h-8z"/>',
+  server:
+    '<rect x="6" y="6" width="28" height="11" rx="3"/><rect x="6" y="23" width="28" height="11" rx="3"/><path d="M12 11.5h.01M12 28.5h.01"/>',
+  folder: '<path d="M4 12a3 3 0 0 1 3-3h8l4 4h14a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/>',
+  file: `<path d="${FILE}M14 22h12M14 28h12"/>`,
+  state: `<path d="${FILE}"/><circle cx="20" cy="26" r="4"/>`,
+  viewFile: `<path d="${FILE}M17 21l-4 4 4 4M23 21l4 4-4 4"/>`,
+  snapshot:
+    '<path d="M6 14V9a3 3 0 0 1 3-3h5M26 6h5a3 3 0 0 1 3 3v5M34 26v5a3 3 0 0 1-3 3h-5M14 34H9a3 3 0 0 1-3-3v-5"/><circle cx="20" cy="20" r="5"/>',
+  table: '<rect x="4" y="8" width="32" height="24" rx="3"/><path d="M4 16h32M4 24h32M16 8v24"/>',
+  wand: '<path d="M7 33 25 15M29 4v9M24.5 8.5h9M33 24h.01M12 10h.01"/>',
+}
+
+const icon = ({ name, x, y, size, color }) => {
+  const scale = size / 40
+  return `<g transform="translate(${num(x)} ${num(y)}) scale(${num(scale)})" fill="none" stroke="${color}" stroke-width="${num(2 / scale)}" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</g>`
 }
 
 // ---------------------------------------------------------------------------
 // Shapes
 // ---------------------------------------------------------------------------
 
-const PAD = 16
-const CHIP_HEIGHT = 24
-const CHIP_GAP = 6
-const LINE_HEIGHT = 20
-const FIRST_LINE = 55
+const PAD = 12
 
 const rect = ({ x, y, w, h }, radius, attributes) =>
   `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="${num(radius)}" ${attributes}/>`
@@ -168,7 +167,7 @@ const group = (c, item) =>
       x: item.x + 20,
       y: item.y + 30,
       line: item.label,
-      size: 12,
+      size: 13,
       weight: 600,
       color: c.accentText,
       spacing: 1.2,
@@ -177,96 +176,46 @@ const group = (c, item) =>
     }),
   ].join('\n')
 
-/** Splits chips into rows that fit in `width`. A chip is a name in code. */
-const chipRows = (chips, width, plain) => {
-  const rows = [[]]
-  let used = 0
-  for (const chip of chips) {
-    const w = textWidth(plain ? chip : `\`${chip}\``, { size: 13 }) + 16
-    if (w > width) {
-      throw new Error(`The chip does not fit in ${String(width)} px: ${chip}`)
-    }
-    if (used + w > width && rows[rows.length - 1].length > 0) {
-      rows.push([])
-      used = 0
-    }
-    rows[rows.length - 1].push({ chip, w })
-    used += w + CHIP_GAP
-  }
-  return rows
-}
-
 /**
- * A card: a title, up to a few lines, chips, and an optional block of code.
+ * A card: an icon over a title, with an optional short second line.
  * `variant` is `plain`, `maker` (filled with the accent), or `marked` (outlined with the accent).
+ * `art` draws a picture in place of the icon. The title then sits at the bottom.
  */
 const card = (c, item) => {
-  const { x, y, w, h, variant = 'plain', lines = [], chips = [], code = [] } = item
-  const inner = (item.textWidth ?? w) - 2 * PAD
+  const { x, y, w, h, variant = 'plain', title, sub, art, iconSize = 40 } = item
   const fill = { plain: c.surface, maker: c.maker, marked: c.markedFill }[variant]
   const stroke =
     variant === 'maker' ? 'none'
     : variant === 'marked' ? `${c.flow}" stroke-width="1.5`
     : c.border
+  const inner = w - 2 * PAD
+  const gap = 14
+  const block = (art ? 0 : iconSize + gap) + 12 + (sub ? 22 : 0)
+  const top = art ? y + h - 24 - (sub ? 22 : 0) - 12 : y + (h - block) / 2
+  const titleY = art ? top + 12 : top + iconSize + gap + 12
   const out = [
-    rect(item, 12, `fill="${fill}" stroke="${stroke}"${item.shadow === false ? '' : ' filter="url(#shadow)"'}`),
+    rect(item, 14, `fill="${fill}" stroke="${stroke}"${item.shadow === false ? '' : ' filter="url(#shadow)"'}`),
   ]
-  if (variant === 'maker') {
-    out.push(
-      text(c, {
-        x: x + w / 2,
-        y: y + h / 2 + 6,
-        line: item.title,
-        size: 18,
-        weight: 600,
-        color: c.night,
-        anchor: 'middle',
-        maxWidth: inner,
-      }),
-    )
-    return out.join('\n')
+  if (art) {
+    out.push(art(c, item))
+  } else {
+    const color = variant === 'maker' ? c.night : c.accentText
+    out.push(icon({ name: item.icon, x: x + (w - iconSize) / 2, y: top, size: iconSize, color }))
   }
-  out.push(text(c, { x: x + PAD, y: y + 32, line: item.title, size: 16, weight: 600, maxWidth: inner }))
-  let bottom = y + 32
-  lines.forEach((line, index) => {
-    bottom = y + FIRST_LINE + index * LINE_HEIGHT
-    out.push(text(c, { x: x + PAD, y: bottom, line, color: c.fgMuted, maxWidth: inner }))
-  })
-  if (chips.length > 0) {
-    const chipTop = bottom + 12
-    chipRows(chips, inner, item.plainChips === true).forEach((row, rowIndex) => {
-      let chipX = x + PAD
-      const chipY = chipTop + rowIndex * (CHIP_HEIGHT + CHIP_GAP)
-      for (const { chip, w: chipWidth } of row) {
-        out.push(
-          rect(
-            { x: chipX, y: chipY, w: chipWidth, h: CHIP_HEIGHT },
-            item.plainChips === true ? 12 : 7,
-            `fill="${c.chipFill}"`,
-          ),
-          text(c, { x: chipX + 8, y: chipY + 16.5, line: item.plainChips === true ? chip : `\`${chip}\``, size: 13 }),
-        )
-        chipX += chipWidth + CHIP_GAP
-      }
-      bottom = chipY + CHIP_HEIGHT - 12
-    })
-  }
-  if (code.length > 0) {
-    const width = Math.max(...code.map((line) => textWidth(`\`${line}\``, { size: 13 }))) + 24
-    const top = bottom + 14
-    if (width > inner) {
-      throw new Error(`The code block does not fit in ${String(inner)} px: ${code[0]}`)
-    }
-    out.push(
-      rect({ x: x + PAD, y: top, w: width, h: code.length * 20 + 16 }, 8, `fill="${c.ground}" stroke="${c.line}"`),
-    )
-    code.forEach((line, index) => {
-      out.push(text(c, { x: x + PAD + 12, y: top + 24 + index * 20, line: `\`${line}\``, size: 13 }))
-    })
-    bottom = top + code.length * 20 + 16 - 16
-  }
-  if (bottom + PAD > y + h) {
-    throw new Error(`The content of the card is higher than ${String(h)} px: ${item.title}`)
+  out.push(
+    text(c, {
+      x: x + w / 2,
+      y: titleY,
+      line: title,
+      size: 15,
+      weight: 600,
+      color: variant === 'maker' ? c.night : c.fg,
+      anchor: 'middle',
+      maxWidth: inner,
+    }),
+  )
+  if (sub) {
+    out.push(text(c, { x: x + w / 2, y: titleY + 20, line: sub, color: c.fgMuted, anchor: 'middle', maxWidth: inner }))
   }
   return out.join('\n')
 }
@@ -294,7 +243,7 @@ const roundedPath = (points, end) => {
 }
 
 /**
- * An arrow along `points` with a head at the last point. A label sits on a chip at `label.at`.
+ * An arrow along `points` with a head at the last point. A label of one or two words sits on a chip at `label.at`.
  * `tone` is `flow` (accent) or `quiet` (neutral).
  */
 const arrow = (c, item) => {
@@ -315,26 +264,21 @@ const arrow = (c, item) => {
     .map(([x, y]) => `${num(x)},${num(y)}`)
     .join(' ')
   const out = [
-    `<path d="${roundedPath(points, [baseX + ux * 1, baseY + uy * 1])}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `<path d="${roundedPath(points, [baseX + ux, baseY + uy])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
     `<polygon points="${head}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
   ]
   if (item.label !== undefined) {
     const { line, at, maxWidth } = item.label
-    const width = textWidth(line, { size: 12 }) + 22
+    const width = textWidth(line, { size: 13, weight: 500 }) + 22
     if (maxWidth !== undefined && width > maxWidth) {
       throw new Error(`The label does not fit in ${String(maxWidth)} px: ${line}`)
     }
     out.push(
-      rect(
-        { x: at[0] - width / 2, y: at[1] - 12, w: width, h: 24 },
-        12,
-        `fill="${c.surface}" stroke="${stroke}" stroke-opacity="0.55"`,
-      ),
+      rect({ x: at[0] - width / 2, y: at[1] - 12, w: width, h: 24 }, 12, `fill="${c.surface}" stroke="${stroke}"`),
       text(c, {
         x: at[0],
         y: at[1] + 4.5,
         line,
-        size: 12,
         weight: 500,
         color: item.tone === 'flow' ? c.flow : c.fgMuted,
         anchor: 'middle',
@@ -342,6 +286,29 @@ const arrow = (c, item) => {
     )
   }
   return out.join('\n')
+}
+
+/** A small page with an app bar. A dashed outline marks the app bar. */
+const appBarPicture = (c, { x, y, w }) => {
+  const left = x + 18
+  const width = w - 36
+  const bar = { x: left + 8, y: y + 26, w: width - 16, h: 42 }
+  const bits = [
+    rect({ x: left, y, w: width, h: 292 }, 12, `fill="${c.ground}" stroke="${c.border}"`),
+    rect(bar, 8, `fill="${c.accentText}"`),
+    `<path d="M${num(bar.x + 14)} ${num(bar.y + 15)}h16M${num(bar.x + 14)} ${num(bar.y + 21)}h16M${num(bar.x + 14)} ${num(bar.y + 27)}h16" stroke="${c.ground}" stroke-width="2.5" stroke-linecap="round"/>`,
+    rect({ x: bar.x + 44, y: bar.y + 17, w: 56, h: 8 }, 4, `fill="${c.ground}"`),
+    `<circle cx="${num(bar.x + bar.w - 20)}" cy="${num(bar.y + 21)}" r="8" fill="${c.ground}"/>`,
+    rect(
+      { x: bar.x - 6, y: bar.y - 6, w: bar.w + 12, h: bar.h + 12 },
+      12,
+      `fill="none" stroke="${c.flow}" stroke-width="2.5" stroke-dasharray="6 5"`,
+    ),
+    rect({ x: left + 14, y: y + 94, w: 96, h: 10 }, 5, `fill="${c.tint}"`),
+    rect({ x: left + 14, y: y + 114, w: 128, h: 10 }, 5, `fill="${c.tint}"`),
+    rect({ x: left + 14, y: y + 148, w: width - 28, h: 120 }, 10, `fill="${c.tint}"`),
+  ]
+  return bits.join('\n')
 }
 
 const layers = { group, card, arrow }
@@ -355,128 +322,99 @@ const processes = {
   name: 'processes',
   title: 'The processes of the workbench',
   description:
-    'The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite development server. The host reads and watches the model folder. The designer edits the model folder by hand.',
+    'The designer edits the model folder, runs the start script, and opens the page. The start script starts one Node.js process that holds the host and the Vite development server. The host reads the model folder and sends each snapshot through the Vite development server to the page in the web browser.',
   width: 880,
-  height: 552,
+  height: 464,
   items: [
-    { kind: 'group', x: 24, y: 24, w: 288, h: 208, label: 'Web browser' },
-    { kind: 'group', x: 536, y: 24, w: 320, h: 360, label: 'One Node.js process' },
+    { kind: 'group', x: 234, y: 24, w: 392, h: 208, label: 'Node.js process' },
+    { kind: 'group', x: 680, y: 24, w: 176, h: 208, label: 'Web browser' },
 
-    {
-      kind: 'card',
-      x: 44,
-      y: 68,
-      w: 248,
-      h: 140,
-      title: 'Page',
-      lines: ['Draws the app bar.'],
-      chips: ['client of the core', 'renderer', 'AppBar view'],
-      plainChips: true,
-    },
-    {
-      kind: 'card',
-      x: 556,
-      y: 68,
-      w: 280,
-      h: 140,
-      title: 'Vite development server',
-      lines: ['Serves the page and the views.', 'Passes these to the host:'],
-      chips: ['GET /snapshot', 'GET /snapshots'],
-    },
-    { kind: 'card', x: 556, y: 280, w: 280, h: 80, title: 'Host', lines: ['The core of the workbench.'] },
-    {
-      kind: 'card',
-      x: 556,
-      y: 444,
-      w: 280,
-      h: 84,
-      title: 'Model folder',
-      lines: ['Definitions and `state.json`.'],
-    },
-    { kind: 'card', x: 24, y: 444, w: 288, h: 84, title: 'Designer', variant: 'maker' },
+    { kind: 'card', x: 24, y: 68, w: 150, h: 140, title: 'Model folder', icon: 'folder' },
+    { kind: 'card', x: 254, y: 68, w: 120, h: 140, title: 'Host', icon: 'server' },
+    { kind: 'card', x: 430, y: 68, w: 176, h: 140, title: 'Vite', sub: 'development server', icon: 'bolt' },
+    { kind: 'card', x: 709, y: 68, w: 118, h: 140, title: 'Page', icon: 'browser' },
+    { kind: 'card', x: 24, y: 330, w: 160, h: 110, title: 'Designer', icon: 'person', variant: 'maker' },
 
-    // The page and the Vite development server
-    {
-      kind: 'arrow',
-      points: [
-        [556, 100],
-        [292, 100],
-      ],
-      label: { line: 'page code and view modules', at: [424, 100], maxWidth: 240 },
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [292, 138],
-        [556, 138],
-      ],
-      label: { line: '`GET /snapshots`', at: [424, 138], maxWidth: 240 },
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [556, 176],
-        [292, 176],
-      ],
-      label: { line: 'each snapshot', at: [424, 176], maxWidth: 240 },
-    },
-
-    // The Vite development server and the host
-    {
-      kind: 'arrow',
-      points: [
-        [616, 208],
-        [616, 280],
-      ],
-      label: { line: 'passes the request', at: [616, 244], maxWidth: 160 },
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [776, 280],
-        [776, 208],
-      ],
-      label: { line: 'each snapshot', at: [776, 244], maxWidth: 120 },
-    },
-
-    // The host and the model folder
-    {
-      kind: 'arrow',
-      points: [
-        [696, 360],
-        [696, 444],
-      ],
-      label: { line: 'reads and watches', at: [696, 402], maxWidth: 160 },
-    },
-
-    // The actions of the designer
+    // The path of the data
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [168, 444],
-        [168, 208],
+        [99, 330],
+        [99, 208],
       ],
-      label: { line: 'opens the address of the page', at: [168, 320], maxWidth: 240 },
+      label: { line: 'edits', at: [99, 269], maxWidth: 100 },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [250, 444],
-        [250, 372],
-        [536, 372],
+        [174, 138],
+        [254, 138],
       ],
-      label: { line: 'runs and stops the start script', at: [396, 372], maxWidth: 250 },
+      label: { line: 'files', at: [204, 138], maxWidth: 70 },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [312, 486],
-        [556, 486],
+        [374, 150],
+        [430, 150],
       ],
-      label: { line: 'edits by hand', at: [434, 486], maxWidth: 140 },
+    },
+    {
+      kind: 'arrow',
+      tone: 'flow',
+      points: [
+        [606, 168],
+        [709, 168],
+      ],
+      label: { line: 'snapshots', at: [657, 168], maxWidth: 100 },
+    },
+
+    // The other connections of the Vite development server
+    {
+      kind: 'arrow',
+      points: [
+        [430, 126],
+        [374, 126],
+      ],
+    },
+    {
+      kind: 'arrow',
+      points: [
+        [709, 108],
+        [606, 108],
+      ],
+      label: { line: 'code', at: [657, 108], maxWidth: 100 },
+    },
+    {
+      kind: 'arrow',
+      points: [
+        [606, 138],
+        [709, 138],
+      ],
+      label: { line: 'request', at: [657, 138], maxWidth: 100 },
+    },
+
+    // The other actions of the designer
+    {
+      kind: 'arrow',
+      points: [
+        [184, 370],
+        [440, 370],
+        [440, 232],
+      ],
+      label: { line: 'start script', at: [312, 370], maxWidth: 140 },
+    },
+    {
+      kind: 'arrow',
+      points: [
+        [184, 410],
+        [768, 410],
+        [768, 208],
+      ],
+      label: { line: 'opens', at: [480, 410], maxWidth: 100 },
     },
   ],
 }
@@ -485,164 +423,91 @@ const picture = {
   name: 'picture',
   title: 'From a file to a picture',
   description:
-    'The host reads the definition file and the state file and makes a snapshot. The client of the core in the page receives the snapshot. The renderer takes the view of each component type from the table of views, gives the props to the view, and draws the result in a marked element.',
+    'The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The table of views comes from the view file. The renderer draws the app bar in a marked element.',
   width: 880,
-  height: 644,
+  height: 444,
   items: [
-    // The model, left to right
-    {
-      kind: 'card',
-      x: 24,
-      y: 24,
-      w: 252,
-      h: 72,
-      title: 'Definition file',
-      lines: ['`definitions/ct_….json`'],
-    },
-    { kind: 'card', x: 24, y: 108, w: 252, h: 72, title: 'State file', lines: ['`state.json`'] },
-    {
-      kind: 'card',
-      x: 314,
-      y: 24,
-      w: 252,
-      h: 156,
-      title: 'Host',
-      lines: ['Reads the two files.'],
-      chips: ['readModelFolder', 'validateModel', 'createCore'],
-    },
-    {
-      kind: 'card',
-      x: 604,
-      y: 24,
-      w: 252,
-      h: 156,
-      title: 'Snapshot',
-      lines: ['The definitions and the', 'entities. Sent again after', 'each change.'],
-      chips: ['getSnapshot'],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [276, 60],
-        [314, 60],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [276, 144],
-        [314, 144],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [566, 102],
-        [604, 102],
-      ],
-    },
+    // The model, then the snapshot
+    { kind: 'card', x: 24, y: 24, w: 180, h: 90, title: 'Definition file', icon: 'file', iconSize: 32 },
+    { kind: 'card', x: 24, y: 126, w: 180, h: 90, title: 'State file', icon: 'state', iconSize: 32 },
+    { kind: 'card', x: 244, y: 24, w: 164, h: 192, title: 'Host', icon: 'server', iconSize: 52 },
+    { kind: 'card', x: 448, y: 24, w: 164, h: 192, title: 'Snapshot', icon: 'snapshot', iconSize: 52 },
 
-    // The views and the client of the core
-    {
-      kind: 'card',
-      x: 24,
-      y: 240,
-      w: 252,
-      h: 148,
-      title: 'View file',
-      lines: ['`defineView` gives the', 'type ID, the props, and', '`render`.'],
-      chips: ['src/views/AppBar.tsx'],
-    },
-    {
-      kind: 'card',
-      x: 314,
-      y: 240,
-      w: 252,
-      h: 148,
-      title: 'Table of views',
-      lines: ['A table from component type', 'ID to view. `collectViews`', 'reads `src/views/*.tsx`.'],
-    },
-    {
-      kind: 'card',
-      x: 604,
-      y: 240,
-      w: 252,
-      h: 148,
-      title: 'Client of the core',
-      lines: ['`connect()` opens the stream', 'of snapshots. It gives', '`getSnapshot` and `subscribe`.'],
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [276, 314],
-        [314, 314],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [730, 180],
-        [730, 240],
-      ],
-      label: { line: '`GET /snapshots` through Vite', at: [730, 210], maxWidth: 240 },
-    },
+    // The views
+    { kind: 'card', x: 24, y: 280, w: 180, h: 140, title: 'View file', icon: 'viewFile' },
+    { kind: 'card', x: 244, y: 280, w: 164, h: 140, title: 'Table of views', icon: 'table' },
+    { kind: 'card', x: 448, y: 280, w: 164, h: 140, title: 'Renderer', icon: 'wand' },
 
-    // The renderer and the marked element
+    // The picture
     {
       kind: 'card',
-      x: 24,
-      y: 448,
-      w: 832,
-      h: 172,
-      textWidth: 300,
-      title: 'Renderer',
-      lines: [
-        'For each entity and component',
-        'type that has a view: takes each',
-        'prop by field ID and calls',
-        '`render`.',
-      ],
-    },
-    {
-      kind: 'card',
-      x: 380,
-      y: 464,
-      w: 460,
-      h: 140,
-      shadow: false,
+      x: 664,
+      y: 24,
+      w: 192,
+      h: 396,
       variant: 'marked',
+      shadow: false,
       title: 'Marked element',
-      lines: ['Wraps the picture of the view: the app bar.'],
-      code: ['<div data-wishem-entity="e_…"', 'data-wishem-component-type="ct_…">'],
+      art: (c, item) => appBarPicture(c, { x: item.x, y: item.y + 24, w: item.w }),
+    },
+
+    // The path of the data
+    {
+      kind: 'arrow',
+      tone: 'flow',
+      points: [
+        [204, 69],
+        [244, 69],
+      ],
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [324, 534],
-        [380, 534],
+        [204, 171],
+        [244, 171],
       ],
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [440, 388],
-        [440, 448],
-      ],
-      label: { line: 'the view of each component type', at: [440, 418], maxWidth: 260 },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [730, 388],
-        [730, 448],
+        [408, 120],
+        [448, 120],
       ],
-      label: { line: 'the snapshot', at: [730, 418], maxWidth: 150 },
+    },
+    {
+      kind: 'arrow',
+      tone: 'flow',
+      points: [
+        [530, 216],
+        [530, 280],
+      ],
+      label: { line: 'props', at: [530, 248], maxWidth: 100 },
+    },
+    {
+      kind: 'arrow',
+      tone: 'flow',
+      points: [
+        [612, 350],
+        [664, 350],
+      ],
+    },
+
+    // Where the view comes from
+    {
+      kind: 'arrow',
+      points: [
+        [204, 350],
+        [244, 350],
+      ],
+    },
+    {
+      kind: 'arrow',
+      points: [
+        [408, 350],
+        [448, 350],
+      ],
     },
   ],
 }

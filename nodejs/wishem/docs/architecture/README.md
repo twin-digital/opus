@@ -8,14 +8,16 @@ This file describes what the workbench is made of. The workbench draws one eleme
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="processes-dark.svg">
-  <img alt="The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite development server. The host reads and watches the model folder. The designer edits the model folder by hand." src="processes-light.svg">
+  <img alt="The designer edits the model folder, runs the start script, and opens the page. The start script starts one Node.js process with the host and the Vite development server. The host reads the model folder. Each snapshot goes through the Vite development server to the page in the web browser." src="processes-light.svg">
 </picture>
 
-- The designer runs the `start` script of `workbench-app`. The script starts the host and the Vite development server in one Node.js process. Ctrl+C stops both.
-- The designer opens the address of the page in a web browser.
-- The Vite development server serves the page and the views. It passes `GET /snapshot` and `GET /snapshots` to the host.
-- The host reads and watches the model folder. The page gets each snapshot through the Vite development server.
-- The designer changes the picture by hand: edit a file in the model folder and save it.
+Amber arrows show the path of a change: from the designer, through the model folder, the host, and the Vite development server, to the page. Gray arrows show the other connections.
+
+- **Designer.** The designer runs the `start` script of `workbench-app`, opens the address of the page in a web browser, and edits files in the model folder. Ctrl+C stops the script.
+- **Model folder.** The folder holds the definition files and `state.json`. To change the picture by hand, edit a file and save it.
+- **Host.** The host reads and watches the model folder. The `start` script starts the host and the Vite development server in one Node.js process.
+- **Vite development server.** It serves the page code and the view modules. It passes `GET /snapshot` and `GET /snapshots` from the page to the host. It passes each snapshot from the host to the page.
+- **Page.** The page runs in the web browser. It holds the client of the core, the renderer, and the `AppBar` view.
 
 To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md).
 
@@ -23,8 +25,18 @@ To start the workbench, see [`workbench-app/README.md`](../../workbench-app/READ
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="picture-dark.svg">
-  <img alt="The host reads the definition file and the state file and makes a snapshot. The client of the core in the page receives the snapshot. The renderer takes the view of each component type from the table of views, gives the props to the view, and draws the result in a marked element." src="picture-light.svg">
+  <img alt="The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file makes the table of views. The renderer draws the app bar in a marked element." src="picture-light.svg">
 </picture>
+
+Amber arrows show the data on its way to the picture. Gray arrows show where the views come from.
+
+- **Definition file and state file.** `definitions/ct_….json` defines the component type of the app bar and its field. `state.json` holds one `AppBar` entity.
+- **Host.** `readModelFolder` reads the two files and `validateModel` checks them. `createCore` makes the core that gives the snapshot.
+- **Snapshot.** The snapshot holds the definitions and the entities, as JSON. The page gets it from `GET /snapshots` through the Vite development server.
+- **View file.** `src/views/AppBar.tsx` uses `defineView` to give the component type ID, the props, and `render`.
+- **Table of views.** `collectViews` reads `src/views/*.tsx` and makes a table from component type ID to view. The Vite development server serves the view files.
+- **Renderer.** For each entity and each component type that has a view, the renderer takes the value of each field that the view declares as a prop. It calls `render`.
+- **Marked element.** The renderer wraps the picture of the view in an element with `data-wishem-entity` and `data-wishem-component-type`. The dashed outline in the diagram marks it.
 
 ## The path of a change
 

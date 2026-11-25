@@ -1,78 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 644" width="880" height="644" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 444" width="880" height="444" role="img" aria-labelledby="title desc">
 <title id="title">From a file to a picture</title>
-<desc id="desc">The host reads the definition file and the state file and makes a snapshot. The client of the core in the page receives the snapshot. The renderer takes the view of each component type from the table of views, gives the props to the view, and draws the result in a marked element.</desc>
-<rect width="880" height="644" fill="#121222"/>
-<rect x="24" y="24" width="252" height="72" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="40" y="56" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Definition file</text>
-<text x="40" y="79" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">definitions/ct_….json</tspan></text>
-<rect x="24" y="108" width="252" height="72" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="40" y="140" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">State file</text>
-<text x="40" y="163" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">state.json</tspan></text>
-<rect x="314" y="24" width="252" height="156" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="330" y="56" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Host</text>
-<text x="330" y="79" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">Reads the two files.</text>
-<rect x="330" y="91" width="127.6" height="24" rx="7" fill="#2f3146"/>
-<text x="338" y="107.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">readModelFolder</tspan></text>
-<rect x="330" y="121" width="112.72" height="24" rx="7" fill="#2f3146"/>
-<text x="338" y="137.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">validateModel</tspan></text>
-<rect x="448.72" y="121" width="90.4" height="24" rx="7" fill="#2f3146"/>
-<text x="456.72" y="137.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">createCore</tspan></text>
-<rect x="604" y="24" width="252" height="156" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="620" y="56" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Snapshot</text>
-<text x="620" y="79" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">The definitions and the</text>
-<text x="620" y="99" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">entities. Sent again after</text>
-<text x="620" y="119" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">each change.</text>
-<rect x="620" y="131" width="97.84" height="24" rx="7" fill="#2f3146"/>
-<text x="628" y="147.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">getSnapshot</tspan></text>
-<rect x="24" y="240" width="252" height="148" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="40" y="272" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">View file</text>
-<text x="40" y="295" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">defineView</tspan> gives the</text>
-<text x="40" y="315" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">type ID, the props, and</text>
-<text x="40" y="335" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">render</tspan>.</text>
-<rect x="40" y="347" width="164.8" height="24" rx="7" fill="#2f3146"/>
-<text x="48" y="363.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">src/views/AppBar.tsx</tspan></text>
-<rect x="314" y="240" width="252" height="148" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="330" y="272" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Table of views</text>
-<text x="330" y="295" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">A table from component type</text>
-<text x="330" y="315" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">ID to view. <tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">collectViews</tspan></text>
-<text x="330" y="335" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">reads <tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">src/views/*.tsx</tspan>.</text>
-<rect x="604" y="240" width="252" height="148" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="620" y="272" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Client of the core</text>
-<text x="620" y="295" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">connect()</tspan> opens the stream</text>
-<text x="620" y="315" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">of snapshots. It gives</text>
-<text x="620" y="335" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">getSnapshot</tspan> and <tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">subscribe</tspan>.</text>
-<rect x="24" y="448" width="832" height="172" rx="12" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="40" y="480" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Renderer</text>
-<text x="40" y="503" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">For each entity and component</text>
-<text x="40" y="523" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">type that has a view: takes each</text>
-<text x="40" y="543" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">prop by field ID and calls</text>
-<text x="40" y="563" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">render</tspan>.</text>
-<rect x="380" y="464" width="460" height="140" rx="12" fill="#352c31" stroke="#f2a93b" stroke-width="1.5"/>
-<text x="396" y="496" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="16" fill="#ececf3" text-anchor="start">Marked element</text>
-<text x="396" y="519" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#a3a3b8" text-anchor="start">Wraps the picture of the view: the app bar.</text>
-<rect x="396" y="533" width="276.96" height="56" rx="8" fill="#121222" stroke="#2d2d46"/>
-<text x="408" y="557" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">&lt;div data-wishem-entity=&quot;e_…&quot;</tspan></text>
-<text x="408" y="577" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="13" fill="#ececf3" text-anchor="start"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">data-wishem-component-type=&quot;ct_…&quot;&gt;</tspan></text>
-<path d="M276 60 L304 60" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="314,60 303,65.5 303,54.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<path d="M276 144 L304 144" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="314,144 303,149.5 303,138.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<path d="M566 102 L594 102" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="604,102 593,107.5 593,96.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<path d="M276 314 L304 314" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="314,314 303,319.5 303,308.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<path d="M730 180 L730 230" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="730,240 724.5,229 735.5,229" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<rect x="620.12" y="198" width="219.76" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b" stroke-opacity="0.55"/>
-<text x="730" y="214.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle"><tspan font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-weight="400" font-size="12" fill="#ececf3">GET /snapshots</tspan> through Vite</text>
-<path d="M324 534 L370 534" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="380,534 369,539.5 369,528.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<path d="M440 388 L440 438" fill="none" stroke="#6b6b88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="440,448 434.5,437 445.5,437" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="317.4" y="406" width="245.2" height="24" rx="12" fill="#1b1b30" stroke="#6b6b88" stroke-opacity="0.55"/>
-<text x="440" y="422.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">the view of each component type</text>
-<path d="M730 388 L730 438" fill="none" stroke="#f2a93b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="730,448 724.5,437 735.5,437" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<rect x="675.8" y="406" width="108.4" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b" stroke-opacity="0.55"/>
-<text x="730" y="422.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">the snapshot</text>
+<desc id="desc">The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The table of views comes from the view file. The renderer draws the app bar in a marked element.</desc>
+<rect width="880" height="444" fill="#121222"/>
+<rect x="24" y="24" width="180" height="90" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(98 40) scale(0.8)" fill="none" stroke="#c2d0ea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h13l9 9v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM23 4v9h9M14 22h12M14 28h12"/></g>
+<text x="114" y="98" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Definition file</text>
+<rect x="24" y="126" width="180" height="90" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(98 142) scale(0.8)" fill="none" stroke="#c2d0ea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h13l9 9v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM23 4v9h9"/><circle cx="20" cy="26" r="4"/></g>
+<text x="114" y="200" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">State file</text>
+<rect x="244" y="24" width="164" height="192" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(300 81) scale(1.3)" fill="none" stroke="#c2d0ea" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="28" height="11" rx="3"/><rect x="6" y="23" width="28" height="11" rx="3"/><path d="M12 11.5h.01M12 28.5h.01"/></g>
+<text x="326" y="159" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Host</text>
+<rect x="448" y="24" width="164" height="192" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(504 81) scale(1.3)" fill="none" stroke="#c2d0ea" stroke-width="1.54" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14V9a3 3 0 0 1 3-3h5M26 6h5a3 3 0 0 1 3 3v5M34 26v5a3 3 0 0 1-3 3h-5M14 34H9a3 3 0 0 1-3-3v-5"/><circle cx="20" cy="20" r="5"/></g>
+<text x="530" y="159" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Snapshot</text>
+<rect x="24" y="280" width="180" height="140" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(94 317) scale(1)" fill="none" stroke="#c2d0ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h13l9 9v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM23 4v9h9M17 21l-4 4 4 4M23 21l4 4-4 4"/></g>
+<text x="114" y="383" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">View file</text>
+<rect x="244" y="280" width="164" height="140" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(306 317) scale(1)" fill="none" stroke="#c2d0ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="32" height="24" rx="3"/><path d="M4 16h32M4 24h32M16 8v24"/></g>
+<text x="326" y="383" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Table of views</text>
+<rect x="448" y="280" width="164" height="140" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(510 317) scale(1)" fill="none" stroke="#c2d0ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 33 25 15M29 4v9M24.5 8.5h9M33 24h.01M12 10h.01"/></g>
+<text x="530" y="383" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Renderer</text>
+<rect x="664" y="24" width="192" height="396" rx="14" fill="#352c31" stroke="#f2a93b" stroke-width="1.5"/>
+<rect x="682" y="48" width="156" height="292" rx="12" fill="#121222" stroke="#45455d"/>
+<rect x="690" y="74" width="140" height="42" rx="8" fill="#c2d0ea"/>
+<path d="M704 89h16M704 95h16M704 101h16" stroke="#121222" stroke-width="2.5" stroke-linecap="round"/>
+<rect x="734" y="91" width="56" height="8" rx="4" fill="#121222"/>
+<circle cx="810" cy="95" r="8" fill="#121222"/>
+<rect x="684" y="68" width="152" height="54" rx="12" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-dasharray="6 5"/>
+<rect x="696" y="142" width="96" height="10" rx="5" fill="#2f3146"/>
+<rect x="696" y="162" width="128" height="10" rx="5" fill="#2f3146"/>
+<rect x="696" y="196" width="128" height="120" rx="10" fill="#2f3146"/>
+<text x="760" y="396" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Marked element</text>
+<path d="M204 69 L234 69" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="244,69 233,74.5 233,63.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<path d="M204 171 L234 171" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="244,171 233,176.5 233,165.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<path d="M408 120 L438 120" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="448,120 437,125.5 437,114.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<path d="M530 216 L530 270" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="530,280 524.5,269 535.5,269" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="499.5" y="236" width="61" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="530" y="252.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="13" fill="#f2a93b" text-anchor="middle">props</text>
+<path d="M612 350 L654 350" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="664,350 653,355.5 653,344.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<path d="M204 350 L234 350" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="244,350 233,355.5 233,344.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<path d="M408 350 L438 350" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="448,350 437,355.5 437,344.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
 </svg>
