@@ -31,10 +31,10 @@ Each message has these parts, in this order:
 | ------------------ | ------------------------------------------------------------------------------------------------------ |
 | **Question**       | The number and the text of the question, as the issue gives it.                                        |
 | **Context**        | What is decided, what is built, and what constrains the answer. Give the source of each fact.          |
-| **Options**        | Each known reasonable answer, with its cost and its benefit. Include the options that the issue gives. |
+| **Options**        | Each known reasonable answer, with its cost and its benefit. Include the options that the issue gives and any others the issue may have missed. |
 | **Recommendation** | One option, with the reason. Or "Defer", with the destination.                                         |
 
-A deferral always names its destination: an existing issue, by number, or a new issue, with a proposed title. "Later" is not a destination.
+A deferral always names its destination: an existing issue, by number, or a new issue, with a proposed title. "Later" is not a destination. The user may choose to "decline" or "skip" the question, in which case it can be left open for the implementer of the ticket. 
 
 If the recommendation includes a decision that the question did not ask for, show it as a separate item. A general agreement from the owner, such as "agreed", confirms the recommendation and each separate item of that message.
 
@@ -51,7 +51,7 @@ Do these two writes for each question, in this order.
 - For a deferred question, give the destination as a link, and the reason.
 - For a question that is answered in part, state the part that is not answered and its destination.
 - If the answer replaces other text of the issue body, quote that text in the comment. Do not change it in the body.
-- If the owner changes a recorded decision later, add a new comment. Do not edit the earlier comment.
+- If the owner changes a recorded decision later, add a new comment. Strike through the original comment. After the strikethrough, add a "revised in" link referencing the new comment.
 - For a question that stays open, record what the discussion found. Do not strike it through.
 
 **2. Strike through the question in the issue body.** Change only the item of that question.
