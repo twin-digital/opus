@@ -43,6 +43,8 @@ pnpm --filter @thrashplay/wishem-workbench-app test:ui:update
 
 The command writes the baseline images in `tests/__screenshots__/`. Commit the images that change.
 
+Before each screenshot, the test hides every part of the page except the section and its ancestors. The section then starts at the same offset whatever the other sections hold. A change to one section changes only the baselines of that section.
+
 ## Run a different command with the browser
 
 `scripts/browser-server.js` runs any command. It starts the browser container and sets `WISHEM_BROWSER_WS_ENDPOINT` to the address of the browser server:

@@ -1,10 +1,26 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const sections = ['principles', 'tokens', 'typography'] as const
 const themes = ['light', 'dark'] as const
 
 const GROUND = { light: 'rgb(247, 247, 250)', dark: 'rgb(18, 18, 34)' }
+
+/**
+ * Hides everything on the page except the element and its ancestors. The element then starts at the
+ * same offset whatever the other sections hold, so its screenshot depends on its own content only.
+ */
+const isolate = async (page: Page, testId: string) => {
+  await page.getByTestId(testId).evaluate((element) => {
+    for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+      for (const sibling of Array.from(node.parentElement?.children ?? [])) {
+        if (sibling !== node && sibling instanceof HTMLElement) {
+          sibling.style.display = 'none'
+        }
+      }
+    }
+  })
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/style-guide.html')
@@ -16,6 +32,7 @@ for (const section of sections) {
     const id = `${section}-${theme}`
 
     test(`${id}: screenshot`, async ({ page }) => {
+      await isolate(page, id)
       await expect(page.getByTestId(id)).toHaveScreenshot(`${id}.png`)
     })
 
