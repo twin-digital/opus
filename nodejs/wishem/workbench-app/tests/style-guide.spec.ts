@@ -104,19 +104,65 @@ test('the maker text role changes with the theme', async ({ page }) => {
   expect(await color('tokens-dark')).toBe('rgb(242, 169, 59)')
 })
 
-test('each font loads from the build', async ({ page }) => {
-  const specs = [
-    '800 39px "Bricolage Grotesque Variable"',
-    '600 25px "Bricolage Grotesque Variable"',
-    '400 16px "Inter Variable"',
-    'italic 400 16px "Inter Variable"',
-    '400 12px "JetBrains Mono"',
-    '500 12px "JetBrains Mono"',
-  ]
-  for (const spec of specs) {
-    const loaded = await page.evaluate(async (font) => (await document.fonts.load(font)).map((f) => f.status), spec)
-    expect(loaded, spec).toEqual(['loaded'])
+test('each font face is declared once and loads from the build', async ({ page }) => {
+  const faces = await page.evaluate(async () => {
+    const all = Array.from(document.fonts)
+    await Promise.all(all.map((face) => face.load()))
+    return all.map((face) => `${face.family}|${face.style}|${face.weight}|${face.status}`).sort()
+  })
+  expect(faces).toEqual([
+    'Bricolage Grotesque Variable|normal|200 800|loaded',
+    'Inter Variable|italic|100 900|loaded',
+    'Inter Variable|normal|100 900|loaded',
+    'JetBrains Mono|normal|400|loaded',
+    'JetBrains Mono|normal|500|loaded',
+  ])
+})
+
+test('the sections are in order, each has its name, and each shows light mode then dark mode', async ({ page }) => {
+  const titles = ['Principles', 'Tokens', 'Typography', 'Components']
+  expect(await page.locator('main > section > h2').allTextContents()).toEqual(titles)
+  for (const title of titles) {
+    await expect(page.getByRole('region', { name: title, exact: true })).toHaveCount(1)
   }
+  const scopes = await page.locator('main > section').evaluateAll((sections) =>
+    sections.map((section) =>
+      Array.from(section.querySelectorAll('[data-theme]'))
+        .map((scope) => scope.getAttribute('data-theme'))
+        .join(','),
+    ),
+  )
+  expect(scopes).toEqual(titles.map(() => 'light,dark'))
+})
+
+test('a text color sample sits on ground', async ({ page }) => {
+  for (const theme of themes) {
+    for (const token of ['fg', 'maker-text']) {
+      const sample = page.getByTestId(`tokens-${theme}`).locator(`[data-token="${token}"]`)
+      expect(await sample.evaluate((e) => getComputedStyle(e).backgroundColor), `${token} in ${theme}`).toBe(
+        GROUND[theme],
+      )
+    }
+  }
+})
+
+test('the default text color is fg in each color scheme', async ({ page }) => {
+  const color = () => page.evaluate(() => getComputedStyle(document.documentElement).color)
+  await page.emulateMedia({ colorScheme: 'light' })
+  expect(await color()).toBe('rgb(28, 28, 46)')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  expect(await color()).toBe('rgb(236, 236, 243)')
+})
+
+test('a screenshot that differs from its baseline fails', async ({ page }) => {
+  await isolate(page, 'components-light')
+  await page
+    .locator('[data-testid="components-light"] header')
+    .first()
+    .evaluate((e) => {
+      e.style.backgroundColor = 'rgb(200, 0, 0)'
+    })
+  await expect(expect(page.getByTestId('components-light')).toHaveScreenshot('components-light.png')).rejects.toThrow()
 })
 
 test('the typography section uses the three typefaces', async ({ page }) => {
@@ -145,6 +191,8 @@ test.describe('components section', () => {
       const bar = specimen(page, id, 'App bar').locator('header')
       expect(await bar.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(23, 23, 42)')
       expect(await bar.evaluate((e) => getComputedStyle(e).height)).toBe('48px')
+      const line = theme === 'light' ? 'rgb(222, 222, 231)' : 'rgb(45, 45, 70)'
+      expect(await bar.evaluate((e) => getComputedStyle(e).borderBottomColor)).toBe(line)
       const heading = bar.locator('h1')
       const style = await heading.evaluate((e) => {
         const { fontFamily, textTransform, color } = getComputedStyle(e)
