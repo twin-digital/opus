@@ -8,7 +8,7 @@ This file describes what the workbench is made of. The workbench draws one eleme
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="processes-dark.svg">
-  <img alt="The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite server. The host reads and watches the model folder. The designer edits the model folder by hand." src="processes-light.svg">
+  <img alt="The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite development server. The host reads and watches the model folder. The designer edits the model folder by hand." src="processes-light.svg">
 </picture>
 
 - The designer runs the `start` script of `workbench-app`. The script starts the host and the Vite development server in one Node.js process. Ctrl+C stops both.
@@ -69,3 +69,5 @@ node nodejs/wishem/docs/architecture/render.mjs
 ```
 
 Run `pnpm install` first. The script reads the font files from `nodejs/wishem/workbench-app/node_modules`. Commit the SVG files that change.
+
+GitHub shows the typefaces of the brand because each SVG file holds them as data, and the `picture` element selects the file for the theme.

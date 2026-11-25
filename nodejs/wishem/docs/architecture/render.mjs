@@ -290,7 +290,7 @@ const processes = {
   name: 'processes',
   title: 'The processes of the workbench',
   description:
-    'The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite server. The host reads and watches the model folder. The designer edits the model folder by hand.',
+    'The designer runs the start script, which starts the host and the Vite development server in one Node.js process. The page in the web browser gets its code and its snapshots from the Vite development server. The host reads and watches the model folder. The designer edits the model folder by hand.',
   width: 880,
   height: 514,
   items: [
@@ -329,7 +329,7 @@ const processes = {
     },
     { kind: 'pill', x: 24, y: 424, w: 240, h: 76, title: 'Designer' },
 
-    // Between the page and the Vite server
+    // Between the page and the Vite development server
     {
       kind: 'arrow',
       points: [
@@ -355,7 +355,7 @@ const processes = {
       label: { x: 386, y: 174, anchor: 'middle', lines: ['each snapshot'], maxWidth: 230 },
     },
 
-    // Between the Vite server and the host
+    // Between the Vite development server and the host
     {
       kind: 'arrow',
       points: [
