@@ -3348,6 +3348,15 @@ importers:
 
   nodejs/wishem/workbench-app:
     dependencies:
+      '@thrashplay/wishem-core':
+        specifier: workspace:*
+        version: link:../core
+      '@thrashplay/wishem-host-nodejs':
+        specifier: workspace:*
+        version: link:../host-nodejs
+      '@thrashplay/wishem-workbench':
+        specifier: workspace:*
+        version: link:../workbench
       react:
         specifier: ^19.2.0
         version: 19.2.8

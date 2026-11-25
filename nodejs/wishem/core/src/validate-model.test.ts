@@ -184,6 +184,27 @@ describe('validateModel', () => {
       expect(problems[0]?.message).toContain('e_')
     })
 
+    it.each([
+      ['first', 4],
+      ['second', 13],
+      ['third', 18],
+      ['fourth', 23],
+      ['last', 28],
+    ])('rejects an ID with an uppercase letter in the %s group of the UUID', (_name, position) => {
+      const id = `${CT.slice(0, position)}${CT.charAt(position).toUpperCase()}${CT.slice(position + 1)}`
+      expect(id).not.toBe(CT)
+      const problems = errors(model([appBar({ id })], []))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.message).toContain('UUID in lowercase')
+    })
+
+    it('names the necessary prefix for a field ID that has the prefix of an entity', () => {
+      const bad = appBar({ fields: [{ id: ENT, label: 'title', type: 'string' }] })
+      const message = errors(model([bad], []))[0]?.message
+      expect(message).toContain('e_')
+      expect(message).toContain('"fld_" is necessary')
+    })
+
     it('names a duplicate component type ID', () => {
       const problems = errors(model([appBar(), appBar({ label: 'Other' })], []))
       expect(problems).toHaveLength(1)
@@ -326,6 +347,20 @@ describe('validateModel', () => {
 
     it('accepts two entities with different IDs', () => {
       expect(validateModel(model([appBar()], [entity(), entity({}, ENT2)])).ok).toBe(true)
+    })
+
+    it('keeps the order of the definitions and of the entities', () => {
+      const other = appBar({ id: CT2, label: 'Other' })
+      const result = validateModel(model([appBar(), other], [entity({}, ENT2), entity()]))
+      expect(result.ok && result.model.definitions.map((d) => d.id)).toEqual([CT, CT2])
+      expect(result.ok && result.model.entities.map((e) => e.id)).toEqual([ENT2, ENT])
+    })
+
+    it('uses the first component type for the fields when two have one ID', () => {
+      const second = appBar({ label: 'Other', fields: [{ id: FLD2, label: 'other', type: 'string' }] })
+      const problems = errors(model([appBar(), second], [entity()]))
+      expect(problems).toHaveLength(1)
+      expect(problems[0]?.path).toEqual(['definitions', 1, 'id'])
     })
   })
 

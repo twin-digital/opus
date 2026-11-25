@@ -11,6 +11,7 @@
     "lint": "lint",
     "lint:fix": "lint_fix",
     "preview": "vite preview",
+    "start": "node scripts/start.ts",
     "style-guide": "vite --open /style-guide.html",
     "test": "opus-test",
     "test:ui": "node scripts/browser-server.ts playwright test",
@@ -19,6 +20,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@thrashplay/wishem-core": "workspace:*",
+    "@thrashplay/wishem-host-nodejs": "workspace:*",
+    "@thrashplay/wishem-workbench": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

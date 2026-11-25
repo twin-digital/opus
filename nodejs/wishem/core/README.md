@@ -65,6 +65,7 @@ stop()
 - `core.getSnapshot()`: returns the current snapshot.
 - `core.subscribe(listener)`: registers a listener. Returns a function that removes it.
 - `core.setModel(data)`: gives a new model to the core. For the host that owns the storage.
+- `CoreReader`: the interface with `getSnapshot` and `subscribe` only. A `Core` extends it. Code that only reads a model, such as a renderer, accepts a `CoreReader`.
 
 ## No Node.js API
 
