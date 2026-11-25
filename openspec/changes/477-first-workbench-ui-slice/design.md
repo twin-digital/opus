@@ -244,11 +244,11 @@ The first step of the view task checks what Vite does. A full reload meets the r
 - **The processes of the workbench**: what the `start` script starts, what runs in the web browser, the model folder, and each connection between them.
 - **From a file to a picture**: the definition file and the state file, the snapshot, the table of views, the props of the view, and the marked element.
 
-Each diagram is two SVG files, one for light mode and one for dark mode, in `nodejs/wishem/docs/architecture/`. The Markdown file shows them with a `picture` element that has a `source` for `(prefers-color-scheme: dark)`. The colors are the values of the role tokens of the workbench. The typefaces are the three typefaces of the brand.
+Each diagram is two SVG files, one for light mode and one for dark mode, in `nodejs/wishem/docs/architecture/`. The Markdown file shows them with a `picture` element that has a `source` for `(prefers-color-scheme: dark)`. The colors are the values of the role tokens of the workbench. The typefaces are the standard typefaces of the system of the reader: a `system-ui` stack for text and a `ui-monospace` stack for code. The SVG files hold no font data. The owner selected this on 2026-11-25: the brand shows in the colors.
 
 A script, `nodejs/wishem/docs/architecture/render.mjs`, writes the SVG files from one description of each diagram, so that the two themes cannot differ in content. It is a Node.js script with no dependency on a web browser.
 
-**Unverified**: if an SVG that GitHub shows as an image can use a typeface that the file holds as data. The first step of the task checks this on the pull request. If the typeface is not used, the script writes the text as paths, with the font files of the `@fontsource` packages.
+The look of the diagrams follows the visual previews of the brainstorm: cards with round corners on a quiet surface, clear space between the parts, a small number of sizes of text, and the accent color only for the parts that the reader must see first. The owner asked for this on 2026-11-25.
 
 The owner reviews the diagrams before the final review of the change. "High quality" is a decision of the owner, not of a test.
 
@@ -698,7 +698,7 @@ The page has no control. Nothing gets focus. The app bar is the banner landmark,
 - [The end-to-end tests share one model folder] → The package uses one worker, and each test writes the original files first.
 - [The `start` script needs a build of two packages] → The README and the error table say this. The `wishem` command has the same condition.
 - [A view that throws removes the page] → Accepted for this slice. An error boundary needs a picture for an error, and the slice adds no component to the catalog.
-- [The brand typefaces do not show in an SVG on GitHub] → See D10. The fallback is text as paths.
+- [The width of text is different on each system, because the diagrams use the standard typefaces] → Each box has spare width for its text, and the script fails when a label is longer than its limit of characters.
 
 ### Decisions that the owner confirmed for this plan
 

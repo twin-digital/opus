@@ -62,12 +62,12 @@ The HTML renderer is a folder of modules in `workbench-app`. It is not a package
 
 ## Change the diagrams
 
-`render.mjs` writes the four SVG files. It describes each diagram one time and writes one file for each theme. It reads the colors from `workbench-app/src/styles/tokens.css`. Each SVG file holds the three typefaces of the brand as data.
+`render.mjs` writes the four SVG files. It describes each diagram one time and writes one file for each theme. It reads the colors from `workbench-app/src/styles/tokens.css`.
 
 ```
 node nodejs/wishem/docs/architecture/render.mjs
 ```
 
-Run `pnpm install` first. The script reads the font files from `nodejs/wishem/workbench-app/node_modules`. Commit the SVG files that change.
+Commit the SVG files that change.
 
-GitHub shows the typefaces of the brand because each SVG file holds them as data, and the `picture` element selects the file for the theme.
+The diagrams use the standard typefaces of the system of the reader and the colors of the role tokens. The `picture` element selects the file for the theme.
