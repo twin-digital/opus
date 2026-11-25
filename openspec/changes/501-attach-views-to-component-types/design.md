@@ -24,7 +24,6 @@ The state of the code after [First workbench UI slice](https://github.com/twin-d
 - A shape for "code that is attached to a component type" that a behavior can use later with no change to a sidecar.
 - A page that stays correct immediately after a label changes, before a type check runs.
 - A fresh checkout that passes the lint and the type check with no generation step.
-- An architecture document of Wishem that follows `docs/diagrams.md`, with a specification that names each diagram.
 
 **Non-Goals:**
 
@@ -141,170 +140,25 @@ This must be verified in the task: after an edit to `src/views/AppBar.tsx` while
 - A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
 - Remove the sentence that a view declares its fields.
 
-`nodejs/wishem/docs/architecture/README.md`: the text and the diagrams. See D9 and the section "The architecture diagrams".
+`nodejs/wishem/docs/architecture/README.md`: replace `defineView` and `checkViews` with the sidecar, the generated types, and the generator. The path of a change gets the generator.
 
-### D9. The architecture level does not change, and the architecture document gets its C4 form
+The diagram "From a file to a picture" (`picture-light.svg` and `picture-dark.svg`) shows the view file as the source of the table of views. After this change, the sidecar gives the link from a view to its component type, so the diagram must show the sidecar. The change is made in the description of the diagram in `render.mjs`, and the script writes the two files. No SVG file is edited by hand. The work follows [`docs/diagrams.md`](../../../docs/diagrams.md) and the `diagrams` skill: the script runs two times with no change on the second run, `check-svg.mjs` passes, and the implementer looks at an image of each file on the page color of its theme. The text of the diagram stays in the limits of the guide: the detail goes in the prose.
 
-The rules of `openspec/config.yaml` require a change to the architecture document when a change alters the C4 context level or container level, or the entities of a store of persisted data. The views work of this change alters neither:
+The diagram "The processes of the workbench" does not change. See D9.
 
-- **Containers.** This change adds no container. The generator and the `generate` command are code of `workbench-app`. The `start` script gets the definitions from the core that it already holds, and it writes files in its own package.
+### D9. The architecture level does not change
+
+The rules of `openspec/config.yaml` require a C4 diagram in this design, and the capability `wishem/architecture/diagrams`, when a change alters the C4 context level or container level, or the entities of a store of persisted data. This change alters neither:
+
+- **Containers.** The containers of the workbench are the page in the web browser, the Node.js process of the `start` script, the model folder, and the packages that other packages build on. This change adds no container. The generator and the `generate` command are code of `workbench-app`. The `start` script gets the definitions from the core that it already holds, and it writes files in its own package.
 - **Relationships.** The `generate` command reads the model folder with the reader of `host-nodejs`, as the host does. It is a development command of one package, and it runs no part of the product. It is not drawn as a container.
 - **Stores.** The model folder is the one store of persisted data. Its entities do not change: the model does not name a view. A sidecar is a source file of `workbench-app`, beside the view that it describes. The `erDiagram` of the Data Model section shows it because the design rules require that diagram for a persisted schema.
 
+The diagram guidance still applies to the one diagram that this change corrects. See D8.
+
+The architecture document of Wishem was made before the diagram guidance. It has no system context diagram, no container diagram in C4 notation, no entity diagram of the model folder, and no `wishem/architecture/diagrams` specification. That work is not part of this change.
+
 A later change makes this decision again when the views become content of a product folder, beside the model folder. The folder of the views is then a store, and the sidecar is an entity of it.
-
-The architecture document was made before the diagram guidance. It has two diagrams, "The processes of the workbench" and "From a file to a picture", which are not in C4 notation. It has no system context diagram, no entity diagram, and no specification. The owner asked for that work in this change.
-
-The work has two parts, in this order:
-
-1. The first task brings the document to the form of `docs/diagrams.md` for the code as it is before the views work. It adds the capability `wishem/architecture/diagrams`.
-2. The task that changes the renderer updates the component diagram of the page, so that it shows the sidecar. The document is then correct after each task.
-
-| File name               | Type                                | Replaces                                                                    |
-| ----------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| `context`               | System context diagram              | Nothing                                                                     |
-| `containers`            | Container diagram                   | `processes`                                                                 |
-| `dynamic-change`        | Dynamic diagram of the primary path | The amber path of `processes`, and the numbered list "The path of a change" |
-| `components-page`       | Component diagram of the page       | `picture`                                                                   |
-| `entities-model-folder` | Entity diagram of the model folder  | Nothing                                                                     |
-
-`render.mjs` writes each file from one description, in the two themes. No SVG file is edited by hand. The work follows the `diagrams` skill: the script runs two times with no change on the second run, `check-svg.mjs` passes for each pair, and the implementer looks at an image of each file on the page color of its theme. The owner accepts the images before the change is complete.
-
-The software system of the diagrams is Wishem. The workbench is the one thing of Wishem that runs now, so each diagram shows the workbench.
-
-Alternative: a separate change and a separate issue for the architecture document. Rejected by the owner, who asked for the work here.
-
-Alternative: draw the diagrams one time, after the views work. Rejected: the component diagram would be wrong from the renderer task to the last task, and the diagram rules say that a task does not defer diagram work.
-
-## The architecture diagrams
-
-These Mermaid diagrams give the content of each SVG diagram. The implementer checks each element and the direction of each relationship against the code before the SVG file is made.
-
-No element and no relationship is new, moved, or removed in the architecture. Each diagram is new as a diagram.
-
-### System context
-
-```mermaid
----
-title: 'System context diagram: Wishem'
----
-flowchart LR
-  designer["<b>Designer</b><br/>[Person]<br/>Makes a product with the workbench."]
-  wishem["<b>Wishem</b><br/>[Software System]<br/>Holds a model and draws it."]
-  designer -- "Starts the workbench [terminal]" --> wishem
-  designer -- "Edits the model files [text editor]" --> wishem
-  designer -- "Looks at the page [web browser]" --> wishem
-```
-
-Wishem connects to no external system.
-
-### Containers
-
-```mermaid
----
-title: 'Container diagram: Wishem'
----
-flowchart LR
-  designer["<b>Designer</b><br/>[Person]<br/>Makes a product with the workbench."]
-  subgraph wishem["Wishem [Software System]"]
-    page["<b>Page</b><br/>[Container: React, web browser]<br/>Draws each component that has a view."]
-    process["<b>Workbench process</b><br/>[Container: Node.js]<br/>Holds the core and serves the page."]
-    model[("<b>Model folder</b><br/>[Container: JSON files]<br/>Holds the definitions and the authored state.")]
-    hostlib["<b>host-nodejs</b><br/>[Container: TypeScript package]<br/>Reads a model folder and serves snapshots."]
-    corelib["<b>core</b><br/>[Container: TypeScript package]<br/>Checks a model and gives snapshots."]
-  end
-  designer -- "Starts and stops [terminal]" --> process
-  designer -- "Edits files [text editor]" --> model
-  designer -- "Looks at [web browser]" --> page
-  page -- "Gets the page code [HTTP]" --> process
-  page -- "Gets snapshots [SSE]" --> process
-  process -- "Reads and watches [file system]" --> model
-  process -- "Runs [import]" --> hostlib
-  hostlib -- "Builds on [import]" --> corelib
-```
-
-- **Workbench process.** The `start` script of `workbench-app` starts one Node.js process. It holds the host and the Vite development server. The two are components of this container, and the prose of the document names them.
-- **Model folder.** The model folder of the base workbench is in the package `@thrashplay/wishem-workbench`.
-- **Packages.** `core` and `host-nodejs` are containers because other packages build on them. The page imports only types from `core`, so the diagram shows no relationship for it.
-
-### The path of a change
-
-```mermaid
----
-title: 'Dynamic diagram: a change to the model becomes a new picture'
----
-flowchart LR
-  designer["<b>Designer</b><br/>[Person]"]
-  model[("<b>Model folder</b><br/>[Container: JSON files]")]
-  process["<b>Workbench process</b><br/>[Container: Node.js]"]
-  page["<b>Page</b><br/>[Container: React, web browser]"]
-  designer -- "1. Saves a model file" --> model
-  process -- "2. Reads the folder after the watch event" --> model
-  process -- "3. Sends the new snapshot [SSE]" --> page
-  page -- "4. Shows the new picture" --> designer
-```
-
-The page opens the stream of snapshots one time. On that stream, the process sends each snapshot. Thus relationship 3 has the direction of the data.
-
-After the views work, the process also runs the generator when the definitions change. That step is inside the workbench process, so the diagram does not show it. The prose of the document does.
-
-### The components of the page
-
-After the views work:
-
-```mermaid
----
-title: 'Component diagram: the page of the workbench'
----
-flowchart LR
-  process["<b>Workbench process</b><br/>[Container: Node.js]<br/>Holds the core and serves the page."]
-  subgraph page["Page [Container: React, web browser]"]
-    client["<b>Client of the core</b><br/>[Component: connect]<br/>Gives the newest snapshot."]
-    renderer["<b>Renderer</b><br/>[Component: React]<br/>Draws each component in a marked element."]
-    table["<b>Table of views</b><br/>[Component: collectViews]<br/>Gives the view of a component type."]
-    sidecars["<b>Sidecars</b><br/>[Component: JSON files]<br/>Attach each view to a component type."]
-    views["<b>Views</b><br/>[Component: React]<br/>Draw one component type each."]
-    catalog["<b>Catalog</b><br/>[Component: React]<br/>The app bar and the zero state."]
-  end
-  client -- "Gets snapshots [SSE]" --> process
-  renderer -- "Reads the snapshot" --> client
-  renderer -- "Finds the view" --> table
-  table -- "Reads" --> sidecars
-  table -- "Collects" --> views
-  renderer -- "Mounts with props" --> views
-  views -- "Draw with" --> catalog
-```
-
-Before the views work, the diagram has no "Sidecars" element. The first task draws it in that form, with the table of views that collects the view files. The renderer task adds the sidecars.
-
-### The entities of the model folder
-
-```mermaid
-erDiagram
-  ComponentTypeDefinition ||--o{ FieldDefinition : has
-  Entity ||--o{ Component : has
-  ComponentTypeDefinition ||--o{ Component : "is the type of"
-  Component ||--o{ FieldValue : holds
-  FieldDefinition ||--o{ FieldValue : "is the field of"
-  ComponentTypeDefinition {
-    string id PK
-  }
-  FieldDefinition {
-    string id PK
-  }
-  Entity {
-    string id PK
-  }
-  Component {
-    string entity FK
-    string componentType FK
-  }
-  FieldValue {
-    string field FK
-  }
-```
-
-`ComponentTypeDefinition`, `FieldDefinition`, and `Entity` are the names of the schema in `nodejs/wishem/core/src/model.ts`. A component and a field value have no type name in the schema: a component is one record of `components` of an entity, with the ID of its component type as its key, and a field value is one entry of that record, with the ID of its field as its key. The implementer reads the schema and uses its names. The entities do not change in this change.
 
 ## The parts and the main flow
 
@@ -597,9 +451,7 @@ No other package changes. `@thrashplay/wishem-core` and `@thrashplay/wishem-host
 
 - [A label changes and the page draws an empty prop until a type check runs] → The `start` script prints each prop name that was removed. A type check on save is deferred.
 - [A person edits a definition with no workbench that runs, and commits a generated file that is not current] → The test of the package fails in the pull request checks and names the file.
-- [The format step or the lint changes or rejects a generated file] → `*.view.gen.ts` is in `.prettierignore`, and the generator task verifies that the lint passes on the generated file as the generator writes it.
-- [The C4 notation asks for more text in each element than the render script draws now] → The first task extends `render.mjs` with the element card, the boundary, the legend, and the entity card, and keeps its checks for the fit of a label and the length of an arrow.
-- [The owner cannot judge a diagram from the SVG source] → The task gives the path of an image of each file in each theme, and the owner accepts the images before the change is complete.
+- [The format step or the lint changes or rejects a generated file] → `*.view.gen.ts` is in `.prettierignore`, and the first task verifies that the lint passes on the generated file as the generator writes it.
 - [React Fast Refresh keeps the old function of a view] → D6, with the verification and the fallback that it gives.
 - [The `start` script changes files of the repository when it runs with a different model folder] → This is correct: the views must agree with the model that the page draws. The option `--no-view-types` turns it off, and the end-to-end server uses it.
 - [The names in code are links by label] → Accepted by the owner. A stored name for a field can be added later with the derived name as its default, and no view changes.
