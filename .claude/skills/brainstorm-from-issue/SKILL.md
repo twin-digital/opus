@@ -18,10 +18,11 @@ The issue is the only record. Do not create an OpenSpec change, a planning file,
 3. **Set aside each blocked question.** A question is blocked when its answer depends on work that is not settled in a different issue or pull request. Do not present it. Name it in the final report, with the work that blocks it. When only a part of a question is blocked, present the part that is not blocked.
 4. **Give the order in one line**, at the top of the first message. Put a question before the questions that depend on its answer.
 5. **Present one question.** Use the parts in "The message for one question". Then stop and wait for the owner.
-6. **Discuss** until the owner gives an outcome: answered, deferred, or left open.
+6. **Discuss** until the owner gives an outcome: answered, deferred, or left open. See "The discussion".
 7. **Record the outcome** with the two writes in "The record". Do the two writes before you present the next question.
-8. **Repeat** steps 5 to 7 for each question.
-9. **Report.** List the answered questions, the deferred questions and where each one went, the questions left open, and the blocked questions.
+8. **Repeat** steps 5 to 7 for each question. Start the message for the next question with a link to the new comment, and name each item that you recorded as proposed.
+9. **Update the issue body** when each question of the issue is answered or moved. See "The final update of the issue body". If a question stays open or blocked, do not do this step.
+10. **Report.** List the answered questions, the deferred questions and where each one went, the questions left open, and the blocked questions. List each new issue. Say if the issue body was updated.
 
 ## The message for one question
 
@@ -38,6 +39,18 @@ A deferral always names its destination: an existing issue, by number, or a new 
 
 If the recommendation includes a decision that the question did not ask for, show it as a separate item. A general agreement from the owner, such as "agreed", confirms the recommendation and each separate item of that message.
 
+## The discussion
+
+One question can need many messages. The owner can ask for more options, give a new option, or change the direction of the design.
+
+- Answer what the owner asks first. When the owner gives a new option or a new direction, compare it with the other options, give its costs and its benefits, and give a recommendation.
+- End each message with one question.
+- Do not record while the owner explores. Do not push for a decision. Record only after the owner gives an outcome.
+- When the answer came from more than one message, give the full answer as a list, and ask the owner to confirm it. Then record.
+- When the discussion opens a topic that is larger than the question, propose to divide it: a narrow answer for this issue, and a new issue for the topic. Give the proposed title and the proposed contents of the new issue.
+- When the owner gives a requirement that no question asked for, record it in the comment of the current question.
+- When a tool that you need is not available, such as GitHub access, tell the owner. Write the record to a file, continue the discussion, and do the writes when the tool is available again.
+
 ## The record
 
 Do these two writes for each question, in this order.
@@ -50,8 +63,9 @@ Do these two writes for each question, in this order.
 - For each rejected option, give one line that starts with "Rejected:" and gives the reason.
 - For a deferred question, give the destination as a link, and the reason.
 - For a question that is answered in part, state the part that is not answered and its destination.
-- If the answer replaces other text of the issue body, quote that text in the comment. Do not change it in the body.
+- If the answer replaces other text of the issue body, quote that text in the comment. Do not change it in the body before the final update.
 - If the owner changes a recorded decision later, add a new comment. Strike through the original comment. After the strikethrough, add a "revised in" link referencing the new comment.
+- If the answer to a later question changes only a part of an earlier comment, strike through only that part of the earlier comment, and add the "revised in" link after it.
 - For a question that stays open, record what the discussion found. Do not strike it through.
 
 **2. Strike through the question in the issue body.** Change only the item of that question.
@@ -64,7 +78,18 @@ Do these two writes for each question, in this order.
 **A deferred question** also needs its destination to hold the question:
 
 - An existing issue: add a comment there with the question, the context, and a link back.
-- A new issue: create it only after the owner agrees. Follow the issue rules of the repository (type, labels, milestone, project board).
+- A new issue: create it only after the owner agrees. Follow the issue rules of the repository (type, labels, milestone, project board). The body holds what the owner stated, what you propose, what is known, and the open questions. Include each question that the owner gave. Set each relation to a different issue, such as "blocked by", on the issues in GitHub.
+
+## The final update of the issue body
+
+Do this step one time, after the last question, and only when each question of the issue is answered or moved. It makes the issue body agree with the comments, so that a reader does not need the comments to learn the decisions.
+
+- Fetch the body immediately before the edit.
+- Change the sections that hold decisions, so that they agree with the comments. Replace each text that a comment quoted as replaced. Update each example and each diagram. Keep the status labels, and link each group of decisions to its comment.
+- Add each new issue and each moved question to the sections that list the relations to other issues.
+- Do not add a decision that no comment records.
+- Keep the list of questions with its strikethroughs and its links, so that a comment that gives the number of a question stays clear. Change the heading of the list to "Answered questions", and add one sentence that says why the list stays.
+- Add one comment to the issue. It says that the body now agrees with the answers, and that the earlier comments that say "the body is not changed" were correct when they were written.
 
 ## Commands
 
@@ -82,6 +107,10 @@ gh api repos/OWNER/REPO/issues/123 --jq .body > body-before.md
 cp body-before.md body-after.md   # then edit body-after.md
 diff body-before.md body-after.md
 gh api --method PATCH repos/OWNER/REPO/issues/123 -F body=@body-after.md
+
+# Change an earlier comment. The ID is the number at the end of the comment URL.
+gh api repos/OWNER/REPO/issues/comments/456 --jq .body > comment-before.md
+gh api --method PATCH repos/OWNER/REPO/issues/comments/456 -F body=@comment-after.md
 ```
 
 ## Example
@@ -108,14 +137,18 @@ The item in the issue body, after the edit:
 
 ## Common mistakes
 
-| Mistake                                                       | Correction                                                                   |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Present two or more questions in one message                  | One question in each message. Give only the order of the others.             |
-| One results comment that you update after each decision       | One new comment for each question.                                           |
-| Edit the issue body one time, at the end                      | Strike through each question immediately after its comment.                  |
-| Present the next question before the two writes are done      | Record first. A session that stops must lose no decision.                    |
-| Correct other text of the issue body during the edit          | Change only the item of the question. Report other problems to the owner.    |
-| Record your own extra decision as confirmed                   | Show it as a separate item. Mark it as proposed until the owner confirms it. |
-| Recommend "defer" with no destination                         | Name the existing issue, or propose the title of a new issue.                |
-| Present a question that waits on unsettled work elsewhere     | Set it aside. Name it and its blocker in the final report.                   |
-| Start an OpenSpec change or edit a file during the brainstorm | The issue is the only record.                                                |
+| Mistake                                                       | Correction                                                                     |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Present two or more questions in one message                  | One question in each message. Give only the order of the others.               |
+| One results comment that you update after each decision       | One new comment for each question.                                             |
+| Edit the issue body one time, at the end                      | Strike through each question immediately after its comment.                    |
+| Present the next question before the two writes are done      | Record first. A session that stops must lose no decision.                      |
+| Correct other text of the issue body during the edit          | Change only the item of the question. The final update changes the other text. |
+| Record an answer while the owner still explores               | Wait for an outcome. For a long discussion, confirm the full answer first.     |
+| Return to your recommendation when the owner gives a new idea | Compare the new idea with the other options first.                             |
+| Put a topic that is larger than the question into the answer  | Propose a narrow answer for this issue and a new issue for the topic.          |
+| Delete the list of questions in the final update              | Keep the list. Change only its heading.                                        |
+| Record your own extra decision as confirmed                   | Show it as a separate item. Mark it as proposed until the owner confirms it.   |
+| Recommend "defer" with no destination                         | Name the existing issue, or propose the title of a new issue.                  |
+| Present a question that waits on unsettled work elsewhere     | Set it aside. Name it and its blocker in the final report.                     |
+| Start an OpenSpec change or edit a file during the brainstorm | The issue is the only record.                                                  |
