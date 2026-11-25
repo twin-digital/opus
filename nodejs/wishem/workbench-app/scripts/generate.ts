@@ -6,20 +6,10 @@ import { validateModel, type Problem } from '@thrashplay/wishem-core'
 import { readModelFolder, withSource } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
 import { modelFolder } from '@thrashplay/wishem-workbench'
-import { generateViewTypes, type ViewTypesFile } from './view-types.ts'
+import { generateViewTypes } from './view-types.ts'
+import { viewTypesLines } from './view-types-report.ts'
 
 const packageRoot = resolve(import.meta.dirname, '..')
-
-const describeProps = (file: ViewTypesFile) =>
-  [
-    ...(file.addedProps.length > 0 ? [`added ${file.addedProps.join(', ')}`] : []),
-    ...(file.removedProps.length > 0 ? [`removed ${file.removedProps.join(', ')}`] : []),
-  ].join(', ')
-
-const describeChange = (file: ViewTypesFile) => {
-  const props = describeProps(file)
-  return props === '' ? '' : `: ${props}`
-}
 
 const main = async (): Promise<number> => {
   const { values } = parseArgs({
@@ -59,28 +49,12 @@ const main = async (): Promise<number> => {
   }
 
   const result = await generateViewTypes({ definitions, views, check })
-  result.warnings.forEach((warning) => {
-    console.log(`wishem: warning: ${warning}`)
-  })
-  result.errors.forEach((error) => {
-    console.log(`wishem: error: ${error}`)
+  viewTypesLines(result).forEach((line) => {
+    console.log(line)
   })
 
-  let changed = false
-  let notCurrent = false
-  for (const file of result.files) {
-    if (file.status === 'written') {
-      console.log(`wishem: wrote ${file.file}${describeChange(file)}`)
-    } else if (file.status === 'changed') {
-      console.log(`wishem: changed ${file.file}${describeChange(file)}`)
-    } else if (file.status === 'removed') {
-      console.log(`wishem: removed ${file.file}`)
-    } else if (file.status === 'not-current') {
-      console.log(`wishem: ${file.file} is not current${describeChange(file)}`)
-      notCurrent = true
-    }
-    changed ||= file.status !== 'current'
-  }
+  const changed = result.files.some((file) => file.status !== 'current')
+  const notCurrent = result.files.some((file) => file.status === 'not-current')
   if (notCurrent) {
     console.log('wishem: run the generate script, then correct each view that the type check names')
   }

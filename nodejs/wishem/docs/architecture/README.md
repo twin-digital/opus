@@ -47,12 +47,13 @@ This is the path from a saved `state.json` to a new picture.
 1. The designer saves `state.json` in the model folder.
 2. The host reads the model folder again (`readModelFolder`) and checks it (`validateModel`). If a file is not correct, the host prints each problem in the terminal. The page keeps the last picture.
 3. The host gives the new model to the core (`setModel`). The core tells its subscribers.
-4. The host sends the new snapshot on each open stream of `GET /snapshots`. The Vite development server passes the stream to the page.
-5. The client of the core (`connect()` in `src/renderer/connect.ts`) parses the snapshot. It ignores a snapshot that has the same text as the last one. Then it tells its subscribers.
-6. The `Renderer` reads the new snapshot. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
-7. For each entity and each component type that has a view, the `Renderer` gives the view one prop for each field of the definition, with the name that the label of the field gives. It mounts the view as a React component.
-8. The `Renderer` puts the result in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`. The wrapper is the map from a point on the screen to an entity.
-9. React updates the page. The app bar shows the new title.
+4. The `start` script listens to the core. When the definitions change, it runs the generator (`generateViewTypes`) with the new definitions. The generator writes each `*.view.gen.ts` file that changed, and the script prints one line for each. A change to a sidecar runs the generator in the same way.
+5. The host sends the new snapshot on each open stream of `GET /snapshots`. The Vite development server passes the stream to the page.
+6. The client of the core (`connect()` in `src/renderer/connect.ts`) parses the snapshot. It ignores a snapshot that has the same text as the last one. Then it tells its subscribers.
+7. The `Renderer` reads the new snapshot. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
+8. For each entity and each component type that has a view, the `Renderer` gives the view one prop for each field of the definition, with the name that the label of the field gives. It mounts the view as a React component.
+9. The `Renderer` puts the result in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`. The wrapper is the map from a point on the screen to an entity.
+10. React updates the page. The app bar shows the new title.
 
 ## What each package holds
 

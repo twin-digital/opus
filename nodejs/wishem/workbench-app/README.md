@@ -15,13 +15,17 @@ The script starts the core of the workbench and the page server in one Node.js p
 
 The page server listens on `127.0.0.1` only. It passes `GET /snapshot` and `GET /snapshots` to the core.
 
-| Option        | Default                                            | Meaning                                        |
-| ------------- | -------------------------------------------------- | ---------------------------------------------- |
-| `--model`     | the model folder of `@thrashplay/wishem-workbench` | The model folder.                              |
-| `--port`      | `5173`                                             | The port of the page. `0`: the system selects. |
-| `--core-port` | `4747`                                             | The port of the core. `0`: the system selects. |
+| Option            | Default                                            | Meaning                                         |
+| ----------------- | -------------------------------------------------- | ----------------------------------------------- |
+| `--model`         | the model folder of `@thrashplay/wishem-workbench` | The model folder.                               |
+| `--port`          | `5173`                                             | The port of the page. `0`: the system selects.  |
+| `--core-port`     | `4747`                                             | The port of the core. `0`: the system selects.  |
+| `--views`         | `src/views/` of the package                        | The folder of the sidecars and generated files. |
+| `--no-view-types` | off                                                | Do not keep the generated files current.        |
 
 For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` path starts from the folder where you run the command, not from the package folder.
+
+While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the core accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
 
 ### Change the picture by hand
 
@@ -130,7 +134,7 @@ When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the scrip
 - `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
 - `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
 
-The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, core port 0, and page port 4180.
+The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, core port 0, page port 4180, and the generator off. The tests then change no file in `src/views/`.
 
 The browser is in the container and has no network path to the test runner. The connection of the `workbench` project has `exposeNetwork: '<loopback>'`. The browser then sends each request to a loopback address through the control connection to the test runner. The stream of snapshots passes through the same connection.
 
