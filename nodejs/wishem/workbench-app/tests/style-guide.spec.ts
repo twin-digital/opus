@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
-const sections = ['principles', 'tokens', 'typography'] as const
+const sections = ['principles', 'tokens', 'typography', 'components'] as const
 const themes = ['light', 'dark'] as const
 
 const GROUND = { light: 'rgb(247, 247, 250)', dark: 'rgb(18, 18, 34)' }
@@ -132,6 +132,60 @@ test('the typography section uses the three typefaces', async ({ page }) => {
   expect(await family('h4')).toMatch(/^"Inter Variable"/)
   expect(await family('p.text-body')).toMatch(/^"Inter Variable"/)
   expect(await family('pre')).toMatch(/^"JetBrains Mono"/)
+})
+
+test.describe('components section', () => {
+  const specimen = (page: Page, testId: string, label: string) =>
+    page.getByTestId(testId).getByRole('region', { name: label, exact: true })
+
+  for (const theme of themes) {
+    const id = `components-${theme}`
+
+    test(`${id}: the app bar is Ink with a lowercase display title and a maker full stop`, async ({ page }) => {
+      const bar = specimen(page, id, 'App bar').locator('header')
+      expect(await bar.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(23, 23, 42)')
+      expect(await bar.evaluate((e) => getComputedStyle(e).height)).toBe('48px')
+      const heading = bar.locator('h1')
+      const style = await heading.evaluate((e) => {
+        const { fontFamily, textTransform, color } = getComputedStyle(e)
+        return { fontFamily, textTransform, color }
+      })
+      expect(style.fontFamily).toMatch(/^"Bricolage Grotesque Variable"/)
+      expect(style.textTransform).toBe('lowercase')
+      expect(style.color).toBe('rgb(242, 242, 246)')
+      expect(await heading.locator('span').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(242, 169, 59)')
+      expect(await heading.evaluate((e) => (e as HTMLElement).innerText)).toBe('wishem.')
+    })
+
+    test(`${id}: a long title is cut with an ellipsis`, async ({ page }) => {
+      const heading = specimen(page, id, 'App bar, long title').locator('h1')
+      const cut = await heading.evaluate((e) => ({
+        overflow: getComputedStyle(e).textOverflow,
+        clipped: e.scrollWidth > e.clientWidth,
+      }))
+      expect(cut).toEqual({ overflow: 'ellipsis', clipped: true })
+    })
+
+    test(`${id}: the zero state is a centered mono label and text in fg-muted`, async ({ page }) => {
+      const zero = specimen(page, id, 'Zero state')
+      const label = zero.getByText('Workbench', { exact: true })
+      const message = zero.getByText('Nothing to show yet.', { exact: true })
+      const muted = theme === 'light' ? 'rgb(91, 91, 112)' : 'rgb(163, 163, 184)'
+      const labelStyle = await label.evaluate((e) => {
+        const { fontFamily, textTransform, color, textAlign } = getComputedStyle(e)
+        return { fontFamily, textTransform, color, textAlign }
+      })
+      expect(labelStyle.fontFamily).toMatch(/^"JetBrains Mono"/)
+      expect(labelStyle.textTransform).toBe('uppercase')
+      expect(labelStyle.color).toBe(muted)
+      expect(labelStyle.textAlign).toBe('center')
+      expect(await message.evaluate((e) => getComputedStyle(e).color)).toBe(muted)
+      expect(await message.evaluate((e) => getComputedStyle(e).textAlign)).toBe('center')
+      const frame = await zero.locator('div > div').first().boundingBox()
+      const text = await message.boundingBox()
+      expect(frame && text && Math.abs(frame.x + frame.width / 2 - (text.x + text.width / 2))).toBeLessThan(1)
+    })
+  }
 })
 
 test('the default text is Inter at 16 pixels', async ({ page }) => {

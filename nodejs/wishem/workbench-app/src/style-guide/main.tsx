@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import '../styles/theme.css'
+import { Components } from './sections/Components.js'
 import { Principles } from './sections/Principles.js'
 import { Tokens } from './sections/Tokens.js'
 import { Typography } from './sections/Typography.js'
@@ -15,6 +16,7 @@ if (root) {
       <Principles />
       <Tokens />
       <Typography />
+      <Components />
     </main>,
   )
 }

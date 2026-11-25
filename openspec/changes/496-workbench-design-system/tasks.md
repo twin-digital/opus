@@ -38,12 +38,12 @@ Interfaces: consumes `ThemeScope`, the Tailwind classes of `design.md` D4, and t
 
 Read the requirements "The app bar", "The zero state", "Who acted decides the role", and "Each component is in the style guide" of the `component-catalog` specification, and the Interfaces and UI sections of `design.md`.
 
-- [ ] 3.1 Write `no-raw-colors.test.ts`: it fails when a file in `src/components/` contains a hexadecimal color value or the name of a palette color. Verify: the test fails for a temporary file that has `#17172a`, and passes when the file is removed.
-- [ ] 3.2 Write the tests of `AppBar`, then `AppBar`: the surface is `night`, the title is a heading 1 in the display typeface and in lowercase by style, the full stop has the `maker` color and is hidden from a screen reader, and a long title is cut with an ellipsis. Verify: the tests fail before the component exists and pass after it. Include a test that the text of the heading is the title as given.
-- [ ] 3.3 Write the tests of `ZeroState`, then `ZeroState`: a mono label and one line of text, in the center, in `fg-muted`. Verify: the tests fail before the component exists and pass after it.
-- [ ] 3.4 Show the zero state on the shell page, with the label `Workbench` and the text `Nothing to show yet.` Verify: `pnpm build` passes and the built page shows the zero state.
-- [ ] 3.5 Write the Components section of the style guide, in a light `ThemeScope` and a dark `ThemeScope`: the app bar with a short title, the app bar with a long title, and the zero state. Add a screenshot test and an accessibility test for the section in each theme. Make the baselines and commit them. Verify: `test:ui` passes on the development computer and in the job `ui-tests`, and the section agrees with the preview.
-- [ ] 3.6 Update the `README.md` of the package with the two components and the rule that a new component goes in the style guide in each state in the same change. Verify: `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass for the package.
+- [x] 3.1 Write `no-raw-colors.test.ts`: it fails when a file in `src/components/` contains a hexadecimal color value or the name of a palette color. Verify: the test fails for a temporary file that has `#17172a`, and passes when the file is removed.
+- [x] 3.2 Write the tests of `AppBar`, then `AppBar`: the surface is `night`, the title is a heading 1 in the display typeface and in lowercase by style, the full stop has the `maker` color and is hidden from a screen reader, and a long title is cut with an ellipsis. Verify: the tests fail before the component exists and pass after it. Include a test that the text of the heading is the title as given.
+- [x] 3.3 Write the tests of `ZeroState`, then `ZeroState`: a mono label and one line of text, in the center, in `fg-muted`. Verify: the tests fail before the component exists and pass after it.
+- [x] 3.4 Show the zero state on the shell page, with the label `Workbench` and the text `Nothing to show yet.` Verify: `pnpm build` passes and the built page shows the zero state.
+- [x] 3.5 Write the Components section of the style guide, in a light `ThemeScope` and a dark `ThemeScope`: the app bar with a short title, the app bar with a long title, and the zero state. Add a screenshot test and an accessibility test for the section in each theme. Make the baselines and commit them. Verify: `test:ui` passes on the development computer and in the job `ui-tests`, and the section agrees with the preview.
+- [x] 3.6 Update the `README.md` of the package with the two components and the rule that a new component goes in the style guide in each state in the same change. Verify: `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass for the package.
 
 ## Task 4: The brand files and the blueprint
 

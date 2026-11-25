@@ -252,6 +252,7 @@ Rejected: a job that runs in the image. The job would install each dependency of
 - `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations and waits for `document.fonts.ready` before a screenshot.
 - The test runner uses one worker. With more than one worker in one browser container, the screenshots of the tall sections are not stable.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
+- The screenshot test hides the rest of the page before a screenshot. Thus a baseline depends only on its own section, and a change of one section does not move the pixels of a different section.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
 - The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.js`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
