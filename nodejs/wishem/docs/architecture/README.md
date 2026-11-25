@@ -16,7 +16,7 @@ Amber arrows show the path of a change: from the designer, through the model fol
 - **Designer.** The designer runs the `start` script of `workbench-app`, opens the address of the page in a web browser, and edits files in the model folder. Ctrl+C stops the script.
 - **Model folder.** The folder holds the definition files and `state.json`. To change the picture by hand, edit a file and save it.
 - **Host.** The host reads and watches the model folder. The `start` script starts the host and the Vite development server in one Node.js process.
-- **Vite development server.** It serves the page code and the view modules. It passes `GET /snapshot` and `GET /snapshots` from the page to the host. It passes each snapshot from the host to the page.
+- **Vite development server.** It serves the page code and the view modules to the page. It passes `GET /snapshot` and `GET /snapshots` from the page to the host. It passes each snapshot from the host to the page.
 - **Page.** The page runs in the web browser. It holds the client of the core, the renderer, and the `AppBar` view.
 
 To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md).

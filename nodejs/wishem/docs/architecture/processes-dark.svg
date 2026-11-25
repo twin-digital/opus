@@ -38,12 +38,12 @@
 <text x="657" y="172.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="13" fill="#f2a93b" text-anchor="middle">snapshots</text>
 <path d="M430 126 L384 126" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="374,126 385,120.5 385,131.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<path d="M709 108 L616 108" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="606,108 617,102.5 617,113.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<path d="M606 108 L699 108" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="709,108 698,113.5 698,102.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
 <rect x="630.4" y="96" width="53.2" height="24" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
 <text x="657" y="112.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="13" fill="#a3a3b8" text-anchor="middle">code</text>
-<path d="M606 138 L699 138" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="709,138 698,143.5 698,132.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<path d="M709 138 L616 138" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="606,138 617,132.5 617,143.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
 <rect x="618.7" y="126" width="76.6" height="24" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
 <text x="657" y="142.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="13" fill="#a3a3b8" text-anchor="middle">request</text>
 <path d="M184 370 L430 370 Q440 370 440 360 L440 242" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>

@@ -383,16 +383,16 @@ const processes = {
     {
       kind: 'arrow',
       points: [
-        [709, 108],
         [606, 108],
+        [709, 108],
       ],
       label: { line: 'code', at: [657, 108], maxWidth: 100 },
     },
     {
       kind: 'arrow',
       points: [
-        [606, 138],
         [709, 138],
+        [606, 138],
       ],
       label: { line: 'request', at: [657, 138], maxWidth: 100 },
     },
