@@ -80,6 +80,9 @@ describe('createCore', () => {
       thrown = error
     }
     expect((thrown as ModelError).problems).toHaveLength(2)
+    for (const problem of (thrown as ModelError).problems) {
+      expect((thrown as ModelError).message).toContain(problem.message)
+    }
   })
 })
 
