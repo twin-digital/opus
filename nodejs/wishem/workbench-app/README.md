@@ -50,3 +50,25 @@ The command writes the baseline images in `tests/__screenshots__/`. Commit the i
 ```
 node scripts/browser-server.js <command> [args...]
 ```
+
+## Design tokens
+
+`src/styles/tokens.css` holds the value of each token. It is the only place for a value. A role that changes with the theme uses `light-dark()`.
+
+The theme follows the color scheme of the system. The workbench has no control that changes the theme. The component `ThemeScope` forces a theme on its content. The style guide and the tests use it.
+
+### A component uses roles only
+
+A component uses roles only. A role gives the purpose of a color, for example `bg-ground`, `text-fg-muted`, or `text-maker-text`. A component does not use a palette color or a color value. A palette color has no Tailwind class. A test fails when a file in `src/components/` has a hexadecimal color or the name of a palette color.
+
+### Add a token
+
+1. Add the custom property to `src/styles/tokens.css`. Write the value one time.
+2. Add the name to a group in `src/tokens.ts`.
+3. For a color role, add `--color-<name>: var(--<name>);` to `src/styles/theme.css`.
+4. Run `pnpm test --filter @thrashplay/wishem-workbench-app`. The tests check that the two files have the same names. They also check the contrast rules of the specification.
+5. Run `test:ui:update` and commit the new baselines. The style guide shows the new token with no other change.
+
+## Fonts
+
+The fonts come from the `@fontsource` packages, Latin subset only: Bricolage Grotesque (variable), Inter (variable, normal and italic), and JetBrains Mono (weights 400 and 500). `src/styles/theme.css` declares them.

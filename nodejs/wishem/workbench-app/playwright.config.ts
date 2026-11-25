@@ -9,7 +9,8 @@ if (!wsEndpoint) {
 export default defineConfig({
   testDir: './tests',
   snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
-  fullyParallel: true,
+  // One worker: parallel pages in the shared browser make screenshots of tall sections unstable.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {

@@ -25,6 +25,9 @@
   "devDependencies": {
     "@axe-core/playwright": "catalog:",
     "@eslint/js": "catalog:",
+    "@fontsource-variable/bricolage-grotesque": "catalog:",
+    "@fontsource-variable/inter": "catalog:",
+    "@fontsource/jetbrains-mono": "catalog:",
     "@playwright/test": "catalog:",
     "@tailwindcss/vite": "^4.3.3",
     "@twin-digital/eslint-config": "workspace:*",
