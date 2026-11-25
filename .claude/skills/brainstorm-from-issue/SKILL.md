@@ -27,14 +27,14 @@ The issue is the only record. Do not create an OpenSpec change, a planning file,
 
 Each message has these parts, in this order:
 
-| Part               | Contents                                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Question**       | The number and the text of the question, as the issue gives it.                                        |
-| **Context**        | What is decided, what is built, and what constrains the answer. Give the source of each fact.          |
+| Part               | Contents                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Question**       | The number and the text of the question, as the issue gives it.                                                                                 |
+| **Context**        | What is decided, what is built, and what constrains the answer. Give the source of each fact.                                                   |
 | **Options**        | Each known reasonable answer, with its cost and its benefit. Include the options that the issue gives and any others the issue may have missed. |
-| **Recommendation** | One option, with the reason. Or "Defer", with the destination.                                         |
+| **Recommendation** | One option, with the reason. Or "Defer", with the destination.                                                                                  |
 
-A deferral always names its destination: an existing issue, by number, or a new issue, with a proposed title. "Later" is not a destination. The user may choose to "decline" or "skip" the question, in which case it can be left open for the implementer of the ticket. 
+A deferral always names its destination: an existing issue, by number, or a new issue, with a proposed title. "Later" is not a destination. The user may choose to "decline" or "skip" the question, in which case it can be left open for the implementer of the ticket.
 
 If the recommendation includes a decision that the question did not ask for, show it as a separate item. A general agreement from the owner, such as "agreed", confirms the recommendation and each separate item of that message.
 
