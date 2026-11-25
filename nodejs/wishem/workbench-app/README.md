@@ -45,6 +45,8 @@ git checkout -- nodejs/wishem/workbench/model/state.json
 
 - A problem in a model file appears in the terminal that runs `start`. The page keeps the last correct picture.
 - A problem in a sidecar, a sidecar with no component type definition, or two labels that give one prop name appears in the browser console.
+- The errors and the warnings of the generator appear in the terminal that runs `start`.
+- A sidecar that is not valid JSON stops the page in the web browser with an error of Vite. The generator names the file in the terminal.
 - When the model is not correct at the start, the script prints each problem and stops with exit code 1.
 - When a port is in use, the script prints the port and stops with exit code 1.
 
@@ -74,7 +76,7 @@ pnpm --filter @thrashplay/wishem-workbench-app generate
 
 The script reads the model folder of `@thrashplay/wishem-workbench` and the sidecars in `src/views/`. It prints one line for each file that it wrote, changed, or removed. It prints nothing for a file that did not change.
 
-The script stops with exit code 1 when the model is not correct, or when a label gives no usable name. A label gives no usable name when it gives an empty name, a name that starts with a digit, or the same name as another field of the component type. The script writes no file for that sidecar.
+The script stops with exit code 1 when the model is not correct, when a sidecar is not valid JSON or has no `componentType`, when the `views` folder cannot be read, or when a label gives no usable name. A label gives no usable name when it gives an empty name, a name that starts with a digit, or the same name as another field of the component type. The script writes no file for that sidecar.
 
 Commit each generated file. A test of the package fails when a generated file is not current.
 

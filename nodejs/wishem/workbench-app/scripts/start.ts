@@ -1,5 +1,6 @@
 // Starts the core of the workbench and the page server in one Node.js process.
 // Usage: node start.ts [--model <folder>] [--port <number>] [--core-port <number>]
+//   [--views <folder>] [--no-view-types]
 import type { AddressInfo } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'

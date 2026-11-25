@@ -86,7 +86,13 @@ export const generateViewTypes = async (options: ViewTypesOptions): Promise<View
   const { definitions, views, check = false } = options
   const result: ViewTypesResult = { files: [], warnings: [], errors: [] }
 
-  const names = await readdir(views).catch(() => [] as string[])
+  let names: string[]
+  try {
+    names = await readdir(views)
+  } catch (error) {
+    result.errors.push(`${views}: the views folder cannot be read (${describeFailure(error)})`)
+    return result
+  }
   const sidecars = names.filter((name) => name.endsWith(SIDECAR_SUFFIX)).sort()
   const generatedFiles = names.filter((name) => name.endsWith(GENERATED_SUFFIX))
   const base = (name: string, suffix: string) => name.slice(0, -suffix.length)

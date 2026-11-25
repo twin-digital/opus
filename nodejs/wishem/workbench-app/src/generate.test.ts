@@ -47,6 +47,14 @@ describe('the generate script', () => {
     expect(existsSync(join(views, 'AppBar.view.gen.ts'))).toBe(true)
   })
 
+  it('prints an error and exits with code 1 for a views folder that does not exist', () => {
+    const missing = join(folder, 'typo')
+    const run = spawnSync('node', [script, '--model', model, '--views', missing, '--check'], { encoding: 'utf8' })
+    expect(run.status).toBe(1)
+    expect(run.stdout).toContain(`wishem: error: ${missing}: the views folder cannot be read`)
+    expect(run.stdout).not.toContain('are current')
+  })
+
   it('prints that the files are current, and changes no file', () => {
     sidecar('AppBar')
     generate()

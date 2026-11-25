@@ -136,7 +136,7 @@ describe('the start script of the workbench', () => {
   })
 
   it('resolves a relative --model against INIT_CWD', { timeout: 30000 }, async () => {
-    const child = spawn('node', [script, '--model', './model', '--port', '0', '--core-port', '0'], {
+    const child = spawn('node', [script, '--model', './model', '--views', views, '--port', '0', '--core-port', '0'], {
       env: { ...process.env, INIT_CWD: folder },
       stdio: ['ignore', 'pipe', 'pipe'],
     })

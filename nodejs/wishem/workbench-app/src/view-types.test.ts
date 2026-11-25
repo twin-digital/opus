@@ -66,6 +66,14 @@ describe('generateViewTypes', () => {
     rmSync(views, { recursive: true, force: true })
   })
 
+  it('gives one error that names a views folder that does not exist', async () => {
+    const missing = join(views, 'typo')
+    const result = await generateViewTypes({ definitions: [appBar('title')], views: missing })
+    expect(result.files).toEqual([])
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain(`${missing}: the views folder cannot be read`)
+  })
+
   it('writes a file on a first run', async () => {
     sidecar('AppBar')
     const result = await run([appBar('title')])
@@ -190,12 +198,6 @@ describe('generateViewTypes', () => {
     const result = await run([definition(APP_BAR, 'AppBar', [FIELD_A, 'a b'], [FIELD_B, 'A-B'])])
     expect(result.errors).toHaveLength(1)
     expect(readFileSync(generated('AppBar'), 'utf8')).toBe(EXPECTED_APP_BAR)
-  })
-
-  it('gives no error when the views folder does not exist', async () => {
-    mkdirSync(join(views, 'x'))
-    const result = await generateViewTypes({ definitions: [], views: join(views, 'missing') })
-    expect(result).toEqual({ files: [], warnings: [], errors: [] })
   })
 
   describe('with check', () => {
