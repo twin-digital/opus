@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { tokenGroups, type TokenGroup } from '../../tokens.js'
 import { Section } from '../Section.js'
 
-type StyleProperty = 'backgroundColor' | 'color' | 'borderTopLeftRadius'
+type StyleProperty = 'backgroundColor' | 'color' | 'borderTopLeftRadius' | 'boxShadow'
 
 /** Formats a computed `rgb()` color as a hexadecimal value. Other values stay as they are. */
 const toHex = (value: string) => {
@@ -47,7 +47,7 @@ const propertyOf = (kind: TokenGroup['kind']): StyleProperty | undefined => {
     case 'radius':
       return 'borderTopLeftRadius'
     case 'shadow':
-      return undefined
+      return 'boxShadow'
   }
 }
 
@@ -70,7 +70,7 @@ const Sample = ({ group, name }: { group: TokenGroup; name: string }) => {
       </div>
       <div className='mt-1 font-mono text-[11px] break-words'>{name}</div>
       {text ?
-        <div className='font-mono text-[11px] text-fg-muted'>{text}</div>
+        <div className='font-mono text-[11px] text-fg-muted break-words'>{text}</div>
       : null}
     </div>
   )

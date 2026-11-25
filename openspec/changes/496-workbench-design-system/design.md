@@ -62,6 +62,7 @@ nodejs/wishem/workbench-app/
       ThemeScope.tsx
     style-guide/
       main.tsx                entry of style-guide.html
+      Section.tsx             one section, drawn in a ThemeScope for each theme
       sections/               Principles, Tokens, Typography, Components
   tests/
     style-guide.spec.ts       screenshot tests and accessibility tests
@@ -81,11 +82,14 @@ This is a decision of the agent that wrote this document. The owner did not conf
 
 ### D3. Token values are in one CSS file, with `light-dark()`
 
-`src/styles/tokens.css` declares each palette color and each role as a CSS custom property on `:root`. A role that changes with the theme uses the CSS function `light-dark()`:
+`src/styles/tokens.css` declares each palette color and each role as a CSS custom property on `:root` and on each element that has a `data-theme` attribute. A role that changes with the theme uses the CSS function `light-dark()`:
 
 ```css
 :root {
   color-scheme: light dark;
+}
+:root,
+[data-theme] {
   --ink: #17172a;
   --wishfire: #f2a93b;
   --wishfire-deep: #9e5b0c;
@@ -103,6 +107,7 @@ This is a decision of the agent that wrote this document. The owner did not conf
 - With no `data-theme` attribute, the page follows the color scheme of the system. No script is necessary.
 - A `data-theme` attribute on an element forces a theme on that element and its content. The style guide and the tests use it.
 - Each value is written one time.
+- The declaration on `[data-theme]` is necessary. A custom property gets its value on the element that declares it. A role that is declared only on `:root` keeps the theme of the root in a part of the page that forces a different theme.
 
 Rejected: a `.dark` class that a script sets, as in `nodejs/grinbox/web`. It needs a script before the first paint, and each dark value is in a second rule.
 
@@ -130,7 +135,8 @@ Rejected: a `@media (prefers-color-scheme: dark)` rule and an attribute rule. Ea
 
 - A component uses classes such as `bg-ground`, `text-fg-muted`, `border-control-border`, and `text-maker-text`.
 - A class such as `bg-red-500` or `bg-ink` does not exist. Thus a component cannot use a default color or a palette color.
-- The text sizes, the radius steps, and the shadow steps are also `@theme` values, with the names `text-h1` to `text-h4`, `text-lead`, `text-body`, `text-ui`, `text-control`, `text-small`, `text-label`, `rounded-sm`, `rounded-md`, `rounded-lg`, `shadow-sm`, and `shadow-md`.
+- The text sizes are also `@theme` values, with the names `text-h1` to `text-h4`, `text-lead`, `text-body`, `text-ui`, `text-control`, `text-small`, and `text-label`.
+- The radius steps and the shadow steps are `@utility` rules that read the tokens: `rounded-sm`, `rounded-md`, `rounded-lg`, `shadow-sm`, and `shadow-md`. The theme removes the default radius and shadow values of Tailwind. A `@theme` value with the same name as its token would refer to itself. Thus a class for one side or one corner, such as `rounded-t-md`, does not exist until a component needs it.
 - The spacing scale of Tailwind is not changed.
 
 ### D5. The names of the tokens are in `tokens.ts`, and tests keep the two files the same
@@ -244,6 +250,7 @@ Rejected: a job that runs in the image. The job would install each dependency of
 ### D10. The tests and the job
 
 - `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations and waits for `document.fonts.ready` before a screenshot.
+- The test runner uses one worker. With more than one worker in one browser container, the screenshots of the tall sections are not stable.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
@@ -282,6 +289,8 @@ export interface ThemeScopeProps {
   /** Forces this theme on the content. */
   theme: Theme
   children: React.ReactNode
+  /** The `data-testid` of the element, for a test. */
+  testId?: string
 }
 export const ThemeScope: (props: ThemeScopeProps) => React.JSX.Element
 

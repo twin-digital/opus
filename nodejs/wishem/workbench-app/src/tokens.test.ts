@@ -74,7 +74,13 @@ const contrast = (a: string, b: string) => {
 
 const themes: Theme[] = ['light', 'dark']
 
-const tokensOf = (group: string) => tokenGroups.find((g) => g.name === group)?.tokens ?? []
+const tokensOf = (group: string) => {
+  const found = tokenGroups.find((g) => g.name === group)
+  if (!found) {
+    throw new Error(`tokens.ts has no group named "${group}"`)
+  }
+  return found.tokens
+}
 
 describe('palette', () => {
   const palette = {
@@ -160,11 +166,23 @@ describe('scales', () => {
 })
 
 describe('contrast', () => {
+  // Derived from tokens.css, so a new text role or fill is covered wherever tokens.ts groups it.
+  const names = [...declarations.keys()]
+  const textRoles = [...new Set(['fg', 'fg-muted', ...names.filter((name) => name.endsWith('-text'))])]
+  const fills = [
+    ...new Set([...tokensOf('Fills'), ...names.filter((name) => name.endsWith('-text')).map((n) => n.slice(0, -5))]),
+  ].filter((name) => declarations.has(name))
+
+  it('covers each text role and each fill of the groups of tokens.ts', () => {
+    expect(tokensOf('Text colors, on ground').filter((name) => !textRoles.includes(name))).toEqual([])
+    expect(tokensOf('Fills').filter((name) => !fills.includes(name))).toEqual([])
+    expect(textRoles.length).toBeGreaterThan(2)
+    expect(fills.length).toBeGreaterThan(0)
+  })
+
   const rules: { role: string; on: string; minimum: number }[] = [
-    ...tokensOf('Text colors, on ground').flatMap((role) =>
-      ['ground', 'surface'].map((on) => ({ role, on, minimum: 4.5 })),
-    ),
-    ...tokensOf('Fills').map((on) => ({ role: 'ink', on, minimum: 4.5 })),
+    ...textRoles.flatMap((role) => ['ground', 'surface'].map((on) => ({ role, on, minimum: 4.5 }))),
+    ...fills.map((on) => ({ role: 'ink', on, minimum: 4.5 })),
     { role: 'on-night', on: 'night', minimum: 4.5 },
     ...['ground', 'surface'].map((on) => ({ role: 'control-border', on, minimum: 3 })),
   ]
