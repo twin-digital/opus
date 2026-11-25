@@ -19,6 +19,7 @@ A view is code of the product that a renderer runs, and it has the shape of a be
 - Change the HTML renderer. It collects the sidecars, gives each view the fields of its component type by name, and warns about a sidecar whose component type has no definition.
 - **BREAKING** Remove `defineView`, the declaration of the props in a view, and the comparison of a view with its definition on each snapshot.
 - Change the view of `AppBar` to the new form, with its sidecar and its generated types.
+- Bring the architecture document of Wishem to the form of `docs/diagrams.md`. It gets a system context diagram, a container diagram, a dynamic diagram of the path of a change, a component diagram of the page, and an entity diagram of the model folder. They replace the two diagrams that exist. A new specification names each diagram.
 - Update the blueprint: the glossary entries "view" and "React view", the row for "component" as a word for React code in the table of terms that are not used, the text about views in `concepts.md`, and the architecture documents.
 
 Not in this change:
@@ -35,13 +36,15 @@ Not in this change:
 
 This change builds on [First workbench UI slice](https://github.com/twin-digital/opus/issues/477), which is merged and archived.
 
-This change alters no element and no relationship at the C4 context level or the container level, and no entity of a store of persisted data. Thus it lists no `wishem/architecture/diagrams` capability. See D9 of `design.md`.
+This change alters no element and no relationship at the C4 context level or the container level, and no entity of a store of persisted data. See D9 of `design.md`. The architecture document was made before the diagram guidance, and it has no specification. The owner asked for that work in this change.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `wishem/renderer-html/view-types`: the generated types of the props of a view: what the generator writes, how a prop gets its name, the command, the check for files that are not current, and how the `start` script keeps the files current.
+
+- `wishem/architecture/diagrams`: the diagrams that the architecture document of Wishem must hold: the system context diagram, the container diagram, the dynamic diagram of the path of a change, the component diagram of the page, and the entity diagram of the model folder.
 
 ### Modified Capabilities
 
@@ -51,7 +54,7 @@ This change alters no element and no relationship at the C4 context level or the
 
 - `@thrashplay/wishem-workbench-app` (private): the renderer modules, the `AppBar` view with its sidecar and its generated types, the generator, a `generate` script, the `start` script, the unit tests, and the end-to-end tests.
 - `nodejs/wishem/docs/glossary.md` and `concepts.md`: the terms and the rules for views.
-- `nodejs/wishem/docs/architecture/`: the text that names `defineView` and `checkViews`, and the diagram "From a file to a picture", through its description in `render.mjs`.
+- `nodejs/wishem/docs/architecture/`: the document in the form of `docs/diagrams.md`, `render.mjs`, ten new SVG files, and the removal of the four SVG files that exist.
 - `nodejs/wishem/workbench-app/README.md` and `nodejs/wishem/CLAUDE.md`: how to add a view.
 - `.prettierignore`: the generated files.
 - No change to a published package, to the pull request checks, or to `turbo.json`.
