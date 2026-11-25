@@ -40,6 +40,21 @@ Architecture diagrams use the standard [C4 model](https://c4model.com/).
 
 A dynamic diagram shows the elements of one flow and numbers each relationship in the order of the flow.
 
+### Entity diagrams
+
+The C4 model does not show data. An entity diagram is a supplementary diagram of the architecture document. It is not a C4 level.
+
+| Diagram                                     | Rule                                                   |
+| ------------------------------------------- | ------------------------------------------------------ |
+| The entities of one store of persisted data | Required, one for each store (each C4 store container) |
+| Domain types that are not persisted         | Optional. The author decides.                          |
+
+- **Level.** An entity diagram is conceptual. It shows the entities, the relationships with their cardinality, and the keys. It does not show the other fields or their types. The schema in the code and the prose next to the diagram give the fields. Do not draw a diagram with each field by hand.
+- **Notation.** Each entity is a card with its name and its key or keys. Each relationship is a line with a cardinality mark at each end. A relationship has a short label only when it needs a name. The legend explains each cardinality mark.
+- **Names.** The name of each entity and each key is the name in the schema.
+- **Updates.** A change that adds, removes, or renames an entity or a relationship in a store updates the entity diagram of that store.
+- **Temporary context.** The Mermaid form is an `erDiagram` for a persisted schema and a `classDiagram` for domain types, as the `design` rules of `openspec/config.yaml` require. The `erDiagram` of an OpenSpec design may show key fields, as that rule says.
+
 ### The notation
 
 - Each element shows three items: its name, its type and technology in brackets (for example `[Container: Node.js]`), and a one-line description.
@@ -82,7 +97,8 @@ In Mermaid, the type in brackets on each element is the legend. Add a `Legend` s
 
 - A product gets its first architecture document when it first has two containers.
 - An OpenSpec change adds or updates the architecture document of its product when the change adds, removes, or moves an element or a relationship at the context level or at the container level.
-- A change inside one container needs no change to the architecture document.
+- An OpenSpec change updates the entity diagram of a store when the change adds, removes, or renames an entity or a relationship in that store.
+- Other changes inside one container need no change to the architecture document.
 - `openspec/config.yaml` states these rules for OpenSpec changes.
 
 ### Where it is
@@ -98,17 +114,17 @@ The architecture document is the folder `architecture/` in the `docs/` folder of
 The folder holds these files:
 
 - `README.md`: the architecture document.
-- `<diagram>-light.svg` and `<diagram>-dark.svg`: the two files of each diagram. Use the names `context`, `containers`, `dynamic-<flow>`, and `components-<container>`.
+- `<diagram>-light.svg` and `<diagram>-dark.svg`: the two files of each diagram. Use the names `context`, `containers`, `dynamic-<flow>`, `components-<container>`, and `entities-<store>`.
 - `render.mjs`: the script that writes the SVG files.
 
 ### What the document holds
 
-For each diagram, in the order of the C4 levels:
+For each diagram, in the order of the C4 levels, then the entity diagrams:
 
 1. A heading with the title of the diagram.
 2. The diagram, in a `picture` element that selects the file for the theme of the reader. The `alt` text says what the diagram shows.
 3. Prose that carries the detail. The diagram tells the story. The prose explains it.
-4. A table of the elements: the name, the type and technology, and the responsibility of each element. For a container, give the package or the folder.
+4. A table of the elements: the name, the type and technology, and the responsibility of each element. For a container, give the package or the folder. For an entity diagram, give each entity, its purpose, and the file of its schema.
 
 At the end, the document links to the specification that names its diagrams and tells how to run `render.mjs`.
 
@@ -116,7 +132,7 @@ At the end, the document links to the specification that names its diagrams and 
 
 Each product that has an architecture document has the capability `<product>/architecture/diagrams` in `openspec/specs/`. The capability has one requirement for each diagram that a rule above requires. Thus a later change that alters the architecture must also change the diagram.
 
-A requirement gives the C4 type, the scope, and the file of the diagram. Its scenario ties the diagram to the architecture. For example:
+A requirement gives the type (a C4 type, or entity diagram), the scope, and the file of the diagram. Its scenario ties the diagram to the architecture or to the data, for example "WHEN a change adds an entity to the store THEN the entity diagram shows it". A container diagram example:
 
 ```markdown
 ### Requirement: The container diagram

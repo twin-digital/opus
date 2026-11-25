@@ -70,8 +70,10 @@ rules:
       store of persisted data, or a package that other packages build on), the change MUST add or
       update the product's architecture document and its diagrams, per `docs/diagrams.md`, and
       list `<product>/architecture/diagrams` as a new or modified capability. A product gets its
-      first architecture document when it first has two containers. A change inside one container
-      needs neither.
+      first architecture document when it first has two containers. When the change adds,
+      removes, or renames an entity or a relationship in a store of persisted data, it MUST update
+      the entity diagram of that store and list `<product>/architecture/diagrams` the same way.
+      Other changes inside one container need neither.
   design:
     - >-
       When the change adds or changes a public package API or a contract between packages
@@ -125,8 +127,10 @@ rules:
       In `<product>/architecture/diagrams`, write one requirement for each diagram that
       `docs/diagrams.md` requires: its C4 type, its scope, and its files, with a scenario that ties
       it to the architecture (e.g. WHEN a change adds a container THEN the container diagram shows
-      it). A change that alters the C4 context or container level modifies the requirement of each
-      affected diagram.
+      it). Each store of persisted data has one entity diagram requirement, with a scenario that
+      ties it to the data (e.g. WHEN a change adds an entity to the store THEN the entity diagram
+      shows it). A change that alters the C4 context or container level, or the entities of a
+      store, modifies the requirement of each affected diagram.
   tasks:
     - >-
       Each task that adds or changes a UI component or design token also updates the product's
@@ -134,7 +138,8 @@ rules:
       baselines in the same task, verified by the style guide's screenshot and accessibility
       tests passing. Never defer style-guide work to a later task.
     - >-
-      Each task that alters the C4 context or container level also updates the affected diagrams
+      Each task that alters the C4 context or container level, or adds, removes, or renames an
+      entity or a relationship in a store of persisted data, also updates the affected diagrams
       (through the product's render script) and the architecture document in the same task. The
       implementer looks at a rendered image of each changed diagram in each theme, per the
       `diagrams` skill. Never defer diagram work to a later task.

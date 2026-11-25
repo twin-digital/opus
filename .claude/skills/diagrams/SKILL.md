@@ -16,8 +16,8 @@ Each product has its own render script. There is no shared renderer library.
 ## Steps
 
 1. **Decide the form.** In a temporary context, write a Mermaid diagram and stop. This skill is for permanent documentation only.
-2. **Decide the C4 type and the scope.** For an architecture diagram, select one row of the table in `docs/diagrams.md`. Write the title: `<C4 type>: <scope>`.
-3. **Read the code.** Find each element and each relationship in the code. Record the direction of each relationship: which element calls, sends, reads, or writes.
+2. **Decide the type and the scope.** Select one row of the C4 table or of the entity diagram table in `docs/diagrams.md`. For a store of persisted data, the type is an entity diagram of that store. Write the title: `<type>: <scope>`, for example `Entity diagram: <store>`.
+3. **Read the code.** Find each element and each relationship in the code. Record the direction of each relationship: which element calls, sends, reads, or writes. For an entity diagram, read the schema of the store: each entity, its keys, and the cardinality of each relationship.
 4. **Write one description of the diagram.** The description is data in the render script: the title, the `desc` text, the size, and a list of items (boundaries, elements, relationships, legend). Each element has its name, its type and technology, and one short line of description. Each relationship has one short label.
 5. **Write or extend the render script.** See "The render script".
 6. **Run the script.** Run it two times. Make sure that the second run changes no file (`git status`).
@@ -74,6 +74,13 @@ Open each image and look at it. Check each item of this list:
 - [ ] Elements align on a grid. The spaces between elements are equal where the elements are peers.
 - [ ] The dark image has the same content as the light image, and each part is visible on the dark page color. No shadow, filter, or fill is missing.
 - [ ] Few text sizes are in use: a title size, a name size, and a detail size.
+
+For an entity diagram, also check each item of this list:
+
+- [ ] Each entity of the store is present.
+- [ ] Each entity card shows its name and its keys only. No other field is present.
+- [ ] Each relationship has a cardinality mark at each end, and the legend explains each mark.
+- [ ] The name of each entity and each key is equal to the name in the schema.
 
 ## The document
 
