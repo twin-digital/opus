@@ -1,15 +1,15 @@
 // @vitest-environment node
-import { spawn, type ChildProcess } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, connect, type Server } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { startWorkbench } from '../scripts/start.js'
+import { startWorkbench, StartError } from '../scripts/start.js'
 
-vi.mock('vite', () => ({
-  createServer: () => Promise.reject(new Error('plugin failed')),
-}))
+const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
+
+vi.mock('vite', () => ({ createServer: vite.createServer }))
 
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
@@ -90,6 +90,8 @@ describe('the start script of the workbench', () => {
   }
 
   beforeEach(() => {
+    vite.createServer.mockReset()
+    vite.createServer.mockRejectedValue(new Error('plugin failed'))
     folder = mkdtempSync(join(tmpdir(), 'workbench-start-'))
     model = join(folder, 'model')
     cpSync(baseModel, model, { recursive: true })
@@ -239,5 +241,100 @@ describe('the start script of the workbench', () => {
     const { page } = await startReady()
 
     expect(await refuses(external?.address ?? '', Number(new URL(page).port))).toBe(true)
+  })
+
+  it(
+    'closes the page server and the core, and names the port, when the page cannot listen',
+    { timeout: 30000 },
+    async () => {
+      const corePort = await freePort()
+      const close = vi.fn(() => Promise.resolve())
+      vite.createServer.mockResolvedValue({
+        listen: () => Promise.reject(Object.assign(new Error('listen failed'), { code: 'EADDRINUSE' })),
+        close,
+      })
+      const lines: string[] = []
+
+      await expect(
+        startWorkbench({ model, port: 4321, corePort, log: (line) => lines.push(line) }),
+      ).rejects.toBeInstanceOf(StartError)
+
+      expect(lines).toContain('wishem: port 4321 is in use')
+      expect(close).toHaveBeenCalledTimes(1)
+      expect(await refuses('127.0.0.1', corePort)).toBe(true)
+    },
+  )
+
+  it('sends each line to the log option, and stops both parts on close', { timeout: 30000 }, async () => {
+    const corePort = await freePort()
+    const close = vi.fn(() => Promise.resolve())
+    vite.createServer.mockResolvedValue({
+      listen: () => Promise.resolve(),
+      httpServer: { address: () => ({ port: 5555 }) },
+      close,
+    })
+    const lines: string[] = []
+
+    const workbench = await startWorkbench({ model, port: 0, corePort, log: (line) => lines.push(line) })
+
+    expect(workbench.pageUrl).toBe('http://127.0.0.1:5555/')
+    expect(workbench.coreUrl).toBe(`http://127.0.0.1:${String(corePort)}`)
+    expect(lines.slice(0, 3)).toEqual([
+      `wishem: model ${model}`,
+      `wishem: core at ${workbench.coreUrl}`,
+      `wishem: workbench at ${workbench.pageUrl}`,
+    ])
+
+    writeFileSync(join(model, 'state.json'), '{ not json')
+    await vi.waitFor(() => {
+      expect(lines).toContain('wishem: the last correct snapshot stays')
+    })
+
+    await workbench.close()
+
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(await refuses('127.0.0.1', corePort)).toBe(true)
+  })
+
+  it.each([
+    ['--port', ['--port', '65536']],
+    ['--port', ['--port', '1.5']],
+    ['--port', ['--port=-1']],
+    ['--port', ['--port', 'abc']],
+    ['--core-port', ['--core-port', '65536']],
+  ])('prints that %s must be a port number and stops with exit code 1', { timeout: 30000 }, async (name, args) => {
+    const run = start(args)
+
+    expect(await run.exit).toBe(1)
+    expect(run.output()).toBe(`wishem: ${name} must be a number from 0 to 65535\n`)
+  })
+
+  it('prints the reason only one time when the model is not correct', { timeout: 30000 }, async () => {
+    writeFileSync(join(model, 'state.json'), '{ not json')
+    const run = start(['--port', '0', '--core-port', '0'])
+
+    await run.exit
+
+    expect(run.output().match(/wishem: the model is not correct/g)).toHaveLength(1)
+  })
+
+  it('has a start script that names an existing file', () => {
+    const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')) as {
+      scripts: Record<string, string>
+    }
+
+    expect(manifest.scripts.start).toBe('node scripts/start.ts')
+    expect(existsSync(script)).toBe(true)
+  })
+
+  it('starts nothing when another module imports the script', { timeout: 30000 }, () => {
+    const result = spawnSync('node', ['--input-type=module', '-e', 'await import(process.env.START_SCRIPT)'], {
+      env: { ...process.env, START_SCRIPT: script },
+      encoding: 'utf8',
+      timeout: 20000,
+    })
+
+    expect(result.status).toBe(0)
+    expect(result.stdout + result.stderr).toBe('')
   })
 })

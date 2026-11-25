@@ -6,7 +6,10 @@ class FakeEventSource {
   static instances: FakeEventSource[] = []
   private readonly handlers = new Map<string, ((event: Event) => void)[]>()
 
-  constructor() {
+  readonly url: string
+
+  constructor(url: string) {
+    this.url = url
     FakeEventSource.instances.push(this)
   }
 
@@ -41,6 +44,8 @@ describe('workbench page', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.doUnmock('./views.js')
+    vi.restoreAllMocks()
   })
 
   it('shows the zero state in a main element and no app bar before a snapshot', async () => {
@@ -61,5 +66,51 @@ describe('workbench page', () => {
       expect(document.querySelector('header h1')?.textContent).toBe('Wishem.')
     })
     expect(document.querySelector('main')?.textContent).toContain('Nothing to show yet.')
+  })
+
+  it('opens the snapshot stream at the address of the page', async () => {
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeEventSource.instances).toHaveLength(1)
+    })
+    expect(FakeEventSource.instances[0]?.url).toBe('/snapshots')
+  })
+
+  it('writes the error and draws no view when a view file is not correct', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.doMock('./views.js', async () => {
+      const { ViewCollectionError } = await import('./renderer/index.js')
+      return {
+        collectAppViews: () => {
+          throw new ViewCollectionError('wishem: the file Bad.tsx has no view.', ['Bad.tsx'])
+        },
+      }
+    })
+
+    await import('./main.js')
+    await vi.waitFor(() => {
+      expect(FakeEventSource.instances).toHaveLength(1)
+    })
+    FakeEventSource.instances[0]?.emit('snapshot', baseSnapshot)
+    await vi.waitFor(() => {
+      expect(document.querySelector('main')?.textContent).toContain('Nothing to show yet.')
+    })
+
+    expect(error).toHaveBeenCalledExactlyOnceWith('wishem: the file Bad.tsx has no view.')
+    expect(document.querySelector('header')).toBeNull()
+  })
+
+  it('throws an error that is not a view collection error', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.doMock('./views.js', () => ({
+      collectAppViews: () => {
+        throw new Error('boom')
+      },
+    }))
+
+    await expect(import('./main.js')).rejects.toThrow('boom')
+
+    expect(error).not.toHaveBeenCalled()
+    expect(FakeEventSource.instances).toHaveLength(0)
   })
 })

@@ -41,4 +41,16 @@ describe('defineView', () => {
       },
     })
   })
+
+  it('types the props as read-only', () => {
+    defineView({
+      componentType: 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34',
+      props,
+      render: (viewProps) => {
+        // @ts-expect-error the props are read-only
+        viewProps.title = 'changed'
+        return null
+      },
+    })
+  })
 })

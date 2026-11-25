@@ -41,6 +41,7 @@ describe('Page', () => {
 
   it('shows the zero state in a main element and no app bar when there is no core', () => {
     draw({ core: undefined, views })
+    expect(container.querySelector('main')?.textContent).toContain('Workbench')
     expect(container.querySelector('main')?.textContent).toContain('Nothing to show yet.')
     expect(container.querySelector('header')).toBeNull()
   })
@@ -51,6 +52,8 @@ describe('Page', () => {
     const header = container.querySelector('header')
     const main = container.querySelector('main')
     expect(header?.textContent).toBe('Wishem.')
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+    expect(main?.querySelector('header')).toBeNull()
     expect(main?.contains(header)).toBe(false)
     expect(header?.compareDocumentPosition(main as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })

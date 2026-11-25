@@ -105,6 +105,7 @@ describe('Renderer', () => {
     draw(core, tableOf({ name: 'A.tsx', view: viewA }, { name: 'Missing.tsx', view: missing }))
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0]?.[0]).toContain('Missing.tsx')
+    expect(warn.mock.calls[0]?.[0]).toContain('ct_cccccccc-0000-4000-8000-000000000003')
     act(() => {
       core.setModel(baseModel('Two'))
     })
@@ -124,5 +125,89 @@ describe('Renderer', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     draw(createCore(baseModel()))
     expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('writes one warning for each difference of a set', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const missingOne = defineView({
+      componentType: 'ct_cccccccc-0000-4000-8000-000000000003',
+      props: {},
+      render: () => null,
+    })
+    const missingTwo = defineView({
+      componentType: 'ct_cccccccc-0000-4000-8000-000000000004',
+      props: {},
+      render: () => null,
+    })
+
+    draw(createCore(baseModel()), tableOf({ name: 'One.tsx', view: missingOne }, { name: 'Two.tsx', view: missingTwo }))
+
+    expect(warn).toHaveBeenCalledTimes(2)
+    expect(
+      warn.mock.calls.map((call) => String(call[0]).includes('One.tsx') || String(call[0]).includes('Two.tsx')),
+    ).toEqual([true, true])
+    expect(String(warn.mock.calls[0]?.[0])).toContain('One.tsx')
+    expect(String(warn.mock.calls[1]?.[0])).toContain('Two.tsx')
+  })
+
+  it('writes a warning when a snapshot removes a field that a view declares', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const core = createCore(baseModel())
+    draw(core)
+    expect(warn).not.toHaveBeenCalled()
+
+    act(() => {
+      const model = baseModel()
+      core.setModel({
+        definitions: model.definitions.map((definition) =>
+          definition.id === CT_A ? { ...definition, fields: [] } : definition,
+        ),
+        entities: [
+          { id: E1, components: { [CT_A]: {} } },
+          { id: E2, components: { [CT_A]: {}, [CT_B]: { [FLD_OTHER]: 'x' } } },
+        ],
+      })
+    })
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0]?.[0])).toContain(FLD_TITLE)
+    expect(String(warn.mock.calls[0]?.[0])).toContain('A.tsx')
+  })
+
+  describe('with a view for each of two component types', () => {
+    const viewB = defineView({
+      componentType: CT_B,
+      props: { other: { field: FLD_OTHER, type: 'string' } },
+      render: ({ other }) => <span className='b'>{`other:${other ?? 'none'}`}</span>,
+    })
+    const model: Snapshot = {
+      ...baseModel(),
+      entities: [
+        { id: E1, components: { [CT_B]: { [FLD_OTHER]: 'y' } } },
+        { id: E2, components: { [CT_A]: { [FLD_TITLE]: 'Two' }, [CT_B]: { [FLD_OTHER]: 'x' } } },
+      ],
+    }
+    const both = () => tableOf({ name: 'A.tsx', view: viewA }, { name: 'B.tsx', view: viewB })
+
+    it('draws in the order of the entities, then of the definitions', () => {
+      draw(createCore(model), both())
+      expect(wrappers().map((wrapper) => wrapper.textContent)).toEqual(['other:y', 'title:Two', 'other:x'])
+    })
+
+    it('marks each wrapper with its own entity and component type', () => {
+      draw(createCore(model), both())
+      expect(wrappers().map((wrapper) => [wrapper.dataset.wishemEntity, wrapper.dataset.wishemComponentType])).toEqual([
+        [E1, CT_B],
+        [E2, CT_A],
+        [E2, CT_B],
+      ])
+    })
+
+    it('draws nothing for an entity that has no component of a type, and logs no error', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      draw(createCore(model), both())
+      expect(wrappers().filter((wrapper) => wrapper.dataset.wishemEntity === E1)).toHaveLength(1)
+      expect(error).not.toHaveBeenCalled()
+    })
   })
 })

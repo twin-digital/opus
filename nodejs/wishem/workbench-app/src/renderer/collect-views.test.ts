@@ -79,4 +79,14 @@ describe('collectViews', () => {
 
     expect(error.message).toContain('NoRender.tsx')
   })
+
+  it.each([
+    ['a component type that is not a string', { componentType: 1, props: {}, render: (): null => null }],
+    ['props that are not an object', { componentType: APP_BAR, props: 'title', render: (): null => null }],
+    ['props that are null', { componentType: APP_BAR, props: null, render: (): null => null }],
+  ])('names the file for a default export with %s', (_name, view) => {
+    const error = catchError(() => collectViews({ './views/Odd.tsx': { default: view } }))
+
+    expect(error.files).toEqual(['Odd.tsx'])
+  })
 })

@@ -152,6 +152,22 @@ describe('connect', () => {
     expect(connection.getSnapshot()).toBe(first)
   })
 
+  it('writes an error and stays unresolved for a first event that is not valid JSON', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    let resolved = false
+    const promise = connect().then((connection) => {
+      resolved = true
+      return connection
+    })
+    latest().emit('snapshot', '{not json')
+    await Promise.resolve()
+    expect(error).toHaveBeenCalledTimes(1)
+    expect(resolved).toBe(false)
+    send(latest(), 'a')
+    const connection = await promise
+    expect(connection.getSnapshot()).toEqual(snapshot('a'))
+  })
+
   it('closes the EventSource on close', async () => {
     const promise = connect()
     send(latest(), 'a')
