@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Wishem Brand Basics</title>
-    <!-- Visual companion to ../brand.md. Render images with: node brand/render.mjs -->
+    <!-- Visual companion to ../brand.md. Render images with, from the root of the repository: cd nodejs/wishem/workbench-app && node scripts/browser-server.ts node ../docs/brand/render.ts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Inter:ital,opsz,wght@0,14..32,400..600;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap"
     />
     <style>
       /* Layout: single reading column; swatches and specimens break into wrapping grids. */
@@ -17,9 +17,11 @@
         /* Brand colours: fixed in both themes */
         --ink: #17172a;
         --wishfire: #f2a93b;
-        --wishfire-deep: #a8620f;
+        --wishfire-deep: #9e5b0c;
         --wisp: #7fd6c6;
         --wisp-deep: #23786b;
+        --moonlight: #c2d0ea;
+        --moonlight-deep: #3f5682;
         --clay: #c8b9a9;
         --mist: #f2f2f6;
 
@@ -35,7 +37,7 @@
         --on-light: #17172a;
 
         --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
-        --body: 'Instrument Sans', 'Helvetica Neue', Arial, sans-serif;
+        --body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
         --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
       }
       @media (prefers-color-scheme: dark) {
@@ -420,14 +422,15 @@
           it, test it and play it back.
         </p>
         <p class="lede">
-          This is a starting point for early design work, not a finished system. It covers colour, type and tone. Logo,
-          iconography and components come later.
+          This is a starting point for early design work, not a finished system. It covers colour, type and tone. Logo
+          and iconography come later. The style guide of the workbench is the record of how the colours and the type are
+          implemented.
         </p>
       </header>
 
       <section aria-labelledby="c">
         <div class="eyebrow">01 · Colour</div>
-        <h2 id="c">Ink, fire and wisp</h2>
+        <h2 id="c">Ink, fire, wisp and moonlight</h2>
         <p>
           The palette tells a story about who is acting. <strong>Wishfire</strong> belongs to the maker: their wishes,
           their actions, their game. <strong>Wisp</strong> belongs to the spirit: whatever the agent is saying, doing or
@@ -449,7 +452,7 @@
                 <h3>Wishfire</h3>
                 <p>
                   The maker's colour. Primary actions, the prompt box, the cursor, "make it so" moments. Use
-                  <code>#A8620F</code> for text on light surfaces.
+                  <code>#9E5B0C</code> for text on light surfaces.
                 </p>
               </div>
             </div>
@@ -464,12 +467,23 @@
               </div>
             </div>
             <div class="swatch">
+              <div class="chip" style="background: var(--moonlight); color: var(--on-light)">#C2D0EA</div>
+              <div class="meta">
+                <h3>Moonlight</h3>
+                <p>
+                  The light of the night, which belongs to no one. Neither the maker nor the spirit owns it, so it
+                  carries focus, selection and the accent of the interface. Use <code>#3F5682</code> for text on light
+                  surfaces.
+                </p>
+              </div>
+            </div>
+            <div class="swatch">
               <div class="chip" style="background: var(--clay); color: var(--on-light)">#C8B9A9</div>
               <div class="meta">
                 <h3>Clay</h3>
                 <p>
                   Warm neutral, for the golem's material. Illustration, borders on dark, subtle texture. It's a
-                  supporting colour, never a headline.
+                  supporting colour, never a headline. The workbench gives it no role.
                 </p>
               </div>
             </div>
@@ -485,15 +499,21 @@
             </div>
           </div>
 
-          <div class="ratio" role="img" aria-label="Proportions: Ink 60%, Mist 25%, Clay 7%, Wisp 5%, Wishfire 3%">
+          <div
+            class="ratio"
+            role="img"
+            aria-label="Proportions: Ink 60%, Mist 25%, Clay 5%, Wisp 4%, Moonlight 3%, Wishfire 3%"
+          >
             <span style="width: 60%; background: var(--ink)"></span>
             <span style="width: 25%; background: var(--mist)"></span>
-            <span style="width: 7%; background: var(--clay)"></span>
-            <span style="width: 5%; background: var(--wisp)"></span>
+            <span style="width: 5%; background: var(--clay)"></span>
+            <span style="width: 4%; background: var(--wisp)"></span>
+            <span style="width: 3%; background: var(--moonlight)"></span>
             <span style="width: 3%; background: var(--wishfire)"></span>
           </div>
         </div>
         <ul class="rules">
+          <li>Moonlight is cool and quiet, so it never competes with the maker's fire or the spirit's wisp.</li>
           <li>Wishfire is scarce on purpose. If everything glows, nothing feels granted.</li>
           <li>
             Never let Wishfire and Wisp swap roles. A user button in Wisp, or an agent message in Wishfire, breaks the
@@ -542,7 +562,7 @@
             </div>
             <div class="spec">
               <div class="label">
-                <strong>Instrument Sans</strong><span>Body and UI. Docs, menus, agent replies. Weights 400–600.</span>
+                <strong>Inter</strong><span>Body and UI. Docs, menus, agent replies. Weights 400–600.</span>
               </div>
               <div class="sample s-body">
                 Wishem ran your level 40 times overnight. Two runs got stuck behind the gate in room 3, and the replays
@@ -559,17 +579,15 @@
           </div>
 
           <div class="scale" aria-label="Type scale in pixels">
-            <span style="font-size: 12px">12</span><span style="font-size: 14px">14</span
-            ><span style="font-size: 16px">16</span><span style="font-size: 20px">20</span
+            <span style="font-size: 12px">12</span><span style="font-size: 13px">13</span
+            ><span style="font-size: 14px">14</span><span style="font-size: 16px">16</span
+            ><span style="font-size: 18px">18</span><span style="font-size: 22px">22</span
             ><span style="font-size: 25px">25</span><span style="font-size: 31px">31</span
             ><span style="font-size: 39px">39</span><span style="font-size: 49px">49</span>
           </div>
         </div>
         <ul class="rules">
-          <li>
-            Use a 1.25 ratio from a 16px base. Keep display sizes for headings, the wordmark and hero lines. In UI,
-            Instrument Sans does almost all the work.
-          </li>
+          <li>Keep display sizes for headings, the wordmark and hero lines. In UI, Inter does almost all the work.</li>
           <li>
             Write the wordmark in lowercase: <em>wishem</em>. Its spark is a Wishfire full stop or the dot of the i.
             Don't split it to show "shem." The hidden meaning stays hidden.

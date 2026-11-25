@@ -12,7 +12,7 @@ Facts that shape the approach:
 - No package in the repository has Playwright tests. The pull request checks have one job, `lint-build-test`, on `ubuntu-latest`.
 - Chromium does not start in the development container, because system libraries are missing.
 - Docker works in the development container. A container that Docker starts from there cannot see the files of the repository, because the paths on the Docker host are different.
-- The development container uses bridge networking on a Docker Compose network.
+- The Docker daemon of the development container runs on a different computer (`DOCKER_HOST` is an `ssh://` address). The development container can reach that computer. A container on that computer cannot reach the development container.
 
 ## Goals / Non-Goals
 
@@ -48,7 +48,8 @@ nodejs/wishem/workbench-app/
   style-guide.html            the style guide page
   playwright.config.ts
   scripts/
-    browser-server.js         starts and stops the browser container
+    browser-server.ts         starts and stops the browser container
+    static-server.ts          serves the test build, with no dependency
   src/
     main.tsx                  entry of index.html
     styles/
@@ -61,6 +62,7 @@ nodejs/wishem/workbench-app/
       ThemeScope.tsx
     style-guide/
       main.tsx                entry of style-guide.html
+      Section.tsx             one section, drawn in a ThemeScope for each theme
       sections/               Principles, Tokens, Typography, Components
   tests/
     style-guide.spec.ts       screenshot tests and accessibility tests
@@ -80,11 +82,14 @@ This is a decision of the agent that wrote this document. The owner did not conf
 
 ### D3. Token values are in one CSS file, with `light-dark()`
 
-`src/styles/tokens.css` declares each palette color and each role as a CSS custom property on `:root`. A role that changes with the theme uses the CSS function `light-dark()`:
+`src/styles/tokens.css` declares each palette color and each role as a CSS custom property on `:root` and on each element that has a `data-theme` attribute. A role that changes with the theme uses the CSS function `light-dark()`:
 
 ```css
 :root {
   color-scheme: light dark;
+}
+:root,
+[data-theme] {
   --ink: #17172a;
   --wishfire: #f2a93b;
   --wishfire-deep: #9e5b0c;
@@ -102,6 +107,7 @@ This is a decision of the agent that wrote this document. The owner did not conf
 - With no `data-theme` attribute, the page follows the color scheme of the system. No script is necessary.
 - A `data-theme` attribute on an element forces a theme on that element and its content. The style guide and the tests use it.
 - Each value is written one time.
+- The declaration on `[data-theme]` is necessary. A custom property gets its value on the element that declares it. A role that is declared only on `:root` keeps the theme of the root in a part of the page that forces a different theme.
 
 Rejected: a `.dark` class that a script sets, as in `nodejs/grinbox/web`. It needs a script before the first paint, and each dark value is in a second rule.
 
@@ -129,7 +135,8 @@ Rejected: a `@media (prefers-color-scheme: dark)` rule and an attribute rule. Ea
 
 - A component uses classes such as `bg-ground`, `text-fg-muted`, `border-control-border`, and `text-maker-text`.
 - A class such as `bg-red-500` or `bg-ink` does not exist. Thus a component cannot use a default color or a palette color.
-- The text sizes, the radius steps, and the shadow steps are also `@theme` values, with the names `text-h1` to `text-h4`, `text-lead`, `text-body`, `text-ui`, `text-control`, `text-small`, `text-label`, `rounded-sm`, `rounded-md`, `rounded-lg`, `shadow-sm`, and `shadow-md`.
+- The text sizes are also `@theme` values, with the names `text-h1` to `text-h4`, `text-lead`, `text-body`, `text-ui`, `text-control`, `text-small`, and `text-label`.
+- The radius steps and the shadow steps are `@utility` rules that read the tokens: `rounded-sm`, `rounded-md`, `rounded-lg`, `shadow-sm`, and `shadow-md`. The theme removes the default radius and shadow values of Tailwind. A `@theme` value with the same name as its token would refer to itself. Thus a class for one side or one corner, such as `rounded-t-md`, does not exist until a component needs it.
 - The spacing scale of Tailwind is not changed.
 
 ### D5. The names of the tokens are in `tokens.ts`, and tests keep the two files the same
@@ -158,82 +165,103 @@ The fonts come from `@fontsource` packages, with the Latin subset only. `theme.c
 
 The script `style-guide` of the package runs `vite --open /style-guide.html`.
 
+The tests use a second build, the test build: `vite build --mode style-guide`. Its input is `style-guide.html` only and its output folder is `dist-style-guide/`. Git ignores that folder. The build of the workbench page does not change: its input is `index.html` and its output folder is `dist/`.
+
+Reason: a static build is a small set of files that can be copied to the computer of the web browser (D8), and the tests load the same bytes on each computer.
+
 Each section of the style guide is drawn two times, in a `ThemeScope` for each theme. Each copy has a `data-testid` with the name of the section and the theme, for example `tokens-dark`. A test takes a screenshot of that element.
 
 The style guide shows a component specimen in a `section` element. An `header` element in a `section` is not a banner landmark, so the app bar specimens do not make two banners.
 
-### D8. The web browser runs in the official Playwright image
+### D8. The web browser runs in the official Playwright image, and the page is served next to it
 
 The image is `mcr.microsoft.com/playwright:v<version>-noble`. `<version>` is the exact version of `@playwright/test` in the pnpm catalog.
 
-In the pull request checks, the job runs in the image. The test runner starts the web browser directly.
+The tests load the test build of the style guide (D7). `scripts/static-server.ts` serves that build. It is a TypeScript file that Node.js runs by type stripping, with no build step and no dependency. It uses erasable syntax only and imports only `node:` modules, because the browser container runs a copy of it. The static server and the web browser run on the same computer in each environment, so the web browser loads the page from `127.0.0.1`.
 
-On a development computer, `scripts/browser-server.js` starts the image as a browser server. The test runner connects to it, and the browser loads the pages from the Vite server through HTTP. No file is mounted.
+A development computer and the pull request checks use the same path. The job of the pull request checks runs on `ubuntu-latest`, which has Docker, and runs the same script as a person does. `scripts/browser-server.ts` does these steps:
+
+1. It makes the test build.
+2. It removes a browser container of an earlier run, then starts a new container from the image. The container runs the browser server of Playwright. The name of the container contains a hash of the path of the package, so each working tree has its own container.
+3. It copies the test build and `static-server.ts` into the container with `docker cp`, and starts the static server in the container with `docker exec`.
+4. It runs the command that it gets (the test runner), with the address of the browser server in the environment. The test runner connects to the browser server.
+5. It removes the container when the command stops.
+
+No file is mounted. The browser container needs no network path to the development computer. The only network path is from the test runner to the browser server.
 
 ```mermaid
 sequenceDiagram
   participant P as Person or agent
-  participant S as browser-server.js
+  participant S as browser-server.ts
   participant D as Docker
   participant B as Browser container
   participant T as Playwright test runner
-  participant V as Vite server
 
   P->>S: pnpm test:ui
-  S->>D: is the browser container running?
-  alt not running
-    S->>D: run the image on the network of this computer
-    D-->>S: started
-  else Docker is not available
+  S->>S: make the test build
+  S->>D: start a container from the image
+  alt Docker is not available
     S-->>P: stop with a message
   end
-  S->>T: start, with the address of the browser server and the address of this computer
-  T->>V: start the development server on 0.0.0.0
+  D-->>S: started, with the published port
+  S->>B: docker cp the test build and static-server.ts
+  S->>B: docker exec the static server on 127.0.0.1
+  S->>T: start, with the address of the browser server
   T->>B: connect
   alt cannot connect
     T-->>P: stop with a message
   end
-  T->>B: open the style guide
-  B->>V: GET /style-guide.html and its modules
-  V-->>B: the page
+  T->>B: open http://127.0.0.1/style-guide.html
   T->>B: screenshot of each section, accessibility check of each section
   B-->>T: images and results
-  T-->>P: pass, or the images of the differences
+  T-->>S: exit code
+  S->>D: remove the container
+  S-->>P: pass, or the images of the differences
 ```
 
-How `browser-server.js` finds the network:
+How `browser-server.ts` finds the address of the browser server:
 
-- In a container: it reads the name of the Docker network and the address of the container from `docker inspect` of its own host name. It starts the browser container on that network. The base URL of the tests is the address of the container.
-- Not in a container: it publishes the port of the browser server on `127.0.0.1` and adds `host.docker.internal` to the browser container. The base URL of the tests uses `host.docker.internal`.
+- The address of the Docker daemon is an `ssh://` address or a `tcp://` address: the host of that address. The script reads the address of the daemon from `DOCKER_HOST`, or from the current Docker context when `DOCKER_HOST` is not set. The port of the browser server is published on each address of the Docker host.
+- The address of the Docker daemon is a socket: `127.0.0.1`. The port is published on `127.0.0.1` only.
+- The environment variable `WISHEM_BROWSER_HOST` replaces the host in each case.
 
-**Unverified**: this network path. Task 1 proves it before other work starts. If it cannot work in the development container, Task 1 stops and the owner decides. The alternative is that the pull request checks make the baselines and a workflow commits them. That alternative changes two requirements of the `visual-tests` specification.
+Docker selects a free port for the browser server. The script reads the port with `docker port`.
+
+**Unverified**: that the test runner on the development computer can connect to the published port, and that a baseline from this path passes in the pull request checks. Task 1 proves the two before other work starts. If the path cannot work, Task 1 stops and the owner decides. The alternative is that the pull request checks make the baselines and a workflow commits them. That alternative changes two requirements of the `visual-tests` specification.
+
+Rejected: the Vite development server on the development computer, with the web browser in a container that loads the pages through the network. The browser container cannot reach the development container when the Docker daemon is on a different computer.
+
+Rejected: an SSH tunnel from the Docker host to the development computer. It is a special case for one type of Docker daemon, and it depends on the configuration of the SSH server.
+
+Rejected: a copy of the package and its dependencies in the container, with the test runner in the container. The dependencies of a pnpm workspace are large, and the results must be copied back.
 
 Rejected: Chromium in the development container. The development container and the runner of the pull request checks are different systems, and the fonts can be drawn differently.
 
 Rejected: baselines that only the pull request checks make. Each visual change needs a push before a person sees a difference.
 
-### D9. One version of Playwright, and a test that proves it
+### D9. One version of Playwright, from one source
 
 - `@playwright/test` and `@axe-core/playwright` are in the pnpm catalog. `@playwright/test` has an exact version, with no range.
-- `browser-server.js` gets the tag of the image from the installed version of `@playwright/test`. Thus the two cannot be different on a development computer.
-- `.github/workflows/ci.yaml` has the tag as text. A Vitest test in the package reads the workflow file and the installed version, and fails with the two versions when they are different. This test runs in the `lint-build-test` job, which needs no web browser.
-- `renovate.json` gets a rule that puts `@playwright/test` and the image `mcr.microsoft.com/playwright` in one group and sets `automerge` to `false`. A new version of the browser can change each baseline, so a person makes the baselines again in that pull request.
+- `browser-server.ts` gets the tag of the image from the installed version of `@playwright/test`. No other file holds the tag. Thus the version of the image and the version of the test tool cannot be different, on a development computer or in the pull request checks.
+- `renovate.json` gets a rule that sets `automerge` to `false` for `@playwright/test`. A new version of the browser can change each baseline, so a person makes the baselines again in that pull request.
 
-**Unverified**: that the `github-actions` manager of Renovate updates the `container` image of a job. If it does not, the test above still fails when the versions are different, and a person changes the tag.
+Rejected: a job that runs in the image. The job would install each dependency of the workspace in the image, which has no build tools for the native modules. The workflow file would hold the tag of the image as text, and a test would be necessary to keep it the same as the version of the test tool.
 
 ### D10. The tests and the job
 
-- `playwright.config.ts` has one project, Chromium. It starts the Vite development server as its `webServer`. It turns off animations and waits for `document.fonts.ready` before a screenshot.
+- `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations. Each test waits for `document.fonts.ready` before it reads the page.
+- The test runner uses one worker. With more than one worker in one browser container, the screenshots of the tall sections are not stable.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
+- The screenshot test hides the rest of the page before a screenshot. Thus a baseline depends only on its own section, and a change of one section does not move the pixels of a different section.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
-- The scripts of the package are `test:ui` and `test:ui:update`. `turbo.json` gets a `test:ui` task with the inputs of the build and the `tests/**` folder.
-- The job `ui-tests` in `ci.yaml` runs in the image. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
+- The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.ts`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
+- The job `ui-tests` in `ci.yaml` runs on `ubuntu-latest`. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
 - The unit tests of the package (`*.test.ts` and `*.test.tsx` in `src/`) run with Vitest in the `lint-build-test` job, as for each other package.
 
 ### D11. The brand images
 
-`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. The fonts of `brand-basics.html` come from the network, as they do now.
+`nodejs/wishem/docs/brand/render.ts` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.ts` runs each command that it gets, so a person runs `render.ts` through it. The fonts of `brand-basics.html` come from the network, as they do now.
 
 ## Interfaces
 
@@ -262,6 +290,8 @@ export interface ThemeScopeProps {
   /** Forces this theme on the content. */
   theme: Theme
   children: React.ReactNode
+  /** The `data-testid` of the element, for a test. */
+  testId?: string
 }
 export const ThemeScope: (props: ThemeScopeProps) => React.JSX.Element
 
@@ -293,10 +323,11 @@ Run the tests on a development computer:
 
 ```
 $ pnpm --filter @thrashplay/wishem-workbench-app test:ui
-browser-server: started mcr.microsoft.com/playwright:v1.56.1-noble as wishem-playwright
-browser-server: the browser loads pages from http://172.19.0.3:4173
+browser-server: built the style guide for the tests
+browser-server: started mcr.microsoft.com/playwright:v1.56.1-noble as wishem-playwright-3f9a1c
+browser-server: the browser server is at ws://127.0.0.1:32771
 
-Running 17 tests using 2 workers
+Running 17 tests using 1 worker
   17 passed (9.4s)
 ```
 
@@ -331,20 +362,21 @@ $ pnpm --filter @thrashplay/wishem-workbench-app test:ui:update
   2 baselines written: components-light.png, components-dark.png
 ```
 
-The version numbers in these examples are illustrations.
+The version numbers, the container name, and the address in these examples are illustrations.
 
 ## Failure Modes
 
-| Failure                                                                  | Result                                                                                                                                  | Recovery                                              | Safe to run again |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------- |
-| Docker is not available on a development computer                        | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.         | Yes               |
-| The image is not on the computer and the registry cannot be reached      | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.  | Yes               |
-| A browser container with the same name runs from a different version     | The script stops that container and starts one from the correct image.                                                                  | None necessary.                                       | Yes               |
-| The browser cannot reach the Vite server                                 | The first test fails with a time-out. The message of the script gives the address that the browser used.                                | Check the Docker network. See D8.                     | Yes               |
-| The port of the Vite server is in use                                    | The `webServer` of Playwright fails, because the port is strict.                                                                        | Stop the other server.                                | Yes               |
-| A font is not loaded when a screenshot is taken                          | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                           | Yes               |
-| The version of `@playwright/test` and the tag in `ci.yaml` are different | The Vitest test of D9 fails in `lint-build-test`. In `ui-tests`, Playwright does not find its browser and fails.                        | Make the two the same, then make the baselines again. | Yes               |
-| The update command stops in the middle                                   | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git. | Yes               |
+| Failure                                                                | Result                                                                                                                                  | Recovery                                                                                         | Safe to run again |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
+| Docker is not available on a development computer                      | `browser-server.ts` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
+| The image is not on the computer and the registry cannot be reached    | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.                                             | Yes               |
+| A browser container of an earlier run of the same working tree remains | The script removes that container and starts a new one from the correct image.                                                          | None necessary.                                                                                  | Yes               |
+| The test build fails                                                   | The script prints the error of the build and stops. No container starts. No baseline changes.                                           | Fix the error.                                                                                   | Yes               |
+| The test runner cannot connect to the browser server                   | The test runner stops with a message. The message of the script gives the address that it used.                                         | Set `WISHEM_BROWSER_HOST` to an address of the Docker host that this computer can reach. See D8. | Yes               |
+| The script stops before it removes the container                       | The container stays on the Docker host.                                                                                                 | Run the command again. The next run removes the container.                                       | Yes               |
+| A font is not loaded when a screenshot is taken                        | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                                                                      | Yes               |
+| The version of `@playwright/test` changes                              | The next run starts the container from the image of the new version. A screenshot can be different from its baseline.                   | Make the baselines again in the same pull request.                                               | Yes               |
+| The update command stops in the middle                                 | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git.                                            | Yes               |
 
 Each operation only reads, or writes files in the working tree. No operation writes to a remote system.
 
@@ -452,7 +484,9 @@ Loading, empty, error, and disabled do not apply: the two components get all the
 
 ## Risks / Trade-offs
 
-- [The network path between the browser container and the development container does not work] → Task 1 proves it first. On a failure, the task stops and the owner decides. See D8.
+- [The test runner cannot connect to the browser server on the Docker host] → Task 1 proves it first. On a failure, the task stops and the owner decides. See D8.
+- [When the Docker daemon is on a different computer, the port of the browser server is open to the network of that computer while a run is in progress] → The container lives only for one run, and Docker selects the port. The development network is private.
+- [The tests load a build, not the development server, so each run makes a build] → The build is small. A person looks at the style guide with the `style-guide` script, which uses the development server.
 - [A baseline from a development computer does not pass in the pull request checks, although the image is the same] → Task 1 proves this with a real pull request before a component is built.
 - [Text is drawn with small differences between runs] → The tests turn off animations and wait for the fonts. If a difference stays, set a small pixel limit for the comparison and record the reason in `playwright.config.ts`.
 - [A person without Docker cannot run the screenshot tests] → The unit tests, the contrast tests, and the style guide need no Docker. The pull request checks run the screenshot tests.

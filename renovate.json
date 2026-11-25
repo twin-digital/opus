@@ -53,6 +53,11 @@
       "separateMajorMinor": false
     },
     {
+      "description": "A new version of `@playwright/test` changes the pinned browser image (browser-server.ts builds the image tag from the installed version) and can change each screenshot baseline. Never auto-merge it: a person makes the baselines again in that pull request.",
+      "matchPackageNames": ["@playwright/test"],
+      "automerge": false
+    },
+    {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
       "matchManagers": ["nvm"],
       "enabled": false

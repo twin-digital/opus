@@ -13,6 +13,9 @@ lerna-debug.log*
 node_modules
 build
 dist
+dist-style-guide
+playwright-report
+test-results
 cdk.out
 dist-ssr
 *.local
