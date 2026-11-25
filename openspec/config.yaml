@@ -24,6 +24,11 @@ context: |
   Every product with a UI has a `<product>/design-system/component-catalog` spec and a dev-only
   in-app style guide, per `docs/ui-style-guide.md`.
 
+  Diagrams follow `docs/diagrams.md`: Mermaid in temporary content (issues, pull requests, change
+  artifacts), rendered SVG files in permanent documentation, and the C4 model for architecture.
+  Every product with an architecture document has a `<product>/architecture/diagrams` spec that
+  names each required diagram.
+
   Issue tracking: each change has one primary GitHub issue in `twin-digital/opus`, and each issue
   has at most one change. The issue must exist before the change is created. The change name starts
   with the issue number: `<issue-number>-<kebab-name>` (e.g. `221-add-in-game-ui`). The issue has
@@ -59,6 +64,16 @@ rules:
       `<product>/design-system/component-catalog` capability that captures the product's
       existing look and feel (tokens, components, required states) as well as this change's
       additions. Establishing it is part of the change, not a follow-up.
+    - >-
+      When the change adds, removes, or moves an element or a relationship at the C4 context or
+      container level (a person, an external system, a process, a service, a deployable unit, a
+      store of persisted data, or a package that other packages build on), the change MUST add or
+      update the product's architecture document and its diagrams, per `docs/diagrams.md`, and
+      list `<product>/architecture/diagrams` as a new or modified capability. A product gets its
+      first architecture document when it first has two containers. When the change adds,
+      removes, or renames an entity or a relationship in a store of persisted data, it MUST update
+      the entity diagram of that store and list `<product>/architecture/diagrams` the same way.
+      Other changes inside one container need neither.
   design:
     - >-
       When the change adds or changes a public package API or a contract between packages
@@ -79,6 +94,11 @@ rules:
       client, a service and an external API, a scheduled job and its targets), include a
       Mermaid `sequenceDiagram` of the main flow and its significant error paths. Diagram
       only the interactions this change adds or modifies.
+    - >-
+      When the change alters the C4 context or container level, include each changed C4 diagram
+      (system context, container) as a Mermaid `flowchart` with subgraphs that follows the C4
+      conventions in `docs/diagrams.md`. Show the whole level after the change, and list in prose
+      which elements and relationships are new, moved, or removed.
     - >-
       When the change involves scheduled jobs, external APIs, network calls, or multi-step
       writes, include a Failure Modes table: failure (timeout, partial failure, duplicate or
@@ -102,12 +122,27 @@ rules:
       product's style guide, reusing existing components unless the section says why they don't
       fit; the states each new or changed component must cover (loading, empty, error, disabled,
       light and dark); narrow-viewport behavior; and keyboard and focus behavior.
+  specs:
+    - >-
+      In `<product>/architecture/diagrams`, write one requirement for each diagram that
+      `docs/diagrams.md` requires: its C4 type, its scope, and its files, with a scenario that ties
+      it to the architecture (e.g. WHEN a change adds a container THEN the container diagram shows
+      it). Each store of persisted data has one entity diagram requirement, with a scenario that
+      ties it to the data (e.g. WHEN a change adds an entity to the store THEN the entity diagram
+      shows it). A change that alters the C4 context or container level, or the entities of a
+      store, modifies the requirement of each affected diagram.
   tasks:
     - >-
       Each task that adds or changes a UI component or design token also updates the product's
       in-app style guide (the component in every state the design lists) and its screenshot
       baselines in the same task, verified by the style guide's screenshot and accessibility
       tests passing. Never defer style-guide work to a later task.
+    - >-
+      Each task that alters the C4 context or container level, or adds, removes, or renames an
+      entity or a relationship in a store of persisted data, also updates the affected diagrams
+      (through the product's render script) and the architecture document in the same task. The
+      implementer looks at a rendered image of each changed diagram in each theme, per the
+      `diagrams` skill. Never defer diagram work to a later task.
 
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.
