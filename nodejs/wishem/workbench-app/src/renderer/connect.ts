@@ -17,6 +17,11 @@ export const connect = (options: ConnectOptions = {}): Promise<CoreConnection> =
     let snapshot: Snapshot | undefined
     let lastText: string | undefined
     let warned = false
+    let closed = false
+
+    const onPageHide = () => {
+      connection.close()
+    }
 
     const connection: CoreConnection = {
       getSnapshot: () => {
@@ -36,9 +41,14 @@ export const connect = (options: ConnectOptions = {}): Promise<CoreConnection> =
         }
       },
       close: () => {
+        closed = true
+        window.removeEventListener('pagehide', onPageHide)
         source.close()
       },
     }
+
+    // A page that is left or reloaded ends the stream, and that is not a failure of the core.
+    window.addEventListener('pagehide', onPageHide)
 
     source.addEventListener('snapshot', (event) => {
       const text = (event as MessageEvent<string>).data
@@ -68,7 +78,7 @@ export const connect = (options: ConnectOptions = {}): Promise<CoreConnection> =
     })
 
     source.addEventListener('error', () => {
-      if (warned) {
+      if (warned || closed) {
         return
       }
       warned = true

@@ -78,13 +78,18 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
         host: PAGE_ADDRESS,
         port,
         strictPort: true,
-        proxy: { '/snapshot': proxy, '/snapshots': proxy },
+        proxy: { '^/snapshots?$': proxy },
       },
     })
     await server.listen()
   } catch (error) {
-    await server?.close()
-    await host.close()
+    try {
+      await server?.close()
+    } catch {
+      // The start error below is the one to report.
+    } finally {
+      await host.close()
+    }
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)
       throw new StartError('the port of the page is in use')
@@ -127,7 +132,8 @@ const main = async () => {
       },
     })
     const workbench = await startWorkbench({
-      model: values.model === undefined ? undefined : resolve(values.model),
+      // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
+      model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
       corePort: parsePort('--core-port', values['core-port'], DEFAULT_CORE_PORT),
     })

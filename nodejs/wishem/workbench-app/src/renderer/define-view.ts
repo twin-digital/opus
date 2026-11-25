@@ -23,6 +23,7 @@ export interface View<P extends PropDeclarations = PropDeclarations> {
   /** The ID of the component type that this view draws. */
   componentType: Id
   props: P
+  /** The renderer calls this function as a plain function, so it must not use React hooks. */
   render: (props: ViewProps<P>) => ReactNode
 }
 

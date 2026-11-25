@@ -153,6 +153,8 @@ If step 1 fails with a `ModelError`, the script prints each problem with `format
 | `--port`      | `5173`                                          | The port of the page. `0`: the system selects. |
 | `--core-port` | `4747`                                          | The port of the core. `0`: the system selects. |
 
+A relative `--model` path starts from the folder where the person ran the command (`INIT_CWD` from pnpm, else the working folder of the process).
+
 The script is a TypeScript file in `scripts/` that Node.js runs by type stripping, as `browser-server.ts` is. It uses erasable syntax only. It imports `host-nodejs` and `workbench` from their built files. The README says that a build is necessary before the first start.
 
 Reason: one process stops as one. No code must watch a child process. This also answers the note in the issue: the host and the Vite development server are in one Node.js process. The slice has two processes, Node.js and the web browser.
@@ -181,7 +183,7 @@ Reason: the workbench has no production form. The `start` script with the Vite d
 - `playwright.config.ts` gets two projects. The project `style-guide` keeps the connection of today and matches `tests/style-guide.spec.ts`. The project `workbench` matches `tests/workbench.spec.ts`, and its connection has `exposeNetwork: '<loopback>'`. Thus the style guide tests still reach the static server in the container at `127.0.0.1:4173`.
 - `scripts/e2e-server.ts` copies the model folder of the base workbench to `nodejs/wishem/workbench-app/.e2e-model/` and calls `startWorkbench` with that folder, core port 0, and a fixed page port that is different from 4173. The copy overwrites files. It deletes nothing. `.e2e-model/` is in `.gitignore`.
 - `playwright.config.ts` starts this script as its `webServer`. The script runs on the computer of the test runner, not in the container.
-- The tests change the files in `.e2e-model/` with `node:fs`.
+- The tests change the files in `.e2e-model/` with `node:fs`. The test of the view edit also changes the tracked file `src/views/AppBar.tsx`, and it writes the original text again in a `finally` block.
 
 ```mermaid
 flowchart LR
@@ -212,6 +214,7 @@ flowchart LR
 - A file that is not valid JSON keeps the last picture, and a correct file after it gives the new picture.
 - A definition with no `title` field gives one console warning that names `AppBar.tsx`, and the page continues to draw.
 - Two entities with an `AppBar` component give two app bars.
+- An edit to the view `src/views/AppBar.tsx` shows in the page with no restart. The test writes the original file again when it ends.
 - A screenshot of the page in light mode and in dark mode, with `emulateMedia`.
 - An accessibility check of the page in each theme, with the same tags as the style guide tests.
 - No request of the page goes to a different host.
@@ -610,25 +613,26 @@ ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34. No view is drawn.
 
 ## Failure Modes
 
-| Failure                                                                                             | Result                                                                                                   | Recovery                                                   | Safe to do again |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------- |
-| The model is not correct at the start                                                               | The script prints each problem and exits with code 1. No page is served.                                 | Correct the file and start again.                          | Yes              |
-| The port of the core is in use                                                                      | The script prints the port and exits with code 1. No page is served.                                     | Stop the other process, or use `--core-port`.              | Yes              |
-| The port of the page is in use                                                                      | The script closes the host, prints the port, and exits with code 1.                                      | Stop the other process, or use `--port`.                   | Yes              |
-| `host-nodejs` or `workbench` is not built                                                           | Node.js cannot load the module. The script stops with the error of Node.js.                              | Run the build command of the README.                       | Yes              |
-| A model file is not correct during a run                                                            | The terminal shows each problem. The core keeps the last correct model. The page keeps the last picture. | Correct the file. The page draws the new model.            | Yes              |
-| A file is saved in two steps by an editor                                                           | The host waits 50 ms after the last change before it reads. A read in the middle gives the row above.    | None necessary.                                            | Yes              |
-| The page loads before the core answers                                                              | The page shows the zero state. The browser console has one message. `EventSource` tries again.           | None necessary.                                            | Yes              |
-| The stream closes during a run                                                                      | The page keeps the last picture. The browser console has one message. `EventSource` connects again.      | None necessary. Start the script again if it stopped.      | Yes              |
-| The stream sends the same snapshot again after a new connection                                     | The client compares the text and calls no listener. The page does not draw again.                        | None necessary.                                            | Yes              |
-| An event of the stream is not valid JSON                                                            | The client writes an error to the browser console and keeps the last snapshot.                           | Not expected. Report it as a bug of the host.              | Yes              |
-| Two view files declare one component type                                                           | The browser console has one error that names the two files. The page shows the zero state and no view.   | Remove one file, or correct its ID. Vite reloads the page. | Yes              |
-| A view and its definition are different                                                             | The browser console has one warning for each difference. The page draws. The prop has no value.          | Correct the view or the definition.                        | Yes              |
-| The `render` function of a view throws                                                              | React removes the page content. The browser console has the error.                                       | Correct the view. Vite reloads the page.                   | Yes              |
-| A test stops in the middle                                                                          | `.e2e-model/` holds changed files. The next run writes the original files again before each test.        | None necessary.                                            | Yes              |
-| The browser in the container cannot reach the page server through the connection of the test runner | The first test of the page fails with a time-out.                                                        | See the fallback of D8.                                    | Yes              |
+| Failure                                                                                             | Result                                                                                                   | Recovery                                                                | Safe to do again |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------- |
+| The model is not correct at the start                                                               | The script prints each problem and exits with code 1. No page is served.                                 | Correct the file and start again.                                       | Yes              |
+| The port of the core is in use                                                                      | The script prints the port and exits with code 1. No page is served.                                     | Stop the other process, or use `--core-port`.                           | Yes              |
+| The port of the page is in use                                                                      | The script closes the host, prints the port, and exits with code 1.                                      | Stop the other process, or use `--port`.                                | Yes              |
+| `host-nodejs` or `workbench` is not built                                                           | Node.js cannot load the module. The script stops with the error of Node.js.                              | Run the build command of the README.                                    | Yes              |
+| A model file is not correct during a run                                                            | The terminal shows each problem. The core keeps the last correct model. The page keeps the last picture. | Correct the file. The page draws the new model.                         | Yes              |
+| A file is saved in two steps by an editor                                                           | The host waits 50 ms after the last change before it reads. A read in the middle gives the row above.    | None necessary.                                                         | Yes              |
+| The page loads before the core answers                                                              | The page shows the zero state. The browser console has one message. `EventSource` tries again.           | None necessary.                                                         | Yes              |
+| The stream closes during a run                                                                      | The page keeps the last picture. The browser console has one message. `EventSource` connects again.      | None necessary. Start the script again if it stopped.                   | Yes              |
+| The stream sends the same snapshot again after a new connection                                     | The client compares the text and calls no listener. The page does not draw again.                        | None necessary.                                                         | Yes              |
+| An event of the stream is not valid JSON                                                            | The client writes an error to the browser console and keeps the last snapshot.                           | Not expected. Report it as a bug of the host.                           | Yes              |
+| Two view files declare one component type                                                           | The browser console has one error that names the two files. The page shows the zero state and no view.   | Remove one file, or correct its ID. Vite reloads the page.              | Yes              |
+| A view and its definition are different                                                             | The browser console has one warning for each difference. The page draws. The prop has no value.          | Correct the view or the definition.                                     | Yes              |
+| The `render` function of a view throws                                                              | React removes the page content. The browser console has the error.                                       | Correct the view. Vite reloads the page.                                | Yes              |
+| A test stops in the middle                                                                          | `.e2e-model/` holds changed files. The next run writes the original files again before each test.        | None necessary.                                                         | Yes              |
+| A hard kill stops the test of the view edit                                                         | `src/views/AppBar.tsx` stays changed. The next run of that test fails at its first check.                | Run `git checkout -- nodejs/wishem/workbench-app/src/views/AppBar.tsx`. | Yes              |
+| The browser in the container cannot reach the page server through the connection of the test runner | The first test of the page fails with a time-out.                                                        | See the fallback of D8.                                                 | Yes              |
 
-Each operation of the page only reads. The script writes no file. The end-to-end tests write only in `.e2e-model/`. No operation writes to a remote system.
+Each operation of the page only reads. The script writes no file. The end-to-end tests write in `.e2e-model/`. The test of the view edit also writes `src/views/AppBar.tsx` and restores it. No operation writes to a remote system.
 
 ## Package Impact
 

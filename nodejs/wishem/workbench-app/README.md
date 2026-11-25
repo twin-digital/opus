@@ -21,14 +21,20 @@ The page server listens on `127.0.0.1` only. It passes `GET /snapshot` and `GET 
 | `--port`      | `5173`                                             | The port of the page. `0`: the system selects. |
 | `--core-port` | `4747`                                             | The port of the core. `0`: the system selects. |
 
-For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`.
+For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`. A relative `--model` path starts from the folder where you run the command, not from the package folder.
 
 ### Change the picture by hand
 
-Edit a file in the model folder and save it. The page shows the new model. For example, in a second terminal:
+Edit a file in the model folder and save it. The page shows the new model. For example, in a second terminal, from the root of the repository:
 
 ```
 sed -i 's/"Wishem"/"Hello"/' nodejs/wishem/workbench/model/state.json
+```
+
+The edit changes a tracked file. To restore it, run this command from the root of the repository:
+
+```
+git checkout -- nodejs/wishem/workbench/model/state.json
 ```
 
 ### Where a problem appears

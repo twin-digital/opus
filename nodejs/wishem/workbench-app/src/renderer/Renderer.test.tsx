@@ -174,6 +174,47 @@ describe('Renderer', () => {
     expect(String(warn.mock.calls[0]?.[0])).toContain('A.tsx')
   })
 
+  it('draws the same view when the label of the component type changes', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const core = createCore(baseModel('One'))
+    draw(core)
+    const before = container.innerHTML
+
+    act(() => {
+      const model = baseModel('One')
+      core.setModel({
+        ...model,
+        definitions: model.definitions.map((definition) =>
+          definition.id === CT_A ? { ...definition, label: 'Header' } : definition,
+        ),
+      })
+    })
+
+    expect(container.innerHTML).toBe(before)
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('gives no new warning when the next snapshot corrects the difference', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const model = baseModel(null)
+    const withFields = (fields: Snapshot['definitions'][number]['fields']): Snapshot => ({
+      ...model,
+      entities: model.entities.slice(0, 1),
+      definitions: model.definitions.map((definition) =>
+        definition.id === CT_A ? { ...definition, fields } : definition,
+      ),
+    })
+    const core = createCore(withFields([]))
+
+    draw(core)
+    expect(warn).toHaveBeenCalledTimes(1)
+    act(() => {
+      core.setModel(withFields([{ id: FLD_TITLE, label: 'title', type: 'string' }]))
+    })
+
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+
   describe('with a view for each of two component types', () => {
     const viewB = defineView({
       componentType: CT_B,

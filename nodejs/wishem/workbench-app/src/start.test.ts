@@ -9,7 +9,14 @@ import { startWorkbench, StartError } from '../scripts/start.js'
 
 const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
 
+const hostModule = vi.hoisted(() => ({ startHost: vi.fn() }))
+
 vi.mock('vite', () => ({ createServer: vite.createServer }))
+vi.mock('@thrashplay/wishem-host-nodejs', async (importActual) => {
+  const actual = await importActual<typeof import('@thrashplay/wishem-host-nodejs')>()
+  hostModule.startHost.mockImplementation(actual.startHost)
+  return { ...actual, startHost: hostModule.startHost }
+})
 
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
@@ -92,6 +99,7 @@ describe('the start script of the workbench', () => {
   beforeEach(() => {
     vite.createServer.mockReset()
     vite.createServer.mockRejectedValue(new Error('plugin failed'))
+    hostModule.startHost.mockClear()
     folder = mkdtempSync(join(tmpdir(), 'workbench-start-'))
     model = join(folder, 'model')
     cpSync(baseModel, model, { recursive: true })
@@ -117,6 +125,25 @@ describe('the start script of the workbench', () => {
         `^wishem: model ${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\nwishem: core at http://127\\.0\\.0\\.1:\\d+\\nwishem: workbench at http://127\\.0\\.0\\.1:\\d+/\\n`,
       ),
     )
+  })
+
+  it('resolves a relative --model against INIT_CWD', { timeout: 30000 }, async () => {
+    const child = spawn('node', [script, '--model', './model', '--port', '0', '--core-port', '0'], {
+      env: { ...process.env, INIT_CWD: folder },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    children.push(child)
+    let text = ''
+    child.stdout.on('data', (chunk: Buffer) => (text += chunk.toString()))
+    child.stderr.on('data', (chunk: Buffer) => (text += chunk.toString()))
+
+    await until(
+      () => text.includes('wishem: workbench at') || child.exitCode !== null,
+      () => text,
+    )
+
+    expect(text).toContain(`wishem: model ${model}\n`)
+    expect(text).toContain('wishem: workbench at')
   })
 
   it('serves the HTML page', { timeout: 30000 }, async () => {
@@ -218,6 +245,49 @@ describe('the start script of the workbench', () => {
     await expect(startWorkbench({ model, port: 0, corePort, log: () => undefined })).rejects.toThrow('plugin failed')
 
     expect(await refuses('127.0.0.1', corePort)).toBe(true)
+  })
+
+  it('does not pass a path that only starts with /snapshot to the core', { timeout: 30000 }, async () => {
+    const { page } = await startReady()
+
+    const response = await fetch(new URL('snapshotx', page))
+
+    expect(response.headers.get('content-type') ?? '').not.toContain('json')
+    expect(await response.text()).not.toContain('"entities"')
+  })
+
+  it(
+    'reports the failure of the page and closes the core when the page server also cannot close',
+    { timeout: 30000 },
+    async () => {
+      const corePort = await freePort()
+      vite.createServer.mockResolvedValue({
+        listen: () => Promise.reject(new Error('listen failed')),
+        close: () => Promise.reject(new Error('close failed')),
+      })
+
+      await expect(startWorkbench({ model, port: 0, corePort, log: () => undefined })).rejects.toThrow('listen failed')
+
+      expect(await refuses('127.0.0.1', corePort)).toBe(true)
+    },
+  )
+
+  it('asks for port 5173 for the page and 4747 for the core by default', { timeout: 30000 }, async () => {
+    const hostClose = vi.fn(() => Promise.resolve())
+    hostModule.startHost.mockResolvedValueOnce({ url: 'http://127.0.0.1:4747', close: hostClose })
+    vite.createServer.mockResolvedValue({
+      listen: () => Promise.resolve(),
+      httpServer: { address: () => ({ port: 5173 }) },
+      close: () => Promise.resolve(),
+    })
+
+    const workbench = await startWorkbench({ model, log: () => undefined })
+
+    expect(hostModule.startHost).toHaveBeenCalledWith(expect.objectContaining({ port: 4747 }))
+    expect(vite.createServer).toHaveBeenCalledWith(
+      expect.objectContaining({ server: expect.objectContaining({ port: 5173 }) }),
+    )
+    await workbench.close()
   })
 
   it('names the port and fails when the core port is in use', { timeout: 30000 }, async () => {

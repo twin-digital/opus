@@ -194,7 +194,11 @@ const card = (c, item) => {
   const top = art ? y + h - 24 - (sub ? 22 : 0) - 12 : y + (h - block) / 2
   const titleY = art ? top + 12 : top + iconSize + gap + 12
   const out = [
-    rect(item, 14, `fill="${fill}" stroke="${stroke}"${item.shadow === false ? '' : ' filter="url(#shadow)"'}`),
+    rect(
+      item,
+      14,
+      `fill="${fill}" stroke="${stroke}"${item.shadow === false || !c.hasShadow ? '' : ' filter="url(#shadow)"'}`,
+    ),
   ]
   if (art) {
     out.push(art(c, item))
@@ -567,7 +571,7 @@ const shadowFilter = (c) =>
   `<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="${c.night}" flood-opacity="0.12"/></filter>`
 
 const renderDiagram = (diagram, theme, tokens) => {
-  const c = buildColors(tokens, theme)
+  const c = { ...buildColors(tokens, theme), hasShadow: theme === 'light' }
   const body = order
     .flatMap((kind) => diagram.items.filter((item) => item.kind === kind))
     .map((item) => layers[item.kind](c, item))
@@ -577,7 +581,7 @@ const renderDiagram = (diagram, theme, tokens) => {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${String(width)} ${String(height)}" width="${String(width)}" height="${String(height)}" role="img" aria-labelledby="title desc">`,
     `<title id="title">${escapeXml(diagram.title)}</title>`,
     `<desc id="desc">${escapeXml(diagram.description)}</desc>`,
-    theme === 'light' ? `<defs>${shadowFilter(c)}</defs>` : '',
+    c.hasShadow ? `<defs>${shadowFilter(c)}</defs>` : '',
     `<rect width="${String(width)}" height="${String(height)}" fill="${c.ground}"/>`,
     body,
     '</svg>',

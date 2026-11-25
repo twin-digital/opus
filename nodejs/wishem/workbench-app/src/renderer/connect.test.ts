@@ -175,4 +175,40 @@ describe('connect', () => {
     connection.close()
     expect(latest().closed).toBe(true)
   })
+
+  it('closes the EventSource on pagehide and writes no warning for an error after it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const promise = connect()
+    send(latest(), 'a')
+    await promise
+    window.dispatchEvent(new Event('pagehide'))
+    expect(latest().closed).toBe(true)
+    latest().emit('error')
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('removes the pagehide listener on close', async () => {
+    const remove = vi.spyOn(window, 'removeEventListener')
+    const promise = connect()
+    send(latest(), 'a')
+    const connection = await promise
+    connection.close()
+    expect(remove).toHaveBeenCalledWith('pagehide', expect.any(Function))
+  })
+
+  it('gives each listener the new snapshot when it arrives after an error', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const promise = connect()
+    send(latest(), 'a')
+    const connection = await promise
+    const one = vi.fn()
+    const two = vi.fn()
+    connection.subscribe(one)
+    connection.subscribe(two)
+    latest().emit('error')
+    send(latest(), 'b')
+    expect(one).toHaveBeenCalledExactlyOnceWith(snapshot('b'))
+    expect(two).toHaveBeenCalledExactlyOnceWith(snapshot('b'))
+    expect(connection.getSnapshot()).toEqual(snapshot('b'))
+  })
 })

@@ -128,9 +128,13 @@
       "inputs": [
         "src/**",
         "scripts/**",
+        "index.html",
         "package.json",
+        "vite.config.ts",
+        "vite.config.d/**",
         "vitest.config.ts",
         "vitest.config.d/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
         "tsconfig.json",
         "tsconfig.*.json"
       ],
