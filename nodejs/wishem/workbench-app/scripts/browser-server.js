@@ -7,6 +7,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { hostname } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -19,7 +20,7 @@ const packageDir = dirname(dirname(fileURLToPath(import.meta.url)))
 /** @type {{ version: string }} */
 const { version } = JSON.parse(readFileSync(require.resolve('@playwright/test/package.json'), 'utf8'))
 const image = `mcr.microsoft.com/playwright:v${version}-noble`
-const container = `wishem-playwright-${createHash('sha1').update(packageDir).digest('hex').slice(0, 8)}`
+const container = `wishem-playwright-${createHash('sha1').update(`${hostname()}:${packageDir}`).digest('hex').slice(0, 8)}`
 
 const log = (/** @type {string} */ message) => {
   console.log(`browser-server: ${message}`)
@@ -62,12 +63,15 @@ let child
 process.on('exit', () => {
   cleanup?.()
 })
-for (const signal of /** @type {const} */ (['SIGINT', 'SIGTERM'])) {
+for (const [signal, code] of /** @type {const} */ ([
+  ['SIGINT', 130],
+  ['SIGTERM', 143],
+])) {
   process.on(signal, () => {
     if (child) {
       child.kill(signal)
     } else {
-      process.exit(130)
+      process.exit(code)
     }
   })
 }

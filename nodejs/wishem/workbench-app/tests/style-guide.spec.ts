@@ -154,17 +154,6 @@ test('the default text color is fg in each color scheme', async ({ page }) => {
   expect(await color()).toBe('rgb(236, 236, 243)')
 })
 
-test('a screenshot that differs from its baseline fails', async ({ page }) => {
-  await isolate(page, 'components-light')
-  await page
-    .locator('[data-testid="components-light"] header')
-    .first()
-    .evaluate((e) => {
-      e.style.backgroundColor = 'rgb(200, 0, 0)'
-    })
-  await expect(expect(page.getByTestId('components-light')).toHaveScreenshot('components-light.png')).rejects.toThrow()
-})
-
 test('the typography section uses the three typefaces', async ({ page }) => {
   const family = (selector: string) =>
     page

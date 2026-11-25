@@ -9,7 +9,7 @@
 
 This file connects how Wishem looks and sounds to what Wishem is. Each colour, typeface and phrase traces back to the same idea: a maker who wishes things into being, and a spirit that grants those wishes. When a design choice isn't covered here, make the choice that tells that story.
 
-It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.md`](../../../docs/ui-style-guide.md)). The colours and type below are the design tokens of the workbench, and its style guide is the record of how they are implemented. This file stays the source of truth for why they look that way. Logo, iconography and components come later.
+It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.md`](../../../docs/ui-style-guide.md)). The colours and type below are the design tokens of the workbench, and its style guide is the record of how they are implemented. This file stays the source of truth for why they look that way. Logo and iconography come later.
 
 The images here are rendered from [`brand/brand-basics.html`](brand/brand-basics.html), which shows the whole guide as a page. If you change a colour, a typeface or a sample, change it in both files, then run `node nodejs/wishem/workbench-app/scripts/browser-server.js node ../docs/brand/render.mjs` to update the images.
 

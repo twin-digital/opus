@@ -1,8 +1,7 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { tokenGroups, type TokenGroup } from '../../tokens.js'
 import { Section } from '../Section.js'
-
-type StyleProperty = 'backgroundColor' | 'color' | 'borderTopLeftRadius' | 'boxShadow'
+import { useComputedValue, type StyleProperty } from '../useComputedValue.js'
 
 /** Formats a computed `rgb()` color as a hexadecimal value. Other values stay as they are. */
 const toHex = (value: string) => {
@@ -11,18 +10,6 @@ const toHex = (value: string) => {
     return value
   }
   return `#${[match[1], match[2], match[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('')}`
-}
-
-/** Reads a computed style value of the element, in the theme of its scope. */
-const useComputedValue = (property: StyleProperty | undefined) => {
-  const ref = useRef<HTMLDivElement>(null)
-  const [value, setValue] = useState('')
-  useLayoutEffect(() => {
-    if (ref.current && property) {
-      setValue(getComputedStyle(ref.current)[property])
-    }
-  }, [property])
-  return { ref, value }
 }
 
 const sampleStyle = (group: TokenGroup, name: string): CSSProperties => {

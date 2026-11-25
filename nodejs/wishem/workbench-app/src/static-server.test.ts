@@ -76,6 +76,11 @@ describe('static-server.js', () => {
     expect((await get(port, '/missing.js')).status).toBe(404)
   })
 
+  it('answers 400 for a malformed escape and keeps serving', async () => {
+    expect((await get(port, '/%E0%A4%A')).status).toBe(400)
+    expect((await get(port, '/a.js')).status).toBe(200)
+  })
+
   it('answers 404 for a path outside the folder', async () => {
     expect((await get(port, '/..%2Fsecret.txt')).status).toBe(404)
   })

@@ -24,7 +24,13 @@ const types = {
 }
 
 createServer((request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname)
+  let pathname
+  try {
+    pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://127.0.0.1').pathname)
+  } catch {
+    response.writeHead(400).end('Bad request')
+    return
+  }
   const file = normalize(join(root, pathname))
   const inside = file === root || file.startsWith(root + sep)
   if (!inside || !statSync(file, { throwIfNoEntry: false })?.isFile()) {
