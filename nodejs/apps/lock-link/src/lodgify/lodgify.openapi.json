@@ -254,9 +254,7 @@
       "Lodgify.Api.Public.Reservations.Models.v1_2.CreatePaymentLinkDto": {
         "additionalProperties": false,
         "description": "Represents the amount to be paid through the website",
-        "properties": {
-          "amount": { "description": "Amount to request", "format": "double", "minimum": 0.01, "type": "number" }
-        },
+        "properties": { "amount": { "$ref": "#/components/schemas/Lodgify.App.Types.Money1" } },
         "type": "object"
       },
       "Lodgify.Api.Public.Reservations.Models.v1_2.GuestBreakdownDto": {
@@ -648,6 +646,12 @@
             "format": "double",
             "type": "number"
           },
+          "applies_up_to_nights": {
+            "description": "The longest stay (in nights, inclusive) this item is limited to, e.g. a short-stay fee. Null when there is no stay-length limit.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
           "description": {
             "description": "A textual description of the price item.",
             "nullable": true,
@@ -815,7 +819,7 @@
       },
       "Lodgify.Api.Public.Reservations.Models.v2.Reservations.BookingTransactions.TransactionTypeEnum": {
         "description": "Type of transaction",
-        "enum": ["Payment", "Refund", "Show", "Authorization", "Void", "Capture"],
+        "enum": ["Payment", "Refund", "Authorization", "Void", "Capture"],
         "type": "string"
       },
       "Lodgify.Api.Public.Reservations.Models.v2.Reservations.Bookings.BookingCheckInDto": {
@@ -1078,6 +1082,7 @@
             "type": "string"
           },
           "email": { "description": "Email of the guest", "nullable": true, "type": "string" },
+          "has_temporary_phone": { "description": "Phone number is temporary", "type": "boolean" },
           "name": { "description": "Name of the guest", "nullable": true, "type": "string" },
           "phone": { "description": "Phone number of the guest", "nullable": true, "type": "string" }
         },
@@ -1295,13 +1300,13 @@
           "Scheduled",
           "Overdue",
           "Pending",
+          "Partial",
+          "Completing",
           "Aborted",
           "Paid",
           "Refunded",
           "Authorized",
-          "Voided",
-          "Captured",
-          "Shown"
+          "Voided"
         ],
         "type": "string"
       },
@@ -1505,7 +1510,11 @@
             "nullable": true,
             "type": "integer"
           },
-          "bookability": { "$ref": "#/components/schemas/Lodgify.Rates.Models.v1.BookingSettings.BookingType" },
+          "bookability": {
+            "description": "Indicates the booking type for this property. Returned as an integer value.\r\n0 = Instant Booking (reservations are confirmed automatically),\r\n1 = Booking Request (reservations require host approval before being confirmed),\r\n2 = Enquiry Only (guests can only send enquiries and cannot make bookings directly)",
+            "format": "int32",
+            "type": "integer"
+          },
           "booking_window_days": {
             "description": "Limits how many days in advance guests can book.",
             "format": "int32",
@@ -1619,6 +1628,7 @@
           "StripeError",
           "ValidationError",
           "PaymentError",
+          "BookingReadOnly",
           "ArgumentError",
           "NotFound",
           "NotImplemented",
@@ -1738,10 +1748,6 @@
         },
         "type": "object"
       },
-      "Lodgify.Rates.Models.v1.BookingSettings.BookingType": {
-        "enum": ["InstantBooking", "BookingRequest", "EnquiryOnly"],
-        "type": "string"
-      },
       "Lodgify.Rates.Models.v1.DateRangeModel": {
         "additionalProperties": false,
         "properties": { "lower": { "type": "string" }, "upper": { "type": "string" } },
@@ -1770,7 +1776,7 @@
     "title": "Lodgify Public API v2",
     "version": "v2"
   },
-  "openapi": "3.0.3",
+  "openapi": "3.0.4",
   "paths": {
     "/v2/availability": {
       "get": {
@@ -1781,12 +1787,14 @@
             "description": "The start date of the calendar period.",
             "in": "query",
             "name": "start",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
             "description": "The end date of the calendar period.",
             "in": "query",
             "name": "end",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
@@ -1896,12 +1904,14 @@
             "description": "The start date of the calendar period.",
             "in": "query",
             "name": "start",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
             "description": "The end date of the calendar period.",
             "in": "query",
             "name": "end",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
@@ -2018,12 +2028,14 @@
             "description": "The start date of the calendar period.",
             "in": "query",
             "name": "start",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
             "description": "The end date of the calendar period.",
             "in": "query",
             "name": "end",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
@@ -2138,7 +2150,7 @@
         "tags": ["Availability"]
       }
     },
-    "/v2/deletedProperties": {
+    "/v2/deletedproperties": {
       "get": {
         "description": "Returns a paged list of all deleted properties since some date",
         "operationId": "GetAllDeletedAsync",
@@ -2619,6 +2631,7 @@
     "/v2/properties/{id}/rooms": {
       "get": {
         "description": "Returns all the roomtypes available for a given property",
+        "operationId": "PropertiesApi_v_GetAllRooms_get",
         "parameters": [
           {
             "description": "Property identifier",
@@ -2750,12 +2763,14 @@
             "description": "Arrival date",
             "in": "query",
             "name": "arrival",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
             "description": "Departure date",
             "in": "query",
             "name": "departure",
+            "required": true,
             "schema": { "format": "date-time", "type": "string" }
           },
           {
@@ -2769,10 +2784,12 @@
             "description": "Room type details",
             "in": "query",
             "name": "roomTypes",
+            "required": true,
             "schema": {
               "items": {
                 "$ref": "#/components/schemas/Lodgify.Api.Public.Reservations.Models.v2.Quote.RoomTypeParamDto"
               },
+              "minItems": 1,
               "type": "array"
             }
           },
@@ -3909,5 +3926,5 @@
     }
   },
   "security": [{ "ApiKey": [] }],
-  "servers": [{ "url": "api.lodgify.com" }]
+  "servers": [{ "url": "https://api.lodgify.com" }]
 }
