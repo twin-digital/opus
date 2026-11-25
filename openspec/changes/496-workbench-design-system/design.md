@@ -221,8 +221,8 @@ sequenceDiagram
 
 How `browser-server.js` finds the address of the browser server:
 
-- `DOCKER_HOST` is an `ssh://` address or a `tcp://` address: the host of that address. The port of the browser server is published on each address of the Docker host.
-- `DOCKER_HOST` is not set, or is a socket: `127.0.0.1`. The port is published on `127.0.0.1` only.
+- The address of the Docker daemon is an `ssh://` address or a `tcp://` address: the host of that address. The script reads the address of the daemon from `DOCKER_HOST`, or from the current Docker context when `DOCKER_HOST` is not set. The port of the browser server is published on each address of the Docker host.
+- The address of the Docker daemon is a socket: `127.0.0.1`. The port is published on `127.0.0.1` only.
 - The environment variable `WISHEM_BROWSER_HOST` replaces the host in each case.
 
 Docker selects a free port for the browser server. The script reads the port with `docker port`.
@@ -249,7 +249,7 @@ Rejected: a job that runs in the image. The job would install each dependency of
 
 ### D10. The tests and the job
 
-- `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations and waits for `document.fonts.ready` before a screenshot.
+- `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations. Each test waits for `document.fonts.ready` before it reads the page.
 - The test runner uses one worker. With more than one worker in one browser container, the screenshots of the tall sections are not stable.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
 - The screenshot test hides the rest of the page before a screenshot. Thus a baseline depends only on its own section, and a change of one section does not move the pixels of a different section.
@@ -327,7 +327,7 @@ browser-server: built the style guide for the tests
 browser-server: started mcr.microsoft.com/playwright:v1.56.1-noble as wishem-playwright-3f9a1c
 browser-server: the browser server is at ws://127.0.0.1:32771
 
-Running 17 tests using 2 workers
+Running 17 tests using 1 worker
   17 passed (9.4s)
 ```
 
