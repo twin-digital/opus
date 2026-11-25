@@ -53,6 +53,12 @@
       "separateMajorMinor": false
     },
     {
+      "description": "`@playwright/test` and the Playwright image of the `ui-tests` job must have one version: the screenshot baselines depend on the web browser. Keep them in one pull request that never auto-merges, so a person makes the baselines again there. A test in workbench-app fails when the two versions differ.",
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "groupName": "playwright",
+      "automerge": false
+    },
+    {
       "description": "repo-kit templates all .nvmrc files; a Renovate bump is reverted by `pnpm sync` and fails the merge-checks gate",
       "matchManagers": ["nvm"],
       "enabled": false

@@ -1,0 +1,57 @@
+{
+  "private": true,
+  "name": "@thrashplay/wishem-workbench-app",
+  "version": "0.0.0",
+  "description": "The Wishem workbench application: design tokens, components, and the style guide.",
+  "type": "module",
+  "scripts": {
+    "build": "build",
+    "clean": "clean",
+    "dev": "vite --host",
+    "lint": "lint",
+    "lint:fix": "lint_fix",
+    "preview": "vite preview",
+    "style-guide": "vite --open /style-guide.html",
+    "test": "opus-test",
+    "test:ui": "node scripts/browser-server.js playwright test",
+    "test:ui:update": "node scripts/browser-server.js playwright test --update-snapshots",
+    "test:watch": "opus-test-watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "catalog:",
+    "@eslint/js": "catalog:",
+    "@playwright/test": "catalog:",
+    "@tailwindcss/vite": "^4.3.3",
+    "@twin-digital/eslint-config": "workspace:*",
+    "@twin-digital/opus-scripts": "workspace:*",
+    "@twin-digital/tsconfig": "workspace:*",
+    "@twin-digital/vite-config": "workspace:*",
+    "@twin-digital/vitest-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-istanbul": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "catalog:",
+    "jsdom": "^30.0.0",
+    "prettier": "catalog:",
+    "prettier-package-json": "catalog:",
+    "tailwindcss": "^4.3.3",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "24.x",
+    "pnpm": "11.x"
+  }
+}

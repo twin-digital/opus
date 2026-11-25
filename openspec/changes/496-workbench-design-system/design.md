@@ -12,7 +12,7 @@ Facts that shape the approach:
 - No package in the repository has Playwright tests. The pull request checks have one job, `lint-build-test`, on `ubuntu-latest`.
 - Chromium does not start in the development container, because system libraries are missing.
 - Docker works in the development container. A container that Docker starts from there cannot see the files of the repository, because the paths on the Docker host are different.
-- The development container uses bridge networking on a Docker Compose network.
+- The Docker daemon of the development container runs on a different computer (`DOCKER_HOST` is an `ssh://` address). The development container can reach that computer. A container on that computer cannot reach the development container.
 
 ## Goals / Non-Goals
 
@@ -49,6 +49,7 @@ nodejs/wishem/workbench-app/
   playwright.config.ts
   scripts/
     browser-server.js         starts and stops the browser container
+    static-server.js          serves the test build, with no dependency
   src/
     main.tsx                  entry of index.html
     styles/
@@ -158,17 +159,31 @@ The fonts come from `@fontsource` packages, with the Latin subset only. `theme.c
 
 The script `style-guide` of the package runs `vite --open /style-guide.html`.
 
+The tests use a second build, the test build: `vite build --mode style-guide`. Its input is `style-guide.html` only and its output folder is `dist-style-guide/`. Git ignores that folder. The build of the workbench page does not change: its input is `index.html` and its output folder is `dist/`.
+
+Reason: a static build is a small set of files that can be copied to the computer of the web browser (D8), and the tests load the same bytes on each computer.
+
 Each section of the style guide is drawn two times, in a `ThemeScope` for each theme. Each copy has a `data-testid` with the name of the section and the theme, for example `tokens-dark`. A test takes a screenshot of that element.
 
 The style guide shows a component specimen in a `section` element. An `header` element in a `section` is not a banner landmark, so the app bar specimens do not make two banners.
 
-### D8. The web browser runs in the official Playwright image
+### D8. The web browser runs in the official Playwright image, and the page is served next to it
 
 The image is `mcr.microsoft.com/playwright:v<version>-noble`. `<version>` is the exact version of `@playwright/test` in the pnpm catalog.
 
-In the pull request checks, the job runs in the image. The test runner starts the web browser directly.
+The tests load the test build of the style guide (D7). `scripts/static-server.js` serves that build. It is a Node.js script with no dependency. The static server and the web browser run on the same computer in each environment, so the web browser loads the page from `127.0.0.1`.
 
-On a development computer, `scripts/browser-server.js` starts the image as a browser server. The test runner connects to it, and the browser loads the pages from the Vite server through HTTP. No file is mounted.
+In the pull request checks, the job runs in the image. `browser-server.js` finds that it runs in the image, starts no container, and runs the test runner directly. The test runner starts the static server as its `webServer` and starts the web browser directly.
+
+On a development computer, `scripts/browser-server.js` does these steps:
+
+1. It makes the test build.
+2. It removes a browser container of an earlier run, then starts a new container from the image. The container runs the browser server of Playwright. The name of the container contains a hash of the path of the package, so each working tree has its own container.
+3. It copies the test build and `static-server.js` into the container with `docker cp`, and starts the static server in the container with `docker exec`.
+4. It runs the command that it gets (the test runner), with the address of the browser server in the environment. The test runner connects to the browser server.
+5. It removes the container when the command stops.
+
+No file is mounted. The browser container needs no network path to the development computer. The only network path is from the test runner to the browser server.
 
 ```mermaid
 sequenceDiagram
@@ -177,36 +192,44 @@ sequenceDiagram
   participant D as Docker
   participant B as Browser container
   participant T as Playwright test runner
-  participant V as Vite server
 
   P->>S: pnpm test:ui
-  S->>D: is the browser container running?
-  alt not running
-    S->>D: run the image on the network of this computer
-    D-->>S: started
-  else Docker is not available
+  S->>S: make the test build
+  S->>D: start a container from the image
+  alt Docker is not available
     S-->>P: stop with a message
   end
-  S->>T: start, with the address of the browser server and the address of this computer
-  T->>V: start the development server on 0.0.0.0
+  D-->>S: started, with the published port
+  S->>B: docker cp the test build and static-server.js
+  S->>B: docker exec the static server on 127.0.0.1
+  S->>T: start, with the address of the browser server
   T->>B: connect
   alt cannot connect
     T-->>P: stop with a message
   end
-  T->>B: open the style guide
-  B->>V: GET /style-guide.html and its modules
-  V-->>B: the page
+  T->>B: open http://127.0.0.1/style-guide.html
   T->>B: screenshot of each section, accessibility check of each section
   B-->>T: images and results
-  T-->>P: pass, or the images of the differences
+  T-->>S: exit code
+  S->>D: remove the container
+  S-->>P: pass, or the images of the differences
 ```
 
-How `browser-server.js` finds the network:
+How `browser-server.js` finds the address of the browser server:
 
-- In a container: it reads the name of the Docker network and the address of the container from `docker inspect` of its own host name. It starts the browser container on that network. The base URL of the tests is the address of the container.
-- Not in a container: it publishes the port of the browser server on `127.0.0.1` and adds `host.docker.internal` to the browser container. The base URL of the tests uses `host.docker.internal`.
+- `DOCKER_HOST` is an `ssh://` address or a `tcp://` address: the host of that address. The port of the browser server is published on each address of the Docker host.
+- `DOCKER_HOST` is not set, or is a socket: `127.0.0.1`. The port is published on `127.0.0.1` only.
+- The environment variable `WISHEM_BROWSER_HOST` replaces the host in each case.
 
-**Unverified**: this network path. Task 1 proves it before other work starts. If it cannot work in the development container, Task 1 stops and the owner decides. The alternative is that the pull request checks make the baselines and a workflow commits them. That alternative changes two requirements of the `visual-tests` specification.
+Docker selects a free port for the browser server. The script reads the port with `docker port`.
+
+**Unverified**: that the test runner on the development computer can connect to the published port, and that a baseline from this path passes in the pull request checks. Task 1 proves the two before other work starts. If the path cannot work, Task 1 stops and the owner decides. The alternative is that the pull request checks make the baselines and a workflow commits them. That alternative changes two requirements of the `visual-tests` specification.
+
+Rejected: the Vite development server on the development computer, with the web browser in a container that loads the pages through the network. The browser container cannot reach the development container when the Docker daemon is on a different computer.
+
+Rejected: an SSH tunnel from the Docker host to the development computer. It is a special case for one type of Docker daemon, and it depends on the configuration of the SSH server.
+
+Rejected: a copy of the package and its dependencies in the container, with the test runner in the container. The dependencies of a pnpm workspace are large, and the results must be copied back.
 
 Rejected: Chromium in the development container. The development container and the runner of the pull request checks are different systems, and the fonts can be drawn differently.
 
@@ -223,17 +246,17 @@ Rejected: baselines that only the pull request checks make. Each visual change n
 
 ### D10. The tests and the job
 
-- `playwright.config.ts` has one project, Chromium. It starts the Vite development server as its `webServer`. It turns off animations and waits for `document.fonts.ready` before a screenshot.
+- `playwright.config.ts` has one project, Chromium. When the environment gives the address of a browser server, it connects to that server and starts no `webServer`. If not, it starts `static-server.js` as its `webServer`. It turns off animations and waits for `document.fonts.ready` before a screenshot.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
-- The scripts of the package are `test:ui` and `test:ui:update`. `turbo.json` gets a `test:ui` task with the inputs of the build and the `tests/**` folder.
+- The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.js`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
 - The job `ui-tests` in `ci.yaml` runs in the image. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
 - The unit tests of the package (`*.test.ts` and `*.test.tsx` in `src/`) run with Vitest in the `lint-build-test` job, as for each other package.
 
 ### D11. The brand images
 
-`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. The fonts of `brand-basics.html` come from the network, as they do now.
+`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.js` runs each command that it gets, so a person runs `render.mjs` through it. The fonts of `brand-basics.html` come from the network, as they do now.
 
 ## Interfaces
 
@@ -293,8 +316,9 @@ Run the tests on a development computer:
 
 ```
 $ pnpm --filter @thrashplay/wishem-workbench-app test:ui
-browser-server: started mcr.microsoft.com/playwright:v1.56.1-noble as wishem-playwright
-browser-server: the browser loads pages from http://172.19.0.3:4173
+browser-server: built the style guide for the tests
+browser-server: started mcr.microsoft.com/playwright:v1.56.1-noble as wishem-playwright-3f9a1c
+browser-server: the browser server is at ws://127.0.0.1:32771
 
 Running 17 tests using 2 workers
   17 passed (9.4s)
@@ -331,20 +355,21 @@ $ pnpm --filter @thrashplay/wishem-workbench-app test:ui:update
   2 baselines written: components-light.png, components-dark.png
 ```
 
-The version numbers in these examples are illustrations.
+The version numbers, the container name, and the address in these examples are illustrations.
 
 ## Failure Modes
 
-| Failure                                                                  | Result                                                                                                                                  | Recovery                                              | Safe to run again |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ----------------- |
-| Docker is not available on a development computer                        | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.         | Yes               |
-| The image is not on the computer and the registry cannot be reached      | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.  | Yes               |
-| A browser container with the same name runs from a different version     | The script stops that container and starts one from the correct image.                                                                  | None necessary.                                       | Yes               |
-| The browser cannot reach the Vite server                                 | The first test fails with a time-out. The message of the script gives the address that the browser used.                                | Check the Docker network. See D8.                     | Yes               |
-| The port of the Vite server is in use                                    | The `webServer` of Playwright fails, because the port is strict.                                                                        | Stop the other server.                                | Yes               |
-| A font is not loaded when a screenshot is taken                          | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                           | Yes               |
-| The version of `@playwright/test` and the tag in `ci.yaml` are different | The Vitest test of D9 fails in `lint-build-test`. In `ui-tests`, Playwright does not find its browser and fails.                        | Make the two the same, then make the baselines again. | Yes               |
-| The update command stops in the middle                                   | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git. | Yes               |
+| Failure                                                                  | Result                                                                                                                                  | Recovery                                                                                         | Safe to run again |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
+| Docker is not available on a development computer                        | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
+| The image is not on the computer and the registry cannot be reached      | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.                                             | Yes               |
+| A browser container of an earlier run of the same working tree remains   | The script removes that container and starts a new one from the correct image.                                                          | None necessary.                                                                                  | Yes               |
+| The test build fails                                                     | The script prints the error of the build and stops. No container starts. No baseline changes.                                           | Fix the error.                                                                                   | Yes               |
+| The test runner cannot connect to the browser server                     | The test runner stops with a message. The message of the script gives the address that it used.                                         | Set `WISHEM_BROWSER_HOST` to an address of the Docker host that this computer can reach. See D8. | Yes               |
+| The script stops before it removes the container                         | The container stays on the Docker host.                                                                                                 | Run the command again. The next run removes the container.                                       | Yes               |
+| A font is not loaded when a screenshot is taken                          | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                                                                      | Yes               |
+| The version of `@playwright/test` and the tag in `ci.yaml` are different | The Vitest test of D9 fails in `lint-build-test`. In `ui-tests`, Playwright does not find its browser and fails.                        | Make the two the same, then make the baselines again.                                            | Yes               |
+| The update command stops in the middle                                   | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git.                                            | Yes               |
 
 Each operation only reads, or writes files in the working tree. No operation writes to a remote system.
 
@@ -452,7 +477,9 @@ Loading, empty, error, and disabled do not apply: the two components get all the
 
 ## Risks / Trade-offs
 
-- [The network path between the browser container and the development container does not work] → Task 1 proves it first. On a failure, the task stops and the owner decides. See D8.
+- [The test runner cannot connect to the browser server on the Docker host] → Task 1 proves it first. On a failure, the task stops and the owner decides. See D8.
+- [When the Docker daemon is on a different computer, the port of the browser server is open to the network of that computer while a run is in progress] → The container lives only for one run, and Docker selects the port. The development network is private.
+- [The tests load a build, not the development server, so each run makes a build] → The build is small. A person looks at the style guide with the `style-guide` script, which uses the development server.
 - [A baseline from a development computer does not pass in the pull request checks, although the image is the same] → Task 1 proves this with a real pull request before a component is built.
 - [Text is drawn with small differences between runs] → The tests turn off animations and wait for the fonts. If a difference stays, set a small pixel limit for the comparison and record the reason in `playwright.config.ts`.
 - [A person without Docker cannot run the screenshot tests] → The unit tests, the contrast tests, and the style guide need no Docker. The pull request checks run the screenshot tests.

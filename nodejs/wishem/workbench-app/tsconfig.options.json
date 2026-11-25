@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    // Nothing imports a browser application, so there are no declarations to emit.
+    "declaration": false,
+    "declarationMap": false
+  },
+  "exclude": ["dist", "dist-style-guide", "node_modules", "playwright-report", "test-results"]
+}

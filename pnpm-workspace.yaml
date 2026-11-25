@@ -4,6 +4,8 @@ packages:
   - tooling/renovate-tools
 
 catalog:
+  '@axe-core/playwright': ^4.14.0
+  '@playwright/test': 1.65.1
   '@aws-lambda-powertools/logger': ^2.30.0
   '@aws-lambda-powertools/metrics': ^2.30.0
   '@aws-lambda-powertools/parameters': ^2.30.0
