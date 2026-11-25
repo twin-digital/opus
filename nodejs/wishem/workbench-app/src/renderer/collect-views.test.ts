@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { collectViews, ViewCollectionError } from './collect-views.js'
-import { defineView } from './define-view.js'
 
 const APP_BAR = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 
-const makeView = (componentType: string) => defineView({ componentType, props: {}, render: () => null })
+const sidecar = (componentType: string, kind = 'react') => ({ default: { kind, componentType } })
+const viewModule = () => ({ default: (): null => null })
 
 const catchError = (run: () => unknown): ViewCollectionError => {
   try {
@@ -17,76 +17,91 @@ const catchError = (run: () => unknown): ViewCollectionError => {
 }
 
 describe('collectViews', () => {
-  it('builds a table from the component type ID to the view and its file name', () => {
-    const view = makeView(APP_BAR)
+  it('builds an entry with the sidecar file name, the component type ID, and the function', () => {
+    const module = viewModule()
 
-    const table = collectViews({ './views/AppBar.tsx': { default: view } })
+    const table = collectViews({ './views/AppBar.view.json': sidecar(APP_BAR) }, { './views/AppBar.tsx': module })
 
     expect(table.size).toBe(1)
-    expect(table.get(APP_BAR)).toEqual({ file: 'AppBar.tsx', view })
+    expect(table.get(APP_BAR)).toEqual({ sidecar: 'AppBar.view.json', componentType: APP_BAR, view: module.default })
   })
 
-  it('returns an empty table for no modules', () => {
-    expect(collectViews({}).size).toBe(0)
+  it('returns an empty table for no files', () => {
+    expect(collectViews({}, {}).size).toBe(0)
   })
 
-  it('does not collect a file that ends with .test.tsx', () => {
-    const table = collectViews({
-      './views/AppBar.test.tsx': { default: 'not a view' },
-      './views/AppBar.tsx': { default: makeView(APP_BAR) },
-    })
+  it('does not put a view file with no sidecar in the table, and gives no error', () => {
+    const table = collectViews({}, { './views/Helper.tsx': viewModule() })
 
-    expect([...table.keys()]).toEqual([APP_BAR])
+    expect(table.size).toBe(0)
   })
 
-  it('names the two files and the ID for two views with one ID', () => {
-    const error = catchError(() =>
-      collectViews({
-        './views/AppBar.tsx': { default: makeView(APP_BAR) },
-        './views/Header.tsx': { default: makeView(APP_BAR) },
-      }),
-    )
+  it('does not put a sidecar of a different kind in the table, and gives no error', () => {
+    const table = collectViews({ './views/AppBar.view.json': sidecar(APP_BAR, 'native') }, {})
 
-    expect(error.message).toBe(
-      `wishem: the views AppBar.tsx and Header.tsx declare the same component type ${APP_BAR}. No view is drawn.`,
-    )
-    expect(error.files).toEqual(['AppBar.tsx', 'Header.tsx'])
+    expect(table.size).toBe(0)
   })
 
-  it('names the file when the default export is not a view object', () => {
-    const error = catchError(() => collectViews({ './views/Bad.tsx': { default: { componentType: 1 } } }))
+  it('names the sidecar for a sidecar with no view file', () => {
+    const error = catchError(() => collectViews({ './views/Header.view.json': sidecar(APP_BAR) }, {}))
 
-    expect(error.message).toBe('wishem: the file Bad.tsx has no default export from defineView. No view is drawn.')
-    expect(error.files).toEqual(['Bad.tsx'])
-  })
-
-  it('names the file when the default export is absent', () => {
-    const error = catchError(() => collectViews({ './views/Empty.tsx': {} }))
-
-    expect(error.message).toContain('Empty.tsx')
-  })
-
-  it('names the file when the module is not an object', () => {
-    const error = catchError(() => collectViews({ './views/Null.tsx': null }))
-
-    expect(error.message).toContain('Null.tsx')
-  })
-
-  it('rejects a view with a missing render function', () => {
-    const error = catchError(() =>
-      collectViews({ './views/NoRender.tsx': { default: { componentType: APP_BAR, props: {} } } }),
-    )
-
-    expect(error.message).toContain('NoRender.tsx')
+    expect(error.files).toEqual(['Header.view.json'])
+    expect(error.message).toBe('wishem: the sidecar Header.view.json has no view file Header.tsx. No view is drawn.')
   })
 
   it.each([
-    ['a component type that is not a string', { componentType: 1, props: {}, render: (): null => null }],
-    ['props that are not an object', { componentType: APP_BAR, props: 'title', render: (): null => null }],
-    ['props that are null', { componentType: APP_BAR, props: null, render: (): null => null }],
-  ])('names the file for a default export with %s', (_name, view) => {
-    const error = catchError(() => collectViews({ './views/Odd.tsx': { default: view } }))
+    ['no default export', {}],
+    ['a default export that is not a function', { default: { render: () => null } }],
+    ['a module that is not an object', null],
+  ])('names the sidecar for a view file with %s', (_name, module) => {
+    const error = catchError(() =>
+      collectViews({ './views/Header.view.json': sidecar(APP_BAR) }, { './views/Header.tsx': module }),
+    )
 
-    expect(error.files).toEqual(['Odd.tsx'])
+    expect(error.files).toEqual(['Header.view.json'])
+    expect(error.message).toBe(
+      'wishem: the view file Header.tsx of the sidecar Header.view.json has no default export that is a function. No view is drawn.',
+    )
+  })
+
+  it.each([
+    ['no componentType', { default: { kind: 'react' } }],
+    ['a kind that is not text', { default: { kind: 1, componentType: APP_BAR } }],
+    ['an array', { default: [] }],
+    ['no default export', {}],
+  ])('names the sidecar when parseSidecar rejects %s', (_name, module) => {
+    const error = catchError(() => collectViews({ './views/AppBar.view.json': module }, {}))
+
+    expect(error.files).toEqual(['AppBar.view.json'])
+    expect(error.message).toBe(
+      'wishem: the sidecar AppBar.view.json is not a JSON object with a "kind" and a "componentType" that are text. No view is drawn.',
+    )
+  })
+
+  it('names the two sidecars and the ID for two sidecars with one component type ID', () => {
+    const error = catchError(() =>
+      collectViews(
+        { './views/AppBar.view.json': sidecar(APP_BAR), './views/Header.view.json': sidecar(APP_BAR) },
+        { './views/AppBar.tsx': viewModule(), './views/Header.tsx': viewModule() },
+      ),
+    )
+
+    expect(error.files).toEqual(['AppBar.view.json', 'Header.view.json'])
+    expect(error.message).toBe(
+      `wishem: the sidecars AppBar.view.json and Header.view.json name the same component type ${APP_BAR}. No view is drawn.`,
+    )
+  })
+
+  it('does not use a view file whose path ends with .test.tsx', () => {
+    const table = collectViews(
+      { './views/AppBar.view.json': sidecar(APP_BAR) },
+      { './views/AppBar.test.tsx': viewModule(), './views/AppBar.tsx': viewModule() },
+    )
+    expect([...table.keys()]).toEqual([APP_BAR])
+
+    const error = catchError(() =>
+      collectViews({ './views/AppBar.test.view.json': sidecar(APP_BAR) }, { './views/AppBar.test.tsx': viewModule() }),
+    )
+    expect(error.files).toEqual(['AppBar.test.view.json'])
   })
 })

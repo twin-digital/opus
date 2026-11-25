@@ -40,15 +40,17 @@ git checkout -- nodejs/wishem/workbench/model/state.json
 ### Where a problem appears
 
 - A problem in a model file appears in the terminal that runs `start`. The page keeps the last correct picture.
-- A problem in a view or a view declaration appears in the browser console.
+- A problem in a sidecar, a sidecar with no component type definition, or two labels that give one prop name appears in the browser console.
 - When the model is not correct at the start, the script prints each problem and stops with exit code 1.
 - When a port is in use, the script prints the port and stops with exit code 1.
 
 ### Add a view
 
-1. Add one file to `src/views/`, for example `src/views/Header.tsx`.
-2. Export a view that `defineView` from `src/renderer/` returns. Use the IDs of the component type and the fields from the definition file in the model folder.
-3. Save the file. Vite reloads the page.
+1. Add the view file to `src/views/`, for example `src/views/Header.tsx`. The default export is a React component.
+2. Add the sidecar `src/views/Header.view.json` with the kind and the ID of the component type: `{ "kind": "react", "componentType": "ct_..." }`. Use the ID from the definition file in the model folder.
+3. Write the generated types: `pnpm --filter @thrashplay/wishem-workbench-app generate`.
+4. Import the type `Props` from `./Header.view.gen.js` in the view file.
+5. Save the files. Vite shows the new view in the page.
 
 ## Views
 
@@ -138,7 +140,7 @@ Before each test, the test writes the original definition file and the original 
 
 ### What Vite does after a change to a view file
 
-Vite reloads the whole page. The default export of a view file is not a React component, so React Fast Refresh does not replace the module in place. The page connects again and draws the current snapshot. The test "an edit to the view of the app bar shows with no restart" proves that the page shows the change.
+The default export of a view file is a React component, and the renderer mounts it as a component. React Fast Refresh replaces the module in place, and the page shows the new picture with no reload. The test "an edit to the view of the app bar shows with no restart" proves that the page shows the change.
 
 ### Baselines of the page
 

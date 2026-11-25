@@ -12,7 +12,7 @@ const loadViews = (): ViewTable => {
       throw error
     }
     console.error(error.message)
-    return collectViews({})
+    return collectViews({}, {})
   }
 }
 

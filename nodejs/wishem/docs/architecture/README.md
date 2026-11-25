@@ -25,7 +25,7 @@ To start the workbench, see [`workbench-app/README.md`](../../workbench-app/READ
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="picture-dark.svg">
-  <img alt="The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file makes the table of views. The renderer draws the app bar in a marked element." src="picture-light.svg">
+  <img alt="The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file and its sidecar make the table of views, which is keyed by the component type ID. The renderer draws the app bar in a marked element." src="picture-light.svg">
 </picture>
 
 Amber arrows show the data on its way to the picture. Gray arrows show where the views come from.
@@ -33,9 +33,11 @@ Amber arrows show the data on its way to the picture. Gray arrows show where the
 - **Definition file and state file.** `definitions/ct_….json` defines the component type of the app bar and its field. `state.json` holds one `AppBar` entity.
 - **Host.** `readModelFolder` reads the two files and `validateModel` checks them. `createCore` makes the core that gives the snapshot.
 - **Snapshot.** The snapshot holds the definitions and the entities, as JSON. The page gets it from `GET /snapshots` through the Vite development server.
-- **View file.** `src/views/AppBar.tsx` uses `defineView` to give the component type ID, the props, and `render`.
-- **Table of views.** `collectViews` reads `src/views/*.tsx` and makes a table from component type ID to view. The Vite development server serves the view files.
-- **Renderer.** For each entity and each component type that has a view, the renderer takes the value of each field that the view declares as a prop. It calls `render`.
+- **View file.** `src/views/AppBar.tsx` has a React component as its default export. The file states no ID.
+- **Sidecar.** `src/views/AppBar.view.json` holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.
+- **Generated types.** `src/views/AppBar.view.gen.ts` has the type `Props` of the view, with one member for each field of the component type. The `generate` script of `workbench-app` writes it from the definition file and the sidecar. The type check reads it. The page does not.
+- **Table of views.** `collectViews` pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view. The Vite development server serves the view files.
+- **Renderer.** For each entity and each component type that has a view, the renderer gives the view one prop for each field of the definition. It takes the prop names from the labels of the fields in the snapshot. It mounts the view as a React component.
 - **Marked element.** The renderer wraps the picture of the view in an element with `data-wishem-entity` and `data-wishem-component-type`. The dashed outline in the diagram marks it.
 
 ## The path of a change
@@ -47,8 +49,8 @@ This is the path from a saved `state.json` to a new picture.
 3. The host gives the new model to the core (`setModel`). The core tells its subscribers.
 4. The host sends the new snapshot on each open stream of `GET /snapshots`. The Vite development server passes the stream to the page.
 5. The client of the core (`connect()` in `src/renderer/connect.ts`) parses the snapshot. It ignores a snapshot that has the same text as the last one. Then it tells its subscribers.
-6. The `Renderer` reads the new snapshot. `checkViews` compares each view with the definitions. A difference gives a warning in the browser console.
-7. For each entity and each component type that has a view, the `Renderer` takes the value of each field that the view declares as a prop. It calls `render` of the view.
+6. The `Renderer` reads the new snapshot. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
+7. For each entity and each component type that has a view, the `Renderer` gives the view one prop for each field of the definition, with the name that the label of the field gives. It mounts the view as a React component.
 8. The `Renderer` puts the result in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`. The wrapper is the map from a point on the screen to an entity.
 9. React updates the page. The app bar shows the new title.
 
@@ -63,11 +65,11 @@ This is the path from a saved `state.json` to a new picture.
 
 `@thrashplay/wishem-workbench-app` depends on the other three packages. `@thrashplay/wishem-workbench` does not depend on `@thrashplay/wishem-workbench-app`.
 
-The HTML renderer is a folder of modules in `workbench-app`. It is not a package. `src/renderer/` holds `defineView`, `collectViews`, `checkViews`, `connect`, and `Renderer`.
+The HTML renderer is a folder of modules in `workbench-app`. It is not a package. `src/renderer/` holds `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, `connect`, and `Renderer`. The `generate` script in `scripts/` writes the generated types of the views.
 
 ## The specifications
 
-- [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, `defineView`, and the table of views.
+- [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the core, and the marked element.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
 - [`wishem/core/snapshot`](../../../../openspec/specs/wishem/core/snapshot/spec.md): the snapshot and the read interface of the core.
