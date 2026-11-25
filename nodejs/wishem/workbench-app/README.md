@@ -50,6 +50,42 @@ git checkout -- nodejs/wishem/workbench/model/state.json
 2. Export a view that `defineView` from `src/renderer/` returns. Use the IDs of the component type and the fields from the definition file in the model folder.
 3. Save the file. Vite reloads the page.
 
+## Views
+
+A view has three files in `src/views/`. The files have one base name, for example `AppBar`:
+
+- `AppBar.tsx`: the view file.
+- `AppBar.view.json`: the sidecar. It holds the kind of the view and the ID of its component type: `{ "kind": "react", "componentType": "ct_..." }`.
+- `AppBar.view.gen.ts`: the generated types. It exports the type `Props`, with one read-only member for each field of the component type.
+
+The name of a prop comes from the label of its field. The rule divides the label into words at each run of characters that are not ASCII letters or digits. The first word starts with a lower case letter. Each other word starts with an upper case letter. For example, the label `Max health` gives the prop `maxHealth`.
+
+### Write the generated types
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app generate
+```
+
+The script reads the model folder of `@thrashplay/wishem-workbench` and the sidecars in `src/views/`. It prints one line for each file that it wrote, changed, or removed. It prints nothing for a file that did not change.
+
+The script stops with exit code 1 when the model is not correct, or when a label gives no usable name. A label gives no usable name when it gives an empty name, a name that starts with a digit, or the same name as another field of the component type. The script writes no file for that sidecar.
+
+Commit each generated file. A test of the package fails when a generated file is not current.
+
+| Option    | Default                                            | Meaning                                                       |
+| --------- | -------------------------------------------------- | ------------------------------------------------------------- |
+| `--check` | off                                                | Change no file. Stop with exit code 1 for a file not current. |
+| `--model` | the model folder of `@thrashplay/wishem-workbench` | The model folder.                                             |
+| `--views` | `src/views/` of the package                        | The folder of the sidecars. The script writes the files here. |
+
+For example, to check that the files are current:
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app generate --check
+```
+
+A relative `--model` or `--views` path starts from the folder where you run the command.
+
 ## Start the style guide
 
 ```
