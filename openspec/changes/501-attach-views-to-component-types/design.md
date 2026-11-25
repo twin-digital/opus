@@ -156,7 +156,7 @@ The rules of `openspec/config.yaml` require a C4 diagram in this design, and the
 
 The diagram guidance still applies to the one diagram that this change corrects. See D8.
 
-The architecture document of Wishem was made before the diagram guidance. It has no system context diagram, no container diagram in C4 notation, no entity diagram of the model folder, and no `wishem/architecture/diagrams` specification. That work is not part of this change.
+The architecture document of Wishem was made before the diagram guidance. It has no system context diagram, no container diagram in C4 notation, no entity diagram of the model folder, and no `wishem/architecture/diagrams` specification. That work is not part of this change. [Architecture document in C4 form](https://github.com/twin-digital/opus/issues/511) does it, after this change.
 
 A later change makes this decision again when the views become content of a product folder, beside the model folder. The folder of the views is then a store, and the sidecar is an entity of it.
 
