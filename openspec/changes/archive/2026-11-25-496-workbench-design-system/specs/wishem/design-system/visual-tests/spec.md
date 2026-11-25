@@ -33,14 +33,14 @@ A test SHALL run an automated accessibility check on each section of the style g
 
 The web browser of the tests SHALL run in one container image with a pinned version. The version of the image SHALL agree with the version of the test tool in the repository. The tests SHALL NOT run in a different web browser.
 
-#### Scenario: The versions do not agree
+#### Scenario: The version of the test tool changes
 
-- **WHEN** the version of the test tool in the repository is different from the version of the container image, and a person starts the tests
-- **THEN** the tests do not run, and the output names the two versions
+- **WHEN** a person changes the version of the test tool in the repository and starts the tests
+- **THEN** the browser container starts from the image that has the new version, and no other file was changed
 
 #### Scenario: The browser container does not run
 
-- **WHEN** a person starts the tests on a development computer and the browser container cannot start
+- **WHEN** a person starts the tests and the browser container cannot start
 - **THEN** the command stops with a message that says what to do, and no baseline is changed
 
 ### Requirement: The same result on each computer

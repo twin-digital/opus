@@ -1,0 +1,59 @@
+/* The one source of each token value. A role that changes with the theme uses light-dark(). */
+:root {
+  color-scheme: light dark;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* A scope with data-theme declares the values again, so light-dark() follows its theme. */
+:root,
+[data-theme] {
+  --ink: #17172a;
+  --wishfire: #f2a93b;
+  --wishfire-deep: #9e5b0c;
+  --wisp: #7fd6c6;
+  --wisp-deep: #23786b;
+  --moonlight: #c2d0ea;
+  --moonlight-deep: #3f5682;
+  --clay: #c8b9a9;
+  --mist: #f2f2f6;
+
+  --ground: light-dark(#f7f7fa, #121222);
+  --surface: light-dark(#ffffff, #1b1b30);
+  --night: var(--ink);
+  --on-night: var(--mist);
+  --line: light-dark(#dedee7, #2d2d46);
+  --control-border: light-dark(#85859a, #6b6b88);
+
+  --fg: light-dark(#1c1c2e, #ececf3);
+  --fg-muted: light-dark(#5b5b70, #a3a3b8);
+
+  --maker: var(--wishfire);
+  --spirit: var(--wisp);
+  --accent: var(--moonlight);
+  --maker-text: light-dark(var(--wishfire-deep), var(--wishfire));
+  --spirit-text: light-dark(var(--wisp-deep), var(--wisp));
+  --accent-text: light-dark(var(--moonlight-deep), var(--moonlight));
+
+  --success: #8fcb3a;
+  --warning: #e8d44d;
+  --danger: #e8555a;
+  --info: #7c9cf5;
+  --success-text: light-dark(#44700c, var(--success));
+  --warning-text: light-dark(#735f00, var(--warning));
+  --danger-text: light-dark(#c62828, #f2666a);
+  --info-text: light-dark(#2f52c4, var(--info));
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px light-dark(#17172a14, #0006);
+  --shadow-md: 0 4px 14px light-dark(#17172a1f, #0008);
+}

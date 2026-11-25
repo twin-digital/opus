@@ -57,6 +57,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/wishem-core](./nodejs/wishem/core): The model, the validation, and the core of Wishem. Runs with no Node.js API.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): The Node.js host of Wishem. Reads a model folder, serves the snapshot over local HTTP, and provides the wishem command.
 - [@thrashplay/wishem-workbench](./nodejs/wishem/workbench): The base workbench of Wishem. Holds the first model and a command to start it.
+- [@thrashplay/wishem-workbench-app](./nodejs/wishem/workbench-app): The Wishem workbench application: design tokens, components, and the style guide.
 - [@twin-digital/renovate-tools](./tooling/renovate-tools): Reconciles Renovate dependency updates with changesets by generating one managed changeset per PR.
 - [@twin-digital/opus-scripts](./tooling/scripts): Scripts used to perform package-level operations in the Opus repository.
 

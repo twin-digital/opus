@@ -30,6 +30,11 @@ packages:
     # generated exports would offer its internals to a consumer that does not exist.
     rules:
       package-manifest: false
+  '@thrashplay/wishem-workbench-app':
+    # Nothing imports a browser application: what it publishes is a built asset tree, so the
+    # generated exports would offer its internals to a consumer that does not exist.
+    rules:
+      package-manifest: false
   '@twin-digital/design-process':
     # One public entry point by design: the CLI is the surface and the operations behind its
     # subcommands are re-exported by name from the package root, so the generated `./*` subpath

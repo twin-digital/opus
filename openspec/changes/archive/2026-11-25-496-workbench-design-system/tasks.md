@@ -1,0 +1,64 @@
+# Tasks
+
+## Task 1: The package and the proof of the pinned browser
+
+Files: `nodejs/wishem/workbench-app/` (`package.json`, `README.md`, `index.html`, `style-guide.html`, `playwright.config.ts`, `scripts/browser-server.ts`, `scripts/static-server.ts`, `src/main.tsx`, `src/style-guide/main.tsx`, `tests/style-guide.spec.ts`, `tests/__screenshots__/`, `vite.config.d/50-react.js`, `vitest.config.d/50-react.ts`, `eslint.config.d/50-react.js`), `.repo-kit.yml`, `pnpm-workspace.yaml`, `turbo.json`, `.github/workflows/ci.yaml`, `renovate.json`, `nodejs/wishem/CLAUDE.md`
+Interfaces: produces the package scripts `style-guide`, `test:ui`, and `test:ui:update`; the `test:ui` task of turbo; the job `ui-tests`; a `style-guide.html` page that holds one element with `data-testid="proof"`
+
+Read `design.md` D1, D7, D8, D9, D10, the Examples, and the Failure Modes before you start. Use `nodejs/grinbox/web` as the pattern for a Vite, React, and Tailwind package.
+
+- [x] 1.1 Create the package `@thrashplay/wishem-workbench-app` (private, version `0.0.0`) with the `vite`, `react`, `react-dom`, `tailwindcss`, `@tailwindcss/vite`, and `@vitejs/plugin-react` dependencies. Add `rules: { package-manifest: false }` for it in `.repo-kit.yml`, with a comment that gives the reason. Run `pnpm install` and `pnpm sync`. Verify: `pnpm sync` makes no more changes on a second run, and `pnpm build --filter @thrashplay/wishem-workbench-app` passes.
+- [x] 1.2 Add `index.html` with `src/main.tsx`, and `style-guide.html` with `src/style-guide/main.tsx`. Each page shows one line of plain text for now. The style guide page has one element with `data-testid="proof"`. Set the build input to `index.html` only. Add the test build of `design.md` D7: `vite build --mode style-guide` has `style-guide.html` as its only input and writes to `dist-style-guide/`, which Git ignores. Add the script `style-guide`. Verify: the script serves `/style-guide.html`, `dist/` has no file of the style guide after a build, and `dist-style-guide/` has `style-guide.html` after a test build.
+- [x] 1.3 Add `@playwright/test` (exact version) and `@axe-core/playwright` to the pnpm catalog and to the package. `browser-server.ts` is the only file that makes the tag of the image, and it makes the tag from the installed version of `@playwright/test`. Verify: the version of `@playwright/test` in the catalog has no range, and a search for the version number in the package and in `.github/` finds no match outside the lockfile and the catalog.
+- [x] 1.4 Before other work of this step, prove the path of `design.md` D8 by hand: start the image as a browser server on the Docker host, copy one HTML file into the container, serve it there, and connect to the browser server from this computer. If the path does not work, stop as step 1.8 says. Then write `scripts/static-server.ts` and `scripts/browser-server.ts` as D8 says: the script makes the test build, replaces the browser container of an earlier run, copies the test build into the container and serves it there, runs the command that it gets, removes the container, and stops with the message of the Examples when Docker is not available. Write `playwright.config.ts` as D10 says, with one Chromium project and no animations. Add the scripts `test:ui` and `test:ui:update`. Verify: `test:ui` fails with a clear message when Docker is stopped or not found.
+- [x] 1.5 Write `tests/style-guide.spec.ts` with one screenshot test and one accessibility test of the `proof` element, and a test that fails when the page makes a request to a different host. Make the baseline with `test:ui:update` and commit it. Verify: `test:ui` passes two times in sequence on the development computer.
+- [x] 1.6 Add the `test:ui` task to `turbo.json`. Add the job `ui-tests` to `.github/workflows/ci.yaml`: it runs on `ubuntu-latest`, runs `pnpm exec turbo run test:ui --affected`, and uploads the Playwright report when it fails. The workflow file does not contain the tag of the image. Pin each action by its commit, as the other jobs do. Add the Renovate rule of `design.md` D9. Verify: a search for `mcr.microsoft.com` in `.github/` finds no match.
+- [x] 1.7 Push the branch and open a draft pull request. Verify: the job `ui-tests` passes with the baseline that the development computer made, and `lint-build-test` passes. This is the proof of the requirement "The same result on each computer".
+- [x] 1.8 If step 1.4, step 1.5, or step 1.7 cannot pass because of the network path or a difference between the two computers, stop. Report what you tried and what failed. Do not start Task 2. The owner decides the alternative.
+- [x] 1.9 Write the `README.md` of the package: what the package is, how to start the style guide, how to run and update the tests, and that the tests need Docker. Add the package to the list in `nodejs/wishem/CLAUDE.md`. Verify: each command in the README runs as written.
+
+## Task 2: Tokens, fonts, and the token and typography sections
+
+Files: `nodejs/wishem/workbench-app/src/styles/tokens.css`, `src/styles/theme.css`, `src/tokens.ts`, `src/tokens.test.ts`, `src/components/ThemeScope.tsx`, `src/components/ThemeScope.test.tsx`, `src/style-guide/main.tsx`, `src/style-guide/sections/Principles.tsx`, `src/style-guide/sections/Tokens.tsx`, `src/style-guide/sections/Typography.tsx`, `src/main.tsx`, `tests/style-guide.spec.ts`, `tests/__screenshots__/`, `package.json`
+Interfaces: consumes the scripts and the test setup of Task 1; produces `tokenGroups` and `TokenGroup` from `src/tokens.ts`, `ThemeScope` and `Theme` from `src/components/ThemeScope.tsx`, the Tailwind classes of `design.md` D4, and style guide sections with the `data-testid` values `principles-light`, `principles-dark`, `tokens-light`, `tokens-dark`, `typography-light`, and `typography-dark`
+
+Read `specs/wishem/design-system/component-catalog/spec.md`, and `design.md` D3 to D7 and the UI section. `nodejs/wishem/docs/design-system/style-guide-preview.html` shows the look of each section.
+
+- [x] 2.1 Check which `@fontsource` packages give Bricolage Grotesque (600 and 800), Inter (400, 500, 600, and 400 italic), and JetBrains Mono (400 and 500). Add them, with the Latin subset only. Verify: the request test of Task 1 passes, and the built page loads each font from the package.
+- [x] 2.2 Write `tokens.css` with each palette color and each role of the specification, with `light-dark()` for a role that changes with the theme. Write `theme.css`: remove the default colors of Tailwind, and map the roles, the typefaces, the text sizes, the radius steps, and the shadow steps. Write the tests first, in `tokens.test.ts`: each value of the specification, each contrast rule of the specification in each theme with a failure that names the role, and the same names in `tokens.ts` and `tokens.css`. Verify: the tests fail before `tokens.css` exists and pass after it.
+- [x] 2.3 Write `ThemeScope`, which forces a theme on its content with the `data-theme` attribute. Verify with a test: an element in a dark `ThemeScope` in a light page has the dark value of `ground`. Verify by hand: the shell page follows the color scheme of the system and changes when the scheme changes, with no reload.
+- [x] 2.4 Write the Principles, Tokens, and Typography sections of the style guide, each in a light `ThemeScope` and a dark `ThemeScope`. The Tokens section draws its samples from `tokenGroups` and reads each value with `getComputedStyle`. Remove the `proof` element. Verify: the sections agree with the preview, and a change of the value of `accent` in `tokens.css` changes its swatch with no other edit.
+- [x] 2.5 Replace the proof tests with a screenshot test and an accessibility test for each of the three sections in each theme. Make the baselines and commit them. Verify: `test:ui` passes on the development computer and in the job `ui-tests`.
+- [x] 2.6 Update the `README.md` of the package with the rule that a component uses roles only and with how to add a token. Verify: `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass for the package.
+
+## Task 3: The app bar, the zero state, and the components section
+
+Files: `nodejs/wishem/workbench-app/src/components/AppBar.tsx`, `src/components/AppBar.test.tsx`, `src/components/ZeroState.tsx`, `src/components/ZeroState.test.tsx`, `src/components/no-raw-colors.test.ts`, `src/style-guide/sections/Components.tsx`, `src/style-guide/main.tsx`, `src/main.tsx`, `tests/style-guide.spec.ts`, `tests/__screenshots__/`
+Interfaces: consumes `ThemeScope`, the Tailwind classes of `design.md` D4, and the test setup; produces `AppBar` and `AppBarProps`, `ZeroState` and `ZeroStateProps`, and style guide sections with the `data-testid` values `components-light` and `components-dark`
+
+Read the requirements "The app bar", "The zero state", "Who acted decides the role", and "Each component is in the style guide" of the `component-catalog` specification, and the Interfaces and UI sections of `design.md`.
+
+- [x] 3.1 Write `no-raw-colors.test.ts`: it fails when a file in `src/components/` contains a hexadecimal color value or the name of a palette color. Verify: the test fails for a temporary file that has `#17172a`, and passes when the file is removed.
+- [x] 3.2 Write the tests of `AppBar`, then `AppBar`: the surface is `night`, the title is a heading 1 in the display typeface and in lowercase by style, the full stop has the `maker` color and is hidden from a screen reader, and a long title is cut with an ellipsis. Verify: the tests fail before the component exists and pass after it. Include a test that the text of the heading is the title as given.
+- [x] 3.3 Write the tests of `ZeroState`, then `ZeroState`: a mono label and one line of text, in the center, in `fg-muted`. Verify: the tests fail before the component exists and pass after it.
+- [x] 3.4 Show the zero state on the shell page, with the label `Workbench` and the text `Nothing to show yet.` Verify: `pnpm build` passes and the built page shows the zero state.
+- [x] 3.5 Write the Components section of the style guide, in a light `ThemeScope` and a dark `ThemeScope`: the app bar with a short title, the app bar with a long title, and the zero state. Add a screenshot test and an accessibility test for the section in each theme. Make the baselines and commit them. Verify: `test:ui` passes on the development computer and in the job `ui-tests`, and the section agrees with the preview.
+- [x] 3.6 Update the `README.md` of the package with the two components and the rule that a new component goes in the style guide in each state in the same change. Verify: `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass for the package.
+
+## Task 4: The brand files and the blueprint
+
+Files: `nodejs/wishem/docs/brand.md`, `nodejs/wishem/docs/brand/brand-basics.html`, `nodejs/wishem/docs/brand/render.ts`, `nodejs/wishem/docs/brand/*.png`, `nodejs/wishem/docs/README.md`, `README.md`
+Interfaces: consumes `scripts/browser-server.ts` of the package, to get a web browser for `render.ts`
+
+Read `nodejs/wishem/docs/brand.md` in full first. That file uses the voice of the brand, not the plain style of the other documents. Keep that voice. The values are in the `component-catalog` specification.
+
+- [x] 4.1 Update `brand.md` and `brand-basics.html` together: add Moonlight (`#C2D0EA`, with `#3F5682` for text on a light surface) as a sixth color, with the role "the light of the night, which belongs to no one"; change the Wishfire value for text on a light surface to `#9E5B0C`; replace Instrument Sans with Inter; replace the type scale with the sizes 12, 13, 14, 16, 18, 22, 25, 31, 39, and 49, and remove the sentence about the 1.25 ratio; say that Clay has no role in the workbench; say that the style guide of the workbench now records how the colors and the type are implemented. Verify: a search for `Instrument`, `A8620F`, and `1.25` in the two files finds no match.
+- [x] 4.2 Change `render.ts` as `design.md` D11 says, so that it works with the browser server. Make the brand images again. Verify: each image in `brand/` is new, and the palette image shows Moonlight in light mode and in dark mode.
+- [x] 4.3 Update `nodejs/wishem/docs/README.md`: the style guide of the workbench is the record of the implementation, and say how to start it. Run `pnpm update-readme` so that the package list of the root `README.md` has the new package. Verify: `pnpm update-readme` makes no more changes on a second run, and the merge check for the README passes.
+
+## Workflow follow-up
+
+- Add a changeset: `@thrashplay/wishem-workbench-app`, minor.
+- Break-test the new package before the final review, as the apply workflow of the schema says.
+- Archive the change after the pull request is approved.
+- After the archive, update the body of [Workbench components](https://github.com/twin-digital/opus/issues/497) if a name in the Interfaces section of `design.md` changed during the work.
