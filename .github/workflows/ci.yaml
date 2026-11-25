@@ -103,6 +103,10 @@ jobs:
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      # The image has no compiler. Native modules (better-sqlite3, hnswlib-node) build with node-gyp.
+      - name: Install build tools
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential
+
       - name: Setup dependencies
         uses: ./.github/actions/setup
 
