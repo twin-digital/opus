@@ -101,3 +101,10 @@ Products with a UI follow `docs/ui-style-guide.md`: a dev-only in-app style guid
 components, covering tokens, typography, and every component in each state, with Playwright
 screenshot and axe tests. Use design tokens and semantic classes, never raw colours; reuse existing
 components before adding new ones; update the style guide in the same change as the component.
+
+## Diagrams
+
+Diagrams follow [`docs/diagrams.md`](docs/diagrams.md): Mermaid in a temporary context (a conversation, an issue, a pull
+request, an OpenSpec change), and a rendered SVG file in permanent documentation. Architecture diagrams use the C4
+model, and each product with two or more containers has an architecture document. Use the `diagrams` skill to make an
+SVG diagram.
