@@ -60,6 +60,27 @@ if (!inImage) {
   }
 }
 
+/** @type {(() => void) | undefined} Removes the browser container. Runs on every exit path. */
+let cleanup
+/** @type {import('node:child_process').ChildProcess | undefined} */
+let child
+process.on('exit', () => {
+  cleanup?.()
+})
+for (const signal of /** @type {const} */ (['SIGINT', 'SIGTERM'])) {
+  process.on(signal, () => {
+    if (child) {
+      child.kill(signal)
+    } else {
+      process.exit(130)
+    }
+  })
+}
+process.on('uncaughtException', (error) => {
+  console.error(error)
+  process.exit(1)
+})
+
 // The test build: the only input is style-guide.html.
 const build = spawnSync('pnpm', ['exec', 'vite', 'build', '--mode', 'style-guide'], {
   cwd: packageDir,
@@ -72,19 +93,13 @@ if (build.status !== 0) {
 /**
  * Runs the command and exits with its exit code.
  * @param {Record<string, string>} env
- * @param {() => void} cleanup
  */
-const run = (env, cleanup) => {
-  const child = spawn(command, commandArgs, { cwd: packageDir, stdio: 'inherit', env: { ...process.env, ...env } })
-  for (const signal of /** @type {const} */ (['SIGINT', 'SIGTERM'])) {
-    process.on(signal, () => child.kill(signal))
-  }
+const run = (env) => {
+  child = spawn(command, commandArgs, { cwd: packageDir, stdio: 'inherit', env: { ...process.env, ...env } })
   child.on('error', (error) => {
-    cleanup()
     fail(`cannot run "${command}": ${error.message}`)
   })
   child.on('exit', (code) => {
-    cleanup()
     process.exit(code ?? 1)
   })
 }
@@ -92,7 +107,7 @@ const run = (env, cleanup) => {
 // The official image sets PLAYWRIGHT_BROWSERS_PATH. The pull request checks run inside the image.
 if (inImage) {
   log('running in the browser image')
-  run({}, () => undefined)
+  run({})
 } else {
   /** The host that publishes the port of the browser server. */
   const browserHost = () => {
@@ -113,6 +128,7 @@ if (inImage) {
     docker(['rm', '-f', container])
   }
   removeContainer()
+  cleanup = removeContainer
 
   const started = docker([
     'run',
@@ -143,9 +159,11 @@ if (inImage) {
       if (check()) {
         return
       }
+      if (docker(['inspect', '-f', '{{.State.Running}}', container]) !== 'true') {
+        fail(`the browser container stopped before ${what} started. See: docker logs ${container}`)
+      }
       await new Promise((resolve) => setTimeout(resolve, 500))
     }
-    removeContainer()
     fail(`${what} did not start. See: docker logs ${container}`)
   }
 
@@ -156,7 +174,6 @@ if (inImage) {
     ?.split(':')
     .pop()
   if (!port) {
-    removeContainer()
     fail('Docker gave no published port for the browser server.')
   }
 
@@ -165,16 +182,18 @@ if (inImage) {
     docker(['cp', `${packageDir}/dist-style-guide/.`, `${container}:/srv/site`]) !== undefined &&
     docker(['cp', join(packageDir, 'scripts', 'static-server.js'), `${container}:/srv/static-server.js`]) !== undefined
   if (!copied) {
-    removeContainer()
     fail('cannot copy the test build into the browser container.')
   }
 
-  docker(['exec', '-d', container, 'node', '/srv/static-server.js', '/srv/site', String(STATIC_PORT)])
+  const serving = docker(['exec', '-d', container, 'node', '/srv/static-server.js', '/srv/site', String(STATIC_PORT)])
+  if (serving === undefined) {
+    fail('cannot start the static server in the browser container.')
+  }
   await waitFor('the static server', () => {
     const probe = `fetch('http://127.0.0.1:${STATIC_PORT}/style-guide.html').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))`
     return docker(['exec', container, 'node', '-e', probe]) !== undefined
   })
 
   log(`the browser server is at ${host}:${port}`)
-  run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${host}:${port}${secretPath}` }, removeContainer)
+  run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${host}:${port}${secretPath}` })
 }
