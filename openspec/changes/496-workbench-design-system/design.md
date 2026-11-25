@@ -48,8 +48,8 @@ nodejs/wishem/workbench-app/
   style-guide.html            the style guide page
   playwright.config.ts
   scripts/
-    browser-server.js         starts and stops the browser container
-    static-server.js          serves the test build, with no dependency
+    browser-server.ts         starts and stops the browser container
+    static-server.ts          serves the test build, with no dependency
   src/
     main.tsx                  entry of index.html
     styles/
@@ -177,13 +177,13 @@ The style guide shows a component specimen in a `section` element. An `header` e
 
 The image is `mcr.microsoft.com/playwright:v<version>-noble`. `<version>` is the exact version of `@playwright/test` in the pnpm catalog.
 
-The tests load the test build of the style guide (D7). `scripts/static-server.js` serves that build. It is a Node.js script with no dependency. The static server and the web browser run on the same computer in each environment, so the web browser loads the page from `127.0.0.1`.
+The tests load the test build of the style guide (D7). `scripts/static-server.ts` serves that build. It is a TypeScript file that Node.js runs by type stripping, with no build step and no dependency. It uses erasable syntax only and imports only `node:` modules, because the browser container runs a copy of it. The static server and the web browser run on the same computer in each environment, so the web browser loads the page from `127.0.0.1`.
 
-A development computer and the pull request checks use the same path. The job of the pull request checks runs on `ubuntu-latest`, which has Docker, and runs the same script as a person does. `scripts/browser-server.js` does these steps:
+A development computer and the pull request checks use the same path. The job of the pull request checks runs on `ubuntu-latest`, which has Docker, and runs the same script as a person does. `scripts/browser-server.ts` does these steps:
 
 1. It makes the test build.
 2. It removes a browser container of an earlier run, then starts a new container from the image. The container runs the browser server of Playwright. The name of the container contains a hash of the path of the package, so each working tree has its own container.
-3. It copies the test build and `static-server.js` into the container with `docker cp`, and starts the static server in the container with `docker exec`.
+3. It copies the test build and `static-server.ts` into the container with `docker cp`, and starts the static server in the container with `docker exec`.
 4. It runs the command that it gets (the test runner), with the address of the browser server in the environment. The test runner connects to the browser server.
 5. It removes the container when the command stops.
 
@@ -192,7 +192,7 @@ No file is mounted. The browser container needs no network path to the developme
 ```mermaid
 sequenceDiagram
   participant P as Person or agent
-  participant S as browser-server.js
+  participant S as browser-server.ts
   participant D as Docker
   participant B as Browser container
   participant T as Playwright test runner
@@ -204,7 +204,7 @@ sequenceDiagram
     S-->>P: stop with a message
   end
   D-->>S: started, with the published port
-  S->>B: docker cp the test build and static-server.js
+  S->>B: docker cp the test build and static-server.ts
   S->>B: docker exec the static server on 127.0.0.1
   S->>T: start, with the address of the browser server
   T->>B: connect
@@ -219,7 +219,7 @@ sequenceDiagram
   S-->>P: pass, or the images of the differences
 ```
 
-How `browser-server.js` finds the address of the browser server:
+How `browser-server.ts` finds the address of the browser server:
 
 - The address of the Docker daemon is an `ssh://` address or a `tcp://` address: the host of that address. The script reads the address of the daemon from `DOCKER_HOST`, or from the current Docker context when `DOCKER_HOST` is not set. The port of the browser server is published on each address of the Docker host.
 - The address of the Docker daemon is a socket: `127.0.0.1`. The port is published on `127.0.0.1` only.
@@ -242,7 +242,7 @@ Rejected: baselines that only the pull request checks make. Each visual change n
 ### D9. One version of Playwright, from one source
 
 - `@playwright/test` and `@axe-core/playwright` are in the pnpm catalog. `@playwright/test` has an exact version, with no range.
-- `browser-server.js` gets the tag of the image from the installed version of `@playwright/test`. No other file holds the tag. Thus the version of the image and the version of the test tool cannot be different, on a development computer or in the pull request checks.
+- `browser-server.ts` gets the tag of the image from the installed version of `@playwright/test`. No other file holds the tag. Thus the version of the image and the version of the test tool cannot be different, on a development computer or in the pull request checks.
 - `renovate.json` gets a rule that sets `automerge` to `false` for `@playwright/test`. A new version of the browser can change each baseline, so a person makes the baselines again in that pull request.
 
 Rejected: a job that runs in the image. The job would install each dependency of the workspace in the image, which has no build tools for the native modules. The workflow file would hold the tag of the image as text, and a test would be necessary to keep it the same as the version of the test tool.
@@ -255,13 +255,13 @@ Rejected: a job that runs in the image. The job would install each dependency of
 - The screenshot test hides the rest of the page before a screenshot. Thus a baseline depends only on its own section, and a change of one section does not move the pixels of a different section.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
-- The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.js`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
+- The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.ts`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
 - The job `ui-tests` in `ci.yaml` runs on `ubuntu-latest`. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
 - The unit tests of the package (`*.test.ts` and `*.test.tsx` in `src/`) run with Vitest in the `lint-build-test` job, as for each other package.
 
 ### D11. The brand images
 
-`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.js` runs each command that it gets, so a person runs `render.mjs` through it. The fonts of `brand-basics.html` come from the network, as they do now.
+`nodejs/wishem/docs/brand/render.mjs` starts Chromium directly and opens a `file:` address. Neither works in the development container. The script changes to this: it connects to the browser server when the environment gives its address, and it gives the HTML to the page as text. `browser-server.ts` runs each command that it gets, so a person runs `render.mjs` through it. The fonts of `brand-basics.html` come from the network, as they do now.
 
 ## Interfaces
 
@@ -368,7 +368,7 @@ The version numbers, the container name, and the address in these examples are i
 
 | Failure                                                                | Result                                                                                                                                  | Recovery                                                                                         | Safe to run again |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
-| Docker is not available on a development computer                      | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
+| Docker is not available on a development computer                      | `browser-server.ts` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
 | The image is not on the computer and the registry cannot be reached    | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.                                             | Yes               |
 | A browser container of an earlier run of the same working tree remains | The script removes that container and starts a new one from the correct image.                                                          | None necessary.                                                                                  | Yes               |
 | The test build fails                                                   | The script prints the error of the build and stops. No container starts. No baseline changes.                                           | Fix the error.                                                                                   | Yes               |

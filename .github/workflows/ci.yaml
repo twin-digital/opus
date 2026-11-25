@@ -85,7 +85,7 @@ jobs:
       - run: pnpm exec turbo run lint --affected
       - run: pnpm exec turbo run test --affected
 
-  # Screenshot and accessibility tests. browser-server.js starts the pinned Playwright image with
+  # Screenshot and accessibility tests. browser-server.ts starts the pinned Playwright image with
   # Docker, as on a development computer.
   ui-tests:
     runs-on: ubuntu-latest

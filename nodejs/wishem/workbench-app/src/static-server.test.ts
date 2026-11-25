@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-const script = join(import.meta.dirname, '..', 'scripts', 'static-server.js')
+const script = join(import.meta.dirname, '..', 'scripts', 'static-server.ts')
 
 const freePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -34,7 +34,7 @@ const get = (port: number, path: string) =>
     req.end()
   })
 
-describe('static-server.js', () => {
+describe('static-server.ts', () => {
   let outer = ''
   let child: ChildProcess | undefined
   let port = 0

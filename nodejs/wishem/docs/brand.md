@@ -14,7 +14,7 @@ It is also the input for Wishem's in-app style guide (see [`docs/ui-style-guide.
 The images here are rendered from [`brand/brand-basics.html`](brand/brand-basics.html), which shows the whole guide as a page. If you change a colour, a typeface or a sample, change it in both files, then run this from the root of the repository to update the images:
 
 ```
-cd nodejs/wishem/workbench-app && node scripts/browser-server.js node ../docs/brand/render.mjs
+cd nodejs/wishem/workbench-app && node scripts/browser-server.ts node ../docs/brand/render.mjs
 ```
 
 ## Colour: ink, fire, wisp and moonlight

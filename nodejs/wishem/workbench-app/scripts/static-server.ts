@@ -1,18 +1,17 @@
-// Serves a folder over HTTP on 127.0.0.1. Usage: node static-server.js <folder> <port>
+// Serves a folder over HTTP on 127.0.0.1. Usage: node static-server.ts <folder> <port>
 import { createReadStream, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 
 const [folderArg, portArg] = process.argv.slice(2)
 if (!folderArg || !portArg) {
-  console.error('usage: node static-server.js <folder> <port>')
+  console.error('usage: node static-server.ts <folder> <port>')
   process.exit(1)
 }
 
 const root = resolve(folderArg)
 
-/** @type {Record<string, string>} */
-const types = {
+const types: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',

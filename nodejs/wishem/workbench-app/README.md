@@ -49,10 +49,10 @@ Before each screenshot, the test hides every part of the page except the section
 
 ## Run a different command with the browser
 
-`scripts/browser-server.js` runs any command. It starts the browser container and sets `WISHEM_BROWSER_WS_ENDPOINT` to the address of the browser server:
+`scripts/browser-server.ts` runs any command. It starts the browser container and sets `WISHEM_BROWSER_WS_ENDPOINT` to the address of the browser server:
 
 ```
-node scripts/browser-server.js <command> [args...]
+node scripts/browser-server.ts <command> [args...]
 ```
 
 ## Design tokens

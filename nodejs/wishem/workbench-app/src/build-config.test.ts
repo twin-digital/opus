@@ -39,6 +39,6 @@ describe('the package scripts', () => {
   })
 
   it('runs the browser tests in the pinned browser', () => {
-    expect(scripts['test:ui']).toMatch(/^node scripts\/browser-server\.js playwright test/)
+    expect(scripts['test:ui']).toMatch(/^node scripts\/browser-server\.ts playwright test/)
   })
 })
