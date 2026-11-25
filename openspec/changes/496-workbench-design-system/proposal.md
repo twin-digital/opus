@@ -44,8 +44,8 @@ None.
 
 - New package: `@thrashplay/wishem-workbench-app` (private).
 - New dependencies: React, Tailwind 4, the Vite plugins for them, three `@fontsource` packages, `@playwright/test`, and `@axe-core/playwright`.
-- `.github/workflows/ci.yaml`: one new job. The job uses a container image from `mcr.microsoft.com`.
-- `renovate.json`: a rule that keeps the version of Playwright and the tag of the container image the same, and that does not merge an update of them automatically.
+- `.github/workflows/ci.yaml`: one new job. The job starts a container from an image of `mcr.microsoft.com`.
+- `renovate.json`: a rule that does not merge an update of Playwright automatically.
 - `nodejs/wishem/docs/brand.md`, `nodejs/wishem/docs/brand/brand-basics.html`, and the brand images: new colors, typeface, and type sizes.
 - `nodejs/wishem/CLAUDE.md` and `nodejs/wishem/docs/README.md`: the new package and the style guide.
 - `README.md` of the repository: the generated package list gets the new package.

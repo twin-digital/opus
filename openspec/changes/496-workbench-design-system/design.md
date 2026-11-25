@@ -173,9 +173,7 @@ The image is `mcr.microsoft.com/playwright:v<version>-noble`. `<version>` is the
 
 The tests load the test build of the style guide (D7). `scripts/static-server.js` serves that build. It is a Node.js script with no dependency. The static server and the web browser run on the same computer in each environment, so the web browser loads the page from `127.0.0.1`.
 
-In the pull request checks, the job runs in the image. `browser-server.js` finds that it runs in the image, starts no container, and runs the test runner directly. The test runner starts the static server as its `webServer` and starts the web browser directly.
-
-On a development computer, `scripts/browser-server.js` does these steps:
+A development computer and the pull request checks use the same path. The job of the pull request checks runs on `ubuntu-latest`, which has Docker, and runs the same script as a person does. `scripts/browser-server.js` does these steps:
 
 1. It makes the test build.
 2. It removes a browser container of an earlier run, then starts a new container from the image. The container runs the browser server of Playwright. The name of the container contains a hash of the path of the package, so each working tree has its own container.
@@ -235,23 +233,22 @@ Rejected: Chromium in the development container. The development container and t
 
 Rejected: baselines that only the pull request checks make. Each visual change needs a push before a person sees a difference.
 
-### D9. One version of Playwright, and a test that proves it
+### D9. One version of Playwright, from one source
 
 - `@playwright/test` and `@axe-core/playwright` are in the pnpm catalog. `@playwright/test` has an exact version, with no range.
-- `browser-server.js` gets the tag of the image from the installed version of `@playwright/test`. Thus the two cannot be different on a development computer.
-- `.github/workflows/ci.yaml` has the tag as text. A Vitest test in the package reads the workflow file and the installed version, and fails with the two versions when they are different. This test runs in the `lint-build-test` job, which needs no web browser.
-- `renovate.json` gets a rule that puts `@playwright/test` and the image `mcr.microsoft.com/playwright` in one group and sets `automerge` to `false`. A new version of the browser can change each baseline, so a person makes the baselines again in that pull request.
+- `browser-server.js` gets the tag of the image from the installed version of `@playwright/test`. No other file holds the tag. Thus the version of the image and the version of the test tool cannot be different, on a development computer or in the pull request checks.
+- `renovate.json` gets a rule that sets `automerge` to `false` for `@playwright/test`. A new version of the browser can change each baseline, so a person makes the baselines again in that pull request.
 
-**Unverified**: that the `github-actions` manager of Renovate updates the `container` image of a job. If it does not, the test above still fails when the versions are different, and a person changes the tag.
+Rejected: a job that runs in the image. The job would install each dependency of the workspace in the image, which has no build tools for the native modules. The workflow file would hold the tag of the image as text, and a test would be necessary to keep it the same as the version of the test tool.
 
 ### D10. The tests and the job
 
-- `playwright.config.ts` has one project, Chromium. When the environment gives the address of a browser server, it connects to that server and starts no `webServer`. If not, it starts `static-server.js` as its `webServer`. It turns off animations and waits for `document.fonts.ready` before a screenshot.
+- `playwright.config.ts` has one project, Chromium. It connects to the browser server at the address that the environment gives, and it has no `webServer`. With no address in the environment, it stops with a message that says to use the `test:ui` script. It turns off animations and waits for `document.fonts.ready` before a screenshot.
 - `tests/style-guide.spec.ts` has one screenshot test and one accessibility test for each section and each theme.
 - The accessibility test uses `@axe-core/playwright` with the tags `wcag2a`, `wcag2aa`, `wcag21a`, and `wcag21aa`. It does not use the best practice rules, because the style guide shows more than one heading 1.
 - A test records each request of the page and fails when a request goes to a different host.
 - The scripts of the package are `test:ui` and `test:ui:update`. Each script runs the test runner through `browser-server.js`. `turbo.json` gets a `test:ui` task with the inputs of the build, the `tests/**` folder, and the `scripts/**` folder.
-- The job `ui-tests` in `ci.yaml` runs in the image. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
+- The job `ui-tests` in `ci.yaml` runs on `ubuntu-latest`. Its steps: checkout with full history, the shared setup action, `pnpm exec turbo run test:ui --affected`, and an upload of the Playwright report when the job fails.
 - The unit tests of the package (`*.test.ts` and `*.test.tsx` in `src/`) run with Vitest in the `lint-build-test` job, as for each other package.
 
 ### D11. The brand images
@@ -359,17 +356,17 @@ The version numbers, the container name, and the address in these examples are i
 
 ## Failure Modes
 
-| Failure                                                                  | Result                                                                                                                                  | Recovery                                                                                         | Safe to run again |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
-| Docker is not available on a development computer                        | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
-| The image is not on the computer and the registry cannot be reached      | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.                                             | Yes               |
-| A browser container of an earlier run of the same working tree remains   | The script removes that container and starts a new one from the correct image.                                                          | None necessary.                                                                                  | Yes               |
-| The test build fails                                                     | The script prints the error of the build and stops. No container starts. No baseline changes.                                           | Fix the error.                                                                                   | Yes               |
-| The test runner cannot connect to the browser server                     | The test runner stops with a message. The message of the script gives the address that it used.                                         | Set `WISHEM_BROWSER_HOST` to an address of the Docker host that this computer can reach. See D8. | Yes               |
-| The script stops before it removes the container                         | The container stays on the Docker host.                                                                                                 | Run the command again. The next run removes the container.                                       | Yes               |
-| A font is not loaded when a screenshot is taken                          | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                                                                      | Yes               |
-| The version of `@playwright/test` and the tag in `ci.yaml` are different | The Vitest test of D9 fails in `lint-build-test`. In `ui-tests`, Playwright does not find its browser and fails.                        | Make the two the same, then make the baselines again.                                            | Yes               |
-| The update command stops in the middle                                   | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git.                                            | Yes               |
+| Failure                                                                | Result                                                                                                                                  | Recovery                                                                                         | Safe to run again |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
+| Docker is not available on a development computer                      | `browser-server.js` stops with a message. No test runs. No baseline changes.                                                            | Start Docker, or use the pull request checks.                                                    | Yes               |
+| The image is not on the computer and the registry cannot be reached    | The start of the container fails. The script prints the error of Docker and stops.                                                      | Run the command again when the network is available.                                             | Yes               |
+| A browser container of an earlier run of the same working tree remains | The script removes that container and starts a new one from the correct image.                                                          | None necessary.                                                                                  | Yes               |
+| The test build fails                                                   | The script prints the error of the build and stops. No container starts. No baseline changes.                                           | Fix the error.                                                                                   | Yes               |
+| The test runner cannot connect to the browser server                   | The test runner stops with a message. The message of the script gives the address that it used.                                         | Set `WISHEM_BROWSER_HOST` to an address of the Docker host that this computer can reach. See D8. | Yes               |
+| The script stops before it removes the container                       | The container stays on the Docker host.                                                                                                 | Run the command again. The next run removes the container.                                       | Yes               |
+| A font is not loaded when a screenshot is taken                        | Not possible in the normal sequence: the test waits for `document.fonts.ready`. A font file that is absent fails the build of the page. | Fix the import of the font.                                                                      | Yes               |
+| The version of `@playwright/test` changes                              | The next run starts the container from the image of the new version. A screenshot can be different from its baseline.                   | Make the baselines again in the same pull request.                                               | Yes               |
+| The update command stops in the middle                                 | The baselines that it wrote are new files. The others are not changed.                                                                  | Run the command again, or restore the files with Git.                                            | Yes               |
 
 Each operation only reads, or writes files in the working tree. No operation writes to a remote system.
 

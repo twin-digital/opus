@@ -31,7 +31,7 @@ The tests need Docker. They run in the Playwright image `mcr.microsoft.com/playw
 3. It runs `playwright test` and connects to the browser in the container.
 4. It removes the container.
 
-The pull request checks run the same tests in the same image. A baseline from a development computer passes in the checks.
+The job `ui-tests` of the pull request checks runs the same command on a runner that has Docker. A baseline from a development computer passes in the checks.
 
 The environment variable `WISHEM_BROWSER_HOST` replaces the host name of the browser server. By default, the host is the host of `DOCKER_HOST`, or `127.0.0.1`.
 
@@ -50,11 +50,3 @@ The command writes the baseline images in `tests/__screenshots__/`. Commit the i
 ```
 node scripts/browser-server.js <command> [args...]
 ```
-
-## Unit tests
-
-```
-pnpm test --filter @thrashplay/wishem-workbench-app
-```
-
-`src/playwright-version.test.ts` fails when the Playwright image tag in `.github/workflows/ci.yaml` is not the installed version of `@playwright/test`.

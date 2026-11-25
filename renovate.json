@@ -53,9 +53,8 @@
       "separateMajorMinor": false
     },
     {
-      "description": "`@playwright/test` and the Playwright image of the `ui-tests` job must have one version: the screenshot baselines depend on the web browser. Keep them in one pull request that never auto-merges, so a person makes the baselines again there. A test in workbench-app fails when the two versions differ.",
-      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
-      "groupName": "playwright",
+      "description": "A new version of `@playwright/test` changes the pinned browser image (browser-server.js builds the image tag from the installed version) and can change each screenshot baseline. Never auto-merge it: a person makes the baselines again in that pull request.",
+      "matchPackageNames": ["@playwright/test"],
       "automerge": false
     },
     {

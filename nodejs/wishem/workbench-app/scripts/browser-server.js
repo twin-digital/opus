@@ -1,12 +1,11 @@
 // Runs a command (the test runner) with the pinned Playwright browser.
 // Usage: node browser-server.js <command> [args...]
 //
-// Development computer: starts the browser image on the Docker host, copies the test build into
-// it, and runs the command with WISHEM_BROWSER_WS_ENDPOINT set. Pull request checks (inside the
-// image): runs the command directly.
+// Starts the browser image on the Docker host, copies the test build into it, and runs the command
+// with WISHEM_BROWSER_WS_ENDPOINT set. A development computer and the pull request checks use this path.
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,16 +47,12 @@ if (!command) {
   fail('usage: node browser-server.js <command> [args...]')
 }
 
-const inImage = process.env.PLAYWRIGHT_BROWSERS_PATH === '/ms-playwright' && existsSync('/ms-playwright')
-
 // Stop early, before the build, when the browser container cannot run.
-if (!inImage) {
-  if (docker(['info', '--format', '{{.ServerVersion}}']) === undefined) {
-    fail(
-      'Docker is not available. The screenshot tests run only in the pinned\n' +
-        'browser image. Start Docker, or let the pull request checks run the tests.',
-    )
-  }
+if (docker(['info', '--format', '{{.ServerVersion}}']) === undefined) {
+  fail(
+    'Docker is not available. The screenshot tests run only in the pinned\n' +
+      'browser image. Start Docker, or let the pull request checks run the tests.',
+  )
 }
 
 /** @type {(() => void) | undefined} Removes the browser container. Runs on every exit path. */
@@ -104,96 +99,90 @@ const run = (env) => {
   })
 }
 
-// The official image sets PLAYWRIGHT_BROWSERS_PATH. The pull request checks run inside the image.
-if (inImage) {
-  log('running in the browser image')
-  run({})
-} else {
-  /** The host that publishes the port of the browser server. */
-  const browserHost = () => {
-    if (process.env.WISHEM_BROWSER_HOST) {
-      return process.env.WISHEM_BROWSER_HOST
-    }
-    const endpoint = process.env.DOCKER_HOST ?? docker(['context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'])
-    if (endpoint && /^(ssh|tcp):\/\//.test(endpoint)) {
-      return new URL(endpoint).hostname
-    }
-    return '127.0.0.1'
+/** The host that publishes the port of the browser server. */
+const browserHost = () => {
+  if (process.env.WISHEM_BROWSER_HOST) {
+    return process.env.WISHEM_BROWSER_HOST
   }
-  const host = browserHost()
-  const publish = host === '127.0.0.1' ? `127.0.0.1::${BROWSER_PORT}` : `${BROWSER_PORT}`
-  const secretPath = `/${randomBytes(16).toString('hex')}`
-
-  const removeContainer = () => {
-    docker(['rm', '-f', container])
+  const endpoint = process.env.DOCKER_HOST ?? docker(['context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'])
+  if (endpoint && /^(ssh|tcp):\/\//.test(endpoint)) {
+    return new URL(endpoint).hostname
   }
-  removeContainer()
-  cleanup = removeContainer
-
-  const started = docker([
-    'run',
-    '-d',
-    '--init',
-    '--ipc=host',
-    '--name',
-    container,
-    '-p',
-    publish,
-    image,
-    '/bin/sh',
-    '-c',
-    `npx -y playwright@${version} run-server --port ${BROWSER_PORT} --host 0.0.0.0 --path ${secretPath}`,
-  ])
-  if (started === undefined) {
-    fail(`the browser container did not start. Run: docker run ${image}`)
-  }
-  log(`started ${image} as ${container}`)
-
-  /**
-   * Polls until the check passes.
-   * @param {string} what
-   * @param {() => boolean} check
-   */
-  const waitFor = async (what, check) => {
-    for (let attempt = 0; attempt < 120; attempt++) {
-      if (check()) {
-        return
-      }
-      if (docker(['inspect', '-f', '{{.State.Running}}', container]) !== 'true') {
-        fail(`the browser container stopped before ${what} started. See: docker logs ${container}`)
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    }
-    fail(`${what} did not start. See: docker logs ${container}`)
-  }
-
-  await waitFor('the browser server', () => (docker(['logs', container]) ?? '').includes('Listening on'))
-
-  const port = docker(['port', container, `${BROWSER_PORT}/tcp`])
-    ?.split('\n')[0]
-    ?.split(':')
-    .pop()
-  if (!port) {
-    fail('Docker gave no published port for the browser server.')
-  }
-
-  const copied =
-    docker(['exec', container, 'mkdir', '-p', '/srv/site']) !== undefined &&
-    docker(['cp', `${packageDir}/dist-style-guide/.`, `${container}:/srv/site`]) !== undefined &&
-    docker(['cp', join(packageDir, 'scripts', 'static-server.js'), `${container}:/srv/static-server.js`]) !== undefined
-  if (!copied) {
-    fail('cannot copy the test build into the browser container.')
-  }
-
-  const serving = docker(['exec', '-d', container, 'node', '/srv/static-server.js', '/srv/site', String(STATIC_PORT)])
-  if (serving === undefined) {
-    fail('cannot start the static server in the browser container.')
-  }
-  await waitFor('the static server', () => {
-    const probe = `fetch('http://127.0.0.1:${STATIC_PORT}/style-guide.html').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))`
-    return docker(['exec', container, 'node', '-e', probe]) !== undefined
-  })
-
-  log(`the browser server is at ${host}:${port}`)
-  run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${host}:${port}${secretPath}` })
+  return '127.0.0.1'
 }
+const host = browserHost()
+const publish = host === '127.0.0.1' ? `127.0.0.1::${BROWSER_PORT}` : `${BROWSER_PORT}`
+const secretPath = `/${randomBytes(16).toString('hex')}`
+
+const removeContainer = () => {
+  docker(['rm', '-f', container])
+}
+removeContainer()
+cleanup = removeContainer
+
+const started = docker([
+  'run',
+  '-d',
+  '--init',
+  '--ipc=host',
+  '--name',
+  container,
+  '-p',
+  publish,
+  image,
+  '/bin/sh',
+  '-c',
+  `npx -y playwright@${version} run-server --port ${BROWSER_PORT} --host 0.0.0.0 --path ${secretPath}`,
+])
+if (started === undefined) {
+  fail(`the browser container did not start. Run: docker run ${image}`)
+}
+log(`started ${image} as ${container}`)
+
+/**
+ * Polls until the check passes.
+ * @param {string} what
+ * @param {() => boolean} check
+ */
+const waitFor = async (what, check) => {
+  for (let attempt = 0; attempt < 120; attempt++) {
+    if (check()) {
+      return
+    }
+    if (docker(['inspect', '-f', '{{.State.Running}}', container]) !== 'true') {
+      fail(`the browser container stopped before ${what} started. See: docker logs ${container}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  fail(`${what} did not start. See: docker logs ${container}`)
+}
+
+await waitFor('the browser server', () => (docker(['logs', container]) ?? '').includes('Listening on'))
+
+const port = docker(['port', container, `${BROWSER_PORT}/tcp`])
+  ?.split('\n')[0]
+  ?.split(':')
+  .pop()
+if (!port) {
+  fail('Docker gave no published port for the browser server.')
+}
+
+const copied =
+  docker(['exec', container, 'mkdir', '-p', '/srv/site']) !== undefined &&
+  docker(['cp', `${packageDir}/dist-style-guide/.`, `${container}:/srv/site`]) !== undefined &&
+  docker(['cp', join(packageDir, 'scripts', 'static-server.js'), `${container}:/srv/static-server.js`]) !== undefined
+if (!copied) {
+  fail('cannot copy the test build into the browser container.')
+}
+
+const serving = docker(['exec', '-d', container, 'node', '/srv/static-server.js', '/srv/site', String(STATIC_PORT)])
+if (serving === undefined) {
+  fail('cannot start the static server in the browser container.')
+}
+await waitFor('the static server', () => {
+  const probe = `fetch('http://127.0.0.1:${STATIC_PORT}/style-guide.html').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))`
+  return docker(['exec', container, 'node', '-e', probe]) !== undefined
+})
+
+log(`the browser server is at ${host}:${port}`)
+run({ WISHEM_BROWSER_WS_ENDPOINT: `ws://${host}:${port}${secretPath}` })

@@ -129,6 +129,7 @@
         "package.json",
         "playwright.config.ts",
         "scripts/**",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
         "src/**",
         "style-guide.html",
         "tests/**",

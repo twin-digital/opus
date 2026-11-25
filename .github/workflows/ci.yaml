@@ -85,27 +85,17 @@ jobs:
       - run: pnpm exec turbo run lint --affected
       - run: pnpm exec turbo run test --affected
 
-  # Screenshot and accessibility tests. The job runs in the pinned Playwright image, so the web
-  # browser is the same as on a development computer. The tag must equal the installed version of
-  # `@playwright/test`; a Vitest test in workbench-app checks it.
+  # Screenshot and accessibility tests. browser-server.js starts the pinned Playwright image with
+  # Docker, as on a development computer.
   ui-tests:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 20
-    container:
-      image: mcr.microsoft.com/playwright:v1.65.1-noble
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-
-      - name: Trust the workspace
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # The image has no compiler. Native modules (better-sqlite3, hnswlib-node) build with node-gyp.
-      - name: Install build tools
-        run: apt-get update && apt-get install -y --no-install-recommends build-essential
 
       - name: Setup dependencies
         uses: ./.github/actions/setup
