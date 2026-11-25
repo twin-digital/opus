@@ -123,6 +123,19 @@
       ],
       "outputs": ["coverage.json"]
     },
+    "@thrashplay/wishem-workbench-app#test": {
+      "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build"],
+      "inputs": [
+        "src/**",
+        "scripts/**",
+        "package.json",
+        "vitest.config.ts",
+        "vitest.config.d/**",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ],
+      "outputs": ["coverage.json"]
+    },
     "test:ui": {
       "dependsOn": ["upstream-sources", "^build"],
       "inputs": [

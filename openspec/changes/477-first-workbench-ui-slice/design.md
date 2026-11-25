@@ -75,7 +75,7 @@ Reason: no code is generated, and a prop that is not declared is a type error. T
 
 ### D3. One module names the views folder, and a pure function builds the table
 
-`src/views.ts` holds the one call to `import.meta.glob('./views/*.tsx', { eager: true })` and gives the result to `collectViews`. `collectViews` takes a record from a file path to a module and returns the table, or throws a `ViewCollectionError`.
+`src/views.ts` exports `collectAppViews`. It holds the one call to `import.meta.glob(['./views/*.tsx', '!./views/*.test.tsx'], { eager: true })` and gives the result to `collectViews`. The pattern excludes the test files, because an eager import of a test file puts the test in the page. `collectViews` takes a record from a file path to a module and returns the table, or throws a `ViewCollectionError`.
 
 - The table is a map from a component type ID to the view and its file name.
 - Two files with the same component type ID give one error that names the two files and the ID.

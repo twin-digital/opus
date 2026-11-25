@@ -1,6 +1,48 @@
 # @thrashplay/wishem-workbench-app
 
-The Wishem workbench application. The package holds the workbench page and the style guide. The design tokens, the components, and the screenshot tests of the style guide are also here.
+The Wishem workbench application. The package holds the workbench page, the HTML renderer, the views, the `start` script, and the style guide. The design tokens, the components, and the screenshot tests of the style guide are also here.
+
+## Start the workbench
+
+Build the Wishem packages before the first start. The `start` script loads `host-nodejs` and `workbench` from their built files.
+
+```
+pnpm build --filter "@thrashplay/wishem-*"
+pnpm --filter @thrashplay/wishem-workbench-app start
+```
+
+The script starts the core of the workbench and the page server in one Node.js process. It prints the model folder, the address of the core, and the address of the page. Open the address of the page in a web browser. Press Ctrl+C to stop both.
+
+The page server listens on `127.0.0.1` only. It passes `GET /snapshot` and `GET /snapshots` to the core.
+
+| Option        | Default                                            | Meaning                                        |
+| ------------- | -------------------------------------------------- | ---------------------------------------------- |
+| `--model`     | the model folder of `@thrashplay/wishem-workbench` | The model folder.                              |
+| `--port`      | `5173`                                             | The port of the page. `0`: the system selects. |
+| `--core-port` | `4747`                                             | The port of the core. `0`: the system selects. |
+
+For example: `pnpm --filter @thrashplay/wishem-workbench-app start --model ./my-model --port 0`.
+
+### Change the picture by hand
+
+Edit a file in the model folder and save it. The page shows the new model. For example, in a second terminal:
+
+```
+sed -i 's/"Wishem"/"Hello"/' nodejs/wishem/workbench/model/state.json
+```
+
+### Where a problem appears
+
+- A problem in a model file appears in the terminal that runs `start`. The page keeps the last correct picture.
+- A problem in a view or a view declaration appears in the browser console.
+- When the model is not correct at the start, the script prints each problem and stops with exit code 1.
+- When a port is in use, the script prints the port and stops with exit code 1.
+
+### Add a view
+
+1. Add one file to `src/views/`, for example `src/views/Header.tsx`.
+2. Export a view that `defineView` from `src/renderer/` returns. Use the IDs of the component type and the fields from the definition file in the model folder.
+3. Save the file. Vite reloads the page.
 
 ## Start the style guide
 
