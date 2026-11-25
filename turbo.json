@@ -143,6 +143,7 @@
         "package.json",
         "playwright.config.ts",
         "scripts/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
         "$TURBO_ROOT$/pnpm-workspace.yaml",
         "src/**",
         "style-guide.html",
