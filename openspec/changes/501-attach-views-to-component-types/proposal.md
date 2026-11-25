@@ -33,7 +33,9 @@ Not in this change:
 - A change to the picture of the page. The page shows the same app bar and the same zero state.
 - A rename of "component" to "view" in the `wishem/design-system/component-catalog` specification, in `src/components/`, and in [Workbench components](https://github.com/twin-digital/opus/issues/497).
 
-This change depends on [First workbench UI slice](https://github.com/twin-digital/opus/issues/477). That change must be merged and archived before the first task of this change starts.
+This change builds on [First workbench UI slice](https://github.com/twin-digital/opus/issues/477), which is merged and archived.
+
+This change alters no element and no relationship at the C4 context level or the container level, and no entity of a store of persisted data. Thus it lists no `wishem/architecture/diagrams` capability. See D9 of `design.md`.
 
 ## Capabilities
 
@@ -49,7 +51,7 @@ This change depends on [First workbench UI slice](https://github.com/twin-digita
 
 - `@thrashplay/wishem-workbench-app` (private): the renderer modules, the `AppBar` view with its sidecar and its generated types, the generator, a `generate` script, the `start` script, the unit tests, and the end-to-end tests.
 - `nodejs/wishem/docs/glossary.md` and `concepts.md`: the terms and the rules for views.
-- `nodejs/wishem/docs/architecture/`: the text and the diagrams that name `defineView` and `checkViews`.
+- `nodejs/wishem/docs/architecture/`: the text that names `defineView` and `checkViews`, and the diagram "From a file to a picture", through its description in `render.mjs`.
 - `nodejs/wishem/workbench-app/README.md` and `nodejs/wishem/CLAUDE.md`: how to add a view.
 - `.prettierignore`: the generated files.
 - No change to a published package, to the pull request checks, or to `turbo.json`.

@@ -140,7 +140,25 @@ This must be verified in the task: after an edit to `src/views/AppBar.tsx` while
 - A view gets the fields of its own component type. When the same data needs more than one view, the data is in one component type, and each view has its own component type with a field that refers to the data. References are **Open**.
 - Remove the sentence that a view declares its fields.
 
-`nodejs/wishem/docs/architecture/README.md` and its diagrams: replace `defineView` and `checkViews` with the sidecar, the generated types, and the generator. The sequence of a change gets the generator.
+`nodejs/wishem/docs/architecture/README.md`: replace `defineView` and `checkViews` with the sidecar, the generated types, and the generator. The path of a change gets the generator.
+
+The diagram "From a file to a picture" (`picture-light.svg` and `picture-dark.svg`) shows the view file as the source of the table of views. After this change, the sidecar gives the link from a view to its component type, so the diagram must show the sidecar. The change is made in the description of the diagram in `render.mjs`, and the script writes the two files. No SVG file is edited by hand. The work follows [`docs/diagrams.md`](../../../docs/diagrams.md) and the `diagrams` skill: the script runs two times with no change on the second run, `check-svg.mjs` passes, and the implementer looks at an image of each file on the page color of its theme. The text of the diagram stays in the limits of the guide: the detail goes in the prose.
+
+The diagram "The processes of the workbench" does not change. See D9.
+
+### D9. The architecture level does not change
+
+The rules of `openspec/config.yaml` require a C4 diagram in this design, and the capability `wishem/architecture/diagrams`, when a change alters the C4 context level or container level, or the entities of a store of persisted data. This change alters neither:
+
+- **Containers.** The containers of the workbench are the page in the web browser, the Node.js process of the `start` script, the model folder, and the packages that other packages build on. This change adds no container. The generator and the `generate` command are code of `workbench-app`. The `start` script gets the definitions from the core that it already holds, and it writes files in its own package.
+- **Relationships.** The `generate` command reads the model folder with the reader of `host-nodejs`, as the host does. It is a development command of one package, and it runs no part of the product. It is not drawn as a container.
+- **Stores.** The model folder is the one store of persisted data. Its entities do not change: the model does not name a view. A sidecar is a source file of `workbench-app`, beside the view that it describes. The `erDiagram` of the Data Model section shows it because the design rules require that diagram for a persisted schema.
+
+The diagram guidance still applies to the one diagram that this change corrects. See D8.
+
+The architecture document of Wishem was made before the diagram guidance. It has no system context diagram, no container diagram in C4 notation, no entity diagram of the model folder, and no `wishem/architecture/diagrams` specification. That work is not part of this change.
+
+A later change makes this decision again when the views become content of a product folder, beside the model folder. The folder of the views is then a store, and the sidecar is an entity of it.
 
 ## The parts and the main flow
 

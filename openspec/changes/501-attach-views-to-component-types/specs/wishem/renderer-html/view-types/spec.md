@@ -102,12 +102,17 @@ With the option `--check`, the `generate` script SHALL change no file. It SHALL 
 
 ### Requirement: The start script keeps the generated files current
 
-While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. For each prop name that is new or removed, the script SHALL print one line that names the generated file and the prop. An error of the generator SHALL be printed, and SHALL NOT stop the script. The script SHALL have an option that turns this off.
+While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. The script SHALL have an option that turns this off.
 
 #### Scenario: A label changes while the workbench runs
 
 - **WHEN** the workbench runs and a person changes the label of the field `title` to `heading` in the definition file
-- **THEN** `AppBar.view.gen.ts` has the member `heading` and no member `title`, and the terminal has a line that names the file and the two props
+- **THEN** `AppBar.view.gen.ts` has the member `heading` and no member `title`
+
+#### Scenario: A sidecar is added while the workbench runs
+
+- **WHEN** the workbench runs and a person adds a sidecar for a component type that has a definition
+- **THEN** the generated file of that sidecar exists
 
 #### Scenario: A change to the authored state
 
@@ -118,3 +123,17 @@ While the `start` script of the workbench runs, the generated files of the `view
 
 - **WHEN** a person starts the workbench with the option that turns the generator off, and changes a label in a definition file
 - **THEN** no generated file changes
+
+### Requirement: The start script reports what the generator did
+
+For each prop name that is new or removed after a run of the generator, the `start` script SHALL print one line that names the generated file and the prop. The script SHALL print each error of the generator. An error of the generator SHALL NOT stop the script.
+
+#### Scenario: A label changes
+
+- **WHEN** the workbench runs and a person changes the label of the field `title` to `heading` in the definition file
+- **THEN** the terminal has a line that names `AppBar.view.gen.ts` and the two props
+
+#### Scenario: Two labels give the same name while the workbench runs
+
+- **WHEN** the workbench runs and a person gives two fields of one component type labels that give the same name
+- **THEN** the terminal has the error of the generator, and the page is still served

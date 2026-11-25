@@ -74,7 +74,7 @@ The page SHALL give a warning in the browser console, and SHALL continue to draw
 
 Each view file in the `views` folder of a product SHALL have one default export, which is a function from the props of the view to a picture. The view file SHALL state no ID of a component type and no ID of a field. The renderer SHALL collect each sidecar of the folder and the view file of each sidecar. A view SHALL need no other registration. The name of the file SHALL have no meaning to the renderer, apart from the link between a view file and its sidecar.
 
-#### Scenario: A new view
+#### Scenario: A new view file
 
 - **WHEN** a person adds a view file and its sidecar to the `views` folder for a component type that has a definition
 - **THEN** the page draws each component of that type, and no other file of the renderer changes
@@ -102,7 +102,7 @@ The renderer SHALL find the view of a component by the ID of the component type 
 
 When two sidecars of the kind `react` name the same component type ID, the page SHALL report one error that names the two sidecar files and the ID. The page SHALL draw no view.
 
-#### Scenario: Two sidecars with the same ID
+#### Scenario: Two files with the same ID
 
 - **WHEN** `views/AppBar.view.json` and `views/Header.view.json` name the same component type ID
 - **THEN** the error names `AppBar.view.json`, `Header.view.json`, and the ID
@@ -111,12 +111,12 @@ When two sidecars of the kind `react` name the same component type ID, the page 
 
 The renderer SHALL write the warnings to the browser console when the set of warnings changes. The renderer SHALL NOT repeat the warnings for a snapshot that has the same set of warnings.
 
-#### Scenario: Two changes to the authored state with the same warning
+#### Scenario: Two changes to the authored state with the same difference
 
 - **WHEN** a sidecar names a component type that is not defined, and the authored state changes two times with no change to the definitions
 - **THEN** the browser console has the warning one time
 
-#### Scenario: The problem is corrected
+#### Scenario: The difference is corrected
 
 - **WHEN** a sidecar gave a warning and a person adds the definition file of its component type
 - **THEN** the next snapshot gives no warning
