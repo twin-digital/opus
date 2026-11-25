@@ -94,7 +94,7 @@ const buildColors = (tokens, theme) => {
 const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 
 // Width of a glyph as a share of the font size. The values assume a wide system font.
-const WIDTH = { regular: 0.6, bold: 0.62, upper: 0.74 }
+const WIDTH = { regular: 0.6, bold: 0.62, upper: 0.7 }
 
 const escapeXml = (value) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
@@ -154,7 +154,7 @@ const icon = ({ name, x, y, size, color }) => {
 // Shapes
 // ---------------------------------------------------------------------------
 
-const PAD = 12
+const PAD = 8
 
 const rect = ({ x, y, w, h }, radius, attributes) =>
   `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="${num(radius)}" ${attributes}/>`
@@ -164,15 +164,15 @@ const group = (c, item) =>
   [
     rect(item, 18, `fill="${c.groupFill}" stroke="${c.line}"`),
     text(c, {
-      x: item.x + 20,
+      x: item.x + 16,
       y: item.y + 30,
       line: item.label,
       size: 13,
       weight: 600,
       color: c.accentText,
-      spacing: 1.2,
+      spacing: 0.6,
       upper: true,
-      maxWidth: item.w - 40,
+      maxWidth: item.w - 32,
     }),
   ].join('\n')
 
@@ -218,6 +218,53 @@ const card = (c, item) => {
     out.push(text(c, { x: x + w / 2, y: titleY + 20, line: sub, color: c.fgMuted, anchor: 'middle', maxWidth: inner }))
   }
   return out.join('\n')
+}
+
+// Least visible line, in px, of an arrow. A labeled arrow keeps `MIN_SIDE` on each side of its pill.
+const MIN_PLAIN = 56
+const MIN_SIDE = 28
+const PILL_HEIGHT = 24
+
+const pillWidth = (line) => textWidth(line, { size: 13, weight: 500 }) + 22
+
+/** Fails the run when an arrow is too short to read, or when its pill leaves too little line. */
+const checkLength = ({ points, label }) => {
+  let length = 0
+  let before
+  let half = 0
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1]
+    const [bx, by] = points[i]
+    if (label !== undefined && before === undefined) {
+      const [px, py] = label.at
+      const onSegment =
+        (bx - ax) * (py - ay) === (by - ay) * (px - ax) &&
+        px >= Math.min(ax, bx) &&
+        px <= Math.max(ax, bx) &&
+        py >= Math.min(ay, by) &&
+        py <= Math.max(ay, by)
+      if (onSegment) {
+        before = length + Math.hypot(px - ax, py - ay)
+        half = ay === by ? pillWidth(label.line) / 2 : PILL_HEIGHT / 2
+      }
+    }
+    length += Math.hypot(bx - ax, by - ay)
+  }
+  if (label === undefined) {
+    if (length < MIN_PLAIN) {
+      throw new Error(`The arrow shows ${num(length)} px of line, less than ${String(MIN_PLAIN)} px`)
+    }
+    return
+  }
+  if (before === undefined) {
+    throw new Error(`The label is not on its arrow: ${label.line}`)
+  }
+  const side = Math.min(before - half, length - before - half)
+  if (side < MIN_SIDE) {
+    throw new Error(
+      `The label leaves ${num(side)} px of line beside it, less than ${String(MIN_SIDE)} px: ${label.line}`,
+    )
+  }
 }
 
 const ARROW_RADIUS = 10
@@ -267,12 +314,10 @@ const arrow = (c, item) => {
     `<path d="${roundedPath(points, [baseX + ux, baseY + uy])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
     `<polygon points="${head}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
   ]
+  checkLength(item)
   if (item.label !== undefined) {
-    const { line, at, maxWidth } = item.label
-    const width = textWidth(line, { size: 13, weight: 500 }) + 22
-    if (maxWidth !== undefined && width > maxWidth) {
-      throw new Error(`The label does not fit in ${String(maxWidth)} px: ${line}`)
-    }
+    const { line, at } = item.label
+    const width = pillWidth(line)
     out.push(
       rect({ x: at[0] - width / 2, y: at[1] - 12, w: width, h: 24 }, 12, `fill="${c.surface}" stroke="${stroke}"`),
       text(c, {
@@ -289,15 +334,15 @@ const arrow = (c, item) => {
 }
 
 /** A small page with an app bar. A dashed outline marks the app bar. */
-const appBarPicture = (c, { x, y, w }) => {
+const appBarPicture = (c, { x, y, w, h }) => {
   const left = x + 18
   const width = w - 36
   const bar = { x: left + 8, y: y + 26, w: width - 16, h: 42 }
   const bits = [
-    rect({ x: left, y, w: width, h: 292 }, 12, `fill="${c.ground}" stroke="${c.border}"`),
+    rect({ x: left, y, w: width, h }, 12, `fill="${c.ground}" stroke="${c.border}"`),
     rect(bar, 8, `fill="${c.accentText}"`),
     `<path d="M${num(bar.x + 14)} ${num(bar.y + 15)}h16M${num(bar.x + 14)} ${num(bar.y + 21)}h16M${num(bar.x + 14)} ${num(bar.y + 27)}h16" stroke="${c.ground}" stroke-width="2.5" stroke-linecap="round"/>`,
-    rect({ x: bar.x + 44, y: bar.y + 17, w: 56, h: 8 }, 4, `fill="${c.ground}"`),
+    rect({ x: bar.x + 44, y: bar.y + 17, w: bar.w - 44 - 40, h: 8 }, 4, `fill="${c.ground}"`),
     `<circle cx="${num(bar.x + bar.w - 20)}" cy="${num(bar.y + 21)}" r="8" fill="${c.ground}"/>`,
     rect(
       { x: bar.x - 6, y: bar.y - 6, w: bar.w + 12, h: bar.h + 12 },
@@ -305,8 +350,8 @@ const appBarPicture = (c, { x, y, w }) => {
       `fill="none" stroke="${c.flow}" stroke-width="2.5" stroke-dasharray="6 5"`,
     ),
     rect({ x: left + 14, y: y + 94, w: 96, h: 10 }, 5, `fill="${c.tint}"`),
-    rect({ x: left + 14, y: y + 114, w: 128, h: 10 }, 5, `fill="${c.tint}"`),
-    rect({ x: left + 14, y: y + 148, w: width - 28, h: 120 }, 10, `fill="${c.tint}"`),
+    rect({ x: left + 14, y: y + 114, w: width - 44, h: 10 }, 5, `fill="${c.tint}"`),
+    rect({ x: left + 14, y: y + 148, w: width - 28, h: h - 148 - 24 }, 10, `fill="${c.tint}"`),
   ]
   return bits.join('\n')
 }
@@ -324,97 +369,97 @@ const processes = {
   description:
     'The designer edits the model folder, runs the start script, and opens the page. The start script starts one Node.js process that holds the host and the Vite development server. The host reads the model folder and sends each snapshot through the Vite development server to the page in the web browser.',
   width: 880,
-  height: 464,
+  height: 472,
   items: [
-    { kind: 'group', x: 234, y: 24, w: 392, h: 208, label: 'Node.js process' },
-    { kind: 'group', x: 680, y: 24, w: 176, h: 208, label: 'Web browser' },
+    { kind: 'group', x: 257, y: 24, w: 334, h: 210, label: 'Node.js process' },
+    { kind: 'group', x: 709, y: 24, w: 142, h: 210, label: 'Web browser' },
 
-    { kind: 'card', x: 24, y: 68, w: 150, h: 140, title: 'Model folder', icon: 'folder' },
-    { kind: 'card', x: 254, y: 68, w: 120, h: 140, title: 'Host', icon: 'server' },
-    { kind: 'card', x: 430, y: 68, w: 176, h: 140, title: 'Vite', sub: 'development server', icon: 'bolt' },
-    { kind: 'card', x: 709, y: 68, w: 118, h: 140, title: 'Page', icon: 'browser' },
-    { kind: 'card', x: 24, y: 330, w: 160, h: 110, title: 'Designer', icon: 'person', variant: 'maker' },
+    { kind: 'card', x: 24, y: 68, w: 132, h: 150, title: 'Model folder', icon: 'folder' },
+    { kind: 'card', x: 273, y: 68, w: 84, h: 150, title: 'Host', icon: 'server' },
+    { kind: 'card', x: 417, y: 68, w: 158, h: 150, title: 'Vite', sub: 'development server', icon: 'bolt' },
+    { kind: 'card', x: 725, y: 68, w: 110, h: 150, title: 'Page', icon: 'browser' },
+    { kind: 'card', x: 24, y: 338, w: 132, h: 110, title: 'Designer', icon: 'person', variant: 'maker' },
 
     // The path of the data
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [99, 330],
-        [99, 208],
+        [90, 338],
+        [90, 218],
       ],
-      label: { line: 'edits', at: [99, 269], maxWidth: 100 },
+      label: { line: 'edits', at: [90, 278] },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [174, 138],
-        [254, 138],
+        [156, 143],
+        [273, 143],
       ],
-      label: { line: 'files', at: [204, 138], maxWidth: 70 },
+      label: { line: 'files', at: [214.5, 143] },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [374, 150],
-        [430, 150],
+        [357, 157],
+        [417, 157],
       ],
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [606, 168],
-        [709, 168],
+        [575, 182],
+        [725, 182],
       ],
-      label: { line: 'snapshots', at: [657, 168], maxWidth: 100 },
+      label: { line: 'snapshots', at: [650, 182] },
     },
 
     // The other connections of the Vite development server
     {
       kind: 'arrow',
       points: [
-        [430, 126],
-        [374, 126],
+        [417, 129],
+        [357, 129],
       ],
     },
     {
       kind: 'arrow',
       points: [
-        [606, 108],
-        [709, 108],
+        [575, 104],
+        [725, 104],
       ],
-      label: { line: 'code', at: [657, 108], maxWidth: 100 },
+      label: { line: 'code', at: [650, 104] },
     },
     {
       kind: 'arrow',
       points: [
-        [709, 138],
-        [606, 138],
+        [725, 143],
+        [575, 143],
       ],
-      label: { line: 'request', at: [657, 138], maxWidth: 100 },
+      label: { line: 'request', at: [650, 143] },
     },
 
     // The other actions of the designer
     {
       kind: 'arrow',
       points: [
-        [184, 370],
-        [440, 370],
-        [440, 232],
+        [156, 372],
+        [496, 372],
+        [496, 234],
       ],
-      label: { line: 'start script', at: [312, 370], maxWidth: 140 },
+      label: { line: 'start script', at: [306, 372] },
     },
     {
       kind: 'arrow',
       points: [
-        [184, 410],
-        [768, 410],
-        [768, 208],
+        [156, 414],
+        [780, 414],
+        [780, 218],
       ],
-      label: { line: 'opens', at: [480, 410], maxWidth: 100 },
+      label: { line: 'opens', at: [470, 414] },
     },
   ],
 }
@@ -425,30 +470,30 @@ const picture = {
   description:
     'The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The table of views comes from the view file. The renderer draws the app bar in a marked element.',
   width: 880,
-  height: 444,
+  height: 476,
   items: [
     // The model, then the snapshot
-    { kind: 'card', x: 24, y: 24, w: 180, h: 90, title: 'Definition file', icon: 'file', iconSize: 32 },
-    { kind: 'card', x: 24, y: 126, w: 180, h: 90, title: 'State file', icon: 'state', iconSize: 32 },
-    { kind: 'card', x: 244, y: 24, w: 164, h: 192, title: 'Host', icon: 'server', iconSize: 52 },
-    { kind: 'card', x: 448, y: 24, w: 164, h: 192, title: 'Snapshot', icon: 'snapshot', iconSize: 52 },
+    { kind: 'card', x: 24, y: 24, w: 156, h: 90, title: 'Definition file', icon: 'file', iconSize: 32 },
+    { kind: 'card', x: 24, y: 126, w: 156, h: 90, title: 'State file', icon: 'state', iconSize: 32 },
+    { kind: 'card', x: 254, y: 24, w: 148, h: 192, title: 'Host', icon: 'server', iconSize: 52 },
+    { kind: 'card', x: 476, y: 24, w: 128, h: 192, title: 'Snapshot', icon: 'snapshot', iconSize: 52 },
 
     // The views
-    { kind: 'card', x: 24, y: 280, w: 180, h: 140, title: 'View file', icon: 'viewFile' },
-    { kind: 'card', x: 244, y: 280, w: 164, h: 140, title: 'Table of views', icon: 'table' },
-    { kind: 'card', x: 448, y: 280, w: 164, h: 140, title: 'Renderer', icon: 'wand' },
+    { kind: 'card', x: 24, y: 312, w: 156, h: 140, title: 'View file', icon: 'viewFile' },
+    { kind: 'card', x: 254, y: 312, w: 148, h: 140, title: 'Table of views', icon: 'table' },
+    { kind: 'card', x: 476, y: 312, w: 128, h: 140, title: 'Renderer', icon: 'wand' },
 
     // The picture
     {
       kind: 'card',
-      x: 664,
+      x: 678,
       y: 24,
-      w: 192,
-      h: 396,
+      w: 178,
+      h: 428,
       variant: 'marked',
       shadow: false,
       title: 'Marked element',
-      art: (c, item) => appBarPicture(c, { x: item.x, y: item.y + 24, w: item.w }),
+      art: (c, item) => appBarPicture(c, { x: item.x, y: item.y + 24, w: item.w, h: item.h - 24 - 24 - 52 }),
     },
 
     // The path of the data
@@ -456,41 +501,41 @@ const picture = {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [204, 69],
-        [244, 69],
+        [180, 69],
+        [254, 69],
       ],
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [204, 171],
-        [244, 171],
+        [180, 171],
+        [254, 171],
       ],
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [408, 120],
-        [448, 120],
+        [402, 120],
+        [476, 120],
       ],
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [530, 216],
-        [530, 280],
+        [540, 216],
+        [540, 312],
       ],
-      label: { line: 'props', at: [530, 248], maxWidth: 100 },
+      label: { line: 'props', at: [540, 264] },
     },
     {
       kind: 'arrow',
       tone: 'flow',
       points: [
-        [612, 350],
-        [664, 350],
+        [604, 382],
+        [678, 382],
       ],
     },
 
@@ -498,15 +543,15 @@ const picture = {
     {
       kind: 'arrow',
       points: [
-        [204, 350],
-        [244, 350],
+        [180, 382],
+        [254, 382],
       ],
     },
     {
       kind: 'arrow',
       points: [
-        [408, 350],
-        [448, 350],
+        [402, 382],
+        [476, 382],
       ],
     },
   ],
