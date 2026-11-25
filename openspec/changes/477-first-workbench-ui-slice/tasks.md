@@ -74,7 +74,6 @@ Read `design.md` D10, D11, and the two Mermaid diagrams. Read `nodejs/wishem/doc
 
 ## Workflow follow-up
 
-- Before Task 1 starts, confirm with the owner each item in "Decisions that the owner did not confirm" of `design.md`.
 - Add a changeset that agrees with the Package Impact table of `design.md`: `@thrashplay/wishem-workbench-app` minor and `@thrashplay/wishem-core` minor.
 - Break-test `@thrashplay/wishem-workbench-app` (the modules in `src/renderer/`) and `@thrashplay/wishem-core` before the final review.
 - Update the body of [First workbench UI slice](https://github.com/twin-digital/opus/issues/477) when the owner changes a decision during the work.

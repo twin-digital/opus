@@ -86,8 +86,6 @@ Reason: no code is generated, and a prop that is not declared is a type error. T
 
 Reason: Vite needs a literal path in `import.meta.glob`, so the call cannot be in a general module of the renderer. A pure function gets unit tests with no web browser.
 
-This is a decision of the agent that wrote this document: the error for a file that exports no view, and the empty table after an error. The owner did not confirm it.
-
 ### D4. The client is an `EventSource` behind the read interface of the core
 
 `@thrashplay/wishem-core` gets the type `CoreReader`: `getSnapshot` and `subscribe`. `Core` extends it. No behavior of the core changes.
@@ -127,8 +125,6 @@ Each picture is in one wrapper element:
 On each snapshot, the renderer calls `checkViews` with the table and the definitions. It keeps the list of differences as text. When the text is different from the last text, it writes each difference with `console.warn`. Each message names the view file, the component type ID, and the field ID when the difference is about a field.
 
 Reason: see [the answer about the position of a view](https://github.com/twin-digital/opus/issues/477#issuecomment-7167138285) and the mark of an entity in [the five answers](https://github.com/twin-digital/opus/issues/477#issuecomment-7167019505).
-
-This is a decision of the agent that wrote this document: the names of the two attributes, the order of the components of one entity, and the mark for the component type. The owner did not confirm it.
 
 Rejected: an attribute that the renderer adds to the first element of the view. A view can return text or more than one element.
 
@@ -703,21 +699,20 @@ The page has no control. Nothing gets focus. The app bar is the banner landmark,
 - [The `start` script needs a build of two packages] → The README and the error table say this. The `wishem` command has the same condition.
 - [A view that throws removes the page] → Accepted for this slice. An error boundary needs a picture for an error, and the slice adds no component to the catalog.
 - [The brand typefaces do not show in an SVG on GitHub] → See D10. The fallback is text as paths.
-- [The owner did not confirm some decisions of this document] → See the list below.
 
-### Decisions that the owner did not confirm
+### Decisions that the owner confirmed for this plan
 
-Confirm each one before the task that builds it starts. Each one is **Proposed** in the issue or new in this document.
+The owner confirmed each of these decisions on 2026-11-25. Each one was **Proposed** in the issue or new in this document.
 
-- The two **Proposed** items of the answer about rule R17: the first sentence of R17 stays, and the `wishem/host-nodejs/server` specification is not a promise to an outside client.
+- The first sentence of rule R17 stays, and it applies to the renderer of the first game. The `wishem/host-nodejs/server` specification is not a promise to an outside client.
 - The page shows no message for a problem. The terminal and the browser console are the only places.
-- The comparison: one warning for each set of differences, and a field that the view does not declare is not a difference.
-- The parameters of the `start` script in D7, and the default port 4747 for the core.
-- The error for a view file that exports no view, and the empty table after a collection error (D3).
-- The names `data-wishem-entity` and `data-wishem-component-type`, and the mark for the component type (D5).
-- The location and the content of the architecture documents, and two SVG files for each diagram (D10).
-- The terms **Model side** and **Presentation side** in the glossary (D11).
+- The comparison gives one warning for each set of differences. A field that the view does not declare is not a difference.
 - The type of a prop is `string | undefined`.
+- The glossary gets the terms **Model side** and **Presentation side**, with the label **Proposed**.
+- The parameters of the `start` script in D7, the default port 4747 for the core, and one Node.js process for the host and the Vite development server.
+- The error for a view file that exports no view, and the empty table after a collection error (D3).
+- The names `data-wishem-entity` and `data-wishem-component-type`, the wrapper element, and the mark for the component type (D5).
+- The location and the content of the architecture documents, and two SVG files for each diagram that a script writes (D10).
 
 ## Open Questions
 
