@@ -1,5 +1,5 @@
 // Renders the images that ../brand.md embeds from brand-basics.html, in light and dark.
-// Run: node nodejs/wishem/workbench-app/scripts/browser-server.js node ../docs/brand/render.mjs
+// Run, from the root of the repository: cd nodejs/wishem/workbench-app && node scripts/browser-server.js node ../docs/brand/render.mjs
 // Without WISHEM_BROWSER_WS_ENDPOINT, it launches a local Chromium.
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
