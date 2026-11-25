@@ -1,10 +1,14 @@
 import type { Model, Problem, Snapshot, ValidationResult } from './model.js'
 import { validateModel } from './validate-model.js'
 
-export interface Core {
+/** The read operations of a core. */
+export interface CoreReader {
   getSnapshot(): Snapshot
   /** Returns a function that stops the registration. */
   subscribe(listener: (snapshot: Snapshot) => void): () => void
+}
+
+export interface Core extends CoreReader {
   /**
    * For the host. Keeps the current model when the result is not ok.
    * Calls every listener. Throws an `AggregateError` after the last call when a listener throws.
