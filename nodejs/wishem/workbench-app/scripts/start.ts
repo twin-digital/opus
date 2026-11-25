@@ -3,7 +3,7 @@
 import type { AddressInfo } from 'node:net'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
-import { createServer } from 'vite'
+import { createServer, type ViteDevServer } from 'vite'
 import { ModelError } from '@thrashplay/wishem-core'
 import { startHost } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
@@ -69,20 +69,21 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   }
 
   const proxy = { target: host.url, changeOrigin: false }
-  const server = await createServer({
-    root: packageRoot,
-    logLevel: 'warn',
-    server: {
-      host: PAGE_ADDRESS,
-      port,
-      strictPort: true,
-      proxy: { '/snapshot': proxy, '/snapshots': proxy },
-    },
-  })
+  let server: ViteDevServer | undefined
   try {
+    server = await createServer({
+      root: packageRoot,
+      logLevel: 'warn',
+      server: {
+        host: PAGE_ADDRESS,
+        port,
+        strictPort: true,
+        proxy: { '/snapshot': proxy, '/snapshots': proxy },
+      },
+    })
     await server.listen()
   } catch (error) {
-    await server.close()
+    await server?.close()
     await host.close()
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)

@@ -4,7 +4,12 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:f
 import { createServer, connect, type Server } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { startWorkbench } from '../scripts/start.js'
+
+vi.mock('vite', () => ({
+  createServer: () => Promise.reject(new Error('plugin failed')),
+}))
 
 const script = join(import.meta.dirname, '..', 'scripts', 'start.ts')
 const baseModel = join(import.meta.dirname, '..', '..', 'workbench', 'model')
@@ -202,6 +207,14 @@ describe('the start script of the workbench', () => {
 
     expect(await run.exit).toBe(1)
     expect(run.output()).toContain(`wishem: port ${pagePort} is in use`)
+    expect(await refuses('127.0.0.1', corePort)).toBe(true)
+  })
+
+  it('closes the core when the page server cannot be created', { timeout: 30000 }, async () => {
+    const corePort = await freePort()
+
+    await expect(startWorkbench({ model, port: 0, corePort, log: () => undefined })).rejects.toThrow('plugin failed')
+
     expect(await refuses('127.0.0.1', corePort)).toBe(true)
   })
 
