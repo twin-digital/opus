@@ -92,3 +92,6 @@ nodejs/football/overrides.json
 
 # Scratch files of the Superpowers plugin.
 .superpowers/
+
+# End-to-end test copy of the Wishem model
+.e2e-model/

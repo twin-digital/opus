@@ -79,6 +79,29 @@ The environment variable `WISHEM_BROWSER_HOST` replaces the host name of the bro
 
 When the host is a loopback name (`localhost`, `127.x.x.x`, or `::1`), the script publishes the port of the browser server on the loopback address only. For another host, it publishes the port on all interfaces of the Docker host.
 
+## Browser tests of the workbench page
+
+`playwright.config.ts` has two projects:
+
+- `style-guide` runs `tests/style-guide.spec.ts`. The browser opens the static server in the container at `127.0.0.1:4173`.
+- `workbench` runs `tests/workbench.spec.ts`. The browser opens the page of the real workbench at `127.0.0.1:4180`.
+
+The `webServer` option of the config runs `scripts/e2e-server.ts` on the computer of the test runner. The script copies the model folder of the base workbench to `.e2e-model/` (git-ignored). It overwrites files and deletes nothing. Then it calls `startWorkbench`, the function of the `start` script, with that folder, core port 0, and page port 4180.
+
+The browser is in the container and has no network path to the test runner. The connection of the `workbench` project has `exposeNetwork: '<loopback>'`. The browser then sends each request to a loopback address through the control connection to the test runner. The stream of snapshots passes through the same connection.
+
+### How a test changes the model
+
+Before each test, the test writes the original definition file and the original `state.json` to `.e2e-model/`. Then it opens the page and waits for the heading `Wishem`. A test changes the model with `node:fs` and waits for the picture with a web-first assertion. The tests only write in `.e2e-model/`, and in `src/views/AppBar.tsx` in the test of the view edit. That test writes the original view file again in a `finally` block.
+
+### What Vite does after a change to a view file
+
+Vite reloads the whole page. The default export of a view file is not a React component, so React Fast Refresh does not replace the module in place. The page connects again and draws the current snapshot. The test "an edit to the view of the app bar shows with no restart" proves that the page shows the change.
+
+### Baselines of the page
+
+`tests/__screenshots__/workbench-light.png` and `workbench-dark.png` hold the screenshots of the page. The browser takes them from the Vite development server, in the pinned browser image.
+
 ## Update the baselines
 
 ```

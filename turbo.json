@@ -139,6 +139,7 @@
     "test:ui": {
       "dependsOn": ["upstream-sources", "^build"],
       "inputs": [
+        "index.html",
         "package.json",
         "playwright.config.ts",
         "scripts/**",
