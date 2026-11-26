@@ -2,7 +2,7 @@
 
 > Blueprint, not a specification. See [`../README.md`](../README.md) for the status labels. The specifications in the last section override this file.
 
-This file describes what Wishem is made of. It uses the [C4 model](https://c4model.com/): a system context diagram, a container diagram, a dynamic diagram, and a component diagram. The workbench is the one part of Wishem that runs now. The workbench draws one element: an app bar. The app bar is an entity in the authored state of the workbench, and a view draws it.
+This file describes what Wishem is made of. It uses the [C4 model](https://c4model.com/): a system context diagram, a container diagram, a dynamic diagram, and a component diagram. It also has an entity diagram of the model folder. The workbench is the one part of Wishem that runs now. The workbench draws one element: an app bar. The app bar is an entity in the authored state of the workbench, and a view draws it.
 
 In a C4 diagram, a container is a process, a store of data, or a package that other packages build on. A container is not a Docker container. A component is a part of one container. A C4 component is not a component of an entity in the model.
 
@@ -56,7 +56,7 @@ To start the workbench, see [`workbench-app/README.md`](../../workbench-app/READ
   <img alt="Dynamic diagram of a change to the model. Step 1: the designer saves a model file in the model folder. Step 2: the workbench process reads the folder after the watch event. Step 3: the process sends the new snapshot to the page. Step 4: the page shows the new picture to the designer." src="dynamic-change-light.svg">
 </picture>
 
-The page opens the stream of snapshots one time. On that stream, the process sends each snapshot. Thus step 3 has the direction of the data.
+The page opens the stream of snapshots one time. On that stream, the process sends each snapshot. Step 3 shows the direction of the data, from the workbench process to the page. The container diagram shows the page as the client of the stream.
 
 This is the path from a saved `state.json` to a new picture.
 
@@ -106,6 +106,37 @@ The `Page` shows the zero state (`ZeroState`) when it has no core yet. The diagr
 | Catalog            | Component: React          | `src/components/`. It holds the components of the workbench, such as `AppBar` and `ZeroState`.                                                                           |
 
 The HTML renderer is a folder of modules in `workbench-app`. It is not a package. `src/renderer/` holds `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, `connect`, and `Renderer`.
+
+## Entity diagram: the model folder
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="entities-model-folder-dark.svg">
+  <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field." src="entities-model-folder-light.svg">
+</picture>
+
+The model folder is the one store of persisted data. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
+
+The schema has the names `ComponentTypeDefinition`, `FieldDefinition`, `Entity`, and `FieldValue`. The schema has no type name for a component. A component is one record in `components` of an entity, and the ID of its component type is the key of the record. The diagram uses the name `Component` for it, as the glossary does. A field value is one entry of that record, and the ID of its field is the key of the entry. The diagram uses the schema name `FieldValue`.
+
+The keys of a `Component` and of a `FieldValue` are the IDs of their parents. A `FieldValue` has the ID of its entity, the ID of its component type, and the ID of its field.
+
+The diagram does not show these fields:
+
+- `ComponentTypeDefinition` has a `label` and a list of `fields`. `FieldDefinition` has the `label` and the `type`. The only `type` is `string`.
+- The `id` of a `FieldDefinition` is unique in its component type only.
+- A `Component` has no fields of its own. It holds the values.
+
+The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value is a string. An entity has at most one component of each component type. A component can have no value for a field.
+
+| Entity                    | Purpose                                                                  | Schema                                                                    |
+| ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `ComponentTypeDefinition` | Declares a component type: its ID, its label, and its fields.            | [`model.ts`](../../core/src/model.ts) (`ComponentTypeDefinition`)         |
+| `FieldDefinition`         | Declares one field of a component type: its ID, its label, and its type. | [`model.ts`](../../core/src/model.ts) (`FieldDefinition`)                 |
+| `Entity`                  | A thing in the model. It holds its components.                           | [`model.ts`](../../core/src/model.ts) (`Entity`)                          |
+| `Component`               | The data of one component type in one entity.                            | [`model.ts`](../../core/src/model.ts) (`Entity.components`)               |
+| `FieldValue`              | The value of one field in one component.                                 | [`model.ts`](../../core/src/model.ts) (`FieldValue`, `Entity.components`) |
+
+The files of the model folder are `definitions/*.json` for the component types and `state.json` for the entities. [`validate-model.ts`](../../core/src/validate-model.ts) checks the relationships.
 
 ## The specifications
 

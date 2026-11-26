@@ -98,7 +98,7 @@ const SIZE = { title: 18, name: 15, detail: 12 }
 const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 
 // Width of a glyph as a share of the font size. The values assume a wide system font.
-const WIDTH = { regular: 0.6, bold: 0.62, upper: 0.7 }
+const WIDTH = { regular: 0.6, bold: 0.62 }
 
 const escapeXml = (value) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
@@ -106,36 +106,14 @@ const escapeXml = (value) =>
 const num = (value) => String(Math.round(value * 100) / 100)
 
 /** The estimated width of a line, for the overflow check. */
-const textWidth = (line, { size, weight = 400, spacing = 0, upper = false }) => {
-  const glyph =
-    upper ? WIDTH.upper
-    : weight >= 600 ? WIDTH.bold
-    : WIDTH.regular
-  return line.length * (size * glyph + spacing)
-}
+const textWidth = (line, { size, weight = 400 }) => line.length * size * (weight >= 600 ? WIDTH.bold : WIDTH.regular)
 
 /** Draws one line of text. `maxWidth` is the width that the text must fit in. */
-const text = (
-  c,
-  {
-    x,
-    y,
-    line,
-    size = SIZE.detail,
-    weight = 400,
-    color = c.fg,
-    anchor = 'start',
-    spacing = 0,
-    upper = false,
-    maxWidth,
-  },
-) => {
-  if (maxWidth !== undefined && textWidth(line, { size, weight, spacing, upper }) > maxWidth) {
+const text = (c, { x, y, line, size = SIZE.detail, weight = 400, color = c.fg, anchor = 'start', maxWidth }) => {
+  if (maxWidth !== undefined && textWidth(line, { size, weight }) > maxWidth) {
     throw new Error(`The text does not fit in ${String(maxWidth)} px: ${line}`)
   }
-  const extra = spacing === 0 ? '' : ` letter-spacing="${num(spacing)}"`
-  const content = escapeXml(upper ? line.toUpperCase() : line)
-  return `<text x="${num(x)}" y="${num(y)}" font-family="${SANS}" font-weight="${String(weight)}" font-size="${num(size)}" fill="${color}" text-anchor="${anchor}"${extra}>${content}</text>`
+  return `<text x="${num(x)}" y="${num(y)}" font-family="${SANS}" font-weight="${String(weight)}" font-size="${num(size)}" fill="${color}" text-anchor="${anchor}">${escapeXml(line)}</text>`
 }
 
 // ---------------------------------------------------------------------------
@@ -393,6 +371,86 @@ const arrow = (c, item) => {
 }
 
 // ---------------------------------------------------------------------------
+// Entities and cardinality
+// ---------------------------------------------------------------------------
+
+const ENTITY = { head: 36, row: 20, padX: 12, tag: 52 }
+const MARK_HALF = 7
+const MARK_STROKE = 2
+
+/** An entity card: the name and the keys. A key has `tag` (`PK`, `FK`, or both) and `name`. */
+const entity = (c, item) => {
+  const { x, y, w, h, name, keys } = item
+  if (ENTITY.head + keys.length * ENTITY.row + 8 > h) {
+    throw new Error(`The keys of ${name} do not fit in a card of ${String(h)} px`)
+  }
+  const out = [
+    rect(item, 12, `fill="${c.surface}" stroke="${c.border}" filter="url(#shadow)"`),
+    text(c, {
+      x: x + ENTITY.padX,
+      y: y + 24,
+      line: name,
+      size: SIZE.name,
+      weight: 600,
+      maxWidth: w - 2 * ENTITY.padX,
+    }),
+    `<path d="M${num(x)} ${num(y + ENTITY.head)} h${num(w)}" stroke="${c.border}"/>`,
+  ]
+  keys.forEach((key, index) => {
+    const baseline = y + ENTITY.head + 16 + index * ENTITY.row
+    out.push(
+      text(c, {
+        x: x + ENTITY.padX,
+        y: baseline,
+        line: key.tag,
+        weight: 600,
+        color: c.accentText,
+        maxWidth: ENTITY.tag - 6,
+      }),
+      text(c, {
+        x: x + ENTITY.padX + ENTITY.tag,
+        y: baseline,
+        line: key.name,
+        maxWidth: w - 2 * ENTITY.padX - ENTITY.tag,
+      }),
+    )
+  })
+  return out.join('\n')
+}
+
+/**
+ * The cardinality mark at `p`. `(dx, dy)` is the unit vector from the card along the line.
+ * `one` is exactly one (two bars). `many` is zero or more (a circle and a crow's foot).
+ */
+const cardinality = (c, [px, py], [dx, dy], kind) => {
+  const at = (along, across) => [px + dx * along - dy * across, py + dy * along + dx * across]
+  const stroke = `stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}" stroke-linecap="round"`
+  const seg = ([ax, ay], [bx, by]) => `M${num(ax)} ${num(ay)} L${num(bx)} ${num(by)}`
+  if (kind === 'one') {
+    return `<path d="${[10, 16].map((along) => seg(at(along, -MARK_HALF), at(along, MARK_HALF))).join(' ')}" fill="none" ${stroke}/>`
+  }
+  const [cx, cy] = at(22, 0)
+  return [
+    `<path d="${[-MARK_HALF, 0, MARK_HALF].map((across) => seg(at(14, 0), at(0, across))).join(' ')}" fill="none" ${stroke}/>`,
+    `<circle cx="${num(cx)}" cy="${num(cy)}" r="4.5" fill="${c.ground}" ${stroke}/>`,
+  ].join('\n')
+}
+
+/** A relationship between two entity cards: a straight line with a cardinality mark at each end. */
+const relationship = (c, item) => {
+  const { from, to } = item
+  checkLength({ points: [from, to] })
+  const length = Math.hypot(to[0] - from[0], to[1] - from[1])
+  const ux = (to[0] - from[0]) / length
+  const uy = (to[1] - from[1]) / length
+  return [
+    `<path d="M${num(from[0])} ${num(from[1])} L${num(to[0])} ${num(to[1])}" fill="none" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
+    cardinality(c, from, [ux, uy], item.fromMark),
+    cardinality(c, to, [-ux, -uy], item.toMark),
+  ].join('\n')
+}
+
+// ---------------------------------------------------------------------------
 // Legend
 // ---------------------------------------------------------------------------
 
@@ -419,6 +477,15 @@ const sample = (c, kind, x, cy) => {
       `<path d="M${num(x)} ${num(box.y + 4)} a${num(SAMPLE_W / 2)} 4 0 0 0 ${num(SAMPLE_W)} 0" fill="none" stroke="${c.border}"/>`,
     ].join('\n')
   }
+  if (kind === 'one' || kind === 'many') {
+    return [
+      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W)} ${num(cy)}" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
+      cardinality(c, [x + SAMPLE_W, cy], [-1, 0], kind),
+    ].join('\n')
+  }
+  if (kind === 'pk' || kind === 'fk') {
+    return text(c, { x, y: cy + 4.5, line: kind.toUpperCase(), weight: 600, color: c.accentText })
+  }
   const style = shapeStyle(c, kind === 'focus' ? 'system' : kind, kind === 'focus')
   return rect(box, 5, `fill="${style.fill}" stroke="${style.stroke}"`)
 }
@@ -443,8 +510,8 @@ const legend = (c, item) => {
   return out.join('\n')
 }
 
-const layers = { group, element, arrow, legend }
-const order = ['group', 'element', 'arrow', 'legend']
+const layers = { group, element, entity, arrow, relationship, legend }
+const order = ['group', 'element', 'entity', 'arrow', 'relationship', 'legend']
 
 // ---------------------------------------------------------------------------
 // Diagram descriptions
@@ -723,7 +790,70 @@ const componentsPage = {
   ],
 }
 
-const diagrams = [context, containers, dynamicChange, componentsPage]
+// Entities of the model folder (`core/src/model.ts`)
+const ENTITY_W = 290
+const ENTITY_LEFT = 48
+const ENTITY_RIGHT = 542
+const ROW_1 = 72
+const ROW_2 = 232
+const ROW_3 = 432
+
+// Card heights: one key, and two or three keys.
+const H_SHORT = 64
+const H_TALL = 104
+
+const ent = (x, y, h, name, keys) => ({ kind: 'entity', x, y, w: ENTITY_W, h, name, keys })
+const pk = (name) => ({ tag: 'PK', name })
+const pkfk = (name) => ({ tag: 'PK, FK', name })
+
+const eType = ent(ENTITY_LEFT, ROW_1, H_SHORT, 'ComponentTypeDefinition', [pk('id')])
+const eField = ent(ENTITY_RIGHT, ROW_1, H_SHORT, 'FieldDefinition', [pk('id')])
+const eComponent = ent(ENTITY_LEFT, ROW_2, H_TALL, 'Component', [pkfk('Entity.id'), pkfk('ComponentTypeDefinition.id')])
+const eValue = ent(ENTITY_RIGHT, ROW_2, H_TALL, 'FieldValue', [
+  pkfk('Entity.id'),
+  pkfk('ComponentTypeDefinition.id'),
+  pkfk('FieldDefinition.id'),
+])
+const eEntity = ent(ENTITY_LEFT, ROW_3, H_SHORT, 'Entity', [pk('id')])
+
+// A relationship from the middle of an edge of `a` to the middle of an edge of `b`. Marks: `one` or `many`.
+const link = (from, fromMark, to, toMark) => ({ kind: 'relationship', from, to, fromMark, toMark })
+
+const entitiesModelFolder = {
+  name: 'entities-model-folder',
+  title: 'Entity diagram: the model folder',
+  description:
+    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field.',
+  width: WIDTH_PX,
+  height: 612,
+  items: [
+    eType,
+    eField,
+    eComponent,
+    eValue,
+    eEntity,
+    link(right(eType), 'one', left(eField), 'many'),
+    link(bottom(eType), 'one', top(eComponent), 'many'),
+    link(top(eEntity), 'one', bottom(eComponent), 'many'),
+    link(right(eComponent), 'one', left(eValue), 'many'),
+    link(bottom(eField), 'one', top(eValue), 'many'),
+    {
+      kind: 'legend',
+      x: 24,
+      y: 544,
+      w: 832,
+      entries: [
+        ['entity', 'Entity'],
+        ['pk', 'Primary key'],
+        ['fk', 'Foreign key'],
+        ['one', 'Exactly one'],
+        ['many', 'Zero or more'],
+      ],
+    },
+  ],
+}
+
+const diagrams = [context, containers, dynamicChange, componentsPage, entitiesModelFolder]
 
 // ---------------------------------------------------------------------------
 // Output
