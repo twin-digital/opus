@@ -1,7 +1,10 @@
 import { Section } from '../Section.js'
 import { AppBarAndZeroState } from './components/AppBarAndZeroState.js'
 import { Buttons } from './components/Buttons.js'
+import { Content } from './components/Content.js'
 import { Controls } from './components/Controls.js'
+import { Narrow } from './components/Narrow.js'
+import { Panels } from './components/Panels.js'
 import { PromptBoxes } from './components/PromptBoxes.js'
 import { SelectSpecimens } from './components/SelectSpecimens.js'
 
@@ -15,5 +18,8 @@ export const Components = () => (
     <Controls />
     <SelectSpecimens />
     <PromptBoxes />
+    <Panels />
+    <Content />
+    <Narrow />
   </Section>
 )

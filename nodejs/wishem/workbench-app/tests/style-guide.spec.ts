@@ -602,3 +602,67 @@ test('the default text is Inter at 16 pixels', async ({ page }) => {
   expect(style.fontFamily).toMatch(/^"Inter Variable"/)
   expect(style.fontSize).toBe('16px')
 })
+
+test.describe('panel and content components', () => {
+  for (const theme of themes) {
+    const scope = (page: Page) => page.getByTestId(`components-${theme}`)
+    const box = (page: Page, testId: string) => scope(page).getByTestId(testId)
+
+    test(`${theme}: in the narrow panel the title is cut, the footer wraps, and no child is wider than the panel`, async ({
+      page,
+    }) => {
+      const narrow = box(page, 'panel-narrow')
+      const title = narrow.locator('h2')
+      expect(
+        await title.evaluate((e) => ({
+          overflow: getComputedStyle(e).textOverflow,
+          clipped: e.scrollWidth > e.clientWidth,
+        })),
+      ).toEqual({ overflow: 'ellipsis', clipped: true })
+      const lines = await narrow
+        .locator('[data-slot="footer"] button')
+        .evaluateAll((buttons) => new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top))).size)
+      expect(lines).toBe(2)
+      const wider = await narrow.evaluate((e) => {
+        const panel = e.firstElementChild as HTMLElement
+        const limit = panel.getBoundingClientRect().right + 0.5
+        return Array.from(panel.querySelectorAll('*')).filter((child) => child.getBoundingClientRect().right > limit)
+          .length
+      })
+      expect(wider).toBe(0)
+    })
+
+    test(`${theme}: the long word of the narrow callout breaks inside its box`, async ({ page }) => {
+      const narrow = box(page, 'callout-narrow')
+      const sizes = await narrow.evaluate((e) => {
+        const callout = e.firstElementChild as HTMLElement
+        return {
+          box: e.getBoundingClientRect().width,
+          callout: callout.getBoundingClientRect().width,
+          overflows: callout.scrollWidth > callout.clientWidth,
+        }
+      })
+      expect(sizes.callout).toBeLessThanOrEqual(sizes.box)
+      expect(sizes.overflows).toBe(false)
+    })
+
+    test(`${theme}: the dividers have their sizes`, async ({ page }) => {
+      const size = async (testId: string) => {
+        const b = await box(page, testId).locator('hr').boundingBox()
+        return { width: b?.width, height: b?.height }
+      }
+      const holder = await box(page, 'divider-plain').boundingBox()
+      expect(await size('divider-plain')).toEqual({ width: holder?.width, height: 1 })
+      expect(await size('divider-accent')).toEqual({ width: 56, height: 2 })
+    })
+
+    test(`${theme}: a badge is one line high`, async ({ page }) => {
+      const badge = box(page, 'badges').locator('span').first()
+      const { height, line } = await badge.evaluate((e) => ({
+        height: e.getBoundingClientRect().height,
+        line: parseFloat(getComputedStyle(e).lineHeight),
+      }))
+      expect(height).toBeLessThan(line + 8)
+    })
+  }
+})

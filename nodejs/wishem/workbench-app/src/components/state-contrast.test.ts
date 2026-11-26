@@ -73,6 +73,31 @@ const rows: StateRow[] = [
   { state: 'prompt box working text', foreground: 'fg-muted', background: 'ground' },
   { state: 'prompt box working status', foreground: 'spirit-text', background: 'ground' },
   { state: 'disabled prompt box reason', foreground: 'fg-muted', background: 'ground' },
+  ...(['ground', 'surface'] as const).flatMap((base): StateRow[] => [
+    ...(['success', 'warning', 'danger', 'info'] as const).flatMap((status): StateRow[] => [
+      {
+        state: `${status} callout title, on ${base}`,
+        foreground: `${status}-text`,
+        background: { mix: [status, base, 10] },
+      },
+      {
+        state: `${status} callout content, on ${base}`,
+        foreground: 'fg',
+        background: { mix: [status, base, 10] },
+      },
+    ]),
+    {
+      state: `spirit aside signature, on ${base}`,
+      foreground: 'spirit-text',
+      background: { mix: ['spirit', base, 9] },
+    },
+    {
+      state: `spirit aside text, on ${base}`,
+      foreground: 'fg',
+      background: { mix: ['spirit', base, 9] },
+    },
+    { state: `quote source, on ${base}`, foreground: 'fg-muted', background: base },
+  ]),
 ]
 
 describe('the contrast of each state', () => {

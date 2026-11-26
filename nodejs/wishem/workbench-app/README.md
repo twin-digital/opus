@@ -205,6 +205,14 @@ The browser tests compare the computed style of a forced specimen with the compu
 - `TextArea` (`invalid` and each native `textarea` prop): the multi-line text control, with the same behavior as `TextInput`. A person can drag its height and not its width.
 - `Checkbox` (`checked`, `onChange`, `children`, and each native `input` prop except `type`): a native checkbox that the catalog draws, with the label in `children`. `onChange` gets the other boolean. The box shows `checked` until the caller gives a new value.
 - `PromptBox` (`label`, `onSend`, `onStop`, `defaultValue`, `working`, `disabled`, `disabledReason`, `placeholder`, `minLines`, `maxLines`): a text area with a hint line and one button. It holds its text from `defaultValue`. Enter or `Make a wish` reports `onSend` with the text. Shift+Enter makes a new line. The text area grows from `minLines` (3) to `maxLines` (8) lines. While `working` is true, the text is read-only, `Stop` reports `onStop`, and focus moves between the text and `Stop`. `disabled` wins over `working` and shows `disabledReason` in the hint line. At the end of the work, the box becomes empty only when it reported `onSend` for this work and did not report `onStop` after it. In each other case, the text stays. A change of the text while `working` is false clears the record of the send.
+- `Panel` (`title`, `headerEnd`, `footer`, `children`): a `surface` box with a body. The header shows when the panel has a `title` (a heading 2, cut with an ellipsis) or `headerEnd`. The footer puts its content at the end of the line and wraps it.
+- `Quote` (`cite`, `children`): italic text with an `accent` bar. `cite` is the optional source below the text.
+- `SpiritAside` (`children`): a remark of Wishem with a `spirit` bar and tint. It starts with `Wishem:`.
+- `MakerLine` (`children`): one text of the designer in the mono typeface. The component draws `> ` before it.
+- `SpiritLine` (`children`): one text of Wishem in `spirit-text`.
+- `Callout` (`variant`, `title`, `children`): `variant` is `success`, `warning`, `danger`, or `info`. The optional bold `title` comes before the content.
+- `Badge` (`variant`, `children`): a pill on one line. `variant` is `neutral` (default), `maker`, `spirit`, `accent`, `success`, `warning`, `danger`, or `info`.
+- `Divider` (`variant`): `plain` (default) fills the width. `accent` is 56 by 2 pixels.
 
 ### Rules for the props of a component
 
