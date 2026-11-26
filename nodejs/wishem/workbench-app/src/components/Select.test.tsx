@@ -107,6 +107,31 @@ describe('Select', () => {
     expect(button?.getAttribute('aria-describedby')).toBe(view.container.querySelector('p')?.id)
   })
 
+  it('keeps the placeholder after a selection until the prop changes', () => {
+    const onChange = vi.fn()
+    draw(<Select options={options} value={undefined} onChange={onChange} placeholder='Select a kind' />)
+    press(trigger() as HTMLButtonElement)
+    const prop = Array.from(document.querySelectorAll('[role="option"]')).find((o) => o.textContent === 'Prop')
+    press(prop as Element)
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('prop')
+    expect(trigger()?.textContent).toBe('Select a kind')
+  })
+
+  it('keeps the description of the caller before the error message of a field', () => {
+    draw(
+      <Field label='Kind' error='Select a kind.'>
+        <Select options={options} value={undefined} onChange={vi.fn()} aria-describedby='hint' />
+      </Field>,
+    )
+    expect(trigger()?.getAttribute('aria-describedby')).toBe(`hint ${view.container.querySelector('p')?.id}`)
+  })
+
+  it('passes only the aria attributes of the caller to the trigger', () => {
+    // A `data-` attribute is allowed by the type check, and the select does not pass it on.
+    draw(<Select options={options} value='enemy' onChange={vi.fn()} data-extra='x' />)
+    expect(trigger()?.hasAttribute('data-extra')).toBe(false)
+  })
+
   it('uses the id of the caller', () => {
     draw(<Select options={options} value='enemy' onChange={vi.fn()} id='kind' />)
     expect(trigger()?.id).toBe('kind')

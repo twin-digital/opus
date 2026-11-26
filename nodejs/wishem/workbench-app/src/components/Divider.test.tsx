@@ -13,6 +13,11 @@ describe('Divider', () => {
     expect(root()?.className).not.toBe(plain)
   })
 
+  it('is a horizontal rule', () => {
+    view.draw(<Divider />)
+    expect(root()?.tagName).toBe('HR')
+  })
+
   it('uses the plain variant by default', () => {
     view.draw(<Divider />)
     const byDefault = root()?.className

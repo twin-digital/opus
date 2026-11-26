@@ -108,6 +108,36 @@ describe('Field', () => {
     expect(probe()?.getAttribute('aria-invalid')).toBe('true')
   })
 
+  it('gives the error message an id that differs from the id of the control', () => {
+    draw(
+      <Field label='Speed' error='Enter a number.'>
+        <Probe />
+      </Field>,
+    )
+    expect(view.container.querySelector('p')?.id).toBeTruthy()
+    expect(view.container.querySelector('p')?.id).not.toBe(probe()?.id)
+  })
+
+  it('treats an empty error message as no error message', () => {
+    draw(
+      <Field label='Speed' error=''>
+        <Probe />
+      </Field>,
+    )
+    expect(view.container.querySelector('p')).toBeNull()
+    expect(probe()?.hasAttribute('aria-describedby')).toBe(false)
+    expect(probe()?.hasAttribute('aria-invalid')).toBe(false)
+  })
+
+  it('sets no description for an empty description of the caller', () => {
+    draw(
+      <Field label='Speed'>
+        <Probe aria-describedby='' />
+      </Field>,
+    )
+    expect(probe()?.hasAttribute('aria-describedby')).toBe(false)
+  })
+
   it('gives each field its own id', () => {
     draw(
       <>

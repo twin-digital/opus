@@ -28,6 +28,15 @@ describe('Callout', () => {
     expect(root()?.firstElementChild).toBe(title())
   })
 
+  it('draws no title element for an empty title', () => {
+    view.draw(
+      <Callout variant='info' title=''>
+        Text
+      </Callout>,
+    )
+    expect(title()).toBeNull()
+  })
+
   it('draws no title element with no title', () => {
     view.draw(<Callout variant='info'>Text</Callout>)
     expect(title()).toBeNull()

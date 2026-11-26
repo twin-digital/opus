@@ -47,6 +47,7 @@ describe('TextArea', () => {
 
   it('holds its own text from a default value', () => {
     view.draw(<TextArea defaultValue='Flees' />)
+    expect(area()?.value).toBe('Flees')
     type(area() as HTMLTextAreaElement, 'Hides')
     expect(area()?.value).toBe('Hides')
   })
@@ -75,6 +76,24 @@ describe('TextArea', () => {
     expect(area()?.id).toBe(view.container.querySelector('label')?.htmlFor)
     expect(area()?.getAttribute('aria-describedby')).toBe(message?.id)
     expect(area()?.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('uses the id of the caller in a field, and the description of the caller before the error message', () => {
+    view.draw(
+      <Field label='Behaviour' error='Describe the behaviour.'>
+        <TextArea id='mine' aria-describedby='hint' />
+      </Field>,
+    )
+    const message = view.container.querySelector('p')
+    expect(area()?.id).toBe('mine')
+    expect(area()?.getAttribute('aria-describedby')).toBe(`hint ${message?.id}`)
+  })
+
+  it('sets no aria-invalid by default and keeps the aria-invalid of the caller', () => {
+    view.draw(<TextArea />)
+    expect(area()?.hasAttribute('aria-invalid')).toBe(false)
+    view.draw(<TextArea aria-invalid='grammar' />)
+    expect(area()?.getAttribute('aria-invalid')).toBe('grammar')
   })
 
   it('does not accept className', () => {

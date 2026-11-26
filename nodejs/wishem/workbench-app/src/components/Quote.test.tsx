@@ -11,6 +11,11 @@ describe('Quote', () => {
     expect(view.container.querySelector('cite')?.textContent).toBe('rules.md, R7')
   })
 
+  it('draws no source element for an empty source', () => {
+    view.draw(<Quote cite=''>A kit is what the first game leaves behind.</Quote>)
+    expect(view.container.querySelector('cite')).toBeNull()
+  })
+
   it('draws no source element when it has no source', () => {
     view.draw(<Quote>A kit is what the first game leaves behind.</Quote>)
     expect(view.container.querySelector('cite')).toBeNull()

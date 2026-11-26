@@ -16,6 +16,20 @@ describe('Badge', () => {
     expect(new Set(sets).size).toBe(variants.length)
   })
 
+  it.each([
+    ['neutral', 'text-fg-muted'],
+    ['maker', 'text-maker-text'],
+    ['spirit', 'text-spirit-text'],
+    ['accent', 'text-accent-text'],
+    ['success', 'text-success-text'],
+    ['warning', 'text-warning-text'],
+    ['danger', 'text-danger-text'],
+    ['info', 'text-info-text'],
+  ] as const)('draws the %s variant in the text color %s', (variant, expected) => {
+    view.draw(<Badge variant={variant}>Text</Badge>)
+    expect(root()?.classList.contains(expected)).toBe(true)
+  })
+
   it('uses the neutral variant by default', () => {
     view.draw(<Badge>Text</Badge>)
     const byDefault = root()?.className

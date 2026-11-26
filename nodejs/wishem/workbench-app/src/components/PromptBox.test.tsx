@@ -52,6 +52,13 @@ describe('PromptBox', () => {
       expect(area().value).toBe('make the bats flee')
     })
 
+    it('reports the text as typed, with its spaces', () => {
+      const { onSend } = draw()
+      type(area(), '  make the bats flee \n')
+      press(area(), { key: 'Enter' })
+      expect(onSend).toHaveBeenCalledExactlyOnceWith('  make the bats flee \n')
+    })
+
     it('does not send on Shift+Enter', () => {
       const { onSend } = draw()
       type(area(), 'make the bats flee')
@@ -271,6 +278,12 @@ describe('PromptBox', () => {
       expect(button('Stop')).toBeUndefined()
       expect(button('Make a wish')?.disabled).toBe(true)
       expect(box().textContent).not.toContain('Wishem is working')
+    })
+
+    it('shows the hint, and not the reason, when the box is not disabled', () => {
+      draw({ disabledReason: 'Not connected' })
+      expect(box().textContent).toContain('Enter to send')
+      expect(box().textContent).not.toContain('Not connected')
     })
 
     it('reports nothing on Enter', () => {

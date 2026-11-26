@@ -87,9 +87,39 @@ describe('Button', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it('does not submit a form when it loads', () => {
+    const onSubmit = vi.fn((event: React.SyntheticEvent) => {
+      event.preventDefault()
+    })
+    view.draw(
+      <form onSubmit={onSubmit}>
+        <Button type='submit'>Go</Button>
+        <Button type='submit' loading>
+          Wait
+        </Button>
+      </form>,
+    )
+    const [go, wait] = Array.from(view.container.querySelectorAll('button'))
+    wait.click()
+    expect(onSubmit).not.toHaveBeenCalled()
+    go.click()
+    expect(onSubmit).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the aria-busy and the aria-disabled of the caller when it does not load', () => {
+    view.draw(
+      <Button aria-busy aria-disabled>
+        Go
+      </Button>,
+    )
+    expect(button()?.getAttribute('aria-busy')).toBe('true')
+    expect(button()?.getAttribute('aria-disabled')).toBe('true')
+  })
+
   it('does not accept className and style', () => {
     // @ts-expect-error The look of a component is fixed.
     view.draw(<Button className='mine'>Go</Button>)
+    expect(button()?.className).not.toContain('mine')
     // @ts-expect-error The look of a component is fixed.
     view.draw(<Button style={{ color: 'red' }}>Go</Button>)
     expect(button()?.className).not.toContain('mine')
