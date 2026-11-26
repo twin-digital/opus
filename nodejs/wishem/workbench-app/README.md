@@ -180,14 +180,41 @@ The theme follows the color scheme of the system. The workbench has no control t
 
 A component uses roles only. A role gives the purpose of a color, for example `bg-ground`, `text-fg-muted`, or `text-maker-text`. A component does not use a palette color or a color value. A palette color has no Tailwind class. A test fails when a file in `src/components/` has a hexadecimal color or the name of a palette color.
 
+Text and marks on a bright fill use the role `on-fill` (`text-on-fill`, `border-on-fill`). `on-fill` has a contrast ratio of 4.5 or more on each fill.
+
+### Forced states
+
+The style guide shows the hover, active, and focus look of a component with no pointer and no key. The attribute `data-force` on a wrapper element forces the state. Its values are `hover`, `active`, and `focus`. The helper `Forced` in `src/style-guide/Forced.tsx` draws the wrapper.
+
+A component does not use the Tailwind variants `hover:`, `active:`, `focus:`, `focus-visible:`, and `focus-within:`. It uses the variants of `src/styles/theme.css`: `st-hover`, `st-active`, `st-focus`, `st-focus-visible`, and `st-focus-within`. Each variant matches the real state, a forced state, and the content of a forced element. Thus the real state and the forced state use one style rule.
+
+To keep a disabled control from reacting, write `enabled:st-hover:`, as the select does.
+
+The browser tests compare the computed style of a forced specimen with the computed style of the same specimen in the real state.
+
 ## Components
 
 `src/components/` holds the components. Each component takes all its content as props.
 
 - `AppBar` (`title`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
+- `Field` (`label`, `error`, `children`): a label above one control, and an optional error message below it. The label names the control. The error message describes the control and puts it in the error state. A control reads its field with the hook `useFieldControl`.
+- `Select` (`options`, `value`, `onChange`, `placeholder`, `disabled`, `invalid`, `open`, `onOpenChange`, `id`): a select built on Base UI (`@base-ui/react`). It holds no value. `onChange` reports a selection, and the select shows a new value only when the caller gives it. A value that is not in `options` shows as text. The menu is below the trigger, as wide as the trigger, and does not lock the page. The `open` prop holds the menu open, for the style guide.
 
-A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
+### Rules for the props of a component
+
+- A component does not accept `className` or `style`. `Native<'button'>` in `src/components/native.ts` gives the native props of an element with no `className` and no `style`.
+- A component with variants selects the variant with a `variant` prop that has a fixed set of names.
+- A control and a button pass each other native attribute to their element.
+- A control that holds no value reports a change to its caller and shows the value that the caller gives.
+
+### A popup is in the theme scope of its control
+
+A popup draws itself in the element of the nearest `ThemeScope`. The hook `useThemeScopeElement` gives that element, or `null` when there is no scope. The popup then has the token values of the scope, the screenshot of the scope shows it, and axe checks it. A later popup follows the same rule.
+
+A new component goes in the Components section of the style guide, in each of its states, in the same change. Each group of components is one file in `src/style-guide/sections/components/`. The helpers `Specimen`, `Forced`, and `StateMatrix` in `src/style-guide/` draw the specimens. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
+
+A state that a person uses has a row in `src/components/state-contrast.test.ts`. The row gives the foreground and the background of the text. The test calculates the contrast ratio from `tokens.css` in each theme. It fails when the ratio is less than 4.5, and it names the state and the theme. The `Section` of the style guide has the prop `layout`. The components section uses `stacked`, which draws the two scopes one above the other.
 
 ### Add a token
 

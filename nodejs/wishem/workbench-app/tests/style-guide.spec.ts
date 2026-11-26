@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const sections = ['principles', 'tokens', 'typography', 'components'] as const
 const themes = ['light', 'dark'] as const
@@ -39,6 +39,8 @@ for (const section of sections) {
     test(`${id}: accessibility`, async ({ page }) => {
       const results = await new AxeBuilder({ page })
         .include(`[data-testid="${id}"]`)
+        // Base UI draws these focus guards in an open menu. They are hidden and focusable by design.
+        .exclude('[data-base-ui-focus-guard]')
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze()
       expect(results.violations).toEqual([])
@@ -92,6 +94,13 @@ test('a palette color has the same value in each theme', async ({ page }) => {
       .evaluate((e) => getComputedStyle(e).backgroundColor)
   expect(await swatch('tokens-light')).toBe('rgb(242, 169, 59)')
   expect(await swatch('tokens-dark')).toBe('rgb(242, 169, 59)')
+})
+
+test('the swatch of on-fill has the color of night in each theme', async ({ page }) => {
+  for (const theme of themes) {
+    const swatch = page.getByTestId(`tokens-${theme}`).locator('[data-token="on-fill"]')
+    expect(await swatch.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(23, 23, 42)')
+  }
 })
 
 test('the maker text role changes with the theme', async ({ page }) => {
@@ -221,6 +230,98 @@ test.describe('components section', () => {
       const frame = await zero.locator('div > div').first().boundingBox()
       const text = await message.boundingBox()
       expect(frame && text && Math.abs(frame.x + frame.width / 2 - (text.x + text.width / 2))).toBeLessThan(1)
+    })
+  }
+})
+
+/** The style properties that the states of a control change. */
+const lookOf = (locator: Locator) =>
+  locator.evaluate((element) => {
+    const { borderColor, boxShadow, outlineStyle, outlineWidth, backgroundColor, color, filter } =
+      getComputedStyle(element)
+    return { borderColor, boxShadow, outlineStyle, outlineWidth, backgroundColor, color, filter }
+  })
+
+test.describe('select', () => {
+  const SURFACE = { light: 'rgb(255, 255, 255)', dark: 'rgb(27, 27, 48)' }
+
+  for (const theme of themes) {
+    const scope = (page: Page) => page.getByTestId(`components-${theme}`)
+    const trigger = (page: Page, specimen: string) => scope(page).getByTestId(specimen).getByRole('combobox')
+
+    test(`${theme}: the real hover has the style of the forced hover`, async ({ page }) => {
+      const forced = await lookOf(trigger(page, 'select-hover'))
+      await trigger(page, 'select-default').hover()
+      expect(await lookOf(trigger(page, 'select-default'))).toEqual(forced)
+    })
+
+    test(`${theme}: the real focus has the style of the forced focus`, async ({ page }) => {
+      const forced = await lookOf(trigger(page, 'select-focus'))
+      await scope(page).getByRole('region', { name: 'Zero state', exact: true }).click()
+      await page.keyboard.press('Tab')
+      await expect(trigger(page, 'select-default')).toBeFocused()
+      expect(await lookOf(trigger(page, 'select-default'))).toEqual(forced)
+    })
+
+    test(`${theme}: the forced states differ from the default`, async ({ page }) => {
+      const base = await lookOf(trigger(page, 'select-default'))
+      expect((await lookOf(trigger(page, 'select-hover'))).borderColor).not.toBe(base.borderColor)
+      expect((await lookOf(trigger(page, 'select-focus'))).boxShadow).not.toBe(base.boxShadow)
+    })
+
+    test(`${theme}: the keyboard opens, moves, selects, and closes`, async ({ page }) => {
+      const button = trigger(page, 'select-default')
+      await button.focus()
+      await page.keyboard.press('Enter')
+      await expect(button).toHaveAttribute('aria-expanded', 'true')
+      const list = page.locator(`[id="${await button.getAttribute('aria-controls')}"]`)
+      const highlighted = list.locator('[role="option"][data-highlighted]')
+      await expect(highlighted).toHaveText('Enemy')
+      await page.keyboard.press('ArrowDown')
+      await expect(highlighted).toHaveText('Prop')
+      await page.keyboard.press('Enter')
+      await expect(button).toHaveAttribute('aria-expanded', 'false')
+      await expect(button).toBeFocused()
+      await page.keyboard.press('Enter')
+      await expect(button).toHaveAttribute('aria-expanded', 'true')
+      await page.keyboard.press('Escape')
+      await expect(button).toHaveAttribute('aria-expanded', 'false')
+      await expect(button).toBeFocused()
+    })
+
+    test(`${theme}: the open menus are in the scope, with the surface of the scope`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' })
+      const menus = scope(page).locator('[role="listbox"]')
+      await expect(menus).toHaveCount(4)
+      for (const menu of await menus.all()) {
+        expect(await menu.evaluate((e) => getComputedStyle(e.parentElement as HTMLElement).backgroundColor)).toBe(
+          SURFACE[theme],
+        )
+      }
+    })
+
+    test(`${theme}: a long value is cut and the menu is as wide as the trigger`, async ({ page }) => {
+      const narrow = scope(page).getByTestId('select-narrow').getByRole('combobox')
+      const value = narrow.locator('span').first()
+      expect(
+        await value.evaluate((e) => ({
+          overflow: getComputedStyle(e).textOverflow,
+          cut: e.scrollWidth > e.clientWidth,
+        })),
+      ).toEqual({
+        overflow: 'ellipsis',
+        cut: true,
+      })
+      const triggerBox = await narrow.boundingBox()
+      const option = scope(page).getByRole('option', { name: /^A long option/ })
+      const menuBox = await option.evaluate((e) => {
+        const listbox = e.closest('[role="listbox"]') as HTMLElement
+        const { width } = (listbox.parentElement as HTMLElement).getBoundingClientRect()
+        return width
+      })
+      expect(Math.abs((triggerBox?.width ?? 0) - menuBox)).toBeLessThan(1)
+      const lineHeight = await option.evaluate((e) => parseFloat(getComputedStyle(e).lineHeight))
+      expect((await option.boundingBox())?.height).toBeGreaterThan(lineHeight * 1.5)
     })
   }
 })

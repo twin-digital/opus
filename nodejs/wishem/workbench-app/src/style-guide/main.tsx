@@ -7,6 +7,12 @@ import { Typography } from './sections/Typography.js'
 
 const root = document.getElementById('root')
 if (root) {
+  // An open menu takes focus when the page loads and scrolls the page to itself.
+  if (location.hash === '') {
+    setTimeout(() => {
+      window.scrollTo(0, 0)
+    }, 300)
+  }
   createRoot(root).render(
     <main className='mx-auto grid max-w-[1200px] gap-14 px-6 pt-8 pb-24'>
       <header className='grid gap-2'>
