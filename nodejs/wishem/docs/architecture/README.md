@@ -118,23 +118,23 @@ The model folder is the one store of persisted data. The sidecars are source fil
 
 The schema has the names `ComponentTypeDefinition`, `FieldDefinition`, `Entity`, and `FieldValue`. The schema has no type name for a component. A component is one record in `components` of an entity, and the ID of its component type is the key of the record. The diagram uses the name `Component` for it, as the glossary does. A field value is one entry of that record, and the ID of its field is the key of the entry. The diagram uses the schema name `FieldValue`.
 
-The keys of a `Component` and of a `FieldValue` are the IDs of their parents. A `FieldValue` has the ID of its entity, the ID of its component type, and the ID of its field.
+The keys of a `FieldDefinition`, a `Component`, and a `FieldValue` include the IDs of their parents. A `FieldDefinition` has the ID of its component type and its own `id`. A `FieldValue` has the ID of its entity, the ID of its component type, and the ID of its field.
 
 The diagram does not show these fields:
 
 - `ComponentTypeDefinition` has a `label` and a list of `fields`. `FieldDefinition` has the `label` and the `type`. The only `type` is `string`.
-- The `id` of a `FieldDefinition` is unique in its component type only.
+- The `id` of a `FieldDefinition` is unique in its component type only. The card shows the ID of the component type and the `id` as its key.
 - A `Component` has no fields of its own. It holds the values.
 
 The model has these rules, and the diagram does not show them. The field of a `FieldValue` must be a field of the component type of its `Component`. A value is a string. An entity has at most one component of each component type. A component can have no value for a field.
 
-| Entity                    | Purpose                                                                  | Schema                                                                    |
-| ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `ComponentTypeDefinition` | Declares a component type: its ID, its label, and its fields.            | [`model.ts`](../../core/src/model.ts) (`ComponentTypeDefinition`)         |
-| `FieldDefinition`         | Declares one field of a component type: its ID, its label, and its type. | [`model.ts`](../../core/src/model.ts) (`FieldDefinition`)                 |
-| `Entity`                  | A thing in the model. It holds its components.                           | [`model.ts`](../../core/src/model.ts) (`Entity`)                          |
-| `Component`               | The data of one component type in one entity.                            | [`model.ts`](../../core/src/model.ts) (`Entity.components`)               |
-| `FieldValue`              | The value of one field in one component.                                 | [`model.ts`](../../core/src/model.ts) (`FieldValue`, `Entity.components`) |
+| Entity                    | Purpose                                                                   | Schema                                                                    |
+| ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ComponentTypeDefinition` | Declares a component type: its ID, its label, and its fields.             | [`model.ts`](../../core/src/model.ts) (`ComponentTypeDefinition`)         |
+| `FieldDefinition`         | Declares one field of a component type: its key, its label, and its type. | [`model.ts`](../../core/src/model.ts) (`FieldDefinition`)                 |
+| `Entity`                  | A thing in the model. It holds its components.                            | [`model.ts`](../../core/src/model.ts) (`Entity`)                          |
+| `Component`               | The data of one component type in one entity.                             | [`model.ts`](../../core/src/model.ts) (`Entity.components`)               |
+| `FieldValue`              | The value of one field in one component.                                  | [`model.ts`](../../core/src/model.ts) (`FieldValue`, `Entity.components`) |
 
 The files of the model folder are `definitions/*.json` for the component types and `state.json` for the entities. [`validate-model.ts`](../../core/src/validate-model.ts) checks the relationships.
 

@@ -795,19 +795,20 @@ const ENTITY_W = 290
 const ENTITY_LEFT = 48
 const ENTITY_RIGHT = 542
 const ROW_1 = 72
-const ROW_2 = 232
-const ROW_3 = 432
+const ROW_2 = 252
+const ROW_3 = 452
 
 // Card heights: one key, and two or three keys.
 const H_SHORT = 64
+const H_MID = 84
 const H_TALL = 104
 
 const ent = (x, y, h, name, keys) => ({ kind: 'entity', x, y, w: ENTITY_W, h, name, keys })
 const pk = (name) => ({ tag: 'PK', name })
 const pkfk = (name) => ({ tag: 'PK, FK', name })
 
-const eType = ent(ENTITY_LEFT, ROW_1, H_SHORT, 'ComponentTypeDefinition', [pk('id')])
-const eField = ent(ENTITY_RIGHT, ROW_1, H_SHORT, 'FieldDefinition', [pk('id')])
+const eType = ent(ENTITY_LEFT, ROW_1, H_MID, 'ComponentTypeDefinition', [pk('id')])
+const eField = ent(ENTITY_RIGHT, ROW_1, H_MID, 'FieldDefinition', [pkfk('ComponentTypeDefinition.id'), pk('id')])
 const eComponent = ent(ENTITY_LEFT, ROW_2, H_TALL, 'Component', [pkfk('Entity.id'), pkfk('ComponentTypeDefinition.id')])
 const eValue = ent(ENTITY_RIGHT, ROW_2, H_TALL, 'FieldValue', [
   pkfk('Entity.id'),
@@ -825,7 +826,7 @@ const entitiesModelFolder = {
   description:
     'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field.',
   width: WIDTH_PX,
-  height: 612,
+  height: 632,
   items: [
     eType,
     eField,
@@ -840,7 +841,7 @@ const entitiesModelFolder = {
     {
       kind: 'legend',
       x: 24,
-      y: 544,
+      y: 564,
       w: 832,
       entries: [
         ['entity', 'Entity'],
