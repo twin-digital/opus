@@ -16,4 +16,17 @@ describe('theme.css', () => {
   it.each(['color', 'radius', 'shadow'])('the Tailwind default %s scale is removed', (scale) => {
     expect(themeCss).toMatch(new RegExp(`--${scale}-\\*:\\s*initial;`))
   })
+
+  it.each([
+    ['hover', 'hover', 'hover'],
+    ['active', 'active', 'active'],
+    ['focus', 'focus', 'focus'],
+    ['focus-visible', 'focus-visible', 'focus'],
+    ['focus-within', 'focus-within', 'focus'],
+  ])('the variant st-%s matches :%s and the force value %s', (name, pseudo, force) => {
+    const declaration = new RegExp(
+      `@custom-variant st-${name} \\(&:is\\(:${pseudo}, \\[data-force~='${force}'\\], \\[data-force~='${force}'\\] \\*\\)\\);`,
+    )
+    expect(themeCss).toMatch(declaration)
+  })
 })

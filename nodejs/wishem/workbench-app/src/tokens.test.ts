@@ -1,78 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { color, contrast, declarations, themes } from './test/token-colors.js'
 import { tokenGroups } from './tokens.js'
 
-type Theme = 'light' | 'dark'
-
 const srcDir = import.meta.dirname
-const tokensCss = readFileSync(join(srcDir, 'styles', 'tokens.css'), 'utf8')
 const themeCss = readFileSync(join(srcDir, 'styles', 'theme.css'), 'utf8')
-
-/** Custom properties declared in tokens.css, name (no dashes) to raw value. */
-const declarations = new Map<string, string>(
-  [...tokensCss.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
-)
-
-/** Splits `a, b` at the top-level comma. */
-const splitArguments = (text: string): [string, string] => {
-  let depth = 0
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    if (char === '(') {
-      depth++
-    } else if (char === ')') {
-      depth--
-    } else if (char === ',' && depth === 0) {
-      return [text.slice(0, i).trim(), text.slice(i + 1).trim()]
-    }
-  }
-  throw new Error(`no top-level comma in "${text}"`)
-}
-
-/** Resolves a value (hex, var(), light-dark()) to a hex color for a theme. */
-const resolve = (value: string, theme: Theme): string => {
-  if (/^#[0-9a-f]{6}$/i.test(value)) {
-    return value.toLowerCase()
-  }
-  const reference = /^var\(--([\w-]+)\)$/.exec(value)
-  if (reference) {
-    const target = declarations.get(reference[1])
-    if (target === undefined) {
-      throw new Error(`tokens.css does not declare --${reference[1]}`)
-    }
-    return resolve(target, theme)
-  }
-  const lightDark = /^light-dark\((.*)\)$/s.exec(value)
-  if (lightDark) {
-    const [light, dark] = splitArguments(lightDark[1])
-    return resolve(theme === 'light' ? light : dark, theme)
-  }
-  throw new Error(`cannot resolve "${value}"`)
-}
-
-const color = (name: string, theme: Theme) => {
-  const value = declarations.get(name)
-  if (value === undefined) {
-    throw new Error(`tokens.css does not declare --${name}`)
-  }
-  return resolve(value, theme)
-}
-
-const luminance = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const channel = parseInt(hex.slice(i, i + 2), 16) / 255
-    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
-  }) as [number, number, number]
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-const contrast = (a: string, b: string) => {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
-  return (hi + 0.05) / (lo + 0.05)
-}
-
-const themes: Theme[] = ['light', 'dark']
 
 const tokensOf = (group: string) => {
   const found = tokenGroups.find((g) => g.name === group)
@@ -112,6 +45,7 @@ describe('roles', () => {
     'control-border': ['#85859a', '#6b6b88'],
     night: ['#17172a', '#17172a'],
     'on-night': ['#f2f2f6', '#f2f2f6'],
+    'on-fill': ['#17172a', '#17172a'],
     maker: ['#f2a93b', '#f2a93b'],
     spirit: ['#7fd6c6', '#7fd6c6'],
     accent: ['#c2d0ea', '#c2d0ea'],
@@ -182,7 +116,7 @@ describe('contrast', () => {
 
   const rules: { role: string; on: string; minimum: number }[] = [
     ...textRoles.flatMap((role) => ['ground', 'surface'].map((on) => ({ role, on, minimum: 4.5 }))),
-    ...fills.map((on) => ({ role: 'ink', on, minimum: 4.5 })),
+    ...fills.map((on) => ({ role: 'on-fill', on, minimum: 4.5 })),
     { role: 'on-night', on: 'night', minimum: 4.5 },
     ...['ground', 'surface'].map((on) => ({ role: 'control-border', on, minimum: 3 })),
   ]

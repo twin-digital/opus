@@ -20,7 +20,7 @@ export const tokenGroups: readonly TokenGroup[] = [
   {
     name: 'Surfaces and lines',
     kind: 'fill',
-    tokens: ['ground', 'surface', 'night', 'on-night', 'line', 'control-border'],
+    tokens: ['ground', 'surface', 'night', 'on-night', 'on-fill', 'line', 'control-border'],
   },
   {
     name: 'Fills',
