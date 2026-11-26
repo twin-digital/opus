@@ -55,10 +55,10 @@
 <polygon points="582,768 571,773.5 571,762.5" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
 <rect x="396.6" y="756" width="86.8" height="24" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
 <text x="440" y="772.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">Draw with</text>
-<path d="M582 568 L308 568" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="298,568 309,562.5 309,573.5" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
-<rect x="378.6" y="556" width="122.8" height="24" rx="12" fill="#ffffff" stroke="#85859a"/>
-<text x="440" y="572.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#5b5b70" text-anchor="middle">Finds the view</text>
+<path d="M582 568 L308 568" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="298,568 309,562.5 309,573.5" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
+<rect x="378.6" y="556" width="122.8" height="24" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
+<text x="440" y="572.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">Finds the view</text>
 <path d="M173 516 L173 430" fill="none" stroke="#85859a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="173,420 178.5,431 167.5,431" fill="#85859a" stroke="#85859a" stroke-width="1" stroke-linejoin="round"/>
 <rect x="144" y="456" width="58" height="24" rx="12" fill="#ffffff" stroke="#85859a"/>

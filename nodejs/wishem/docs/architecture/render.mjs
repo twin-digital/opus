@@ -2,7 +2,7 @@
 // Usage: node render.mjs
 // Each diagram is described once, below. The script writes one file for each theme.
 // Colors come from the role tokens of the workbench. Text uses the standard typeface of the system.
-// The diagrams follow the C4 model (docs/diagrams.md).
+// The script writes C4 diagrams and an entity diagram (docs/diagrams.md).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -524,7 +524,7 @@ const LEFT = 48
 const MIDDLE = 315
 const RIGHT = 582
 
-/** Builds an element. The shape of the description of a diagram stays short. */
+/** Builds an element of a diagram. */
 const el = (shape, x, y, name, type, description, extra = {}) => ({
   kind: 'element',
   shape,
@@ -632,7 +632,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has five containers. The workbench process runs the host-nodejs package and uses the core package. It reads and watches the model folder, serves the page code, and sends snapshots to the page. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has five containers. The workbench process runs the host-nodejs package and uses the core package. It reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
   width: WIDTH_PX,
   height: 904,
   items: [
@@ -683,7 +683,7 @@ const dynamicChange = {
   name: 'dynamic-change',
   title: 'Dynamic diagram: a change to the model becomes a new picture',
   description:
-    'Four steps in order. The designer saves a model file in the model folder. The workbench process reads the folder after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.',
+    'Four steps in order. The designer saves a model file in the model folder. The workbench process reads after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.',
   width: WIDTH_PX,
   height: 492,
   items: [
@@ -771,7 +771,7 @@ const componentsPage = {
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
 
     // How the table of views gets its content
-    rel('quiet', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
+    rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
     rel('quiet', [top(pTable), bottom(pSidecars)], 'Reads', [173, 468]),
     rel('quiet', [bottom(pTable, 110), top(pViews, 110)], 'Collects', [110, 668]),
     {
@@ -817,7 +817,7 @@ const eValue = ent(ENTITY_RIGHT, ROW_2, H_TALL, 'FieldValue', [
 ])
 const eEntity = ent(ENTITY_LEFT, ROW_3, H_SHORT, 'Entity', [pk('id')])
 
-// A relationship from the middle of an edge of `a` to the middle of an edge of `b`. Marks: `one` or `many`.
+// A relationship from point `from` to point `to`, with a mark at each end: `one` or `many`.
 const link = (from, fromMark, to, toMark) => ({ kind: 'relationship', from, to, fromMark, toMark })
 
 const entitiesModelFolder = {

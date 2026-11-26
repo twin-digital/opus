@@ -96,7 +96,7 @@ The script gets these parts:
 
 The rules of the `diagrams` skill for a render script apply: only `node:` modules, colors from the token file, the system font stack, one text function, `role="img"` with a `title` and a `desc`, the same `defs` in each theme, and numbers with two decimals. The script fails and writes no file when a label does not fit, when an arrow is too short, when a label chip is not on its line, or when a token is absent.
 
-One accent color shows the primary path: the relationships of the dynamic diagram, and the same relationships in the container diagram.
+One accent color shows the primary path: the relationships of the dynamic diagram, and the same relationships in the container diagram. In the component diagram of the page, the accent color shows the primary path inside the page.
 
 Alternative: a shared library for C4 shapes. Rejected by the guidance: each product has its own render script.
 
@@ -226,6 +226,7 @@ erDiagram
     string id PK
   }
   FieldDefinition {
+    string componentType PK, FK
     string id PK
   }
   Entity {
@@ -240,7 +241,7 @@ erDiagram
   }
 ```
 
-`ComponentTypeDefinition`, `FieldDefinition`, and `Entity` are the names of the schema in `nodejs/wishem/core/src/model.ts`. A component and a field value have no type name in the schema: a component is one record of `components` of an entity, with the ID of its component type as its key, and a field value is one entry of that record, with the ID of its field as its key. The implementer reads the schema and uses its names. The design rules ask for an `erDiagram` for a persisted schema. This one shows the schema that exists: this change adds no entity and no relationship.
+`ComponentTypeDefinition`, `FieldDefinition`, `Entity`, and `FieldValue` are the names of the schema in `nodejs/wishem/core/src/model.ts`. The schema has no type name for a component: a component is one record of `components` of an entity, with the ID of its component type as its key, and a field value is one entry of that record, with the ID of its field as its key. The implementer reads the schema and uses its names. The design rules ask for an `erDiagram` for a persisted schema. This one shows the schema that exists: this change adds no entity and no relationship.
 
 ## Package Impact
 
