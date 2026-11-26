@@ -171,6 +171,15 @@ describe('PromptBox', () => {
         button('Stop')?.click()
       })
       expect(first.onStop).toHaveBeenCalledOnce()
+
+      const second = draw()
+      type(area(), 'make the bats flee')
+      press(area(), { key: 'Enter' })
+      second.redraw({ working: true })
+      act(() => {
+        button('Stop')?.click()
+      })
+      expect(second.onStop).toHaveBeenCalledOnce()
     })
 
     it('makes the text read-only and out of the focus order while the work runs', () => {
@@ -213,6 +222,22 @@ describe('PromptBox', () => {
       })
       redraw({ working: true })
       redraw({ working: false })
+      expect(document.activeElement).toBe(area())
+    })
+
+    it('returns focus to the emptied text when the keyboard sent and the work ended', () => {
+      const { redraw, onSend } = draw()
+      act(() => {
+        area().focus()
+      })
+      type(area(), 'make the bats flee')
+      press(area(), { key: 'Enter' })
+      expect(onSend).toHaveBeenCalledOnce()
+      redraw({ working: true })
+      expect(document.activeElement).toBe(button('Stop'))
+      redraw({ working: false })
+      expect(area().value).toBe('')
+      expect(button('Make a wish')?.disabled).toBe(true)
       expect(document.activeElement).toBe(area())
     })
 
