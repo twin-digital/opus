@@ -1,5 +1,6 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
 import { useFieldControl } from './Field.js'
+import { defined } from './native.js'
 import { useThemeScopeElement } from './ThemeScope.js'
 
 export interface SelectOption {
@@ -7,10 +8,6 @@ export interface SelectOption {
   label: string
   disabled?: boolean
 }
-
-/** Drops the keys that have the value `undefined`, so they do not replace a value. */
-const defined = <T extends object>(value: T) =>
-  Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>
 
 type AriaProps = { [K in keyof React.AriaAttributes]?: React.AriaAttributes[K] }
 
@@ -43,7 +40,7 @@ const triggerClass = [
   'py-[5px] pr-[26px] pl-2 text-left text-control text-fg',
   'data-placeholder:text-fg-muted',
   'enabled:st-hover:border-fg-muted',
-  'enabled:st-focus:border-maker-text enabled:st-focus:shadow-[inset_0_0_0_1px_var(--maker-text)] enabled:st-focus:outline-0',
+  'enabled:st-focus:border-maker-text enabled:st-focus:shadow-[inset_0_0_0_1px_var(--maker-text)] enabled:st-focus:outline-0 enabled:st-focus:outline-transparent',
   'data-popup-open:border-maker-text data-popup-open:shadow-[inset_0_0_0_1px_var(--maker-text)] data-popup-open:outline-0',
   'aria-invalid:border-danger-text',
   'aria-invalid:enabled:st-hover:border-danger-text',

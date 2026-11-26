@@ -1,6 +1,6 @@
-import { act, useState, type ReactNode } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, useState } from 'react'
+import { describe, expect, it, vi } from 'vitest'
+import { useRender } from '../test/render.js'
 import { Field } from './Field.js'
 import { Select, type SelectOption } from './Select.js'
 import { ThemeScope } from './ThemeScope.js'
@@ -13,30 +13,11 @@ const options: SelectOption[] = [
 ]
 
 describe('Select', () => {
-  let container: HTMLDivElement
-  let root: Root
+  const view = useRender()
 
-  beforeEach(() => {
-    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-    container = document.createElement('div')
-    document.body.append(container)
-    root = createRoot(container)
-  })
+  const { draw } = view
 
-  afterEach(() => {
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
-  })
-
-  const draw = (node: ReactNode) => {
-    act(() => {
-      root.render(node)
-    })
-  }
-
-  const trigger = () => container.querySelector<HTMLButtonElement>('button[role="combobox"]')
+  const trigger = () => view.container.querySelector<HTMLButtonElement>('button[role="combobox"]')
   const menu = () => document.querySelector<HTMLElement>('[role="listbox"]')
   const optionNames = () => Array.from(document.querySelectorAll('[role="option"]')).map((o) => o.textContent)
 
@@ -122,8 +103,8 @@ describe('Select', () => {
     )
     const button = trigger()
     expect(button?.getAttribute('aria-invalid')).toBe('true')
-    expect(button?.id).toBe(container.querySelector('label')?.htmlFor)
-    expect(button?.getAttribute('aria-describedby')).toBe(container.querySelector('p')?.id)
+    expect(button?.id).toBe(view.container.querySelector('label')?.htmlFor)
+    expect(button?.getAttribute('aria-describedby')).toBe(view.container.querySelector('p')?.id)
   })
 
   it('uses the id of the caller', () => {
@@ -155,7 +136,7 @@ describe('Select', () => {
         </ThemeScope>
       </ThemeScope>,
     )
-    const inner = container.querySelector('[data-testid="inner"]')
+    const inner = view.container.querySelector('[data-testid="inner"]')
     expect(menu()).not.toBeNull()
     expect(inner?.contains(menu())).toBe(true)
   })
@@ -163,7 +144,7 @@ describe('Select', () => {
   it('draws the menu in the body with no theme scope', () => {
     draw(<Select options={options} value='enemy' onChange={vi.fn()} open />)
     expect(menu()).not.toBeNull()
-    expect(container.contains(menu())).toBe(false)
+    expect(view.container.contains(menu())).toBe(false)
     expect(document.body.contains(menu())).toBe(true)
   })
 

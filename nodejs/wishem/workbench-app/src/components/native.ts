@@ -11,3 +11,9 @@ export type Native<T extends keyof React.JSX.IntrinsicElements> = Omit<Component
 export interface TextProps {
   children: ReactNode
 }
+
+/**
+ * Drops the keys that have the value `undefined`, so that they do not replace a value of the caller.
+ */
+export const defined = <T extends object>(value: T) =>
+  Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>

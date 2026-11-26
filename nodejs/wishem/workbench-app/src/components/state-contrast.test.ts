@@ -35,6 +35,38 @@ const rows: StateRow[] = [
   { state: 'select trigger placeholder, on ground', foreground: 'fg-muted', background: 'ground' },
   { state: 'select option', foreground: 'fg', background: 'surface' },
   { state: 'select option, highlighted', foreground: 'fg', background: { mix: ['fg', 'surface', 9] } },
+  { state: 'maker button, default', foreground: 'on-fill', background: 'maker' },
+  {
+    state: 'maker button, hover',
+    foreground: { brightness: ['on-fill', 1.08] },
+    background: { brightness: ['maker', 1.08] },
+  },
+  {
+    state: 'maker button, active',
+    foreground: { brightness: ['on-fill', 0.88] },
+    background: { brightness: ['maker', 0.88] },
+  },
+  { state: 'danger button, default', foreground: 'on-fill', background: 'danger' },
+  {
+    state: 'danger button, hover',
+    foreground: { brightness: ['on-fill', 1.08] },
+    background: { brightness: ['danger', 1.08] },
+  },
+  {
+    state: 'danger button, active',
+    foreground: { brightness: ['on-fill', 0.96] },
+    background: { brightness: ['danger', 0.96] },
+  },
+  { state: 'neutral button, default', foreground: 'fg', background: 'surface' },
+  { state: 'neutral button, hover', foreground: 'fg', background: { mix: ['fg', 'surface', 8] } },
+  { state: 'neutral button, active', foreground: 'fg', background: { mix: ['fg', 'surface', 16] } },
+  { state: 'quiet button, default, on ground', foreground: 'fg-muted', background: 'ground' },
+  { state: 'quiet button, default, on surface', foreground: 'fg-muted', background: 'surface' },
+  { state: 'quiet button, hover', foreground: 'fg-muted', background: { mix: ['fg', 'surface', 8] } },
+  { state: 'quiet button, active', foreground: 'fg', background: { mix: ['fg', 'surface', 16] } },
+  { state: 'text control placeholder, on ground', foreground: 'fg-muted', background: 'ground' },
+  { state: 'read-only text, on ground', foreground: 'fg-muted', background: 'ground' },
+  { state: 'read-only text, on surface', foreground: 'fg-muted', background: 'surface' },
 ]
 
 describe('the contrast of each state', () => {

@@ -1,6 +1,6 @@
 import { act } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { useRender } from '../test/render.js'
 import { Field, useFieldControl } from './Field.js'
 
 interface ProbeProps {
@@ -23,30 +23,11 @@ const Probe = (props: ProbeProps) => {
 }
 
 describe('Field', () => {
-  let container: HTMLDivElement
-  let root: Root
+  const view = useRender()
 
-  beforeEach(() => {
-    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-    container = document.createElement('div')
-    document.body.append(container)
-    root = createRoot(container)
-  })
+  const { draw } = view
 
-  afterEach(() => {
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
-  })
-
-  const draw = (node: React.ReactNode) => {
-    act(() => {
-      root.render(node)
-    })
-  }
-
-  const probe = () => container.querySelector<HTMLInputElement>('[data-testid="probe"]')
+  const probe = () => view.container.querySelector<HTMLInputElement>('[data-testid="probe"]')
 
   it('names the control with the label', () => {
     draw(
@@ -54,7 +35,7 @@ describe('Field', () => {
         <Probe />
       </Field>,
     )
-    const label = container.querySelector('label')
+    const label = view.container.querySelector('label')
     expect(label?.textContent).toBe('Speed')
     expect(probe()?.id).toBeTruthy()
     expect(label?.htmlFor).toBe(probe()?.id)
@@ -70,7 +51,7 @@ describe('Field', () => {
     const clicks: Element[] = []
     probe()?.addEventListener('click', (event) => clicks.push(event.target as Element))
     act(() => {
-      container.querySelector('label')?.click()
+      view.container.querySelector('label')?.click()
     })
     expect(clicks).toEqual([probe()])
   })
@@ -81,7 +62,7 @@ describe('Field', () => {
         <Probe />
       </Field>,
     )
-    const message = container.querySelector('p')
+    const message = view.container.querySelector('p')
     expect(message?.textContent).toBe('Enter a number.')
     expect(probe()?.getAttribute('aria-describedby')).toBe(message?.id)
     expect(probe()?.getAttribute('aria-invalid')).toBe('true')
@@ -93,7 +74,7 @@ describe('Field', () => {
         <Probe />
       </Field>,
     )
-    expect(container.querySelector('p')).toBeNull()
+    expect(view.container.querySelector('p')).toBeNull()
     expect(probe()?.hasAttribute('aria-describedby')).toBe(false)
     expect(probe()?.hasAttribute('aria-invalid')).toBe(false)
   })
@@ -105,7 +86,7 @@ describe('Field', () => {
       </Field>,
     )
     expect(probe()?.id).toBe('mine')
-    expect(container.querySelector('label')?.htmlFor).not.toBe('mine')
+    expect(view.container.querySelector('label')?.htmlFor).not.toBe('mine')
   })
 
   it('keeps the description of the caller before the error message', () => {
@@ -114,7 +95,7 @@ describe('Field', () => {
         <Probe aria-describedby='hint' />
       </Field>,
     )
-    const message = container.querySelector('p')
+    const message = view.container.querySelector('p')
     expect(probe()?.getAttribute('aria-describedby')).toBe(`hint ${message?.id}`)
   })
 
@@ -138,44 +119,25 @@ describe('Field', () => {
         </Field>
       </>,
     )
-    const ids = Array.from(container.querySelectorAll('input')).map((input) => input.id)
+    const ids = Array.from(view.container.querySelectorAll('input')).map((input) => input.id)
     expect(new Set(ids).size).toBe(2)
   })
 })
 
 describe('useFieldControl with no field', () => {
-  let container: HTMLDivElement
-  let root: Root
-
-  beforeEach(() => {
-    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-    container = document.createElement('div')
-    document.body.append(container)
-    root = createRoot(container)
-  })
-
-  afterEach(() => {
-    act(() => {
-      root.unmount()
-    })
-    container.remove()
-  })
+  const view = useRender()
 
   it('uses its own id and invalid', () => {
-    act(() => {
-      root.render(<Probe id='own' invalid />)
-    })
-    const input = container.querySelector('input')
+    view.draw(<Probe id='own' invalid />)
+    const input = view.container.querySelector('input')
     expect(input?.id).toBe('own')
     expect(input?.getAttribute('aria-invalid')).toBe('true')
     expect(input?.hasAttribute('aria-describedby')).toBe(false)
   })
 
   it('sets nothing when the control has no id and is valid', () => {
-    act(() => {
-      root.render(<Probe />)
-    })
-    const input = container.querySelector('input')
+    view.draw(<Probe />)
+    const input = view.container.querySelector('input')
     expect(input?.hasAttribute('id')).toBe(false)
     expect(input?.hasAttribute('aria-invalid')).toBe(false)
   })

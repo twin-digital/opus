@@ -237,10 +237,193 @@ test.describe('components section', () => {
 /** The style properties that the states of a control change. */
 const lookOf = (locator: Locator) =>
   locator.evaluate((element) => {
-    const { borderColor, boxShadow, outlineStyle, outlineWidth, backgroundColor, color, filter } =
-      getComputedStyle(element)
-    return { borderColor, boxShadow, outlineStyle, outlineWidth, backgroundColor, color, filter }
+    const {
+      borderColor,
+      borderStyle,
+      boxShadow,
+      outlineStyle,
+      outlineWidth,
+      outlineColor,
+      outlineOffset,
+      backgroundColor,
+      color,
+      filter,
+      transform,
+      translate,
+    } = getComputedStyle(element)
+    return {
+      borderColor,
+      borderStyle,
+      boxShadow,
+      outlineStyle,
+      outlineWidth,
+      outlineColor,
+      outlineOffset,
+      backgroundColor,
+      color,
+      filter,
+      transform,
+      translate,
+    }
   })
+
+/**
+ * Moves focus to the element with the Tab key. A click on the Zero state first sets the start of the Tab order.
+ */
+const tabTo = async (page: Page, scope: Locator, target: Locator) => {
+  await scope.getByRole('region', { name: 'Zero state', exact: true }).click()
+  for (let step = 0; step < 80; step++) {
+    await page.keyboard.press('Tab')
+    if (await target.evaluate((element) => element === document.activeElement)) {
+      return
+    }
+  }
+  throw new Error('The Tab key did not reach the target')
+}
+
+const DANGER_TEXT = { light: 'rgb(198, 40, 40)', dark: 'rgb(242, 102, 106)' }
+const MAKER_TEXT = { light: 'rgb(158, 91, 12)', dark: 'rgb(242, 169, 59)' }
+
+test.describe('button, text controls, and checkbox', () => {
+  for (const theme of themes) {
+    const scope = (page: Page) => page.getByTestId(`components-${theme}`)
+    const within = (page: Page, specimen: string, role: 'button' | 'textbox' | 'checkbox') =>
+      scope(page).getByTestId(specimen).getByRole(role)
+
+    for (const variant of ['maker', 'neutral', 'quiet', 'danger']) {
+      test(`${theme}: the real hover and the real focus of a ${variant} button have the style of the forced states`, async ({
+        page,
+      }) => {
+        const forcedHover = await lookOf(within(page, `button-${variant}-hover`, 'button'))
+        const forcedFocus = await lookOf(within(page, `button-${variant}-focus`, 'button'))
+        const normal = within(page, `button-${variant}-default`, 'button')
+        await normal.hover()
+        expect(await lookOf(normal)).toEqual(forcedHover)
+        await page.mouse.move(0, 0)
+        await tabTo(page, scope(page), normal)
+        expect(await lookOf(normal)).toEqual(forcedFocus)
+        expect(forcedFocus.outlineColor).toBe(MAKER_TEXT[theme])
+        expect(forcedFocus.outlineWidth).toBe('2px')
+        expect(forcedFocus.outlineOffset).toBe('2px')
+      })
+    }
+
+    test(`${theme}: the forced states of a button differ from the default`, async ({ page }) => {
+      const base = await lookOf(within(page, 'button-maker-default', 'button'))
+      expect((await lookOf(within(page, 'button-maker-hover', 'button'))).filter).not.toBe(base.filter)
+      expect((await lookOf(within(page, 'button-maker-active', 'button'))).translate).not.toBe(base.translate)
+      expect((await lookOf(within(page, 'button-maker-focus', 'button'))).outlineStyle).not.toBe(base.outlineStyle)
+    })
+
+    test(`${theme}: a button and a checkbox show no ring after a click`, async ({ page }) => {
+      const button = within(page, 'button-neutral-default', 'button')
+      await button.click()
+      await expect(button).toBeFocused()
+      expect((await lookOf(button)).outlineStyle).toBe('none')
+      const box = within(page, 'checkbox-off-default', 'checkbox')
+      await box.click({ force: true })
+      await expect(box).toBeFocused()
+      expect((await lookOf(box)).outlineStyle).toBe('none')
+    })
+
+    test(`${theme}: a loading button gets focus with the Tab key`, async ({ page }) => {
+      const loading = within(page, 'button-maker-loading', 'button')
+      await tabTo(page, scope(page), loading)
+      await expect(loading).toBeFocused()
+      expect((await lookOf(loading)).outlineStyle).toBe('solid')
+    })
+
+    for (const id of ['text-input', 'text-input-empty', 'text-area']) {
+      test(`${theme}: the real hover and the real focus of ${id} have the style of the forced states`, async ({
+        page,
+      }) => {
+        const forcedHover = await lookOf(within(page, `${id}-hover`, 'textbox'))
+        const forcedFocus = await lookOf(within(page, `${id}-focus`, 'textbox'))
+        const normal = within(page, `${id}-default`, 'textbox')
+        await normal.hover()
+        expect(await lookOf(normal)).toEqual(forcedHover)
+        await page.mouse.move(0, 0)
+        await tabTo(page, scope(page), normal)
+        expect(await lookOf(normal)).toEqual(forcedFocus)
+      })
+    }
+
+    test(`${theme}: a text input shows the focus look after a click and keeps its size`, async ({ page }) => {
+      const input = within(page, 'text-input-default', 'textbox')
+      const size = async () => {
+        const box = await input.boundingBox()
+        return { width: box?.width, height: box?.height }
+      }
+      const before = await size()
+      await input.click()
+      await expect(input).toBeFocused()
+      const look = await lookOf(input)
+      expect(look.borderColor).toBe(MAKER_TEXT[theme])
+      expect(look.boxShadow).toContain(MAKER_TEXT[theme])
+      expect(look.outlineWidth).toBe('0px')
+      expect(await size()).toEqual(before)
+    })
+
+    test(`${theme}: an error text control keeps the danger-text border in the real hover and the real focus`, async ({
+      page,
+    }) => {
+      const error = within(page, 'text-input-error', 'textbox')
+      expect((await lookOf(error)).borderColor).toBe(DANGER_TEXT[theme])
+      await error.hover()
+      expect((await lookOf(error)).borderColor).toBe(DANGER_TEXT[theme])
+      await error.focus()
+      const focused = await lookOf(error)
+      expect(focused.borderColor).toBe(DANGER_TEXT[theme])
+      expect(focused.boxShadow).toContain(DANGER_TEXT[theme])
+    })
+
+    test(`${theme}: the specimen error with focus has the danger-text border and inner pixel`, async ({ page }) => {
+      const look = await lookOf(within(page, 'text-input-error-focus', 'textbox'))
+      expect(look.borderColor).toBe(DANGER_TEXT[theme])
+      expect(look.boxShadow).toContain(DANGER_TEXT[theme])
+    })
+
+    test(`${theme}: the read-only control has a dashed border and no fill`, async ({ page }) => {
+      const look = await lookOf(within(page, 'text-input-read-only', 'textbox'))
+      expect(look.borderStyle).toBe('dashed')
+      expect(look.backgroundColor).toBe('rgba(0, 0, 0, 0)')
+    })
+
+    for (const state of ['off', 'on']) {
+      test(`${theme}: the real hover and the real focus of the ${state} checkbox have the style of the forced states`, async ({
+        page,
+      }) => {
+        const forcedHover = await lookOf(within(page, `checkbox-${state}-hover`, 'checkbox'))
+        const forcedFocus = await lookOf(within(page, `checkbox-${state}-focus`, 'checkbox'))
+        const normal = within(page, `checkbox-${state}-default`, 'checkbox')
+        await normal.hover()
+        expect(await lookOf(normal)).toEqual(forcedHover)
+        await page.mouse.move(0, 0)
+        await tabTo(page, scope(page), normal)
+        expect(await lookOf(normal)).toEqual(forcedFocus)
+      })
+    }
+
+    test(`${theme}: a long checkbox label wraps and the box stays at the first line`, async ({ page }) => {
+      const specimen = scope(page).getByTestId('checkbox-long')
+      const box = await specimen.getByRole('checkbox').boundingBox()
+      const text = specimen.locator('label > span')
+      const textBox = await text.boundingBox()
+      const lineHeight = await text.evaluate((e) => parseFloat(getComputedStyle(e).lineHeight))
+      expect(textBox?.height).toBeGreaterThan(lineHeight * 1.5)
+      expect(box && textBox && box.y - textBox.y).toBeLessThan(lineHeight)
+      expect(box?.height).toBe(16)
+      const frame = await specimen.boundingBox()
+      expect(frame && textBox && textBox.x + textBox.width).toBeLessThanOrEqual((frame?.x ?? 0) + (frame?.width ?? 0))
+    })
+
+    test(`${theme}: a click on the label of a field moves focus to the text input`, async ({ page }) => {
+      const field = scope(page).getByTestId('text-input-error')
+      await field.getByText('Speed', { exact: true }).click()
+      await expect(field.getByRole('textbox')).toBeFocused()
+    })
+  }
+})
 
 test.describe('select', () => {
   const SURFACE = { light: 'rgb(255, 255, 255)', dark: 'rgb(27, 27, 48)' }
@@ -257,8 +440,7 @@ test.describe('select', () => {
 
     test(`${theme}: the real focus has the style of the forced focus`, async ({ page }) => {
       const forced = await lookOf(trigger(page, 'select-focus'))
-      await scope(page).getByRole('region', { name: 'Zero state', exact: true }).click()
-      await page.keyboard.press('Tab')
+      await tabTo(page, scope(page), trigger(page, 'select-default'))
       await expect(trigger(page, 'select-default')).toBeFocused()
       expect(await lookOf(trigger(page, 'select-default'))).toEqual(forced)
     })

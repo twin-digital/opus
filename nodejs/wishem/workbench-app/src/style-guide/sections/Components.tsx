@@ -1,5 +1,7 @@
 import { Section } from '../Section.js'
 import { AppBarAndZeroState } from './components/AppBarAndZeroState.js'
+import { Buttons } from './components/Buttons.js'
+import { Controls } from './components/Controls.js'
 import { SelectSpecimens } from './components/SelectSpecimens.js'
 
 /**
@@ -8,6 +10,8 @@ import { SelectSpecimens } from './components/SelectSpecimens.js'
 export const Components = () => (
   <Section id='components' title='Components' layout='stacked'>
     <AppBarAndZeroState />
+    <Buttons />
+    <Controls />
     <SelectSpecimens />
   </Section>
 )
