@@ -63,7 +63,9 @@ Wishem connects to no external system, so the system context diagram has one per
 - **Model folder** `[Container: JSON files]`. It is the one store of persisted data. The model folder of the base workbench is in the package `@thrashplay/wishem-workbench`.
 - **core** and **host-nodejs** `[Container: TypeScript package]`. The guidance makes a package a container when other packages build on it.
 
-The page imports only types from `core`. The diagram shows no relationship for it.
+The host component of the workbench process is `host-nodejs` at run time: the `start` script calls `startHost`. The package is a container because other packages build on it. The process is a container because it runs. The prose of the document states this, so that a reader does not count the host two times.
+
+The workbench process imports `ModelError` from `core` as a value (`workbench-app/scripts/start.ts`), so the diagram shows a relationship from the workbench process to `core`. The page imports only types from `core`. The diagram shows no relationship for it.
 
 `@thrashplay/wishem-workbench-app` is not a container of its own. It holds the page and the `start` script, which are in the page and the workbench process. The table of the elements gives the package of each container.
 
@@ -157,6 +159,7 @@ flowchart LR
   page -- "Gets snapshots [SSE]" --> process
   process -- "Reads and watches [file system]" --> model
   process -- "Runs [import]" --> hostlib
+  process -- "Uses [import]" --> corelib
   hostlib -- "Builds on [import]" --> corelib
 ```
 
