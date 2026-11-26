@@ -100,7 +100,7 @@
 @custom-variant st-active (&:is(:active, [data-force~='active'], [data-force~='active'] *));
 @custom-variant st-focus (&:is(:focus, [data-force~='focus'], [data-force~='focus'] *));
 @custom-variant st-focus-visible (&:is(:focus-visible, [data-force~='focus'], [data-force~='focus'] *));
-@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus'], [data-force~='focus'] *));
+@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus-within'], [data-force~='focus-within'] *));
 
 @theme {
   --text-h1: 39px;

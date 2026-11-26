@@ -184,9 +184,9 @@ Text and marks on a bright fill use the role `on-fill` (`text-on-fill`, `border-
 
 ### Forced states
 
-The style guide shows the hover, active, and focus look of a component with no pointer and no key. The attribute `data-force` on a wrapper element forces the state. Its values are `hover`, `active`, and `focus`. The helper `Forced` in `src/style-guide/Forced.tsx` draws the wrapper.
+The style guide shows the hover, active, and focus look of a component with no pointer and no key. The attribute `data-force` on a wrapper element forces the state. Its values are `hover`, `active`, `focus`, and `focus-within`. The helper `Forced` in `src/style-guide/Forced.tsx` draws the wrapper.
 
-A component does not use the Tailwind variants `hover:`, `active:`, `focus:`, `focus-visible:`, and `focus-within:`. It uses the variants of `src/styles/theme.css`: `st-hover`, `st-active`, `st-focus`, `st-focus-visible`, and `st-focus-within`. Each variant matches the real state, a forced state, and the content of a forced element. Thus the real state and the forced state use one style rule.
+A component does not use the Tailwind variants `hover:`, `active:`, `focus:`, `focus-visible:`, and `focus-within:`. It uses the variants of `src/styles/theme.css`: `st-hover`, `st-active`, `st-focus`, `st-focus-visible`, and `st-focus-within`. Each variant matches the real state, a forced state, and the content of a forced element. `st-focus-within` matches the force value `focus-within` and not `focus`, so a specimen can show the focus look of a box with no key ring on the controls in it. Thus the real state and the forced state use one style rule.
 
 To keep a disabled control from reacting, write `enabled:st-hover:`, as the select does.
 

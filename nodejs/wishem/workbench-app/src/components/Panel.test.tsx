@@ -50,6 +50,31 @@ describe('Panel', () => {
     expect(part('header')?.children).toHaveLength(1)
   })
 
+  it('treats an empty title as no title', () => {
+    view.draw(<Panel title=''>Body</Panel>)
+    expect(part('header')).toBeNull()
+    expect(view.container.querySelector('h2')).toBeNull()
+  })
+
+  it('draws no heading for an empty title when the header has content at its end', () => {
+    view.draw(
+      <Panel title='' headerEnd={<span>Draft</span>}>
+        Body
+      </Panel>,
+    )
+    expect(part('header')?.textContent).toBe('Draft')
+    expect(view.container.querySelector('h2')).toBeNull()
+  })
+
+  it.each([null, false] as const)('draws no wrapper for the end of the header for headerEnd %s', (empty) => {
+    view.draw(
+      <Panel title='Replays' headerEnd={empty}>
+        Body
+      </Panel>,
+    )
+    expect(part('header')?.children).toHaveLength(1)
+  })
+
   it('holds the content of the footer', () => {
     view.draw(<Panel footer={<button type='button'>Apply</button>}>Body</Panel>)
     expect(part('footer')?.querySelector('button')?.textContent).toBe('Apply')

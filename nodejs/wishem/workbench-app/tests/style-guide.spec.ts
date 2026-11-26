@@ -326,6 +326,25 @@ test.describe('button, text controls, and checkbox', () => {
       expect((await lookOf(box)).outlineStyle).toBe('none')
     })
 
+    test(`${theme}: the Space key changes a checkbox`, async ({ page }) => {
+      const box = within(page, 'checkbox-off-default', 'checkbox')
+      await box.focus()
+      await box.evaluate((element) => {
+        element.addEventListener('click', () => {
+          element.setAttribute('data-click-checked', String((element as HTMLInputElement).checked))
+        })
+      })
+      await page.keyboard.press('Space')
+      await expect(box).toHaveAttribute('data-click-checked', 'true')
+    })
+
+    test(`${theme}: a loading danger button has the colors of the default danger button`, async ({ page }) => {
+      const loading = await lookOf(within(page, 'button-danger-loading', 'button'))
+      const normal = await lookOf(within(page, 'button-danger-default', 'button'))
+      expect(loading.backgroundColor).toBe(normal.backgroundColor)
+      expect(loading.color).toBe(normal.color)
+    })
+
     test(`${theme}: a loading button gets focus with the Tab key`, async ({ page }) => {
       const loading = within(page, 'button-maker-loading', 'button')
       await tabTo(page, scope(page), loading)
@@ -448,15 +467,50 @@ test.describe('select', () => {
     test(`${theme}: an error select keeps the danger-text border in the real hover and the real focus`, async ({
       page,
     }) => {
-      const DANGER = { light: 'rgb(198, 40, 40)', dark: 'rgb(242, 102, 106)' }
       const error = trigger(page, 'select-error')
-      expect((await lookOf(error)).borderColor).toBe(DANGER[theme])
+      expect((await lookOf(error)).borderColor).toBe(DANGER_TEXT[theme])
       await error.hover()
-      expect((await lookOf(error)).borderColor).toBe(DANGER[theme])
+      expect((await lookOf(error)).borderColor).toBe(DANGER_TEXT[theme])
       await error.focus()
       const focused = await lookOf(error)
-      expect(focused.borderColor).toBe(DANGER[theme])
-      expect(focused.boxShadow).toContain(DANGER[theme])
+      expect(focused.borderColor).toBe(DANGER_TEXT[theme])
+      expect(focused.boxShadow).toContain(DANGER_TEXT[theme])
+    })
+
+    test(`${theme}: an open select has the focus look while the pointer stays on it`, async ({ page }) => {
+      const button = trigger(page, 'select-default')
+      await button.click()
+      await expect(button).toHaveAttribute('aria-expanded', 'true')
+      await expect(button).not.toBeFocused()
+      await button.hover()
+      expect(await button.evaluate((element) => element.matches(':hover'))).toBe(true)
+      const look = await lookOf(button)
+      expect(look.borderColor).toBe(MAKER_TEXT[theme])
+      expect(look.boxShadow).toContain(MAKER_TEXT[theme])
+    })
+
+    test(`${theme}: an open error select keeps the danger-text border while the pointer stays on it`, async ({
+      page,
+    }) => {
+      const error = trigger(page, 'select-error')
+      await error.click()
+      await expect(error).toHaveAttribute('aria-expanded', 'true')
+      await expect(error).not.toBeFocused()
+      await error.hover()
+      expect(await error.evaluate((element) => element.matches(':hover'))).toBe(true)
+      const look = await lookOf(error)
+      expect(look.borderColor).toBe(DANGER_TEXT[theme])
+      expect(look.boxShadow).toContain(DANGER_TEXT[theme])
+    })
+
+    test(`${theme}: the page scrolls with the menus open`, async ({ page }) => {
+      await page.evaluate(() => {
+        window.scrollTo(0, 200)
+      })
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+      expect(
+        await page.evaluate(() => [document.body, document.documentElement].map((e) => getComputedStyle(e).overflow)),
+      ).not.toContain('hidden')
     })
 
     test(`${theme}: the forced states differ from the default`, async ({ page }) => {
@@ -528,14 +582,18 @@ test.describe('prompt box', () => {
     const area = (page: Page, specimen: string) => scope(page).getByTestId(specimen).getByRole('textbox')
     const box = (page: Page, specimen: string) => scope(page).getByTestId(specimen).getByRole('group')
 
-    test(`${theme}: the real focus of the empty box has the border and shadow of the forced box`, async ({ page }) => {
+    test(`${theme}: the real focus of the empty box has the look of the forced box`, async ({ page }) => {
       const forced = await lookOf(box(page, 'prompt-focus'))
-      await area(page, 'prompt-empty').click()
+      await tabTo(page, scope(page), area(page, 'prompt-empty'))
       const real = await lookOf(box(page, 'prompt-empty'))
-      expect(real.borderColor).toBe(forced.borderColor)
-      expect(real.boxShadow).toBe(forced.boxShadow)
+      expect(real).toEqual(forced)
       expect(real.borderColor).toBe(MAKER_TEXT[theme])
       expect(real.boxShadow).toContain(MAKER_TEXT[theme])
+    })
+
+    test(`${theme}: the button of the forced box has no focus ring`, async ({ page }) => {
+      const button = scope(page).getByTestId('prompt-focus').getByRole('button')
+      expect((await lookOf(button)).outlineStyle).toBe('none')
     })
 
     test(`${theme}: the working box has the spirit border`, async ({ page }) => {
@@ -590,8 +648,23 @@ test.describe('prompt box', () => {
 test('the page is at the top after it loads, although the open menus take focus', async ({ page }) => {
   await expect(page.locator('[role="option"]:focus')).toHaveCount(1)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)
-  await page.waitForTimeout(500)
-  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  const highest = await page.evaluate(
+    async () =>
+      new Promise<number>((resolve) => {
+        const end = performance.now() + 500
+        let max = window.scrollY
+        const sample = () => {
+          max = Math.max(max, window.scrollY)
+          if (performance.now() < end) {
+            requestAnimationFrame(sample)
+          } else {
+            resolve(max)
+          }
+        }
+        sample()
+      }),
+  )
+  expect(highest).toBe(0)
 })
 
 test('the default text is Inter at 16 pixels', async ({ page }) => {

@@ -7,7 +7,7 @@ export interface FieldProps {
    */
   error?: string
   /**
-   * One control.
+   * One control. An `id` from the caller on the control replaces the identifier of the field, and the label then does not name the control.
    */
   children: ReactNode
 }
@@ -51,7 +51,7 @@ export interface FieldControl {
 
 /**
  * Merges the field of the control, if it has one, with its own `id` and `invalid`.
- * An `id` of the caller replaces the identifier of the field.
+ * An `id` of the caller replaces the identifier of the field, and the label then does not name the control.
  */
 export const useFieldControl = (own: { id?: string; invalid?: boolean; 'aria-describedby'?: string }): FieldControl => {
   const field = useContext(FieldContext)

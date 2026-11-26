@@ -18,7 +18,7 @@ export const PromptBoxes = () => (
     </Specimen>
     <Specimen label='Prompt box, focus with text'>
       <div className='p-3'>
-        <Forced state='focus' testId='prompt-focus'>
+        <Forced state='focus-within' testId='prompt-focus'>
           <PromptBox label='Wish with text' defaultValue={TEXT} onSend={noop} onStop={noop} />
         </Forced>
       </div>

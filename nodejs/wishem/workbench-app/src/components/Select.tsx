@@ -2,6 +2,7 @@ import { Select as BaseSelect } from '@base-ui/react/select'
 import { useFieldControl } from './Field.js'
 import { defined } from './native.js'
 import { useThemeScopeElement } from './ThemeScope.js'
+import { controlStateClass } from './textControl.js'
 
 export interface SelectOption {
   value: string
@@ -39,12 +40,9 @@ const triggerClass = [
   'relative flex w-full min-w-0 cursor-default items-center rounded-sm border border-control-border bg-ground',
   'py-[5px] pr-[26px] pl-2 text-left text-control text-fg',
   'data-placeholder:text-fg-muted',
-  'enabled:st-hover:border-fg-muted',
-  'enabled:st-focus:border-maker-text enabled:st-focus:shadow-[inset_0_0_0_1px_var(--maker-text)] enabled:st-focus:outline-0 enabled:st-focus:outline-transparent',
+  'not-data-popup-open:enabled:st-hover:border-fg-muted',
+  controlStateClass,
   'data-popup-open:border-maker-text data-popup-open:shadow-[inset_0_0_0_1px_var(--maker-text)] data-popup-open:outline-0',
-  'aria-invalid:border-danger-text',
-  'aria-invalid:enabled:st-hover:border-danger-text',
-  'aria-invalid:enabled:st-focus:border-danger-text aria-invalid:enabled:st-focus:shadow-[inset_0_0_0_1px_var(--danger-text)]',
   'aria-invalid:data-popup-open:border-danger-text aria-invalid:data-popup-open:shadow-[inset_0_0_0_1px_var(--danger-text)]',
   'disabled:opacity-50',
 ].join(' ')

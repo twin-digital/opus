@@ -22,11 +22,16 @@ describe('theme.css', () => {
     ['active', 'active', 'active'],
     ['focus', 'focus', 'focus'],
     ['focus-visible', 'focus-visible', 'focus'],
-    ['focus-within', 'focus-within', 'focus'],
   ])('the variant st-%s matches :%s and the force value %s', (name, pseudo, force) => {
     const declaration = new RegExp(
       `@custom-variant st-${name} \\(&:is\\(:${pseudo}, \\[data-force~='${force}'\\], \\[data-force~='${force}'\\] \\*\\)\\);`,
     )
     expect(themeCss).toMatch(declaration)
+  })
+
+  it('the variant st-focus-within matches :focus-within and the force value focus-within, not the value focus', () => {
+    const declaration =
+      "@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus-within'], [data-force~='focus-within'] *));"
+    expect(themeCss).toContain(declaration)
   })
 })

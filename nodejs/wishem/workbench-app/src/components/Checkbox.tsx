@@ -27,7 +27,7 @@ const boxClass = [
  * A native checkbox that the catalog draws, with its label after it. It holds no value.
  */
 export const Checkbox = ({ checked, onChange, children, ...rest }: CheckboxProps) => (
-  <label className='flex items-start gap-2 text-control break-words'>
+  <label className='inline-flex items-start gap-2 text-control break-words'>
     <input
       {...rest}
       type='checkbox'

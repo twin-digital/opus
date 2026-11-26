@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type ForcedState = 'hover' | 'active' | 'focus'
+export type ForcedState = 'hover' | 'active' | 'focus' | 'focus-within'
 
 export interface ForcedProps {
   /**
@@ -15,7 +15,7 @@ export interface ForcedProps {
 }
 
 /**
- * Forces the hover, active, or focus look on one specimen. The `st-` variants of the specimen match the wrapper.
+ * Forces the hover, active, focus, or focus-within look on one specimen. The `st-` variants of the specimen match the wrapper.
  */
 export const Forced = ({ state, testId, children }: ForcedProps) => (
   <div data-force={state} data-testid={testId}>

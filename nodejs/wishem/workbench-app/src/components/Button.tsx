@@ -1,4 +1,5 @@
 import type { Native } from './native.js'
+import { Spinner } from './Spinner.js'
 
 export type ButtonVariant = 'maker' | 'neutral' | 'quiet' | 'danger'
 
@@ -65,13 +66,7 @@ export const Button = ({
     }}
     className={`${baseClass} ${variantClass[variant]}`}
   >
-    {loading && (
-      <span
-        aria-hidden='true'
-        data-spinner=''
-        className='mr-1.5 inline-block size-[11px] animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none'
-      />
-    )}
+    {loading && <Spinner />}
     {children}
   </button>
 )

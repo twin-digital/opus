@@ -43,9 +43,11 @@ export const Panels = () => (
           <Field label='Speed' error='Enter a number.'>
             <TextInput defaultValue='fast' />
           </Field>
-          <Checkbox checked onChange={noop}>
-            Flees light
-          </Checkbox>
+          <div>
+            <Checkbox checked onChange={noop}>
+              Flees light
+            </Checkbox>
+          </div>
         </Panel>
       </div>
     </Specimen>

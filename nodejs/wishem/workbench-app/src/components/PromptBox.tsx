@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Button } from './Button.js'
+import { Spinner } from './Spinner.js'
 
 export interface PromptBoxProps {
   /**
@@ -149,10 +150,7 @@ export const PromptBox = ({
       <div className='flex flex-wrap items-center justify-between gap-x-3 gap-y-2'>
         {locked ?
           <span className='inline-flex items-center text-small text-spirit-text'>
-            <span
-              aria-hidden='true'
-              className='mr-1.5 inline-block size-[11px] animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none'
-            />
+            <Spinner />
             {WORKING_TEXT}
           </span>
         : <span className='text-small text-fg-muted'>{disabled && disabledReason ? disabledReason : HINT}</span>}
