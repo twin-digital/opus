@@ -60,16 +60,16 @@ The tokens section of the style guide shows the new swatch with no other edit. I
 @custom-variant st-active (&:is(:active, [data-force~='active'], [data-force~='active'] *));
 @custom-variant st-focus (&:is(:focus, [data-force~='focus'], [data-force~='focus'] *));
 @custom-variant st-focus-visible (&:is(:focus-visible, [data-force~='focus'], [data-force~='focus'] *));
-@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus'], [data-force~='focus'] *));
+@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus-within'], [data-force~='focus-within'] *));
 ```
 
 - A component uses these variants and does not use `hover:`, `active:`, `focus:`, `focus-visible:`, or `focus-within:`. Thus the forced state and the real state are one rule.
-- The attribute is `data-force`, with the values `hover`, `active`, and `focus`.
+- The attribute is `data-force`, with the values `hover`, `active`, `focus`, and `focus-within`. `focus-within` forces the look of a box that holds the element with focus, and does not force the focus look of the elements in the box. The prompt box specimen uses it.
 - The style guide has a helper, `Forced`, that draws `<div data-force={state}>` around one specimen. No component has a prop for the force. The descendant part of the selector is necessary because the select and the prompt box do not pass `data-*` to an inner element.
 - The text controls use `st-focus`. The button and the checkbox use `st-focus-visible`. The prompt box uses `st-focus-within` on its box.
 - The states of a disabled control do not react: a class such as `enabled:st-hover:` keeps a forced hover from a disabled specimen. A loading button is not disabled, so it uses a `data-loading` attribute for the same purpose.
 
-**Unverified**: that `@custom-variant` of the installed Tailwind accepts these selectors, and the order of the variants in a class. Task 1 proves it with the first control.
+The installed Tailwind accepts these selectors as written. The order of the classes does not decide which rule wins: the selector of a stacked variant does. A state that must win over hover, such as the error border or the open look of the select, has its own class with the hover variant in the stack, for example `aria-invalid:enabled:st-hover:border-danger-text`.
 
 Agent decision for the names and for the descendant part. The issue fixes only that an attribute forces the state and that the rule is shared. Rejected: to replace the built-in `hover` variant of Tailwind. A person who reads a class would not see that it is different.
 
@@ -95,14 +95,17 @@ The select uses the `Select` parts of `@base-ui/react`. The library gives the ke
 - A value that is not in the options: the trigger shows the text of the value. The select looks up the label in `options` and uses the value when it finds none. The menu lists only `options`.
 - The trigger shows the placeholder in `fg-muted` when `value` is `undefined`.
 
-**Unverified**: the names of the parts and the props of the installed version, and the three facts that the issue names: a controlled open state, a select that does not lock the page, and a container for its portal. Task 1 proves them first, with an open select in the light scope and in the dark scope of the style guide at the same time. Task 1 also proves these items, which come from the review of the issue:
+Task 1 proved the three facts that the issue names, with an open select in the light scope and in the dark scope of the style guide at the same time: the open state can be controlled, the select does not lock the page, and the portal takes a container. It also proved these items:
 
-- Two open selects on one page do not close each other when the page loads.
+- Two open selects on one page stay open together when the page loads.
 - A controlled `open={true}` with no `onOpenChange` stays open after a click outside and after Escape, and gives no error.
-- The open menu does not take focus when the page loads. The style guide has more than one open select, and the page must not scroll to one of them.
-- axe reports no violation for the open menu in a scope.
+- axe reports one violation for an open menu, `aria-hidden-focus`, on the focus guard elements that the library draws. The accessibility test excludes `[data-base-ui-focus-guard]`. It excludes no rule.
 
-If one of the three facts of the issue is false, Task 1 stops and the owner decides. The first step is to examine the constraint that failed, or a different library. A select with no library is not the first fallback.
+One item is false: an open menu takes focus when it is drawn, and the web browser scrolls to it. The library has no prop that stops this. The style guide has open selects when it loads, so `src/style-guide/main.tsx` sets the scroll position back to the top after each focus change, until the first input of a person. A page with a hash in its address is not changed. A page of the workbench that opens a select after a click is not affected.
+
+The menu does not flip above the trigger, and its list has a maximum height of 16 rem with a scroll bar. With a flip and a height from the available space, the position of the menu depended on the scroll position, and the screenshots were not stable. Known cost: a select near the bottom of a window opens below the visible area. Agent decision. The owner did not confirm it.
+
+A click on the label of a field opens the menu of its select, because a label activates its button.
 
 ### D6. The menu is drawn in the nearest theme scope
 
@@ -152,8 +155,8 @@ The box is a `div` with `role="group"` and the `label` prop as its `aria-label`.
 - **Text**: the component holds the text in React state. The first value is `defaultValue`.
 - **Keys**: the `keydown` handler sends on Enter with no Shift, when the trimmed text is not empty, `working` and `disabled` are false, and the event is not a composition event (`isComposing`, or key code 229).
 - **Working**: the text area is `readOnly` with `tabIndex={-1}`, and the button is `Stop`.
-- **End of the work**: a ref holds one of three values for the current work: `none`, `sent`, or `stopped`. `onSend` sets `sent`. `onStop` sets `stopped`. When `working` changes from true to false, the box clears its text only if the ref is `sent`, and then the ref goes back to `none`.
-- **Focus**: when `working` becomes true and the text area has focus, focus moves to `Stop`. When `working` becomes false and `Stop` had focus, focus moves to the text area. A layout effect does this, because the button that had focus leaves the page.
+- **End of the work**: the component holds a mark for the current work in React state, with one of three values: `none`, `sent`, or `stopped`. `onSend` sets `sent`. `onStop` sets `stopped`. When `working` changes from true to false, the box clears its text only if the mark is `sent`, and then the mark goes back to `none`.
+- **Focus**: when `working` becomes true and the text area has focus, focus moves to `Stop`. When `working` becomes false and `Stop` had focus, focus moves to the text area. `Make a wish` and `Stop` are one button element with different props, so focus does not drop to the page when the label changes. A layout effect moves focus between the text and that button. In the working state, a click can still put focus in the text, so that a person can select and copy it.
 - **Disabled**: `disabled` wins over `working`. The text area and the button are `disabled` and dimmed. The hint line shows `disabledReason` when it has one.
 - **Fixed texts**: `Make a wish`, `Stop`, `Wishem is working`, and `Enter to send · Shift+Enter for a new line` are constants in the component file.
 
@@ -188,7 +191,7 @@ The rows cover at least: the text of each button variant in the default, hover, 
 
 The table states the values again, and a class in a component file can differ from it. This is accepted: the accessibility test checks the same states in the web browser where axe can see them, and the review of each task compares the two.
 
-**Unverified**: that axe ignores an element that is `disabled` or has `aria-disabled="true"`, and that axe does not see a CSS `filter`. Task 1 checks it with the disabled select and its disabled option, and Task 2 with the disabled button and the loading button. If axe reports a disabled control, the accessibility test excludes that specimen by its name. It does not exclude the rule.
+axe reports nothing for a disabled control, a disabled option, a loading button, or the disabled prompt box, so the accessibility test excludes no specimen.
 
 Agent decision for the form of the test. The issue fixes that a test of the package calculates the contrast from the token values.
 
@@ -206,8 +209,8 @@ Agent decision. The owner agreed only that the section is a static grid of each 
 
 `tests/style-guide.spec.ts` gets one test for each control and theme. The test:
 
-1. Reads the computed style of the forced specimen: `border-color`, `box-shadow`, `outline`, `background-color`, `color`, and `filter`.
-2. Puts the default specimen in the real state: `hover()` for hover, and for focus a click on the element before it and then the Tab key.
+1. Reads the computed style of the forced specimen: the border, the box shadow, the outline, the background color, the text color, the filter, the translation, and the opacity.
+2. Puts the default specimen in the real state: `hover()` for hover, and for focus a click on a specimen that cannot get focus and then the Tab key until the target has focus.
 3. Reads the same properties of the default specimen and compares.
 
 For the focus ring, the test also clicks the button and checks that it has no outline. For the select, a test opens a closed specimen with the keyboard, selects an option, and checks the roles with the accessibility tree. The highlighted option of the menu has no forced specimen: this test covers its look.
@@ -374,7 +377,7 @@ export const Divider: (props: DividerProps) => React.JSX.Element
 export const useThemeScopeElement: () => HTMLElement | null
 ```
 
-`TextProps` is in `src/components/native.ts`. `Status` is exported from `Callout.tsx`, and `Badge.tsx` imports it.
+`TextProps` is in `src/components/native.ts`, with `defined`, which removes the keys of an object that have no value. `src/components/textControl.ts` holds the classes that the text input, the text area, and the trigger of the select share. `src/components/Spinner.tsx` draws the spinner of the button and of the prompt box. `src/test/render.ts` is the render helper of the unit tests. None of these is a component of the catalog. `Status` is exported from `Callout.tsx`, and `Badge.tsx` imports it.
 
 ## Examples
 
@@ -599,7 +602,7 @@ No component has a loading state, an empty state, or an error state other than t
 
 ### Narrow container
 
-No component reads the width of the window, and the catalog has no breakpoint and no container query. The rule for each component is in the requirements "A component follows the width of its container" and "Text that does not fit" of the `component-catalog` specification. The style guide shows three narrow specimens in a box of 260 pixels. The viewport of the tests stays at 1280 pixels.
+No component reads the width of the window, and the catalog has no breakpoint and no container query. The rule for each component is in the requirements "A component follows the width of its container" and "Text that does not fit" of the `component-catalog` specification. The style guide shows narrow specimens in a box of 260 pixels: the panel with a form and a callout with a long word in the narrow group, and the prompt box, the select with a long value, and a checkbox with a long label in the group of each component. The viewport of the tests stays at 1280 pixels.
 
 ### Keyboard and focus
 
@@ -610,6 +613,6 @@ No component reads the width of the window, and the catalog has no breakpoint an
 | Text area  | Native. The focus look shows for each focus.                                                                                                                                            |
 | Select     | Enter, Space, or an arrow key opens the menu. The arrow keys, Home, and End move the highlight. Letters go to an option. Enter selects. Escape closes. Focus returns to the trigger.    |
 | Checkbox   | A native checkbox. Space changes it. The ring shows for keyboard focus only.                                                                                                            |
-| Field      | A click on the label moves focus to the control.                                                                                                                                        |
+| Field      | A click on the label moves focus to the control. For a select, the click also opens the menu.                                                                                           |
 | Prompt box | Enter sends. Shift+Enter makes a new line. In the working state, the text is out of the focus order, and focus moves to `Stop`. At the end of the work, focus returns to the text (D9). |
 | The others | No part can get focus.                                                                                                                                                                  |
