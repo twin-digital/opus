@@ -8,6 +8,10 @@ export interface SelectOption {
   disabled?: boolean
 }
 
+/** Drops the keys that have the value `undefined`, so they do not replace a value. */
+const defined = <T extends object>(value: T) =>
+  Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>
+
 type AriaProps = { [K in keyof React.AriaAttributes]?: React.AriaAttributes[K] }
 
 export interface SelectProps extends AriaProps {
@@ -42,6 +46,7 @@ const triggerClass = [
   'enabled:st-focus:border-maker-text enabled:st-focus:shadow-[inset_0_0_0_1px_var(--maker-text)] enabled:st-focus:outline-0',
   'data-popup-open:border-maker-text data-popup-open:shadow-[inset_0_0_0_1px_var(--maker-text)] data-popup-open:outline-0',
   'aria-invalid:border-danger-text',
+  'aria-invalid:enabled:st-hover:border-danger-text',
   'aria-invalid:enabled:st-focus:border-danger-text aria-invalid:enabled:st-focus:shadow-[inset_0_0_0_1px_var(--danger-text)]',
   'aria-invalid:data-popup-open:border-danger-text aria-invalid:data-popup-open:shadow-[inset_0_0_0_1px_var(--danger-text)]',
   'disabled:opacity-50',
@@ -94,7 +99,7 @@ export const Select = ({
       }
       modal={false}
     >
-      <BaseSelect.Trigger {...aria} {...control} className={triggerClass}>
+      <BaseSelect.Trigger {...aria} {...defined(control)} className={triggerClass}>
         <BaseSelect.Value placeholder={placeholder} className='min-w-0 flex-1 truncate'>
           {(current: string | null) => (current === null ? placeholder : labelOf(current))}
         </BaseSelect.Value>

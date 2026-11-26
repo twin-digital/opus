@@ -7,11 +7,22 @@ import { Typography } from './sections/Typography.js'
 
 const root = document.getElementById('root')
 if (root) {
-  // An open menu takes focus when the page loads and scrolls the page to itself.
+  // An open menu takes focus on load and scrolls the page. Reset the scroll until the first input of a person.
   if (location.hash === '') {
-    setTimeout(() => {
+    const inputs = ['pointerdown', 'keydown', 'wheel', 'touchstart']
+    const reset = () => {
       window.scrollTo(0, 0)
-    }, 300)
+    }
+    const stop = () => {
+      document.removeEventListener('focusin', reset)
+      for (const input of inputs) {
+        document.removeEventListener(input, stop)
+      }
+    }
+    document.addEventListener('focusin', reset)
+    for (const input of inputs) {
+      document.addEventListener(input, stop, { passive: true })
+    }
   }
   createRoot(root).render(
     <main className='mx-auto grid max-w-[1200px] gap-14 px-6 pt-8 pb-24'>

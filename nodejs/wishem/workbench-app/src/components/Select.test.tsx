@@ -136,6 +136,12 @@ describe('Select', () => {
     expect(trigger()?.getAttribute('aria-label')).toBe('Kind')
   })
 
+  it('keeps the aria attributes of the caller when the field gives none', () => {
+    draw(<Select options={options} value='enemy' onChange={vi.fn()} aria-invalid='grammar' aria-describedby='hint' />)
+    expect(trigger()?.getAttribute('aria-invalid')).toBe('grammar')
+    expect(trigger()?.getAttribute('aria-describedby')).toBe('hint')
+  })
+
   it('disables the trigger', () => {
     draw(<Select options={options} value='enemy' onChange={vi.fn()} disabled />)
     expect(trigger()?.disabled).toBe(true)
@@ -161,12 +167,21 @@ describe('Select', () => {
     expect(document.body.contains(menu())).toBe(true)
   })
 
-  it('stays open with a controlled open prop and no handler', () => {
+  it('stays open with a controlled open prop and no handler, with no console error', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     draw(<Select options={options} value='enemy' onChange={vi.fn()} open />)
+    const focused = document.querySelector<HTMLElement>('[role="option"]')
+    expect(focused).not.toBeNull()
     act(() => {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      focused?.focus()
+      focused?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
     expect(menu()).not.toBeNull()
+    expect(error).not.toHaveBeenCalled()
+    error.mockRestore()
   })
 
   it('tells onOpenChange when a person opens the menu', () => {

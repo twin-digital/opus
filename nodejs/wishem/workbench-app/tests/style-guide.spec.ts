@@ -263,6 +263,20 @@ test.describe('select', () => {
       expect(await lookOf(trigger(page, 'select-default'))).toEqual(forced)
     })
 
+    test(`${theme}: an error select keeps the danger-text border in the real hover and the real focus`, async ({
+      page,
+    }) => {
+      const DANGER = { light: 'rgb(198, 40, 40)', dark: 'rgb(242, 102, 106)' }
+      const error = trigger(page, 'select-error')
+      expect((await lookOf(error)).borderColor).toBe(DANGER[theme])
+      await error.hover()
+      expect((await lookOf(error)).borderColor).toBe(DANGER[theme])
+      await error.focus()
+      const focused = await lookOf(error)
+      expect(focused.borderColor).toBe(DANGER[theme])
+      expect(focused.boxShadow).toContain(DANGER[theme])
+    })
+
     test(`${theme}: the forced states differ from the default`, async ({ page }) => {
       const base = await lookOf(trigger(page, 'select-default'))
       expect((await lookOf(trigger(page, 'select-hover'))).borderColor).not.toBe(base.borderColor)
@@ -324,6 +338,13 @@ test.describe('select', () => {
       expect((await option.boundingBox())?.height).toBeGreaterThan(lineHeight * 1.5)
     })
   }
+})
+
+test('the page is at the top after it loads, although the open menus take focus', async ({ page }) => {
+  await expect(page.locator('[role="option"]:focus')).toHaveCount(1)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
 })
 
 test('the default text is Inter at 16 pixels', async ({ page }) => {
