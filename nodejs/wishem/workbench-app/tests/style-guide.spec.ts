@@ -522,6 +522,71 @@ test.describe('select', () => {
   }
 })
 
+test.describe('prompt box', () => {
+  for (const theme of themes) {
+    const scope = (page: Page) => page.getByTestId(`components-${theme}`)
+    const area = (page: Page, specimen: string) => scope(page).getByTestId(specimen).getByRole('textbox')
+    const box = (page: Page, specimen: string) => scope(page).getByTestId(specimen).getByRole('group')
+
+    test(`${theme}: the real focus of the empty box has the border and shadow of the forced box`, async ({ page }) => {
+      const forced = await lookOf(box(page, 'prompt-focus'))
+      await area(page, 'prompt-empty').click()
+      const real = await lookOf(box(page, 'prompt-empty'))
+      expect(real.borderColor).toBe(forced.borderColor)
+      expect(real.boxShadow).toBe(forced.boxShadow)
+      expect(real.borderColor).toBe(MAKER_TEXT[theme])
+      expect(real.boxShadow).toContain(MAKER_TEXT[theme])
+    })
+
+    test(`${theme}: the working box has the spirit border`, async ({ page }) => {
+      const look = await lookOf(box(page, 'prompt-working'))
+      expect(look.borderColor).toBe('rgb(127, 214, 198)')
+    })
+
+    const heightOf = (page: Page, lines: number) =>
+      area(page, 'prompt-empty').evaluate((element, count) => {
+        const field = element as HTMLTextAreaElement
+        field.value = Array.from({ length: count }, (_, index) => `line ${String(index + 1)}`).join('\n')
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+        const lineHeight = parseFloat(getComputedStyle(field).lineHeight)
+        return {
+          lines: Math.round(field.getBoundingClientRect().height / lineHeight),
+          scrolls: field.scrollHeight > field.clientHeight + 1,
+        }
+      }, lines)
+
+    test(`${theme}: five lines make a text area of five lines with no scroll bar`, async ({ page }) => {
+      expect(await heightOf(page, 5)).toEqual({ lines: 5, scrolls: false })
+    })
+
+    test(`${theme}: twelve lines make a text area of eight lines that scrolls`, async ({ page }) => {
+      expect(await heightOf(page, 12)).toEqual({ lines: 8, scrolls: true })
+    })
+
+    test(`${theme}: an empty box is three lines high`, async ({ page }) => {
+      expect(await heightOf(page, 1)).toEqual({ lines: 3, scrolls: false })
+    })
+
+    test(`${theme}: in the narrow box the button is fully inside the box`, async ({ page }) => {
+      const narrow = box(page, 'prompt-narrow')
+      const frame = await narrow.boundingBox()
+      const button = await narrow.getByRole('button').boundingBox()
+      expect(button?.x).toBeGreaterThanOrEqual(frame?.x ?? 0)
+      expect((button?.x ?? 0) + (button?.width ?? 0)).toBeLessThanOrEqual((frame?.x ?? 0) + (frame?.width ?? 0))
+      const hint = await narrow.getByText('Enter to send', { exact: false }).boundingBox()
+      expect(button?.y).toBeGreaterThanOrEqual((hint?.y ?? 0) + (hint?.height ?? 0) - 1)
+    })
+
+    test(`${theme}: the disabled box shows the reason at full fg-muted`, async ({ page }) => {
+      const reason = scope(page).getByTestId('prompt-disabled').getByText('Not connected', { exact: true })
+      expect(await reason.evaluate((e) => getComputedStyle(e).opacity)).toBe('1')
+      expect(await reason.evaluate((e) => getComputedStyle(e).color)).toBe(
+        theme === 'light' ? 'rgb(91, 91, 112)' : 'rgb(163, 163, 184)',
+      )
+    })
+  }
+})
+
 test('the page is at the top after it loads, although the open menus take focus', async ({ page }) => {
   await expect(page.locator('[role="option"]:focus')).toHaveCount(1)
   expect(await page.evaluate(() => window.scrollY)).toBe(0)

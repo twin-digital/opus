@@ -2,6 +2,7 @@ import { Section } from '../Section.js'
 import { AppBarAndZeroState } from './components/AppBarAndZeroState.js'
 import { Buttons } from './components/Buttons.js'
 import { Controls } from './components/Controls.js'
+import { PromptBoxes } from './components/PromptBoxes.js'
 import { SelectSpecimens } from './components/SelectSpecimens.js'
 
 /**
@@ -13,5 +14,6 @@ export const Components = () => (
     <Buttons />
     <Controls />
     <SelectSpecimens />
+    <PromptBoxes />
   </Section>
 )

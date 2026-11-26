@@ -67,6 +67,12 @@ const rows: StateRow[] = [
   { state: 'text control placeholder, on ground', foreground: 'fg-muted', background: 'ground' },
   { state: 'read-only text, on ground', foreground: 'fg-muted', background: 'ground' },
   { state: 'read-only text, on surface', foreground: 'fg-muted', background: 'surface' },
+  { state: 'prompt box text', foreground: 'maker-text', background: 'ground' },
+  { state: 'prompt box placeholder', foreground: 'fg-muted', background: 'ground' },
+  { state: 'prompt box hint', foreground: 'fg-muted', background: 'ground' },
+  { state: 'prompt box working text', foreground: 'fg-muted', background: 'ground' },
+  { state: 'prompt box working status', foreground: 'spirit-text', background: 'ground' },
+  { state: 'disabled prompt box reason', foreground: 'fg-muted', background: 'ground' },
 ]
 
 describe('the contrast of each state', () => {
