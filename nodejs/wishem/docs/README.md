@@ -49,7 +49,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 - `brand.md`: the colors, type, and voice of Wishem, and how to tell the story of the name. This file uses the brand voice, not the plain style of the other files, and it has no status labels.
 - `design-system/style-guide-preview.html`: a static page that shows the design tokens, the typography, and each component of the workbench in each state. It is the result of the brainstorm for [Workbench design system](https://github.com/twin-digital/opus/issues/496). It is a preview, not a specification.
 - `../workbench-app/`: the workbench application. Its style guide is the record of how the colors and the type are implemented. It shows the design tokens, the typography, and each component in each state. To start it, run `pnpm --filter @thrashplay/wishem-workbench-app style-guide`.
-- `architecture/`: what the workbench is made of, with two diagrams: the processes, and the path from a file to a picture. `render.mjs` writes the SVG files of the diagrams.
+- `architecture/`: what the workbench is made of, in the C4 model: a system context diagram, a container diagram, a dynamic diagram of the path of a change, and a component diagram of the page. `render.mjs` writes the SVG files of the diagrams.
 - `concepts.md`: the project and its two parts, the entity and component model, the three kinds of directive, subsystems, and contracts.
 - `glossary.md`: one term for each concept, and the terms that are not used.
 - `rules.md`: the numbered rules that every part of Wishem obeys, with the reason for each rule and the alternatives that were rejected. This file is the record of what is decided until a specification exists.

@@ -2,6 +2,7 @@
 // Usage: node render.mjs
 // Each diagram is described once, below. The script writes one file for each theme.
 // Colors come from the role tokens of the workbench. Text uses the standard typeface of the system.
+// The diagrams follow the C4 model (docs/diagrams.md).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -80,8 +81,8 @@ const buildColors = (tokens, theme) => {
     ...c,
     groupFill: mix(c.ground, c.accentText, 0.07),
     tint: mix(c.surface, c.accentText, 0.12),
-    markedFill: mix(c.surface, c.maker, 0.12),
     border: mix(c.line, c.fgMuted, 0.2),
+    componentBorder: mix(c.line, c.accentText, 0.6),
     flow: c.makerText,
     quiet: c.controlBorder,
   }
@@ -90,6 +91,9 @@ const buildColors = (tokens, theme) => {
 // ---------------------------------------------------------------------------
 // Text: the one place that decides how text is drawn
 // ---------------------------------------------------------------------------
+
+// The three text sizes of a diagram.
+const SIZE = { title: 18, name: 15, detail: 12 }
 
 const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 
@@ -113,7 +117,18 @@ const textWidth = (line, { size, weight = 400, spacing = 0, upper = false }) => 
 /** Draws one line of text. `maxWidth` is the width that the text must fit in. */
 const text = (
   c,
-  { x, y, line, size = 13, weight = 400, color = c.fg, anchor = 'start', spacing = 0, upper = false, maxWidth },
+  {
+    x,
+    y,
+    line,
+    size = SIZE.detail,
+    weight = 400,
+    color = c.fg,
+    anchor = 'start',
+    spacing = 0,
+    upper = false,
+    maxWidth,
+  },
 ) => {
   if (maxWidth !== undefined && textWidth(line, { size, weight, spacing, upper }) > maxWidth) {
     throw new Error(`The text does not fit in ${String(maxWidth)} px: ${line}`)
@@ -124,115 +139,138 @@ const text = (
 }
 
 // ---------------------------------------------------------------------------
-// Icons: simple line icons on a 40 x 40 grid, drawn with one stroke weight
-// ---------------------------------------------------------------------------
-
-const FILE = 'M10 4h13l9 9v21a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM23 4v9h9'
-
-const icons = {
-  person: '<circle cx="20" cy="12" r="6.5"/><path d="M7 35c0-8 6-12 13-12s13 4 13 12"/>',
-  browser: '<rect x="4" y="7" width="32" height="26" rx="4"/><path d="M4 15h32M9 11h.01M13 11h.01M17 11h.01"/>',
-  bolt: '<path d="M23 4 11 22h8l-2 14 12-19h-8z"/>',
-  server:
-    '<rect x="6" y="6" width="28" height="11" rx="3"/><rect x="6" y="23" width="28" height="11" rx="3"/><path d="M12 11.5h.01M12 28.5h.01"/>',
-  folder: '<path d="M4 12a3 3 0 0 1 3-3h8l4 4h14a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/>',
-  file: `<path d="${FILE}M14 22h12M14 28h12"/>`,
-  state: `<path d="${FILE}"/><circle cx="20" cy="26" r="4"/>`,
-  viewFile: `<path d="${FILE}M17 21l-4 4 4 4M23 21l4 4-4 4"/>`,
-  sidecar: `<path d="${FILE}M17 21c-2 0-3 1-3 3v1.5c0 1-1 1.5-2 1.5 1 0 2 .5 2 1.5V29c0 2 1 3 3 3M23 21c2 0 3 1 3 3v1.5c0 1 1 1.5 2 1.5-1 0-2 .5-2 1.5V29c0 2-1 3-3 3"/>`,
-  snapshot:
-    '<path d="M6 14V9a3 3 0 0 1 3-3h5M26 6h5a3 3 0 0 1 3 3v5M34 26v5a3 3 0 0 1-3 3h-5M14 34H9a3 3 0 0 1-3-3v-5"/><circle cx="20" cy="20" r="5"/>',
-  table: '<rect x="4" y="8" width="32" height="24" rx="3"/><path d="M4 16h32M4 24h32M16 8v24"/>',
-  wand: '<path d="M7 33 25 15M29 4v9M24.5 8.5h9M33 24h.01M12 10h.01"/>',
-}
-
-const icon = ({ name, x, y, size, color }) => {
-  const scale = size / 40
-  return `<g transform="translate(${num(x)} ${num(y)}) scale(${num(scale)})" fill="none" stroke="${color}" stroke-width="${num(2 / scale)}" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</g>`
-}
-
-// ---------------------------------------------------------------------------
 // Shapes
 // ---------------------------------------------------------------------------
 
 const PAD = 8
+const PERSON_ICON = '<circle cx="20" cy="12" r="6.5"/><path d="M7 35c0-8 6-12 13-12s13 4 13 12"/>'
 
 const rect = ({ x, y, w, h }, radius, attributes) =>
   `<rect x="${num(x)}" y="${num(y)}" width="${num(w)}" height="${num(h)}" rx="${num(radius)}" ${attributes}/>`
 
-/** A tinted, round container with a small uppercase label. */
+/** The path of a store: a cylinder. */
+const cylinder = ({ x, y, w, h }, ry) => {
+  const rx = w / 2
+  return `M${num(x)} ${num(y + ry)} a${num(rx)} ${num(ry)} 0 0 1 ${num(w)} 0 v${num(h - 2 * ry)} a${num(rx)} ${num(ry)} 0 0 1 ${num(-w)} 0 z`
+}
+
+/** The label of a boundary: the name and the type, for example `Wishem [Software System]`. */
 const group = (c, item) =>
   [
-    rect(item, 18, `fill="${c.groupFill}" stroke="${c.line}"`),
+    rect(item, 14, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5" stroke-dasharray="7 5"`),
     text(c, {
       x: item.x + 16,
-      y: item.y + 30,
+      y: item.y + 26,
       line: item.label,
-      size: 13,
+      size: SIZE.detail,
       weight: 600,
-      color: c.accentText,
-      spacing: 0.6,
-      upper: true,
+      color: c.fgMuted,
       maxWidth: item.w - 32,
     }),
   ].join('\n')
 
-/**
- * A card: an icon over a title, with an optional short second line.
- * `variant` is `plain`, `maker` (filled with the accent), or `marked` (outlined with the accent).
- * `art` draws a picture in place of the icon. The title then sits at the bottom.
- */
-const card = (c, item) => {
-  const { x, y, w, h, variant = 'plain', title, sub, art, iconSize = 40 } = item
-  const fill = { plain: c.surface, maker: c.maker, marked: c.markedFill }[variant]
-  const stroke =
-    variant === 'maker' ? 'none'
-    : variant === 'marked' ? `${c.flow}" stroke-width="1.5`
-    : c.border
-  const inner = w - 2 * PAD
-  const gap = 14
-  const block = (art ? 0 : iconSize + gap) + 12 + (sub ? 22 : 0)
-  const top = art ? y + h - 24 - (sub ? 22 : 0) - 12 : y + (h - block) / 2
-  const titleY = art ? top + 12 : top + iconSize + gap + 12
-  const out = [
-    rect(
-      item,
-      14,
-      `fill="${fill}" stroke="${stroke}"${item.shadow === false || !c.hasShadow ? '' : ' filter="url(#shadow)"'}`,
-    ),
-  ]
-  if (art) {
-    out.push(art(c, item))
-  } else {
-    const color = variant === 'maker' ? c.night : c.accentText
-    out.push(icon({ name: item.icon, x: x + (w - iconSize) / 2, y: top, size: iconSize, color }))
+/** Fill and stroke of each element shape. `focus` marks the element that the diagram is about. */
+const shapeStyle = (c, shape, focus) => {
+  if (focus) {
+    return { fill: c.maker, stroke: 'none', ink: c.night, muted: c.night }
   }
-  out.push(
-    text(c, {
-      x: x + w / 2,
-      y: titleY,
-      line: title,
-      size: 15,
-      weight: 600,
-      color: variant === 'maker' ? c.night : c.fg,
-      anchor: 'middle',
-      maxWidth: inner,
-    }),
-  )
-  if (sub) {
-    out.push(text(c, { x: x + w / 2, y: titleY + 20, line: sub, color: c.fgMuted, anchor: 'middle', maxWidth: inner }))
+  const fill = shape === 'person' ? c.tint : c.surface
+  const stroke = shape === 'component' ? c.componentBorder : c.border
+  return { fill, stroke, ink: c.fg, muted: c.fgMuted }
+}
+
+// Space of a line in an element card, and the height of a store top.
+const LEAD = { name: 21, type: 18, description: 16 }
+const ICON_SIZE = 28
+const STORE_RY = 8
+const DESCRIPTION_LINES = 2
+
+/** Breaks a line of description into at most `maxLines` lines that fit `maxWidth`. */
+const wrap = (line, maxWidth, maxLines) => {
+  const lines = []
+  let current = ''
+  for (const word of line.split(' ')) {
+    const next = current === '' ? word : `${current} ${word}`
+    if (current !== '' && textWidth(next, { size: SIZE.detail }) > maxWidth) {
+      lines.push(current)
+      current = word
+    } else {
+      current = next
+    }
+  }
+  lines.push(current)
+  if (lines.length > maxLines) {
+    throw new Error(`The description needs ${String(lines.length)} lines, more than ${String(maxLines)}: ${line}`)
+  }
+  return lines
+}
+
+/**
+ * An element: a name, a type and technology in brackets, and an optional description.
+ * `shape` is `person`, `system`, `container`, `store`, or `component`.
+ */
+const element = (c, item) => {
+  const { x, y, w, h, shape, name, type, description, focus = false } = item
+  const style = shapeStyle(c, shape, focus)
+  const attributes = `fill="${style.fill}" stroke="${style.stroke}" filter="url(#shadow)"`
+  const out = [shape === 'store' ? `<path d="${cylinder(item, STORE_RY)}" ${attributes}/>` : rect(item, 14, attributes)]
+  if (shape === 'store') {
+    out.push(
+      `<path d="M${num(x)} ${num(y + STORE_RY)} a${num(w / 2)} ${num(STORE_RY)} 0 0 0 ${num(w)} 0" fill="none" stroke="${style.stroke === 'none' ? c.night : style.stroke}"/>`,
+    )
+  }
+  const inner = w - 2 * PAD
+  const lines = [
+    { line: name, size: SIZE.name, weight: 600, color: style.ink, lead: LEAD.name },
+    { line: type, size: SIZE.detail, weight: 400, color: style.muted, lead: LEAD.type },
+    ...(description === undefined ? [] : wrap(description, inner, DESCRIPTION_LINES)).map((line) => ({
+      line,
+      size: SIZE.detail,
+      weight: 400,
+      color: style.muted,
+      lead: LEAD.description,
+    })),
+  ]
+  const iconBlock = shape === 'person' ? ICON_SIZE + 8 : 0
+  const block = iconBlock + lines.reduce((sum, line) => sum + line.lead, 0)
+  const areaTop = shape === 'store' ? y + 2 * STORE_RY : y
+  const area = shape === 'store' ? h - 3 * STORE_RY : h
+  if (block > area - 8) {
+    throw new Error(`The text of ${name} is ${String(block)} px high and does not fit in ${String(area - 8)} px`)
+  }
+  let cursor = areaTop + (area - block) / 2
+  if (shape === 'person') {
+    const scale = ICON_SIZE / 40
+    out.push(
+      `<g transform="translate(${num(x + (w - ICON_SIZE) / 2)} ${num(cursor)}) scale(${num(scale)})" fill="none" stroke="${focus ? c.night : c.accentText}" stroke-width="${num(2 / scale)}" stroke-linecap="round" stroke-linejoin="round">${PERSON_ICON}</g>`,
+    )
+    cursor += iconBlock
+  }
+  for (const { lead, ...line } of lines) {
+    out.push(text(c, { ...line, x: x + w / 2, y: cursor + lead - 5, anchor: 'middle', maxWidth: inner }))
+    cursor += lead
   }
   return out.join('\n')
 }
 
-// Least visible line, in px, of an arrow. A labeled arrow keeps `MIN_SIDE` on each side of its pill.
+// Least visible line, in px, of an arrow. A labeled arrow keeps `MIN_SIDE` on each side of its chip.
 const MIN_PLAIN = 56
 const MIN_SIDE = 28
-const PILL_HEIGHT = 24
+const CHIP_PAD = 22
 
-const pillWidth = (line) => textWidth(line, { size: 13, weight: 500 }) + 22
+/** The lines of a label: the verb phrase, and the technology in brackets on a second line. */
+const labelLines = (label) => {
+  const split = label.indexOf(' [')
+  return split === -1 ? [label] : [label.slice(0, split), label.slice(split + 1)]
+}
 
-/** Fails the run when an arrow is too short to read, or when its pill leaves too little line. */
+/** The size of the chip of a label. */
+const chipSize = (label) => ({
+  w: Math.max(...labelLines(label).map((line) => textWidth(line, { size: SIZE.detail, weight: 500 }))) + CHIP_PAD,
+  h: labelLines(label).length === 1 ? 24 : 40,
+})
+
+/** Fails the run when an arrow is too short to read, or when its chip leaves too little line. */
 const checkLength = ({ points, label }) => {
   let length = 0
   let before
@@ -250,7 +288,8 @@ const checkLength = ({ points, label }) => {
         py <= Math.max(ay, by)
       if (onSegment) {
         before = length + Math.hypot(px - ax, py - ay)
-        half = ay === by ? pillWidth(label.line) / 2 : PILL_HEIGHT / 2
+        const chip = chipSize(label.line)
+        half = ay === by ? chip.w / 2 : chip.h / 2
       }
     }
     length += Math.hypot(bx - ax, by - ay)
@@ -294,328 +333,445 @@ const roundedPath = (points, end) => {
   return `${d} L${num(last[0])} ${num(last[1])}`
 }
 
-/**
- * An arrow along `points` with a head at the last point. A label of one or two words sits on a chip at `label.at`.
- * `tone` is `flow` (accent) or `quiet` (neutral).
- */
-const arrow = (c, item) => {
-  const stroke = c[item.tone ?? 'quiet']
-  const { points } = item
-  const [tipX, tipY] = points[points.length - 1]
-  const [fromX, fromY] = points[points.length - 2]
-  const length = Math.hypot(tipX - fromX, tipY - fromY)
-  const ux = (tipX - fromX) / length
-  const uy = (tipY - fromY) / length
+/** The head of an arrow: a triangle with its tip at `tip`, pointing along the unit vector `(ux, uy)`. */
+const arrowHead = ([tipX, tipY], ux, uy) => {
   const baseX = tipX - ux * HEAD_LENGTH
   const baseY = tipY - uy * HEAD_LENGTH
-  const head = [
+  return [
     [tipX, tipY],
     [baseX - uy * HEAD_HALF, baseY + ux * HEAD_HALF],
     [baseX + uy * HEAD_HALF, baseY - ux * HEAD_HALF],
   ]
     .map(([x, y]) => `${num(x)},${num(y)}`)
     .join(' ')
+}
+
+/**
+ * A relationship: an arrow along `points` with a head at the last point.
+ * The label (`label.line`) sits on a chip at `label.at`. A technology in brackets goes on a second line.
+ * `tone` is `flow` (accent, the primary path) or `quiet` (neutral).
+ */
+const arrow = (c, item) => {
+  const stroke = c[item.tone ?? 'quiet']
+  const { points } = item
+  const tip = points[points.length - 1]
+  const [fromX, fromY] = points[points.length - 2]
+  const length = Math.hypot(tip[0] - fromX, tip[1] - fromY)
+  const ux = (tip[0] - fromX) / length
+  const uy = (tip[1] - fromY) / length
   const out = [
-    `<path d="${roundedPath(points, [baseX + ux, baseY + uy])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
-    `<polygon points="${head}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
+    `<path d="${roundedPath(points, [tip[0] - ux * (HEAD_LENGTH - 1), tip[1] - uy * (HEAD_LENGTH - 1)])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `<polygon points="${arrowHead(tip, ux, uy)}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
   ]
   checkLength(item)
   if (item.label !== undefined) {
     const { line, at } = item.label
-    const width = pillWidth(line)
+    const lines = labelLines(line)
+    const chip = chipSize(line)
+    const color = item.tone === 'flow' ? c.flow : c.fgMuted
     out.push(
-      rect({ x: at[0] - width / 2, y: at[1] - 12, w: width, h: 24 }, 12, `fill="${c.surface}" stroke="${stroke}"`),
-      text(c, {
-        x: at[0],
-        y: at[1] + 4.5,
-        line,
-        weight: 500,
-        color: item.tone === 'flow' ? c.flow : c.fgMuted,
-        anchor: 'middle',
-      }),
+      rect(
+        { x: at[0] - chip.w / 2, y: at[1] - chip.h / 2, w: chip.w, h: chip.h },
+        12,
+        `fill="${c.surface}" stroke="${stroke}"`,
+      ),
     )
+    lines.forEach((part, index) => {
+      out.push(
+        text(c, {
+          x: at[0],
+          y: lines.length === 1 ? at[1] + 4.5 : at[1] - 3 + index * 15,
+          line: part,
+          weight: index === 0 ? 500 : 400,
+          color,
+          anchor: 'middle',
+        }),
+      )
+    })
   }
   return out.join('\n')
 }
 
-/** A small page with an app bar. A dashed outline marks the app bar. */
-const appBarPicture = (c, { x, y, w, h }) => {
-  const left = x + 18
-  const width = w - 36
-  const bar = { x: left + 8, y: y + 26, w: width - 16, h: 42 }
-  const bits = [
-    rect({ x: left, y, w: width, h }, 12, `fill="${c.ground}" stroke="${c.border}"`),
-    rect(bar, 8, `fill="${c.accentText}"`),
-    `<path d="M${num(bar.x + 14)} ${num(bar.y + 15)}h16M${num(bar.x + 14)} ${num(bar.y + 21)}h16M${num(bar.x + 14)} ${num(bar.y + 27)}h16" stroke="${c.ground}" stroke-width="2.5" stroke-linecap="round"/>`,
-    rect({ x: bar.x + 44, y: bar.y + 17, w: bar.w - 44 - 40, h: 8 }, 4, `fill="${c.ground}"`),
-    `<circle cx="${num(bar.x + bar.w - 20)}" cy="${num(bar.y + 21)}" r="8" fill="${c.ground}"/>`,
-    rect(
-      { x: bar.x - 6, y: bar.y - 6, w: bar.w + 12, h: bar.h + 12 },
-      12,
-      `fill="none" stroke="${c.flow}" stroke-width="2.5" stroke-dasharray="6 5"`,
-    ),
-    rect({ x: left + 14, y: y + 94, w: 96, h: 10 }, 5, `fill="${c.tint}"`),
-    rect({ x: left + 14, y: y + 114, w: width - 44, h: 10 }, 5, `fill="${c.tint}"`),
-    rect({ x: left + 14, y: y + 148, w: width - 28, h: h - 148 - 24 }, 10, `fill="${c.tint}"`),
-  ]
-  return bits.join('\n')
+// ---------------------------------------------------------------------------
+// Legend
+// ---------------------------------------------------------------------------
+
+const SAMPLE_W = 26
+const SAMPLE_H = 16
+const LEGEND_H = 44
+
+/** A small sample of a shape, a boundary, or a relationship. `cy` is the middle of the sample. */
+const sample = (c, kind, x, cy) => {
+  const box = { x, y: cy - SAMPLE_H / 2, w: SAMPLE_W, h: SAMPLE_H }
+  if (kind === 'flow' || kind === 'quiet') {
+    const color = c[kind]
+    return [
+      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W - HEAD_LENGTH + 1)} ${num(cy)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`,
+      `<polygon points="${arrowHead([x + SAMPLE_W, cy], 1, 0)}" fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>`,
+    ].join('\n')
+  }
+  if (kind === 'boundary') {
+    return rect(box, 5, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5" stroke-dasharray="4 3"`)
+  }
+  if (kind === 'store') {
+    return [
+      `<path d="${cylinder(box, 4)}" fill="${c.surface}" stroke="${c.border}"/>`,
+      `<path d="M${num(x)} ${num(box.y + 4)} a${num(SAMPLE_W / 2)} 4 0 0 0 ${num(SAMPLE_W)} 0" fill="none" stroke="${c.border}"/>`,
+    ].join('\n')
+  }
+  const style = shapeStyle(c, kind === 'focus' ? 'system' : kind, kind === 'focus')
+  return rect(box, 5, `fill="${style.fill}" stroke="${style.stroke}"`)
 }
 
-const layers = { group, card, arrow }
-const order = ['group', 'card', 'arrow']
+/** The legend: a strip with one sample and one label for each shape, color, and line style that the diagram uses. */
+const legend = (c, item) => {
+  const { x, y, w, entries } = item
+  const middle = y + LEGEND_H / 2
+  const out = [rect({ x, y, w, h: LEGEND_H }, 12, `fill="${c.surface}" stroke="${c.border}"`)]
+  let cursor = x + 16
+  out.push(text(c, { x: cursor, y: middle + 4.5, line: 'Legend', weight: 600, color: c.accentText, maxWidth: 60 }))
+  cursor += 16 + textWidth('Legend', { size: SIZE.detail, weight: 600 })
+  for (const [kind, label] of entries) {
+    const width = textWidth(label, { size: SIZE.detail })
+    if (cursor + SAMPLE_W + 8 + width > x + w - 16) {
+      throw new Error(`The legend does not fit in ${String(w)} px: ${label}`)
+    }
+    out.push(sample(c, kind, cursor, middle))
+    out.push(text(c, { x: cursor + SAMPLE_W + 8, y: middle + 4.5, line: label, color: c.fgMuted }))
+    cursor += SAMPLE_W + 8 + width + 18
+  }
+  return out.join('\n')
+}
+
+const layers = { group, element, arrow, legend }
+const order = ['group', 'element', 'arrow', 'legend']
 
 // ---------------------------------------------------------------------------
 // Diagram descriptions
 // ---------------------------------------------------------------------------
 
-const processes = {
-  name: 'processes',
-  title: 'The processes of the workbench',
+const WIDTH_PX = 880
+const CARD_W = 250
+const CARD_H = 104
+const LEFT = 48
+const MIDDLE = 315
+const RIGHT = 582
+
+/** Builds an element. The shape of the description of a diagram stays short. */
+const el = (shape, x, y, name, type, description, extra = {}) => ({
+  kind: 'element',
+  shape,
+  x,
+  y,
+  w: CARD_W,
+  h: CARD_H,
+  name,
+  type,
+  description,
+  ...extra,
+})
+
+// Points on the edge of an element. Without a coordinate, the point is the middle of the edge.
+const top = (e, x = e.x + e.w / 2) => [x, e.y]
+const bottom = (e, x = e.x + e.w / 2) => [x, e.y + e.h]
+const left = (e, y = e.y + e.h / 2) => [e.x, y]
+const right = (e, y = e.y + e.h / 2) => [e.x + e.w, y]
+
+const rel = (tone, points, line, at) => ({ kind: 'arrow', tone, points, label: { line, at } })
+
+const SYSTEM = 'Wishem [Software System]'
+
+// System context: the person and the software system. Wishem connects to no external system.
+const contextDesigner = el('person', LEFT, 72, 'Designer', '[Person]', 'Makes a product with the workbench.', {
+  h: 200,
+})
+const contextWishem = el('system', RIGHT, 72, 'Wishem', '[Software System]', 'Holds a model and draws it.', {
+  h: 200,
+  focus: true,
+})
+const contextArrow = (y, line) => rel('quiet', [right(contextDesigner, y), left(contextWishem, y)], line, [440, y])
+
+const context = {
+  name: 'context',
+  title: 'System context diagram: Wishem',
   description:
-    'The designer edits the model folder, runs the start script, and opens the page. The start script starts one Node.js process that holds the host and the Vite development server. The host reads the model folder and sends each snapshot through the Vite development server to the page in the web browser.',
-  width: 880,
-  height: 472,
+    'The designer is the one person who uses Wishem. The designer starts the workbench in a terminal, edits the model files in a text editor, and looks at the page in a web browser. Wishem connects to no external system.',
+  width: WIDTH_PX,
+  height: 372,
   items: [
-    { kind: 'group', x: 257, y: 24, w: 334, h: 210, label: 'Node.js process' },
-    { kind: 'group', x: 709, y: 24, w: 142, h: 210, label: 'Web browser' },
-
-    { kind: 'card', x: 24, y: 68, w: 132, h: 150, title: 'Model folder', icon: 'folder' },
-    { kind: 'card', x: 273, y: 68, w: 84, h: 150, title: 'Host', icon: 'server' },
-    { kind: 'card', x: 417, y: 68, w: 158, h: 150, title: 'Vite', sub: 'development server', icon: 'bolt' },
-    { kind: 'card', x: 725, y: 68, w: 110, h: 150, title: 'Page', icon: 'browser' },
-    { kind: 'card', x: 24, y: 338, w: 132, h: 110, title: 'Designer', icon: 'person', variant: 'maker' },
-
-    // The path of the data
+    contextDesigner,
+    contextWishem,
+    contextArrow(108, 'Starts the workbench [terminal]'),
+    contextArrow(172, 'Edits the model files [text editor]'),
+    contextArrow(236, 'Looks at the page [web browser]'),
     {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [90, 338],
-        [90, 218],
-      ],
-      label: { line: 'edits', at: [90, 278] },
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [156, 143],
-        [273, 143],
-      ],
-      label: { line: 'files', at: [214.5, 143] },
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [357, 157],
-        [417, 157],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [575, 182],
-        [725, 182],
-      ],
-      label: { line: 'snapshots', at: [650, 182] },
-    },
-
-    // The other connections of the Vite development server
-    {
-      kind: 'arrow',
-      points: [
-        [417, 129],
-        [357, 129],
-      ],
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [575, 104],
-        [725, 104],
-      ],
-      label: { line: 'code', at: [650, 104] },
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [725, 143],
-        [575, 143],
-      ],
-      label: { line: 'request', at: [650, 143] },
-    },
-
-    // The other actions of the designer
-    {
-      kind: 'arrow',
-      points: [
-        [156, 372],
-        [496, 372],
-        [496, 234],
-      ],
-      label: { line: 'start script', at: [306, 372] },
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [156, 414],
-        [780, 414],
-        [780, 218],
-      ],
-      label: { line: 'opens', at: [470, 414] },
-    },
-  ],
-}
-
-const picture = {
-  name: 'picture',
-  title: 'From a file to a picture',
-  description:
-    'The definition file and the state file go to the host, which makes a snapshot. The renderer takes the props from the snapshot and the view from the table of views. The view file and its sidecar make the table of views. The sidecar gives the component type ID of the view. The renderer draws the app bar in a marked element.',
-  width: 880,
-  height: 528,
-  items: [
-    // The model, then the snapshot
-    { kind: 'card', x: 24, y: 24, w: 156, h: 90, title: 'Definition file', icon: 'file', iconSize: 32 },
-    { kind: 'card', x: 24, y: 126, w: 156, h: 90, title: 'State file', icon: 'state', iconSize: 32 },
-    { kind: 'card', x: 254, y: 24, w: 148, h: 192, title: 'Host', icon: 'server', iconSize: 52 },
-    { kind: 'card', x: 476, y: 24, w: 128, h: 192, title: 'Snapshot', icon: 'snapshot', iconSize: 52 },
-
-    // The views
-    { kind: 'card', x: 24, y: 312, w: 156, h: 90, title: 'View file', icon: 'viewFile', iconSize: 32 },
-    { kind: 'card', x: 24, y: 414, w: 156, h: 90, title: 'Sidecar', icon: 'sidecar', iconSize: 32 },
-    {
-      kind: 'card',
-      x: 254,
-      y: 312,
-      w: 148,
-      h: 192,
-      title: 'Table of views',
-      sub: 'by type ID',
-      icon: 'table',
-      iconSize: 52,
-    },
-    { kind: 'card', x: 476, y: 312, w: 128, h: 192, title: 'Renderer', icon: 'wand', iconSize: 52 },
-
-    // The picture
-    {
-      kind: 'card',
-      x: 678,
-      y: 24,
-      w: 178,
-      h: 480,
-      variant: 'marked',
-      shadow: false,
-      title: 'Marked element',
-      art: (c, item) => appBarPicture(c, { x: item.x, y: item.y + 24, w: item.w, h: item.h - 24 - 24 - 52 }),
-    },
-
-    // The path of the data
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [180, 69],
-        [254, 69],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [180, 171],
-        [254, 171],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [402, 120],
-        [476, 120],
-      ],
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [540, 216],
-        [540, 312],
-      ],
-      label: { line: 'props', at: [540, 264] },
-    },
-    {
-      kind: 'arrow',
-      tone: 'flow',
-      points: [
-        [604, 408],
-        [678, 408],
-      ],
-    },
-
-    // Where the view comes from
-    {
-      kind: 'arrow',
-      points: [
-        [180, 357],
-        [254, 357],
-      ],
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [180, 459],
-        [254, 459],
-      ],
-    },
-    {
-      kind: 'arrow',
-      points: [
-        [402, 408],
-        [476, 408],
+      kind: 'legend',
+      x: 24,
+      y: 304,
+      w: 832,
+      entries: [
+        ['person', 'Person'],
+        ['focus', 'Software system'],
+        ['quiet', 'Relationship'],
       ],
     },
   ],
 }
 
-const diagrams = [processes, picture]
+// Containers
+const cDesigner = el('person', MIDDLE, 64, 'Designer', '[Person]', 'Makes a product with the workbench.', { h: 124 })
+const cPage = el(
+  'container',
+  LEFT,
+  284,
+  'Page',
+  '[Container: React, web browser]',
+  'Draws each component that has a view.',
+)
+const cModel = el(
+  'store',
+  RIGHT,
+  284,
+  'Model folder',
+  '[Container: JSON files]',
+  'Holds the definitions and the authored state.',
+)
+const cProcess = el(
+  'container',
+  MIDDLE,
+  484,
+  'Workbench process',
+  '[Container: Node.js]',
+  'Holds the core and serves the page.',
+)
+const cHost = el(
+  'container',
+  LEFT,
+  684,
+  'host-nodejs',
+  '[Container: TypeScript package]',
+  'Reads a model folder and serves snapshots.',
+)
+const cCore = el(
+  'container',
+  RIGHT,
+  684,
+  'core',
+  '[Container: TypeScript package]',
+  'Checks a model and gives snapshots.',
+)
+
+const containers = {
+  name: 'containers',
+  title: 'Container diagram: Wishem',
+  description:
+    'Wishem has five containers. The workbench process runs the host-nodejs package and uses the core package. It reads and watches the model folder, serves the page code, and sends snapshots to the page. The designer starts the process, edits the model folder, and looks at the page.',
+  width: WIDTH_PX,
+  height: 904,
+  items: [
+    { kind: 'group', x: 24, y: 224, w: 832, h: 588, label: SYSTEM },
+    cDesigner,
+    cPage,
+    cModel,
+    cProcess,
+    cHost,
+    cCore,
+
+    // The primary path: a change to the model becomes a new picture
+    rel('flow', [left(cDesigner, 126), [240, 126], top(cPage, 240)], 'Looks at [web browser]', [240, 200]),
+    rel('flow', [right(cDesigner, 126), [640, 126], top(cModel, 640)], 'Edits files [text editor]', [640, 200]),
+    rel('flow', [right(cProcess, 536), [707, 536], bottom(cModel)], 'Reads and watches [file system]', [707, 460]),
+    rel('flow', [bottom(cPage, 96), [96, 560], left(cProcess, 560)], 'Gets snapshots [SSE]', [96, 470]),
+
+    // The other relationships
+    rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [440, 336]),
+    rel('quiet', [bottom(cPage, 250), [250, 520], left(cProcess, 520)], 'Gets page code [HTTP]', [250, 444]),
+    rel('quiet', [bottom(cProcess, 375), [375, 636], [173, 636], top(cHost)], 'Runs [import]', [274, 636]),
+    rel('quiet', [bottom(cProcess, 505), [505, 636], [707, 636], top(cCore)], 'Uses [import]', [606, 636]),
+    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [440, 736]),
+    {
+      kind: 'legend',
+      x: 24,
+      y: 844,
+      w: 832,
+      entries: [
+        ['person', 'Person'],
+        ['container', 'Container'],
+        ['store', 'Store'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
+}
+
+// Dynamic: the path of a change
+const dDesigner = el('person', LEFT, 72, 'Designer', '[Person]')
+const dModel = el('store', RIGHT, 72, 'Model folder', '[Container: JSON files]')
+const dProcess = el('container', RIGHT, 272, 'Workbench process', '[Container: Node.js]')
+const dPage = el('container', LEFT, 272, 'Page', '[Container: React, web browser]')
+
+const dynamicChange = {
+  name: 'dynamic-change',
+  title: 'Dynamic diagram: a change to the model becomes a new picture',
+  description:
+    'Four steps in order. The designer saves a model file in the model folder. The workbench process reads the folder after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.',
+  width: WIDTH_PX,
+  height: 492,
+  items: [
+    dDesigner,
+    dModel,
+    dProcess,
+    dPage,
+    rel('flow', [right(dDesigner), left(dModel)], '1. Saves a model file', [440, 124]),
+    rel('flow', [top(dProcess), bottom(dModel)], '2. Reads after the watch event', [707, 224]),
+    rel('flow', [left(dProcess), right(dPage)], '3. Sends the new snapshot [SSE]', [440, 324]),
+    rel('flow', [top(dPage), bottom(dDesigner)], '4. Shows the new picture', [173, 224]),
+    {
+      kind: 'legend',
+      x: 24,
+      y: 424,
+      w: 832,
+      entries: [
+        ['person', 'Person'],
+        ['container', 'Container'],
+        ['store', 'Store'],
+        ['flow', 'Step, in the order of the flow'],
+      ],
+    },
+  ],
+}
+
+// Components of the page
+const pProcess = el(
+  'container',
+  RIGHT,
+  64,
+  'Workbench process',
+  '[Container: Node.js]',
+  'Holds the core and serves the page.',
+)
+const pSidecars = el(
+  'component',
+  LEFT,
+  316,
+  'Sidecars',
+  '[Component: JSON files]',
+  'Attach each view to a component type.',
+)
+const pClient = el('component', RIGHT, 316, 'Client of the core', '[Component: connect]', 'Gives the newest snapshot.')
+const pTable = el(
+  'component',
+  LEFT,
+  516,
+  'Table of views',
+  '[Component: collectViews]',
+  'Gives the view of a component type.',
+)
+const pRenderer = el(
+  'component',
+  RIGHT,
+  516,
+  'Renderer',
+  '[Component: React]',
+  'Draws each component in a marked element.',
+)
+const pViews = el('component', LEFT, 716, 'Views', '[Component: React]', 'Draw one component type each.')
+const pCatalog = el('component', RIGHT, 716, 'Catalog', '[Component: React]', 'The app bar and the zero state.')
+
+const componentsPage = {
+  name: 'components-page',
+  title: 'Component diagram: the page of the workbench',
+  description:
+    'The page has six components. The client of the core gets snapshots from the workbench process. The renderer reads the snapshot, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
+  width: WIDTH_PX,
+  height: 940,
+  items: [
+    pProcess,
+    { kind: 'group', x: 24, y: 244, w: 832, h: 600, label: 'Page [Container: React, web browser]' },
+    pSidecars,
+    pClient,
+    pTable,
+    pRenderer,
+    pViews,
+    pCatalog,
+
+    // The path of a snapshot to a view
+    rel('flow', [top(pClient), bottom(pProcess)], 'Gets snapshots [SSE]', [707, 216]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the snapshot', [707, 468]),
+    rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
+    rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
+
+    // How the table of views gets its content
+    rel('quiet', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
+    rel('quiet', [top(pTable), bottom(pSidecars)], 'Reads', [173, 468]),
+    rel('quiet', [bottom(pTable, 110), top(pViews, 110)], 'Collects', [110, 668]),
+    {
+      kind: 'legend',
+      x: 24,
+      y: 876,
+      w: 832,
+      entries: [
+        ['container', 'Container'],
+        ['component', 'Component'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
+}
+
+const diagrams = [context, containers, dynamicChange, componentsPage]
 
 // ---------------------------------------------------------------------------
 // Output
 // ---------------------------------------------------------------------------
 
-const shadowFilter = (c) =>
-  `<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="${c.night}" flood-opacity="0.12"/></filter>`
+// Each theme has the same definitions. Only the strength of the shadow changes.
+const shadowFilter = (c, theme) =>
+  `<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="${c.night}" flood-opacity="${theme === 'light' ? '0.12' : '0.5'}"/></filter>`
 
 const renderDiagram = (diagram, theme, tokens) => {
-  const c = { ...buildColors(tokens, theme), hasShadow: theme === 'light' }
+  const c = buildColors(tokens, theme)
+  const { width, height } = diagram
   const body = order
     .flatMap((kind) => diagram.items.filter((item) => item.kind === kind))
     .map((item) => layers[item.kind](c, item))
     .join('\n')
-  const { width, height } = diagram
+  const title = text(c, {
+    x: 24,
+    y: 36,
+    line: diagram.title,
+    size: SIZE.title,
+    weight: 600,
+    maxWidth: width - 48,
+  })
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${String(width)} ${String(height)}" width="${String(width)}" height="${String(height)}" role="img" aria-labelledby="title desc">`,
     `<title id="title">${escapeXml(diagram.title)}</title>`,
     `<desc id="desc">${escapeXml(diagram.description)}</desc>`,
-    c.hasShadow ? `<defs>${shadowFilter(c)}</defs>` : '',
+    `<defs>${shadowFilter(c, theme)}</defs>`,
     `<rect width="${String(width)}" height="${String(height)}" fill="${c.ground}"/>`,
+    title,
     body,
     '</svg>',
     '',
-  ]
-    .filter((line) => line !== '')
-    .join('\n')
+  ].join('\n')
 }
 
 const tokens = readTokens()
 
-for (const diagram of diagrams) {
-  for (const theme of ['light', 'dark']) {
-    const file = join(here, `${diagram.name}-${theme}.svg`)
-    writeFileSync(file, renderDiagram(diagram, theme, tokens))
-    console.log(`wrote ${file}`)
-  }
+// Render every file first, so that a failed check writes no file.
+const files = diagrams.flatMap((diagram) =>
+  ['light', 'dark'].map((theme) => ({
+    file: join(here, `${diagram.name}-${theme}.svg`),
+    content: renderDiagram(diagram, theme, tokens),
+  })),
+)
+
+for (const { file, content } of files) {
+  writeFileSync(file, content)
+  console.log(`wrote ${file}`)
 }

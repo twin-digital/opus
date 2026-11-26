@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 492" width="880" height="492" role="img" aria-labelledby="title desc">
+<title id="title">Dynamic diagram: a change to the model becomes a new picture</title>
+<desc id="desc">Four steps in order. The designer saves a model file in the model folder. The workbench process reads the folder after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.</desc>
+<defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
+<rect width="880" height="492" fill="#121222"/>
+<text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Dynamic diagram: a change to the model becomes a new picture</text>
+<rect x="48" y="72" width="250" height="104" rx="14" fill="#2f3146" stroke="#45455d" filter="url(#shadow)"/>
+<g transform="translate(159 86.5) scale(0.7)" fill="none" stroke="#c2d0ea" stroke-width="2.86" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="12" r="6.5"/><path d="M7 35c0-8 6-12 13-12s13 4 13 12"/></g>
+<text x="173" y="138.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Designer</text>
+<text x="173" y="156.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Person]</text>
+<path d="M582 80 a125 8 0 0 1 250 0 v88 a125 8 0 0 1 -250 0 z" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<path d="M582 80 a125 8 0 0 0 250 0" fill="none" stroke="#45455d"/>
+<text x="707" y="124.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Model folder</text>
+<text x="707" y="142.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: JSON files]</text>
+<rect x="582" y="272" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="707" y="320.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Workbench process</text>
+<text x="707" y="338.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: Node.js]</text>
+<rect x="48" y="272" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="173" y="320.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Page</text>
+<text x="173" y="338.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: React, web browser]</text>
+<path d="M298 124 L572 124" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="582,124 571,129.5 571,118.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="353.4" y="112" width="173.2" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="440" y="128.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">1. Saves a model file</text>
+<path d="M707 272 L707 186" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="707,176 712.5,187 701.5,187" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="588" y="212" width="238" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="707" y="228.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">2. Reads after the watch event</text>
+<path d="M582 324 L308 324" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="298,324 309,318.5 309,329.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="339" y="304" width="202" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="440" y="321" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">3. Sends the new snapshot</text>
+<text x="440" y="336" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[SSE]</text>
+<path d="M173 272 L173 186" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="173,176 178.5,187 167.5,187" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="75.6" y="212" width="194.8" height="24" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="173" y="228.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">4. Shows the new picture</text>
+<rect x="24" y="424" width="832" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
+<text x="40" y="450.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
+<rect x="100.64" y="438" width="26" height="16" rx="5" fill="#2f3146" stroke="#45455d"/>
+<text x="134.64" y="450.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Person</text>
+<rect x="195.84" y="438" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
+<text x="229.84" y="450.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Container</text>
+<path d="M312.64 442 a13 4 0 0 1 26 0 v8 a13 4 0 0 1 -26 0 z" fill="#1b1b30" stroke="#45455d"/>
+<path d="M312.64 442 a13 4 0 0 0 26 0" fill="none" stroke="#45455d"/>
+<text x="346.64" y="450.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Store</text>
+<path d="M400.64 446 L416.64 446" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round"/>
+<polygon points="426.64,446 415.64,451.5 415.64,440.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<text x="434.64" y="450.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Step, in the order of the flow</text>
+</svg>
