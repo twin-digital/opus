@@ -91,7 +91,7 @@ The select uses the `Select` parts of `@base-ui/react`. The library gives the ke
 - `value` and `onChange` go to the root. The select holds no value.
 - `open` and `onOpenChange` go to the root. With no `open` prop, the library holds the open state.
 - The root is not modal, so an open select does not lock the page and does not hide the other content.
-- The menu is below the trigger and as wide as the trigger. It does not move the selected option over the trigger.
+- The menu is next to the trigger and as wide as the trigger. It opens below the trigger when it fits there, and above when the space below is too small. Its maximum height is the available space of the side that it uses, and its list scrolls. It does not move the selected option over the trigger.
 - A value that is not in the options: the trigger shows the text of the value. The select looks up the label in `options` and uses the value when it finds none. The menu lists only `options`.
 - The trigger shows the placeholder in `fg-muted` when `value` is `undefined`.
 
@@ -103,9 +103,9 @@ Task 1 proved the three facts that the issue names, with an open select in the l
 
 One item is false: an open menu takes focus when it is drawn, and the web browser scrolls to it. The library has no prop that stops this. The style guide has open selects when it loads, so `src/style-guide/main.tsx` sets the scroll position back to the top after each focus change, until the first input of a person. A page with a hash in its address is not changed. A page of the workbench that opens a select after a click is not affected.
 
-The menu does not flip above the trigger, and its list has a maximum height of 16 rem with a scroll bar. With a flip and a height from the available space, the position of the menu depended on the scroll position, and the screenshots were not stable. Known cost: a select near the bottom of a window opens below the visible area. Agent decision. The owner did not confirm it.
+The place of the menu uses the default collision behavior of the library. The open specimens of the style guide have the same behavior as a select in a page of the workbench. The screenshot test makes the viewport as high as the section before it takes the screenshot, so each open specimen has its space below the trigger and the baselines do not depend on the scroll position.
 
-A click on the label of a field opens the menu of its select, because a label activates its button.
+A label activates its button, so a click on the label of a field would open the menu of its select. The select tells its field, through the hook `useFocusOnlyLabel`, that its label gives focus only. The field then stops the default action of the click and moves focus to the trigger. The label keeps its `htmlFor`, so it still names the trigger. The field does not import the select.
 
 ### D6. The menu is drawn in the nearest theme scope
 
@@ -573,7 +573,7 @@ The app bar and the zero state are reused with no change. No existing component 
 | Button, maker            | Active           | `brightness(0.88)`, down 1 pixel                                                                                              |
 | Button, danger           | Active           | `brightness(0.96)`, down 1 pixel                                                                                              |
 | Button, neutral or quiet | Hover            | A fill of 8 percent `fg` in `surface`                                                                                         |
-| Button, neutral or quiet | Active           | A fill of 16 percent `fg` in `surface`, down 1 pixel. The text of a quiet button is `fg`                                      |
+| Button, neutral or quiet | Active           | A fill of 14 percent `fg` in `surface`, down 1 pixel                                                                          |
 | Button                   | Focus (keyboard) | A ring of 2 pixels in `maker-text`, 2 pixels outside                                                                          |
 | Button                   | Disabled         | Opacity 0.45, cursor `not-allowed`                                                                                            |
 | Button                   | Loading          | Spinner before the label, cursor `progress`, no opacity                                                                       |
@@ -613,6 +613,6 @@ No component reads the width of the window, and the catalog has no breakpoint an
 | Text area  | Native. The focus look shows for each focus.                                                                                                                                            |
 | Select     | Enter, Space, or an arrow key opens the menu. The arrow keys, Home, and End move the highlight. Letters go to an option. Enter selects. Escape closes. Focus returns to the trigger.    |
 | Checkbox   | A native checkbox. Space changes it. The ring shows for keyboard focus only.                                                                                                            |
-| Field      | A click on the label moves focus to the control. For a select, the click also opens the menu.                                                                                           |
+| Field      | A click on the label moves focus to the control. For a select, the menu stays closed.                                                                                                   |
 | Prompt box | Enter sends. Shift+Enter makes a new line. In the working state, the text is out of the focus order, and focus moves to `Stop`. At the end of the work, focus returns to the text (D9). |
 | The others | No part can get focus.                                                                                                                                                                  |

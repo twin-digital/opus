@@ -159,6 +159,11 @@ The field SHALL show a label above one control, and an optional error message be
 - **WHEN** a person clicks the label of a field that holds a text input
 - **THEN** the input gets focus
 
+#### Scenario: A click on the label of a select
+
+- **WHEN** a person clicks the label of a field that holds a select
+- **THEN** the trigger of the select gets focus, and the menu stays closed
+
 #### Scenario: A control with no field
 
 - **WHEN** a text input with no field around it is marked as not valid by its caller
@@ -236,7 +241,7 @@ The select SHALL be drawn by the catalog and SHALL NOT be the native select of t
 
 ### Requirement: The menu of the select
 
-The menu SHALL be a `surface` box with a `line` border, a radius of 8 pixels, and the medium shadow, below the trigger and as wide as the trigger. It SHALL mark the selected option with a check mark in `maker-text`, and highlight the option under the pointer or the keyboard. A disabled option SHALL be dimmed, and a person SHALL NOT be able to select it. An open select SHALL NOT lock the page.
+The menu SHALL be a `surface` box with a `line` border, a radius of 8 pixels, and the medium shadow, next to the trigger and as wide as the trigger. It SHALL mark the selected option with a check mark in `maker-text`, and highlight the option under the pointer or the keyboard. A disabled option SHALL be dimmed, and a person SHALL NOT be able to select it. An open select SHALL NOT lock the page.
 
 #### Scenario: A disabled option
 
@@ -252,6 +257,25 @@ The menu SHALL be a `surface` box with a `line` border, a radius of 8 pixels, an
 
 - **WHEN** the style guide shows an open select in the light scope and an open select in the dark scope
 - **THEN** the two menus are open at the same time, and a person can scroll the page
+
+### Requirement: The menu of the select is in view
+
+The menu SHALL open below the trigger when it fits there, and above the trigger when the space below is too small. When the menu fits on neither side, it SHALL use the side with more space, and its list SHALL scroll. The whole menu SHALL be in the visible area of the page when it opens.
+
+#### Scenario: A select near the bottom of the window
+
+- **WHEN** a person opens a select whose trigger is nearer to the bottom edge of the window than the height of its menu
+- **THEN** the menu opens above the trigger, and the whole menu is in the visible area
+
+#### Scenario: A select near the top of the window
+
+- **WHEN** a person opens a select that has space for its menu below the trigger
+- **THEN** the menu opens below the trigger
+
+#### Scenario: A window that is too short for the menu
+
+- **WHEN** a person opens a select in a window that has too little space for the menu above the trigger and below it
+- **THEN** the whole menu is in the visible area, and its list scrolls
 
 ### Requirement: The select with a keyboard and a screen reader
 
@@ -348,7 +372,7 @@ Enter, or a click on `Make a wish`, SHALL report "send" with the text to the cal
 
 ### Requirement: The working state of the prompt box
 
-While the caller says that work is in progress, the prompt box SHALL be locked: the text stays and is read-only in `fg-muted`, the text cannot get focus, the border is `spirit`, the hint line shows a spinner and `Wishem is working` in `spirit-text`, and the neutral button `Stop` is the only action. `Stop` SHALL report "stop" to the caller. A box SHALL lock also when it did not send, and it then keeps its draft in view.
+While the caller says that work is in progress, the prompt box SHALL be locked: the text stays and is read-only in `fg-muted`, the text is out of the focus order, the border is `spirit`, the hint line shows a spinner and `Wishem is working` in `spirit-text`, and the neutral button `Stop` is the only action. `Stop` SHALL report "stop" to the caller. A box SHALL lock also when it did not send, and it then keeps its draft in view.
 
 #### Scenario: A box that is made while work runs
 
