@@ -107,6 +107,21 @@ describe('Select', () => {
     expect(button?.getAttribute('aria-describedby')).toBe(view.container.querySelector('p')?.id)
   })
 
+  it('moves focus to the trigger and keeps the menu closed when the label of its field gets a click', () => {
+    draw(
+      <Field label='Kind'>
+        <Select options={options} value='enemy' onChange={vi.fn()} />
+      </Field>,
+    )
+    const label = view.container.querySelector('label')
+    act(() => {
+      label?.click()
+    })
+    expect(document.activeElement).toBe(trigger())
+    expect(trigger()?.getAttribute('aria-expanded')).toBe('false')
+    expect(menu()).toBeNull()
+  })
+
   it('keeps the placeholder after a selection until the prop changes', () => {
     const onChange = vi.fn()
     draw(<Select options={options} value={undefined} onChange={onChange} placeholder='Select a kind' />)

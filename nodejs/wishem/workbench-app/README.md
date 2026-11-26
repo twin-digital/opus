@@ -160,7 +160,7 @@ pnpm --filter @thrashplay/wishem-workbench-app test:ui:update
 
 The command writes the baseline images in `tests/__screenshots__/`. Commit the images that change.
 
-Before each screenshot, the test hides every part of the page except the section and its ancestors. The section then starts at the same offset whatever the other sections hold. A change to one section changes only the baselines of that section.
+Before each screenshot, the test hides every part of the page except the section and its ancestors. The section then starts at the same offset whatever the other sections hold. A change to one section changes only the baselines of that section. The test also makes the viewport as high as the section, so an open menu has room below its trigger and does not move with the scroll position.
 
 ## Run a different command with the browser
 
@@ -199,7 +199,7 @@ The browser tests compare the computed style of a forced specimen with the compu
 - `AppBar` (`title`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
 - `Field` (`label`, `error`, `children`): a label above one control, and an optional error message below it. The label names the control. The error message describes the control and puts it in the error state. A control reads its field with the hook `useFieldControl`.
-- `Select` (`options`, `value`, `onChange`, `placeholder`, `disabled`, `invalid`, `open`, `onOpenChange`, `id`): a select built on Base UI (`@base-ui/react`). It holds no value. `onChange` reports a selection, and the select shows a new value only when the caller gives it. A value that is not in `options` shows as text. The menu is below the trigger, as wide as the trigger, and does not lock the page. The `open` prop holds the menu open, for the style guide.
+- `Select` (`options`, `value`, `onChange`, `placeholder`, `disabled`, `invalid`, `open`, `onOpenChange`, `id`): a select built on Base UI (`@base-ui/react`). It holds no value. `onChange` reports a selection, and the select shows a new value only when the caller gives it. A value that is not in `options` shows as text. The menu is below the trigger when it fits there, and above the trigger when it does not. When it fits on neither side, it uses the larger side and its list scrolls. The menu is 4 pixels from the trigger, as wide as the trigger, and does not lock the page. A click on the label of the `Field` of a select moves focus to the trigger and does not open the menu. The `open` prop holds the menu open, for the style guide.
 - `Button` (`variant`, `loading`, and each native `button` prop): `variant` is `maker`, `neutral` (default), `quiet`, or `danger`. The `type` is `button` unless the caller sets it. A loading button shows a spinner, has `aria-busy`, ignores a click, and stays in the focus order.
 - `TextInput` (`invalid` and each native `input` prop): a single-line text control. It shows `value` and reports a change with `onChange`, or holds its own text from `defaultValue`. It takes its `id`, `aria-describedby`, and error state from its `Field`.
 - `TextArea` (`invalid` and each native `textarea` prop): the multi-line text control, with the same behavior as `TextInput`. A person can drag its height and not its width.

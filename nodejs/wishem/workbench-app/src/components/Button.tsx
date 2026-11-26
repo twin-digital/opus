@@ -22,7 +22,7 @@ const baseClass = [
 
 const neutralFill = [
   'enabled:not-data-loading:st-hover:bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]',
-  'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:bg-[color-mix(in_srgb,var(--fg)_16%,var(--surface))]',
+  'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:bg-[color-mix(in_srgb,var(--fg)_14%,var(--surface))]',
 ].join(' ')
 
 const variantClass: Record<ButtonVariant, string> = {
@@ -32,7 +32,7 @@ const variantClass: Record<ButtonVariant, string> = {
     'enabled:not-data-loading:st-active:translate-y-px enabled:not-data-loading:st-active:brightness-[0.88]',
   ].join(' '),
   neutral: `border-control-border bg-surface text-fg ${neutralFill}`,
-  quiet: `text-fg-muted enabled:not-data-loading:st-active:text-fg ${neutralFill}`,
+  quiet: `text-fg-muted ${neutralFill}`,
   danger: [
     'bg-danger font-semibold text-on-fill',
     'enabled:not-data-loading:st-hover:brightness-[1.08]',

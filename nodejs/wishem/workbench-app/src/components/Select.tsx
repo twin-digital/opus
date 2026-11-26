@@ -1,5 +1,5 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
-import { useFieldControl } from './Field.js'
+import { useFieldControl, useFocusOnlyLabel } from './Field.js'
 import { defined } from './native.js'
 import { useThemeScopeElement } from './ThemeScope.js'
 import { controlStateClass } from './textControl.js'
@@ -70,6 +70,7 @@ export const Select = ({
   ...rest
 }: SelectProps) => {
   const scope = useThemeScopeElement()
+  useFocusOnlyLabel()
   const control = useFieldControl({ id, invalid, 'aria-describedby': rest['aria-describedby'] })
   const aria = Object.fromEntries(Object.entries(rest).filter(([name]) => name.startsWith('aria-')))
   const labelOf = (current: string) => options.find((option) => option.value === current)?.label ?? current
@@ -104,14 +105,9 @@ export const Select = ({
         />
       </BaseSelect.Trigger>
       <BaseSelect.Portal container={scope ?? undefined}>
-        <BaseSelect.Positioner
-          sideOffset={4}
-          alignItemWithTrigger={false}
-          collisionAvoidance={{ side: 'none', align: 'shift', fallbackAxisSide: 'none' }}
-          className='z-10 outline-0'
-        >
-          <BaseSelect.Popup className='w-(--anchor-width) rounded-md border border-line bg-surface p-1 text-control text-fg shadow-md outline-0'>
-            <BaseSelect.List className='max-h-64 overflow-y-auto'>
+        <BaseSelect.Positioner sideOffset={4} alignItemWithTrigger={false} className='z-10 outline-0'>
+          <BaseSelect.Popup className='flex max-h-(--available-height) w-(--anchor-width) flex-col rounded-md border border-line bg-surface p-1 text-control text-fg shadow-md outline-0'>
+            <BaseSelect.List className='min-h-0 overflow-y-auto'>
               {options.map((option) => (
                 <BaseSelect.Item
                   key={option.value}

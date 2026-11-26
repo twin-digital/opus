@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, type ReactNode } from 'react'
+import { createContext, useContext, useId, useLayoutEffect, useState, type ReactNode } from 'react'
 
 export interface FieldProps {
   label: string
@@ -15,6 +15,7 @@ export interface FieldProps {
 interface FieldContextValue {
   controlId: string
   errorId: string | undefined
+  setFocusOnly: (focusOnly: boolean) => void
 }
 
 const FieldContext = createContext<FieldContextValue | null>(null)
@@ -24,12 +25,24 @@ const FieldContext = createContext<FieldContextValue | null>(null)
  */
 export const Field = ({ label, error, children }: FieldProps) => {
   const id = useId()
+  const [focusOnly, setFocusOnly] = useState(false)
   const hasError = error !== undefined && error !== ''
   const errorId = hasError ? `${id}-error` : undefined
   return (
-    <FieldContext value={{ controlId: id, errorId }}>
+    <FieldContext value={{ controlId: id, errorId, setFocusOnly }}>
       <div className='grid gap-1'>
-        <label htmlFor={id} className='text-control font-medium'>
+        <label
+          htmlFor={id}
+          className='text-control font-medium'
+          onClick={
+            focusOnly ?
+              (event) => {
+                event.preventDefault()
+                document.getElementById(id)?.focus()
+              }
+            : undefined
+          }
+        >
           {label}
         </label>
         {children}
@@ -61,4 +74,18 @@ export const useFieldControl = (own: { id?: string; invalid?: boolean; 'aria-des
     'aria-describedby': describedBy.length > 0 ? describedBy.join(' ') : undefined,
     'aria-invalid': own.invalid === true || field?.errorId !== undefined ? true : undefined,
   }
+}
+
+/**
+ * Makes a click on the label of the field move focus to the control and not activate it.
+ * A control that opens a popup on activation calls this.
+ */
+export const useFocusOnlyLabel = () => {
+  const setFocusOnly = useContext(FieldContext)?.setFocusOnly
+  useLayoutEffect(() => {
+    setFocusOnly?.(true)
+    return () => {
+      setFocusOnly?.(false)
+    }
+  }, [setFocusOnly])
 }

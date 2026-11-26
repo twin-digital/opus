@@ -22,6 +22,32 @@ const isolate = async (page: Page, testId: string) => {
   })
 }
 
+/**
+ * Makes the viewport as high as the element. An open menu then has room below its trigger,
+ * so it opens at the same place whatever the scroll position is.
+ */
+const fitViewport = async (page: Page, testId: string) => {
+  const box = await page.getByTestId(testId).evaluate((element) => {
+    const { top, height } = element.getBoundingClientRect()
+    return { top: top + window.scrollY, height }
+  })
+  await page.setViewportSize({ width: page.viewportSize()?.width ?? 1280, height: Math.ceil(box.top + box.height) })
+  await page.evaluate(() => {
+    window.scrollTo(0, 0)
+  })
+  // Two frames let the open menus find their place after the resize.
+  await page.evaluate(
+    async () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve()
+          })
+        })
+      }),
+  )
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/style-guide.html')
   await page.evaluate(async () => document.fonts.ready)
@@ -33,6 +59,7 @@ for (const section of sections) {
 
     test(`${id}: screenshot`, async ({ page }) => {
       await isolate(page, id)
+      await fitViewport(page, id)
       await expect(page.getByTestId(id)).toHaveScreenshot(`${id}.png`)
     })
 
@@ -572,6 +599,97 @@ test.describe('select', () => {
       expect(Math.abs((triggerBox?.width ?? 0) - menuBox)).toBeLessThan(1)
       const lineHeight = await option.evaluate((e) => parseFloat(getComputedStyle(e).lineHeight))
       expect((await option.boundingBox())?.height).toBeGreaterThan(lineHeight * 1.5)
+    })
+
+    test(`${theme}: a click on the label of a field moves focus to the select and keeps its menu closed`, async ({
+      page,
+    }) => {
+      const field = scope(page).getByTestId('select-error')
+      const button = field.getByRole('combobox')
+      await expect(button).toHaveAccessibleName('Kind')
+      await field.getByText('Kind', { exact: true }).click()
+      await expect(button).toBeFocused()
+      await expect(button).toHaveAttribute('aria-expanded', 'false')
+      expect(await page.locator(`[id="${(await button.getAttribute('aria-controls')) ?? ''}"]`).count()).toBe(0)
+    })
+
+    /** Scrolls the page so that the trigger is `top` pixels from the top edge of the viewport. */
+    const placeTrigger = async (page: Page, button: Locator, top: number) => {
+      await button.evaluate((element, wanted) => {
+        window.scrollBy(0, element.getBoundingClientRect().top - wanted)
+      }, top)
+    }
+
+    /**
+     * Opens the select and returns the boxes of the trigger and the menu, and the viewport.
+     * The open specimens of the page take focus and scroll the page, so the trigger returns to `top` first.
+     */
+    const openAndMeasure = async (page: Page, button: Locator, top: number) => {
+      await button.click()
+      await expect(button).toHaveAttribute('aria-expanded', 'true')
+      await page.waitForTimeout(300)
+      await placeTrigger(page, button, top)
+      const list = page.locator(`[id="${(await button.getAttribute('aria-controls')) ?? ''}"]`)
+      await expect(list).toBeVisible()
+      // The menu animates in. Wait until its box stops moving.
+      await expect
+        .poll(async () => {
+          const first = await list.boundingBox()
+          await page.waitForTimeout(50)
+          const second = await list.boundingBox()
+          return JSON.stringify(first) === JSON.stringify(second)
+        })
+        .toBe(true)
+      return page.evaluate(
+        ([triggerId, listId]) => {
+          const box = (element: Element | null) => {
+            const { top, bottom, left, right } = (element as HTMLElement).getBoundingClientRect()
+            return { top, bottom, left, right }
+          }
+          const list = document.getElementById(listId) as HTMLElement
+          const menu = list.closest('[data-side]') ?? list.parentElement
+          return {
+            trigger: box(document.getElementById(triggerId)),
+            menu: box(menu),
+            scrolls: list.scrollHeight > list.clientHeight + 1,
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+          }
+        },
+        [(await button.getAttribute('id')) ?? '', (await button.getAttribute('aria-controls')) ?? ''],
+      )
+    }
+
+    test(`${theme}: a menu that does not fit below the trigger opens above it, inside the viewport`, async ({
+      page,
+    }) => {
+      const button = trigger(page, 'select-default')
+      const height = page.viewportSize()?.height ?? 720
+      await placeTrigger(page, button, height - 60)
+      const m = await openAndMeasure(page, button, height - 60)
+      expect(m.menu.top).toBeGreaterThanOrEqual(0)
+      expect(m.menu.bottom).toBeLessThanOrEqual(m.viewport.height)
+      expect(m.menu.bottom).toBeLessThanOrEqual(m.trigger.top)
+    })
+
+    test(`${theme}: a menu that fits below the trigger opens below it, 4 pixels from it`, async ({ page }) => {
+      const button = trigger(page, 'select-default')
+      await placeTrigger(page, button, 20)
+      const m = await openAndMeasure(page, button, 20)
+      expect(m.menu.top).toBeGreaterThanOrEqual(m.trigger.bottom)
+      expect(Math.abs(m.menu.top - m.trigger.bottom - 4)).toBeLessThan(1)
+      expect(m.menu.bottom).toBeLessThanOrEqual(m.viewport.height)
+      expect(Math.abs(m.menu.left - m.trigger.left)).toBeLessThan(1)
+      expect(Math.abs(m.menu.right - m.trigger.right)).toBeLessThan(1)
+    })
+
+    test(`${theme}: a menu that fits on neither side uses the larger side, and its list scrolls`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 150 })
+      const button = trigger(page, 'select-default')
+      await placeTrigger(page, button, 30)
+      const m = await openAndMeasure(page, button, 30)
+      expect(m.menu.top).toBeGreaterThanOrEqual(0)
+      expect(m.menu.bottom).toBeLessThanOrEqual(m.viewport.height)
+      expect(m.scrolls).toBe(true)
     })
   }
 })
