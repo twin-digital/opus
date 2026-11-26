@@ -570,7 +570,7 @@ The app bar and the zero state are reused with no change. No existing component 
 | Button, maker            | Active           | `brightness(0.88)`, down 1 pixel                                                                                              |
 | Button, danger           | Active           | `brightness(0.96)`, down 1 pixel                                                                                              |
 | Button, neutral or quiet | Hover            | A fill of 8 percent `fg` in `surface`                                                                                         |
-| Button, neutral or quiet | Active           | A fill of 16 percent `fg` in `surface`, down 1 pixel                                                                          |
+| Button, neutral or quiet | Active           | A fill of 16 percent `fg` in `surface`, down 1 pixel. The text of a quiet button is `fg`                                      |
 | Button                   | Focus (keyboard) | A ring of 2 pixels in `maker-text`, 2 pixels outside                                                                          |
 | Button                   | Disabled         | Opacity 0.45, cursor `not-allowed`                                                                                            |
 | Button                   | Loading          | Spinner before the label, cursor `progress`, no opacity                                                                       |
