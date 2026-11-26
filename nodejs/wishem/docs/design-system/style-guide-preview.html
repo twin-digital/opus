@@ -219,7 +219,7 @@
         justify-content: space-between;
         align-items: center;
       }
-      .panel > header h3 {
+      .panel > header h2 {
         font: 600 var(--fs-ctl) var(--body);
         margin: 0;
       }
@@ -346,7 +346,7 @@
       }
       .prompt.on {
         border-color: var(--maker-text);
-        box-shadow: 0 0 0 1px var(--maker-text);
+        box-shadow: inset 0 0 0 1px var(--maker-text);
       }
       .prompt textarea {
         font: 400 var(--fs-ui)/1.55 var(--mono);
@@ -439,12 +439,12 @@
       .ctl:focus-visible {
         outline: 0;
         border-color: var(--maker-text);
-        box-shadow: 0 0 0 1px var(--maker-text);
+        box-shadow: inset 0 0 0 1px var(--maker-text);
       }
       .ctl.err.focus,
       .ctl.err:focus-visible {
         border-color: var(--danger-text);
-        box-shadow: 0 0 0 1px var(--danger-text);
+        box-shadow: inset 0 0 0 1px var(--danger-text);
       }
       .field {
         display: grid;
@@ -492,9 +492,11 @@
       .btn.hover.danger {
         filter: brightness(1.08);
       }
+      .btn.danger.active {
+        filter: brightness(0.96);
+      }
       .btn.busy {
         cursor: progress;
-        opacity: 0.8;
       }
       .ctl.hover {
         border-color: var(--fg-muted);
@@ -578,8 +580,7 @@
       .cb.hover {
         border-color: var(--fg);
       }
-      .cb.on,
-      .cb.mix {
+      .cb.on {
         background: var(--maker);
         border-color: var(--maker-text);
       }
@@ -594,21 +595,14 @@
         border-bottom: 2px solid var(--on-fill);
         transform: rotate(45deg);
       }
-      .cb.mix::after {
-        content: '';
-        position: absolute;
-        left: 3px;
-        right: 3px;
-        top: 5.5px;
-        height: 2px;
-        background: var(--on-fill);
-      }
-      .cb.on.hover,
-      .cb.mix.hover {
+      .cb.on.hover {
         filter: brightness(1.1);
       }
       .cb.dis {
         opacity: 0.45;
+      }
+      .prompt.off textarea {
+        opacity: 0.5;
       }
       .prompt.busy {
         border-color: var(--spirit);
@@ -719,6 +713,8 @@
           <div class="sw"><b style="background: var(--ground)"></b><span>ground</span></div>
           <div class="sw"><b style="background: var(--surface)"></b><span>surface</span></div>
           <div class="sw"><b style="background: var(--night)"></b><span>night</span></div>
+          <div class="sw"><b style="background: var(--on-night)"></b><span>on-night</span></div>
+          <div class="sw"><b style="background: var(--on-fill)"></b><span>on-fill</span></div>
           <div class="sw"><b style="background: var(--line)"></b><span>line</span></div>
           <div class="sw"><b style="background: var(--control-border)"></b><span>control-border</span></div>
         </div>
@@ -853,7 +849,7 @@ onLit(torch) {
           </div>
           <div class="panel">
             <header>
-              <h3>Replays</h3>
+              <h2>Replays</h2>
               <span class="badge" style="--ct: var(--accent-text)">New</span>
             </header>
             <div class="body">
@@ -926,7 +922,7 @@ onLit(torch) {
         <div class="grid2">
           <div class="panel">
             <header>
-              <h3>Panel with a header and a footer</h3>
+              <h2>Panel with a header and a footer</h2>
               <span class="badge">Draft</span>
             </header>
             <div class="body">
@@ -948,7 +944,7 @@ onLit(torch) {
           </div>
           <div style="display: grid; gap: 16px; align-content: start">
             <div class="panel">
-              <header><h3>Plain panel</h3></header>
+              <header><h2>Plain panel</h2></header>
               <div class="body">
                 <p style="margin: 0">The header and the footer are optional.</p>
                 <p class="sm">Last run 4 minutes ago.</p>
@@ -1081,17 +1077,17 @@ onLit(torch) {
             <p class="sm">Working: the text is locked and the status is in the spirit colour</p>
           </div>
           <div>
-            <div class="prompt" style="opacity: 0.5">
+            <div class="prompt off">
               <textarea disabled placeholder="Describe a game, a level or a single mechanic."></textarea>
               <div class="bar">
                 <span class="sm">Not connected</span><button class="btn maker" disabled>Make a wish</button>
               </div>
             </div>
-            <p class="sm">Disabled</p>
+            <p class="sm">Disabled: the reason text is not dimmed</p>
           </div>
         </div>
 
-        <p class="sub">Maker line, spirit reply and spirit aside</p>
+        <p class="sub">Maker line, spirit line and spirit aside</p>
         <div class="panel">
           <div class="body">
             <p class="makerline">&gt; make the bats flee when the torch is lit</p>
