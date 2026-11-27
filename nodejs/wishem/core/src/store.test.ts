@@ -1,0 +1,471 @@
+import { InputRefusedError } from '@thrashplay/wishem-hub'
+import type { ModelSubsystem, RecordedInput } from '@thrashplay/wishem-hub'
+import { describe, expect, it } from 'vitest'
+import { ModelError } from './core.js'
+import type { Entity, Model } from './model.js'
+import { createStore, storeInputs } from './store.js'
+
+const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
+const CT2 = 'ct_77777777-8888-4999-8aaa-bbbbbbbbbbbb'
+const FLD = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
+const FLD2 = 'fld_11111111-2222-4333-8444-555555555555'
+const ENT = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
+const ENT2 = 'e_aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+const MISSING = 'e_00000000-0000-4000-8000-000000000000'
+
+const definitions = () => [
+  { id: CT, label: 'AppBar', fields: [{ id: FLD, label: 'title', type: 'string' as const }] },
+  { id: CT2, label: 'Footer', fields: [{ id: FLD2, label: 'text', type: 'string' as const }] },
+]
+
+const workbench = (title = 'Wishem'): Model => ({
+  definitions: definitions(),
+  entities: [{ id: ENT, components: { [CT]: { [FLD]: title } } }],
+})
+
+const twoEntities = (): Model => ({
+  definitions: definitions(),
+  entities: [
+    { id: ENT, components: { [CT]: { [FLD]: 'Wishem' } } },
+    { id: ENT2, components: { [CT2]: { [FLD2]: 'Footer' } } },
+  ],
+})
+
+let seq = 0
+/** Calls `apply` with a recorded input that has a frozen JSON copy of the payload. */
+const send = (store: ModelSubsystem<Model>, part: Model, type: string, payload?: unknown): Model => {
+  seq += 1
+  const recorded: RecordedInput = {
+    seq,
+    source: 'test',
+    type,
+    payload: payload === undefined ? null : (JSON.parse(JSON.stringify(payload)) as unknown),
+  }
+  return store.apply(part, recorded, { read: () => ({}) })
+}
+
+const refusal = (run: () => unknown): InputRefusedError => {
+  try {
+    run()
+  } catch (error) {
+    if (error instanceof InputRefusedError) {
+      return error
+    }
+    throw error
+  }
+  throw new Error('The input was not refused')
+}
+
+const frozenDeep = (value: unknown): boolean =>
+  typeof value !== 'object' || value === null || (Object.isFrozen(value) && Object.values(value).every(frozenDeep))
+
+describe('createStore', () => {
+  it('is a model subsystem with the ID store and four input types', () => {
+    const store = createStore()
+    expect(store.id).toBe('store')
+    expect(store.inputs).toEqual(['store/replace-model', 'store/add-entity', 'store/remove-entity', 'store/set-field'])
+  })
+
+  it('starts from the first model with the definitions and the entities', () => {
+    const part = createStore({ model: workbench() }).initial
+    expect(part.definitions[0]?.label).toBe('AppBar')
+    expect(part.entities[0]?.id).toBe(ENT)
+    expect(part).toEqual(workbench())
+  })
+
+  it('freezes the first model', () => {
+    expect(frozenDeep(createStore({ model: workbench() }).initial)).toBe(true)
+  })
+
+  it('does not change the object that gave the first model', () => {
+    const model = workbench()
+    createStore({ model })
+    expect(Object.isFrozen(model)).toBe(false)
+  })
+
+  it('uses a different ID for the subsystem and for the input types', () => {
+    const store = createStore({ id: 'product' })
+    expect(store.id).toBe('product')
+    expect(store.inputs).toContain('product/set-field')
+    expect(store.inputs).not.toContain('store/set-field')
+    expect(store.inputs.every((type) => type.startsWith('product/'))).toBe(true)
+  })
+
+  it('starts from an empty model when no model is given', () => {
+    expect(createStore().initial).toEqual({ definitions: [], entities: [] })
+    expect(createStore({ id: 'product' }).initial).toEqual({ definitions: [], entities: [] })
+  })
+
+  it('throws a ModelError with the problem when the first model is not correct', () => {
+    const model = { definitions: [], entities: [{ id: ENT, components: { [CT]: {} } }] }
+    let error: unknown
+    try {
+      createStore({ model })
+    } catch (caught) {
+      error = caught
+    }
+    expect(error).toBeInstanceOf(ModelError)
+    expect((error as ModelError).problems[0]?.message).toContain('not defined')
+  })
+
+  it('throws a ModelError when the first model is not an object', () => {
+    expect(() => createStore({ model: 7 })).toThrow(ModelError)
+    expect(() => createStore({ model: null })).toThrow(ModelError)
+  })
+
+  it('gives a new inputs list on each call', () => {
+    expect(createStore().inputs).not.toBe(createStore().inputs)
+  })
+})
+
+describe('replace-model', () => {
+  it('puts a correct model in the part', () => {
+    const store = createStore({ model: workbench() })
+    const next = send(store, store.initial, 'store/replace-model', { model: workbench('Wishem workbench') })
+    expect(next.entities[0]?.components[CT]?.[FLD]).toBe('Wishem workbench')
+    expect(frozenDeep(next)).toBe(true)
+  })
+
+  it('keeps the same part object when the model is equal', () => {
+    const store = createStore({ model: workbench() })
+    expect(send(store, store.initial, 'store/replace-model', { model: workbench() })).toBe(store.initial)
+  })
+
+  it('keeps the same part object when only the order of the keys differs', () => {
+    const store = createStore({ model: workbench() })
+    const reordered = { entities: workbench().entities, definitions: workbench().definitions }
+    expect(send(store, store.initial, 'store/replace-model', { model: reordered })).toBe(store.initial)
+  })
+
+  it('refuses a model that is not correct, with the paths of the model', () => {
+    const store = createStore({ model: workbench() })
+    const duplicate = { definitions: [...definitions(), definitions()[0]], entities: [] }
+    const error = refusal(() => send(store, store.initial, 'store/replace-model', { model: duplicate }))
+    expect(error.problems).toEqual([
+      {
+        message: `Component type "AppBar" has the ID "${CT}", which another component type has`,
+        path: ['definitions', 2, 'id'],
+      },
+    ])
+  })
+
+  it('applies a model that has only a warning', () => {
+    const store = createStore()
+    const sameLabel = {
+      definitions: [definitions()[0], { id: CT2, label: 'AppBar', fields: [] }],
+      entities: [],
+    }
+    const next = send(store, store.initial, 'store/replace-model', { model: sameLabel })
+    expect(next.definitions).toHaveLength(2)
+  })
+
+  it.each([
+    ['no payload', undefined, ['payload']],
+    ['a payload that is not an object', 5, ['payload']],
+    ['a payload that is an array', [], ['payload']],
+    ['a payload with no model key', {}, ['payload', 'model']],
+  ])('refuses %s', (_name, payload, path) => {
+    const store = createStore()
+    const error = refusal(() => send(store, store.initial, 'store/replace-model', payload))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.path).toEqual(path)
+  })
+
+  it('refuses a model that is not an object, with the path of the model', () => {
+    const store = createStore()
+    const error = refusal(() => send(store, store.initial, 'store/replace-model', { model: 'text' }))
+    expect(error.problems).toEqual([{ message: 'The model is not an object', path: [] }])
+  })
+
+  it('refuses an input type that the store does not apply', () => {
+    const store = createStore()
+    expect(() => send(store, store.initial, 'store/unknown', {})).toThrow(InputRefusedError)
+  })
+})
+
+describe('storeInputs', () => {
+  it('makes the replace-model input', () => {
+    const model = workbench()
+    expect(storeInputs().replaceModel(model)).toEqual({ type: 'store/replace-model', payload: { model } })
+  })
+
+  it('uses the ID for the type of each input', () => {
+    const inputs = storeInputs('product')
+    const entity: Entity = { id: ENT, components: {} }
+    expect(inputs.replaceModel(workbench()).type).toBe('product/replace-model')
+    expect(inputs.addEntity(entity).type).toBe('product/add-entity')
+    expect(inputs.removeEntity(ENT).type).toBe('product/remove-entity')
+    expect(inputs.setField({ entity: ENT, componentType: CT, field: FLD, value: 'x' }).type).toBe('product/set-field')
+  })
+
+  it('makes the payloads of the small inputs', () => {
+    const inputs = storeInputs()
+    const entity: Entity = { id: ENT, components: {} }
+    const set = { entity: ENT, componentType: CT, field: FLD, value: 'x' }
+    expect(inputs.addEntity(entity).payload).toEqual({ entity })
+    expect(inputs.removeEntity(ENT).payload).toEqual({ entity: ENT })
+    expect(inputs.setField(set).payload).toEqual(set)
+  })
+
+  it('gives inputs that the store of the same ID applies', () => {
+    const store = createStore({ id: 'product', model: workbench() })
+    const input = storeInputs('product').replaceModel(workbench('Product'))
+    const next = send(store, store.initial, input.type, input.payload)
+    expect(next.entities[0]?.components[CT]?.[FLD]).toBe('Product')
+  })
+})
+
+describe('add-entity', () => {
+  const newEntity = (): Entity => ({ id: ENT2, components: { [CT2]: { [FLD2]: 'Footer' } } })
+
+  it('adds the entity at the end of the list', () => {
+    const store = createStore({ model: workbench() })
+    const next = send(store, store.initial, 'store/add-entity', { entity: newEntity() })
+    expect(next.entities.map((entity) => entity.id)).toEqual([ENT, ENT2])
+    expect(next.entities[1]).toEqual(newEntity())
+    expect(frozenDeep(next)).toBe(true)
+  })
+
+  it('keeps the earlier entity and the definitions as the same objects', () => {
+    const store = createStore({ model: workbench() })
+    const next = send(store, store.initial, 'store/add-entity', { entity: newEntity() })
+    expect(next.entities[0]).toBe(store.initial.entities[0])
+    expect(next.definitions).toBe(store.initial.definitions)
+    expect(store.initial.entities).toHaveLength(1)
+  })
+
+  it('holds the checked entity, with no key that is not in the form', () => {
+    const store = createStore({ model: workbench() })
+    const entity = { ...newEntity(), extra: 1 }
+    const next = send(store, store.initial, 'store/add-entity', { entity })
+    expect(next.entities[1]).toEqual(newEntity())
+  })
+
+  it('refuses an ID that exists, with a problem that names the ID', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: { id: ENT, components: {} } }))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.message).toContain(ENT)
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity', 'id'])
+  })
+
+  it('refuses an entity with a component that the model does not allow, with the path of the model', () => {
+    const store = createStore({ model: workbench() })
+    const entity = { id: ENT2, components: { [CT]: { [FLD2]: 'x' } } }
+    const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity }))
+    expect(error.problems[0]?.path).toEqual(['entities', 1, 'components', CT, FLD2])
+  })
+
+  it('refuses an ID that is not correct', () => {
+    const store = createStore()
+    const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: { id: 'x', components: {} } }))
+    expect(error.problems[0]?.path).toEqual(['entities', 0, 'id'])
+  })
+
+  it('accepts an ID again after remove-entity of the same ID', () => {
+    const store = createStore({ model: workbench() })
+    const removed = send(store, store.initial, 'store/remove-entity', { entity: ENT })
+    const added = send(store, removed, 'store/add-entity', { entity: workbench().entities[0] })
+    expect(added.entities).toEqual(workbench().entities)
+  })
+
+  it.each([
+    ['no payload', undefined, ['payload']],
+    ['a payload that is not an object', 'text', ['payload']],
+    ['an empty payload', {}, ['payload', 'entity']],
+    ['an entity that is not an object', { entity: 7 }, ['payload', 'entity']],
+    ['an entity that is an array', { entity: [] }, ['payload', 'entity']],
+    ['an entity with no ID', { entity: { components: {} } }, ['payload', 'entity', 'id']],
+    ['an entity with an ID that is not a string', { entity: { id: 7, components: {} } }, ['payload', 'entity', 'id']],
+    ['an entity with no components', { entity: { id: ENT2 } }, ['payload', 'entity', 'components']],
+    [
+      'an entity with components that are not an object',
+      { entity: { id: ENT2, components: [] } },
+      ['payload', 'entity', 'components'],
+    ],
+  ])('refuses %s', (_name, payload, path) => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/add-entity', payload))
+    expect(error.problems.map((problem) => problem.path)).toContainEqual(path)
+  })
+
+  it('gives one problem for each fault of the entity form', () => {
+    const store = createStore()
+    const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: {} }))
+    expect(error.problems.map((problem) => problem.path)).toEqual([
+      ['payload', 'entity', 'id'],
+      ['payload', 'entity', 'components'],
+    ])
+  })
+})
+
+describe('remove-entity', () => {
+  it('removes the entity', () => {
+    const store = createStore({ model: twoEntities() })
+    const next = send(store, store.initial, 'store/remove-entity', { entity: ENT })
+    expect(next.entities).toEqual([twoEntities().entities[1]])
+    expect(next.entities[0]).toBe(store.initial.entities[1])
+    expect(next.definitions).toBe(store.initial.definitions)
+    expect(store.initial.entities).toHaveLength(2)
+    expect(frozenDeep(next)).toBe(true)
+  })
+
+  it('refuses an ID that no entity has, with a problem that names the ID', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: MISSING }))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.message).toContain(MISSING)
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
+  })
+
+  it('refuses an entity that is not a string, with a problem about the form', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: 7 }))
+    expect(error.problems[0]?.message).toContain('string')
+  })
+
+  it('refuses the second removal of one ID', () => {
+    const store = createStore({ model: twoEntities() })
+    const next = send(store, store.initial, 'store/remove-entity', { entity: ENT })
+    expect(() => send(store, next, 'store/remove-entity', { entity: ENT })).toThrow(InputRefusedError)
+  })
+
+  it.each([
+    ['no payload', undefined, ['payload']],
+    ['a payload that is not an object', 3, ['payload']],
+    ['an empty payload', {}, ['payload', 'entity']],
+    ['an entity that is not a string', { entity: 7 }, ['payload', 'entity']],
+  ])('refuses %s', (_name, payload, path) => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', payload))
+    expect(error.problems.map((problem) => problem.path)).toEqual([path])
+  })
+})
+
+describe('set-field', () => {
+  const set = (value: unknown = 'Wishem workbench') => ({ entity: ENT, componentType: CT, field: FLD, value })
+
+  it('sets the value and keeps each other entity as the same object', () => {
+    const store = createStore({ model: twoEntities() })
+    const next = send(store, store.initial, 'store/set-field', set())
+    expect(next.entities[0]?.components[CT]?.[FLD]).toBe('Wishem workbench')
+    expect(next.entities[1]).toBe(store.initial.entities[1])
+    expect(next.definitions).toBe(store.initial.definitions)
+    expect(frozenDeep(next)).toBe(true)
+  })
+
+  it('leaves the earlier part unchanged', () => {
+    const store = createStore({ model: twoEntities() })
+    send(store, store.initial, 'store/set-field', set())
+    expect(store.initial.entities[0]?.components[CT]?.[FLD]).toBe('Wishem')
+    expect(store.initial).toEqual(twoEntities())
+  })
+
+  it('keeps the other values of the component and the other components', () => {
+    const model: Model = {
+      definitions: [
+        {
+          id: CT,
+          label: 'AppBar',
+          fields: [
+            { id: FLD, label: 'title', type: 'string' },
+            { id: FLD2, label: 'subtitle', type: 'string' },
+          ],
+        },
+        { id: CT2, label: 'Footer', fields: [] },
+      ],
+      entities: [{ id: ENT, components: { [CT]: { [FLD]: 'a', [FLD2]: 'b' }, [CT2]: {} } }],
+    }
+    const store = createStore({ model })
+    const next = send(store, store.initial, 'store/set-field', set('c'))
+    expect(next.entities[0]?.components).toEqual({ [CT]: { [FLD]: 'c', [FLD2]: 'b' }, [CT2]: {} })
+    expect(next.entities[0]?.components[CT2]).toBe(store.initial.entities[0]?.components[CT2])
+  })
+
+  it('adds the component when the entity has none of that type', () => {
+    const store = createStore({ model: twoEntities() })
+    const next = send(store, store.initial, 'store/set-field', { ...set('Top'), entity: ENT2 })
+    expect(next.entities[1]?.components).toEqual({ [CT2]: { [FLD2]: 'Footer' }, [CT]: { [FLD]: 'Top' } })
+  })
+
+  it('adds the component to an entity with no components', () => {
+    const model = { ...workbench(), entities: [{ id: ENT, components: {} }] }
+    const store = createStore({ model })
+    const next = send(store, store.initial, 'store/set-field', set('Top'))
+    expect(next.entities[0]?.components).toEqual({ [CT]: { [FLD]: 'Top' } })
+  })
+
+  it('returns the same part object when the value is equal', () => {
+    const store = createStore({ model: workbench() })
+    const once = send(store, store.initial, 'store/set-field', set('Changed'))
+    const twice = send(store, once, 'store/set-field', set('Changed'))
+    expect(once).not.toBe(store.initial)
+    expect(twice).toBe(once)
+  })
+
+  it('refuses an entity that does not exist, with a problem that names the ID', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/set-field', { ...set(), entity: MISSING }))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.message).toContain(MISSING)
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
+  })
+
+  it('refuses a component type that is not defined', () => {
+    const store = createStore({ model: workbench() })
+    const unknown = 'ct_99999999-8888-4777-8666-555555555555'
+    const error = refusal(() => send(store, store.initial, 'store/set-field', { ...set(), componentType: unknown }))
+    expect(error.problems[0]?.message).toContain(unknown)
+    expect(error.problems[0]?.path).toEqual(['payload', 'componentType'])
+  })
+
+  it('refuses a field of a different component type, with a problem that names the field', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/set-field', { ...set(), field: FLD2 }))
+    expect(error.problems[0]?.message).toContain(FLD2)
+    expect(error.problems[0]?.path).toEqual(['payload', 'field'])
+  })
+
+  it.each([
+    ['a number', 7],
+    ['null', null],
+    ['an object', { a: 1 }],
+  ])('refuses a value that is %s, with the path of the model', (_name, value) => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/set-field', set(value)))
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.path).toEqual(['entities', 0, 'components', CT, FLD])
+  })
+
+  it.each([
+    ['no payload', undefined, [['payload']]],
+    ['a payload that is not an object', 'text', [['payload']]],
+    [
+      'an empty payload',
+      {},
+      [
+        ['payload', 'entity'],
+        ['payload', 'componentType'],
+        ['payload', 'field'],
+        ['payload', 'value'],
+      ],
+    ],
+    ['an entity that is not a string', { ...set(), entity: 1 }, [['payload', 'entity']]],
+    ['a component type that is not a string', { ...set(), componentType: null }, [['payload', 'componentType']]],
+    ['a field that is not a string', { ...set(), field: [] }, [['payload', 'field']]],
+    ['no value', { entity: ENT, componentType: CT, field: FLD }, [['payload', 'value']]],
+  ])('refuses %s', (_name, payload, paths) => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/set-field', payload))
+    expect(error.problems.map((problem) => problem.path)).toEqual(paths)
+  })
+})
+
+describe('the part of the store', () => {
+  it('stays the same object after a refusal', () => {
+    const store = createStore({ model: workbench() })
+    const part = store.initial
+    expect(() => send(store, part, 'store/remove-entity', { entity: MISSING })).toThrow(InputRefusedError)
+    expect(part).toEqual(workbench())
+  })
+})

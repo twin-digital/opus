@@ -35,6 +35,9 @@
     "test:watch": "opus-test-watch",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@thrashplay/wishem-hub": "workspace:*"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "@twin-digital/eslint-config": "workspace:*",
