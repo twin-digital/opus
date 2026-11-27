@@ -16,10 +16,20 @@ describe('isInputType', () => {
     expect(isInputType(name)).toBe(true)
   })
 
-  it.each(['', 'SetField', 'store', 'store/', '/set', 'a/b/c', 'Store/set', 'store/Set', 'store/1x', 'store//x'])(
-    'rejects %j',
-    (name) => {
-      expect(isInputType(name)).toBe(false)
-    },
-  )
+  it.each([
+    '',
+    'SetField',
+    'store',
+    'store/',
+    '/set',
+    'a/b/c',
+    'Store/set',
+    'store/Set',
+    'store/1x',
+    'store//x',
+    'store:set',
+    'store.set',
+  ])('rejects %j', (name) => {
+    expect(isInputType(name)).toBe(false)
+  })
 })

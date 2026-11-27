@@ -220,6 +220,30 @@ describe('submit', () => {
     expect(hub.read().store).toBe(before.store)
   })
 
+  it('gives each input the part that the last input made', async () => {
+    const { hub, keyboard } = running()
+    await keyboard.submit({ type: 'time/advance', payload: { by: 1 } })
+    await keyboard.submit({ type: 'time/advance', payload: { by: 2 } })
+    expect(hub.read().time).toEqual({ now: 3, running: false })
+  })
+
+  it('gives each model subsystem its own recorded input in turn', async () => {
+    const seen: number[] = []
+    const spy: ModelSubsystem<number> = {
+      id: 'spy',
+      inputs: ['spy/look'],
+      initial: 0,
+      apply: (part, input) => {
+        seen.push(input.seq)
+        return part
+      },
+    }
+    const { keyboard } = running([spy])
+    await keyboard.submit({ type: 'spy/look' })
+    await keyboard.submit({ type: 'spy/look' })
+    expect(seen).toEqual([1, 2])
+  })
+
   it('gives an input to each subsystem that declares the type, in order, with the earlier parts readable', async () => {
     const seen: unknown[] = []
     const physics: ModelSubsystem<{ sawNow: number }> = {
@@ -480,12 +504,16 @@ describe('joined state', () => {
     expect(hub.read()).toBe(later)
   })
 
-  it('has the same joined state for a model subsystem that returns the same part', async () => {
-    const same: ModelSubsystem<number> = { id: 'same', inputs: ['same/noop'], initial: 4, apply: (part) => part }
+  it('keeps the same part object when a model subsystem returns it', async () => {
+    const same: ModelSubsystem<{ n: number }> = {
+      id: 'same',
+      inputs: ['same/noop'],
+      initial: { n: 4 },
+      apply: (part) => part,
+    }
     const { hub, keyboard } = running([same])
-    const before = hub.read()
     await keyboard.submit({ type: 'same/noop' })
-    expect(hub.read().same).toBe(before.same)
+    expect(hub.read().same).toBe(same.initial)
   })
 
   it('freezes the joined state before and after an input', async () => {
@@ -513,13 +541,15 @@ describe('joined state', () => {
 })
 
 describe('subscribe', () => {
-  it('stores a listener and returns a function that removes it', () => {
+  it('calls a listener until the function that it got removes the listener', () => {
     const hub = createHub({ subsystems: [store] })
     const port = hub.attach({ id: 'renderer', kind: 'output' })
-    const remove = port.subscribe(vi.fn())
-    expect(typeof remove).toBe('function')
-    expect(() => {
-      remove()
-    }).not.toThrow()
+    const listener = vi.fn()
+    const remove = port.subscribe(listener)
+    hub.start()
+    expect(listener).toHaveBeenCalledTimes(1)
+    remove()
+    hub.stop()
+    expect(listener).toHaveBeenCalledTimes(1)
   })
 })

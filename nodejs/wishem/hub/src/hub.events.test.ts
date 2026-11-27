@@ -260,23 +260,17 @@ describe('queue', () => {
     expect(log).toEqual(['send', 'applied-1', 'applied-2'])
   })
 
-  it('resolves the promise of a queued input after its own events', async () => {
+  it('resolves the promise of a queued input with its own result', async () => {
     const { hub, keyboard, renderer } = make()
-    const log: string[] = []
     let sent: Promise<unknown> | undefined
     renderer.subscribe((event) => {
-      if (event.type !== 'applied') {
-        return
+      if (event.type === 'applied' && event.input.seq === 1) {
+        sent = keyboard.submit(setField('b'))
       }
-      if (event.input.seq === 1) {
-        sent = keyboard.submit(setField('b')).then(() => log.push('resolved-2'))
-      }
-      log.push(`applied-${String(event.input.seq)}`)
     })
     hub.start()
     await keyboard.submit(setField('a'))
-    await sent
-    expect(log).toEqual(['applied-1', 'applied-2', 'resolved-2'])
+    await expect(sent).resolves.toEqual({ ok: true, seq: 2 })
   })
 
   it('applies inputs that a listener sends in the order of sending', async () => {
@@ -310,7 +304,7 @@ describe('queue', () => {
     const { hub, keyboard, renderer } = make()
     let sent: Promise<unknown> | undefined
     renderer.subscribe((event) => {
-      if (event.type === 'applied') {
+      if (event.type === 'applied' && event.input.seq === 1) {
         sent = keyboard.submit(setField('b'))
         hub.stop()
       }
@@ -484,7 +478,7 @@ describe('failure in a listener', () => {
       const { hub, keyboard, first } = two()
       let sent: Promise<unknown> | undefined
       first.subscribe((event) => {
-        if (event.type === 'applied') {
+        if (event.type === 'applied' && event.input.seq === 1) {
           sent = keyboard.submit(setField('b'))
           hub.stop()
         }
