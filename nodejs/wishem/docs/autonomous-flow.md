@@ -59,9 +59,26 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
 - At most four subagents run at one time.
-- At most one agent at a time runs lint, a type check, a test, or a build. This agent is the **implementation subagent**. No other agent runs these commands while it works. This includes the lead agent.
-- A subagent that only reads or only designs can run at the same time as the implementation subagent.
+- At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
+
+  ```bash
+  flock -w 1200 /tmp/wishem-heavy.lock timeout 900 <command>
+  ```
+
+  The command waits while a different agent holds the lock. The lock is the same file for each worktree. The system releases the lock when the command ends or its agent stops.
+
+- A command that does not end holds the lock. Two limits prevent this. `timeout 900` stops a command after 15 minutes, with exit code 124. `-w 1200` stops the wait for the lock after 20 minutes, with exit code 1 and no run of the command.
+- A subagent that gets one of these two results does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
+- When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
+
+- An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test. [`break-test-rules.md`](break-test-rules.md) gives the rules for a break-test. Put a link to that file in the brief of each break-test.
+- More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
+- `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
+- Enter the worktree of a change before you start a subagent for it, and before you send a message to a subagent that stopped. A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
+- A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 8 minutes.
+- A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception.
+- Two changes that each add a package both change `pnpm-lock.yaml` and the package list of the root `README.md`. After the first one is merged, update the branch of the second one, and make the two files again if they have a conflict.
 
 ## Where a change is permitted
 
@@ -72,11 +89,13 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 | `.changeset/`                                                                                                                        | Permitted.                                                                                |
 | `pnpm-lock.yaml`, and the catalog in `pnpm-workspace.yaml`                                                                           | Permitted.                                                                                |
 | The entries of the Wishem packages in `.repo-kit.yml`, and the package list in the root `README.md` that `pnpm update-readme` writes | Permitted.                                                                                |
+| The entries of `turbo.json` and `.gitignore` that name a Wishem package or a path in `nodejs/wishem/`                                | Permitted.                                                                                |
 | Each other place in the repository, the devcontainer, and the CI workflows                                                           | Not permitted. Ask in a discovery issue. Make the change only after the owner permits it. |
 
 Three more limits apply:
 
 - Each new package is private. Do not publish to npm. A release to npm needs a discovery question that the owner answers with "yes". Prefer a different method, such as files on a GitHub release.
+- A release of Wishem is a prerelease on GitHub that the lead agent makes by hand with `gh release create`. The lead agent can create the tag and the prerelease in `twin-digital/opus`, on the condition that each npm package of Wishem is private. Each archive has the notice "All rights reserved". Wishem has no licence.
 - Run Godot in a Docker container. A local installation of a tool needs a discovery question.
 - Do not close or rewrite an issue that this work did not create, with one exception: close an issue as replaced, with a link, when a merged specification covers it.
 
@@ -111,7 +130,9 @@ Then:
 - Set the status of each task that waits to `Blocked`.
 - Continue with a task that is not blocked. Keep one subagent at work when such a task exists.
 - When no task can start after the task in progress, see "A notice to the phone of the owner".
-- The owner answers on the issue and tells the lead agent. Record the answer in the OpenSpec change that uses it, set the tasks that waited to `Todo`, and close the discovery issue.
+- The owner answers in a comment on the issue and tells the lead agent. The owner does not close the issue.
+- The lead agent records the answer in the OpenSpec change that uses it. If that change does not exist, the lead agent records the answer in a comment on the issue of each task that waited. Then the lead agent sets the tasks that waited to `Todo` and closes the discovery issue.
+- An answer that changes a limit of the owner also changes this file, in a pull request.
 
 ## How a change is made
 
@@ -124,6 +145,26 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Open one pull request for each change. The checks of the pull request are the check of the other packages.
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
+
+## The scope of a task
+
+A task does what its issue and its plan say. Work on a task finds other things: a fault in code that the task did not change, an improvement, a minor finding of a review. Do not do them in the task. Reason: a task that grows causes rework, and its pull request is harder to review.
+
+Correct a finding in the task only when one of these conditions is true:
+
+- The review of the task gives the finding the level Critical or Important. The task is not complete until its review approves it.
+- The change does not do what its specification says.
+- A check of the pull request fails.
+- A later correction needs a breaking change to an interface that the task adds.
+
+For each other finding, create a follow-up issue:
+
+- Give the issue the type, the label `app:wishem`, and a milestone: the milestone of the outcome that the finding belongs to, or `[WSH] R1 Tech Debt`. Add it to the project.
+- Put a link to the pull request or to the review that found it in the issue.
+- Put related findings of one review in one issue.
+- Start a follow-up issue in its turn, as each other task. A follow-up issue that changes no behavior does not need an OpenSpec change.
+
+The brief of each subagent says: report each thing that is not in the scope of the task, and do not correct it.
 
 ## When a milestone is complete
 
@@ -196,6 +237,7 @@ GitHub tells the owner about each discovery issue and each review issue, because
 
 - **The work is about to stop.** No task with the status `Todo` can start, and at least one task is `Blocked` by a discovery issue. Send the notice when this condition becomes true, also when an agent still works on a task. Reason: the owner can answer before that agent completes its task, and then the work does not stop.
 - **The work stopped.** Each case of "When to stop": a milestone fails its final review two times, the checks on `main` stay red, or the credentials do not work.
+- **A usage limit stopped a subagent.** A subagent reports that it stopped because of a usage limit of its model. The owner can reset the limit. Send one notice for each such event. The lead agent cannot read the usage, so it cannot send a notice before the limit. When the limit stops the lead agent, no notice is possible.
 
 Send one notice for each set of open discovery issues. Send a new notice only when the set changes. Do not send a notice for a question that blocks only a part of the work, or for a review issue.
 
