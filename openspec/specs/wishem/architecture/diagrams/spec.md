@@ -34,6 +34,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** a change makes a container get its data from a different container
 - **THEN** the container diagram shows the relationship between the new pair of containers
 
+#### Scenario: The core package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `hub` as a TypeScript package, and a relationship from `core` to `hub` with the label "Builds on [import]"
+
 ### Requirement: The dynamic diagram of the path of a change
 
 The architecture document SHALL hold a C4 dynamic diagram of the primary path of Wishem, in `nodejs/wishem/docs/architecture/dynamic-change-light.svg` and `dynamic-change-dark.svg`. The primary path is the path from a change to the model to a new picture. The diagram SHALL number each relationship in the order of the flow.
