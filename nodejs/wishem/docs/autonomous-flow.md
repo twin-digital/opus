@@ -106,7 +106,48 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
    - What was built, how it was built, and the reason.
    - Each important decision that the lead agent made alone.
    - Each change to blueprint text that had the label **Agreed**.
+   - The result of the retrospective. See "Retrospective".
 3. Continue with the next milestone. Do not wait for the review.
+
+## Retrospective
+
+A retrospective examines this process, not the product. Its result is a change to this file, to a brief, or to nothing.
+
+### Notes during the work
+
+The issue **Process notes** in the project holds the notes. Add one comment, of one or two lines, immediately after each of these events:
+
+- A pull request needs more than two rounds of corrections before its checks are green.
+- A review finds a fault that an earlier step could find.
+- A subagent does a task again, or fails because its brief lacks a fact.
+- A rule of this file is not clear, or two rules disagree.
+- The owner corrects a decision, or says that a question was not necessary.
+- A task is blocked for a reason that is not a discovery question.
+- The container stops, or the memory is too low to start a subagent.
+
+Reason: a session loses the details of an event when its context is summarized. A note that is written at the time of the event stays.
+
+### When to do a retrospective
+
+- When a milestone is complete, before you create its review issue.
+- Immediately after each stop that "When to stop" names.
+
+Do not do a retrospective for each pull request or at fixed times. One pull request gives too little data, and the quantity of work in a period of time is not constant.
+
+### How to do a retrospective
+
+1. Collect the facts for the period: the number of changes, the rounds of corrections for each pull request, the faults that each review found, the discovery questions and how long each one blocked a task, and the notes in **Process notes**.
+2. For each note and each fact that is not usual, find the cause. Ask which rule, which brief, or which missing rule permitted it.
+3. Select at most three improvements. Prefer an improvement that removes a cause to one that adds a check.
+4. Make the improvements in one pull request that changes this file or the briefs. See "Changes to this process".
+5. Write the result in the review issue of the milestone: the facts, the causes, the improvements that were made, and the improvements that wait for the owner. After a stop, write the result in the message to the owner.
+6. Add a comment to **Process notes** that says which notes the retrospective used.
+
+### Changes to this process
+
+- The lead agent can change a procedure of this file with no question. Examples: the parts of a discovery issue, the events that get a note, the content of a brief.
+- A change that makes a limit of the owner less strict needs a discovery question. These limits are: "Limits on agents", "Where a change is permitted", "When to ask the owner", "When to stop", and the rule to open a pull request and to wait for green checks before a merge.
+- Divide a section of this file into a skill in `nodejs/wishem/.claude/skills/` when a subagent needs the section, or when the section is longer than this file can hold clearly.
 
 ## When to stop
 
