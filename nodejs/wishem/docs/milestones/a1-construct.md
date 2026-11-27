@@ -274,8 +274,6 @@ To put it back, run the same command with the two labels swapped. Terminal 2 the
 
 Stop terminal 2 with Ctrl+C. Stop terminal 1 with Ctrl+C. Terminal 2 prints `link closed` when terminal 1 stops, or when you stop it.
 
-The construct follows a hand edit of `state.json` also after it wrote the file (step 6.1).
-
 ## 3. The link
 
 The link is a protocol of JSON messages on a WebSocket at `ws://127.0.0.1:4747/link`. The file `nodejs/wishem/hub/LINK.md` defines it. `raw-link.mjs` is a client with no library. It shows each message.
@@ -589,14 +587,20 @@ A hand edit of `state.json` after this write is followed. Start `link-client.mjs
 sed -i 's/"Hello"/"By hand"/' /tmp/a1-model/state.json
 ```
 
-Result in the third terminal, in less than 1 second:
+The third terminal first prints the state that it gets when it opens, with the title `Hello`. Result in the third terminal after the `sed` command, in less than 1 second:
 
 ```text
 applied #2 store/replace-model from files
 state: types: AppBar | entities: e_c0d5e6f1 AppBar{title="By hand"}
 ```
 
-Terminal 1 prints no line. Stop the third terminal with Ctrl+C. Put the copy back and start the construct again before step 6.2.
+Terminal 1 prints no line. Put the title back, so that step 6.2 starts with `Hello` in the file. In terminal 2:
+
+```sh
+sed -i 's/"By hand"/"Hello"/' /tmp/a1-model/state.json
+```
+
+The third terminal prints one more `applied` line, with the title `Hello`. Stop the third terminal with Ctrl+C.
 
 ### 6.2 A definition change through the link holds the write
 
