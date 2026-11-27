@@ -59,9 +59,20 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
 - At most four subagents run at one time.
-- At most one agent at a time runs lint, a type check, a test, or a build. This agent is the **implementation subagent**. No other agent runs these commands while it works. This includes the lead agent.
-- A subagent that only reads or only designs can run at the same time as the implementation subagent.
+- At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
+
+  ```bash
+  flock /tmp/wishem-heavy.lock <command>
+  ```
+
+  The command waits while a different agent holds the lock. The lock is the same file for each worktree. The system releases the lock when the command ends or its agent stops.
+
+- An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test.
+- More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
+- `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
+- Enter the worktree of a change before you start a subagent for it. A subagent keeps the worktree in which it starts, also when the lead agent enters a different worktree later. A subagent that starts in the main checkout cannot enter a worktree.
+- Two changes that each add a package both change `pnpm-lock.yaml` and the package list of the root `README.md`. After the first one is merged, update the branch of the second one, and make the two files again if they have a conflict.
 
 ## Where a change is permitted
 
