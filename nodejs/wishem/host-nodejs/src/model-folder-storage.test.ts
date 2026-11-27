@@ -350,6 +350,19 @@ describe('the storage subsystem for files', () => {
       await unchanged()
     })
 
+    it('does not write for a change of the order of the definitions', async () => {
+      await writeFile(path.join(folder, 'definitions', `${CT2}.json`), JSON.stringify(second))
+      await eventually(() => store().definitions.length === 2)
+      const before = await stateText()
+      const model = { definitions: [second, definition('AppBar')], entities: store().entities } as Model
+      expect((await client.submit(inputs.replaceModel(model))).ok).toBe(true)
+      expect((await setTitle('Waiting')).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+      await pause(300)
+      expect(writes()).toBe(0)
+      expect(await stateText()).toBe(before)
+    })
+
     it('does not write a removed component type', async () => {
       const entities = [{ id: E, components: {} }]
       expect((await client.submit(inputs.replaceModel({ definitions: [], entities }))).ok).toBe(true)
@@ -399,6 +412,49 @@ describe('the storage subsystem for files', () => {
       const result = validateModel((await readModelFolder(folder)).data)
       expect(result.ok).toBe(true)
       expect(result.ok && result.model.entities).toEqual(store().entities)
+    })
+  })
+
+  describe('The construct stops during a read', () => {
+    const gateReads = () => {
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(readModelFolder).mockClear()
+      vi.mocked(readModelFolder).mockImplementation(async (target) => {
+        const result = await actualRead(target)
+        await gate
+        return result
+      })
+      return release
+    }
+
+    it('writes the entities that the read makes ready', async () => {
+      const second = { id: CT2, label: 'Card', fields: [{ id: FLD2, label: 'text', type: 'string' }] }
+      const entity = { id: E2, components: { [CT2]: { [FLD2]: 'x' } } }
+      const model = { definitions: [definition('AppBar'), second], entities: [...store().entities, entity] }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+      const release = gateReads()
+      await writeFile(path.join(folder, 'definitions', `${CT2}.json`), JSON.stringify(second))
+      await eventually(() => vi.mocked(readModelFolder).mock.calls.length === 1)
+      const closing = storage.close()
+      release()
+      await closing
+      expect((await stateFile()).entities).toHaveLength(2)
+    })
+
+    it('starts no read that waits in the queue', async () => {
+      const release = gateReads()
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('One')))
+      await eventually(() => vi.mocked(readModelFolder).mock.calls.length === 1)
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Two')))
+      await pause(200)
+      const closing = storage.close()
+      release()
+      await closing
+      expect(vi.mocked(readModelFolder).mock.calls).toHaveLength(1)
     })
   })
 
