@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { storeInputs } from '@thrashplay/wishem-core'
 import type { startConstruct } from '@thrashplay/wishem-host-nodejs'
-import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import { hubInputs, openLink, webSocketChannel, type Hub } from '@thrashplay/wishem-hub'
 import { startWorkbench, StartError } from '../scripts/start.js'
 
 const vite = vi.hoisted(() => ({ createServer: vi.fn() }))
@@ -545,6 +545,71 @@ describe('the start script of the workbench', () => {
         expect(run.child.exitCode).toBeNull()
       },
     )
+
+    /** Starts the workbench in this process and gives its hub. */
+    const startInProcess = async () => {
+      const actual = await vi.importActual<typeof import('vite')>('vite')
+      vite.createServer.mockImplementation(actual.createServer)
+      const startActual = hostModule.startConstruct.getMockImplementation()
+      let hub: Hub | undefined
+      hostModule.startConstruct.mockImplementationOnce(async (options: unknown) => {
+        const construct = (await startActual?.(options)) as Awaited<ReturnType<typeof startConstruct>>
+        hub = construct.hub
+        return construct
+      })
+      const workbench = await startWorkbench({ model, views, port: 0, hubPort: 0, log: () => undefined })
+      if (hub === undefined) {
+        throw new Error('no hub')
+      }
+      return { workbench, hub }
+    }
+
+    it('does not turn the definitions into text for an input that does not change the store', async () => {
+      const { workbench, hub } = await startInProcess()
+      const port = hub.attach({ id: 'tester', kind: 'input' })
+      try {
+        await vi.waitFor(() => {
+          expect(readGenerated()).toContain('readonly title')
+        })
+        const before = hub.read().store as { definitions: unknown }
+        const spy = vi.spyOn(JSON, 'stringify')
+
+        const result = await port.submit(
+          storeInputs().setField({ entity: ENTITY, componentType: APP_BAR, field: TITLE, value: 'Wishem' }),
+        )
+
+        expect(result.ok).toBe(true)
+        expect(hub.read().store).toBe(before)
+        expect(spy.mock.calls.filter(([value]) => value === before.definitions)).toHaveLength(0)
+        spy.mockRestore()
+      } finally {
+        await workbench.close()
+      }
+    })
+
+    it('writes the member title again after a rewind to the point before a change of the label', async () => {
+      const { workbench, hub } = await startInProcess()
+      const port = hub.attach({ id: 'tester', kind: 'input' })
+      try {
+        await vi.waitFor(() => {
+          expect(readGenerated()).toContain('readonly title')
+        })
+        const before = hub.record().at(-1)?.seq ?? 0
+        setLabel('heading')
+        await vi.waitFor(() => {
+          expect(readGenerated()).toContain('readonly heading')
+        })
+
+        expect((await port.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+        await vi.waitFor(() => {
+          expect(readGenerated()).toContain('readonly title')
+        })
+        expect(readGenerated()).not.toContain('readonly heading')
+      } finally {
+        await workbench.close()
+      }
+    })
 
     it('writes and changes no generated file with --no-view-types', { timeout: 30000 }, async () => {
       const run = start(['--port', '0', '--hub-port', '0', '--no-view-types'])

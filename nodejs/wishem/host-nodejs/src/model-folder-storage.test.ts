@@ -2,10 +2,10 @@ import { writeFileSync } from 'node:fs'
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { createStore, storeInputs, validateModel } from '@thrashplay/wishem-core'
+import { createStore, isEqual, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { createHub } from '@thrashplay/wishem-hub'
-import type { Hub, Port } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs } from '@thrashplay/wishem-hub'
+import type { Hub, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachModelFolderStorage, FILES_ID, FILES_WRITER_ID } from './model-folder-storage.js'
 import type { ModelFolderStorage } from './model-folder-storage.js'
@@ -14,6 +14,11 @@ import { readModelFolder } from './read-model-folder.js'
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
   return { ...actual, rename: vi.fn(actual.rename), writeFile: vi.fn(actual.writeFile) }
+})
+
+vi.mock('@thrashplay/wishem-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thrashplay/wishem-core')>()
+  return { ...actual, isEqual: vi.fn(actual.isEqual) }
 })
 
 vi.mock('./read-model-folder.js', async (importOriginal) => {
@@ -48,6 +53,13 @@ const E2 = 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6'
 const isHeld = (line: string) => line.includes('state.json is not written')
 const isEqualAgain = (line: string) => line.includes('are equal to the files in definitions again')
 
+const counter: ModelSubsystem<number> = {
+  id: 'counter',
+  inputs: ['counter/bump'],
+  initial: 0,
+  apply: (part) => part + 1,
+}
+
 const state = (title: string) => ({ entities: [{ id: E, components: { [CT]: { [FLD]: title } } }] })
 
 describe('the storage subsystem for files', () => {
@@ -71,6 +83,7 @@ describe('the storage subsystem for files', () => {
   beforeEach(async () => {
     lines = []
     vi.mocked(rename).mockClear()
+    vi.mocked(isEqual).mockClear()
     vi.mocked(readModelFolder).mockReset()
     vi.mocked(readModelFolder).mockImplementation(actualRead)
     folder = await mkdtemp(path.join(tmpdir(), 'wishem-storage-'))
@@ -82,7 +95,7 @@ describe('the storage subsystem for files', () => {
     if (!result.ok) {
       throw new Error('the fixture is not correct')
     }
-    hub = createHub({ subsystems: [createStore({ model: result.model })] })
+    hub = createHub({ subsystems: [createStore({ model: result.model }), counter] })
     storage = attachModelFolderStorage({ folder, hub, first: result.model, log: (line) => lines.push(line) })
     hub.start()
     storage.watch()
@@ -232,6 +245,29 @@ describe('the storage subsystem for files', () => {
       expect(writes()).toBe(0)
       expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
       expect(lines.filter(isHeld)).toHaveLength(1)
+    })
+
+    it('writes the title before Hello after a rewind to the point before Hello', async () => {
+      const before = hub.record().at(-1)?.seq ?? 0
+      expect((await setTitle('Hello')).ok).toBe(true)
+      await eventually(async () => (await fileTitle()) === 'Hello')
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(async () => (await fileTitle()) === 'Wishem')
+      expect(title()).toBe('Wishem')
+    })
+
+    it('compares no entities for an input that does not change the store', async () => {
+      const store = hub.read().store
+      vi.mocked(isEqual).mockClear()
+
+      expect((await client.submit({ type: 'counter/bump', payload: {} })).ok).toBe(true)
+      await pause(150)
+
+      expect(hub.read().store).toBe(store)
+      expect(isEqual).not.toHaveBeenCalled()
+      expect(writes()).toBe(0)
     })
 
     it('writes an input that arrives directly before the stop', async () => {
