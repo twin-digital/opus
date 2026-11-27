@@ -627,22 +627,31 @@ const cCore = el(
   '[Container: TypeScript package]',
   'Checks a model and gives snapshots.',
 )
+const cHub = el(
+  'container',
+  MIDDLE,
+  884,
+  'hub',
+  '[Container: TypeScript package]',
+  'Joins the subsystems of a construct.',
+)
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has five containers. The workbench process runs the host-nodejs package and uses the core package. It reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. It reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
   width: WIDTH_PX,
-  height: 904,
+  height: 1104,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832, h: 588, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832, h: 788, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
     cProcess,
     cHost,
     cCore,
+    cHub,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [240, 126], top(cPage, 240)], 'Looks at [web browser]', [240, 200]),
@@ -656,10 +665,11 @@ const containers = {
     rel('quiet', [bottom(cProcess, 375), [375, 636], [173, 636], top(cHost)], 'Runs [import]', [274, 636]),
     rel('quiet', [bottom(cProcess, 505), [505, 636], [707, 636], top(cCore)], 'Uses [import]', [606, 636]),
     rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [440, 736]),
+    rel('quiet', [bottom(cCore), [707, 936], right(cHub, 936)], 'Builds on [import]', [707, 850]),
     {
       kind: 'legend',
       x: 24,
-      y: 844,
+      y: 1044,
       w: 832,
       entries: [
         ['person', 'Person'],
