@@ -110,6 +110,27 @@ describe('createChannelPair', () => {
     expect(closeB).toHaveBeenCalledTimes(1)
   })
 
+  it('does not give a held message to a second message listener', async () => {
+    const [a, b] = createChannelPair()
+    a.send('early')
+    await tick()
+    const first: string[] = []
+    const second: string[] = []
+    b.onMessage((text) => first.push(text))
+    b.onMessage((text) => second.push(text))
+    expect(first).toEqual(['early'])
+    expect(second).toEqual([])
+  })
+
+  it('does not run a late close listener in the call of onClose', async () => {
+    const [a, b] = createChannelPair()
+    a.close()
+    await tick()
+    const closeB = vi.fn()
+    b.onClose(closeB)
+    expect(closeB).not.toHaveBeenCalled()
+  })
+
   it('allows a send from inside a message listener', async () => {
     const [a, b] = createChannelPair()
     const got: string[] = []
@@ -246,5 +267,36 @@ describe('webSocketChannel', () => {
     channel.onClose(onClose)
     await tick()
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives no message to the listener after the close', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const got: string[] = []
+    channel.onMessage((text) => got.push(text))
+    fire('close')
+    fire('message', { data: 'late' })
+    expect(got).toEqual([])
+  })
+
+  it('runs the close listener for a socket that closes after the open event', async () => {
+    const { socket, fire } = fakeSocket(0)
+    const promise = webSocketChannel(socket)
+    fire('open')
+    const channel = await promise
+    const onClose = vi.fn()
+    channel.onClose(onClose)
+    fire('close')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not send on the socket after a close event', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    fire('close')
+    channel.send('x')
+    channel.close()
+    expect(socket.sent).toEqual([])
+    expect(socket.closeCalls).toBe(0)
   })
 })

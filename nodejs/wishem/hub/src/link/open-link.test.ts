@@ -111,6 +111,48 @@ const applied = (seq: number, parts: Record<string, unknown> = {}) => ({
   parts,
 })
 
+const throwValue = (value: unknown): never => {
+  throw value
+}
+
+/** A channel that the test drives by calls. */
+const manualChannel = () => {
+  let deliver: (text: string) => void = () => undefined
+  let closeListener: () => void = () => undefined
+  const sent: string[] = []
+  const state = { failSend: false, closes: 0 }
+  const channel: Channel = {
+    send: (text) => {
+      if (state.failSend) {
+        throw new Error('The channel is closed.')
+      }
+      sent.push(text)
+    },
+    onMessage: (listener) => {
+      deliver = listener
+    },
+    onClose: (listener) => {
+      closeListener = listener
+    },
+    close: () => {
+      state.closes++
+    },
+  }
+  return {
+    channel,
+    sent,
+    state,
+    deliver: (message: unknown) => {
+      deliver(JSON.stringify(message))
+    },
+    close: () => {
+      closeListener()
+    },
+  }
+}
+
+const welcomeMessage = { t: 'welcome', protocol: 1, status: 'running', seq: 0, state: { time: { ticks: 0 } } }
+
 describe('the start of a link', () => {
   it('sends hello at once with the protocol version and the subsystems', async () => {
     const [client, server] = createChannelPair()
@@ -128,6 +170,23 @@ describe('the start of a link', () => {
         ],
       },
     ])
+  })
+
+  it('closes the channel when the hub side refuses', async () => {
+    const link = manualChannel()
+    const opening = openLink(link.channel, [page])
+    link.deliver({ t: 'refused', reason: 'id-in-use', message: 'No.' })
+    await expect(opening).rejects.toBeInstanceOf(LinkRefusedError)
+    expect(link.state.closes).toBe(1)
+  })
+
+  it('gives a frozen copy of the welcome state and a frozen list of ports', async () => {
+    const state = { store: { fields: {} } }
+    const { link } = await connectRaw([page], { state })
+    expect(link.ports.page.read()).toEqual(state)
+    expect(link.ports.page.read()).not.toBe(state)
+    expect(Object.isFrozen(link.ports.page.read())).toBe(true)
+    expect(Object.isFrozen(link.ports)).toBe(true)
   })
 
   it('resolves with a port for each subsystem when welcome arrives', async () => {
@@ -273,6 +332,52 @@ describe('a remote port reads and listens', () => {
     send({ t: 'event', event: 'stopping' })
     await settle()
     expect(listener).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not call a listener that an earlier listener removes during the event', async () => {
+    const { link, send } = await connectRaw([page])
+    const later = vi.fn()
+    let removeLater: () => void = () => undefined
+    link.ports.page.subscribe(() => {
+      removeLater()
+    })
+    removeLater = link.ports.page.subscribe(later)
+    send({ t: 'event', event: 'started' })
+    await settle()
+    expect(later).not.toHaveBeenCalled()
+  })
+
+  it('does not call a listener that is added during the event until the next event', async () => {
+    const { link, send } = await connectRaw([page])
+    const added = vi.fn()
+    let first = true
+    link.ports.page.subscribe(() => {
+      if (first) {
+        first = false
+        link.ports.page.subscribe(added)
+      }
+    })
+    send({ t: 'event', event: 'started' })
+    await settle()
+    expect(added).not.toHaveBeenCalled()
+    send({ t: 'event', event: 'stopping' })
+    await settle()
+    expect(added).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives a frozen input to the listeners of an applied event', async () => {
+    const { link, send } = await connectRaw([page])
+    const events: HubEvent[] = []
+    link.ports.page.subscribe((event) => events.push(event))
+    send({ ...applied(1), input: { seq: 1, source: 'other', type: 'x/y', payload: { deep: { value: 1 } } } })
+    await settle()
+    const event = events[0]
+    expect(event.type).toBe('applied')
+    if (event.type === 'applied') {
+      expect(Object.isFrozen(event.input)).toBe(true)
+      expect(Object.isFrozen(event.input.payload)).toBe(true)
+      expect(Object.isFrozen((event.input.payload as { deep: object }).deep)).toBe(true)
+    }
   })
 
   it('keeps going when a listener throws, and gives the error to onError', async () => {
@@ -436,12 +541,42 @@ describe('a remote port sends inputs', () => {
     await expect(pending).resolves.toEqual({ ok: true, seq: 1 })
   })
 
+  it('does not throw for a result with an unknown request number', () => {
+    const link = manualChannel()
+    void openLink(link.channel, [page, controls])
+    link.deliver(welcomeMessage)
+    expect(() => {
+      link.deliver({ t: 'result', request: 77, result: { ok: true, seq: 1 } })
+    }).not.toThrow()
+  })
+
   it('gives not-permitted for an output port with no message', async () => {
     const { link, sent } = await connectRaw()
     const result = await link.ports.page.submit(setField('a'))
     await settle()
     expect(result).toEqual({ ok: false, reason: 'not-permitted', problems: [] })
     expect(sent).toEqual([])
+  })
+
+  it('rejects with an Error for a payload that throws a value that is not an Error', async () => {
+    const { link } = await connectRaw()
+    const payload = {
+      toJSON: () => throwValue('plain text'),
+    }
+    const failure = await link.ports['page-controls'].submit({ type: 'a/b', payload }).catch((e: unknown) => e)
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).toBe('plain text')
+  })
+
+  it('ends the link and rejects the request when the channel send throws', async () => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page, controls])
+    manual.deliver(welcomeMessage)
+    const link = await opening
+    manual.state.failSend = true
+    await expect(link.ports['page-controls'].submit(setField('a'))).rejects.toBeInstanceOf(LinkClosedError)
+    await link.closed
+    expect(manual.state.closes).toBe(1)
   })
 
   it('rejects a payload that JSON cannot hold, and keeps the link', async () => {

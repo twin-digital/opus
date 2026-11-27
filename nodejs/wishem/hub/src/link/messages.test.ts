@@ -63,6 +63,16 @@ describe('parseClientMessage', () => {
     expect(parseClientMessage(text)).toBeUndefined()
   })
 
+  it('gives undefined for a hello with one subsystem that is not correct in a list of correct ones', () => {
+    const mixed = { ...hello, subsystems: [{ id: 'page', kind: 'output' }, { id: 'bad' }] }
+    expect(parseClientMessage(json(mixed))).toBeUndefined()
+  })
+
+  it('gives undefined for a number that is not finite', () => {
+    const text = '{"t":"hello","protocol":1e999,"subsystems":[{"id":"page","kind":"output"}]}'
+    expect(parseClientMessage(text)).toBeUndefined()
+  })
+
   it('marks a message with an unknown type', () => {
     const message = parseClientMessage(json({ t: 'future-thing', x: 1 }))
     expect(message).toEqual({ t: 'future-thing', unknown: true })
@@ -90,6 +100,16 @@ describe('parseHubMessage', () => {
     expect(parseHubMessage(json({ t: 'event', event: 'stopping' }))).toEqual({ t: 'event', event: 'stopping' })
     expect(parseHubMessage(json(applied))).toEqual(applied)
     expect(parseHubMessage(json(result))).toEqual(result)
+  })
+
+  it('reads a welcome with each status and a refused with each reason', () => {
+    for (const status of ['created', 'running', 'stopped']) {
+      expect(parseHubMessage(json({ ...welcome, status }))).toEqual({ ...welcome, status })
+    }
+    for (const reason of ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']) {
+      const message = { t: 'refused', reason, message: 'No.' }
+      expect(parseHubMessage(json(message))).toEqual(message)
+    }
   })
 
   it('reads a result with an error and a rejection', () => {

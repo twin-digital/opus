@@ -228,6 +228,34 @@ describe('the hello message', () => {
   })
 })
 
+describe('the order of the welcome', () => {
+  it('sends the welcome before an event that the hub emits while it sends the welcome', async () => {
+    const hub = makeHub()
+    const input = hub.attach(keyboard)
+    const sent: string[] = []
+    let deliver: ((text: string) => void) | undefined
+    let first = true
+    const channel: Channel = {
+      send: (text) => {
+        if (first) {
+          first = false
+          void input.submit({ type: 'time/tick' })
+        }
+        sent.push(text)
+      },
+      onMessage: (listener) => {
+        deliver = listener
+      },
+      onClose: () => undefined,
+      close: () => undefined,
+    }
+    serveLink(hub, channel)
+    deliver?.(JSON.stringify(hello(page)))
+    await settle()
+    expect(sent.map((text) => (JSON.parse(text) as { t: string }).t)).toEqual(['welcome', 'applied'])
+  })
+})
+
 describe('a stop during the welcome', () => {
   it('sends the stopping event after the welcome and closes the channel', () => {
     const hub = makeHub()
@@ -332,6 +360,46 @@ describe('a hello that the hub side refuses', () => {
     await settle()
     expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'stopped' })])
     expect(link.isClosed()).toBe(true)
+  })
+
+  it('refuses an older protocol version', async () => {
+    const link = connect(makeHub())
+    link.send({ ...hello(page), protocol: 0 })
+    await settle()
+    expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'version', supported: [1] })])
+  })
+
+  it('checks the status of the hub before the list of subsystems', async () => {
+    const hub = makeHub()
+    hub.stop()
+    const link = connect(hub)
+    link.send({ t: 'hello', protocol: 1, subsystems: [] })
+    await settle()
+    expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'stopped' })])
+  })
+
+  it('refuses with stopped when an attach fails with an error that is not a configuration error', async () => {
+    const hub = makeHub()
+    const failing: Hub = {
+      get status() {
+        return hub.status
+      },
+      start: () => {
+        hub.start()
+      },
+      stop: () => {
+        hub.stop()
+      },
+      read: () => hub.read(),
+      record: () => hub.record(),
+      attach: () => {
+        throw new Error('The hub failed.')
+      },
+    }
+    const link = connect(failing)
+    link.send(hello(page))
+    await settle()
+    expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'stopped' })])
   })
 
   it('closes the ports that it attached when one attach fails with a different error', async () => {
@@ -604,6 +672,31 @@ describe('the end of a connection', () => {
     await settle()
     expect(link.messages.map((m) => m.t)).toEqual(['welcome'])
     expect(hub.record()).toHaveLength(1)
+  })
+
+  it('does not send a result that completes after the close, for a channel that accepts a send', async () => {
+    const hub = makeHub()
+    const sent: string[] = []
+    let deliver: ((text: string) => void) | undefined
+    let closeListener: (() => void) | undefined
+    const channel: Channel = {
+      send: (text) => {
+        sent.push(text)
+      },
+      onMessage: (listener) => {
+        deliver = listener
+      },
+      onClose: (listener) => {
+        closeListener = listener
+      },
+      close: () => undefined,
+    }
+    serveLink(hub, channel)
+    deliver?.(JSON.stringify(hello(page, keyboard)))
+    deliver?.(JSON.stringify({ t: 'submit', request: 1, subsystem: 'keyboard', input: setField('a') }))
+    closeListener?.()
+    await settle()
+    expect(sent.map((text) => (JSON.parse(text) as { t: string }).t)).toEqual(['welcome', 'applied'])
   })
 
   it('treats a channel whose send throws as closed', async () => {
