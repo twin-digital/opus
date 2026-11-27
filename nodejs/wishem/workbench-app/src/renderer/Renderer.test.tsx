@@ -78,7 +78,7 @@ describe('Renderer', () => {
 
   const draw = (core: Core, views = tableOf(sourceA)) => {
     act(() => {
-      root.render(<Renderer core={core} views={views} />)
+      root.render(<Renderer reader={core} views={views} />)
     })
   }
 

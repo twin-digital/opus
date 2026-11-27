@@ -1,11 +1,18 @@
-import type { ComponentTypeDefinition, CoreReader, Entity } from '@thrashplay/wishem-core'
+import type { ComponentTypeDefinition, Entity, Model } from '@thrashplay/wishem-core'
 import { createElement, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { ViewProps, ViewTable } from './collect-views.js'
 import { propNames } from './field-names.js'
 import { describeWarning, viewWarnings } from './view-warnings.js'
 
+/** The read operations that the renderer uses. */
+export interface ModelReader {
+  getSnapshot(): Model
+  /** Returns a function that removes the listener. */
+  subscribe(listener: (model: Model) => void): () => void
+}
+
 export interface RendererProps {
-  core: CoreReader
+  reader: ModelReader
   views: ViewTable
 }
 
@@ -13,12 +20,12 @@ const propsOf = (definition: ComponentTypeDefinition, component: Entity['compone
   Object.fromEntries(propNames(definition).props.map(({ name, field }) => [name, component[field.id]]))
 
 /** Draws each component that has a view. Each picture is in a wrapper that gives its entity. */
-export const Renderer = ({ core, views }: RendererProps) => {
-  const subscribe = useCallback((listener: () => void) => core.subscribe(listener), [core])
-  const getSnapshot = useCallback(() => core.getSnapshot(), [core])
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot)
+export const Renderer = ({ reader, views }: RendererProps) => {
+  const subscribe = useCallback((listener: () => void) => reader.subscribe(listener), [reader])
+  const getSnapshot = useCallback(() => reader.getSnapshot(), [reader])
+  const model = useSyncExternalStore(subscribe, getSnapshot)
 
-  const warnings = useMemo(() => viewWarnings(views, snapshot.definitions).map(describeWarning), [views, snapshot])
+  const warnings = useMemo(() => viewWarnings(views, model.definitions).map(describeWarning), [views, model])
   const lastWarned = useRef('')
   useEffect(() => {
     const text = warnings.join('\n')
@@ -33,8 +40,8 @@ export const Renderer = ({ core, views }: RendererProps) => {
 
   return (
     <>
-      {snapshot.entities.flatMap((entity) =>
-        snapshot.definitions.map((definition) => {
+      {model.entities.flatMap((entity) =>
+        model.definitions.map((definition) => {
           const component = entity.components[definition.id] as Entity['components'][string] | undefined
           const entry = views.get(definition.id)
           if (!component || !entry) {

@@ -38,8 +38,8 @@ describe('Page', () => {
     })
   }
 
-  it('shows the zero state in a main element and no app bar when there is no core', () => {
-    draw({ core: undefined, views })
+  it('shows the zero state in a main element and no app bar when there is no reader', () => {
+    draw({ reader: undefined, views })
     expect(container.querySelector('main')?.textContent).toContain('Workbench')
     expect(container.querySelector('main')?.textContent).toContain('Nothing to show yet.')
     expect(container.querySelector('header')).toBeNull()
@@ -47,7 +47,7 @@ describe('Page', () => {
 
   it('shows the app bar before the zero state, outside the main element', () => {
     const core = createCore({ definitions: [definition], entities: state.entities })
-    draw({ core, views })
+    draw({ reader: core, views })
     const header = container.querySelector('header')
     const main = container.querySelector('main')
     expect(header?.textContent).toBe('Wishem.')
