@@ -33,6 +33,12 @@ Task 2: fix round 1/5 (1 addressed, 0 open — I1; commits 0c52ebd..4de8f97). Re
 Task 2: minor (deferred): close() of serveHub waits one microtask (await Promise.resolve()) so that each link gets 'stopping'; one microtask is a thin guarantee, and only one path has a test. The catch around hub.stop() takes each error, not only the error of a stop that is already requested (hub.stop() throws only for those cases now).
 Task 2: complete (commits 47767a7..4de8f97, review clean)
 
+Task 3: dispatched (implementer: sonnet), base e4f64a6a
+Task 3: implementer DONE, commit 9966e6ba (pixi-page 34 tests; lint and typecheck pass; build waits for Task 5). Concerns: each RED run failed only for the missing module; the port-in-use test cannot show that no hub runs; the scenario of a workbench at the same time is a second construct; no changeset (the plan adds it in the workflow follow-up); the catch of startPixiConstruct has no test. Review dispatched (sonnet).
+Task 3: review: spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the url and onError members agree with "Interfaces" of design.md; close() of serveHub stops the hub (the contract of Task 2); the report shows the test run. No gap.
+Task 3: minor (deferred): the catch of startPixiConstruct closes the server but has no test (close() of serveHub stops a running hub, so no hub stays); in close() of startPixiConstruct, a throw of clock.stop() or of the close of the clock port skips server.close() (use try/finally); the port-in-use test proves only that no clock runs; the changeset waits for the finish.
+Task 3: complete (commits e4f64a6..9966e6b, review clean)
+
 ## State at the end of the session of 2026-11-27
 
 - NEXT STEP: the scoped re-review of fix round 1 (review package 0c52ebd6..4de8f972, re-review instructions of the skill, the finding I1 above). Then Task 2 is complete, and Task 3 (the construct in a Node.js process) starts.
