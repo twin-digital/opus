@@ -180,6 +180,7 @@ The lead agent is the one agent that can do the steps that are bound to a worktr
 - When a change is complete and reviewed, do its finish steps before you start a subagent for a different change.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
+- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than four subagents run, look at the tasks of each open milestone and start one that is not blocked.
 
 ## The scope of a task
 
@@ -204,13 +205,27 @@ The brief of each subagent says: report each thing that is not in the scope of t
 ## When a milestone is complete
 
 1. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
-2. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
+2. Write the test guide of the milestone. See "The test guide of a milestone".
+3. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
+   - A link to the test guide of the milestone.
    - A link to each specification of the milestone.
    - What was built, how it was built, and the reason.
    - Each important decision that the lead agent made alone.
    - Each change to blueprint text that had the label **Agreed**.
    - The result of the retrospective. See "Retrospective".
-3. Continue with the next milestone. Do not wait for the review.
+   - If the milestone published a build that a person can install, and where it is.
+4. Continue with the next milestone. Do not wait for the review.
+
+### The test guide of a milestone
+
+The owner asked for this document on 2026-11-27. It is the test plan of the milestone, the list of its new features, and a demonstration that a person does alone.
+
+- The file is `nodejs/wishem/docs/milestones/<milestone>.md`, for example `a1-construct.md`. `nodejs/wishem/docs/milestones/README.md` lists the guides.
+- The guide starts with what a person needs, and the commands that get it, from a new checkout of the repository.
+- The guide has one section for each feature that the milestone added and that a person can use or see. Each section gives the steps as exact commands or actions, and after each step the result that the person sees.
+- A feature that only a program can use, such as a function of a library, has a section with the shortest program or command that shows it.
+- A subagent that did not build the milestone writes the guide, and it does each step on the `main` branch before it writes the step. A step that does not give its result is a fault: record it as an issue of the type `Bug`, and say so in the guide.
+- The guide ends with a list of what the milestone did not build, so that the person does not look for it.
 
 ## Retrospective
 
