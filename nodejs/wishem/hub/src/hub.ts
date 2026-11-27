@@ -1,5 +1,5 @@
 import { HubConfigurationError, InputRefusedError } from './errors.js'
-import { HUB_ID, isHubInputType, isId, isInputType } from './names.js'
+import { HUB_ID, isHubInputType, isId, isInputType, REWIND_INPUT_TYPE } from './names.js'
 import type {
   Checkpoint,
   Hub,
@@ -13,6 +13,7 @@ import type {
   ModelSubsystem,
   Port,
   RecordedInput,
+  RewindPayload,
   SubmitResult,
 } from './types.js'
 
@@ -39,9 +40,6 @@ const deepFreeze = <T>(value: T): T => {
   }
   return value
 }
-
-/** A checkpoint is a valid start of the record when a replay from it can apply each input after it. */
-const isValidStart = (_checkpoint: Checkpoint): boolean => true
 
 const copySubsystem = (subsystem: ModelSubsystem): ModelSubsystem => ({
   id: subsystem.id,
@@ -184,10 +182,20 @@ export const createHub = (options: HubOptions): Hub => {
     }
   }
 
+  /** A checkpoint is a valid start when each rewind in the record after it has a target at or after it. */
+  const isValidStart = (checkpoint: Checkpoint) =>
+    record.every(
+      (input) =>
+        input.seq <= checkpoint.seq ||
+        input.type !== REWIND_INPUT_TYPE ||
+        (input.payload as RewindPayload).seq >= checkpoint.seq,
+    )
+
   const limitRecord = () => {
     if (lastSeq - checkpoints[0].seq <= recordLimit) {
       return
     }
+    // The last checkpoint is always valid and in range, so the index is at least 1.
     const index = checkpoints.findIndex((c) => lastSeq - c.seq <= recordLimit && isValidStart(c))
     if (index < 1) {
       return
@@ -196,9 +204,50 @@ export const createHub = (options: HubOptions): Hub => {
     checkpoints.splice(0, index)
   }
 
+  /** Gives one input to the subsystems that declare its type. Returns the new joined state. */
+  const applyTo = (state: JoinedState, recorded: RecordedInput): JoinedState => {
+    const next: Record<string, unknown> = { ...state }
+    for (const subsystem of subsystems) {
+      if (subsystem.inputs.includes(recorded.type)) {
+        next[subsystem.id] = subsystem.apply(next[subsystem.id], recorded, { read: () => Object.freeze({ ...next }) })
+      }
+    }
+    return Object.freeze(next)
+  }
+
+  /** Records an accepted input, makes `state` the joined state, and keeps the checkpoints and the limit. */
+  const commit = (recorded: RecordedInput, state: JoinedState, forceCheckpoint: boolean) => {
+    joined = state
+    record.push(recorded)
+    lastSeq = recorded.seq
+    if (forceCheckpoint || lastSeq % checkpointInterval === 0) {
+      checkpoints.push(Object.freeze({ seq: lastSeq, state: joined }))
+    }
+    limitRecord()
+  }
+
+  const rewind = (recorded: RecordedInput): Applied => {
+    const target = (recorded.payload as Partial<RewindPayload> | null)?.seq
+    if (!Number.isInteger(target) || (target as number) < checkpoints[0].seq || (target as number) > lastSeq) {
+      const message = `The target must be an integer from ${checkpoints[0].seq} to ${lastSeq}.`
+      return { ok: false, reason: 'invalid', problems: [{ message, path: ['payload', 'seq'] }] }
+    }
+    const checkpoint = checkpoints.findLast((c) => c.seq <= (target as number)) as Checkpoint
+    const start = checkpoints[0].seq
+    let state = joined
+    if (target !== lastSeq) {
+      state = checkpoint.state
+      for (const input of record.slice(checkpoint.seq - start, (target as number) - start)) {
+        state = applyTo(state, input)
+      }
+    }
+    commit(recorded, state, true)
+    return { ok: true, recorded }
+  }
+
   const apply = (source: string, input: Input): Applied => {
-    const targets = subsystems.filter((subsystem) => subsystem.inputs.includes(input.type))
-    if (targets.length === 0) {
+    const isRewind = input.type === REWIND_INPUT_TYPE
+    if (!isRewind && !subsystems.some((subsystem) => subsystem.inputs.includes(input.type))) {
       return reject('unknown-type')
     }
 
@@ -211,25 +260,19 @@ export const createHub = (options: HubOptions): Hub => {
     }
 
     const recorded: RecordedInput = Object.freeze({ seq: lastSeq + 1, source, type: input.type, payload })
-    const next: Record<string, unknown> = { ...joined }
+    if (isRewind) {
+      return rewind(recorded)
+    }
+    let state: JoinedState
     try {
-      for (const subsystem of targets) {
-        next[subsystem.id] = subsystem.apply(next[subsystem.id], recorded, { read: () => Object.freeze({ ...next }) })
-      }
+      state = applyTo(joined, recorded)
     } catch (error) {
       if (error instanceof InputRefusedError) {
         return { ok: false, reason: 'invalid', problems: error.problems }
       }
       throw error
     }
-
-    joined = Object.freeze(next)
-    record.push(recorded)
-    lastSeq = recorded.seq
-    if (lastSeq % checkpointInterval === 0) {
-      checkpoints.push(Object.freeze({ seq: lastSeq, state: joined }))
-    }
-    limitRecord()
+    commit(recorded, state, false)
     return { ok: true, recorded }
   }
 

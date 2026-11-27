@@ -5,6 +5,12 @@ export interface Input {
   payload?: unknown
 }
 
+/** The payload of the input `hub/rewind`. */
+export interface RewindPayload {
+  /** The target. The joined state becomes the state after this input. 0 is the first state. */
+  seq: number
+}
+
 export interface RecordedInput {
   /** Starts at 1. */
   readonly seq: number

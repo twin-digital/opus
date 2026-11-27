@@ -171,7 +171,7 @@ A request with a reply through the hub is a possible later addition. (**Agreed**
 A model subsystem gives state or rules. It has one of two forms. (**Proposed**)
 
 - **A pure function.** The model subsystem gets its part of the state and an input, and it returns the new part. The hub holds the parts. A part that did not change is the same object.
-- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#533](https://github.com/twin-digital/opus/issues/533).
+- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#574](https://github.com/twin-digital/opus/issues/574).
 
 A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
 
@@ -244,8 +244,7 @@ The **joined state** is the state of a construct that the hub gives to a reader.
 The hub has these hub events (**Proposed**):
 
 - The construct started.
-- An input was applied. The hub event has the sequence number and the type of the input.
-- The construct was restored to an earlier point.
+- An input was applied. The hub event has the sequence number and the type of the input. A rewind is an applied input of the type `hub/rewind`.
 - The construct stops.
 
 The hub has no hub event for each change of a value.

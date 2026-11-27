@@ -1,3 +1,5 @@
+import type { Input, RewindPayload } from './types.js'
+
 const NAME = '[a-z][a-z0-9]*(?:-[a-z0-9]+)*'
 const ID = new RegExp(`^${NAME}$`)
 const INPUT_TYPE = new RegExp(`^${NAME}/${NAME}$`)
@@ -16,3 +18,9 @@ export const isInputType = (value: string): boolean => INPUT_TYPE.test(value)
 
 /** Checks that an input type starts with the reserved name `hub`. */
 export const isHubInputType = (value: string): boolean => value.startsWith(`${HUB_ID}/`)
+
+/** Makes the inputs that the hub itself applies. */
+export const hubInputs = {
+  /** Makes the input that returns the joined state to the state after the input `seq`. */
+  rewind: (seq: number): Input => ({ type: REWIND_INPUT_TYPE, payload: { seq } satisfies RewindPayload }),
+}

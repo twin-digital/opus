@@ -82,7 +82,7 @@ Terms in each group are in alphabetical order.
 
 **Restore**: To load a checkpoint into a construct.
 
-**Rewind**: To return a construct to an earlier point in its record. The hub restores the last checkpoint before the target and applies the record from there (**Proposed**).
+**Rewind**: To return a construct to an earlier point in its record. A rewind is the input `hub/rewind` with the target sequence number, and its hub event is `applied`. The hub restores the last checkpoint at or before the target and applies the record from there (**Proposed**).
 
 **Snapshot**: The state of one model subsystem, saved as data. A model library that holds its own state makes a snapshot and restores it.
 
@@ -138,7 +138,7 @@ Terms in each group are in alphabetical order.
 
 **Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 
-**Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, the construct was restored to an earlier point, and the construct stops. No hub event exists for each change of a value.
+**Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, and the construct stops. A rewind is an applied input. No hub event exists for each change of a value.
 
 **I/O subsystem**: An output subsystem or an input subsystem. An I/O subsystem holds no state. Each I/O subsystem can read the joined state and get the hub events (**Proposed**).
 

@@ -20,11 +20,26 @@ The record has a start and a list of inputs. The start is a checkpoint: a sequen
 
 The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of `checkpointInterval`. The default is 100. A checkpoint refers to the parts of the joined state and copies none.
 
-The option `recordLimit` is the largest number of inputs after the start. The default is 100000. After an accepted input, when the list holds more inputs than the limit, the hub moves the start to the first valid checkpoint in range. It removes the inputs up to that checkpoint and the checkpoints before it. `createHub` throws a `HubConfigurationError` when an option is not a positive integer, or when `recordLimit` is smaller than `checkpointInterval`.
+The option `recordLimit` is the largest number of inputs after the start. The default is 100000. After an accepted input, when the list holds more inputs than the limit, the hub moves the start to the first valid checkpoint in range. A checkpoint is valid when each rewind in the record after it has a target at or after it. The hub removes the inputs up to that checkpoint and the checkpoints before it. `createHub` throws a `HubConfigurationError` when an option is not a positive integer, or when `recordLimit` is smaller than `checkpointInterval`.
 
 ## Reserved names
 
 The ID `hub` and the input types `hub/<name>` belong to the hub. `createHub` throws a `HubConfigurationError` for a model subsystem with the ID `hub` or with a declared type that starts with `hub/`. `attach` throws a `HubConfigurationError` for the ID `hub`. The constants `HUB_ID` and `REWIND_INPUT_TYPE` give the reserved ID and the reserved type `hub/rewind`.
+
+## Rewind
+
+The input `hub/rewind` returns the joined state to the state after the input `seq`. The target 0 is the first state. An input subsystem sends it like each other input. `hubInputs.rewind(seq)` makes it.
+
+```ts
+import { createHub, hubInputs } from '@thrashplay/wishem-hub'
+
+const accepted = await port.submit(hubInputs.rewind(2))
+// { ok: true, seq: 6 } after five inputs
+```
+
+The hub takes the last checkpoint at or before the target. It gives the inputs after that checkpoint, up to the target, to the model subsystems again. A part that none of these inputs changes is the same object as in the checkpoint. The rewind gets the next sequence number, stays in the record, and keeps a checkpoint. A rewind causes one `applied` event, and its input has the type `hub/rewind`. A rewind removes no input from the record.
+
+A target that is not an integer, is before the start of the record, or is after `hub.seq` gives the rejection `invalid` with a problem at the path `['payload', 'seq']`. A rejected rewind changes nothing. When a model subsystem throws while it applies an input again, the hub changes nothing and the promise of `submit` rejects with the error. Each other type `hub/<name>` gives the rejection `unknown-type`.
 
 ## The three kinds of subsystem
 
