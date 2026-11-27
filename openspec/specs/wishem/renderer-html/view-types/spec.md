@@ -102,7 +102,7 @@ With the option `--check`, the `generate` script SHALL change no file. It SHALL 
 
 ### Requirement: The start script keeps the generated files current
 
-While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. The script SHALL have an option that turns this off.
+While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. A rewind that changes the definitions SHALL be such a change. The script SHALL have an option that turns this off.
 
 #### Scenario: A label changes while the workbench runs
 
@@ -123,6 +123,11 @@ While the `start` script of the workbench runs, the generated files of the `view
 
 - **WHEN** a person starts the workbench with the option that turns the generator off, and changes a label in a definition file
 - **THEN** no generated file changes
+
+#### Scenario: A rewind before a change of a label
+
+- **WHEN** the workbench runs, a person changes the label of the field `title` to `heading`, and then an input subsystem sends `hub/rewind` with the sequence number before that change
+- **THEN** `AppBar.view.gen.ts` has the member `title` and no member `heading`
 
 ### Requirement: The start script reports what the generator did
 

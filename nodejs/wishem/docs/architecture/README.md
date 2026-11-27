@@ -155,6 +155,7 @@ The files of the model folder are `definitions/*.json` for the component types a
 - [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
 - [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.
 - [`wishem/hub/link`](../../../../openspec/specs/wishem/hub/link/spec.md): the link between two processes.
+- [`wishem/hub/record`](../../../../openspec/specs/wishem/hub/record/spec.md): the record, the checkpoints, the rewind, and the replay.
 
 ## Change the diagrams
 

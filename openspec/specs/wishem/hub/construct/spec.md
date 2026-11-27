@@ -27,12 +27,17 @@ A hub SHALL be made from a list of model subsystems. Each model subsystem SHALL 
 
 ### Requirement: An ID and an input type have a fixed form
 
-The ID of a subsystem SHALL be one or more groups of lowercase letters and digits that hyphens join, and it SHALL start with a letter. An input type SHALL be two such names that one slash joins, such as `store/set-field`.
+The ID of a subsystem SHALL be one or more groups of lowercase letters and digits that hyphens join, and it SHALL start with a letter. An input type SHALL be two such names that one slash joins, such as `store/set-field`. The ID `hub` and each input type whose first name is `hub` SHALL be reserved for the hub, as `wishem/hub/record` defines.
 
 #### Scenario: Correct names
 
 - **WHEN** a model subsystem has the ID `time` and declares the input type `time/set-running`
 - **THEN** the hub accepts the two names
+
+#### Scenario: The reserved ID
+
+- **WHEN** an output subsystem attaches with the ID `hub`
+- **THEN** the hub refuses, and the error names the ID
 
 ### Requirement: An I/O subsystem attaches to a hub and gets a port
 
@@ -120,7 +125,7 @@ When a model subsystem fails with an error that is not a refusal, the hub SHALL 
 
 ### Requirement: The hub keeps the record of the accepted inputs
 
-The hub SHALL give each accepted input a sequence number. The first number SHALL be 1, and each next number SHALL be one more. The hub SHALL keep, for each accepted input, its sequence number, the ID of the subsystem that sent it, its type, and its payload. The record SHALL be the list of these inputs in the order of their sequence numbers. A later change to the object that the sender gave SHALL NOT change the record.
+The hub SHALL give each accepted input a sequence number. The first number SHALL be 1, and each next number SHALL be one more. The hub SHALL keep, for each accepted input, its sequence number, the ID of the subsystem that sent it, its type, and its payload. The record SHALL be the list of these inputs after the start of the record, in the order of their sequence numbers, as `wishem/hub/record` defines. A later change to the object that the sender gave SHALL NOT change the record.
 
 #### Scenario: Three accepted inputs and one rejected input
 
@@ -178,6 +183,11 @@ A port SHALL let its subsystem register a listener and remove it. The hub SHALL 
 - **WHEN** a listener is removed, and then the hub accepts an input
 - **THEN** that listener gets no event
 
+#### Scenario: A rewind
+
+- **WHEN** a listener is registered and the hub accepts the input `hub/rewind`
+- **THEN** the listener gets one `applied` event that holds that input, and no other event
+
 ### Requirement: A failure in a listener does not stop the hub
 
 When a listener throws an error, the hub SHALL call each other listener, SHALL keep the input in the record, and SHALL report the error to the code that made the hub.
@@ -189,7 +199,7 @@ When a listener throws an error, the hub SHALL call each other listener, SHALL k
 
 ### Requirement: A hub starts one time and stops one time
 
-A hub SHALL accept inputs only between its start and its stop. After the stop, the hub SHALL send no event, each send SHALL be rejected with `not-running`, and an attach SHALL be refused. A read of the joined state and of the record SHALL work in each state of the hub.
+A hub SHALL accept inputs only between its start and its stop. After the stop, the hub SHALL send no event, each send SHALL be rejected with `not-running`, and an attach SHALL be refused. A read of the joined state, of the last sequence number, and of the record SHALL work in each state of the hub.
 
 #### Scenario: A hub stops
 
@@ -204,7 +214,7 @@ A hub SHALL accept inputs only between its start and its stop. After the stop, t
 #### Scenario: A read after the stop
 
 - **WHEN** a hub is stopped
-- **THEN** a read gives the last joined state, and the record holds each accepted input
+- **THEN** a read gives the last joined state, and the record holds each accepted input after the start of the record
 
 ### Requirement: The hub runs with no Node.js API
 
@@ -214,3 +224,12 @@ The code of the hub SHALL use only the standard library of the language. It SHAL
 
 - **WHEN** a source file of the hub package imports `node:fs`
 - **THEN** the build of the package fails
+
+### Requirement: The hub has three events
+
+The events `started`, `applied`, and `stopping` SHALL be the only events of the hub. A restore of the construct to an earlier point SHALL be the `applied` event of a rewind input, and SHALL NOT be a different event.
+
+#### Scenario: A listener that knows the three events
+
+- **WHEN** a listener handles `started`, `applied`, and `stopping`, and the hub accepts inputs and a rewind and then stops
+- **THEN** the listener gets no event of a different type
