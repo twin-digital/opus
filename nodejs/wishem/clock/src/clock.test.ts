@@ -122,6 +122,88 @@ describe('startClock', () => {
     expect(part().ticks).toBe(6)
   })
 
+  it('drops the remainder of the time above the limit', () => {
+    const { fire, part } = setup()
+    fire(10_025)
+    fire(25)
+    expect(part().ticks).toBe(5)
+  })
+
+  it('keeps the remainder when the due ticks equal the limit', () => {
+    const { fire, part } = setup({ maxTicksPerCall: 2 })
+    fire(125)
+    expect(part().ticks).toBe(2)
+    fire(25)
+    expect(part().ticks).toBe(3)
+  })
+
+  it('sends no tick when the part time is not an object, or running is not true', () => {
+    for (const time of [null, undefined, {}, { running: 1 }, { running: 'true' }]) {
+      const submit = vi.fn(() => Promise.resolve({ ok: true }))
+      const port = {
+        subsystem: { id: 'clock', kind: 'input' },
+        read: () => ({ [TIME_ID]: time }),
+        subscribe: () => () => undefined,
+        submit,
+      } as unknown as Port
+      let callback: (() => void) | undefined
+      let now = 0
+      startClock(port, {
+        timer: {
+          start: (cb) => {
+            callback = cb
+            return () => undefined
+          },
+        },
+        now: () => now,
+      })
+      now = 500
+      expect(() => callback?.()).not.toThrow()
+      expect(submit).not.toHaveBeenCalled()
+    }
+  })
+
+  it('handles the events of a hub that starts after the clock', () => {
+    const hub = createHub({ subsystems: [createTime()] })
+    const clockPort = hub.attach({ id: 'clock', kind: 'input' })
+    const clock = startClock(clockPort, { timer: { start: () => () => undefined }, now: () => 0 })
+    expect(() => {
+      hub.start()
+    }).not.toThrow()
+    clock.stop()
+  })
+
+  it('does not leave a rejected tick unhandled', async () => {
+    const unhandled: unknown[] = []
+    const record = (reason: unknown) => unhandled.push(reason)
+    process.on('unhandledRejection', record)
+    try {
+      const port = {
+        subsystem: { id: 'clock', kind: 'input' },
+        read: () => ({ [TIME_ID]: { now: 0, ticks: 0, running: true } }),
+        subscribe: () => () => undefined,
+        submit: () => Promise.reject(new Error('rejected')),
+      } as unknown as Port
+      let callback: (() => void) | undefined
+      let time = 0
+      startClock(port, {
+        timer: {
+          start: (cb) => {
+            callback = cb
+            return () => undefined
+          },
+        },
+        now: () => time,
+      })
+      time = 100
+      callback?.()
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off('unhandledRejection', record)
+    }
+  })
+
   it('uses the option maxTicksPerCall', () => {
     const { fire, part } = setup({ maxTicksPerCall: 2 })
     fire(1000)
@@ -255,7 +337,9 @@ describe('startClock', () => {
       const events: HubEvent['type'][] = []
       clockPort.subscribe((event) => events.push(event.type))
       startClock(clockPort)
-      vi.advanceTimersByTime(1000)
+      vi.advanceTimersByTime(50)
+      expect(hub.read()[TIME_ID]).toMatchObject({ now: 50, ticks: 1 })
+      vi.advanceTimersByTime(950)
       expect(hub.read()[TIME_ID]).toMatchObject({ now: 1000, ticks: 20 })
       hub.stop()
       expect(vi.getTimerCount()).toBe(0)

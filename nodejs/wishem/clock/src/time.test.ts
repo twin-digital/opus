@@ -1,4 +1,4 @@
-import { createHub } from '@thrashplay/wishem-hub'
+import { InputRefusedError, createHub } from '@thrashplay/wishem-hub'
 import { describe, expect, it } from 'vitest'
 import { TIME_ID, createTime, timeInputs, type TimeOptions, type TimePart } from './time.js'
 
@@ -14,6 +14,11 @@ describe('createTime', () => {
   it('starts a new construct at time 0, running', () => {
     const { part } = setup()
     expect(part()).toEqual({ now: 0, ticks: 0, running: true })
+  })
+
+  it('has the part name time', () => {
+    const { hub } = setup()
+    expect(Object.keys(hub.read())).toEqual(['time'])
   })
 
   it('starts in a pause when running is false', () => {
@@ -42,6 +47,33 @@ describe('createTime', () => {
     for (const payload of payloads) {
       const result = await controls.submit({ type: 'time/advance', payload })
       expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    }
+    expect(part()).toBe(before)
+  })
+
+  it('refuses a length that is not finite', () => {
+    const subsystem = createTime()
+    const part = { now: 0, ticks: 0, running: true }
+    for (const ms of [Infinity, -Infinity, Number.NaN, '50']) {
+      const input = { seq: 1, source: 'test', type: 'time/advance', payload: { ms } }
+      expect(() => subsystem.apply(part, input, { read: () => ({}) })).toThrow(InputRefusedError)
+    }
+  })
+
+  it('applies a tick of a length that is larger than 0 and less than 1', async () => {
+    const { controls, part } = setup()
+    await controls.submit(timeInputs.advance(0.5))
+    await controls.submit(timeInputs.advance(1))
+    expect(part()).toEqual({ now: 1.5, ticks: 2, running: true })
+  })
+
+  it('refuses a payload that is not an object', async () => {
+    const { controls, part } = setup()
+    const before = part()
+    for (const payload of [undefined, 'text', 5, true]) {
+      for (const type of ['time/advance', 'time/set-running']) {
+        expect(await controls.submit({ type, payload })).toMatchObject({ ok: false, reason: 'invalid' })
+      }
     }
     expect(part()).toBe(before)
   })
