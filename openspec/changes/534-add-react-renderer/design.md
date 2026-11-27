@@ -40,15 +40,15 @@ Two changes run at the same time as this change:
 
 This boundary applies to each renderer package: `renderer-react` now, and `renderer-pixi` (#540) and `renderer-godot` (#541) later.
 
-| A renderer package does this | The page (or the application) does this |
-| --- | --- |
-| Draws from a port that it gets: it calls `read` and `subscribe` only. | Makes the port: it opens a link or makes a hub in the page, and attaches the output subsystem. |
-| Removes its listeners when it stops. | Closes the port and the link. |
-| Defines its kind of view and its kind of sidecar (`react` here). It ignores a sidecar of a different kind. | Holds the views and the sidecars, in one folder for each renderer, and loads them. |
-| Builds the table of views from the loaded modules that it gets. | Gives the loaded modules (in Vite: `import.meta.glob`). |
-| Marks each drawn element with its entity. | Holds the fixed content, such as the zero state, and the layout. |
-| Holds the generator of the types of its views, if its views are TypeScript. | Runs the generator, and gives the definitions and the command. |
-| Knows no address, no link, no folder, and no workbench. | Connects again after a link ends, and handles the events of the page, such as `pagehide` and `pageshow`. |
+| A renderer package does this                                                                               | The page (or the application) does this                                                                  |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Draws from a port that it gets: it calls `read` and `subscribe` only.                                      | Makes the port: it opens a link or makes a hub in the page, and attaches the output subsystem.           |
+| Removes its listeners when it stops.                                                                       | Closes the port and the link.                                                                            |
+| Defines its kind of view and its kind of sidecar (`react` here). It ignores a sidecar of a different kind. | Holds the views and the sidecars, in one folder for each renderer, and loads them.                       |
+| Builds the table of views from the loaded modules that it gets.                                            | Gives the loaded modules (in Vite: `import.meta.glob`).                                                  |
+| Marks each drawn element with its entity.                                                                  | Holds the fixed content, such as the zero state, and the layout.                                         |
+| Holds the generator of the types of its views, if its views are TypeScript.                                | Runs the generator, and gives the definitions and the command.                                           |
+| Knows no address, no link, no folder, and no workbench.                                                    | Connects again after a link ends, and handles the events of the page, such as `pagehide` and `pageshow`. |
 
 - The name of each package is `@thrashplay/wishem-renderer-<library>`, in `nodejs/wishem/renderer-<library>`. This change makes `@thrashplay/wishem-renderer-react` in `nodejs/wishem/renderer-react`.
 - The sidecar is `<name>.view.json` with `{ "kind": "<kind>", "componentType": "ct_..." }`. Each renderer selects its own `kind`.
@@ -88,13 +88,13 @@ This boundary applies to each renderer package: `renderer-react` now, and `rende
 
 ### 5. What moves, and what stays
 
-| From `workbench-app` | To |
-| --- | --- |
-| `src/renderer/collect-views.ts`, `field-names.ts`, `sidecar.ts`, `view-warnings.ts`, `Renderer.tsx`, and their tests | `renderer-react/src/` |
-| `scripts/view-types.ts` (the generator) and `scripts/view-types-report.ts` (the lines) | `renderer-react/src/view-types.ts` |
-| The tests of `generateViewTypes` and `renderViewTypes` in `src/view-types.test.ts` | `renderer-react/src/view-types.test.ts` |
-| `src/renderer/hub-client.ts`, `reload-on-restore.ts`, and their tests | `workbench-app/src/` |
-| `src/renderer/index.ts` | Removed. The page imports from the package. |
+| From `workbench-app`                                                                                                 | To                                          |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `src/renderer/collect-views.ts`, `field-names.ts`, `sidecar.ts`, `view-warnings.ts`, `Renderer.tsx`, and their tests | `renderer-react/src/`                       |
+| `scripts/view-types.ts` (the generator) and `scripts/view-types-report.ts` (the lines)                               | `renderer-react/src/view-types.ts`          |
+| The tests of `generateViewTypes` and `renderViewTypes` in `src/view-types.test.ts`                                   | `renderer-react/src/view-types.test.ts`     |
+| `src/renderer/hub-client.ts`, `reload-on-restore.ts`, and their tests                                                | `workbench-app/src/`                        |
+| `src/renderer/index.ts`                                                                                              | Removed. The page imports from the package. |
 
 `src/views/`, `src/views.ts`, `src/Page.tsx`, `src/main.tsx`, the `generate` and `start` scripts, the style guide, and the test "the generated files of the repository are current" stay in `workbench-app`.
 
@@ -128,7 +128,7 @@ export interface RendererProps {
   port: PortReader
   views: ViewTable
 }
-export const Renderer: (props: RendererProps) => ReactElement
+export const Renderer: (props: RendererProps) => ReactElement | null
 
 export type ViewProps = Readonly<Record<string, FieldValue | undefined>>
 export interface CollectedView {
@@ -363,18 +363,18 @@ The system context diagram does not change.
 
 ## Failure Modes
 
-| Failure | Behavior | Recovery |
-| --- | --- | --- |
-| The hub is not reachable at the start | `connectHub` writes one warning and tries again. `onPort` is not called. The page shows the zero state. | The next `welcome` calls `onPort`. |
-| The link ends | The renderer keeps the picture of the old port. `connectHub` writes one warning and waits 500 ms, 1 s, 2 s, 4 s, then 5 s. | The next `welcome` calls `onPort` with the new port. |
-| The hub refuses the link | `connectHub` writes one error for the refusal and tries again. | As above. |
-| `onPort` throws | `connectHub` writes the error to `console.error`. The link stays open. | The next `welcome` calls `onPort` again. |
-| `close()` runs before the first `welcome`, while a socket opens, or during a delay | No `onPort` call. The socket or the link closes. No warning. | None needed. `close()` is idempotent. |
-| `close()` runs inside `onPort` | The link closes. No later `onPort` call and no warning. | None needed. |
-| The joined state has no part `store` | The renderer draws nothing. | The next event with a part `store` draws it. |
-| An event arrives after the renderer is removed | The listener is removed, so nothing happens. | None needed. |
-| The generator cannot read the folder or write a file | Unchanged: the result holds an error, and the script prints it. | The person corrects the cause and saves again. |
-| The package has no built files when a script runs | Node.js cannot load `@thrashplay/wishem-renderer-react/view-types`. | Build the Wishem packages before the start, as `workbench-app/README.md` says. |
+| Failure                                                                            | Behavior                                                                                                                   | Recovery                                                                       |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| The hub is not reachable at the start                                              | `connectHub` writes one warning and tries again. `onPort` is not called. The page shows the zero state.                    | The next `welcome` calls `onPort`.                                             |
+| The link ends                                                                      | The renderer keeps the picture of the old port. `connectHub` writes one warning and waits 500 ms, 1 s, 2 s, 4 s, then 5 s. | The next `welcome` calls `onPort` with the new port.                           |
+| The hub refuses the link                                                           | `connectHub` writes one error for the refusal and tries again.                                                             | As above.                                                                      |
+| `onPort` throws                                                                    | `connectHub` writes the error to `console.error`. The link stays open.                                                     | The next `welcome` calls `onPort` again.                                       |
+| `close()` runs before the first `welcome`, while a socket opens, or during a delay | No `onPort` call. The socket or the link closes. No warning.                                                               | None needed. `close()` is idempotent.                                          |
+| `close()` runs inside `onPort`                                                     | The link closes. No later `onPort` call and no warning.                                                                    | None needed.                                                                   |
+| The joined state has no part `store`                                               | The renderer draws nothing.                                                                                                | The next event with a part `store` draws it.                                   |
+| An event arrives after the renderer is removed                                     | The listener is removed, so nothing happens.                                                                               | None needed.                                                                   |
+| The generator cannot read the folder or write a file                               | Unchanged: the result holds an error, and the script prints it.                                                            | The person corrects the cause and saves again.                                 |
+| The package has no built files when a script runs                                  | Node.js cannot load `@thrashplay/wishem-renderer-react/view-types`.                                                        | Build the Wishem packages before the start, as `workbench-app/README.md` says. |
 
 `Renderer` and `connectHub` make no write. `close()` is idempotent. A second `onPort` with the same model draws one time, and the picture does not change.
 
@@ -403,10 +403,10 @@ The same `Renderer` takes the remote port of a link: `const link = await openLin
 
 ## Package Impact
 
-| Package | Published or private | Bump | Reason |
-| --- | --- | --- | --- |
-| `@thrashplay/wishem-renderer-react` | Private (new) | minor | New package: the renderer, the table of views, and the generator. |
-| `@thrashplay/wishem-workbench-app` | Private | patch | Uses the package. `connectHub` and `Page` take a port. No change that the person sees. |
+| Package                             | Published or private | Bump  | Reason                                                                                 |
+| ----------------------------------- | -------------------- | ----- | -------------------------------------------------------------------------------------- |
+| `@thrashplay/wishem-renderer-react` | Private (new)        | minor | New package: the renderer, the table of views, and the generator.                      |
+| `@thrashplay/wishem-workbench-app`  | Private              | patch | Uses the package. `connectHub` and `Page` take a port. No change that the person sees. |
 
 No other package changes. `core` and `hub` get a new dependent and no change.
 
