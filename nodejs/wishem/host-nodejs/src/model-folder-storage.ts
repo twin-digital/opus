@@ -117,6 +117,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
         log(`wishem: the model is correct: ${describeCounts(current())}`)
       }
       correct = true
+      requestWrite()
     } catch (error) {
       log(`wishem: cannot read the model: ${String(error)}`)
     }
@@ -196,6 +197,9 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
           seen = queue
           await seen
         } while (seen !== queue)
+        if (!sameDefinitions({ definitions: current().definitions, entities: [] }, synced)) {
+          log('wishem: the process stops, and the model folder does not hold the last changes of the store')
+        }
         files.close()
         writer.close()
       })()

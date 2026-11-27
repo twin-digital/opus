@@ -307,6 +307,50 @@ describe('the storage subsystem for files', () => {
     })
   })
 
+  describe('A person adds the definition file', () => {
+    it('writes the entities that wait, with no new input', async () => {
+      const second = { id: CT2, label: 'Card', fields: [{ id: FLD2, label: 'text', type: 'string' }] }
+      const entity = { id: E2, components: { [CT2]: { [FLD2]: 'x' } } }
+      const model = { definitions: [definition('AppBar'), second], entities: [...store().entities, entity] }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+      const recorded = hub.record().length
+
+      await writeFile(path.join(folder, 'definitions', `${CT2}.json`), JSON.stringify(second))
+      await eventually(() => lines.filter(isEqualAgain).length === 1)
+      await eventually(async () => (await stateFile()).entities.length === 2)
+
+      expect(hub.record()).toHaveLength(recorded)
+      const result = validateModel((await readModelFolder(folder)).data)
+      expect(result.ok).toBe(true)
+      expect(result.ok && result.model.entities).toEqual(store().entities)
+    })
+  })
+
+  describe('The process reports a stop that loses changes', () => {
+    const isLost = (line: string) => line.includes('does not hold the last changes of the store')
+    const relabel = () =>
+      client.submit(inputs.replaceModel({ definitions: [definition('Renamed')], entities: store().entities } as Model))
+
+    it('prints the line one time, also for a second close', async () => {
+      const before = await readFile(path.join(folder, 'definitions', `${CT}.json`), 'utf8')
+      expect((await relabel()).ok).toBe(true)
+      await storage.close()
+      await storage.close()
+      expect(lines.filter(isLost)).toHaveLength(1)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
+      expect(await readdir(path.join(folder, 'definitions'))).toEqual([`${CT}.json`])
+      expect(await readFile(path.join(folder, 'definitions', `${CT}.json`), 'utf8')).toBe(before)
+    })
+
+    it('prints no line for a title that is written', async () => {
+      await setTitle('Title')
+      await storage.close()
+      expect(await fileTitle()).toBe('Title')
+      expect(lines.filter(isLost)).toHaveLength(0)
+    })
+  })
+
   describe('The storage subsystem writes no definition file', () => {
     it('leaves the definitions folder as it is', async () => {
       const before = await readFile(path.join(folder, 'definitions', `${CT}.json`), 'utf8')
