@@ -14,12 +14,36 @@ The work is orderly, and the owner can track it and review it. The work does not
 
 ## The record of the work
 
-The GitHub project **Wishem Architecture** in the `twin-digital` organization is the record of the work. A new session reads the project first.
+The GitHub project [Wishem Architecture](https://github.com/orgs/twin-digital/projects/6) in the `twin-digital` organization is the record of the work. A new session reads the project first.
 
 - Each implementation task has one GitHub issue. Create the issue when you identify the task, and add it to the project immediately.
 - Each issue has the type, the label `app:wishem`, and one milestone. See "Work tracking" in the `CLAUDE.md` of the repository.
 - Set the status of an issue to `In Progress` when work on it starts. Set it to `Done` when its pull request is merged.
 - Set the status to `Blocked` when the task cannot continue. Add a comment that links to the discovery issue or to the cause.
+
+### Commands for the project
+
+Set `GH_ORG=twin-digital` for each command.
+
+```bash
+# Add an issue. The output has the ID of the item.
+gh project item-add 6 --owner twin-digital --url <issue URL> --format json --jq .id
+
+# Set the status of an item.
+gh project item-edit --project-id PVT_kwDOBTuvM84Bte_U --id <item ID> \
+  --field-id PVTSSF_lADOBTuvM84Bte_UzhroRF0 --single-select-option-id <option ID>
+
+# List the items with their status.
+gh project item-list 6 --owner twin-digital --limit 200 --format json \
+  --jq '.items[] | "\(.status)\t\(.content.number)\t\(.title)"'
+```
+
+| Status        | Option ID  |
+| ------------- | ---------- |
+| `Todo`        | `d9fe5c0f` |
+| `In Progress` | `f04b0216` |
+| `Blocked`     | `6e1cb228` |
+| `Done`        | `f27ade21` |
 
 ### Milestones
 
@@ -115,7 +139,7 @@ A retrospective examines this process, not the product. Its result is a change t
 
 ### Notes during the work
 
-The issue **Process notes** in the project holds the notes. Add one comment, of one or two lines, immediately after each of these events:
+The issue [Process notes](https://github.com/twin-digital/opus/issues/521) holds the notes. Add one comment, of one or two lines, immediately after each of these events:
 
 - A pull request needs more than two rounds of corrections before its checks are green.
 - A review finds a fault that an earlier step could find.
@@ -160,6 +184,7 @@ Stop and tell the owner in each of these cases:
 ## How a session continues the work
 
 1. Read this file.
-2. Read the project: the issues that are `In Progress`, then `Blocked`, then `Todo`.
-3. Read the discovery issues that are closed since the last session, and apply each answer.
-4. Continue with the first task that is not blocked.
+2. If [Architecture brief from the design discussion](https://github.com/twin-digital/opus/issues/522) is open, read it. It holds the decisions and the inputs that the blueprint does not hold.
+3. Read the project: the issues that are `In Progress`, then `Blocked`, then `Todo`.
+4. Read the discovery issues that are closed since the last session, and apply each answer.
+5. Continue with the first task that is not blocked.
