@@ -395,7 +395,8 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
 - The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
 - The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
-- The view of the PixiJS renderer and the view of the Godot renderer each clear the viewport to a color that a field gives. (**Proposed**)
+- The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a construct with a clock in a Node.js process, and a page that reads it through a link. (**Proposed**)
+- The view of the PixiJS renderer is `ClearColor`. The view of the Godot renderer is the same. Each clears the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
 
 ### Views (**Agreed**)
@@ -435,7 +436,7 @@ A built-in subsystem needs no adapter. A library can replace a built-in subsyste
 ## Distribution
 
 - A product is distributed as a build that holds the hub, the subsystems, the model, and the page. (**Proposed**)
-- A product with a browser renderer can run the hub in the page, because the hub uses no Node.js API. (**Proposed**)
+- For the MVP, the hub of each construct is in a Node.js process, and each renderer reads it through a link. (**Agreed**, owner, 2026-11-27)
 - The workbench is distributed as an archive on a GitHub release. (**Proposed**)
 - No package of Wishem is published to npm unless the owner agrees. (**Agreed**)
 - The licence and the release channel are **Open**.

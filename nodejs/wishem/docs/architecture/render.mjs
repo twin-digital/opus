@@ -650,22 +650,47 @@ const cRenderer = el(
 
 const cClock = el(
   'container',
-  gx(RIGHT),
+  gx(MIDDLE),
   1084,
   'clock',
   '[Container: TypeScript package]',
   'Holds the time subsystem and the clock.',
 )
 
+const cPixiPage = el(
+  'container',
+  gx(LEFT),
+  1484,
+  'PixiJS page',
+  '[Container: PixiJS, web browser]',
+  'Draws the PixiJS construct and sends the keys.',
+)
+const cPixiProcess = el(
+  'container',
+  gx(RIGHT),
+  1484,
+  'PixiJS process',
+  '[Container: Node.js]',
+  'Runs the construct with a clock and serves the page.',
+)
+const cRendererPixi = el(
+  'container',
+  gx(LEFT),
+  1704,
+  'renderer-pixi',
+  '[Container: TypeScript package]',
+  'Draws PixiJS views from a port.',
+)
+
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eight containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
-  width: WIDTH_PX + GUTTER + 32,
-  height: 1512,
+    'Wishem has eleven containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock and core packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the two processes, edits the model folder, and looks at the two pages.',
+  width: WIDTH_PX + GUTTER + 56,
+  height: 1960,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1196, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1636, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
@@ -675,6 +700,9 @@ const containers = {
     cHub,
     cRenderer,
     cClock,
+    cPixiPage,
+    cPixiProcess,
+    cRendererPixi,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
@@ -716,11 +744,41 @@ const containers = {
       'Builds on [import]',
       [772, 1336],
     ),
-    rel('quiet', [top(cClock), [gx(707), 964], right(cHub, 964)], 'Builds on [import]', [gx(707), 1024]),
+    rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1036]),
+
+    // The PixiJS construct
+    rel(
+      'flow',
+      [left(cDesigner, 160), [14, 160], [14, 1536], left(cPixiPage, 1536)],
+      'Looks at and presses keys [web browser]',
+      [180, 160],
+    ),
+    rel(
+      'quiet',
+      [right(cDesigner, 160), [976, 160], [976, 1536], right(cPixiProcess, 1536)],
+      'Starts and stops [terminal]',
+      [860, 160],
+    ),
+    rel('quiet', [right(cPixiPage, 1512), left(cPixiProcess, 1512)], 'Gets page code [HTTP]', [gx(440), 1512]),
+    rel('flow', [right(cPixiPage, 1566), left(cPixiProcess, 1566)], 'Connects to the hub [WebSocket link]', [
+      gx(440),
+      1566,
+    ]),
+    rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1646]),
+    rel('quiet', [top(cPixiPage, 150), [150, 1040], [410, 1040], bottom(cHub, 410)], 'Builds on [import]', [300, 1040]),
+    rel('quiet', [top(cPixiPage, 300), [300, 1136], left(cClock, 1136)], 'Builds on [import]', [300, 1250]),
+    rel('quiet', [top(cPixiProcess, 700), [700, 1136], right(cClock, 1136)], 'Builds on [import]', [700, 1260]),
+    rel('quiet', [top(cPixiProcess, 830), bottom(cCore, 830)], 'Builds on [import]', [830, 1000]),
+    rel(
+      'quiet',
+      [top(cPixiProcess, 760), [760, 1440], [125, 1440], bottom(cHost, 125)],
+      'Serves the link with [import]',
+      [550, 1440],
+    ),
     {
       kind: 'legend',
       x: 24,
-      y: 1452,
+      y: 1900,
       w: 832 + GUTTER + 32,
       entries: [
         ['person', 'Person'],
