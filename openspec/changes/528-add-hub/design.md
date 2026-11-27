@@ -166,9 +166,7 @@ export interface IoSubsystem {
 
 export type RejectionReason = 'not-permitted' | 'not-running' | 'unknown-type' | 'invalid'
 
-export type SubmitResult =
-  | { ok: true; seq: number }
-  | { ok: false; reason: RejectionReason; problems: InputProblem[] }
+export type SubmitResult = { ok: true; seq: number } | { ok: false; reason: RejectionReason; problems: InputProblem[] }
 
 export type HubEvent = { type: 'started' } | { type: 'applied'; input: RecordedInput } | { type: 'stopping' }
 
@@ -309,9 +307,9 @@ sequenceDiagram
 
 ## Package Impact
 
-| Package | Published or private | Bump | Reason |
-| --- | --- | --- | --- |
-| `@thrashplay/wishem-hub` | Private | minor | New package. |
+| Package                  | Published or private | Bump  | Reason       |
+| ------------------------ | -------------------- | ----- | ------------ |
+| `@thrashplay/wishem-hub` | Private              | minor | New package. |
 
 No other package changes.
 
