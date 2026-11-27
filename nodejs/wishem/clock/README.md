@@ -25,6 +25,10 @@ The input `time/set-running` sets `running`. While `running` is `false`, the clo
 
 A tick applies for each value of `running`. To step a paused construct, send one `time/advance`.
 
+## Rewind
+
+After the hub applies the input `hub/rewind`, the clock measures real time again from that moment. The real time before the rewind causes no tick after it. While `running` is `true`, the next tick comes one step length after the rewind. When the rewind returns to a state with `running` set to `false`, the clock sends no tick until `running` becomes `true`.
+
 ## Start and stop
 
 `startClock` throws an `Error` in these cases:

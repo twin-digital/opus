@@ -50,11 +50,11 @@ Interfaces: consumes `hub/rewind` of Task 2 and `Hub.seq` of Task 1; the message
 Files: `nodejs/wishem/clock/src/clock.ts`, `nodejs/wishem/clock/src/clock.test.ts`, `nodejs/wishem/clock/src/replay.test.ts` (new), `nodejs/wishem/clock/package.json`, `pnpm-lock.yaml`, `nodejs/wishem/clock/README.md`
 Interfaces: consumes `REWIND_INPUT_TYPE`, `hubInputs.rewind`, `HubOptions.record`, `Hub.recordStart()` from `@thrashplay/wishem-hub`, and `createStore`, `storeInputs`, `isEqual` from `@thrashplay/wishem-core`
 
-- [ ] 5.1 Set `last = now()` in the clock on the `applied` event of `hub/rewind` (D10). Verify the two scenarios of "The clock sends no late ticks after a rewind" with the fake timer and the fake `now` of `clock.test.ts`, with tests that fail before the code
-- [ ] 5.2 Add `@thrashplay/wishem-core` (`workspace:*`) to the `devDependencies` of `clock`, and run `pnpm install` (D11). Verify that `pnpm install` succeeds and that `core` does not depend on `clock`
-- [ ] 5.3 Write `replay.test.ts`: a hub with the store and `time`, a clock with a fake timer, `store/add-entity`, `store/set-field`, `time/set-running`, and ticks, then one `hub/rewind`, then more inputs. Verify that the joined state after the rewind is `isEqual` to the state that the test kept at the target, and that a second hub made with new, equal subsystems and the record of the first hub has a joined state that is `isEqual` to the first one and the same `seq`. Also run the replay with `checkpointInterval` 3 and `recordLimit` 6, so that the record has a start that is not 0
-- [ ] 5.4 Document the behavior after a rewind in `clock/README.md`
-- [ ] 5.5 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-clock` passes
+- [x] 5.1 Set `last = now()` in the clock on the `applied` event of `hub/rewind` (D10). Verify the two scenarios of "The clock sends no late ticks after a rewind" with the fake timer and the fake `now` of `clock.test.ts`, with tests that fail before the code
+- [x] 5.2 Add `@thrashplay/wishem-core` (`workspace:*`) to the `devDependencies` of `clock`, and run `pnpm install` (D11). Verify that `pnpm install` succeeds and that `core` does not depend on `clock`
+- [x] 5.3 Write `replay.test.ts`: a hub with the store and `time`, a clock with a fake timer, `store/add-entity`, `store/set-field`, `time/set-running`, and ticks, then one `hub/rewind`, then more inputs. Verify that the joined state after the rewind is `isEqual` to the state that the test kept at the target, and that a second hub made with new, equal subsystems and the record of the first hub has a joined state that is `isEqual` to the first one and the same `seq`. Also run the replay with `checkpointInterval` 3 and `recordLimit` 6, so that the record has a start that is not 0
+- [x] 5.4 Document the behavior after a rewind in `clock/README.md`
+- [x] 5.5 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-clock` passes
 
 ## Task 6: The listeners of the workbench compare by identity
 
