@@ -134,7 +134,7 @@ Terms in each group are in alphabetical order.
 
 **Construct**: One hub and all its subsystems. A construct runs in one process or in more than one. Each running copy of a product is one construct, and the workbench runs as its own construct. The hub code is the same for each construct. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Construct manager** (**Proposed**): The I/O subsystem of the workbench construct that starts and stops the constructs of the product. It gives each product construct the product model, sends each later change of the product model as an input, and reports the status of each product construct. To a product construct, the construct manager is an I/O subsystem.
+**Construct manager** (**Proposed**): The part of the workbench construct that starts and stops the constructs of the product. It gives each product construct the product model, sends each later change of the product model as an input, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem.
 
 **Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 
@@ -148,7 +148,7 @@ Terms in each group are in alphabetical order.
 
 **Joined state** (**Proposed**): The state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. Each part is immutable.
 
-**Link** (**Proposed**): The connection between the process of a hub and a process that has no hub. One link carries the subsystems of one process. A link is a versioned protocol of JSON messages on a WebSocket.
+**Link** (**Proposed**): The connection between the process of a hub and a process that does not hold that hub. One link carries the subsystems of one process. A link is a versioned protocol of JSON messages on a WebSocket.
 
 **Model contract**: The four conditions a library must pass to provide a model subsystem.
 
@@ -166,13 +166,13 @@ Terms in each group are in alphabetical order.
 
 **Record**: The ordered list of the inputs of a construct, which the hub keeps. Each entry has the sequence number and the source of the input (**Proposed**). Rewind and replay use the record.
 
-**Remote port** (**Proposed**): The part that keeps the link to the hub, in a process that has no hub. It gives the subsystems of that process the three operations of a port.
+**Remote port** (**Proposed**): The part that keeps the link to a hub, in a process that does not hold that hub. It gives the subsystems of that process the three operations of a port.
 
 **Renderer contract**: The four things a renderer must do.
 
 **Sidecar** (**Agreed**): A data file beside a view. It holds the kind of the view and the ID of its component type.
 
-**Storage subsystem** (**Proposed**): The I/O subsystem that keeps the authored state. As an output subsystem, it writes each change to files. As an input subsystem, it sends an input when a file changes on the disk. No other part of Wishem knows that the authored state is in files.
+**Storage subsystem** (**Proposed**): The part that keeps the authored state. It has one job, and it attaches two subsystems. Its output subsystem writes each change to files. Its input subsystem sends an input when a file changes on the disk. No other part of Wishem knows that the authored state is in files.
 
 **Store** (**Proposed**): The built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The store holds the list of entities.
 

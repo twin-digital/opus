@@ -18,8 +18,8 @@ The contract is in `concepts.md`. An I/O subsystem holds no state and follows li
 Reason: a library that hides state makes rewind and replay impossible.
 Rejected: to ban each outside library that holds state. That is too strict, because some libraries pass the contract.
 
-**R3. A construct can be recorded, replayed, and rewound. A construct that has a clock can also be paused and stepped.** (**Agreed**)
-The same starting state and the same inputs always give the same result. The hub keeps each input in the record. A construct that has no clock has the record, rewind, and replay (**Proposed**).
+**R3. A construct can be stepped, recorded, replayed, and rewound.** (**Agreed**)
+The same starting state and the same inputs always give the same result. The hub keeps each input in the record. A construct that has no clock has the record, rewind, and replay. Pause and step need the clock. (**Proposed**)
 Reason: "make the jump high enough so I would have made this" needs the agent to run the designer's exact inputs again.
 
 **R4. All state lives in declared component fields. Behavior code keeps no state of its own.** (**Proposed**)
@@ -39,7 +39,7 @@ Reason: the agent must discover the vocabulary of the product. Tools such as tab
 
 **R7. Nothing is built before a design needs it.** (**Agreed**)
 The model, the tools, and the library adapters grow when a product first needs them.
-Exception: the PixiJS renderer and the Godot renderer, each with one kind of view, are built before a product needs them. They are the proof that the hub and the link serve more than one renderer.
+Exception: the PixiJS renderer and the Godot renderer, each with one view, are built before a product needs them. They are the proof that the hub and the link serve more than one renderer.
 Reason: the engine is meant to "self-construct" as features are needed to support a design.
 Rejected: to build a complete engine and editor before a product. The complexity is too high as a first step.
 Rejected: to build a kit for one genre before the first game. A kit is what the first game leaves behind.

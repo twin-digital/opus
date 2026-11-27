@@ -126,7 +126,7 @@ The **hub** is the part of a construct that connects the subsystems.
 - The hub knows each subsystem.
 - A subsystem communicates only with the hub. A subsystem does not address a different subsystem (rule R20).
 - The hub joins the model data that the model subsystems hold. It gives that data to each subsystem that asks.
-- The hub carries events. The events are few, because an event for each change costs too much in a game.
+- The hub carries hub events. The hub events are few, because a hub event for each change costs too much in a game.
 - The hub keeps the ordered record of inputs that rewind and replay use.
 - A job belongs in the hub only if a subsystem cannot do it.
 
@@ -162,14 +162,16 @@ These items are **Proposed**:
 
 - A model subsystem gets no port. It cannot send an input.
 - A part that draws and also sends, such as a page with a form, attaches two subsystems: one output subsystem and one input subsystem.
-- A request with a reply through the hub is a possible later addition. It is for a query of an output subsystem, such as a screenshot. It is not for control. See "The renderer contract".
+- A part that reads and also sends for one job, such as the storage subsystem or the construct manager, also attaches two subsystems: one output subsystem and one input subsystem.
+
+A request with a reply through the hub is a possible later addition. (**Agreed**) It is for a query of an output subsystem, such as a screenshot. It is not for control. See "The renderer contract". (**Proposed**)
 
 ### Model subsystems
 
 A model subsystem gives state or rules. It has one of two forms. (**Proposed**)
 
 - **A pure function.** The model subsystem gets its part of the state and an input, and it returns the new part. The hub holds the parts. A part that did not change is the same object.
-- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. This form is designed with checkpoints in [#533](https://github.com/twin-digital/opus/issues/533).
+- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#533](https://github.com/twin-digital/opus/issues/533).
 
 A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
 
@@ -225,22 +227,22 @@ The record is a record of inputs. It is not a record of each change of a value. 
 
 A write from the workbench or from the agent is an input. Thus the record is also the record of changes with their sources, which provenance and undo need. (**Proposed**)
 
-## Joined state and events
+## Joined state and hub events
 
 The **joined state** is the state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. (**Proposed**)
 
 - The hub holds the parts. Each part is immutable. A part that did not change is the same object. (**Proposed**)
 - A reader in the process of the hub gets the parts with no copy. Thus a renderer can read the joined state on each frame. (**Proposed**)
-- Events do not carry the state. A subsystem that needs the state reads it. (**Proposed**)
+- Hub events do not carry the state. A subsystem that needs the state reads it. (**Proposed**)
 
-The hub has these events (**Proposed**):
+The hub has these hub events (**Proposed**):
 
 - The construct started.
-- An input was applied. The event has the sequence number and the type of the input.
+- An input was applied. The hub event has the sequence number and the type of the input.
 - The construct was restored to an earlier point.
 - The construct stops.
 
-The hub has no event for each change of a value.
+The hub has no hub event for each change of a value.
 
 ### How the live state is composed (**Proposed**)
 
@@ -321,7 +323,7 @@ These items are **Proposed**:
 
 - The **store** is the built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The package `core` holds the code of the store. `core` is a current name in the code.
 - The authored state is the state of the store in the workbench construct.
-- A **storage subsystem** keeps the authored state. It is an I/O subsystem. As an output subsystem, it writes each change to files. As an input subsystem, it sends an input when a file changes on the disk. Only the storage subsystem knows that the authored state is in files.
+- A **storage subsystem** keeps the authored state. It has one job, and it attaches two subsystems. Its output subsystem writes each change to files. Its input subsystem sends an input when a file changes on the disk. Only the storage subsystem knows that the authored state is in files.
 - The live state is the joined state of a product construct. The store of that construct starts from the authored model that the workbench gives to the construct.
 - The live state is in memory. Its durable form is a checkpoint and the record.
 
@@ -340,10 +342,10 @@ These items are **Proposed**:
 - Between processes, a **link** carries a port. A link is a versioned protocol of JSON messages on a WebSocket.
 - One link carries the subsystems of one process.
 - The side of the hub sends the joined state at the start. With each hub event, it sends the parts that changed. The other side sends inputs.
-- A process that has no hub holds a **remote port**. The remote port keeps the link, and it gives the subsystems of that process the three operations of a port.
+- A process that does not hold that hub holds a **remote port**. The remote port keeps the link, and it gives the subsystems of that process the three operations of a port.
 - A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot.
-- A model subsystem in a process that has no hub must apply each input and confirm it before the hub continues. The protocol reserves the messages for this case. The design has no such model subsystem.
-- Two subsystems in one process that has no hub can share data that is derived from the joined state. State that is not derived goes through the hub, as a part of a model subsystem.
+- A model subsystem in a process that does not hold that hub must apply each input and confirm it before the hub continues. The protocol reserves the messages for this case. The design has no such model subsystem.
+- Two subsystems in one process that does not hold that hub can share data that is derived from the joined state. State that is not derived goes through the hub, as a part of a model subsystem.
 
 ## Workbench and product
 
@@ -353,12 +355,12 @@ These items are **Proposed**:
 
 - The store of the workbench construct holds the authored model of the workbench. It holds the authored model of the product as a separate, **mounted** model. The product model refers to nothing of the workbench.
 - The workbench construct has a model subsystem that holds the list of the product constructs that must run.
-- The workbench construct has an I/O subsystem that reads the list: the **construct manager**. The construct manager does these things:
+- The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
   - It starts and stops the product constructs.
   - It gives each product construct the product model.
   - It sends each later change of the product model to the product construct as an input.
   - It reports the status of each product construct to the workbench hub as inputs.
-- To a product construct, the construct manager is an I/O subsystem. A hub does not connect to a hub.
+- To a product construct, the construct manager is also an output subsystem and an input subsystem. A hub does not connect to a hub.
 - The agent connects to the workbench construct through a link.
 - The workbench construct has no clock. It has the record, so it has undo and rewind.
 
@@ -375,7 +377,7 @@ A renderer is an output subsystem with more requirements. It follows the **rende
 
 Item 3 is what resolves "the platform to my right" and a click to inspect.
 
-Items 2 and 3 are requests that need a reply. They have no path through the hub. A request with a reply through the hub is a possible later addition for these two items. (**Proposed**)
+Items 2 and 3 are requests that need a reply. They have no path through the hub. (**Proposed**) A request with a reply through the hub is a possible later addition. (**Agreed**)
 
 The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the live state has no such order.
 
@@ -387,8 +389,8 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
 - The React renderer is a package. It runs React views. (**Proposed**)
-- The PixiJS renderer and the Godot renderer each have one kind of view. (**Agreed**)
-- The first view of the PixiJS renderer and of the Godot renderer clears the viewport to a color that a field gives. (**Proposed**)
+- The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
+- The view of the PixiJS renderer and the view of the Godot renderer each clear the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
 
 ### Views (**Agreed**)
@@ -417,7 +419,7 @@ Examples of transient state: hover, focus, the open state of a select, the scrol
 
 Each other state is in the model. An event in a view sends an input to the hub.
 
-Reason: the web browser holds focus, hover, the scroll position, and the caret, so no HTML renderer can put them in the model. The workbench has authored state only, so each change of a value in the model is an input that the storage subsystem writes.
+Reason: the web browser holds focus, hover, the scroll position, and the caret, so no HTML renderer can put them in the model. Each change of a value in the store of the workbench is an input, and the storage subsystem writes it.
 
 ### Adapters
 

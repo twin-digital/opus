@@ -8,16 +8,16 @@ This file is the only part of the blueprint that describes future work. Each mil
 
 The list of milestones is **Agreed**. The order after milestone 0 is **Open**.
 
-| #   | Milestone                                                               | Result                                                                                                                           | Depends on |
-| --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 0   | **Blueprint**                                                           | This folder.                                                                                                                     | None       |
-| 1   | [**Core model**](https://github.com/twin-digital/opus/issues/479)       | Entities and components with declared fields. Step, snapshot, restore, rewind, replay, bookmarks. A first renderer adapter.      | 0          |
-| 2   | [**Agent access**](https://github.com/twin-digital/opus/issues/480)     | The tools an agent uses on a running product: query, edit, pause, step, replay, and write changes to authored state.             | 1          |
-| 3   | [**Behavior prompts**](https://github.com/twin-digital/opus/issues/481) | Behaviors with prompt, code, and history. Code is replaced while the product runs.                                               | 1, 2       |
-| 4   | [**Asset prompts**](https://github.com/twin-digital/opus/issues/482)    | Room layouts and sprites from prompts. Provenance, reapply, and the hand-edit warning.                                           | 1, 2       |
-| 5   | [**Expectations**](https://github.com/twin-digital/opus/issues/483)     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.                | 1, 2       |
-| 6   | [**Tools**](https://github.com/twin-digital/opus/issues/484)            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.                  | 1, 2       |
-| 7   | [**Other engines**](https://github.com/twin-digital/opus/issues/485)    | A renderer in another engine, on a link between processes. The architecture work builds the link. Each other part is **Parked.** | 1          |
+| #   | Milestone                                                               | Result                                                                                                                                                              | Depends on |
+| --- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 0   | **Blueprint**                                                           | This folder.                                                                                                                                                        | None       |
+| 1   | [**Core model**](https://github.com/twin-digital/opus/issues/479)       | Entities and components with declared fields. Step, snapshot, restore, rewind, replay, bookmarks. A first renderer adapter.                                         | 0          |
+| 2   | [**Agent access**](https://github.com/twin-digital/opus/issues/480)     | The tools an agent uses on a running product: query, edit, pause, step, replay, and write changes to authored state.                                                | 1          |
+| 3   | [**Behavior prompts**](https://github.com/twin-digital/opus/issues/481) | Behaviors with prompt, code, and history. Code is replaced while the product runs.                                                                                  | 1, 2       |
+| 4   | [**Asset prompts**](https://github.com/twin-digital/opus/issues/482)    | Room layouts and sprites from prompts. Provenance, reapply, and the hand-edit warning.                                                                              | 1, 2       |
+| 5   | [**Expectations**](https://github.com/twin-digital/opus/issues/483)     | Expectations stored with rooms and other things. The agent checks changes against them and turns them into tests.                                                   | 1, 2       |
+| 6   | [**Tools**](https://github.com/twin-digital/opus/issues/484)            | The designer's view: screen view, inspector, tables derived from declarations, overlays, click to select, drag.                                                     | 1, 2       |
+| 7   | [**Other engines**](https://github.com/twin-digital/opus/issues/485)    | A renderer in another engine, on a link between processes. The architecture work builds the link and a Godot renderer with one view. Each other part is **Parked.** | 1          |
 
 Each milestone has a GitHub issue and a GitHub milestone. The issue holds what is known about the milestone, its open questions, and its notes. The name of an OpenSpec change starts with the number of its GitHub issue.
 
