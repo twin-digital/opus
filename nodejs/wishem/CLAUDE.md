@@ -23,7 +23,7 @@ The `docs/` folder holds the blueprint.
 These rules apply to each agent, and also to a subagent that has only a brief.
 
 - Change files only in `nodejs/wishem/`, `openspec/changes/`, `openspec/specs/wishem/`, `.changeset/`, `pnpm-lock.yaml`, the catalog in `pnpm-workspace.yaml`, and the Wishem entries of `.repo-kit.yml`. A change in a different place needs the permission of the owner.
-- Run lint, a type check, a test, or a build only when your brief tells you to. Only one agent at a time runs these commands, because they use much memory.
+- Run lint, a type check, a test, or a build only when your brief tells you to. These commands use much memory, so only one runs at a time. Run each one under the lock: `flock /tmp/wishem-heavy.lock <command>`.
 - Run them only for the packages that you changed, with a turbo filter.
 - Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`.
 - Each new package is private. Do not publish to npm.
