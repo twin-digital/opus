@@ -24,7 +24,7 @@ The designer is the one person who uses Wishem. Wishem connects to no external s
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="containers-dark.svg">
-  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder, and looks at the page. The page gets page code [HTTP] and gets snapshots [SSE] from the workbench process. The workbench process reads and watches the model folder, runs the host-nodejs package, and uses the core package. The host-nodejs package builds on the core package. The core package builds on the hub package." src="containers-light.svg">
+  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder, and looks at the page. The page gets page code [HTTP] and gets snapshots [SSE] from the workbench process. The workbench process reads and watches the model folder, runs the host-nodejs package, and uses the core package. The host-nodejs package builds on the core package and on the hub package. The core package builds on the hub package." src="containers-light.svg">
 </picture>
 
 Amber arrows show the primary path: a change to the model becomes a new picture. Gray arrows show the other relationships.
@@ -46,13 +46,13 @@ To start the workbench, see [`workbench-app/README.md`](../../workbench-app/READ
 | Page              | Container: React, web browser | Draws each component that has a view. It holds the HTML renderer, the views, and the components. Package: `@thrashplay/wishem-workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/renderer/`, `src/views/`, `src/components/`).                               |
 | Workbench process | Container: Node.js            | Runs the host and the Vite development server. It holds the core and serves the page. Package: `@thrashplay/wishem-workbench-app` (`scripts/start.ts`).                                                                                                        |
 | Model folder      | Container: JSON files         | The one store of persisted data. It holds the definition files and `state.json`. Package: `@thrashplay/wishem-workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`).                                                                     |
-| host-nodejs       | Container: TypeScript package | `startHost` and `readModelFolder`. The host reads and watches a model folder, and serves `GET /snapshot` and `GET /snapshots`. Package: `@thrashplay/wishem-host-nodejs`.                                                                                      |
+| host-nodejs       | Container: TypeScript package | `startConstruct`, `startHost`, and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                                             |
 | core              | Container: TypeScript package | The model types, `validateModel`, `createCore`, `ModelError`, and the store (`createStore`, `storeInputs`). The core has `getSnapshot` and `subscribe`. The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`. |
-| hub               | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.                                                                                         |
+| hub               | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.                              |
 
 - `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-host-nodejs`, and `@thrashplay/wishem-workbench`.
 - `@thrashplay/wishem-workbench` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-host-nodejs`. It does not depend on `@thrashplay/wishem-workbench-app`.
-- `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core`.
+- `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-hub` depends on no other package of Wishem.
 

@@ -9,6 +9,15 @@ describe('the package exports', () => {
   })
 })
 
+describe('isEqual', () => {
+  it('is exported by the package root and compares by canonical JSON', () => {
+    const a = { definitions: [], entities: [] }
+    expect(api.isEqual).toBeTypeOf('function')
+    expect(api.isEqual(a, { entities: [], definitions: [] })).toBe(true)
+    expect(api.isEqual(a, { definitions: [], entities: [{ id: 'e_1', components: {} }] })).toBe(false)
+  })
+})
+
 describe('CoreReader', () => {
   it('accepts a core and has no operation that changes the model', () => {
     const core = api.createCore({ definitions: [], entities: [] })

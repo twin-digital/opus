@@ -617,7 +617,7 @@ const cHost = el(
   684,
   'host-nodejs',
   '[Container: TypeScript package]',
-  'Reads a model folder and serves snapshots.',
+  'Runs a construct and serves the link.',
 )
 const cCore = el(
   'container',
@@ -633,14 +633,14 @@ const cHub = el(
   884,
   'hub',
   '[Container: TypeScript package]',
-  'Joins the subsystems of a construct.',
+  'Joins the subsystems and carries the link.',
 )
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. The workbench process reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package. The workbench process reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
   width: WIDTH_PX,
   height: 1104,
   items: [
@@ -666,6 +666,7 @@ const containers = {
     rel('quiet', [bottom(cProcess, 505), [505, 636], [707, 636], top(cCore)], 'Uses [import]', [606, 636]),
     rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [440, 736]),
     rel('quiet', [bottom(cCore), [707, 936], right(cHub, 936)], 'Builds on [import]', [707, 850]),
+    rel('quiet', [bottom(cHost), [173, 920], left(cHub, 920)], 'Builds on [import]', [173, 864]),
     {
       kind: 'legend',
       x: 24,

@@ -13,6 +13,7 @@ export type {
 export { createCore, ModelError } from './core.js'
 export type { Core, CoreReader } from './core.js'
 export { validateModel } from './validate-model.js'
+export { isEqual } from './equality.js'
 export { createStore, storeInputs } from './store.js'
 export type {
   AddEntityPayload,

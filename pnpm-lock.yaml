@@ -78,6 +78,9 @@ catalogs:
     '@types/node':
       specifier: 24.13.3
       version: 24.13.3
+    '@types/ws':
+      specifier: ^8.18.1
+      version: 8.18.1
     '@vitest/coverage-istanbul':
       specifier: 4.1.11
       version: 4.1.11
@@ -138,6 +141,9 @@ catalogs:
     vitest:
       specifier: ^4.0.12
       version: 4.1.11
+    ws:
+      specifier: ^8.21.2
+      version: 8.21.2
     yaml:
       specifier: ^2.8.2
       version: 2.9.0
@@ -3300,6 +3306,12 @@ importers:
       '@thrashplay/wishem-core':
         specifier: workspace:*
         version: link:../core
+      '@thrashplay/wishem-hub':
+        specifier: workspace:*
+        version: link:../hub
+      ws:
+        specifier: 'catalog:'
+        version: 8.21.2
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -3319,6 +3331,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
+      '@types/ws':
+        specifier: 'catalog:'
+        version: 8.18.1
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 4.1.11(supports-color@8.1.1)(vitest@4.1.11)
