@@ -22,17 +22,19 @@ Terms in each group are in alphabetical order.
 
 **Model side** (**Proposed**): The definitions, the behaviors, and the authored state of a product or of a workbench. The model side is the model.
 
+**Mount** (**Proposed**): To put the model of a product in the authored model of the workbench. The product model stays a separate model that refers to nothing of the workbench.
+
 **Presentation side** (**Proposed**): The views of a product or of a workbench for one output subsystem. The presentation side is code of the product. It is not part of the model.
 
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. Each part is a model, and each model has its own core.
+**Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. The workbench holds one authored model, and that model contains the model of the product. The product knows nothing about the workbench.
 
-**Workbench**: The part of a project that the designer uses to make the product. The workbench shows and changes the product. It holds the tools. A workbench is a model that is made with Wishem. It is not a game.
+**Workbench**: The part of a project that the designer uses to make the product. The workbench shows and changes the product. It holds the tools. A workbench is a model that is made with Wishem. It is not a game. The workbench runs as its own construct, and that construct does not hold the subsystems of the product.
 
 ## The model
 
-**Authored state**: What is stored in files: rooms, entity definitions, prompts, expectations, assets. It is part of the model.
+**Authored state**: The things of a model that the designer or the agent makes and that Wishem keeps: rooms, entity definitions, prompts, expectations, assets. It is part of the model. The store of the workbench construct holds it, and a storage subsystem keeps it (**Proposed**).
 
 **Behavior**: Something a component does during play. A behavior has a prompt, code, fields, checks, and a history.
 
@@ -46,7 +48,7 @@ Terms in each group are in alphabetical order.
 
 **Entity definition** (**Proposed**): The declaration of a kind of entity, such as "goat": its name and its component types.
 
-**Event** (**Proposed**): Something that happens in a simulation at one step. A behavior can respond to an event. A simulation can make a bookmark at an event.
+**Event** (**Proposed**): Something that happens in a construct at one point in its time. A behavior can respond to an event. A construct can make a bookmark at an event. An event is not a hub event.
 
 **Field**: One declared value in a component.
 
@@ -54,13 +56,13 @@ Terms in each group are in alphabetical order.
 
 **Label** (**Agreed** for a component type and a field): The name of a registered thing that the designer sees. The designer can change it.
 
-**Live state**: The state of one simulation.
+**Live state**: The joined state of one construct of a product. It is in memory. Its durable form is a checkpoint and the record (**Proposed**).
 
-**Model**: What a core runs: its definitions, its behaviors, and its authored state. The product and the workbench of a project are each a model.
+**Model**: The definitions, the behaviors, and the authored state of a product or of a workbench. The model subsystems of a construct hold the model. The hub does not hold it.
 
 **Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt.
 
-**Registry**: The record of the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state.
+**Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 
 **Relation**: A declared field that refers to another entity. Examples: a room contains an entity, and a held item is attached to the hero.
 
@@ -68,23 +70,27 @@ Terms in each group are in alphabetical order.
 
 ## Time
 
-**Bookmark**: A named point in a recording. Rewind and rerun use it as their target.
+**Bookmark**: A named point in a record. Rewind and replay use it as their target.
 
-**Play session**: A simulation with a player at the controls.
+**Checkpoint** (**Proposed**): The snapshots of all the model subsystems of a construct at one point in the record. The hub keeps checkpoints.
 
-**Recording**: The seed and the inputs of a simulation.
+**Clock**: An input subsystem that sends ticks at an interval. While `running` is true in the state of the `time` subsystem, the clock sends `time/advance` inputs (**Proposed**). A product that is not a game has no clock.
 
-**Rerun**: To run a recording again in a new simulation, with or without a changed value.
+**Play session**: A construct with a player at the controls.
 
-**Restore**: To load a snapshot.
+**Replay**: To apply a record to a new construct, with or without a changed value.
 
-**Rewind**: To return to an earlier point of the current play session.
+**Restore**: To load a checkpoint into a construct. Each model subsystem loads its snapshot.
 
-**Simulation**: One running instance of a model. It has its own live state, position in time, source of inputs, and recording. The core advances it in steps. It runs with no window. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
+**Rewind**: To return a construct to an earlier point in its record. The hub restores the last checkpoint before the target and applies the record from there (**Proposed**).
 
-**Snapshot**: The whole live state of a simulation, saved as data.
+**Snapshot**: The part of one model subsystem in the joined state, saved as data. A model subsystem makes a snapshot of its part and restores it.
 
-**Step**: One fixed advance of a simulation.
+**Step** (**Proposed**): One `time/advance` input that is sent while the clock is paused.
+
+**Tick**: One advance of the time of a construct. One `time/advance` input is one tick (**Proposed**).
+
+**Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, and `running`. It declares the input types `time/advance` and `time/set-running`.
 
 ## Directives
 
@@ -120,35 +126,57 @@ Terms in each group are in alphabetical order.
 
 **Check**: A repeatable test that the agent writes from a behavior prompt or an expectation.
 
-## Subsystems
+## Constructs and subsystems
 
 **Adapter**: The code that connects a library to a subsystem.
 
 **Built-in subsystem**: A subsystem that Wishem provides. It is in every product.
 
-**Core**: The part of Wishem that is not a subsystem. It runs the simulations: it steps the subsystems, joins their parts into the live state, and keeps time and recordings.
+**Construct**: One hub and all its subsystems. A construct runs in one process or in more than one. Each running copy of a product is one construct, and the workbench runs as its own construct. The hub code is the same for each construct. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Host** (**Proposed**): The part that assembles one core and its subsystems in one arrangement. `host-nodejs` is the host for Node.js.
+**Construct manager** (**Proposed**): The I/O subsystem of the workbench construct that starts and stops the constructs of the product. It gives each product construct the product model, sends each later change of the product model as an input, and reports the status of each product construct. To a product construct, the construct manager is an I/O subsystem.
 
-**I/O subsystem**: An output subsystem or an input subsystem.
+**Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 
-**Input subsystem**: A subsystem that changes what the player does into recorded inputs. Examples: gamepad, keyboard.
+**Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, the construct was restored to an earlier point, and the construct stops. No hub event exists for each change of a value.
+
+**I/O subsystem**: An output subsystem, an input subsystem, or a subsystem that does the two jobs. An I/O subsystem holds no state.
+
+**Input** (**Proposed**): Data that a subsystem sends to the hub to change state: a type and a payload. The type has the form `<subsystem>/<name>`, such as `store/set-field` or `time/advance`. The hub gives each input a sequence number and records its source.
+
+**Input subsystem**: A subsystem that sends inputs to the hub. Examples: gamepad, keyboard, the clock.
+
+**Joined state** (**Proposed**): The state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. Each part is immutable.
+
+**Link** (**Proposed**): The connection that carries a port between two processes. A link is a versioned protocol of JSON messages on a WebSocket.
 
 **Model contract**: The four conditions a library must pass to provide a model subsystem.
 
 **Model library**: A library that provides a model subsystem.
 
-**Model subsystem**: A subsystem that holds state or rules. Examples: physics, authored scenes.
+**Model subsystem**: A subsystem that holds state or rules. It changes its state only when the hub gives it an input, and the same inputs give the same state. Examples: the store, the `time` subsystem, physics.
 
-**Output subsystem**: A subsystem that shows or plays a simulation. Examples: renderer, sound.
+**Output subsystem**: A subsystem that only reads. It shows or plays a construct. Examples: renderer, sound.
+
+**Port** (**Proposed**): The interface that a subsystem uses to communicate with the hub. A port has three operations: `submit(input)` sends an input, `read()` gets the joined state, and `subscribe(listener)` gets the hub events. In the process of the hub, a port is direct calls.
+
+**Process**: A running thing that holds subsystems. Inside one process, a subsystem and a hub use direct calls. Between two processes, they use a link. A process has one language. A process holds zero or more hubs (**Proposed**).
 
 **React view** (**Agreed**): The kind of view that the HTML renderer runs: a React component. A React view that has no sidecar is not attached to a component type.
+
+**Record**: The ordered list of the inputs of a construct, which the hub keeps. Each entry has the sequence number and the source of the input (**Proposed**). Rewind and replay use the record.
+
+**Remote port** (**Proposed**): The part that keeps the link to the hub, in a process that has no hub. It gives the subsystems of that process the three operations of a port.
 
 **Renderer contract**: The four things a renderer must do.
 
 **Sidecar** (**Agreed**): A data file beside a view. It holds the kind of the view and the ID of its component type.
 
-**Subsystem**: A part of a product that has one job. Wishem provides it, or a library provides it through an adapter.
+**Storage subsystem** (**Proposed**): The I/O subsystem that keeps the authored state. As an output subsystem, it writes each change to files. As an input subsystem, it sends an input when a file changes on the disk. No other part of Wishem knows that the authored state is in files.
+
+**Store** (**Proposed**): The built-in model subsystem that holds the definitions and the entities. A write is an input to the store. The store holds the list of entities.
+
+**Subsystem**: A part of a construct that has one job. Wishem provides it, or a library provides it through an adapter. A subsystem has one kind, and the hub knows the kind (**Proposed**).
 
 **View** (**Agreed**): Code that a renderer runs to draw a component type. A view is content of the product, and it is not part of the renderer. Each renderer has its own kind of view. A view is a pure function of its props. A sidecar attaches a view to its component type.
 
@@ -160,29 +188,37 @@ Terms in each group are in alphabetical order.
 
 **Change**: A unit of work. A change is always an OpenSpec change. Each GitHub issue is planned as one change.
 
-**Milestone**: One row of the roadmap, such as "Core model". A milestone has one or more changes. It agrees with a GitHub milestone, such as "Wishem: Core model".
+**Milestone**: One row of the roadmap, such as "Agent access". A milestone has one or more changes. It agrees with a GitHub milestone, such as "Wishem: Agent access".
 
 ## Terms that are not used
 
-| Do not use                                      | Use                                                           | Reason                                                                                                       |
-| ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Attachment interface                            | The interface of the core                                     | A core has one interface. No formal "attachment" object exists.                                              |
-| Client and server                               | Model and renderer                                            | No wire protocol exists. See rule R17.                                                                       |
-| Component, for React code                       | View, or React view                                           | A component is a part of an entity in a model.                                                               |
-| Designer statement                              | Expectation                                                   | One word for the concept.                                                                                    |
-| Engine, for Wishem as a whole                   | Wishem, or the model                                          | No engine is built ahead of a product.                                                                       |
-| Game model                                      | Model                                                         | A model is not always the model of a game. The workbench is a model, and it is not a game.                   |
-| Game state                                      | State                                                         | The state of a model is not always the state of a game.                                                      |
-| Game truth                                      | State and rules                                               | Plain words for the same thing.                                                                              |
-| Generation prompt                               | Asset prompt                                                  | Shorter, and it pairs with "behavior prompt".                                                                |
-| Invariant, constraint, requirement              | Expectation                                                   | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things. |
-| Origin record                                   | Provenance                                                    | Provenance is the usual term for this record.                                                                |
-| Presentation slot                               | Output subsystem or input subsystem                           | Input is not presentation.                                                                                   |
-| Project, for a row of the roadmap               | Milestone                                                     | A project is what a designer makes with Wishem. "Milestone" agrees with the GitHub milestones.               |
-| Scene graph                                     | Model, or the renderer's objects                              | Use "model" for entities and components. Use "the renderer's objects" for the display side.                  |
-| Script                                          | Behavior                                                      | The prompt is the source, not a script.                                                                      |
-| Sim                                             | Simulation                                                    | Write the word in full.                                                                                      |
-| Slot                                            | Subsystem                                                     | Games use "slot" for equipment and saved games.                                                              |
-| Stored words                                    | Directive                                                     | Internal term for the three kinds together.                                                                  |
-| Subject, for what a workbench shows and changes | No term. Write "the workbench shows and changes the product". | The sentence gives the relation in plain words. A second term for the product is not necessary.              |
-| Truth slot, truth library, truth contract       | Model subsystem, model library, model contract                | Plain words for the same things.                                                                             |
+| Do not use                                                  | Use                                                                                                              | Reason                                                                                                                                                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arrangement, instance, wheel, for a running copy of a model | Construct                                                                                                        | One word for the concept.                                                                                                                                                        |
+| Attachment interface                                        | Port                                                                                                             | A subsystem communicates with the hub through a port. No formal "attachment" object exists.                                                                                      |
+| Client and server                                           | The hub and the remote port, or the two sides of a link                                                          | A link carries a port between two processes. One side has the hub, and the other side has a remote port. See rule R17.                                                           |
+| Component, for React code                                   | View, or React view                                                                                              | A component is a part of an entity in a model.                                                                                                                                   |
+| Core                                                        | Hub, for the part that connects the subsystems. Store, for the part that holds the definitions and the entities. | "Core" has more than one meaning. The part that connects the subsystems does not hold the model. `core` and `createCore` are current names in the code.                          |
+| Designer statement                                          | Expectation                                                                                                      | One word for the concept.                                                                                                                                                        |
+| Engine, for Wishem as a whole                               | Wishem, or the model                                                                                             | No engine is built ahead of a product.                                                                                                                                           |
+| Folder, file, for where a model is stored                   | No term. Write "the authored model of the product".                                                              | Storage in files is the method of one storage subsystem. Only the text about a storage subsystem uses these words.                                                               |
+| Game model                                                  | Model                                                                                                            | A model is not always the model of a game. The workbench is a model, and it is not a game.                                                                                       |
+| Game state                                                  | State                                                                                                            | The state of a model is not always the state of a game.                                                                                                                          |
+| Game truth                                                  | State and rules                                                                                                  | Plain words for the same thing.                                                                                                                                                  |
+| Generation prompt                                           | Asset prompt                                                                                                     | Shorter, and it pairs with "behavior prompt".                                                                                                                                    |
+| Host                                                        | Process                                                                                                          | "Host" has more than one meaning: the running thing that holds subsystems, and the code that assembles a construct. `host-nodejs` and `startHost` are current names in the code. |
+| Invariant, constraint, requirement                          | Expectation                                                                                                      | An expectation can be soft. Games and physics libraries use "constraint" and "requirement" for other things.                                                                     |
+| Kernel, microkernel                                         | Hub                                                                                                              | In an operating system, a process runs on the kernel. Here, a process holds the hub.                                                                                             |
+| Origin record                                               | Provenance                                                                                                       | Provenance is the usual term for this record.                                                                                                                                    |
+| Presentation slot                                           | Output subsystem or input subsystem                                                                              | Input is not presentation.                                                                                                                                                       |
+| Project, for a row of the roadmap                           | Milestone                                                                                                        | A project is what a designer makes with Wishem. "Milestone" agrees with the GitHub milestones.                                                                                   |
+| Recording                                                   | Record                                                                                                           | One word for the concept. The record of the hub is also the record of changes with their sources.                                                                                |
+| Rerun                                                       | Replay                                                                                                           | One word for the concept.                                                                                                                                                        |
+| Runtime, cell, island, for the thing that holds subsystems  | Process                                                                                                          | One word for the concept.                                                                                                                                                        |
+| Scene graph                                                 | Model, or the renderer's objects                                                                                 | Use "model" for entities and components. Use "the renderer's objects" for the display side.                                                                                      |
+| Script                                                      | Behavior                                                                                                         | The prompt is the source, not a script.                                                                                                                                          |
+| Simulation, sim                                             | Construct                                                                                                        | An agent helps the designer make a simulation as a product, so the word has a second meaning.                                                                                    |
+| Slot                                                        | Subsystem                                                                                                        | Games use "slot" for equipment and saved games.                                                                                                                                  |
+| Stored words                                                | Directive                                                                                                        | Internal term for the three kinds together.                                                                                                                                      |
+| Subject, for what a workbench shows and changes             | No term. Write "the workbench shows and changes the product".                                                    | The sentence gives the relation in plain words. A second term for the product is not necessary.                                                                                  |
+| Truth slot, truth library, truth contract                   | Model subsystem, model library, model contract                                                                   | Plain words for the same things.                                                                                                                                                 |
