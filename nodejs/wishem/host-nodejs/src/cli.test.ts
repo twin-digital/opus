@@ -15,6 +15,11 @@ const cli = path.join(packageRoot, 'dist', 'cli.js')
 const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
 const FLD = 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62'
 const E = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
+const PRODUCT_CT = 'ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d'
+const PRODUCT_FLD = 'fld_ef085a2e-22ef-4409-bac4-9cd5648d0705'
+const PRODUCT_CT2 = 'ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512'
+const PRODUCT_FLD2 = 'fld_694d6cb2-97e8-444e-961e-aa76744837fb'
+const PRODUCT_E = 'e_99969ed3-f499-4dbb-bf6d-958db4542884'
 
 interface Run {
   child: ChildProcess
@@ -53,6 +58,7 @@ const until = async (check: () => boolean, ms = 4000) => {
 
 describe('wishem command', () => {
   let folder: string
+  let productFolder: string
   let running: Run[]
   let sockets: WebSocket[]
 
@@ -66,6 +72,7 @@ describe('wishem command', () => {
     running = []
     sockets = []
     folder = await mkdtemp(path.join(tmpdir(), 'wishem-cli-'))
+    productFolder = await mkdtemp(path.join(tmpdir(), 'wishem-cli-product-'))
     await mkdir(path.join(folder, 'definitions'))
     await writeFile(
       path.join(folder, 'definitions', `${CT}.json`),
@@ -74,6 +81,20 @@ describe('wishem command', () => {
     await writeFile(
       path.join(folder, 'state.json'),
       JSON.stringify({ entities: [{ id: E, components: { [CT]: { [FLD]: 'Wishem' } } }] }),
+    )
+    await mkdir(path.join(productFolder, 'definitions'))
+    for (const [id, label, field] of [
+      [PRODUCT_CT, 'Counter', PRODUCT_FLD],
+      [PRODUCT_CT2, 'Color', PRODUCT_FLD2],
+    ]) {
+      await writeFile(
+        path.join(productFolder, 'definitions', `${id}.json`),
+        JSON.stringify({ id, label, fields: [{ id: field, label: 'value', type: 'string' }] }),
+      )
+    }
+    await writeFile(
+      path.join(productFolder, 'state.json'),
+      JSON.stringify({ entities: [{ id: PRODUCT_E, components: { [PRODUCT_CT]: { [PRODUCT_FLD]: '0' } } }] }),
     )
   })
 
@@ -84,6 +105,7 @@ describe('wishem command', () => {
     running.forEach(({ child }) => child.kill('SIGKILL'))
     await Promise.all(running.map(({ exit }) => exit))
     await rm(folder, { recursive: true, force: true })
+    await rm(productFolder, { recursive: true, force: true })
   })
 
   it('prints the address of a correct model and keeps running', async () => {
@@ -182,14 +204,14 @@ describe('wishem command', () => {
     const arg = (name: string) => (name === 'folder' ? folder : name)
     const process_ = start([arg(first), arg(second), '--port', '0'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
     expect(process_.stdout()).not.toContain('link at')
   })
 
   it('prints the usage and exits with a non-zero code for an unknown option', async () => {
     const process_ = start(['start', folder, '--nope'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
   })
 
   it('accepts the highest port number', async () => {
@@ -246,7 +268,7 @@ describe('wishem command', () => {
   it('prints the usage and exits with a non-zero code when no folder is given', async () => {
     const process_ = start(['start'])
     expect(await process_.exit).not.toBe(0)
-    expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+    expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
   })
 
   it.each(['', '0x10', '1e3', ' 5000 ', '65536', '70000', '-1'])(
@@ -254,7 +276,7 @@ describe('wishem command', () => {
     async (value) => {
       const process_ = start(['start', folder, '--port', value])
       expect(await process_.exit).not.toBe(0)
-      expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
+      expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
       expect(process_.stdout()).not.toContain('link at')
     },
   )
@@ -276,5 +298,94 @@ describe('wishem command', () => {
       JSON.stringify({ entities: [{ id: E, components: { [CT]: { [FLD]: 'Again' } } }] }),
     )
     await until(() => process_.stdout().includes('wishem: the model is correct: 1 component type, 1 entity'))
+  })
+
+  describe('the option --product', () => {
+    it('prints the five start lines in their order', async () => {
+      const process_ = start(['start', folder, '--product', productFolder, '--port', '0'])
+      await until(() => process_.stdout().includes('link at'))
+      const lines = process_.stdout().trimEnd().split('\n')
+      expect(lines.slice(0, 4)).toEqual([
+        `wishem: model ${folder}`,
+        `wishem: product ${productFolder}`,
+        'wishem: 1 component type, 1 entity',
+        'wishem: product: 2 component types, 1 entity',
+      ])
+      expect(lines[4]).toMatch(/^wishem: link at ws:\/\/127\.0\.0\.1:\d+\/link$/)
+      expect(lines).toHaveLength(5)
+    })
+
+    it('mounts the product as the part product on the link', async () => {
+      const process_ = start(['start', folder, '--product', productFolder, '--port', '0'])
+      await until(() => process_.stdout().includes('link at'))
+      const url = /link at (\S+)/.exec(process_.stdout())?.[1] ?? ''
+      const socket = new WebSocket(url)
+      sockets.push(socket)
+      const link = await openLink(await webSocketChannel(socket), [{ id: 'cli-test', kind: 'output' }])
+      const read = link.ports['cli-test'].read()
+      expect((read.product as Model).definitions).toHaveLength(2)
+      expect((read.store as Model).definitions).toHaveLength(1)
+    })
+
+    it('prints no product line when the option is not given', async () => {
+      const process_ = start(['start', folder, '--port', '0'])
+      await until(() => process_.stdout().includes('link at'))
+      expect(process_.stdout()).not.toContain('product')
+    })
+
+    it('prints the absolute path of a product folder that is given as a relative path', async () => {
+      const parent = await realpath(path.dirname(productFolder))
+      const process_ = start(['start', folder, '--product', path.basename(productFolder), '--port', '0'], {
+        cwd: parent,
+      })
+      await until(() => process_.stdout().includes('link at'))
+      expect(process_.stdout().split('\n')[1]).toBe(
+        `wishem: product ${path.join(parent, path.basename(productFolder))}`,
+      )
+    })
+
+    it('exits with code 1 and names the file for a product file that is not valid JSON', async () => {
+      await writeFile(path.join(productFolder, 'state.json'), '{ nope')
+      const process_ = start(['start', folder, '--product', productFolder, '--port', '0'])
+      expect(await process_.exit).toBe(1)
+      expect(process_.stderr()).toContain(
+        `wishem: problem in ${path.join(productFolder, 'state.json')}: the text is not valid JSON (line 1)`,
+      )
+      expect(process_.stderr()).toContain('wishem: the model is not correct, so the hub did not start')
+      expect(process_.stdout()).not.toContain('link at')
+    })
+
+    it('exits with code 1 for the same folder', async () => {
+      const process_ = start(['start', folder, '--product', folder, '--port', '0'])
+      expect(await process_.exit).toBe(1)
+      expect(process_.stderr()).toContain('wishem: the product folder and the model folder are the same folder')
+      expect(process_.stdout()).toContain(`wishem: product ${folder}`)
+      expect(process_.stdout()).not.toContain('link at')
+    })
+
+    it.each([[['--product', '']], [['--product']]])(
+      'prints the usage and exits with code 2 for the arguments %j',
+      async (extra) => {
+        const process_ = start(['start', folder, ...extra, '--port', '0'])
+        expect(await process_.exit).toBe(2)
+        expect(process_.stderr()).toContain('usage: wishem start <folder> [--product <folder>] [--port <number>]')
+        expect(process_.stdout()).not.toContain('link at')
+      },
+    )
+
+    it('prints a problem of the product during a run with the prefix, and that the model is correct again', async () => {
+      const process_ = start(['start', folder, '--product', productFolder, '--port', '0'])
+      await until(() => process_.stdout().includes('link at'))
+      await writeFile(path.join(productFolder, 'state.json'), '{')
+      await until(() => process_.stdout().includes('wishem: product: the last correct model stays'))
+      expect(process_.stdout()).toContain(`wishem: problem in ${path.join(productFolder, 'state.json')}: `)
+      await writeFile(
+        path.join(productFolder, 'state.json'),
+        JSON.stringify({ entities: [{ id: PRODUCT_E, components: { [PRODUCT_CT]: { [PRODUCT_FLD]: '1' } } }] }),
+      )
+      await until(() =>
+        process_.stdout().includes('wishem: product: the model is correct: 2 component types, 1 entity'),
+      )
+    })
   })
 })

@@ -14,12 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { FILES_ID } from './model-folder-storage.js'
 import { readModelFolder } from './read-model-folder.js'
-import {
-  PRODUCT_FILES_ID,
-  PRODUCT_FILES_WRITER_ID,
-  PRODUCT_ID,
-  startConstruct,
-} from './start-construct.js'
+import { PRODUCT_FILES_ID, PRODUCT_FILES_WRITER_ID, PRODUCT_ID, startConstruct } from './start-construct.js'
 import type { Construct } from './start-construct.js'
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -39,7 +34,8 @@ vi.mock('./read-model-folder.js', async (importOriginal) => {
 
 const actualReadModelFolder = (await vi.importActual<typeof import('./read-model-folder.js')>('./read-model-folder.js'))
   .readModelFolder
-const actualCreateHub = (await vi.importActual<typeof import('@thrashplay/wishem-hub')>('@thrashplay/wishem-hub')).createHub
+const actualCreateHub = (await vi.importActual<typeof import('@thrashplay/wishem-hub')>('@thrashplay/wishem-hub'))
+  .createHub
 const actualWatch = (await vi.importActual<typeof import('node:fs')>('node:fs')).watch
 
 const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
@@ -442,7 +438,9 @@ describe('startConstruct with a product', () => {
     await writeFile(path.join(target, 'state.json'), JSON.stringify(stateValue))
   }
 
-  const start = async (options: { port?: number; product?: string; onWatchError?: (error: Error) => void } = {}) => {
+  const start = async (
+    options: { folder?: string; port?: number; product?: string; onWatchError?: (error: Error) => void } = {},
+  ) => {
     construct = await startConstruct({
       folder,
       product: productFolder,
@@ -456,10 +454,13 @@ describe('startConstruct with a product', () => {
   const part = (target: Construct, id: string) => target.hub.read()[id] as Model
   const count = (target: Construct) => part(target, 'product').entities[0]?.components[COUNTER_CT]?.[COUNT_FLD]
   const workbenchTitle = (target: Construct) => part(target, 'store').entities[0]?.components[CT]?.[FLD]
-  const fileHas = async (target: string, text: string) => (await readFile(path.join(target, 'state.json'), 'utf8')).includes(text)
+  const fileHas = async (target: string, text: string) =>
+    (await readFile(path.join(target, 'state.json'), 'utf8')).includes(text)
   const client = (target: Construct) => target.hub.attach({ id: 'client', kind: 'input' })
   const setCount = (port: Port, value: string) =>
-    port.submit(storeInputs('product').setField({ entity: PRODUCT_E, componentType: COUNTER_CT, field: COUNT_FLD, value }))
+    port.submit(
+      storeInputs('product').setField({ entity: PRODUCT_E, componentType: COUNTER_CT, field: COUNT_FLD, value }),
+    )
   const setTitle = (port: Port, value: string) =>
     port.submit(storeInputs().setField({ entity: E, componentType: CT, field: FLD, value }))
   const relabelProduct = (target: Construct, port: Port) =>
@@ -477,7 +478,7 @@ describe('startConstruct with a product', () => {
     vi.mocked(createHub).mockImplementationOnce((options) => {
       const hub = actualCreateHub(options)
       const attach = hub.attach.bind(hub)
-      hub.attach = ((request: Parameters<Hub['attach']>[0]) => {
+      hub.attach = (request: Parameters<Hub['attach']>[0]) => {
         const port = attach(request)
         const close = port.close.bind(port)
         port.close = () => {
@@ -485,7 +486,7 @@ describe('startConstruct with a product', () => {
           close()
         }
         return port
-      }) as Hub['attach']
+      }
       return hub
     })
     return closed
@@ -517,7 +518,11 @@ describe('startConstruct with a product', () => {
     it('holds the workbench in the part store and the product in the part product', async () => {
       const started = await start()
       expect(part(started, 'store').definitions.map(({ label }) => label)).toEqual(['AppBar'])
-      expect(part(started, 'product').definitions.map(({ label }) => label).sort()).toEqual(['Color', 'Counter'])
+      expect(
+        part(started, 'product')
+          .definitions.map(({ label }) => label)
+          .sort(),
+      ).toEqual(['Color', 'Counter'])
       expect(part(started, 'product').entities).toHaveLength(1)
     })
 
@@ -555,13 +560,15 @@ describe('startConstruct with a product', () => {
     it('refuses a product entity with a component of the workbench', async () => {
       const started = await start()
       const before = part(started, 'product')
-      const outcome = await client(started).submit(
-        storeInputs('product').addEntity({
-          entity: { id: 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6', components: { [CT]: { [FLD]: 'x' } } },
-        }),
-      )
+      const port = client(started)
+      const id = 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6'
+      const outcome = await port.submit(storeInputs('product').addEntity({ id, components: { [CT]: { [FLD]: 'x' } } }))
       expect(outcome).toMatchObject({ ok: false, reason: 'invalid' })
       expect(part(started, 'product')).toBe(before)
+      const control = await port.submit(
+        storeInputs('product').addEntity({ id, components: { [COUNTER_CT]: { [COUNT_FLD]: '1' } } }),
+      )
+      expect(control.ok).toBe(true)
     })
   })
 
@@ -759,7 +766,7 @@ describe('startConstruct with a product', () => {
     it('stops the hub and closes each part when the watch of the product folder cannot start', async () => {
       const port = await freePort()
       const opened: FSWatcher[] = []
-      vi.mocked(watch).mockImplementation(((target: PathLike, ...rest: unknown[]) => {
+      vi.mocked(watch).mockImplementation((target: PathLike, ...rest: unknown[]) => {
         if (String(target).startsWith(productFolder)) {
           throw new Error('no product watch')
         }
@@ -767,7 +774,7 @@ describe('startConstruct with a product', () => {
         vi.spyOn(watcher, 'close')
         opened.push(watcher)
         return watcher
-      }) as unknown as typeof watch)
+      })
       const closed = trackClosedPorts()
       await expect(start({ port })).rejects.toThrow('no product watch')
       const hub = vi.mocked(createHub).mock.results[0]?.value as Hub
