@@ -10,6 +10,53 @@ A hub holds the joined state of one construct. The joined state has one part for
 
 The code that makes the hub gives it an ordered list of model subsystems. The hub starts one time and stops one time. It accepts inputs only between the start and the stop.
 
+## The record
+
+The record has a start and a list of inputs. The start is a checkpoint: a sequence number and the joined state after the input with that number. For a new hub, the start is `{ seq: 0, state }` with the first joined state. The list holds each accepted input after the start, in the order of the sequence numbers, with no gap.
+
+- `hub.record()` returns the inputs after the start.
+- `hub.recordStart()` returns the start.
+- `hub.seq` returns the sequence number of the last accepted input, or 0. A read does not copy the record.
+
+The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of `checkpointInterval`, and after each rewind. The default is 100. A checkpoint refers to the parts of the joined state and copies none.
+
+The option `recordLimit` is the largest number of inputs after the start. The default is 100000. After an accepted input, when the list holds more inputs than the limit, the hub moves the start to the first valid checkpoint in range. A checkpoint is valid when each rewind in the record after it has a target at or after it. The hub removes the inputs up to that checkpoint and the checkpoints before it. `createHub` throws a `HubConfigurationError` when an option is not a positive integer, or when `recordLimit` is smaller than `checkpointInterval`.
+
+## Reserved names
+
+The ID `hub` and the input types `hub/<name>` belong to the hub. `createHub` throws a `HubConfigurationError` for a model subsystem with the ID `hub` or with a declared type that starts with `hub/`. `attach` throws a `HubConfigurationError` for the ID `hub`. The constants `HUB_ID` and `REWIND_INPUT_TYPE` give the reserved ID and the reserved type `hub/rewind`.
+
+## Rewind
+
+The input `hub/rewind` returns the joined state to the state after the input `seq`. The target 0 is the first state. An input subsystem sends it like each other input. `hubInputs.rewind(seq)` makes it.
+
+```ts
+import { hubInputs } from '@thrashplay/wishem-hub'
+
+// `port` is the port of an input subsystem.
+const accepted = await port.submit(hubInputs.rewind(2))
+// { ok: true, seq: 6 } after five inputs
+```
+
+The hub takes the last checkpoint at or before the target. It gives the inputs after that checkpoint, up to the target, to the model subsystems again. A part that none of these inputs changes is the same object as in the checkpoint. The rewind gets the next sequence number, stays in the record, and keeps a checkpoint. A rewind causes one `applied` event, and its input has the type `hub/rewind`. A rewind removes no input from the record.
+
+A target that is not an integer, is before the start of the record, or is after `hub.seq` gives the rejection `invalid` with a problem at the path `['payload', 'seq']`. A rejected rewind changes nothing. When a model subsystem throws while it applies an input again, the hub changes nothing and the promise of `submit` rejects with the error. Each other type `hub/<name>` gives the rejection `unknown-type`.
+
+## Replay
+
+The option `record` makes a hub from a record. The hub takes `record.start` as its first joined state and its first checkpoint. It applies each input of `record.inputs` in order, with the recorded source and sequence number, before `createHub` returns. It sends no event for these inputs. The new hub has the status `created`. Its joined state and its `seq` equal those of the record that it got, so the next input gets the next sequence number. The hub applies `recordLimit` one time, after the last input of the record. When `recordLimit` is not less than the number of inputs of the record, the new hub has the same record and the same `recordStart()`. A smaller `recordLimit` gives a shorter record. An input `hub/rewind` in the record applies as it applied the first time.
+
+```ts
+import { createHub } from '@thrashplay/wishem-hub'
+
+// `subsystems` are the model subsystems of the first hub, or equal ones with a changed value.
+const copy = createHub({ subsystems, record: { start: hub.recordStart(), inputs: hub.record() } })
+```
+
+`checkpointInterval` and `recordLimit` apply to the new hub. They do not need to equal the values of the first hub. The hub does not move the start of the record during the replay, so each rewind of a correct record applies.
+
+`createHub` throws a `HubConfigurationError` when the keys of `record.start.state` are not the IDs of the model subsystems, or when the sequence numbers of the record have a gap or do not follow `record.start.seq`. `createHub` throws a `ReplayError` with `seq` and `problems` when a model subsystem refuses an input of the record, throws while it applies one, or when the hub rejects an input of the record.
+
 ## The three kinds of subsystem
 
 - **Model subsystem.** It owns one part of the joined state. It declares the input types that it applies, and it returns the new part for each input. It gets no port, so it cannot send an input. The list of model subsystems is fixed when the hub is made.

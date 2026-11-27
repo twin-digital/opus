@@ -72,7 +72,7 @@ Terms in each group are in alphabetical order.
 
 **Bookmark**: A named point in a record. Rewind and replay use it as their target.
 
-**Checkpoint** (**Proposed**): The joined state of a construct at one sequence number of the record. The hub keeps checkpoints. For a model subsystem that is a pure function, a checkpoint refers to the part and makes no copy.
+**Checkpoint** (**Proposed**): The joined state of a construct at one sequence number of the record. The hub keeps a checkpoint at the start of the record and after each input whose sequence number is a multiple of the checkpoint interval (default 100), and after each rewind. A checkpoint refers to the parts of the joined state and makes no copy.
 
 **Clock**: An input subsystem that sends ticks at an interval. While `running` is true in the state of the `time` subsystem, the clock sends `time/advance` inputs (**Proposed**). A product that is not a game has no clock.
 
@@ -82,7 +82,7 @@ Terms in each group are in alphabetical order.
 
 **Restore**: To load a checkpoint into a construct.
 
-**Rewind**: To return a construct to an earlier point in its record. The hub restores the last checkpoint before the target and applies the record from there (**Proposed**).
+**Rewind**: To return a construct to an earlier point in its record. A rewind is the input `hub/rewind` with the target sequence number, and its hub event is `applied`. The hub restores the last checkpoint at or before the target and applies the record from there (**Proposed**).
 
 **Snapshot**: The state of one model subsystem, saved as data. A model library that holds its own state makes a snapshot and restores it.
 
@@ -138,7 +138,7 @@ Terms in each group are in alphabetical order.
 
 **Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 
-**Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, the construct was restored to an earlier point, and the construct stops. No hub event exists for each change of a value.
+**Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, and the construct stops. A rewind is an applied input. No hub event exists for each change of a value.
 
 **I/O subsystem**: An output subsystem or an input subsystem. An I/O subsystem holds no state. Each I/O subsystem can read the joined state and get the hub events (**Proposed**).
 
@@ -164,7 +164,7 @@ Terms in each group are in alphabetical order.
 
 **React view** (**Agreed**): The kind of view that the HTML renderer runs: a React component. A React view that has no sidecar is not attached to a component type.
 
-**Record**: The ordered list of the inputs of a construct, which the hub keeps. Each entry has the sequence number and the source of the input (**Proposed**). Rewind and replay use the record.
+**Record**: The start and the ordered list of the inputs of a construct after the start, which the hub keeps. The start is a checkpoint. Each input has the sequence number and the source (**Proposed**). The record has a limit (default 100000 inputs). When the list is longer, the hub moves the start to a checkpoint and removes the earlier inputs. Rewind and replay use the record.
 
 **Remote port** (**Proposed**): The part that keeps the link to a hub, in a process that does not hold that hub. It gives the subsystems of that process the three operations of a port.
 
