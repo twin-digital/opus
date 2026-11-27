@@ -131,6 +131,20 @@ When the page gets the `pagehide` event, it SHALL close its link, SHALL NOT open
 - **WHEN** the person reloads the page
 - **THEN** the old page writes no warning, and the hub detaches the subsystem of the old page
 
+### Requirement: A page that the browser restores loads again
+
+A browser can keep a page that the person left and show it again without a load. When the page gets a `pageshow` event whose `persisted` is `true`, the page SHALL load itself again, so that it opens a new link. A `pageshow` event whose `persisted` is `false` SHALL have no effect.
+
+#### Scenario: The person goes back to the page
+
+- **WHEN** the person leaves the page, and the browser restores the page with a `pageshow` event whose `persisted` is `true`
+- **THEN** the page loads itself again
+
+#### Scenario: The first load
+
+- **WHEN** the page gets a `pageshow` event whose `persisted` is `false`
+- **THEN** the page does not load itself again
+
 ## REMOVED Requirements
 
 ### Requirement: The page shows its fixed content when it has no snapshot
