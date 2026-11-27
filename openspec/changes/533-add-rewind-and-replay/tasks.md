@@ -40,10 +40,10 @@ Interfaces: consumes `hub/rewind` of Task 2; produces `HubOptions.record` and `R
 Files: `nodejs/wishem/hub/src/link/serve-link.ts`, `nodejs/wishem/hub/src/link/serve-link.test.ts`, `nodejs/wishem/hub/src/link/open-link.test.ts`, `nodejs/wishem/hub/src/link/examples.ts`, `nodejs/wishem/hub/src/link/examples.test.ts`, `nodejs/wishem/hub/LINK.md`
 Interfaces: consumes `hub/rewind` of Task 2 and `Hub.seq` of Task 1; the messages of the link do not change
 
-- [ ] 4.1 Make `serveLink` handle `started`, `applied`, and `stopping` by name, with a `never` check of `HubEvent` in the last branch, so that only `stopping` closes the link (D7). Verify that the type check fails when a test adds a fourth type to a local copy of the union, then remove that copy, and verify the tests of `serve-link.test.ts`
-- [ ] 4.2 Verify with tests that a rewind on a link reaches a remote port of version 1 as one `applied` message with the next sequence number and the changed parts, that the link stays open, and that a read gives the state after the target (scenario "A rewind on a link"). Verify that a `hello` with the ID `hub` gets `refused` with `id-in-use`
-- [ ] 4.3 In `LINK.md`, add a section on the reserved ID `hub` and the input `hub/rewind` (payload, the rejection, the `applied` message that it causes), and an example of a rewind on a link from design.md. Add the example messages to `examples.ts` so that `examples.test.ts` checks them against the hub side
-- [ ] 4.4 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
+- [x] 4.1 Make `serveLink` handle `started`, `applied`, and `stopping` by name, with a `never` check of `HubEvent` in the last branch, so that only `stopping` closes the link (D7). Verify that the type check fails when a test adds a fourth type to a local copy of the union, then remove that copy, and verify the tests of `serve-link.test.ts`
+- [x] 4.2 Verify with tests that a rewind on a link reaches a remote port of version 1 as one `applied` message with the next sequence number and the changed parts, that the link stays open, and that a read gives the state after the target (scenario "A rewind on a link"). Verify that a `hello` with the ID `hub` gets `refused` with `id-in-use`
+- [x] 4.3 In `LINK.md`, add a section on the reserved ID `hub` and the input `hub/rewind` (payload, the rejection, the `applied` message that it causes), and an example of a rewind on a link from design.md. Add the example messages to `examples.ts` so that `examples.test.ts` checks them against the hub side
+- [x] 4.4 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
 
 ## Task 5: The clock after a rewind, and the proof of replay
 

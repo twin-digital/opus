@@ -108,7 +108,7 @@ The hub side sends `refused` when it cannot serve the `hello`. It then closes th
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `malformed`   | The first message is not `hello`. A message is not JSON. The list of subsystems is empty or not correct. A second `hello` arrives. |
 | `version`     | The version of the client is not supported. Use a version of the list `supported`.                                                 |
-| `id-in-use`   | A subsystem ID is in use by an other link or by the hub.                                                                           |
+| `id-in-use`   | A subsystem ID is in use by an other link or by the hub. The ID `hub` is always in use.                                            |
 | `unsupported` | A subsystem has the kind `"model"`. Version 1 does not support it.                                                                 |
 | `stopped`     | The hub is stopped.                                                                                                                |
 
@@ -216,6 +216,41 @@ Each item of `problems` is an object with a `message` (text) and an optional `pa
 { "t": "result", "request": 3, "error": "The model subsystem failed." }
 ```
 
+## The reserved ID and the input `hub/rewind`
+
+The ID `hub` belongs to the hub. A subsystem of a client cannot use it. A `hello` with the ID `hub` gets `refused` with the reason `id-in-use`.
+
+```json
+{ "t": "refused", "reason": "id-in-use", "message": "A subsystem ID is in use." }
+```
+
+The input types that start with `hub/` belong to the hub. The hub applies them itself. No model subsystem gets them. The hub rejects an unknown type of this form with the reason `unknown-type`.
+
+The input `hub/rewind` returns the joined state to the state after an earlier input. An input subsystem sends it with `submit`, as it sends each other input.
+
+| Key       | JSON type | Meaning                                                                                               |
+| --------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| `type`    | text      | `"hub/rewind"`                                                                                        |
+| `payload` | object    | `{ "seq": number }`. The target. The joined state becomes the state after the input with this number. |
+
+The target is an integer. It is not before the first number that the hub keeps, and not after the last accepted input. The target 0 is the first state, when the hub still keeps it. A rewind to the last accepted input changes no part.
+
+A rewind is an input. The hub records it with the next sequence number. The hub side sends it to each client as an `applied` message that holds the input `hub/rewind` and each part that the rewind changed. The sequence numbers go up by 1, as for each other input. The client uses the rules of `applied` and needs no other code. The link stays open.
+
+When the target is not correct, the hub rejects the input. The `result` has the reason `invalid`, and `problems` names the path `["payload", "seq"]`. The hub accepts no input, so the sequence numbers do not change.
+
+```json
+{
+  "t": "result",
+  "request": 6,
+  "result": {
+    "ok": false,
+    "reason": "invalid",
+    "problems": [{ "message": "The target must be an integer from 0 to 5.", "path": ["payload", "seq"] }]
+  }
+}
+```
+
 ## The rules of order
 
 1. The client sends `hello` first. The hub side answers with `welcome` or `refused`.
@@ -296,6 +331,37 @@ The hub has a model subsystem `counter` with one part: `{ "count": number }`. Th
 
 ```json
 { "t": "result", "request": 1, "result": { "ok": true, "seq": 4 } }
+```
+
+### A rewind
+
+The hub accepted four inputs of `counter/add`, and the count is 8. The sequence number of the last input is 4. The subsystem `page-controls` rewinds to the input 2. The count was 4 after that input.
+
+1. The subsystem `page-controls` sends the rewind.
+
+```json
+{
+  "t": "submit",
+  "request": 5,
+  "subsystem": "page-controls",
+  "input": { "type": "hub/rewind", "payload": { "seq": 2 } }
+}
+```
+
+2. The hub side sends `applied` with the sequence number 5 and the changed part.
+
+```json
+{
+  "t": "applied",
+  "input": { "seq": 5, "source": "page-controls", "type": "hub/rewind", "payload": { "seq": 2 } },
+  "parts": { "counter": { "count": 4 } }
+}
+```
+
+3. The hub side sends `result` for the request.
+
+```json
+{ "t": "result", "request": 5, "result": { "ok": true, "seq": 5 } }
 ```
 
 The sections above show the other messages: `event`, `refused`, a rejected `result`, and a failed `result`.

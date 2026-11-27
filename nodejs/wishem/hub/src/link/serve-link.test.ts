@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createHub } from '../hub.js'
+import { hubInputs } from '../names.js'
 import type { Hub, IoSubsystem, ModelSubsystem, Port } from '../types.js'
 import { createChannelPair } from './channel.js'
 import type { Channel } from './channel.js'
@@ -330,6 +331,14 @@ describe('a hello that the hub side refuses', () => {
     expect(link.messages).toEqual([expect.objectContaining({ reason: 'id-in-use' })])
   })
 
+  it('refuses the reserved ID of the hub with id-in-use', async () => {
+    const link = connect(makeHub())
+    link.send(hello({ id: 'hub', kind: 'input' }))
+    await settle()
+    expect(link.messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'id-in-use' })])
+    expect(link.isClosed()).toBe(true)
+  })
+
   it('refuses an ID that two subsystems of the hello share and attaches none', async () => {
     const hub = makeHub()
     const link = connect(hub)
@@ -507,6 +516,41 @@ describe('the events of the hub', () => {
     await settle()
     expect(link.messages[1]).toMatchObject({ parts: { store: { fields: { a: '1' } } } })
     expect(Object.keys(link.messages[2]?.parts as object)).toEqual(['time'])
+  })
+})
+
+describe('a rewind on a link', () => {
+  it('sends one applied message with the next number and the changed parts, and keeps the link open', async () => {
+    const hub = makeHub()
+    const input = hub.attach(keyboard)
+    for (const name of ['a', 'b', 'c', 'd']) {
+      await input.submit(setField(name))
+    }
+    const link = await joined(hub, page)
+    const before = link.messages.length
+    await input.submit(hubInputs.rewind(2))
+    await settle()
+    expect(link.messages.slice(before)).toEqual([
+      {
+        t: 'applied',
+        input: { seq: 5, source: 'keyboard', type: 'hub/rewind', payload: { seq: 2 } },
+        parts: { store: { fields: { a: '1', b: '1' } } },
+      },
+    ])
+    expect(link.isClosed()).toBe(false)
+  })
+
+  it('sends no event, closes nothing, and counts on after a rewind to the last number', async () => {
+    const hub = makeHub()
+    const input = hub.attach(keyboard)
+    await input.submit(setField('a'))
+    const link = await joined(hub, page)
+    await input.submit(hubInputs.rewind(1))
+    await input.submit({ type: 'time/tick' })
+    await settle()
+    expect(link.messages.slice(1).map((m) => (m.input as { seq: number }).seq)).toEqual([2, 3])
+    expect(link.messages[1]?.parts).toEqual({})
+    expect(link.isClosed()).toBe(false)
   })
 })
 

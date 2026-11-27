@@ -5,6 +5,10 @@ import type { Channel } from './channel.js'
 import { LINK_PROTOCOL_VERSION, parseClientMessage } from './messages.js'
 import type { ClientMessage, HubMessage, RefusalReason } from './messages.js'
 
+const assertNever = (event: never): never => {
+  throw new Error(`The hub event is not handled: ${JSON.stringify(event)}`)
+}
+
 const KINDS: readonly string[] = ['input', 'output']
 
 /** Serves one connection for a hub. Returns at once. The link ends when the channel closes. */
@@ -73,18 +77,25 @@ export const serveLink = (hub: Hub, channel: Channel): void => {
     if (closed) {
       return
     }
-    if (event.type === 'started') {
-      send({ t: 'event', event: 'started' })
-    } else if (event.type === 'applied') {
-      const state = hub.read()
-      send({ t: 'applied', input: event.input, parts: changedParts(state) })
-      lastSent = state
-    } else {
-      stopping = true
-      send({ t: 'event', event: 'stopping' })
-      if (welcomed) {
-        shutdown()
+    switch (event.type) {
+      case 'started':
+        send({ t: 'event', event: 'started' })
+        break
+      case 'applied': {
+        const state = hub.read()
+        send({ t: 'applied', input: event.input, parts: changedParts(state) })
+        lastSent = state
+        break
       }
+      case 'stopping':
+        stopping = true
+        send({ t: 'event', event: 'stopping' })
+        if (welcomed) {
+          shutdown()
+        }
+        break
+      default:
+        return assertNever(event)
     }
   }
 
