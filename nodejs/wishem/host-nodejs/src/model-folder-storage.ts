@@ -28,11 +28,16 @@ export interface ModelFolderStorageOptions {
 export interface ModelFolderStorage {
   /** Starts the watch and the quiet read. */
   watch(): void
-  /** Closes the watch, and waits for the running read and write. Gives the same promise on each call. */
+  /**
+   * Closes the watch, and waits for the running read and write. Gives the same promise on each call.
+   * Prints a line when the model folder does not hold the last changes of the store.
+   */
   close(): Promise<void>
 }
 
 const sameDefinitions = (a: Model, b: Model) => isEqual({ ...a, entities: [] }, { ...b, entities: [] })
+const sameDefinitionList = (a: Model['definitions'], b: Model['definitions']) =>
+  isEqual({ definitions: [...a], entities: [] }, { definitions: [...b], entities: [] })
 const sameEntities = (a: readonly Entity[], b: readonly Entity[]) =>
   isEqual({ definitions: [], entities: [...a] }, { definitions: [], entities: [...b] })
 
@@ -54,11 +59,14 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
   const current = () => hub.read()[STORE_ID] as Model
 
   let synced = options.first
+  // The definitions of the last correct read of the folder.
+  let disk = options.first.definitions
   let watcher: FSWatcher | undefined
   let timer: NodeJS.Timeout | undefined
   let queue: Promise<void> = Promise.resolve()
   let writeQueued = false
   let correct = true
+  let held = false
   let closed = false
   let closing: Promise<void> | undefined
 
@@ -85,6 +93,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       }
 
       const read = validation.model
+      disk = read.definitions
       const store = current()
       const next: Model = {
         definitions: sameDefinitions(read, synced) ? store.definitions : read.definitions,
@@ -116,6 +125,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
         log(`wishem: the model is correct: ${describeCounts(current())}`)
       }
       correct = true
+      requestWrite()
     } catch (error) {
       log(`wishem: cannot read the model: ${String(error)}`)
     }
@@ -123,7 +133,20 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
 
   const write = async () => {
     writeQueued = false
-    const { entities } = current()
+    const { definitions, entities } = current()
+    if (!sameDefinitionList(definitions, disk)) {
+      if (!held) {
+        log(
+          `wishem: the definitions of the store differ from the files in definitions, so ${STATE_FILE} is not written`,
+        )
+        held = true
+      }
+      return
+    }
+    if (held) {
+      log('wishem: the definitions of the store are equal to the files in definitions again')
+      held = false
+    }
     if (sameEntities(entities, synced.entities)) {
       return
     }
@@ -182,6 +205,9 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
           seen = queue
           await seen
         } while (seen !== queue)
+        if (!sameDefinitionList(current().definitions, disk)) {
+          log('wishem: the process stops, and the model folder does not hold the last changes of the store')
+        }
         files.close()
         writer.close()
       })()
