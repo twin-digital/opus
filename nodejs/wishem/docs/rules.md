@@ -104,6 +104,7 @@ Rejected: the wire protocol as the thing to build. It is for the games of other 
 ## Structure
 
 **R20. A subsystem communicates only with the hub.** (**Agreed**)
-A subsystem does not address a different subsystem. This applies when the subsystem and the hub are in one process, and when they are in different processes.
+A subsystem has three operations on the hub: send an input, read the joined state, and get the hub events. A subsystem does not address a different subsystem, and it has no way to ask a different subsystem to do something. Control is state: pause is an input that sets `running` in the `time` part, and the clock reads `running`. This applies when the subsystem and the hub are in one process, and when they are in different processes.
 Reason: the hub keeps the record of inputs. A replay gives the same result only if the hub sees each thing that changes state.
+Rejected: a direct request from one subsystem to a different subsystem, for control such as pause. Control that the record does not hold makes a replay give a different result.
 Rejected: a mesh, in which subsystems communicate with each other and the hub is one peer. A message between two subsystems is state that the hub did not see. The hub could not keep a record that gives the same result again.

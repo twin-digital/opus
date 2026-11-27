@@ -136,38 +136,49 @@ The hub code is the same TypeScript code for each construct. A workbench constru
 
 A subsystem has one kind. The hub knows the kind. (**Proposed**)
 
-| Kind                 | What it does                                                                    | Examples                                 |
-| -------------------- | ------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Model subsystem**  | Holds state or rules. It changes its state only when the hub gives it an input. | The store, the `time` subsystem, physics |
-| **Input subsystem**  | Sends inputs to the hub.                                                        | Gamepad, keyboard, touch, the clock      |
-| **Output subsystem** | Only reads. It shows or plays a construct.                                      | Renderer, sound                          |
+| Kind                 | What it does                                                                                                        | Examples                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Model subsystem**  | Gives the state and the rules of one part of the joined state. The part changes only when the hub applies an input. | The store, the `time` subsystem, physics |
+| **Input subsystem**  | Sends inputs to the hub.                                                                                            | Gamepad, keyboard, touch, the clock      |
+| **Output subsystem** | Only reads. It shows or plays a construct.                                                                          | Renderer, sound                          |
 
 Output subsystems and input subsystems together are the **I/O subsystems**.
 
-A part that reads and also sends, such as a renderer with controls, is two subsystems or one I/O subsystem that has the two permissions. Which form it has is **Open**. The change that builds the hub decides it.
+### The port
 
-### The port (**Proposed**)
+A subsystem has three operations on the hub: send an input, read the joined state, and get the hub events. A subsystem has no way to ask a different subsystem to do something. (**Agreed**)
 
-A subsystem communicates with the hub through a **port**. A port has three operations:
+Control is state. Example: pause is an input that sets `running` in the `time` part of the joined state, and the clock reads `running`. (**Agreed**)
 
-| Operation             | Meaning               |
-| --------------------- | --------------------- |
-| `submit(input)`       | Send an input.        |
-| `read()`              | Get the joined state. |
-| `subscribe(listener)` | Get the hub events.   |
+An I/O subsystem uses the three operations through a **port** (**Proposed**):
 
-No direct call from one subsystem to a different subsystem exists. A subsystem controls a different subsystem through state. Example: an input sets `running` in the state of the `time` subsystem, and the clock reads `running`.
+| Operation             | Meaning               | Which subsystem can use it |
+| --------------------- | --------------------- | -------------------------- |
+| `submit(input)`       | Send an input.        | An input subsystem only    |
+| `read()`              | Get the joined state. | Each I/O subsystem         |
+| `subscribe(listener)` | Get the hub events.   | Each I/O subsystem         |
+
+These items are **Proposed**:
+
+- A model subsystem gets no port. It cannot send an input.
+- A part that draws and also sends, such as a page with a form, attaches two subsystems: one output subsystem and one input subsystem.
+- A request with a reply through the hub is a possible later addition. It is for a query of an output subsystem, such as a screenshot. It is not for control. See "The renderer contract".
 
 ### Model subsystems
 
-A model subsystem holds state or rules. A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
+A model subsystem gives state or rules. It has one of two forms. (**Proposed**)
+
+- **A pure function.** The model subsystem gets its part of the state and an input, and it returns the new part. The hub holds the parts. A part that did not change is the same object.
+- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. This form is designed with checkpoints in [#533](https://github.com/twin-digital/opus/issues/533).
+
+A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
+
+A library that provides a model subsystem is a **model library**. It must pass the **model contract**:
 
 1. Its whole state can be read and written as data.
 2. Its state can be saved and restored exactly.
 3. The same input always gives the same result.
 4. It runs with no window, faster than real time.
-
-A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
 
 Candidates discussed (**Unverified**):
 
@@ -195,7 +206,7 @@ These rules apply (**Proposed**):
 - **Output rule.** The agent can learn what an output subsystem showed or played. For a renderer this is a screenshot. For sound this is a record of the sounds that played.
 - **Input rule.** Each input that an input subsystem sends is in the record. A record or the agent can take the place of an input subsystem.
 
-The control of an I/O subsystem is also state. That state is in a model subsystem. An input changes it, and the I/O subsystem reads it. (**Proposed**)
+The control of an I/O subsystem is also state. That state is in a part of the joined state. An input changes it, and the I/O subsystem reads it. (**Agreed**)
 
 What an output subsystem holds is derived from the live state and can be built again from it at any time.
 
@@ -218,7 +229,7 @@ A write from the workbench or from the agent is an input. Thus the record is als
 
 The **joined state** is the state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. (**Proposed**)
 
-- Each part is immutable. A part that did not change is the same object. (**Proposed**)
+- The hub holds the parts. Each part is immutable. A part that did not change is the same object. (**Proposed**)
 - A reader in the process of the hub gets the parts with no copy. Thus a renderer can read the joined state on each frame. (**Proposed**)
 - Events do not carry the state. A subsystem that needs the state reads it. (**Proposed**)
 
@@ -235,7 +246,7 @@ The hub has no event for each change of a value.
 
 The live state of a construct is its joined state. Each model subsystem contributes its part. A built-in model subsystem contributes its part in the same way as one that a library provides.
 
-- A checkpoint is the snapshot of each model subsystem, under the same keys.
+- A checkpoint is the joined state at one sequence number of the record. The hub keeps it. For a model subsystem that is a pure function, the checkpoint refers to the part and makes no copy.
 - The registry reports each definition together with the model subsystem that owns it.
 - A construct passes the model contract when each model subsystem passes it.
 - The entity is what joins the parts. The physics part and the store part refer to the same goat by one entity ID.
@@ -247,6 +258,8 @@ The live state of a construct is its joined state. Each model subsystem contribu
 Each input is in the record. The same starting state and the same inputs always give the same result. Random values come from a seed. (rule R3)
 
 The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**)
+
+A tick is the input `time/advance`. A listener sees a tick as the hub event for an applied input. (**Agreed**)
 
 A construct that has no clock has the record, rewind, and replay. (**Proposed**)
 
@@ -261,9 +274,9 @@ These operations follow from the record and the two subsystems (**Proposed**):
 | ----------------- | -------------------------------------------------------------------------------------------------------- |
 | **Pause**, resume | Send `time/set-running`.                                                                                 |
 | **Step**          | Send one `time/advance` while the clock is paused.                                                       |
-| **Snapshot**      | A model subsystem saves its part as data.                                                                |
-| **Checkpoint**    | The hub keeps the snapshots of all the model subsystems at one point in the record.                      |
-| **Restore**       | Load a checkpoint. Each model subsystem loads its snapshot.                                              |
+| **Snapshot**      | A model library that holds its own state saves that state as data.                                       |
+| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                     |
+| **Restore**       | Load a checkpoint into a construct.                                                                      |
 | **Rewind**        | Restore the last checkpoint before the target, then apply the record from that checkpoint to the target. |
 | **Replay**        | Apply a record to a new construct, with or without a changed value.                                      |
 | **Bookmark**      | Give a name to a point in a record.                                                                      |
@@ -325,6 +338,7 @@ These items are **Proposed**:
 
 - In the process of the hub, a port is direct calls.
 - Between processes, a **link** carries a port. A link is a versioned protocol of JSON messages on a WebSocket.
+- One link carries the subsystems of one process.
 - The side of the hub sends the joined state at the start. With each hub event, it sends the parts that changed. The other side sends inputs.
 - A process that has no hub holds a **remote port**. The remote port keeps the link, and it gives the subsystems of that process the three operations of a port.
 - A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot.
@@ -360,6 +374,8 @@ A renderer is an output subsystem with more requirements. It follows the **rende
 4. It draws tool overlays, such as a ring that shows a distance.
 
 Item 3 is what resolves "the platform to my right" and a click to inspect.
+
+Items 2 and 3 are requests that need a reply. They have no path through the hub. A request with a reply through the hub is a possible later addition for these two items. (**Proposed**)
 
 The renderer keeps its own objects, such as sprites, layers, and draw order. Wishem does not define them. Example: in a 3/4 perspective the renderer sorts by y position, and the live state has no such order.
 

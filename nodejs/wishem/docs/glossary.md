@@ -72,7 +72,7 @@ Terms in each group are in alphabetical order.
 
 **Bookmark**: A named point in a record. Rewind and replay use it as their target.
 
-**Checkpoint** (**Proposed**): The snapshots of all the model subsystems of a construct at one point in the record. The hub keeps checkpoints.
+**Checkpoint** (**Proposed**): The joined state of a construct at one sequence number of the record. The hub keeps checkpoints. For a model subsystem that is a pure function, a checkpoint refers to the part and makes no copy.
 
 **Clock**: An input subsystem that sends ticks at an interval. While `running` is true in the state of the `time` subsystem, the clock sends `time/advance` inputs (**Proposed**). A product that is not a game has no clock.
 
@@ -80,15 +80,15 @@ Terms in each group are in alphabetical order.
 
 **Replay**: To apply a record to a new construct, with or without a changed value.
 
-**Restore**: To load a checkpoint into a construct. Each model subsystem loads its snapshot.
+**Restore**: To load a checkpoint into a construct.
 
 **Rewind**: To return a construct to an earlier point in its record. The hub restores the last checkpoint before the target and applies the record from there (**Proposed**).
 
-**Snapshot**: The part of one model subsystem in the joined state, saved as data. A model subsystem makes a snapshot of its part and restores it.
+**Snapshot**: The state of one model subsystem, saved as data. A model library that holds its own state makes a snapshot and restores it.
 
 **Step** (**Proposed**): One `time/advance` input that is sent while the clock is paused.
 
-**Tick**: One advance of the time of a construct. One `time/advance` input is one tick (**Proposed**).
+**Tick** (**Agreed**): The input `time/advance`. A listener sees a tick as the hub event for an applied input.
 
 **Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, and `running`. It declares the input types `time/advance` and `time/set-running`.
 
@@ -140,25 +140,25 @@ Terms in each group are in alphabetical order.
 
 **Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, the construct was restored to an earlier point, and the construct stops. No hub event exists for each change of a value.
 
-**I/O subsystem**: An output subsystem, an input subsystem, or a subsystem that does the two jobs. An I/O subsystem holds no state.
+**I/O subsystem**: An output subsystem or an input subsystem. An I/O subsystem holds no state. Each I/O subsystem can read the joined state and get the hub events (**Proposed**).
 
 **Input** (**Proposed**): Data that a subsystem sends to the hub to change state: a type and a payload. The type has the form `<subsystem>/<name>`, such as `store/set-field` or `time/advance`. The hub gives each input a sequence number and records its source.
 
-**Input subsystem**: A subsystem that sends inputs to the hub. Examples: gamepad, keyboard, the clock.
+**Input subsystem**: A subsystem that sends inputs to the hub. Only an input subsystem can send an input (**Proposed**). Examples: gamepad, keyboard, the clock.
 
 **Joined state** (**Proposed**): The state of a construct that the hub gives to a reader. It has one part for each model subsystem, under the key of that model subsystem. Each part is immutable.
 
-**Link** (**Proposed**): The connection that carries a port between two processes. A link is a versioned protocol of JSON messages on a WebSocket.
+**Link** (**Proposed**): The connection between the process of a hub and a process that has no hub. One link carries the subsystems of one process. A link is a versioned protocol of JSON messages on a WebSocket.
 
 **Model contract**: The four conditions a library must pass to provide a model subsystem.
 
 **Model library**: A library that provides a model subsystem.
 
-**Model subsystem**: A subsystem that holds state or rules. It changes its state only when the hub gives it an input, and the same inputs give the same state. Examples: the store, the `time` subsystem, physics.
+**Model subsystem**: A subsystem that gives the state and the rules of one part of the joined state. The part changes only when the hub applies an input, and the same inputs give the same state. A model subsystem is a pure function: it gets its part and an input, and it returns the new part. A model library that holds its own state is a second form (**Proposed**). Examples: the store, the `time` subsystem, physics.
 
 **Output subsystem**: A subsystem that only reads. It shows or plays a construct. Examples: renderer, sound.
 
-**Port** (**Proposed**): The interface that a subsystem uses to communicate with the hub. A port has three operations: `submit(input)` sends an input, `read()` gets the joined state, and `subscribe(listener)` gets the hub events. In the process of the hub, a port is direct calls.
+**Port** (**Proposed**): The interface that an I/O subsystem uses to communicate with the hub. A port has three operations: `submit(input)` sends an input, `read()` gets the joined state, and `subscribe(listener)` gets the hub events. Only an input subsystem can use `submit`. A model subsystem gets no port. In the process of the hub, a port is direct calls.
 
 **Process**: A running thing that holds subsystems. Inside one process, a subsystem and a hub use direct calls. Between two processes, they use a link. A process has one language. A process holds zero or more hubs (**Proposed**).
 
