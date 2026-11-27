@@ -18,6 +18,7 @@ The GitHub project [Wishem Architecture](https://github.com/orgs/twin-digital/pr
 
 - Each implementation task has one GitHub issue. Create the issue when you identify the task, and add it to the project immediately.
 - Each issue has the type, the label `app:wishem`, and one milestone. See "Work tracking" in the `CLAUDE.md` of the repository.
+- An issue that is for the owner has its own type. A discovery issue has the type `Question`. A review issue has the type `Review`. Each other issue has the type `Feature`, `Bug`, or `Task`.
 - Set the status of an issue to `In Progress` when work on it starts. Set it to `Done` when its pull request is merged.
 - Set the status to `Blocked` when the task cannot continue. Add a comment that links to the discovery issue or to the cause.
 
@@ -106,7 +107,7 @@ For each question, give:
 
 Then:
 
-- Put the issue in the milestone `[WSH] Discovery`, add it to the project, and assign it to the owner.
+- Give the issue the type `Question`. Put it in the milestone `[WSH] Discovery`, add it to the project, and assign it to the owner.
 - Set the status of each task that waits to `Blocked`.
 - Continue with a task that is not blocked. Keep one subagent at work when such a task exists.
 - The owner answers on the issue and tells the lead agent. Record the answer in the OpenSpec change that uses it, set the tasks that waited to `Todo`, and close the discovery issue.
@@ -125,7 +126,7 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 ## When a milestone is complete
 
 1. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
-2. Create one issue in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
+2. Create one issue with the type `Review` in the milestone `[WSH] Review`, add it to the project, and assign it to the owner. The issue has these parts:
    - A link to each specification of the milestone.
    - What was built, how it was built, and the reason.
    - Each important decision that the lead agent made alone.
