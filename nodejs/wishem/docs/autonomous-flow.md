@@ -58,7 +58,7 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
-- At most four subagents run at one time.
+- At most five subagents run at one time. The owner set this limit on 2026-11-27, after the second retrospective.
 - At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
 
   ```bash
@@ -190,7 +190,7 @@ The lead agent is the one agent that can do the steps that are bound to a worktr
 - When a change is complete and reviewed, do its finish steps before you start a subagent for a different change.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
-- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than four subagents run, look at the tasks of each open milestone and start one that is not blocked.
+- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than five subagents run, look at the tasks of each open milestone and start one that is not blocked.
 
 ## The scope of a task
 
