@@ -55,6 +55,20 @@ describe('viewWarnings', () => {
     ])
   })
 
+  it('gives one warning with the field ID and the name for a label that gives a reserved name', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    expect(viewWarnings(views, [definition(APP_BAR, 'title', 'Wishem')])).toEqual([
+      {
+        kind: 'reserved-name',
+        sidecar: 'AppBar.view.json',
+        componentType: APP_BAR,
+        name: 'wishem',
+        fields: [FIELD_B],
+      },
+    ])
+  })
+
   it('gives no warning for an empty name or a name that starts with a digit', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
@@ -74,6 +88,20 @@ describe('viewWarnings', () => {
 })
 
 describe('describeWarning', () => {
+  it('names the sidecar file, the field, the component type, and the name for a reserved name', () => {
+    expect(
+      describeWarning({
+        kind: 'reserved-name',
+        sidecar: 'AppBar.view.json',
+        componentType: APP_BAR,
+        name: 'wishem',
+        fields: [FIELD_B],
+      }),
+    ).toBe(
+      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives the reserved name "wishem". The view does not get the field.`,
+    )
+  })
+
   it('names the sidecar file and the ID for a component type that is not defined', () => {
     expect(
       describeWarning({ kind: 'component-type-not-defined', sidecar: 'Header.view.json', componentType: HEADER }),

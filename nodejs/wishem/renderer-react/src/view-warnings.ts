@@ -3,12 +3,12 @@ import type { ViewTable } from './collect-views.js'
 import { propNames } from './field-names.js'
 
 export interface ViewWarning {
-  kind: 'component-type-not-defined' | 'same-name'
+  kind: 'component-type-not-defined' | 'same-name' | 'reserved-name'
   sidecar: string
   componentType: Id
-  /** Set for `same-name`. */
-  fields?: [Id, Id]
-  /** Set for `same-name`. */
+  /** Set for `same-name`. One field for `reserved-name`. */
+  fields?: [Id, Id] | [Id]
+  /** Set for `same-name` and `reserved-name`. */
   name?: string
 }
 
@@ -37,6 +37,8 @@ export const viewWarnings = (views: ViewTable, definitions: readonly ComponentTy
     for (const problem of propNames(definition).problems) {
       if (problem.kind === 'same-name') {
         warnings.push({ kind: 'same-name', sidecar, componentType, name: problem.name, fields: problem.fields })
+      } else if (problem.kind === 'reserved-name') {
+        warnings.push({ kind: 'reserved-name', sidecar, componentType, name: problem.name, fields: [problem.field] })
       }
     }
   }
@@ -52,5 +54,7 @@ export const describeWarning = (warning: ViewWarning): string => {
       return `wishem: the sidecar ${sidecar} names the component type ${componentType}, which no definition has. No view is drawn for it.`
     case 'same-name':
       return `wishem: the sidecar ${sidecar}: the fields ${fields?.[0] ?? ''} and ${fields?.[1] ?? ''} of the component type ${componentType} give the same name "${name ?? ''}". The prop has the value of the first field.`
+    case 'reserved-name':
+      return `wishem: the sidecar ${sidecar}: the label of the field ${fields?.[0] ?? ''} of the component type ${componentType} gives the reserved name "${name ?? ''}". The view does not get the field.`
   }
 }

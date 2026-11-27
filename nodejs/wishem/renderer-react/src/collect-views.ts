@@ -1,8 +1,10 @@
 import type { FieldValue, Id } from '@thrashplay/wishem-core'
 import type { ComponentType } from 'react'
 import { parseSidecar, REACT_KIND } from './sidecar.js'
+import type { ViewTools } from './view-tools.js'
 
-export type ViewProps = Readonly<Record<string, FieldValue | undefined>>
+/** The fields by prop name, and the tools in `wishem`. */
+export type ViewProps = Readonly<Record<string, FieldValue | undefined>> & { readonly wishem: ViewTools }
 
 export interface CollectedView {
   /** The file name of the sidecar, for example `AppBar.view.json`. */

@@ -16,21 +16,44 @@ const model = {
   entities: [{ id: 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2', components: { [CT_APP_BAR]: { [FLD_TITLE]: 'Wishem' } } }],
 }
 
-it('runs the example of the README', () => {
+it('runs the example of the README', async () => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   document.body.innerHTML = '<div id="root"></div>'
 
   const hub = createHub({ subsystems: [createStore({ model })] })
   hub.start()
   const port = hub.attach({ id: 'screen', kind: 'output' })
+  const input = hub.attach({ id: 'screen-input', kind: 'input' })
   const views = collectViews(
     { './views/AppBar.view.json': { default: { kind: 'react', componentType: CT_APP_BAR } } },
-    { './views/AppBar.tsx': { default: ({ title }: ViewProps) => <h1>{title}</h1> } },
+    {
+      './views/AppBar.tsx': {
+        default: ({ title, wishem }: ViewProps) => (
+          <button
+            type='button'
+            onClick={() => {
+              void wishem.setField('title', 'Wishem studio')
+            }}
+          >
+            {title}
+          </button>
+        ),
+      },
+    },
   )
 
   act(() => {
-    createRoot(document.getElementById('root') as HTMLElement).render(<Renderer port={port} views={views} />)
+    createRoot(document.getElementById('root') as HTMLElement).render(
+      <Renderer port={port} input={input} views={views} />,
+    )
   })
 
-  expect(document.querySelector('h1')?.textContent).toBe('Wishem')
+  expect(document.querySelector('button')?.textContent).toBe('Wishem')
+
+  await act(async () => {
+    document.querySelector('button')?.click()
+    await Promise.resolve()
+  })
+
+  expect(document.querySelector('button')?.textContent).toBe('Wishem studio')
 })

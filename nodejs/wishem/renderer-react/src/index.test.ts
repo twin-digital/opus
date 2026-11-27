@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import * as root from './index.js'
 
 describe('the root entry', () => {
-  it('exports the renderer, the table of views, the warnings, the sidecar, and the names of props', () => {
+  it('exports the renderer, the table of views, the warnings, the sidecar, the names of props, and the stub of the tools', () => {
     expect(Object.keys(root).sort()).toEqual([
       'REACT_KIND',
+      'RESERVED_PROP_NAMES',
       'Renderer',
       'ViewCollectionError',
       'collectViews',
@@ -12,6 +13,7 @@ describe('the root entry', () => {
       'fieldName',
       'parseSidecar',
       'propNames',
+      'stubViewTools',
       'viewWarnings',
     ])
   })

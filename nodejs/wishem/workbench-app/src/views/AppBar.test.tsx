@@ -4,9 +4,10 @@ import type { ComponentTypeDefinition } from '@thrashplay/wishem-core'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { parseSidecar, REACT_KIND } from '@thrashplay/wishem-renderer-react'
+import { parseSidecar, REACT_KIND, stubViewTools } from '@thrashplay/wishem-renderer-react'
 import { collectAppViews } from '../views.js'
 import view from './AppBar.js'
+import type { Values } from './AppBar.view.gen.js'
 
 const modelFolder = resolve(import.meta.dirname, '../../../workbench/model')
 const definition = JSON.parse(
@@ -16,7 +17,7 @@ const sidecar = parseSidecar(JSON.parse(readFileSync(resolve(import.meta.dirname
 
 const markup = (title: string | undefined) => {
   const container = document.createElement('div')
-  container.innerHTML = renderToStaticMarkup(createElement(view, { title }))
+  container.innerHTML = renderToStaticMarkup(createElement(view, { title, wishem: stubViewTools<Values>().tools }))
   return container
 }
 

@@ -8,9 +8,15 @@ export const fieldName = (label: string): string =>
     .map((word, index) => (index === 0 ? word[0].toLowerCase() : word[0].toUpperCase()) + word.slice(1))
     .join('')
 
+/** The names that no field can use as a prop. */
+export const RESERVED_PROP_NAMES = ['wishem', 'key'] as const
+
+const isReserved = (name: string): boolean => (RESERVED_PROP_NAMES as readonly string[]).includes(name)
+
 export type NameProblem =
   | { kind: 'empty-name'; field: Id }
   | { kind: 'name-starts-with-digit'; field: Id; name: string }
+  | { kind: 'reserved-name'; field: Id; name: string }
   | { kind: 'same-name'; name: string; fields: [Id, Id] }
 
 export interface PropNames {
@@ -30,6 +36,10 @@ export const propNames = (definition: ComponentTypeDefinition): PropNames => {
       problems.push({ kind: 'empty-name', field: field.id })
     } else if (/^[0-9]/.test(name)) {
       problems.push({ kind: 'name-starts-with-digit', field: field.id, name })
+    }
+    if (isReserved(name)) {
+      problems.push({ kind: 'reserved-name', field: field.id, name })
+      continue
     }
     const earlier = first.get(name)
     if (earlier) {
