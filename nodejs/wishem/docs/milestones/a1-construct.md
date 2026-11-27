@@ -274,8 +274,6 @@ To put it back, run the same command with the two labels swapped. Terminal 2 the
 
 Stop terminal 2 with Ctrl+C. Stop terminal 1 with Ctrl+C. Terminal 2 prints `link closed` when terminal 1 stops, or when you stop it.
 
-Do not do a hand edit of `state.json` after section 6 wrote the file in the same run. See "Known faults".
-
 ## 3. The link
 
 The link is a protocol of JSON messages on a WebSocket at `ws://127.0.0.1:4747/link`. The file `nodejs/wishem/hub/LINK.md` defines it. `raw-link.mjs` is a client with no library. It shows each message.
@@ -583,6 +581,27 @@ Result of the `cat` command:
 
 The write replaces the whole file, and the layout of the file changes to this one.
 
+A hand edit of `state.json` after this write is followed. Start `link-client.mjs` with no option in a third terminal, and in terminal 2 run:
+
+```sh
+sed -i 's/"Hello"/"By hand"/' /tmp/a1-model/state.json
+```
+
+The third terminal first prints the state that it gets when it opens, with the title `Hello`. Result in the third terminal after the `sed` command, in less than 1 second:
+
+```text
+applied #2 store/replace-model from files
+state: types: AppBar | entities: e_c0d5e6f1 AppBar{title="By hand"}
+```
+
+Terminal 1 prints no line. Put the title back, so that step 6.2 starts with `Hello` in the file. In terminal 2:
+
+```sh
+sed -i 's/"By hand"/"Hello"/' /tmp/a1-model/state.json
+```
+
+The third terminal prints one more `applied` line, with the title `Hello`. Stop the third terminal with Ctrl+C.
+
 ### 6.2 A definition change through the link holds the write
 
 Do the three commands, one after the other:
@@ -840,28 +859,7 @@ The number of ticks before the pause can be 2 or 3 on a slow computer. The value
 
 ## Known faults
 
-### A change of `state.json` by hand is not followed after the construct wrote the file
-
-Issue: [#579](https://github.com/twin-digital/opus/issues/579).
-
-After the construct writes `state.json` (section 6), the construct no longer follows changes of `state.json`. The construct follows changes of the definition files.
-
-Steps:
-
-1. Put the copy back. Start the construct (step 1.1) in terminal 1.
-2. In terminal 2, run `node nodejs/wishem/docs/milestones/a1-construct/link-client.mjs` and leave it open.
-3. In terminal 3, run `node nodejs/wishem/docs/milestones/a1-construct/link-client.mjs --once --title Hello`.
-4. Terminal 2 prints the `applied #1 store/set-field` lines. The construct wrote `state.json`.
-5. In terminal 3, run `sed -i 's/"Hello"/"By hand"/' /tmp/a1-model/state.json`.
-6. Wait 2 seconds.
-
-Expected result (from the specification): terminal 2 prints `applied #2 store/replace-model from files` and the title `By hand`.
-
-Real result: terminal 2 prints no line. Terminal 1 prints no line. The construct keeps the title `Hello`. The writer repeated the edit three times with a write in place, with a wait of 2 seconds each, and one time with `sed -i`. No edit was followed. A new start of the construct reads the file again.
-
-The same step with no earlier write through the link works (step 2.1). An edit of a definition file after the write also works. The writer did not find the cause. The specification of the model folder says that a person can change the files while the construct runs. The workbench uses the same construct, so it has the same fault. The writer did not check it in the workbench. The page sends no input, so a person meets the fault only with a program such as `link-client.mjs --title`.
-
-The writer did not create an issue of the type `Bug`. The lead agent does that.
+The milestone has no known fault.
 
 ## Not in this milestone
 
