@@ -62,10 +62,14 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
 
   ```bash
-  flock /tmp/wishem-heavy.lock <command>
+  flock -w 1200 /tmp/wishem-heavy.lock timeout 900 <command>
   ```
 
   The command waits while a different agent holds the lock. The lock is the same file for each worktree. The system releases the lock when the command ends or its agent stops.
+
+- A command that does not end holds the lock. Two limits prevent this. `timeout 900` stops a command after 15 minutes, with exit code 124. `-w 1200` stops the wait for the lock after 20 minutes, with exit code 1 and no run of the command.
+- A subagent that gets one of these two results does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
+- When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
 
 - An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test.
 - More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
@@ -230,6 +234,7 @@ GitHub tells the owner about each discovery issue and each review issue, because
 
 - **The work is about to stop.** No task with the status `Todo` can start, and at least one task is `Blocked` by a discovery issue. Send the notice when this condition becomes true, also when an agent still works on a task. Reason: the owner can answer before that agent completes its task, and then the work does not stop.
 - **The work stopped.** Each case of "When to stop": a milestone fails its final review two times, the checks on `main` stay red, or the credentials do not work.
+- **A usage limit stopped a subagent.** A subagent reports that it stopped because of a usage limit of its model. The owner can reset the limit. Send one notice for each such event. The lead agent cannot read the usage, so it cannot send a notice before the limit. When the limit stops the lead agent, no notice is possible.
 
 Send one notice for each set of open discovery issues. Send a new notice only when the set changes. Do not send a notice for a question that blocks only a part of the work, or for a review issue.
 
