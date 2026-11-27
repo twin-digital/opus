@@ -28,9 +28,22 @@ Follow-up issues of design.md (created 2026-11-27, before apply): #606 list of r
 
 Ruling: if the type check of `renderer-react` fails at the end of Task 1 only because `FieldValue` is wider, Task 1 is complete with that failure recorded, and the Task 2 dispatch carries it — the plan gives `renderer-react` to Task 2 and 1.6 says to report it; the branch is not pushed for merge between tasks — cost if wrong: one red check of the draft pull request until Task 2.
 
+## Tasks
+
+Task 1: dispatched (implementer: sonnet), base 7e8615fd
+
+Task 1: implementer DONE_WITH_CONCERNS, commit 7c38349e (core 183 tests; lint, typecheck, test, build pass; renderer-react typecheck and test pass, 109; host-nodejs typecheck passes, 2 of 187 tests fail). Concerns: two tests of host-nodejs/src/read-model-folder.test.ts (lines 97 and 147) use `definition('number')` as a field type that is not known, and `number` is now valid; the new store tests passed on their first run (the validation was done before the store); the legend says "One" in place of "Exactly one" so that "Zero or one" fits.
+Ruling: correct the two fixtures of host-nodejs in Task 1, with a type that stays unknown (for example `date`) — 1.6 requires the tests of host-nodejs to pass, the tests check a problem of an unknown type and not `number`, and the plan did not see that the fixture used `number` — cost if wrong: one test file outside the file list of the task. Fixed before the review (a correctness concern). Fix dispatched (new implementer, sonnet), base 7c38349e.
+
+Task 1: correction of the fixtures, commit 93962ba8 (`number` to `date` in two fixtures; the two tests failed before and pass after; host-nodejs lint, typecheck, test pass, 187). Review dispatched (sonnet), range 7e8615fd..93962ba8.
+
+Task 1: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: Decision 8 of design.md agrees with the code that the review read (finite number, true or false, the form e_<uuid> and a second pass, `===` kept); the implementer viewed the PNG of each SVG; the report shows the runs of 1.6. No gap. The ruling of the pre-flight on renderer-react is not needed: its type check passed.
+Task 1: minor (deferred): the legend says "One" in place of "Exactly one" (a widening of the legend keeps the exact term); one dense `if` block in validate-model.ts (type check, form check, assignment, push); `F` in store.hub.test.ts is typed as a plain string; no RED run of the store tests (store.ts needed no change).
+Task 1: complete (commits 7e8615f..93962ba, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 1 (the field types in core). The pre-flight scan is done, and the follow-up issues exist.
+- NEXT STEP: Task 2 (inputs from a view, and the new types in the generator).
 
 ## For the review issue of the milestone A3
 
