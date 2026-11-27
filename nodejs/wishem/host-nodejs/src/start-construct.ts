@@ -1,13 +1,13 @@
-import { createServer } from 'node:http'
-import type { AddressInfo } from 'node:net'
 import { createStore, ModelError, validateModel } from '@thrashplay/wishem-core'
 import type { Problem } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
 import type { Hub } from '@thrashplay/wishem-hub'
 import { formatProblem } from './format.js'
-import { attachLinkServer, LINK_PATH, respondNotFound } from './link-server.js'
+import { LINK_PATH } from './link-server.js'
 import { attachModelFolderStorage } from './model-folder-storage.js'
 import { readModelFolder, withSource } from './read-model-folder.js'
+import { serveHub } from './serve-hub.js'
+import type { HubServer } from './serve-hub.js'
 
 export { LINK_PATH }
 
@@ -33,7 +33,6 @@ export interface Construct {
 }
 
 export const DEFAULT_PORT = 4747
-const HOST_ADDRESS = '127.0.0.1'
 
 /** Rejects with a `ModelError` when the model is not correct at the start. */
 export const startConstruct = async (options: ConstructOptions): Promise<Construct> => {
@@ -63,27 +62,11 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
   })
   const storage = attachModelFolderStorage({ folder, hub, first, log, onWatchError: options.onWatchError })
 
-  const server = createServer(respondNotFound)
-  const linkServer = attachLinkServer(server, hub)
-  const closeServer = () =>
-    new Promise<void>((resolve) => {
-      server.close(() => {
-        resolve()
-      })
-      server.closeAllConnections()
-    })
-
+  let server: HubServer
   try {
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject)
-      server.listen(port, HOST_ADDRESS, () => {
-        server.off('error', reject)
-        resolve()
-      })
-    })
+    server = await serveHub(hub, { port })
   } catch (error) {
     await storage.close()
-    await linkServer.close()
     throw error
   }
 
@@ -93,17 +76,15 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
   } catch (error) {
     hub.stop()
     await storage.close()
-    await linkServer.close()
-    await closeServer()
+    await server.close()
     throw error
   }
 
-  const address = `${HOST_ADDRESS}:${(server.address() as AddressInfo).port}`
   let closing: Promise<void> | undefined
 
   return {
-    url: `http://${address}`,
-    linkUrl: `ws://${address}${LINK_PATH}`,
+    url: server.url,
+    linkUrl: server.linkUrl,
     hub,
     close: () => {
       closing ??= (async () => {
@@ -112,8 +93,7 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
           hub.stop()
         }
         await storageClosed
-        await linkServer.close()
-        await closeServer()
+        await server.close()
       })()
       return closing
     },

@@ -33,7 +33,7 @@ Interfaces: consumes `attachLinkServer`, `respondNotFound`, and `LINK_PATH` of `
 
 Do not change `link-server.ts`, a test file that exists, `cli.ts`, or a file outside `nodejs/wishem/host-nodejs/`.
 
-- [ ] 2.1 Write `src/serve-hub.ts` as Decision 10 of `design.md` says. Write each test in `src/serve-hub.test.ts` before its code, and see it fail first. The tests use a real hub with `createTime` of `@thrashplay/wishem-clock` (a development dependency, `workspace:*`) and `createStore`, a real WebSocket (the global `WebSocket` of Node.js 24) with `webSocketChannel` and `openLink`, and port 0. Verify one test for each scenario of `specs/wishem/host-nodejs/server/spec.md`, and these tests of state:
+- [x] 2.1 Write `src/serve-hub.ts` as Decision 10 of `design.md` says. Write each test in `src/serve-hub.test.ts` before its code, and see it fail first. The tests use a real hub with `createTime` of `@thrashplay/wishem-clock` (a development dependency, `workspace:*`) and `createStore`, a real WebSocket (the global `WebSocket` of Node.js 24) with `webSocketChannel` and `openLink`, and port 0. Verify one test for each scenario of `specs/wishem/host-nodejs/server/spec.md`, and these tests of state:
   - `url` and `linkUrl` name `127.0.0.1` and the port that the system selected; a client gets `welcome` with the parts `time` and `store`;
   - `serveHub` does not start the hub: the `welcome` has the status `created`, and the client gets `started` after the caller starts the hub;
   - a request with `Origin: https://example.com` gets 403 and attaches nothing; a plain `GET /x` gets 404 with a JSON `error`;
@@ -41,9 +41,9 @@ Do not change `link-server.ts`, a test file that exists, `cli.ts`, or a file out
   - `close()` with an open link and a running hub: the client gets `stopping`, the link ends, the hub status is `stopped`, and a new server can listen on the same port;
   - `close()` two times: the same promise, and no error; `close()` when the hub was never started: no error, and the port is released; `close()` after the caller stopped the hub: no error;
   - `close()` from inside a listener of a port of the hub during an `applied` event: no error, and the promise resolves
-- [ ] 2.2 Make `startConstruct` use `serveHub`. Keep its order: the storage closes, the hub stops, the process waits for the storage, and then the server closes. Verify that `src/start-construct.test.ts`, `src/link-server.test.ts`, `src/cli.test.ts`, and `src/cli.signal.test.ts` pass with no change (`git diff --stat` shows no test file other than `src/serve-hub.test.ts`)
-- [ ] 2.3 Export `serveHub`, `ServeHubOptions`, and `HubServer` from `src/index.ts`. Add a section "Serve the link of a hub" to `README.md` in Simplified Technical English, with the example of the section "Examples" of `design.md`. Verify that a test in `src/serve-hub.test.ts` runs the code of the example
-- [ ] 2.4 Verify: `pnpm exec turbo run lint typecheck test build --filter @thrashplay/wishem-host-nodejs` passes, one task name for each command if the time limit needs it
+- [x] 2.2 Make `startConstruct` use `serveHub`. Keep its order: the storage closes, the hub stops, the process waits for the storage, and then the server closes. Verify that `src/start-construct.test.ts`, `src/link-server.test.ts`, `src/cli.test.ts`, and `src/cli.signal.test.ts` pass with no change (`git diff --stat` shows no test file other than `src/serve-hub.test.ts`)
+- [x] 2.3 Export `serveHub`, `ServeHubOptions`, and `HubServer` from `src/index.ts`. Add a section "Serve the link of a hub" to `README.md` in Simplified Technical English, with the example of the section "Examples" of `design.md`. Verify that a test in `src/serve-hub.test.ts` runs the code of the example
+- [x] 2.4 Verify: `pnpm exec turbo run lint typecheck test build --filter @thrashplay/wishem-host-nodejs` passes, one task name for each command if the time limit needs it
 
 ## Task 3: The construct of the PixiJS page in a Node.js process
 
