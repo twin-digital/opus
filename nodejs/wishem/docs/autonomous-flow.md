@@ -150,9 +150,25 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
 
+### Reviews
+
+- A change with two or more tasks has a review of each task and one final review of the full branch.
+- A change with one task has one review: the final review of the full branch. The diff of the task is the diff of the branch, so a review of the task reads the same code.
+
+### Break-tests
+
+The owner decided on 2026-11-27 that a break-test is not a step of a change. A change is merged after its final review. These rules replace the break-test step of the apply workflow:
+
+- After a change is merged, create one issue for each library package that the change changed. A library package is a package that a different package depends on: `core`, `hub`, `clock`, and `host-nodejs` at this time.
+- The issue has the type `Review`, the title "Break-test: `<package>` after #`<issue of the change>`", the label `app:wishem`, and the milestone of the change. Add it to the project. Do not assign it to the owner.
+- The scope of the break-test is the source files of the package that the change added or changed, and the tests that the change added or changed. The issue lists these files and gives the range of commits.
+- When one or more of these issues are open, one break-test is always in work. Do them in the order in which they were created, the oldest one first. Do not run two at the same time.
+- A break-test runs in a worktree of its own, from `main`. Its result is a pull request that changes tests only, and that closes the issue. The description of the pull request gives the totals of the two passes.
+- When a break-test finds a fault of the source, create an issue of the type `Bug` for the fault. Do not correct the source in the pull request of the break-test.
+
 ### Skills and briefs
 
-- Use each skill that the workflow names, as the skill is written: `openspec-propose` for a new change, `openspec-update-change` for a revision, `superpowers:subagent-driven-development` for the apply step with a review of each task, `break-test` with its two passes, `openspec-archive-change`, and `superpowers:finishing-a-development-branch`. At the menu of the last one, select the pull request.
+- Use each skill that the workflow names, as the skill is written: `openspec-propose` for a new change, `openspec-update-change` for a revision, `superpowers:subagent-driven-development` for the apply step, `break-test` with its two passes, `openspec-archive-change`, and `superpowers:finishing-a-development-branch`. At the menu of the last one, select the pull request.
 - One step differs from `superpowers:subagent-driven-development`: its fix loop sends a message to the implementer that stopped. Start a new implementer with the report file and the findings. See "Limits on agents".
 - A brief does not replace a skill. A brief for work that a skill covers names the skill and tells the subagent to invoke it. The brief does not give the steps of the skill again, does not limit them, and does not remove one.
 - When the lead agent does a step in a lighter form than the workflow gives, it tells the owner in the same message, with the reason.
