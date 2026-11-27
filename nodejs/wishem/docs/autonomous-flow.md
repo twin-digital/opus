@@ -186,7 +186,9 @@ Stop and tell the owner in each of these cases:
 
 ## A notice to the phone of the owner
 
-Do the steps of this section only if the owner gave Pushover credentials to this session. If the owner gave none, ignore this section. The owner tells the session how to get the credentials. Do not write the credentials in a file of the repository, in an issue, or in a brief.
+The Pushover credentials are in the file `~/.pushover.env`. The file has two lines of the form `NAME=value`, with the names `PUSHOVER_API_TOKEN` and `PUSHOVER_USER_KEY`. Do the steps of this section only if that file exists. If it does not exist, ignore this section.
+
+Do not print the credentials. Do not write them in a file of the repository, in an issue, or in a brief.
 
 GitHub tells the owner about each discovery issue and each review issue, because the issue is assigned to the owner. A notice to the phone is for the cases in which the work stops or is about to stop.
 
@@ -205,14 +207,15 @@ Send one notice for each set of open discovery issues. Send a new notice only wh
 
 ### How to send a notice
 
-Pushover needs two values: the token of the application and the key of the user.
-
 ```bash
-curl --silent --fail https://api.pushover.net/1/messages.json \
-  --form-string "token=<application token>" --form-string "user=<user key>" \
+set -a; . ~/.pushover.env; set +a
+curl --silent --fail --output /dev/null https://api.pushover.net/1/messages.json \
+  --form-string "token=$PUSHOVER_API_TOKEN" --form-string "user=$PUSHOVER_USER_KEY" \
   --form-string "title=<title>" --form-string "message=<message>" \
   --form-string "url=<link to the first issue>"
 ```
+
+A notice that Pushover accepts gives exit code 0.
 
 If the request fails, add a note to **Process notes** and continue. A notice that fails does not stop the work.
 
