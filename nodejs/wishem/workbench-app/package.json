@@ -24,6 +24,7 @@
     "@thrashplay/wishem-core": "workspace:*",
     "@thrashplay/wishem-host-nodejs": "workspace:*",
     "@thrashplay/wishem-hub": "workspace:*",
+    "@thrashplay/wishem-renderer-react": "workspace:*",
     "@thrashplay/wishem-workbench": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

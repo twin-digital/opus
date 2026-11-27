@@ -62,7 +62,10 @@ const deferred = () => {
 class FakeWatcher extends EventEmitter {
   readonly close = vi.fn()
 
-  constructor(readonly change: () => void) {
+  constructor(
+    readonly target: string,
+    readonly change: (event?: string, name?: string | null) => void,
+  ) {
     super()
   }
 }
@@ -77,6 +80,7 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
   let storage: ModelFolderStorage
   let client: Port
   let watcher: FakeWatcher
+  let watchers: FakeWatcher[]
   let first: Model
   const inputs = storeInputs()
 
@@ -139,8 +143,10 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     vi.mocked(fsp.rm).mockReset()
     vi.mocked(fsp.rm).mockImplementation(actualFs.rm)
     vi.mocked(watch).mockReset()
-    vi.mocked(watch).mockImplementation(((_folder: string, _options: unknown, listener: () => void) => {
-      watcher = new FakeWatcher(listener)
+    watchers = []
+    vi.mocked(watch).mockImplementation(((target: string, _options: unknown, listener: () => void) => {
+      watcher = new FakeWatcher(target, listener)
+      watchers.push(watcher)
       return watcher
     }) as unknown as typeof watchType)
   })
@@ -302,17 +308,116 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     expect(reads()).toBe(count)
   })
 
-  it('logs a watch error and calls onWatchError', () => {
+  const startWithErrorHandler = () => {
     const onWatchError = vi.fn()
     hub = createHub({ subsystems: [createStore({ model: first })] })
     storage = attachModelFolderStorage({ folder, hub, first, log: (line) => lines.push(line), onWatchError })
     hub.start()
     storage.watch()
     client = hub.attach({ id: 'client', kind: 'input' })
-    const error = new Error('boom')
-    watcher.emit('error', error)
+    return onWatchError
+  }
+
+  it('logs a watch error of each watcher and calls onWatchError', () => {
+    const onWatchError = startWithErrorHandler()
+    expect(watchers.map(({ target }) => target)).toEqual([folder, path.join(folder, 'definitions')])
+    const first = new Error('boom')
+    const second = new Error('bang')
+    watchers[0]?.emit('error', first)
+    watchers[1]?.emit('error', second)
     expect(lines).toContain('wishem: the watch failed: boom')
-    expect(onWatchError).toHaveBeenCalledExactlyOnceWith(error)
+    expect(lines).toContain('wishem: the watch failed: bang')
+    expect(onWatchError).toHaveBeenCalledTimes(2)
+    expect(onWatchError).toHaveBeenNthCalledWith(1, first)
+    expect(onWatchError).toHaveBeenNthCalledWith(2, second)
+  })
+
+  it('closes each watcher at close', async () => {
+    start()
+    await pause(150)
+    await storage.close()
+    expect(watchers).toHaveLength(2)
+    watchers.forEach((made) => {
+      expect(made.close).toHaveBeenCalledOnce()
+    })
+  })
+
+  it.each([
+    ['the name definitions', 'definitions'],
+    ['no name', null],
+    ['an undefined name', undefined],
+  ])('attaches the watcher of definitions again for an event of the folder with %s', async (_label, name) => {
+    start()
+    await pause(150)
+    const old = watchers[1]
+    watchers[0]?.change('rename', name)
+    expect(old.close).toHaveBeenCalledOnce()
+    expect(watchers).toHaveLength(3)
+    expect(watchers[2]?.target).toBe(path.join(folder, 'definitions'))
+    await storage.close()
+    expect(old.close).toHaveBeenCalledOnce()
+    watchers.forEach((made) => {
+      expect(made.close).toHaveBeenCalled()
+    })
+    expect(watchers[0]?.close).toHaveBeenCalledOnce()
+    expect(watchers[2]?.close).toHaveBeenCalledOnce()
+  })
+
+  it('does not attach the watcher of definitions again for an event of the folder with another name', async () => {
+    start()
+    await pause(150)
+    watchers[0]?.change('change', 'state.json')
+    expect(watchers).toHaveLength(2)
+    expect(watchers[1]?.close).not.toHaveBeenCalled()
+  })
+
+  it('reports a watch that throws when it is attached again, and throws nothing out of the listener', async () => {
+    const onWatchError = startWithErrorHandler()
+    await pause(150)
+    const failure = new Error('ENOSPC: no space')
+    vi.mocked(watch).mockImplementationOnce(() => {
+      throw failure
+    })
+    expect(() => {
+      watchers[0]?.change('rename', 'definitions')
+    }).not.toThrow()
+    expect(watchers[1]?.close).toHaveBeenCalledOnce()
+    expect(lines).toContain('wishem: the watch failed: ENOSPC: no space')
+    expect(onWatchError).toHaveBeenCalledExactlyOnceWith(failure)
+  })
+
+  it('reports a value that is not an Error when the watch throws it again', async () => {
+    const onWatchError = startWithErrorHandler()
+    await pause(150)
+    vi.mocked(watch).mockImplementationOnce(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw 'no space'
+    })
+    watchers[0]?.change('rename', 'definitions')
+    expect(lines).toContain('wishem: the watch failed: no space')
+    expect(onWatchError).toHaveBeenCalledOnce()
+    expect(onWatchError.mock.calls[0]?.[0]).toBeInstanceOf(Error)
+  })
+
+  it('does not attach the watcher of definitions again when the folder is removed', async () => {
+    start()
+    await pause(150)
+    const old = watchers[1]
+    await rm(path.join(folder, 'definitions'), { recursive: true })
+    watchers[0]?.change('rename', 'definitions')
+    expect(old.close).toHaveBeenCalledOnce()
+    expect(watchers).toHaveLength(2)
+    await storage.close()
+    expect(old.close).toHaveBeenCalledOnce()
+  })
+
+  it('does not attach the watcher of definitions again for an event after close', async () => {
+    start()
+    await pause(150)
+    await storage.close()
+    watchers[0]?.change('rename', 'definitions')
+    expect(watchers).toHaveLength(2)
+    expect(watchers[1]?.close).toHaveBeenCalledOnce()
   })
 
   it('joins the changes of one wait into one read', async () => {

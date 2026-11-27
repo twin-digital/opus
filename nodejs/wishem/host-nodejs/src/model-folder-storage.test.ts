@@ -2,10 +2,10 @@ import { writeFileSync } from 'node:fs'
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { createStore, storeInputs, validateModel } from '@thrashplay/wishem-core'
+import { createStore, isEqual, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { createHub } from '@thrashplay/wishem-hub'
-import type { Hub, Port } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs } from '@thrashplay/wishem-hub'
+import type { Hub, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachModelFolderStorage, FILES_ID, FILES_WRITER_ID } from './model-folder-storage.js'
 import type { ModelFolderStorage } from './model-folder-storage.js'
@@ -14,6 +14,11 @@ import { readModelFolder } from './read-model-folder.js'
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
   return { ...actual, rename: vi.fn(actual.rename), writeFile: vi.fn(actual.writeFile) }
+})
+
+vi.mock('@thrashplay/wishem-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thrashplay/wishem-core')>()
+  return { ...actual, isEqual: vi.fn(actual.isEqual) }
 })
 
 vi.mock('./read-model-folder.js', async (importOriginal) => {
@@ -48,6 +53,13 @@ const E2 = 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6'
 const isHeld = (line: string) => line.includes('state.json is not written')
 const isEqualAgain = (line: string) => line.includes('are equal to the files in definitions again')
 
+const counter: ModelSubsystem<number> = {
+  id: 'counter',
+  inputs: ['counter/bump'],
+  initial: 0,
+  apply: (part) => part + 1,
+}
+
 const state = (title: string) => ({ entities: [{ id: E, components: { [CT]: { [FLD]: title } } }] })
 
 describe('the storage subsystem for files', () => {
@@ -71,6 +83,7 @@ describe('the storage subsystem for files', () => {
   beforeEach(async () => {
     lines = []
     vi.mocked(rename).mockClear()
+    vi.mocked(isEqual).mockClear()
     vi.mocked(readModelFolder).mockReset()
     vi.mocked(readModelFolder).mockImplementation(actualRead)
     folder = await mkdtemp(path.join(tmpdir(), 'wishem-storage-'))
@@ -82,7 +95,7 @@ describe('the storage subsystem for files', () => {
     if (!result.ok) {
       throw new Error('the fixture is not correct')
     }
-    hub = createHub({ subsystems: [createStore({ model: result.model })] })
+    hub = createHub({ subsystems: [createStore({ model: result.model }), counter] })
     storage = attachModelFolderStorage({ folder, hub, first: result.model, log: (line) => lines.push(line) })
     hub.start()
     storage.watch()
@@ -132,6 +145,81 @@ describe('the storage subsystem for files', () => {
       expect(storeInputsRecorded().map(({ type }) => type)).toEqual(['store/replace-model'])
       expect(hub.record().map(({ source }) => source)).toEqual(['files'])
       expect(writes()).toBe(0)
+    })
+  })
+
+  describe('The store follows state.json after the process wrote it', () => {
+    const statePath = () => path.join(folder, 'state.json')
+    const processWrites = async (value: string) => {
+      const before = writes()
+      expect((await setTitle(value)).ok).toBe(true)
+      await eventually(() => writes() > before)
+      await eventually(async () => (await fileTitle()) === value)
+      await pause(200)
+    }
+    const editInPlace = (value: string) => writeFile(statePath(), JSON.stringify(state(value)))
+    const editByReplace = async (value: string) => {
+      await writeFile(`${statePath()}.edit`, JSON.stringify(state(value)))
+      await rename(`${statePath()}.edit`, statePath())
+    }
+
+    it('follows a write in place after one write of the process', async () => {
+      await processWrites('Hello')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a write in place after two writes of the process', async () => {
+      await processWrites('One')
+      await processWrites('Two')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a replace of the file after a write of the process', async () => {
+      await processWrites('Hello')
+      await editByReplace('Replaced')
+      await eventually(() => title() === 'Replaced')
+    })
+
+    it('follows a replace of the file, and then a write in place', async () => {
+      await editByReplace('Replaced')
+      await eventually(() => title() === 'Replaced')
+      await editInPlace('In place')
+      await eventually(() => title() === 'In place')
+    })
+
+    it('does not read again for the write of the process', async () => {
+      await processWrites('Hello')
+      expect(writes()).toBe(1)
+      expect(storeInputsRecorded()).toHaveLength(0)
+    })
+
+    it('follows a state.json that is removed and made again', async () => {
+      await rm(statePath())
+      await pause(200)
+      expect(title()).toBe('Wishem')
+      await editInPlace('Back')
+      await eventually(() => title() === 'Back')
+      await processWrites('After')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a definitions folder that is removed and made again', async () => {
+      const file = path.join(folder, 'definitions', `${CT}.json`)
+      await rm(path.join(folder, 'definitions'), { recursive: true })
+      await mkdir(path.join(folder, 'definitions'))
+      await writeFile(file, JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
+      await writeFile(file, JSON.stringify(definition('Baz')))
+      await eventually(() => store().definitions[0]?.label === 'Baz')
+    })
+
+    it('follows a definition file after a write of the process', async () => {
+      await processWrites('Hello')
+      await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
     })
   })
 
@@ -234,6 +322,29 @@ describe('the storage subsystem for files', () => {
       expect(lines.filter(isHeld)).toHaveLength(1)
     })
 
+    it('writes the title before Hello after a rewind to the point before Hello', async () => {
+      const before = hub.record().at(-1)?.seq ?? 0
+      expect((await setTitle('Hello')).ok).toBe(true)
+      await eventually(async () => (await fileTitle()) === 'Hello')
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(async () => (await fileTitle()) === 'Wishem')
+      expect(title()).toBe('Wishem')
+    })
+
+    it('compares no entities for an input that does not change the store', async () => {
+      const store = hub.read().store
+      vi.mocked(isEqual).mockClear()
+
+      expect((await client.submit({ type: 'counter/bump', payload: {} })).ok).toBe(true)
+      await pause(150)
+
+      expect(hub.read().store).toBe(store)
+      expect(isEqual).not.toHaveBeenCalled()
+      expect(writes()).toBe(0)
+    })
+
     it('writes an input that arrives directly before the stop', async () => {
       await setTitle('Last words')
       hub.stop()
@@ -317,6 +428,37 @@ describe('the storage subsystem for files', () => {
       await eventually(() => lines.filter(isHeld).length === 2)
       await pause(200)
       expect(lines.filter(isEqualAgain)).toHaveLength(1)
+    })
+  })
+
+  describe('A rewind past a change of the definitions', () => {
+    it('writes state.json when the rewind makes the definitions equal to the files', async () => {
+      const before = hub.seq
+      const model = { definitions: [definition('Renamed')], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+      expect(writes()).toBe(0)
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(() => lines.filter(isEqualAgain).length === 1)
+      expect((await stateFile()).entities).toEqual(store().entities)
+      expect(store().definitions[0]?.label).toBe('AppBar')
+    })
+
+    it('holds the write when the rewind makes the definitions differ from the files', async () => {
+      const before = hub.seq
+      await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
+      expect(lines.filter(isHeld)).toHaveLength(0)
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(() => lines.filter(isHeld).length === 1)
+      await pause(200)
+      expect(store().definitions[0]?.label).toBe('AppBar')
+      expect(writes()).toBe(0)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
     })
   })
 

@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
+    "@thrashplay/wishem-core": "workspace:*",
     "@twin-digital/eslint-config": "workspace:*",
     "@twin-digital/opus-scripts": "workspace:*",
     "@twin-digital/tsconfig": "workspace:*",

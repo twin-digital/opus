@@ -61,7 +61,8 @@ const keepViewTypesCurrent = ({ hub, server, views, log }: KeeperOptions) => {
   const state: { running?: Promise<void>; again: boolean } = { again: false }
   const port = hub.attach({ id: 'view-types', kind: 'output' })
   const definitionsOf = () => (port.read().store as Model).definitions
-  let lastDefinitions = JSON.stringify(definitionsOf())
+  let lastArray = definitionsOf()
+  let lastDefinitions = JSON.stringify(lastArray)
 
   const hasRequest = () => state.again
 
@@ -93,7 +94,12 @@ const keepViewTypesCurrent = ({ hub, server, views, log }: KeeperOptions) => {
     if (event.type !== 'applied') {
       return
     }
-    const definitions = JSON.stringify(definitionsOf())
+    const array = definitionsOf()
+    if (array === lastArray) {
+      return
+    }
+    lastArray = array
+    const definitions = JSON.stringify(array)
     if (definitions !== lastDefinitions) {
       lastDefinitions = definitions
       request()

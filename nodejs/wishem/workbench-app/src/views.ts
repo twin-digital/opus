@@ -1,4 +1,4 @@
-import { collectViews } from './renderer/index.js'
+import { collectViews } from '@thrashplay/wishem-renderer-react'
 
 /** Collects the sidecars and the view files of the `views` folder. Throws a `ViewCollectionError` when a sidecar is not correct. */
 export const collectAppViews = () =>

@@ -1,4 +1,4 @@
-import { createHub, type HubEvent, type Port } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs, type HubEvent, type Port } from '@thrashplay/wishem-hub'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { startClock, type ClockOptions } from './clock.js'
 import { TIME_ID, createTime, timeInputs, type TimePart } from './time.js'
@@ -101,6 +101,31 @@ describe('startClock', () => {
     const { fire, wait, controls, part } = setup()
     await controls.submit(timeInputs.setRunning(false))
     wait(10_000)
+    await controls.submit(timeInputs.setRunning(true))
+    fire(50)
+    expect(part().ticks).toBe(1)
+  })
+
+  it('sends no late ticks after a rewind while the construct runs', async () => {
+    const { fire, wait, controls, part } = setup()
+    fire(50)
+    wait(120)
+    await controls.submit(hubInputs.rewind(0))
+    fire(20)
+    expect(part().ticks).toBe(0)
+    fire(30)
+    expect(part().ticks).toBe(1)
+  })
+
+  it('sends no tick after a rewind to a pause until running is true', async () => {
+    const { fire, controls, part } = setup()
+    await controls.submit(timeInputs.setRunning(false))
+    await controls.submit(timeInputs.setRunning(true))
+    fire(50)
+    await controls.submit(hubInputs.rewind(1))
+    expect(part().running).toBe(false)
+    fire(10_000)
+    expect(part().ticks).toBe(0)
     await controls.submit(timeInputs.setRunning(true))
     fire(50)
     expect(part().ticks).toBe(1)

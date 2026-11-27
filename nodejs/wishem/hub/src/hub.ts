@@ -1,9 +1,11 @@
-import { HubConfigurationError, InputRefusedError } from './errors.js'
-import { isId, isInputType } from './names.js'
+import { HubConfigurationError, InputRefusedError, ReplayError } from './errors.js'
+import { HUB_ID, isHubInputType, isId, isInputType, REWIND_INPUT_TYPE } from './names.js'
 import type {
+  Checkpoint,
   Hub,
   HubEvent,
   HubOptions,
+  HubRecord,
   HubStatus,
   Input,
   InputProblem,
@@ -12,6 +14,7 @@ import type {
   ModelSubsystem,
   Port,
   RecordedInput,
+  RewindPayload,
   SubmitResult,
 } from './types.js'
 
@@ -54,6 +57,9 @@ const validateSubsystems = (subsystems: readonly ModelSubsystem[]) => {
     if (!isId(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is not correct.`)
     }
+    if (subsystem.id === HUB_ID) {
+      throw new HubConfigurationError(`The subsystem ID "${HUB_ID}" is reserved for the hub.`)
+    }
     if (ids.has(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is in use.`)
     }
@@ -62,8 +68,52 @@ const validateSubsystems = (subsystems: readonly ModelSubsystem[]) => {
       if (!isInputType(type)) {
         throw new HubConfigurationError(`The input type "${type}" of "${subsystem.id}" is not correct.`)
       }
+      if (isHubInputType(type)) {
+        throw new HubConfigurationError(`The input type "${type}" of "${subsystem.id}" is reserved for the hub.`)
+      }
     }
   }
+}
+
+const DEFAULT_CHECKPOINT_INTERVAL = 100
+const DEFAULT_RECORD_LIMIT = 100_000
+
+const validateLimits = (checkpointInterval: number, recordLimit: number) => {
+  if (!Number.isInteger(checkpointInterval) || checkpointInterval < 1) {
+    throw new HubConfigurationError('The option checkpointInterval must be a positive integer.')
+  }
+  if (!Number.isInteger(recordLimit) || recordLimit < 1) {
+    throw new HubConfigurationError('The option recordLimit must be a positive integer.')
+  }
+  if (recordLimit < checkpointInterval) {
+    throw new HubConfigurationError(
+      `The option recordLimit (${recordLimit}) is smaller than the option checkpointInterval (${checkpointInterval}).`,
+    )
+  }
+}
+
+const validateRecord = (record: HubRecord, subsystems: readonly ModelSubsystem[]) => {
+  const keys = Object.keys(record.start.state)
+  for (const key of keys) {
+    if (!subsystems.some((subsystem) => subsystem.id === key)) {
+      throw new HubConfigurationError(`The start of the record has the key "${key}", which is not a model subsystem.`)
+    }
+  }
+  for (const subsystem of subsystems) {
+    if (!keys.includes(subsystem.id)) {
+      throw new HubConfigurationError(`The start of the record has no key for the model subsystem "${subsystem.id}".`)
+    }
+  }
+  if (!Number.isInteger(record.start.seq) || record.start.seq < 0) {
+    throw new HubConfigurationError('The sequence number of the start of the record must be a non-negative integer.')
+  }
+  record.inputs.forEach((input, index) => {
+    if (input.seq !== record.start.seq + index + 1) {
+      throw new HubConfigurationError(
+        `The input number ${input.seq} of the record does not follow the number ${record.start.seq + index}.`,
+      )
+    }
+  })
 }
 
 /** Copies the payload as JSON data and freezes the copy. Throws when JSON cannot hold the payload. */
@@ -78,14 +128,24 @@ const copyPayload = (payload: unknown): unknown => {
   return deepFreeze(JSON.parse(json) as unknown)
 }
 
-/** Makes a hub. Throws a `HubConfigurationError` when the list of model subsystems is not correct. */
+/**
+ * Makes a hub. Throws a `HubConfigurationError` when the list of subsystems, an option, or the record is not correct.
+ * Throws a `ReplayError` when an input of the record does not apply.
+ */
 export const createHub = (options: HubOptions): Hub => {
   const subsystems = options.subsystems.map(copySubsystem)
   validateSubsystems(subsystems)
+  const checkpointInterval = options.checkpointInterval ?? DEFAULT_CHECKPOINT_INTERVAL
+  const recordLimit = options.recordLimit ?? DEFAULT_RECORD_LIMIT
+  validateLimits(checkpointInterval, recordLimit)
+  if (options.record) {
+    validateRecord(options.record, subsystems)
+  }
 
   let status: HubStatus = 'created'
   let joined: JoinedState = Object.freeze(Object.fromEntries(subsystems.map((s) => [s.id, s.initial])))
   const record: RecordedInput[] = []
+  const checkpoints: Checkpoint[] = [Object.freeze({ seq: 0, state: joined })]
   const reportError = (error: unknown) => {
     try {
       options.onError?.(error)
@@ -98,6 +158,7 @@ export const createHub = (options: HubOptions): Hub => {
   let busy = false
   let stopRequested = false
   let lastSeq = 0
+  let replaying = false
 
   const emit = (event: HubEvent) => {
     for (const entry of [...attached.values()]) {
@@ -153,9 +214,72 @@ export const createHub = (options: HubOptions): Hub => {
     }
   }
 
+  /** A checkpoint is a valid start when each rewind in the record after it has a target at or after it. */
+  const isValidStart = (checkpoint: Checkpoint) =>
+    record.every(
+      (input) =>
+        input.seq <= checkpoint.seq ||
+        input.type !== REWIND_INPUT_TYPE ||
+        (input.payload as RewindPayload).seq >= checkpoint.seq,
+    )
+
+  const limitRecord = () => {
+    if (replaying || lastSeq - checkpoints[0].seq <= recordLimit) {
+      return
+    }
+    // The last checkpoint is always valid and in range, so the index is at least 1.
+    const index = checkpoints.findIndex((c) => lastSeq - c.seq <= recordLimit && isValidStart(c))
+    if (index < 1) {
+      return
+    }
+    record.splice(0, checkpoints[index].seq - checkpoints[0].seq)
+    checkpoints.splice(0, index)
+  }
+
+  /** Gives one input to the subsystems that declare its type. Returns the new joined state. */
+  const applyTo = (state: JoinedState, recorded: RecordedInput): JoinedState => {
+    const next: Record<string, unknown> = { ...state }
+    for (const subsystem of subsystems) {
+      if (subsystem.inputs.includes(recorded.type)) {
+        next[subsystem.id] = subsystem.apply(next[subsystem.id], recorded, { read: () => Object.freeze({ ...next }) })
+      }
+    }
+    return Object.freeze(next)
+  }
+
+  /** Records an accepted input, makes `state` the joined state, and keeps the checkpoints and the limit. */
+  const commit = (recorded: RecordedInput, state: JoinedState, forceCheckpoint: boolean) => {
+    joined = state
+    record.push(recorded)
+    lastSeq = recorded.seq
+    if (forceCheckpoint || lastSeq % checkpointInterval === 0) {
+      checkpoints.push(Object.freeze({ seq: lastSeq, state: joined }))
+    }
+    limitRecord()
+  }
+
+  const rewind = (recorded: RecordedInput): Applied => {
+    const target = (recorded.payload as Partial<RewindPayload> | null)?.seq
+    if (!Number.isInteger(target) || (target as number) < checkpoints[0].seq || (target as number) > lastSeq) {
+      const message = `The target must be an integer from ${checkpoints[0].seq} to ${lastSeq}.`
+      return { ok: false, reason: 'invalid', problems: [{ message, path: ['payload', 'seq'] }] }
+    }
+    const checkpoint = checkpoints.findLast((c) => c.seq <= (target as number)) as Checkpoint
+    const start = checkpoints[0].seq
+    let state = joined
+    if (target !== lastSeq) {
+      state = checkpoint.state
+      for (const input of record.slice(checkpoint.seq - start, (target as number) - start)) {
+        state = applyTo(state, input)
+      }
+    }
+    commit(recorded, state, true)
+    return { ok: true, recorded }
+  }
+
   const apply = (source: string, input: Input): Applied => {
-    const targets = subsystems.filter((subsystem) => subsystem.inputs.includes(input.type))
-    if (targets.length === 0) {
+    const isRewind = input.type === REWIND_INPUT_TYPE
+    if (!isRewind && !subsystems.some((subsystem) => subsystem.inputs.includes(input.type))) {
       return reject('unknown-type')
     }
 
@@ -168,21 +292,19 @@ export const createHub = (options: HubOptions): Hub => {
     }
 
     const recorded: RecordedInput = Object.freeze({ seq: lastSeq + 1, source, type: input.type, payload })
-    const next: Record<string, unknown> = { ...joined }
+    if (isRewind) {
+      return rewind(recorded)
+    }
+    let state: JoinedState
     try {
-      for (const subsystem of targets) {
-        next[subsystem.id] = subsystem.apply(next[subsystem.id], recorded, { read: () => Object.freeze({ ...next }) })
-      }
+      state = applyTo(joined, recorded)
     } catch (error) {
       if (error instanceof InputRefusedError) {
         return { ok: false, reason: 'invalid', problems: error.problems }
       }
       throw error
     }
-
-    joined = Object.freeze(next)
-    record.push(recorded)
-    lastSeq = recorded.seq
+    commit(recorded, state, false)
     return { ok: true, recorded }
   }
 
@@ -192,6 +314,9 @@ export const createHub = (options: HubOptions): Hub => {
     }
     if (!isId(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is not correct.`)
+    }
+    if (subsystem.id === HUB_ID) {
+      throw new HubConfigurationError(`The subsystem ID "${HUB_ID}" is reserved for the hub.`)
     }
     if (attached.has(subsystem.id) || subsystems.some((model) => model.id === subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is in use.`)
@@ -234,9 +359,35 @@ export const createHub = (options: HubOptions): Hub => {
     }
   }
 
+  if (options.record) {
+    const { start, inputs } = options.record
+    joined = Object.freeze({ ...start.state })
+    checkpoints[0] = Object.freeze({ seq: start.seq, state: joined })
+    lastSeq = start.seq
+    replaying = true
+    for (const input of inputs) {
+      let result: Applied
+      try {
+        result = apply(input.source, { type: input.type, payload: input.payload })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new ReplayError(input.seq, [{ message }])
+      }
+      if (!result.ok) {
+        const problems = result.problems.length > 0 ? result.problems : [{ message: `Rejected: ${result.reason}.` }]
+        throw new ReplayError(input.seq, problems)
+      }
+    }
+    replaying = false
+    limitRecord()
+  }
+
   return {
     get status() {
       return status
+    },
+    get seq() {
+      return lastSeq
     },
     start: () => {
       if (status !== 'created') {
@@ -261,5 +412,6 @@ export const createHub = (options: HubOptions): Hub => {
     attach,
     read: () => joined,
     record: () => record.slice(),
+    recordStart: () => checkpoints[0],
   }
 }
