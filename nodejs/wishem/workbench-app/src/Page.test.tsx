@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { createCore } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -46,8 +46,8 @@ describe('Page', () => {
   })
 
   it('shows the app bar before the zero state, outside the main element', () => {
-    const core = createCore({ definitions: [definition], entities: state.entities })
-    draw({ reader: core, views })
+    const model = { definitions: [definition], entities: state.entities } as Model
+    draw({ reader: { getSnapshot: () => model, subscribe: () => () => undefined }, views })
     const header = container.querySelector('header')
     const main = container.querySelector('main')
     expect(header?.textContent).toBe('Wishem.')

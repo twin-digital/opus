@@ -1,7 +1,7 @@
 import { InputRefusedError } from '@thrashplay/wishem-hub'
 import type { ModelSubsystem, RecordedInput } from '@thrashplay/wishem-hub'
 import { describe, expect, it } from 'vitest'
-import { ModelError } from './core.js'
+import { ModelError } from './errors.js'
 import type { Entity, Model } from './model.js'
 import { createStore, storeInputs } from './store.js'
 

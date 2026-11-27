@@ -301,4 +301,64 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     await pause(150)
     expect(reads()).toBe(count)
   })
+
+  it('logs a watch error and calls onWatchError', () => {
+    const onWatchError = vi.fn()
+    hub = createHub({ subsystems: [createStore({ model: first })] })
+    storage = attachModelFolderStorage({ folder, hub, first, log: (line) => lines.push(line), onWatchError })
+    hub.start()
+    storage.watch()
+    client = hub.attach({ id: 'client', kind: 'input' })
+    const error = new Error('boom')
+    watcher.emit('error', error)
+    expect(lines).toContain('wishem: the watch failed: boom')
+    expect(onWatchError).toHaveBeenCalledExactlyOnceWith(error)
+  })
+
+  it('joins the changes of one wait into one read', async () => {
+    start()
+    await pause(150)
+    const count = reads()
+    watcher.change()
+    watcher.change()
+    watcher.change()
+    await pause(150)
+    expect(reads()).toBe(count + 1)
+  })
+
+  it('waits 50 ms after a change before it reads the folder', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      start()
+      await vi.advanceTimersByTimeAsync(50)
+      await vi.mocked(readModelFolder).mock.results.at(-1)?.value
+      await vi.advanceTimersByTimeAsync(0)
+      const count = reads()
+      watcher.change()
+      await vi.advanceTimersByTimeAsync(49)
+      expect(reads()).toBe(count)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(reads()).toBe(count + 1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('logs a read that fails, and keeps running', async () => {
+    start()
+    await pause(150)
+    vi.mocked(readModelFolder).mockRejectedValueOnce(new Error('disk broke'))
+    watcher.change()
+    await eventually(() => lines.some((line) => line.includes('cannot read the model: Error: disk broke')))
+    await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('After failure')))
+    watcher.change()
+    await eventually(() => title() === 'After failure')
+    expect(lines.filter((line) => line.includes('cannot read the model'))).toHaveLength(1)
+  })
+
+  it('follows a change that is made between the first read and the start of the watch', async () => {
+    await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Raced')))
+    start()
+    await eventually(() => title() === 'Raced')
+  })
 })

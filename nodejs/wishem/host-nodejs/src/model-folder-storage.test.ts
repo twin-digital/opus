@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -124,6 +125,49 @@ describe('the storage subsystem for files', () => {
       await pause(200)
       expect(storeInputsRecorded().map(({ type }) => type)).toEqual(['store/replace-model'])
       expect(writes()).toBe(0)
+    })
+  })
+
+  describe('The process prints the warnings of the model', () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    const warnings = () => lines.filter((line) => line.includes('warning')).length
+
+    it('prints a warning for two component types with the same label', async () => {
+      await writeFile(
+        path.join(folder, 'definitions', 'other.json'),
+        JSON.stringify({ ...definition('AppBar'), id: other }),
+      )
+      await eventually(() => warnings() === 1)
+    })
+
+    it('prints one warning for a burst of writes', async () => {
+      await writeFile(
+        path.join(folder, 'definitions', 'other.json'),
+        JSON.stringify({ ...definition('AppBar'), id: other }),
+      )
+      await eventually(() => warnings() === 1)
+      for (let index = 0; index < 8; index++) {
+        writeFileSync(path.join(folder, 'state.json'), JSON.stringify(state(`Burst ${String(index)}`)))
+      }
+      await eventually(() => title() === 'Burst 7')
+      await pause(300)
+      expect(warnings()).toBe(2)
+    })
+  })
+
+  describe('The report of a correct model', () => {
+    it('says that the model is correct only after a problem, and once', async () => {
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('One')))
+      await eventually(() => title() === 'One')
+      await writeFile(path.join(folder, 'state.json'), '{')
+      await eventually(() => lines.some((line) => line.includes('problem in state.json')))
+      expect(lines.some((line) => line.includes('the model is correct'))).toBe(false)
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Two')))
+      await eventually(() => lines.filter((line) => line.includes('the model is correct')).length === 1)
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Three')))
+      await eventually(() => title() === 'Three')
+      await pause(200)
+      expect(lines.filter((line) => line.includes('the model is correct'))).toHaveLength(1)
     })
   })
 

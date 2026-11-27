@@ -1,6 +1,6 @@
 import { InputRefusedError } from '@thrashplay/wishem-hub'
 import type { InputProblem, Input, ModelSubsystem, RecordedInput } from '@thrashplay/wishem-hub'
-import { ModelError } from './core.js'
+import { ModelError } from './errors.js'
 import { deepFreeze, isEqual } from './equality.js'
 import type { Entity, FieldValue, Id, Model, Problem } from './model.js'
 import { validateModel } from './validate-model.js'

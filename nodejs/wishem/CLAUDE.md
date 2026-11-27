@@ -6,8 +6,10 @@ The `docs/` folder holds the blueprint.
 
 ## Packages
 
-- `core` (`@thrashplay/wishem-core`): the model types, the validation, and the core. `core` uses no Node.js API. `pnpm build --filter @thrashplay/wishem-core` fails when a source file of `core` uses one.
-- `host-nodejs` (`@thrashplay/wishem-host-nodejs`): the Node.js host. It reads a model folder, serves the snapshot, and provides the `wishem` command.
+- `core` (`@thrashplay/wishem-core`): the model types, the validation, `isEqual`, and the store. `core` uses no Node.js API. `pnpm build --filter @thrashplay/wishem-core` fails when a source file of `core` uses one.
+- `hub` (`@thrashplay/wishem-hub`): the hub, the ports, the record, and the link. It uses no Node.js API.
+- `clock` (`@thrashplay/wishem-clock`): the `time` subsystem and the clock. It uses no Node.js API.
+- `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link, writes `state.json`, and provides the `wishem` command.
 - `workbench` (`@thrashplay/wishem-workbench`): the base workbench. It holds the first model and a `start` script.
 - `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the HTML renderer, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
 

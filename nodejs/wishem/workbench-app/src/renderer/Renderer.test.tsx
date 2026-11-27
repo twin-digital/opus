@@ -1,9 +1,9 @@
-import { createCore, type Core, type Snapshot } from '@thrashplay/wishem-core'
+import type { Snapshot } from '@thrashplay/wishem-core'
 import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { collectViews, type ViewProps } from './collect-views.js'
-import { Renderer } from './Renderer.js'
+import { Renderer, type ModelReader } from './Renderer.js'
 
 const CT_A = 'ct_aaaaaaaa-0000-4000-8000-000000000001'
 const CT_B = 'ct_bbbbbbbb-0000-4000-8000-000000000002'
@@ -26,6 +26,30 @@ const baseModel = (titleOne: string | null = 'One'): Snapshot => ({
   ],
 })
 
+interface TestReader extends ModelReader {
+  setModel(model: Snapshot): void
+}
+
+const createReader = (first: Snapshot): TestReader => {
+  let model = first
+  const listeners = new Set<(model: Snapshot) => void>()
+  return {
+    getSnapshot: () => model,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    setModel: (next) => {
+      model = next
+      listeners.forEach((listener) => {
+        listener(model)
+      })
+    },
+  }
+}
+
 const viewA = ({ title }: ViewProps) => <span className='a'>{title === undefined ? 'none' : `title:${title}`}</span>
 
 interface ViewSource {
@@ -47,7 +71,7 @@ const tableOf = (...sources: ViewSource[]) =>
 
 const sourceA: ViewSource = { name: 'A', componentType: CT_A, view: viewA }
 
-const withLabel = (core: Core, label: string): Snapshot => {
+const withLabel = (core: TestReader, label: string): Snapshot => {
   const model = core.getSnapshot()
   return {
     ...model,
@@ -76,7 +100,7 @@ describe('Renderer', () => {
     vi.restoreAllMocks()
   })
 
-  const draw = (core: Core, views = tableOf(sourceA)) => {
+  const draw = (core: TestReader, views = tableOf(sourceA)) => {
     act(() => {
       root.render(<Renderer reader={core} views={views} />)
     })
@@ -85,7 +109,7 @@ describe('Renderer', () => {
   const wrappers = () => Array.from(container.querySelectorAll<HTMLElement>('[data-wishem-entity]'))
 
   it('draws one wrapper for each component that has a view, with the two attributes', () => {
-    draw(createCore(baseModel()))
+    draw(createReader(baseModel()))
     const found = wrappers()
     expect(found).toHaveLength(2)
     expect(found[0]?.dataset.wishemComponentType).toBe(CT_A)
@@ -93,13 +117,13 @@ describe('Renderer', () => {
   })
 
   it('draws in the order of the entities of the snapshot', () => {
-    draw(createCore(baseModel()))
+    draw(createReader(baseModel()))
     expect(wrappers().map((wrapper) => wrapper.dataset.wishemEntity)).toEqual([E1, E2])
     expect(wrappers().map((wrapper) => wrapper.textContent)).toEqual(['title:One', 'title:Two'])
   })
 
   it('gives a view no value for a field that the component omits', () => {
-    draw(createCore(baseModel(null)))
+    draw(createReader(baseModel(null)))
     expect(wrappers()[0]?.textContent).toBe('none')
   })
 
@@ -120,7 +144,7 @@ describe('Renderer', () => {
     }
 
     draw(
-      createCore(model),
+      createReader(model),
       tableOf({
         ...sourceA,
         view: (props) => {
@@ -140,19 +164,19 @@ describe('Renderer', () => {
       return <span>{`${String(title)}:${count}`}</span>
     }
 
-    draw(createCore(baseModel()), tableOf({ ...sourceA, view: Counter }))
+    draw(createReader(baseModel()), tableOf({ ...sourceA, view: Counter }))
 
     expect(wrappers()[0]?.textContent).toBe('One:7')
   })
 
   it('draws nothing for a component type that has no view', () => {
-    const core = createCore(baseModel())
+    const core = createReader(baseModel())
     draw(core)
     expect(container.querySelectorAll(`[data-wishem-component-type="${CT_B}"]`)).toHaveLength(0)
   })
 
   it('draws the new snapshot after the core sends it', () => {
-    const core = createCore(baseModel('One'))
+    const core = createReader(baseModel('One'))
     draw(core)
     act(() => {
       core.setModel(baseModel('Changed'))
@@ -161,7 +185,7 @@ describe('Renderer', () => {
   })
 
   it('gives the value under the new name when the label of a field changes while the page is open', () => {
-    const core = createCore(baseModel('One'))
+    const core = createReader(baseModel('One'))
     const keys: string[][] = []
     const views = tableOf({
       ...sourceA,
@@ -197,7 +221,10 @@ describe('Renderer', () => {
       entities: [{ id: E1, components: { [CT_A]: { [FLD_MAX_A]: 'first', [FLD_MAX_B]: 'second' } } }],
     }
 
-    draw(createCore(model), tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${String(maxHealth)}`}</span> }))
+    draw(
+      createReader(model),
+      tableOf({ ...sourceA, view: ({ maxHealth }) => <span>{`max:${String(maxHealth)}`}</span> }),
+    )
 
     expect(wrappers()[0]?.textContent).toBe('max:first')
     expect(warn).toHaveBeenCalledTimes(1)
@@ -209,7 +236,7 @@ describe('Renderer', () => {
   it('writes the warnings when the set of warnings changes, and not again for the same set', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const missing: ViewSource = { name: 'Missing', componentType: CT_C, view: () => null }
-    const core = createCore(baseModel('One'))
+    const core = createReader(baseModel('One'))
     draw(core, tableOf(sourceA, missing))
     expect(warn).toHaveBeenCalledTimes(1)
     expect(warn.mock.calls[0]?.[0]).toContain('Missing.view.json')
@@ -233,7 +260,7 @@ describe('Renderer', () => {
 
   it('gives no warning for views that match their definitions', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    draw(createCore(baseModel()))
+    draw(createReader(baseModel()))
     expect(warn).not.toHaveBeenCalled()
   })
 
@@ -241,7 +268,7 @@ describe('Renderer', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
     draw(
-      createCore(baseModel()),
+      createReader(baseModel()),
       tableOf(
         { name: 'One', componentType: CT_C, view: () => null },
         { name: 'Two', componentType: 'ct_cccccccc-0000-4000-8000-000000000004', view: () => null },
@@ -255,7 +282,7 @@ describe('Renderer', () => {
 
   it('draws the same view when the label of the component type changes', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const core = createCore(baseModel('One'))
+    const core = createReader(baseModel('One'))
     draw(core)
     const before = container.innerHTML
 
@@ -276,7 +303,11 @@ describe('Renderer', () => {
   it('gives no new warning when the next snapshot adds the definition of the component type', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const model = baseModel()
-    const core = createCore({ ...model, definitions: model.definitions.filter(({ id }) => id !== CT_A), entities: [] })
+    const core = createReader({
+      ...model,
+      definitions: model.definitions.filter(({ id }) => id !== CT_A),
+      entities: [],
+    })
 
     draw(core)
     expect(warn).toHaveBeenCalledTimes(1)
@@ -304,12 +335,12 @@ describe('Renderer', () => {
     const both = () => tableOf(sourceA, sourceB)
 
     it('draws in the order of the entities, then of the definitions', () => {
-      draw(createCore(model), both())
+      draw(createReader(model), both())
       expect(wrappers().map((wrapper) => wrapper.textContent)).toEqual(['other:y', 'title:Two', 'other:x'])
     })
 
     it('marks each wrapper with its own entity and component type', () => {
-      draw(createCore(model), both())
+      draw(createReader(model), both())
       expect(wrappers().map((wrapper) => [wrapper.dataset.wishemEntity, wrapper.dataset.wishemComponentType])).toEqual([
         [E1, CT_B],
         [E2, CT_A],
@@ -319,7 +350,7 @@ describe('Renderer', () => {
 
     it('draws nothing for an entity that has no component of a type, and logs no error', () => {
       const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-      draw(createCore(model), both())
+      draw(createReader(model), both())
       expect(wrappers().filter((wrapper) => wrapper.dataset.wishemEntity === E1)).toHaveLength(1)
       expect(error).not.toHaveBeenCalled()
     })

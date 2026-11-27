@@ -2,30 +2,33 @@ import { describe, expect, it } from 'vitest'
 import * as api from './index.js'
 
 describe('the package exports', () => {
-  it('gives createCore, ModelError, and validateModel', () => {
-    expect(api.createCore).toBeTypeOf('function')
+  it('gives ModelError, validateModel, createStore, storeInputs, and isEqual', () => {
     expect(api.ModelError).toBeTypeOf('function')
     expect(api.validateModel).toBeTypeOf('function')
+    expect(api.createStore).toBeTypeOf('function')
+    expect(api.storeInputs).toBeTypeOf('function')
+    expect(api.isEqual).toBeTypeOf('function')
+  })
+
+  it('does not give createCore', () => {
+    expect('createCore' in api).toBe(false)
+  })
+
+  it('gives the ModelError class that createStore throws', () => {
+    let error: unknown
+    try {
+      api.createStore({ model: 7 })
+    } catch (thrown) {
+      error = thrown
+    }
+    expect(error).toBeInstanceOf(api.ModelError)
   })
 })
 
 describe('isEqual', () => {
-  it('is exported by the package root and compares by canonical JSON', () => {
+  it('compares by canonical JSON', () => {
     const a = { definitions: [], entities: [] }
-    expect(api.isEqual).toBeTypeOf('function')
     expect(api.isEqual(a, { entities: [], definitions: [] })).toBe(true)
     expect(api.isEqual(a, { definitions: [], entities: [{ id: 'e_1', components: {} }] })).toBe(false)
-  })
-})
-
-describe('CoreReader', () => {
-  it('accepts a core and has no operation that changes the model', () => {
-    const core = api.createCore({ definitions: [], entities: [] })
-    const read = (reader: api.CoreReader) => {
-      // @ts-expect-error a reader has no setModel
-      void reader.setModel
-      return reader.getSnapshot()
-    }
-    expect(read(core)).toEqual({ definitions: [], entities: [] })
   })
 })

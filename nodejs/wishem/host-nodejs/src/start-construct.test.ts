@@ -262,6 +262,18 @@ describe('startConstruct', () => {
     expect(lines).toContain('wishem: a listener failed: listener boom')
   })
 
+  it('prints the warning of the first model once, and not again when nothing changes', async () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    await writeFile(
+      path.join(folder, 'definitions', 'other.json'),
+      JSON.stringify({ id: other, label: 'AppBar', fields: [] }),
+    )
+    await start()
+    expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+  })
+
   it('sends a hand edit of a file to a client of the link in less than 2 seconds', async () => {
     const started = await start()
     const link = await open(started, 'page-a')
