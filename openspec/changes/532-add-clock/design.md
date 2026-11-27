@@ -110,7 +110,7 @@ export interface ClockTimer {
 export interface ClockOptions {
   /** The length of one tick in milliseconds. Default 50. */
   stepMs?: number
-  /** Default 5. */
+  /** An integer. Default 5. */
   maxTicksPerCall?: number
   /** Default: `setInterval`. */
   timer?: ClockTimer

@@ -9,7 +9,7 @@ export interface ClockTimer {
 export interface ClockOptions {
   /** The length of one tick in milliseconds. Default 50. */
   stepMs?: number
-  /** Default 5. */
+  /** An integer. Default 5. */
   maxTicksPerCall?: number
   /** Default: `setInterval`. */
   timer?: ClockTimer
@@ -50,6 +50,9 @@ export const startClock = (port: Port, options: ClockOptions = {}): Clock => {
   const { stepMs = 50, maxTicksPerCall = 5, timer = defaultTimer, now = Date.now } = options
   requirePositive('stepMs', stepMs)
   requirePositive('maxTicksPerCall', maxTicksPerCall)
+  if (!Number.isInteger(maxTicksPerCall)) {
+    throw new Error('The option maxTicksPerCall must be an integer.')
+  }
   if (port.subsystem.kind !== 'input') {
     throw new Error('The clock needs the port of an input subsystem.')
   }
@@ -72,8 +75,14 @@ export const startClock = (port: Port, options: ClockOptions = {}): Clock => {
     const current = now()
     const due = Math.floor((current - last) / stepMs)
     const count = Math.min(due, maxTicksPerCall)
-    for (let i = 0; i < count && !isStopped(); i++) {
+    let sent = 0
+    while (sent < count && !isStopped() && isRunning(port.read()[TIME_ID])) {
       port.submit(timeInputs.advance(stepMs)).catch(() => undefined)
+      sent += 1
+    }
+    // A stop or a pause during the loop has already set the state of `last`.
+    if (sent < count) {
+      return
     }
     last = due > maxTicksPerCall ? current : last + due * stepMs
   }

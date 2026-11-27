@@ -17,7 +17,7 @@ A tick is the input `time/advance` with a length in milliseconds. The time subsy
 
 The clock sends ticks of a fixed length, the step length. The default is 50 milliseconds. Set a different length with the option `stepMs`.
 
-At each call of its timer, the clock sends one tick for each full step length of real time since the last tick. It sends at most `maxTicksPerCall` ticks (default 5) in one call. It drops the time above that limit.
+At each call of its timer, the clock sends one tick for each full step length of real time since the last tick. It sends at most `maxTicksPerCall` ticks (an integer, default 5) in one call. It drops the time above that limit.
 
 ## Pause and step
 
@@ -31,7 +31,8 @@ A tick applies for each value of `running`. To step a paused construct, send one
 
 - The port is not the port of an input subsystem.
 - The joined state has no part `time`.
-- The option `stepMs` or `maxTicksPerCall` is not a finite number larger than 0.
+- The option `stepMs` is not a finite number larger than 0.
+- The option `maxTicksPerCall` is not an integer larger than 0.
 
 The clock stops when you call `stop()` and when the hub sends the `stopping` event. A second `stop()` does nothing.
 

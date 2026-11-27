@@ -233,6 +233,26 @@ describe('startClock', () => {
     expect(part().ticks).toBe(2)
   })
 
+  it('sends no more ticks after a pause inside a listener of an applied event', async () => {
+    const { hub, fire, wait, controls, part } = setup()
+    const pauser = hub.attach({ id: 'pauser', kind: 'input' })
+    let paused = false
+    pauser.subscribe((event) => {
+      if (event.type === 'applied' && event.input.type === 'time/advance' && !paused) {
+        paused = true
+        void pauser.submit(timeInputs.setRunning(false))
+      }
+    })
+    fire(150)
+    expect(part()).toMatchObject({ ticks: 1, running: false })
+    wait(10_000)
+    await controls.submit(timeInputs.setRunning(true))
+    fire(49)
+    expect(part().ticks).toBe(1)
+    fire(1)
+    expect(part().ticks).toBe(2)
+  })
+
   it('does not wait for a rejected tick, and the rejection is handled', async () => {
     let submits = 0
     const submit = () => {
@@ -292,7 +312,7 @@ describe('startClock', () => {
     },
   )
 
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+  it.each([0, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])(
     'throws for the option maxTicksPerCall %s',
     (maxTicksPerCall) => {
       const hub = createHub({ subsystems: [createTime()] })
