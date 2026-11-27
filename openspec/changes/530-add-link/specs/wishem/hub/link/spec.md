@@ -40,7 +40,7 @@ The `welcome` message SHALL hold the version of the protocol, the status of the 
 
 ### Requirement: The hub side refuses a hello that it cannot serve
 
-The hub side SHALL answer a `hello` with a `refused` message and SHALL close the connection in each of these cases: the version is not one that the hub side supports (reason `version`, with the list of supported versions), the list of subsystems is empty or an entry is not correct (reason `malformed`), an ID is in use (reason `id-in-use`), a subsystem has the kind `model` (reason `unsupported`), or the hub is stopped (reason `stopped`). A `refused` message SHALL hold a text that says what is not correct. When the hub side refuses, it SHALL attach none of the subsystems.
+The hub side SHALL answer a `hello` that it cannot serve with a `refused` message, SHALL close the connection, and SHALL attach none of the subsystems. The message SHALL hold a reason and a text that says what is not correct. The reasons SHALL be `version`, with the list of supported versions, `malformed` for a list of subsystems that is empty or not correct, `id-in-use`, `unsupported` for a subsystem of the kind `model`, and `stopped` for a hub that is stopped.
 
 #### Scenario: A client with a newer protocol
 
@@ -82,7 +82,12 @@ An `applied` message SHALL hold the recorded input and the new value of each par
 
 ### Requirement: The client sends inputs with a request number
 
-A `submit` message SHALL hold a request number that the client selects, the ID of the sending subsystem, and the input. The hub side SHALL give the input to the port of that subsystem and SHALL answer with one `result` message that holds the same request number and the result of the hub. When the ID is not a subsystem of this link, the result SHALL be a rejection with the reason `not-permitted`. When the hub fails with an error, the `result` message SHALL hold the text of the error in place of a result.
+A `submit` message SHALL hold a request number, the ID of the sending subsystem, and the input. The hub side SHALL give the input to the port of that subsystem and SHALL answer with one `result` message that holds the same request number and the result of the hub. For an ID that is not a subsystem of this link, the result SHALL be a rejection with the reason `not-permitted`. When the hub fails with an error, the `result` message SHALL hold the text of the error in place of a result.
+
+#### Scenario: The hub fails with an error
+
+- **WHEN** a model subsystem throws an error while it applies an input of a client
+- **THEN** the client gets `result` with the request number and the text of the error, and the link stays open
 
 #### Scenario: An accepted input
 

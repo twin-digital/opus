@@ -184,7 +184,14 @@ export const openLink: (channel: Channel, subsystems: readonly IoSubsystem[]) =>
 Example of a link, from the client:
 
 ```json
-{ "t": "hello", "protocol": 1, "subsystems": [{ "id": "page", "kind": "output" }, { "id": "page-controls", "kind": "input" }] }
+{
+  "t": "hello",
+  "protocol": 1,
+  "subsystems": [
+    { "id": "page", "kind": "output" },
+    { "id": "page-controls", "kind": "input" }
+  ]
+}
 ```
 
 ```json
@@ -192,11 +199,20 @@ Example of a link, from the client:
 ```
 
 ```json
-{ "t": "submit", "request": 1, "subsystem": "page-controls", "input": { "type": "counter/add", "payload": { "by": 2 } } }
+{
+  "t": "submit",
+  "request": 1,
+  "subsystem": "page-controls",
+  "input": { "type": "counter/add", "payload": { "by": 2 } }
+}
 ```
 
 ```json
-{ "t": "applied", "input": { "seq": 4, "source": "page-controls", "type": "counter/add", "payload": { "by": 2 } }, "parts": { "counter": { "count": 8 } } }
+{
+  "t": "applied",
+  "input": { "seq": 4, "source": "page-controls", "type": "counter/add", "payload": { "by": 2 } },
+  "parts": { "counter": { "count": 8 } }
+}
 ```
 
 ```json
@@ -241,14 +257,14 @@ sequenceDiagram
 
 ## Failure Modes
 
-| Failure                                             | Result                                                                                                  | Recovery                                                                                |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| The connection closes                               | The hub side closes the ports of the link. The remote port fails each send that waits.                  | The client opens a new link and gets the full state.                                    |
-| A `submit` was sent and the connection closes       | The client does not know if the hub accepted the input. `submit` is not idempotent.                     | The client reads the state of the new link. It does not send the input again blindly.   |
-| A message that is not correct, after the start      | The hub side sends `refused` with `malformed` and closes.                                               | A defect of the client. Correct the client.                                             |
-| A sequence number that is not the next one          | The remote port closes the link.                                                                        | The client opens a new link.                                                            |
-| A client is slow and messages collect in the socket | The hub does not wait for a client. The memory of the process grows.                                    | Not handled in version 1. [#531](https://github.com/twin-digital/opus/issues/531) can close a link that is too far behind. |
-| Two clients use one subsystem ID                    | The second `hello` gets `refused` with `id-in-use`.                                                     | The client selects a different ID.                                                      |
+| Failure                                             | Result                                                                                 | Recovery                                                                                                                   |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| The connection closes                               | The hub side closes the ports of the link. The remote port fails each send that waits. | The client opens a new link and gets the full state.                                                                       |
+| A `submit` was sent and the connection closes       | The client does not know if the hub accepted the input. `submit` is not idempotent.    | The client reads the state of the new link. It does not send the input again blindly.                                      |
+| A message that is not correct, after the start      | The hub side sends `refused` with `malformed` and closes.                              | A defect of the client. Correct the client.                                                                                |
+| A sequence number that is not the next one          | The remote port closes the link.                                                       | The client opens a new link.                                                                                               |
+| A client is slow and messages collect in the socket | The hub does not wait for a client. The memory of the process grows.                   | Not handled in version 1. [#531](https://github.com/twin-digital/opus/issues/531) can close a link that is too far behind. |
+| Two clients use one subsystem ID                    | The second `hello` gets `refused` with `id-in-use`.                                    | The client selects a different ID.                                                                                         |
 
 ## Package Impact
 
