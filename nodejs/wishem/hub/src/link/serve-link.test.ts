@@ -608,14 +608,22 @@ describe('the end of a connection', () => {
         return { ...port, close }
       },
     }
-    const [client, server] = createChannelPair()
-    serveLink(wrapped, server)
-    client.send(JSON.stringify(hello(page, controls)))
-    await settle()
-    client.close()
-    client.close()
-    await settle()
-    server.close()
+    let deliver: ((text: string) => void) | undefined
+    let closeListener: (() => void) | undefined
+    const channel: Channel = {
+      send: () => undefined,
+      onMessage: (listener) => {
+        deliver = listener
+      },
+      onClose: (listener) => {
+        closeListener = listener
+      },
+      close: () => undefined,
+    }
+    serveLink(wrapped, channel)
+    deliver?.(JSON.stringify(hello(page, controls)))
+    closeListener?.()
+    closeListener?.()
     await settle()
     expect(closes).toHaveLength(2)
     for (const close of closes) {
@@ -662,16 +670,6 @@ describe('the end of a connection', () => {
     expect(sent).toHaveLength(1)
     expect(() => hub.attach(page)).not.toThrow()
     expect(() => hub.attach(controls)).not.toThrow()
-  })
-
-  it('does not send a result that completes after the close', async () => {
-    const hub = makeHub()
-    const link = await joined(hub, page, keyboard)
-    link.send({ t: 'submit', request: 1, subsystem: 'keyboard', input: setField('a') })
-    link.close()
-    await settle()
-    expect(link.messages.map((m) => m.t)).toEqual(['welcome'])
-    expect(hub.record()).toHaveLength(1)
   })
 
   it('does not send a result that completes after the close, for a channel that accepts a send', async () => {

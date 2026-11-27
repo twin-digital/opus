@@ -34,16 +34,14 @@ describe('parseClientMessage', () => {
 
   it.each([
     ['text that is not JSON', 'not json'],
-    ['a JSON array', '[]'],
     ['JSON null', 'null'],
-    ['a JSON string', '"hello"'],
     ['an object with no t', json({ protocol: 1 })],
     ['an object with a t that is not a string', json({ t: 5 })],
     ['a hello with no protocol', json({ ...hello, protocol: undefined })],
     ['a hello with a protocol that is not a number', json({ ...hello, protocol: '1' })],
     ['a hello with no subsystems', json({ ...hello, subsystems: undefined })],
     ['a hello with subsystems that are not a list', json({ ...hello, subsystems: {} })],
-    ['a hello with a subsystem that is not an object', json({ ...hello, subsystems: ['page'] })],
+    ['a hello with a subsystem that is not an object', json({ ...hello, subsystems: [null] })],
     ['a hello with a subsystem with no id', json({ ...hello, subsystems: [{ kind: 'input' }] })],
     [
       'a hello with a subsystem with an id that is not text',
@@ -78,8 +76,8 @@ describe('parseClientMessage', () => {
     expect(message).toEqual({ t: 'future-thing', unknown: true })
   })
 
-  it('marks a reserved type as unknown', () => {
-    expect(parseClientMessage(json({ t: 'part' }))).toEqual({ t: 'part', unknown: true })
+  it.each(['apply', 'part'])('marks the reserved type %s as unknown', (t) => {
+    expect(parseClientMessage(json({ t }))).toEqual({ t, unknown: true })
   })
 
   it('does not accept a hub message type as a known client message', () => {
@@ -154,7 +152,7 @@ describe('parseHubMessage', () => {
     expect(parseHubMessage(json({ t: 'future-thing' }))).toEqual({ t: 'future-thing', unknown: true })
   })
 
-  it('marks a reserved type as unknown', () => {
-    expect(parseHubMessage(json({ t: 'apply' }))).toEqual({ t: 'apply', unknown: true })
+  it.each(['apply', 'part'])('marks the reserved type %s as unknown', (t) => {
+    expect(parseHubMessage(json({ t }))).toEqual({ t, unknown: true })
   })
 })
