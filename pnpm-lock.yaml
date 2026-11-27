@@ -3555,6 +3555,9 @@ importers:
       '@thrashplay/wishem-hub':
         specifier: workspace:*
         version: link:../hub
+      '@thrashplay/wishem-renderer-react':
+        specifier: workspace:*
+        version: link:../renderer-react
       '@thrashplay/wishem-workbench':
         specifier: workspace:*
         version: link:../workbench

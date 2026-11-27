@@ -5,6 +5,7 @@ import {
   serveLink,
   type Channel,
   type Hub,
+  type Port,
   type WebSocketLike,
 } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
@@ -137,7 +138,7 @@ interface Env {
   hub: Hub
   sockets: FakeSocket[]
   plan: Mode[]
-  options: HubClientOptions
+  options: Omit<HubClientOptions, 'onPort'>
   last: () => FakeSocket
 }
 
@@ -178,15 +179,33 @@ const flush = async (ms = 0) => {
   await vi.advanceTimersByTimeAsync(ms)
 }
 
+type Options = Omit<HubClientOptions, 'onPort'>
+
+const storeOf = (port: Port) => port.read().store
+
 describe('connectHub', () => {
   let env: Env
   let clients: HubClient[]
+  let ports: Port[]
   let warn: MockInstance<typeof console.warn>
   let error: MockInstance<typeof console.error>
 
-  const connect = async (options: HubClientOptions = env.options) => {
-    const client = await connectHub(options)
+  const onPort = (port: Port) => {
+    ports.push(port)
+  }
+
+  /** Waits for `count` calls of `onPort`. Fails by an assertion when they do not come. */
+  const waitForPorts = async (count: number) => {
+    for (let tries = 0; tries < 20 && ports.length < count; tries += 1) {
+      await flush()
+    }
+    expect(ports).toHaveLength(count)
+  }
+
+  const connect = async (options: Options = env.options) => {
+    const client = connectHub({ ...options, onPort })
     clients.push(client)
+    await waitForPorts(1)
     return client
   }
 
@@ -202,6 +221,7 @@ describe('connectHub', () => {
     vi.useFakeTimers()
     env = makeEnv(startHub('One'))
     clients = []
+    ports = []
     warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
@@ -238,60 +258,47 @@ describe('connectHub', () => {
   })
 
   describe('before the first link', () => {
-    it('resolves after the welcome message and not before', async () => {
+    it('calls onPort after the welcome message and not before', async () => {
       env.plan = ['manual']
-      let resolved = false
-      const promise = connectHub(env.options).then((client) => {
-        resolved = true
-        clients.push(client)
-        return client
-      })
+      clients.push(connectHub({ ...env.options, onPort }))
       env.last().held = true
       env.last().open()
       await flush()
       expect(env.last().sent).toHaveLength(1)
-      expect(resolved).toBe(false)
+      expect(ports).toHaveLength(0)
       env.last().release()
-      const client = await promise
-      expect(resolved).toBe(true)
-      expect(client.getSnapshot()).toEqual(modelOf('One'))
+      await waitForPorts(1)
+      expect(storeOf(ports[0])).toEqual(modelOf('One'))
     })
 
-    it('writes one warning, keeps trying, and resolves when the hub answers', async () => {
+    it('writes one warning, keeps trying, and calls onPort when the hub answers', async () => {
       env.plan = ['fail', 'fail']
-      let resolved = false
-      void connectHub(env.options).then((client) => {
-        resolved = true
-        clients.push(client)
-      })
+      clients.push(connectHub({ ...env.options, onPort }))
       await flush()
       expect(warn).toHaveBeenCalledExactlyOnceWith(WARNING)
+      expect(ports).toHaveLength(0)
       await flush(500)
       await flush(1000)
       expect(env.sockets).toHaveLength(3)
       expect(warn).toHaveBeenCalledTimes(1)
-      expect(resolved).toBe(true)
+      await waitForPorts(1)
     })
 
     it('writes one error for a refusal, and tries again', async () => {
       const stopped = startHub('One')
       stopped.stop()
       env.hub = stopped
-      let resolved = false
-      void connectHub(env.options).then((client) => {
-        resolved = true
-        clients.push(client)
-      })
+      clients.push(connectHub({ ...env.options, onPort }))
       await flush()
       await flush(500)
       await flush(1000)
       expect(env.sockets).toHaveLength(3)
       expect(error).toHaveBeenCalledTimes(1)
       expect(String(error.mock.calls[0]?.[0])).toContain('stopped')
-      expect(resolved).toBe(false)
+      expect(ports).toHaveLength(0)
       env.hub = startHub('Two')
       await flush(2000)
-      expect(resolved).toBe(true)
+      await waitForPorts(1)
     })
   })
 
@@ -316,7 +323,8 @@ describe('connectHub', () => {
     it('gives two clients two IDs and both attach', async () => {
       const second = makeEnv(env.hub)
       await connect()
-      clients.push(await connectHub(second.options))
+      clients.push(connectHub({ ...second.options, onPort }))
+      await waitForPorts(2)
       expect(env.sockets[0]?.sent[0]).not.toBe(second.sockets[0]?.sent[0])
       expect(second.sockets).toHaveLength(1)
     })
@@ -327,111 +335,51 @@ describe('connectHub', () => {
     })
   })
 
-  describe('the reader', () => {
-    it('gives the same object until the part is a different object', async () => {
-      const client = await connect()
-      const first = client.getSnapshot()
-      expect(client.getSnapshot()).toBe(first)
-      await setTitle(env.hub, 'Two')
-      await flush()
-      expect(client.getSnapshot()).not.toBe(first)
-      expect(client.getSnapshot()).toEqual(modelOf('Two'))
+  describe('the port of a link', () => {
+    it('is the port of the link, and gives the model of the hub', async () => {
+      await connect()
+      expect(storeOf(ports[0])).toEqual(modelOf('One'))
     })
 
-    it('calls no listener for an applied event with the same part', async () => {
-      const client = await connect()
+    it('follows the hub while the link is open', async () => {
+      await connect()
+      const port = ports[0]
       const listener = vi.fn()
-      client.subscribe(listener)
-      const first = client.getSnapshot()
-      await setTitle(env.hub, 'One')
-      await flush()
-      expect(listener).not.toHaveBeenCalled()
-      expect(client.getSnapshot()).toBe(first)
-    })
-
-    it('calls each listener one time with the new model', async () => {
-      const client = await connect()
-      const one = vi.fn()
-      const two = vi.fn()
-      client.subscribe(one)
-      client.subscribe(two)
+      port.subscribe(listener)
       await setTitle(env.hub, 'Two')
       await flush()
-      expect(one).toHaveBeenCalledExactlyOnceWith(modelOf('Two'))
-      expect(two).toHaveBeenCalledExactlyOnceWith(modelOf('Two'))
+      expect(listener).toHaveBeenCalled()
+      expect(storeOf(port)).toEqual(modelOf('Two'))
     })
 
-    it('does not call a listener that was removed', async () => {
-      const client = await connect()
-      const listener = vi.fn()
-      const stop = client.subscribe(listener)
-      stop()
-      await setTitle(env.hub, 'Two')
-      await flush()
-      expect(listener).not.toHaveBeenCalled()
-    })
-
-    it('keeps two registrations of one function separate', async () => {
-      const client = await connect()
-      const listener = vi.fn()
-      const stop = client.subscribe(listener)
-      client.subscribe(listener)
-      stop()
-      await setTitle(env.hub, 'Two')
-      await flush()
-      expect(listener).toHaveBeenCalledTimes(1)
-    })
-
-    it('calls the other listeners and writes one error when a listener throws', async () => {
-      const client = await connect()
-      const other = vi.fn()
-      client.subscribe(() => {
-        throw new Error('boom')
-      })
-      client.subscribe(other)
-      await setTitle(env.hub, 'Two')
-      await flush()
-      expect(other).toHaveBeenCalledTimes(1)
-      expect(error).toHaveBeenCalledTimes(1)
-    })
-
-    it('calls each listener one time after a new welcome with an equal model', async () => {
-      const client = await connect()
-      const first = client.getSnapshot()
-      const one = vi.fn()
-      const two = vi.fn()
-      client.subscribe(one)
-      client.subscribe(two)
+    it('calls onPort one time after each welcome, with the port of the new link', async () => {
+      await connect()
       env.last().drop()
       await flush(500)
       expect(env.sockets).toHaveLength(2)
-      expect(one).toHaveBeenCalledExactlyOnceWith(modelOf('One'))
-      expect(two).toHaveBeenCalledTimes(1)
-      expect(client.getSnapshot()).not.toBe(first)
-      expect(client.getSnapshot()).toEqual(first)
+      await waitForPorts(2)
+      expect(ports[1]).not.toBe(ports[0])
+      expect(storeOf(ports[1])).toEqual(modelOf('One'))
     })
 
     it('gives the new title after the link comes back', async () => {
-      const client = await connectAndDrop()
+      await connectAndDrop()
       env.hub = startHub('Three')
       await flush(500)
-      expect(client.getSnapshot()).toEqual(modelOf('Three'))
+      await waitForPorts(2)
+      expect(storeOf(ports[1])).toEqual(modelOf('Three'))
     })
 
-    it('does not call a removed listener after a new welcome', async () => {
-      const client = await connect()
-      const listener = vi.fn()
-      client.subscribe(listener)()
-      env.last().drop()
-      await flush(500)
-      expect(listener).not.toHaveBeenCalled()
+    it('keeps the last state in the port of a link that ended', async () => {
+      await connectAndDrop()
+      expect(storeOf(ports[0])).toEqual(modelOf('One'))
+      expect(ports).toHaveLength(1)
     })
   })
 
   describe('after the link ends', () => {
-    it('keeps the picture and writes one warning for the loss', async () => {
-      const client = await connectAndDrop()
-      expect(client.getSnapshot()).toEqual(modelOf('One'))
+    it('writes one warning for the loss', async () => {
+      await connectAndDrop()
       expect(warn).toHaveBeenCalledExactlyOnceWith(WARNING)
     })
 
@@ -494,6 +442,30 @@ describe('connectHub', () => {
     })
   })
 
+  describe('onPort throws', () => {
+    it('writes one error, keeps the link open, and calls onPort again after the next welcome', async () => {
+      let calls = 0
+      const failing = (port: Port) => {
+        calls += 1
+        ports.push(port)
+        if (calls === 1) {
+          throw new Error('boom')
+        }
+      }
+      clients.push(connectHub({ ...env.options, onPort: failing }))
+      await waitForPorts(1)
+      expect(error).toHaveBeenCalledTimes(1)
+      expect(env.last().readyState).toBe(1)
+      expect(env.last().closeCalls).toBe(0)
+      expect(warn).not.toHaveBeenCalled()
+      env.last().drop()
+      await flush(500)
+      await waitForPorts(2)
+      expect(calls).toBe(2)
+      expect(error).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('close', () => {
     it('closes the link and writes no warning', async () => {
       const client = await connect()
@@ -515,10 +487,40 @@ describe('connectHub', () => {
       expect(remove.mock.calls).toHaveLength(removed)
     })
 
-    it('closes the socket at once when it runs while a socket opens', async () => {
+    it('inside onPort: closes the link, calls onPort no more, and writes no warning', async () => {
+      const holder: { client?: HubClient } = {}
+      const closing = (port: Port) => {
+        ports.push(port)
+        holder.client?.close()
+      }
+      holder.client = connectHub({ ...env.options, onPort: closing })
+      clients.push(holder.client)
+      await waitForPorts(1)
+      await flush(10_000)
+      expect(env.last().closeCalls).toBeGreaterThan(0)
+      expect(env.last().readyState).toBe(3)
+      expect(env.sockets).toHaveLength(1)
+      expect(ports).toHaveLength(1)
+      expect(warn).not.toHaveBeenCalled()
+      expect(error).not.toHaveBeenCalled()
+    })
+
+    it('before the first welcome: calls no onPort and writes no warning', async () => {
+      env.plan = ['manual']
+      const client = connectHub({ ...env.options, onPort })
+      clients.push(client)
+      await flush()
+      expect(env.sockets).toHaveLength(1)
+      client.close()
+      expect(env.last().closeCalls).toBeGreaterThan(0)
+      await flush(10_000)
+      expect(ports).toHaveLength(0)
+      expect(env.sockets).toHaveLength(1)
+      expect(warn).not.toHaveBeenCalled()
+    })
+
+    it('while a socket opens: closes the socket at once and calls no onPort', async () => {
       const client = await connectAndDrop()
-      const listener = vi.fn()
-      client.subscribe(listener)
       env.plan = ['manual']
       await flush(500)
       expect(env.sockets).toHaveLength(2)
@@ -526,14 +528,13 @@ describe('connectHub', () => {
       expect(env.last().closeCalls).toBeGreaterThan(0)
       expect(env.last().readyState).toBe(3)
       await flush(10_000)
-      expect(listener).not.toHaveBeenCalled()
+      expect(ports).toHaveLength(1)
       expect(env.sockets).toHaveLength(2)
+      expect(warn).toHaveBeenCalledTimes(1)
     })
 
     it('closes a socket that opens after it ran, and sends no hello', async () => {
       const client = await connectAndDrop()
-      const listener = vi.fn()
-      client.subscribe(listener)
       env.plan = ['manual']
       await flush(500)
       const socket = env.last()
@@ -544,15 +545,12 @@ describe('connectHub', () => {
       await flush(10_000)
       expect(socket.sent).toHaveLength(0)
       expect(socket.closeCalls).toBe(2)
-      expect(listener).not.toHaveBeenCalled()
+      expect(ports).toHaveLength(1)
       expect(env.sockets).toHaveLength(2)
     })
 
-    it('closes a link whose welcome comes after it ran, and draws nothing', async () => {
+    it('closes a link whose welcome comes after it ran, and calls no onPort', async () => {
       const client = await connectAndDrop()
-      const listener = vi.fn()
-      client.subscribe(listener)
-      const first = client.getSnapshot()
       env.plan = ['manual']
       await flush(500)
       const socket = env.last()
@@ -565,30 +563,30 @@ describe('connectHub', () => {
       socket.release()
       await flush(10_000)
       expect(socket.closeCalls).toBe(2)
-      expect(listener).not.toHaveBeenCalled()
-      expect(client.getSnapshot()).toBe(first)
+      expect(ports).toHaveLength(1)
       expect(env.sockets).toHaveLength(2)
     })
 
-    it('opens no link when it runs while a delay runs', async () => {
+    it('during a delay: opens no link and calls no onPort', async () => {
       const client = await connectAndDrop()
+      const warnings = warn.mock.calls.length
       client.close()
       await flush(10_000)
       expect(env.sockets).toHaveLength(1)
+      expect(ports).toHaveLength(1)
+      expect(warn).toHaveBeenCalledTimes(warnings)
     })
   })
 
   describe('pagehide', () => {
     it('closes the link, opens no new one, and writes no warning', async () => {
-      const client = await connect()
-      const listener = vi.fn()
-      client.subscribe(listener)
+      await connect()
       window.dispatchEvent(new Event('pagehide'))
       await flush(10_000)
       expect(env.last().closeCalls).toBeGreaterThan(0)
       expect(env.sockets).toHaveLength(1)
       expect(warn).not.toHaveBeenCalled()
-      expect(listener).not.toHaveBeenCalled()
+      expect(ports).toHaveLength(1)
     })
 
     it('removes the listener when the client closes', async () => {
@@ -596,6 +594,18 @@ describe('connectHub', () => {
       const client = await connect()
       client.close()
       expect(remove).toHaveBeenCalledWith('pagehide', expect.any(Function))
+    })
+
+    it('does nothing after close()', async () => {
+      const client = await connect()
+      client.close()
+      const calls = env.last().closeCalls
+      window.dispatchEvent(new Event('pagehide'))
+      await flush(10_000)
+      expect(env.last().closeCalls).toBe(calls)
+      expect(env.sockets).toHaveLength(1)
+      expect(warn).not.toHaveBeenCalled()
+      expect(error).not.toHaveBeenCalled()
     })
   })
 })
