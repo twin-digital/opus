@@ -21,3 +21,5 @@ export type { ClientMessage, HubMessage, RefusalReason } from './link/messages.j
 export { createChannelPair, webSocketChannel } from './link/channel.js'
 export type { Channel, WebSocketLike } from './link/channel.js'
 export { serveLink } from './link/serve-link.js'
+export { openLink, LinkRefusedError, LinkClosedError } from './link/open-link.js'
+export type { OpenLinkOptions, RemoteLink } from './link/open-link.js'

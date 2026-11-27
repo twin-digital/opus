@@ -178,7 +178,16 @@ export class LinkRefusedError extends Error {
 export class LinkClosedError extends Error {}
 
 /** Rejects with a `LinkRefusedError` when the hub side refuses, and with a `LinkClosedError` when the channel closes first. */
-export const openLink: (channel: Channel, subsystems: readonly IoSubsystem[]) => Promise<RemoteLink>
+export interface OpenLinkOptions {
+  /** Gets each error that a listener of a remote port throws. */
+  onError?: (error: unknown) => void
+}
+
+export const openLink: (
+  channel: Channel,
+  subsystems: readonly IoSubsystem[],
+  options?: OpenLinkOptions,
+) => Promise<RemoteLink>
 ```
 
 Example of a link, from the client:

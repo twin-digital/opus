@@ -73,4 +73,47 @@ const refused = await screen.submit({ type: 'counter/add', payload: { by: 2 } })
 // shown: [{ count: 2 }]
 ```
 
-The test `src/readme-example.test.ts` runs this example.
+## The link
+
+A link connects a hub to the subsystems of a process that has no hub. The process can be a browser page, a game, or a program in a different language. The protocol uses JSON text messages on one connection. `LINK.md` defines each message. A person who writes a client in any language needs only that document.
+
+- `serveLink(hub, channel)` is the hub side. It attaches the subsystems of the client to the hub and sends each event one time.
+- `openLink(channel, subsystems, options)` is the client side in TypeScript. It resolves with a `RemoteLink`. A `RemoteLink` has one remote port for each subsystem, `closed`, and `close()`.
+- A remote port has the operations of a port. `read()` returns the last joined state with no wait.
+- `openLink` rejects with a `LinkRefusedError` when the hub side refuses the `hello`. It rejects with a `LinkClosedError` when the channel closes first.
+- When the link ends, each `submit` that waits fails with a `LinkClosedError`. Each later `submit` gives `not-running`. `read()` keeps the last joined state.
+- The option `onError` gets each error that a listener throws.
+- A channel is the connection. `createChannelPair()` makes two connected channels in memory. `webSocketChannel(socket)` makes a channel from a WebSocket.
+
+```ts
+import { createChannelPair, createHub, openLink, serveLink, type ModelSubsystem } from '@thrashplay/wishem-hub'
+
+const counter: ModelSubsystem<{ count: number }> = {
+  id: 'counter',
+  inputs: ['counter/add'],
+  initial: { count: 0 },
+  apply: (part, input) => ({ count: part.count + (input.payload as { by: number }).by }),
+}
+
+const hub = createHub({ subsystems: [counter] })
+hub.start()
+
+const [clientChannel, hubChannel] = createChannelPair()
+serveLink(hub, hubChannel)
+const link = await openLink(clientChannel, [
+  { id: 'screen', kind: 'output' },
+  { id: 'buttons', kind: 'input' },
+])
+const shown: unknown[] = []
+link.ports.screen.subscribe((event) => {
+  if (event.type === 'applied') {
+    shown.push(link.ports.screen.read().counter)
+  }
+})
+const accepted = await link.ports.buttons.submit({ type: 'counter/add', payload: { by: 2 } })
+
+// accepted: { ok: true, seq: 1 }
+// shown: [{ count: 2 }]
+```
+
+The test `src/readme-example.test.ts` runs both examples.
