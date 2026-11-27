@@ -57,20 +57,40 @@ export interface Port {
   close(): void
 }
 
+/** The joined state after one sequence number. It refers to the parts and copies none. */
+export interface Checkpoint {
+  readonly seq: number
+  readonly state: JoinedState
+}
+
+/** The start of a record and the inputs after it, in the order of the sequence numbers, with no gap. */
+export interface HubRecord {
+  readonly start: Checkpoint
+  readonly inputs: readonly RecordedInput[]
+}
+
 export interface HubOptions {
   /** The order is the order in which the hub gives an input to the model subsystems. */
   subsystems: readonly ModelSubsystem[]
   /** Gets each error that a listener throws. */
   onError?: (error: unknown) => void
+  /** A positive integer. Default 100. */
+  checkpointInterval?: number
+  /** A positive integer, not smaller than `checkpointInterval`. Default 100000. */
+  recordLimit?: number
 }
 
 export type HubStatus = 'created' | 'running' | 'stopped'
 
 export interface Hub {
   readonly status: HubStatus
+  /** The sequence number of the last accepted input. 0 for none. */
+  readonly seq: number
   start(): void
   stop(): void
   attach(subsystem: IoSubsystem): Port
   read(): JoinedState
+  /** The inputs after the start of the record. */
   record(): readonly RecordedInput[]
+  recordStart(): Checkpoint
 }

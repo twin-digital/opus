@@ -10,6 +10,22 @@ A hub holds the joined state of one construct. The joined state has one part for
 
 The code that makes the hub gives it an ordered list of model subsystems. The hub starts one time and stops one time. It accepts inputs only between the start and the stop.
 
+## The record
+
+The record has a start and a list of inputs. The start is a checkpoint: a sequence number and the joined state after the input with that number. For a new hub, the start is `{ seq: 0, state }` with the first joined state. The list holds each accepted input after the start, in the order of the sequence numbers, with no gap.
+
+- `hub.record()` returns the inputs after the start.
+- `hub.recordStart()` returns the start.
+- `hub.seq` returns the sequence number of the last accepted input, or 0. A read does not copy the record.
+
+The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of `checkpointInterval`. The default is 100. A checkpoint refers to the parts of the joined state and copies none.
+
+The option `recordLimit` is the largest number of inputs after the start. The default is 100000. After an accepted input, when the list holds more inputs than the limit, the hub moves the start to the first valid checkpoint in range. It removes the inputs up to that checkpoint and the checkpoints before it. `createHub` throws a `HubConfigurationError` when an option is not a positive integer, or when `recordLimit` is smaller than `checkpointInterval`.
+
+## Reserved names
+
+The ID `hub` and the input types `hub/<name>` belong to the hub. `createHub` throws a `HubConfigurationError` for a model subsystem with the ID `hub` or with a declared type that starts with `hub/`. `attach` throws a `HubConfigurationError` for the ID `hub`. The constants `HUB_ID` and `REWIND_INPUT_TYPE` give the reserved ID and the reserved type `hub/rewind`.
+
 ## The three kinds of subsystem
 
 - **Model subsystem.** It owns one part of the joined state. It declares the input types that it applies, and it returns the new part for each input. It gets no port, so it cannot send an input. The list of model subsystems is fixed when the hub is made.

@@ -1,6 +1,7 @@
 import { HubConfigurationError, InputRefusedError } from './errors.js'
-import { isId, isInputType } from './names.js'
+import { HUB_ID, isHubInputType, isId, isInputType } from './names.js'
 import type {
+  Checkpoint,
   Hub,
   HubEvent,
   HubOptions,
@@ -39,6 +40,9 @@ const deepFreeze = <T>(value: T): T => {
   return value
 }
 
+/** A checkpoint is a valid start of the record when a replay from it can apply each input after it. */
+const isValidStart = (_checkpoint: Checkpoint): boolean => true
+
 const copySubsystem = (subsystem: ModelSubsystem): ModelSubsystem => ({
   id: subsystem.id,
   initial: subsystem.initial,
@@ -54,6 +58,9 @@ const validateSubsystems = (subsystems: readonly ModelSubsystem[]) => {
     if (!isId(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is not correct.`)
     }
+    if (subsystem.id === HUB_ID) {
+      throw new HubConfigurationError(`The subsystem ID "${HUB_ID}" is reserved for the hub.`)
+    }
     if (ids.has(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is in use.`)
     }
@@ -62,7 +69,27 @@ const validateSubsystems = (subsystems: readonly ModelSubsystem[]) => {
       if (!isInputType(type)) {
         throw new HubConfigurationError(`The input type "${type}" of "${subsystem.id}" is not correct.`)
       }
+      if (isHubInputType(type)) {
+        throw new HubConfigurationError(`The input type "${type}" of "${subsystem.id}" is reserved for the hub.`)
+      }
     }
+  }
+}
+
+const DEFAULT_CHECKPOINT_INTERVAL = 100
+const DEFAULT_RECORD_LIMIT = 100_000
+
+const validateLimits = (checkpointInterval: number, recordLimit: number) => {
+  if (!Number.isInteger(checkpointInterval) || checkpointInterval < 1) {
+    throw new HubConfigurationError('The option checkpointInterval must be a positive integer.')
+  }
+  if (!Number.isInteger(recordLimit) || recordLimit < 1) {
+    throw new HubConfigurationError('The option recordLimit must be a positive integer.')
+  }
+  if (recordLimit < checkpointInterval) {
+    throw new HubConfigurationError(
+      `The option recordLimit (${recordLimit}) is smaller than the option checkpointInterval (${checkpointInterval}).`,
+    )
   }
 }
 
@@ -82,10 +109,14 @@ const copyPayload = (payload: unknown): unknown => {
 export const createHub = (options: HubOptions): Hub => {
   const subsystems = options.subsystems.map(copySubsystem)
   validateSubsystems(subsystems)
+  const checkpointInterval = options.checkpointInterval ?? DEFAULT_CHECKPOINT_INTERVAL
+  const recordLimit = options.recordLimit ?? DEFAULT_RECORD_LIMIT
+  validateLimits(checkpointInterval, recordLimit)
 
   let status: HubStatus = 'created'
   let joined: JoinedState = Object.freeze(Object.fromEntries(subsystems.map((s) => [s.id, s.initial])))
   const record: RecordedInput[] = []
+  const checkpoints: Checkpoint[] = [Object.freeze({ seq: 0, state: joined })]
   const reportError = (error: unknown) => {
     try {
       options.onError?.(error)
@@ -153,6 +184,18 @@ export const createHub = (options: HubOptions): Hub => {
     }
   }
 
+  const limitRecord = () => {
+    if (lastSeq - checkpoints[0].seq <= recordLimit) {
+      return
+    }
+    const index = checkpoints.findIndex((c) => lastSeq - c.seq <= recordLimit && isValidStart(c))
+    if (index < 1) {
+      return
+    }
+    record.splice(0, checkpoints[index].seq - checkpoints[0].seq)
+    checkpoints.splice(0, index)
+  }
+
   const apply = (source: string, input: Input): Applied => {
     const targets = subsystems.filter((subsystem) => subsystem.inputs.includes(input.type))
     if (targets.length === 0) {
@@ -183,6 +226,10 @@ export const createHub = (options: HubOptions): Hub => {
     joined = Object.freeze(next)
     record.push(recorded)
     lastSeq = recorded.seq
+    if (lastSeq % checkpointInterval === 0) {
+      checkpoints.push(Object.freeze({ seq: lastSeq, state: joined }))
+    }
+    limitRecord()
     return { ok: true, recorded }
   }
 
@@ -192,6 +239,9 @@ export const createHub = (options: HubOptions): Hub => {
     }
     if (!isId(subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is not correct.`)
+    }
+    if (subsystem.id === HUB_ID) {
+      throw new HubConfigurationError(`The subsystem ID "${HUB_ID}" is reserved for the hub.`)
     }
     if (attached.has(subsystem.id) || subsystems.some((model) => model.id === subsystem.id)) {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is in use.`)
@@ -238,6 +288,9 @@ export const createHub = (options: HubOptions): Hub => {
     get status() {
       return status
     },
+    get seq() {
+      return lastSeq
+    },
     start: () => {
       if (status !== 'created') {
         throw new Error(`The hub cannot start from the status "${status}".`)
@@ -261,5 +314,6 @@ export const createHub = (options: HubOptions): Hub => {
     attach,
     read: () => joined,
     record: () => record.slice(),
+    recordStart: () => checkpoints[0],
   }
 }

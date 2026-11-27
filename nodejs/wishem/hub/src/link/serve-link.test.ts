@@ -408,7 +408,11 @@ describe('a hello that the hub side refuses', () => {
         hub.stop()
       },
       read: () => hub.read(),
+      get seq() {
+        return hub.seq
+      },
       record: () => hub.record(),
+      recordStart: () => hub.recordStart(),
       attach: () => {
         throw new Error('The hub failed.')
       },
@@ -434,7 +438,11 @@ describe('a hello that the hub side refuses', () => {
         hub.stop()
       },
       read: () => hub.read(),
+      get seq() {
+        return hub.seq
+      },
       record: () => hub.record(),
+      recordStart: () => hub.recordStart(),
       attach: (subsystem) => {
         count += 1
         if (count === 2) {
@@ -614,7 +622,11 @@ describe('the end of a connection', () => {
         hub.stop()
       },
       read: () => hub.read(),
+      get seq() {
+        return hub.seq
+      },
       record: () => hub.record(),
+      recordStart: () => hub.recordStart(),
       attach: (subsystem) => {
         const port = hub.attach(subsystem)
         const close = vi.fn(() => {

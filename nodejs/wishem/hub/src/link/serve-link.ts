@@ -132,9 +132,8 @@ export const serveLink = (hub: Hub, channel: Channel): void => {
     const [first] = ports.values()
     unsubscribe = first.subscribe(onEvent)
     const state = hub.read()
-    const last = hub.record().at(-1)
     lastSent = state
-    sendNow({ t: 'welcome', protocol: LINK_PROTOCOL_VERSION, status: hub.status, seq: last?.seq ?? 0, state })
+    sendNow({ t: 'welcome', protocol: LINK_PROTOCOL_VERSION, status: hub.status, seq: hub.seq, state })
     welcomed = true
     for (const queued of waiting.splice(0)) {
       sendNow(queued)

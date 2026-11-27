@@ -1,8 +1,10 @@
 export type {
   ApplyContext,
+  Checkpoint,
   Hub,
   HubEvent,
   HubOptions,
+  HubRecord,
   HubStatus,
   Input,
   InputProblem,
@@ -15,6 +17,7 @@ export type {
   SubmitResult,
 } from './types.js'
 export { createHub } from './hub.js'
+export { HUB_ID, REWIND_INPUT_TYPE } from './names.js'
 export { HubConfigurationError, InputRefusedError } from './errors.js'
 export { LINK_PROTOCOL_VERSION } from './link/messages.js'
 export type { ClientMessage, HubMessage, RefusalReason } from './link/messages.js'

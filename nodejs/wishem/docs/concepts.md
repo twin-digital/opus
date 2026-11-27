@@ -225,6 +225,12 @@ The hub does these things with each input (**Proposed**):
 
 The record is a record of inputs. It is not a record of each change of a value. (**Proposed**)
 
+The record has a start and a list of inputs. The start is a checkpoint: the joined state after one sequence number. For a new hub, the start is the sequence number 0 and the first joined state. The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of the checkpoint interval (default 100). A checkpoint refers to the parts and makes no copy. (**Proposed**)
+
+The record has a limit (default 100000 inputs after the start). When the list is longer, the hub moves the start to a checkpoint and removes the earlier inputs and checkpoints. (**Proposed**)
+
+The ID `hub` and the input types `hub/<name>` belong to the hub. No model subsystem or I/O subsystem uses them. (**Proposed**)
+
 A write from the workbench or from the agent is an input. Thus the record is also the record of changes with their sources, which provenance and undo need. (**Proposed**)
 
 ## Joined state and hub events
