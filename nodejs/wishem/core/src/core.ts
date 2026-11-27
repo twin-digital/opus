@@ -1,4 +1,5 @@
-import type { Model, Problem, Snapshot, ValidationResult } from './model.js'
+import type { Problem, Snapshot, ValidationResult } from './model.js'
+import { deepFreeze, isEqual } from './equality.js'
 import { validateModel } from './validate-model.js'
 
 /** The read operations of a core. */
@@ -25,24 +26,6 @@ export class ModelError extends Error {
     this.problems = problems
   }
 }
-
-/** JSON text with sorted record keys. */
-const canonical = (value: unknown): string =>
-  JSON.stringify(value, (_key, item: unknown) =>
-    typeof item === 'object' && item !== null && !Array.isArray(item) ?
-      Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
-    : item,
-  )
-
-const deepFreeze = <T>(value: T): T => {
-  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
-    Object.freeze(value)
-    Object.values(value).forEach(deepFreeze)
-  }
-  return value
-}
-
-const isEqual = (a: Model, b: Model): boolean => canonical(a) === canonical(b)
 
 /** Throws a `ModelError` that holds the problems when the model is not correct. */
 export const createCore = (data: unknown): Core => {
