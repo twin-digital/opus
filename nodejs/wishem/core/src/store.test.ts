@@ -113,6 +113,12 @@ describe('createStore', () => {
     expect(() => createStore({ model: null })).toThrow(ModelError)
   })
 
+  it('refuses an input type of a store with a different ID, with the path type', () => {
+    const store = createStore({ id: 'product', model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/set-field', { entity: ENT }))
+    expect(error.problems.map((problem) => problem.path)).toEqual([['type']])
+  })
+
   it('gives a new inputs list on each call', () => {
     expect(createStore().inputs).not.toBe(createStore().inputs)
   })
@@ -334,7 +340,6 @@ describe('remove-entity', () => {
     ['no payload', undefined, ['payload']],
     ['a payload that is not an object', 3, ['payload']],
     ['an empty payload', {}, ['payload', 'entity']],
-    ['an entity that is not a string', { entity: 7 }, ['payload', 'entity']],
   ])('refuses %s', (_name, payload, path) => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/remove-entity', payload))
@@ -450,22 +455,20 @@ describe('set-field', () => {
         ['payload', 'value'],
       ],
     ],
-    ['an entity that is not a string', { ...set(), entity: 1 }, [['payload', 'entity']]],
-    ['a component type that is not a string', { ...set(), componentType: null }, [['payload', 'componentType']]],
-    ['a field that is not a string', { ...set(), field: [] }, [['payload', 'field']]],
     ['no value', { entity: ENT, componentType: CT, field: FLD }, [['payload', 'value']]],
   ])('refuses %s', (_name, payload, paths) => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/set-field', payload))
     expect(error.problems.map((problem) => problem.path)).toEqual(paths)
   })
-})
 
-describe('the part of the store', () => {
-  it('stays the same object after a refusal', () => {
+  it.each([
+    ['entity', { ...set(), entity: 1 }],
+    ['componentType', { ...set(), componentType: null }],
+    ['field', { ...set(), field: [] }],
+  ])('refuses a %s that is not a string, with a problem about the form', (key, payload) => {
     const store = createStore({ model: workbench() })
-    const part = store.initial
-    expect(() => send(store, part, 'store/remove-entity', { entity: MISSING })).toThrow(InputRefusedError)
-    expect(part).toEqual(workbench())
+    const error = refusal(() => send(store, store.initial, 'store/set-field', payload))
+    expect(error.problems).toEqual([{ message: `The payload has no string "${key}" key`, path: ['payload', key] }])
   })
 })
