@@ -25,10 +25,10 @@ The `docs/` folder holds the blueprint.
 These rules apply to each agent, and also to a subagent that has only a brief.
 
 - Change files only in `nodejs/wishem/`, `openspec/changes/`, `openspec/specs/wishem/`, `.changeset/`, `pnpm-lock.yaml`, the catalog in `pnpm-workspace.yaml`, and the Wishem entries of `.repo-kit.yml`. A change in a different place needs the permission of the owner.
-- Run lint, a type check, a test, or a build only when your brief tells you to. These commands use much memory, so only one runs at a time. Run each one under the lock: `flock -w 1200 /tmp/wishem-heavy.lock timeout 900 <command>`. If the command ends with exit code 124, or `flock` gives up with exit code 1, do not try again: stop and report it with the output of `lslocks`.
+- Run lint, a type check, a test, or a build only when your brief tells you to. These commands use much memory, so only one runs at a time. Run each one under the lock: `flock -w 15 /tmp/wishem-heavy.lock timeout 140 <command>`. If `flock` gives up with exit code 1, try the same command again, at most 40 times. If the command ends with exit code 124, or you do not get the lock in 40 tries, stop and report it with the output of `lslocks`.
 - Run them only for the packages that you changed, with a turbo filter.
-- Do no background work: no command in the background, no monitor, and no wait for a later event. Run a long job in the foreground, in parts that each end in less than 8 minutes.
-- Write no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. Write your scripts and your results in `.superpowers/` of your own worktree.
+- Do no background work: no command in the background, no monitor, and no wait for a later event. Run a long job in the foreground, in parts that each end in less than 150 seconds.
+- Write no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. Write your scripts and your results in `.superpowers/` of your own worktree. Give a report file the extension `.txt`.
 - For a break-test, follow `docs/break-test-rules.md`.
 - Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`.
 - Each new package is private. Do not publish to npm.

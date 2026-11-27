@@ -62,22 +62,26 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
 
   ```bash
-  flock -w 1200 /tmp/wishem-heavy.lock timeout 900 <command>
+  flock -w 15 /tmp/wishem-heavy.lock timeout 140 <command>
   ```
 
   The command waits while a different agent holds the lock. The lock is the same file for each worktree. The system releases the lock when the command ends or its agent stops.
 
-- A command that does not end holds the lock. Two limits prevent this. `timeout 900` stops a command after 15 minutes, with exit code 124. `-w 1200` stops the wait for the lock after 20 minutes, with exit code 1 and no run of the command.
-- A subagent that gets one of these two results does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
+- The system moves a foreground command of a subagent to the background after approximately 180 seconds, and the subagent then loses the result. Thus each command, with its wait for the lock, ends in less than 150 seconds. Divide a longer job into parts, for example one package for each command.
+- `-w 15` stops the wait for the lock after 15 seconds, with exit code 1 and no run of the command. The agent then tries the same command again, at most 40 times.
+- A command that does not end holds the lock. `timeout 140` stops the command after 140 seconds, with exit code 124.
+- A subagent that gets exit code 124, or that does not get the lock in 40 tries, does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
 - When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
+- At the start of a session, and after each break-test, the lead agent looks for test processes that are older than 15 minutes (`pgrep -af vitest`) and for a file with the name `core` in a package folder. It stops each such process and removes each such file.
 
 - An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test. [`break-test-rules.md`](break-test-rules.md) gives the rules for a break-test. Put a link to that file in the brief of each break-test.
 - More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
 - `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
-- Enter the worktree of a change before you start a subagent for it, and before you send a message to a subagent that stopped. A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
-- A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 8 minutes.
-- A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception.
+- Enter the worktree of a change before you start a subagent for it. A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
+- Do not send a message to a subagent that stopped. Such a subagent gets the worktree in which the lead agent is at that time, and the lead agent then cannot leave that worktree until the subagent reports. Start a new subagent, and give it the report file of the first one.
+- A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 150 seconds.
+- A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception. A subagent cannot write a `.md` file there, so each report file of a subagent has the extension `.txt`.
 - Two changes that each add a package both change `pnpm-lock.yaml` and the package list of the root `README.md`. After the first one is merged, update the branch of the second one, and make the two files again if they have a conflict.
 
 ## Where a change is permitted
@@ -145,6 +149,21 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Open one pull request for each change. The checks of the pull request are the check of the other packages.
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
+
+### Skills and briefs
+
+- Use each skill that the workflow names, as the skill is written: `openspec-propose` for a new change, `openspec-update-change` for a revision, `superpowers:subagent-driven-development` for the apply step with a review of each task, `break-test` with its two passes, `openspec-archive-change`, and `superpowers:finishing-a-development-branch`. At the menu of the last one, select the pull request.
+- One step differs from `superpowers:subagent-driven-development`: its fix loop sends a message to the implementer that stopped. Start a new implementer with the report file and the findings. See "Limits on agents".
+- A brief does not replace a skill. A brief for work that a skill covers names the skill and tells the subagent to invoke it. The brief does not give the steps of the skill again, does not limit them, and does not remove one.
+- When the lead agent does a step in a lighter form than the workflow gives, it tells the owner in the same message, with the reason.
+
+### Work at the same time
+
+The lead agent is the one agent that can do the steps that are bound to a worktree, such as the finish of a change. Keep the lead agent free:
+
+- When a change is complete and reviewed, do its finish steps before you start a subagent for a different change.
+- While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
+- While a long step runs and no plan can start, start a follow-up issue that touches a different package.
 
 ## The scope of a task
 
