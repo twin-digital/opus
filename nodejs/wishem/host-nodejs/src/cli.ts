@@ -2,8 +2,9 @@
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { ModelError } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
 import { describeCounts, formatProblem } from './format.js'
-import { DEFAULT_PORT, startHost } from './start-host.js'
+import { DEFAULT_PORT, startConstruct } from './start-construct.js'
 
 const USAGE = 'usage: wishem start <folder> [--port <number>]'
 
@@ -44,7 +45,7 @@ const main = async () => {
   say(`wishem: model ${path.resolve(folder)}`)
 
   try {
-    const host = await startHost({
+    const construct = await startConstruct({
       folder,
       port,
       log: say,
@@ -52,11 +53,11 @@ const main = async () => {
         process.exit(1)
       },
     })
-    say(`wishem: ${describeCounts(host.core.getSnapshot())}`)
-    say(`wishem: snapshot at ${host.url}/snapshot`)
+    say(`wishem: ${describeCounts(construct.hub.read().store as Model)}`)
+    say(`wishem: link at ${construct.linkUrl}`)
 
     const stop = () => {
-      void host.close().then(() => {
+      void construct.close().then(() => {
         process.exit(0)
       })
     }
@@ -67,7 +68,7 @@ const main = async () => {
       error.problems.forEach((problem) => {
         console.error(formatProblem(problem))
       })
-      console.error('wishem: the model is not correct, so the core did not start')
+      console.error('wishem: the model is not correct, so the hub did not start')
     } else if ((error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
       console.error(`wishem: port ${port} is in use`)
     } else {

@@ -278,4 +278,17 @@ describe('startConstruct', () => {
     await eventually(() => seen)
     expect(Date.now() - begin).toBeLessThan(2000)
   })
+
+  it('runs the example of the README', async () => {
+    const { startConstruct: fromPackage } = await import('./index.js')
+    const example = async (model: string) => {
+      const running = await fromPackage({ folder: model, port: 0, log: () => undefined })
+      const result = { link: running.linkUrl, store: running.hub.read().store }
+      await running.close()
+      return result
+    }
+    const result = await example(folder)
+    expect(result.link).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
+    expect((result.store as Model).entities).toHaveLength(1)
+  })
 })

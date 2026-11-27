@@ -56,7 +56,7 @@ To start the workbench, see [`workbench-app/README.md`](../../workbench-app/READ
 - `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-hub` depends on no other package of Wishem.
 
-The package `host-nodejs` also provides the `wishem` command. The command starts the host for a model folder, with no page. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`).
+The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`).
 
 ## Dynamic diagram: a change to the model becomes a new picture
 

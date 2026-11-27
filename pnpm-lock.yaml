@@ -3422,6 +3422,9 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.9.1(jiti@2.7.0)(supports-color@8.1.1))
+      '@thrashplay/wishem-hub':
+        specifier: workspace:*
+        version: link:../hub
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config

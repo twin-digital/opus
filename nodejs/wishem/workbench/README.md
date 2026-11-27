@@ -11,10 +11,21 @@ pnpm build --filter "@thrashplay/wishem-*"
 pnpm --filter @thrashplay/wishem-workbench start
 ```
 
-The command prints the address of the snapshot. Open it in a second terminal.
+The command prints the address of the link.
 
 ```
-curl http://127.0.0.1:4747/snapshot
+wishem: link at ws://127.0.0.1:4747/link
+```
+
+A client opens a WebSocket at that address. The protocol is in [`nodejs/wishem/hub/LINK.md`](../hub/LINK.md). The `openLink` function and the `webSocketChannel` function of `@thrashplay/wishem-hub` are a client:
+
+```ts
+import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+
+const socket = new WebSocket('ws://127.0.0.1:4747/link')
+const link = await openLink(await webSocketChannel(socket), [{ id: 'reader', kind: 'output' }])
+console.log(link.ports.reader.read().store) // the model
+link.close()
 ```
 
 To stop the command, press Ctrl+C.
@@ -36,11 +47,11 @@ model/
 1. Start the command.
 2. Open `model/state.json`.
 3. Change the value `Wishem` to other text. Save the file.
-4. Request the snapshot again. The snapshot has the new text. You do not restart the command.
+4. Open a new link. The part `store` has the new text. You do not restart the command.
 
-To see each change as it happens, run `curl -N http://127.0.0.1:4747/snapshots`.
+A client that stays connected gets each change as an `applied` event.
 
-If a saved file is not correct, the command prints each problem and the snapshot does not change. When you correct the file, the command prints that the model is correct.
+If a saved file is not correct, the command prints each problem and the model does not change. When you correct the file, the command prints that the model is correct.
 
 ## Use in code
 
