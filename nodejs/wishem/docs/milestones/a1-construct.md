@@ -842,6 +842,8 @@ The number of ticks before the pause can be 2 or 3 on a slow computer. The value
 
 ### A change of `state.json` by hand is not followed after the construct wrote the file
 
+Issue: [#579](https://github.com/twin-digital/opus/issues/579).
+
 After the construct writes `state.json` (section 6), the construct no longer follows changes of `state.json`. The construct follows changes of the definition files.
 
 Steps:
