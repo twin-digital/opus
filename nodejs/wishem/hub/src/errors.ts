@@ -13,3 +13,16 @@ export class InputRefusedError extends Error {
     this.problems = problems
   }
 }
+
+/** Thrown by `createHub` when an input of the record does not apply. */
+export class ReplayError extends Error {
+  readonly seq: number
+  readonly problems: InputProblem[]
+
+  constructor(seq: number, problems: InputProblem[]) {
+    super(`The input ${seq} of the record does not apply: ${problems.map((problem) => problem.message).join('; ')}`)
+    this.name = 'ReplayError'
+    this.seq = seq
+    this.problems = problems
+  }
+}

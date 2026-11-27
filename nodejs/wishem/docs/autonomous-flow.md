@@ -58,7 +58,7 @@ gh project item-list 6 --owner twin-digital --limit 200 --format json \
 
 Lint, type checks, tests, and builds use much memory. They can stop the container.
 
-- At most four subagents run at one time.
+- At most five subagents run at one time. The owner set this limit on 2026-11-27, after the second retrospective.
 - At most one lint, type check, test, or build command runs at one time. A lock makes this sure. Each agent, and this includes the lead agent, runs each such command in this form:
 
   ```bash
@@ -148,7 +148,17 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`. The hooks check each package of the repository.
 - Open one pull request for each change. The checks of the pull request are the check of the other packages.
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
+- Before the push, run `pnpm exec prettier --check` on the folder of the change, on the archive of the change, and on each file that the branch changed. A planner runs `pnpm exec prettier --write` on the folder of the change before its commit. The check `merge-checks` of a pull request fails for one file that is not in the format.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
+- The folder [`flow-scripts`](flow-scripts/) holds three scripts for these steps. `merge-when-green.mjs <number>` waits for the checks of a pull request, merges it, and updates the branch and waits again when `main` moved. `board.mjs <item ID>=<todo|progress|blocked|done>` sets the status of an item of the project. `break-test-issue.mjs` creates the issue of a break-test. Run each one with `node`, as one command.
+
+### The steps that a person does
+
+A test of one requirement does not find a fault that needs two features in a sequence. The first test guide found such a fault after each review and each break-test: a hand edit of a file was not followed after the process wrote that file.
+
+- The design of a change that adds or changes a thing that a person can use or see has a section "The test guide". It gives the steps that a person does to see the change work, with real processes and real files, as exact commands and their results. The steps join the change with the features that it meets: a write and then a hand edit, a stop and then a start, an input through the link and then the file on the disk.
+- The final reviewer does these steps on the branch before it gives its verdict, and reports the real result of each step. A step that does not give its result is a finding of the grade Important or higher.
+- The test guide of the milestone uses these sections.
 
 ### Reviews
 
@@ -180,7 +190,7 @@ The lead agent is the one agent that can do the steps that are bound to a worktr
 - When a change is complete and reviewed, do its finish steps before you start a subagent for a different change.
 - While a long step runs, such as an implementer or a break-test, start the plan of the next change on the board in a new worktree. A plan does not need the merge of the change that it depends on. It needs only the design of that change.
 - While a long step runs and no plan can start, start a follow-up issue that touches a different package.
-- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than four subagents run, look at the tasks of each open milestone and start one that is not blocked.
+- Work is not limited to one milestone. A task can start when each issue that blocks it is closed, in any milestone. When fewer than five subagents run, look at the tasks of each open milestone and start one that is not blocked.
 
 ## The scope of a task
 

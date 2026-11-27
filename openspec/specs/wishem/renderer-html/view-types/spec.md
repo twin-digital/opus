@@ -8,7 +8,7 @@ Defines the generated types of the props of a React view: what the generator wri
 
 ### Requirement: The generator writes the types of the props of each view
 
-For each sidecar of the kind `react` in a `views` folder, the generator SHALL write one TypeScript file beside the sidecar. The file of `<name>.view.json` SHALL be `<name>.view.gen.ts`. The file SHALL export one type, `Props`, with one read-only member for each field in the definition of the component type of the sidecar. The type of the member of a `string` field SHALL be a string or no value. The generator SHALL get the definitions from the model folder.
+For each sidecar of the kind `react` in a `views` folder, the generator SHALL write one TypeScript file beside the sidecar. The file of `<name>.view.json` SHALL be `<name>.view.gen.ts`. The file SHALL export one type, `Props`, with one read-only member for each field in the definition of the component type of the sidecar. The type of the member of a `string` field SHALL be a string or no value. The `generate` script SHALL get the definitions from the model folder.
 
 #### Scenario: The types of the app bar
 
@@ -102,7 +102,7 @@ With the option `--check`, the `generate` script SHALL change no file. It SHALL 
 
 ### Requirement: The start script keeps the generated files current
 
-While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. The script SHALL have an option that turns this off.
+While the `start` script of the workbench runs, the generated files of the `views` folder of the package SHALL follow the model that the core holds. The script SHALL run the generator when it starts, after each change to the definitions that the core accepts, and after each change to a sidecar. A rewind that changes the definitions SHALL be such a change. The script SHALL have an option that turns this off.
 
 #### Scenario: A label changes while the workbench runs
 
@@ -124,6 +124,11 @@ While the `start` script of the workbench runs, the generated files of the `view
 - **WHEN** a person starts the workbench with the option that turns the generator off, and changes a label in a definition file
 - **THEN** no generated file changes
 
+#### Scenario: A rewind before a change of a label
+
+- **WHEN** the workbench runs, a person changes the label of the field `title` to `heading`, and then an input subsystem sends `hub/rewind` with the sequence number before that change
+- **THEN** `AppBar.view.gen.ts` has the member `title` and no member `heading`
+
 ### Requirement: The start script reports what the generator did
 
 For each prop name that is new or removed after a run of the generator, the `start` script SHALL print one line that names the generated file and the prop. The script SHALL print each error of the generator. An error of the generator SHALL NOT stop the script.
@@ -137,3 +142,17 @@ For each prop name that is new or removed after a run of the generator, the `sta
 
 - **WHEN** the workbench runs and a person gives two fields of one component type labels that give the same name
 - **THEN** the terminal has the error of the generator, and the page is still served
+
+### Requirement: The generator is a part of the React renderer package
+
+The generator SHALL be a part of the React renderer package, in the entry `@thrashplay/wishem-renderer-react/view-types`. The caller SHALL give the definitions, the `views` folder, and the command that writes the files again. The generator SHALL read no model folder. The header of each generated file SHALL name the command that the caller gives.
+
+#### Scenario: The command of the workbench
+
+- **WHEN** the `generate` script of the workbench page writes `AppBar.view.gen.ts`
+- **THEN** the header of the file names `pnpm --filter @thrashplay/wishem-workbench-app generate`
+
+#### Scenario: A product gives its own command
+
+- **WHEN** a caller gives the command `pnpm --filter my-product generate`
+- **THEN** the header of each file that the generator writes names `pnpm --filter my-product generate`

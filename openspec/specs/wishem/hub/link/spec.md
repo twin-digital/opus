@@ -57,9 +57,14 @@ The hub side SHALL answer a `hello` that it cannot serve with a `refused` messag
 - **WHEN** a client sends `hello` with a subsystem of the kind `model`
 - **THEN** the client gets `refused` with the reason `unsupported`
 
+#### Scenario: The reserved ID
+
+- **WHEN** a client sends `hello` with an input subsystem that has the ID `hub`
+- **THEN** the client gets `refused` with the reason `id-in-use`
+
 ### Requirement: The hub side sends each event one time for each link
 
-The hub side SHALL send one `event` message for the `started` event and for the `stopping` event of the hub, and one `applied` message for each accepted input. A link SHALL get each event one time, also when the link carries more than one subsystem. After the `stopping` event, the hub side SHALL close the connection.
+The hub side SHALL send one `event` message for the `started` event and for the `stopping` event of the hub, and one `applied` message for each accepted input. A link SHALL get each event one time, also when the link carries more than one subsystem. After the `stopping` event, the hub side SHALL close the connection. The hub side SHALL close the connection only for the `stopping` event, and not for a different event.
 
 #### Scenario: A link with two subsystems
 
@@ -73,12 +78,17 @@ The hub side SHALL send one `event` message for the `started` event and for the 
 
 ### Requirement: An applied message holds the input and the parts that changed
 
-An `applied` message SHALL hold the recorded input and the new value of each part of the joined state that changed since the last state that the hub side sent on this link. It SHALL hold no part that did not change.
+An `applied` message SHALL hold the recorded input and each part of the joined state that is not the same object as in the last state that the hub side sent on this link. It SHALL hold no other part. A part in the message MAY have a value that is equal to its last value. A rewind SHALL reach the client as an `applied` message with the input `hub/rewind`, so a client of version 1 SHALL get the state after a rewind with no other message.
 
 #### Scenario: An input changes one part of two
 
 - **WHEN** the joined state has the parts `store` and `time`, and an input changes only `time`
 - **THEN** the `applied` message holds the input and the part `time`, and it does not hold `store`
+
+#### Scenario: A rewind on a link
+
+- **WHEN** a client has a link, the hub accepted the inputs 1 to 4, and then the hub accepts a rewind to the input 2
+- **THEN** the client gets an `applied` message with the sequence number 5 and the input `hub/rewind`, the link stays open, and a read of the remote port gives the joined state after the input 2
 
 ### Requirement: The client sends inputs with a request number
 

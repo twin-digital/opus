@@ -5,3 +5,4 @@ A test guide is the test plan of one milestone. It lists the new features of the
 | Milestone    | Guide                              | Programs        |
 | ------------ | ---------------------------------- | --------------- |
 | A1 Construct | [a1-construct.md](a1-construct.md) | `a1-construct/` |
+| A2 Time      | [a2-time.md](a2-time.md)           | `a2-time/`      |

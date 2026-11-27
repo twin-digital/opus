@@ -1,31 +1,35 @@
 import type { ComponentTypeDefinition, Entity, Model } from '@thrashplay/wishem-core'
+import type { Port } from '@thrashplay/wishem-hub'
 import { createElement, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { ViewProps, ViewTable } from './collect-views.js'
 import { propNames } from './field-names.js'
 import { describeWarning, viewWarnings } from './view-warnings.js'
 
-/** The read operations that the renderer uses. */
-export interface ModelReader {
-  getSnapshot(): Model
-  /** Returns a function that removes the listener. */
-  subscribe(listener: (model: Model) => void): () => void
-}
+/** The two operations of a port that a renderer uses. */
+export type PortReader = Pick<Port, 'read' | 'subscribe'>
 
 export interface RendererProps {
-  reader: ModelReader
+  port: PortReader
   views: ViewTable
 }
 
 const propsOf = (definition: ComponentTypeDefinition, component: Entity['components'][string]): ViewProps =>
   Object.fromEntries(propNames(definition).props.map(({ name, field }) => [name, component[field.id]]))
 
-/** Draws each component that has a view. Each picture is in a wrapper that gives its entity. */
-export const Renderer = ({ reader, views }: RendererProps) => {
-  const subscribe = useCallback((listener: () => void) => reader.subscribe(listener), [reader])
-  const getSnapshot = useCallback(() => reader.getSnapshot(), [reader])
-  const model = useSyncExternalStore(subscribe, getSnapshot)
+/**
+ * Draws each component that has a view, from the part `store` of the joined state of a port.
+ * Each picture is in a wrapper that gives its entity and its component type.
+ * The renderer only reads. It does not close the port.
+ */
+export const Renderer = ({ port, views }: RendererProps) => {
+  const subscribe = useCallback((listener: () => void) => port.subscribe(listener), [port])
+  const getStore = useCallback(() => port.read().store as Model | undefined, [port])
+  const model = useSyncExternalStore(subscribe, getStore)
 
-  const warnings = useMemo(() => viewWarnings(views, model.definitions).map(describeWarning), [views, model])
+  const warnings = useMemo(
+    () => (model ? viewWarnings(views, model.definitions).map(describeWarning) : []),
+    [views, model],
+  )
   const lastWarned = useRef('')
   useEffect(() => {
     const text = warnings.join('\n')
@@ -37,6 +41,10 @@ export const Renderer = ({ reader, views }: RendererProps) => {
       console.warn(line)
     })
   }, [warnings])
+
+  if (!model) {
+    return null
+  }
 
   return (
     <>

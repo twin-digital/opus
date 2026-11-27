@@ -1,8 +1,10 @@
 export type {
   ApplyContext,
+  Checkpoint,
   Hub,
   HubEvent,
   HubOptions,
+  HubRecord,
   HubStatus,
   Input,
   InputProblem,
@@ -12,10 +14,12 @@ export type {
   Port,
   RecordedInput,
   RejectionReason,
+  RewindPayload,
   SubmitResult,
 } from './types.js'
 export { createHub } from './hub.js'
-export { HubConfigurationError, InputRefusedError } from './errors.js'
+export { HUB_ID, hubInputs, REWIND_INPUT_TYPE } from './names.js'
+export { HubConfigurationError, InputRefusedError, ReplayError } from './errors.js'
 export { LINK_PROTOCOL_VERSION } from './link/messages.js'
 export type { ClientMessage, HubMessage, RefusalReason } from './link/messages.js'
 export { createChannelPair, webSocketChannel } from './link/channel.js'

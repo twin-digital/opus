@@ -44,6 +44,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-hub`, and the page imports a value of `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows a relationship from `host-nodejs` to `hub` and a relationship from the page to `hub`, each with the label "Builds on [import]"
 
+#### Scenario: The page and the workbench process build on the React renderer package
+
+- **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
+- **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
+
 #### Scenario: A change alters the protocol between two containers
 
 - **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
@@ -81,6 +86,11 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 
 - **WHEN** a change replaces the part of the page that gets the model from the workbench process
 - **THEN** the component diagram shows the new part, its technology, and its relationship to the process
+
+#### Scenario: The renderer reads through a port
+
+- **WHEN** the client of the hub gives the port of each link, and the renderer and the table of views come from `@thrashplay/wishem-renderer-react`
+- **THEN** the component diagram shows that the renderer reads the part `store` through the port, and its technology lines name `renderer-react` for the renderer and the table of views
 
 ### Requirement: The entity diagram of the model folder
 
