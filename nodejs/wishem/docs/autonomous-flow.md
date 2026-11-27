@@ -72,11 +72,13 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 | `.changeset/`                                                                                                                        | Permitted.                                                                                |
 | `pnpm-lock.yaml`, and the catalog in `pnpm-workspace.yaml`                                                                           | Permitted.                                                                                |
 | The entries of the Wishem packages in `.repo-kit.yml`, and the package list in the root `README.md` that `pnpm update-readme` writes | Permitted.                                                                                |
+| The entries of `turbo.json` and `.gitignore` that name a Wishem package or a path in `nodejs/wishem/`                                | Permitted.                                                                                |
 | Each other place in the repository, the devcontainer, and the CI workflows                                                           | Not permitted. Ask in a discovery issue. Make the change only after the owner permits it. |
 
 Three more limits apply:
 
 - Each new package is private. Do not publish to npm. A release to npm needs a discovery question that the owner answers with "yes". Prefer a different method, such as files on a GitHub release.
+- A release of Wishem is a prerelease on GitHub that the lead agent makes by hand with `gh release create`. The lead agent can create the tag and the prerelease in `twin-digital/opus`, on the condition that each npm package of Wishem is private. Each archive has the notice "All rights reserved". Wishem has no licence.
 - Run Godot in a Docker container. A local installation of a tool needs a discovery question.
 - Do not close or rewrite an issue that this work did not create, with one exception: close an issue as replaced, with a link, when a merged specification covers it.
 
@@ -111,7 +113,9 @@ Then:
 - Set the status of each task that waits to `Blocked`.
 - Continue with a task that is not blocked. Keep one subagent at work when such a task exists.
 - When no task can start after the task in progress, see "A notice to the phone of the owner".
-- The owner answers on the issue and tells the lead agent. Record the answer in the OpenSpec change that uses it, set the tasks that waited to `Todo`, and close the discovery issue.
+- The owner answers in a comment on the issue and tells the lead agent. The owner does not close the issue.
+- The lead agent records the answer in the OpenSpec change that uses it. If that change does not exist, the lead agent records the answer in a comment on the issue of each task that waited. Then the lead agent sets the tasks that waited to `Todo` and closes the discovery issue.
+- An answer that changes a limit of the owner also changes this file, in a pull request.
 
 ## How a change is made
 
