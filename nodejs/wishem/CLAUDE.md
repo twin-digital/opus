@@ -18,6 +18,20 @@ The `docs/` folder holds the blueprint.
 3. `docs/glossary.md`: the exact terms to use.
 4. `docs/brand.md`: before you design a user interface or write what the agent says to the designer.
 
+## Rules for each agent
+
+These rules apply to each agent, and also to a subagent that has only a brief.
+
+- Change files only in `nodejs/wishem/`, `openspec/changes/`, `openspec/specs/wishem/`, `.changeset/`, `pnpm-lock.yaml`, the catalog in `pnpm-workspace.yaml`, and the Wishem entries of `.repo-kit.yml`. A change in a different place needs the permission of the owner.
+- Run lint, a type check, a test, or a build only when your brief tells you to. Only one agent at a time runs these commands, because they use much memory.
+- Run them only for the packages that you changed, with a turbo filter.
+- Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`.
+- Each new package is private. Do not publish to npm.
+
+## Autonomous work
+
+When the owner tells you to work with little help, you are the lead agent. Read `docs/autonomous-flow.md` before you do anything else. That file replaces two items of "How to work": you do not confirm a **Proposed** item with the owner, and you can change a rule in `docs/rules.md`. It tells you when to ask the owner.
+
 ## How to work
 
 - Plan each change as an OpenSpec change. Start from the GitHub issue of the change. `docs/roadmap.md` gives the milestones and their issues.
