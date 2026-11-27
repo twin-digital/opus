@@ -42,7 +42,7 @@ The hub side SHALL send one `event` message for the `started` event and for the 
 
 ### Requirement: An applied message holds the input and the parts that changed
 
-An `applied` message SHALL hold the recorded input and the new value of each part of the joined state that changed since the last state that the hub side sent on this link. It SHALL hold no part that did not change. A rewind SHALL reach the client as an `applied` message that holds the input `hub/rewind` and each part that the rewind changed, so a client of version 1 SHALL get the state after a rewind with no other message.
+An `applied` message SHALL hold the recorded input and each part of the joined state that is not the same object as in the last state that the hub side sent on this link. It SHALL hold no other part. A part in the message MAY have a value that is equal to its last value. A rewind SHALL reach the client as an `applied` message with the input `hub/rewind`, so a client of version 1 SHALL get the state after a rewind with no other message.
 
 #### Scenario: An input changes one part of two
 

@@ -4,7 +4,7 @@
 
 ### Requirement: The clock sends no late ticks after a rewind
 
-After the hub applies a rewind, the clock SHALL measure the real time again from the time of the rewind. The real time that passed before the rewind SHALL NOT cause ticks after it. While `running` is `true` after the rewind, the clock SHALL send the next tick one step length after the rewind.
+After the hub applies a rewind, the clock SHALL measure the real time again from the time of the rewind. The real time that passed before the rewind SHALL NOT cause ticks after it. While `running` is `true` after the rewind, the clock SHALL send the next tick at the first call of its timer that is one step length or more after the rewind.
 
 #### Scenario: A rewind while the construct runs
 

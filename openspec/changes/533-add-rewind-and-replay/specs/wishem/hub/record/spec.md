@@ -115,7 +115,7 @@ The hub SHALL reject a `hub/rewind` with the reason `invalid` and a problem at t
 
 ### Requirement: A new hub can start from a record
 
-The code that makes a hub SHALL be able to give a record. The hub SHALL take the start of the record as its first joined state and as its first checkpoint, and SHALL apply each input of the record in order, with its sequence number and its source, before the hub starts. The hub SHALL send no event for these inputs. The new hub SHALL have the same record and the same last sequence number as the record that it got.
+The code that makes a hub SHALL be able to give a record. The hub SHALL take the start of the record as its first joined state and as its first checkpoint, and SHALL apply each input of the record in order, with its sequence number and its source, before the hub starts. The hub SHALL send no event for these inputs. The new hub SHALL have the same joined state and the same last sequence number as the hub that made the record.
 
 #### Scenario: A replay
 
@@ -126,6 +126,20 @@ The code that makes a hub SHALL be able to give a record. The hub SHALL take the
 
 - **WHEN** the record holds a `hub/rewind` input, and a new hub starts from that record
 - **THEN** the joined state of the new hub is equal to the joined state of the first hub
+
+### Requirement: The limit of the record does not stop a replay
+
+The hub SHALL NOT move the start of the record while it applies the record that it got, so each rewind of that record applies. When the limit of the new hub is not less than the number of inputs that it got, the new hub SHALL have the same record. When the limit is less, the new hub SHALL apply its limit one time after the last input.
+
+#### Scenario: A replay in a hub with a smaller limit
+
+- **WHEN** a hub with a limit of 1000 applies 30 inputs and then a rewind to the sequence number 5, and a new hub with a limit of 20 starts from that record
+- **THEN** the replay does not fail, the joined state and the last sequence number of the new hub are equal to those of the first hub, and the record of the new hub holds 20 inputs or fewer
+
+#### Scenario: A replay in a hub with an equal limit
+
+- **WHEN** a new hub with the limit of the first hub starts from the record of the first hub
+- **THEN** `record()` and `recordStart()` of the new hub are equal to those of the first hub
 
 ### Requirement: A record that does not apply stops the replay
 
