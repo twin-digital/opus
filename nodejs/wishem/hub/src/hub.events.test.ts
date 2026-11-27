@@ -59,6 +59,36 @@ describe('events', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 
+  it('does not send the current event to a listener that registers during the event', async () => {
+    const { hub, keyboard, renderer } = make()
+    const late = vi.fn()
+    let added = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !added) {
+        added = true
+        renderer.subscribe(late)
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(late).not.toHaveBeenCalled()
+  })
+
+  it('does not send the current event to a port that attaches during the event', async () => {
+    const { hub, keyboard, renderer } = make()
+    const late = vi.fn()
+    let added = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !added) {
+        added = true
+        hub.attach({ id: 'late', kind: 'output' }).subscribe(late)
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(late).not.toHaveBeenCalled()
+  })
+
   it('sends no event to a removed listener', async () => {
     const { hub, keyboard, renderer } = make()
     const listener = vi.fn()
@@ -249,6 +279,21 @@ describe('queue', () => {
     expect(log).toEqual(['applied-1', 'applied-2', 'resolved-2'])
   })
 
+  it('applies inputs that a listener sends in the order of sending', async () => {
+    const { hub, keyboard, renderer } = make()
+    let sent = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField('b'))
+        void keyboard.submit(setField('c'))
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(hub.record().map((r) => (r.payload as { name: string }).name)).toEqual(['a', 'b', 'c'])
+  })
+
   it('applies an input that a listener of started sends', async () => {
     const { hub, keyboard, renderer } = make()
     let sent: Promise<unknown> | undefined
@@ -324,52 +369,131 @@ describe('failure in a listener', () => {
     hub.start()
     await expect(keyboard.submit(setField('a'))).resolves.toEqual({ ok: true, seq: 1 })
   })
-})
 
-describe('break-test additions', () => {
-  it('applies inputs that a listener sends in the order of sending', async () => {
-    const { hub, keyboard, renderer } = make()
-    let sent = false
-    renderer.subscribe((event) => {
-      if (event.type === 'applied' && !sent) {
-        sent = true
-        void keyboard.submit(setField('b'))
-        void keyboard.submit(setField('c'))
-      }
+  describe('when onError throws', () => {
+    const onError = () => {
+      throw new Error('onError')
+    }
+    const thrower = () => {
+      throw new Error('listener')
+    }
+
+    it('still accepts the input and calls the other listeners during applied', async () => {
+      const { hub, keyboard, renderer } = make({ onError })
+      const other = vi.fn()
+      renderer.subscribe((event) => {
+        if (event.type === 'applied') {
+          thrower()
+        }
+      })
+      renderer.subscribe(other)
+      hub.start()
+      await expect(keyboard.submit(setField('a'))).resolves.toEqual({ ok: true, seq: 1 })
+      expect(other).toHaveBeenCalledWith(expect.objectContaining({ type: 'applied' }))
     })
-    hub.start()
-    await keyboard.submit(setField('a'))
-    expect(hub.record().map((input) => (input.payload as { name: string }).name)).toEqual(['a', 'b', 'c'])
+
+    it('still sends stopping to the other listeners and stops', () => {
+      const { hub, renderer } = make({ onError })
+      const other = vi.fn()
+      renderer.subscribe((event) => {
+        if (event.type === 'stopping') {
+          thrower()
+        }
+      })
+      renderer.subscribe(other)
+      hub.start()
+      hub.stop()
+      expect(other).toHaveBeenCalledWith({ type: 'stopping' })
+      expect(hub.status).toBe('stopped')
+    })
+
+    it('still applies the inputs that a started listener sent', async () => {
+      const { hub, keyboard, renderer } = make({ onError })
+      let sent: Promise<unknown> | undefined
+      renderer.subscribe((event) => {
+        if (event.type === 'started') {
+          sent = keyboard.submit(setField('a'))
+          thrower()
+        }
+      })
+      hub.start()
+      await expect(sent).resolves.toEqual({ ok: true, seq: 1 })
+    })
   })
 
-  it('does not send the current event to a listener that registers during the event', async () => {
-    const { hub, keyboard, renderer } = make()
-    const late = vi.fn()
-    let added = false
-    renderer.subscribe((event) => {
-      if (event.type === 'applied' && !added) {
-        added = true
-        renderer.subscribe(late)
-      }
-    })
-    hub.start()
-    await keyboard.submit(setField('a'))
-    expect(late).not.toHaveBeenCalled()
-  })
+  describe('when a listener stops the hub', () => {
+    const two = () => {
+      const hub = createHub({ subsystems: [store] })
+      const keyboard = hub.attach({ id: 'keyboard', kind: 'input' })
+      const first = hub.attach({ id: 'first', kind: 'output' })
+      const second = hub.attach({ id: 'second', kind: 'output' })
+      const events: string[] = []
+      return { hub, keyboard, first, second, events }
+    }
 
-  it('does not send the current event to a port that attaches during the event', async () => {
-    const { hub, keyboard, renderer } = make()
-    const late = vi.fn()
-    let added = false
-    renderer.subscribe((event) => {
-      if (event.type === 'applied' && !added) {
-        added = true
-        hub.attach({ id: 'late', kind: 'output' }).subscribe(late)
-      }
+    it('completes the delivery of applied, then sends stopping, in an applied listener', async () => {
+      const { hub, keyboard, first, second, events } = two()
+      first.subscribe((event) => {
+        events.push(`first:${event.type}`)
+        if (event.type === 'applied') {
+          hub.stop()
+          events.push(`status:${hub.status}`)
+        }
+      })
+      second.subscribe((event) => events.push(`second:${event.type}`))
+      hub.start()
+      events.length = 0
+      await keyboard.submit(setField('a'))
+      expect(events).toEqual(['first:applied', 'status:running', 'second:applied', 'first:stopping', 'second:stopping'])
+      expect(hub.status).toBe('stopped')
     })
-    hub.start()
-    await keyboard.submit(setField('a'))
-    expect(late).not.toHaveBeenCalled()
+
+    it('completes the delivery of started, then sends stopping, in a started listener', () => {
+      const { hub, first, second, events } = two()
+      first.subscribe((event) => {
+        events.push(`first:${event.type}`)
+        if (event.type === 'started') {
+          hub.stop()
+        }
+      })
+      second.subscribe((event) => events.push(`second:${event.type}`))
+      hub.start()
+      expect(events).toEqual(['first:started', 'second:started', 'first:stopping', 'second:stopping'])
+      expect(hub.status).toBe('stopped')
+    })
+
+    it('throws on a second stop while a stop is requested', () => {
+      const { hub, first } = two()
+      let error: unknown
+      first.subscribe((event) => {
+        if (event.type === 'started') {
+          hub.stop()
+          try {
+            hub.stop()
+          } catch (caught) {
+            error = caught
+          }
+        }
+      })
+      hub.start()
+      expect(error).toBeInstanceOf(Error)
+      expect(hub.status).toBe('stopped')
+    })
+
+    it('gives not-running to each input that waits in the queue', async () => {
+      const { hub, keyboard, first } = two()
+      let sent: Promise<unknown> | undefined
+      first.subscribe((event) => {
+        if (event.type === 'applied') {
+          sent = keyboard.submit(setField('b'))
+          hub.stop()
+        }
+      })
+      hub.start()
+      await keyboard.submit(setField('a'))
+      await expect(sent).resolves.toEqual({ ok: false, reason: 'not-running', problems: [] })
+      expect(hub.record()).toHaveLength(1)
+    })
   })
 })
 

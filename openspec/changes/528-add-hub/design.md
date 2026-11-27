@@ -80,6 +80,7 @@ The kinds are `model`, `input`, and `output`. The model subsystems are fixed whe
 
 - Reason for the promise: a remote port must wait for a reply. One interface for the direct port and the remote port lets a subsystem run in the process of the hub or in a different process with no change.
 - Reason for the queue: a listener that sends an input must not start a second input inside the first one. Each listener sees the events in the order of the sequence numbers.
+- A listener can call `stop()` while the hub delivers an event. The hub then completes the current delivery to each remaining listener, sends `stopping`, and gives `not-running` to each input in the queue.
 - A rejection is a result with `ok: false`. The promise is rejected only when a model subsystem throws an error that is not a refusal.
 
 ### 6. A model subsystem refuses with `InputRefusedError`
@@ -125,12 +126,12 @@ export interface Input {
 
 export interface RecordedInput {
   /** Starts at 1. */
-  seq: number
+  readonly seq: number
   /** The ID of the subsystem that sent the input. */
-  source: string
-  type: string
+  readonly source: string
+  readonly type: string
   /** A frozen JSON copy. `null` when the sender gave no payload. */
-  payload: unknown
+  readonly payload: unknown
 }
 
 /** One key for each model subsystem, under its ID. */
@@ -151,8 +152,8 @@ export interface ModelSubsystem<Part = unknown> {
 }
 
 export interface InputProblem {
-  message: string
-  path?: (string | number)[]
+  readonly message: string
+  readonly path?: readonly (string | number)[]
 }
 
 export class InputRefusedError extends Error {
@@ -161,8 +162,8 @@ export class InputRefusedError extends Error {
 }
 
 export interface IoSubsystem {
-  id: string
-  kind: 'input' | 'output'
+  readonly id: string
+  readonly kind: 'input' | 'output'
 }
 
 export type RejectionReason = 'not-permitted' | 'not-running' | 'unknown-type' | 'invalid'

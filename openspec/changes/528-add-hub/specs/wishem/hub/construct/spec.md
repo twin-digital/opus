@@ -196,6 +196,11 @@ A hub SHALL accept inputs only between its start and its stop. After the stop, t
 - **WHEN** a hub with one registered listener stops
 - **THEN** the listener gets the event `stopping`, and a later input is rejected with the reason `not-running`
 
+#### Scenario: A listener stops the hub
+
+- **WHEN** a listener of an applied event stops the hub
+- **THEN** each other listener gets that applied event, and then the event stopping
+
 #### Scenario: A read after the stop
 
 - **WHEN** a hub is stopped

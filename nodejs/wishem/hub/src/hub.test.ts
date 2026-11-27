@@ -60,6 +60,18 @@ describe('createHub', () => {
     expect(() => createHub({ subsystems: [bad] })).toThrow(/Store/)
   })
 
+  it('keeps no reference to the list of input types of the caller', async () => {
+    const inputs = ['time/set-running']
+    const hub = createHub({ subsystems: [{ ...time, inputs }] })
+    const keyboard = hub.attach({ id: 'keyboard', kind: 'input' })
+    hub.start()
+    inputs.push('time/advance')
+    expect(await keyboard.submit({ type: 'time/advance', payload: { by: 1 } })).toMatchObject({
+      ok: false,
+      reason: 'unknown-type',
+    })
+  })
+
   it('accepts correct names', () => {
     const subsystem: ModelSubsystem = { ...time, inputs: ['time/set-running'] }
     expect(() => createHub({ subsystems: [subsystem] })).not.toThrow()
@@ -96,6 +108,27 @@ describe('attach', () => {
     const port = hub.attach({ id: 'renderer', kind: 'output' })
     port.close()
     expect(() => hub.attach({ id: 'renderer', kind: 'output' })).not.toThrow()
+  })
+
+  it('does nothing on a second close of a port', () => {
+    const hub = createHub({ subsystems: [store] })
+    const first = hub.attach({ id: 'renderer', kind: 'output' })
+    first.close()
+    const second = hub.attach({ id: 'renderer', kind: 'output' })
+    first.close()
+    expect(() => hub.attach({ id: 'renderer', kind: 'output' })).toThrow(HubConfigurationError)
+    second.close()
+    expect(() => hub.attach({ id: 'renderer', kind: 'output' })).not.toThrow()
+  })
+
+  it('keeps no reference to the object of the caller', async () => {
+    const hub = createHub({ subsystems: [store] })
+    const subsystem: { id: string; kind: 'input' | 'output' } = { id: 'screen', kind: 'output' }
+    const port = hub.attach(subsystem)
+    hub.start()
+    subsystem.kind = 'input'
+    expect(await port.submit(setField)).toEqual({ ok: false, reason: 'not-permitted', problems: [] })
+    expect(Object.isFrozen(port.subsystem)).toBe(true)
   })
 
   it('refuses an attach on a stopped hub', () => {
@@ -243,6 +276,71 @@ describe('submit', () => {
     expect(await keyboard.submit({ type: 'broken/run', payload: { fail: false } })).toEqual({ ok: true, seq: 1 })
     expect(hub.read().broken).toBe(1)
   })
+
+  it('gives the sender an Error when a model subsystem throws a value that is not an Error', async () => {
+    const bad: ModelSubsystem<number> = {
+      id: 'bad',
+      inputs: ['bad/run'],
+      initial: 0,
+      apply: () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'broken'
+      },
+    }
+    const { keyboard } = running([bad])
+    const error = await keyboard.submit({ type: 'bad/run' }).catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('broken')
+  })
+
+  it('gives each model subsystem input A before input B', async () => {
+    const calls: string[] = []
+    const spy = (id: string): ModelSubsystem<number> => ({
+      id,
+      inputs: ['spy/look'],
+      initial: 0,
+      apply: (part, input) => {
+        calls.push(`${id}:${(input.payload as { name: string }).name}`)
+        return part
+      },
+    })
+    const { keyboard } = running([spy('first'), spy('second')])
+    await keyboard.submit({ type: 'spy/look', payload: { name: 'A' } })
+    await keyboard.submit({ type: 'spy/look', payload: { name: 'B' } })
+    expect(calls).toEqual(['first:A', 'second:A', 'first:B', 'second:B'])
+  })
+
+  it('sends no event for an input that a model subsystem refuses', async () => {
+    const refuser: ModelSubsystem<number> = {
+      id: 'guard',
+      inputs: ['guard/go'],
+      initial: 0,
+      apply: () => {
+        throw new InputRefusedError([{ message: 'no' }])
+      },
+    }
+    const { hub, keyboard } = running([refuser])
+    const listener = vi.fn()
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe(listener)
+    expect(await keyboard.submit({ type: 'guard/go' })).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(listener).not.toHaveBeenCalled()
+  })
+
+  it('sends no event for an input that makes a model subsystem throw', async () => {
+    const broken: ModelSubsystem<number> = {
+      id: 'broken',
+      inputs: ['broken/run'],
+      initial: 0,
+      apply: () => {
+        throw new Error('defect')
+      },
+    }
+    const { hub, keyboard } = running([broken])
+    const listener = vi.fn()
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe(listener)
+    await expect(keyboard.submit({ type: 'broken/run' })).rejects.toThrow('defect')
+    expect(listener).not.toHaveBeenCalled()
+  })
 })
 
 describe('record', () => {
@@ -264,7 +362,7 @@ describe('record', () => {
     const payload = { name: 'a', value: '1' }
     await keyboard.submit({ type: 'store/set-field', payload })
     payload.value = 'changed'
-    expect(hub.record()[0]?.payload).toEqual({ name: 'a', value: '1' })
+    expect(hub.record().at(0)?.payload).toEqual({ name: 'a', value: '1' })
   })
 
   it('gives the model subsystems the recorded copy', async () => {
@@ -281,23 +379,23 @@ describe('record', () => {
     const { hub, keyboard } = running([spy])
     const payload = { deep: { n: 1 } }
     await keyboard.submit({ type: 'spy/look', payload })
-    expect(received).toBe(hub.record()[0])
+    expect(received).toBe(hub.record().at(0))
     expect((received as { payload: unknown }).payload).not.toBe(payload)
   })
 
   it('freezes the recorded input and its payload', async () => {
     const { hub, keyboard } = running()
     await keyboard.submit(setField)
-    const entry = hub.record()[0]
+    const entry = hub.record().at(0)
     expect(Object.isFrozen(entry)).toBe(true)
-    expect(Object.isFrozen(entry.payload)).toBe(true)
+    expect(Object.isFrozen(entry?.payload)).toBe(true)
   })
 
   it('has the payload null for an input with no payload', async () => {
     const ping: ModelSubsystem<number> = { id: 'ping', inputs: ['ping/send'], initial: 0, apply: (part) => part + 1 }
     const { hub, keyboard } = running([ping])
     await keyboard.submit({ type: 'ping/send' })
-    expect(hub.record()[0]?.payload).toBeNull()
+    expect(hub.record().at(0)?.payload).toBeNull()
   })
 
   it('rejects a payload that refers to itself', async () => {
@@ -313,6 +411,48 @@ describe('record', () => {
     const { keyboard } = running()
     const result = await keyboard.submit({ type: 'store/set-field', payload: { n: 1n } })
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+  })
+
+  it('freezes the nested objects of a payload in the record', async () => {
+    const { hub, keyboard } = running()
+    await keyboard.submit({ type: 'store/set-field', payload: { name: 'a', value: '1', deep: { list: [1] } } })
+    const payload = hub.record().at(0)?.payload as { deep: { list: number[] } }
+    expect(Object.isFrozen(payload.deep)).toBe(true)
+    expect(Object.isFrozen(payload.deep.list)).toBe(true)
+  })
+
+  it('gives one problem with the path payload for a payload that refers to itself', async () => {
+    const { keyboard } = running()
+    const payload: Record<string, unknown> = {}
+    payload.self = payload
+    const result = await keyboard.submit({ type: 'store/set-field', payload })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    if (!result.ok) {
+      expect(result.problems).toHaveLength(1)
+      expect(result.problems.at(0)?.path).toEqual(['payload'])
+    }
+  })
+
+  it('does not change an earlier result of record() after a new input', async () => {
+    const { hub, keyboard } = running()
+    const before = hub.record()
+    await keyboard.submit(setField)
+    expect(before).toHaveLength(0)
+    expect(hub.record()).toHaveLength(1)
+  })
+
+  it('rejects a function payload as invalid with the path payload', async () => {
+    const { hub, keyboard } = running()
+    const result = await keyboard.submit({ type: 'store/set-field', payload: () => 1 })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid', problems: [{ path: ['payload'] }] })
+    expect(hub.record()).toEqual([])
+  })
+
+  it('has the payload null for an undefined payload', async () => {
+    const ping: ModelSubsystem<number> = { id: 'ping', inputs: ['ping/send'], initial: 0, apply: (part) => part + 1 }
+    const { hub, keyboard } = running([ping])
+    await keyboard.submit({ type: 'ping/send', payload: undefined })
+    expect(hub.record().at(0)?.payload).toBeNull()
   })
 
   it('gives equal states and records for equal inputs, with or without an output subsystem', async () => {
@@ -347,21 +487,7 @@ describe('joined state', () => {
     await keyboard.submit({ type: 'same/noop' })
     expect(hub.read().same).toBe(before.same)
   })
-})
 
-describe('subscribe', () => {
-  it('stores a listener and returns a function that removes it', () => {
-    const hub = createHub({ subsystems: [store] })
-    const port = hub.attach({ id: 'renderer', kind: 'output' })
-    const remove = port.subscribe(vi.fn())
-    expect(typeof remove).toBe('function')
-    expect(() => {
-      remove()
-    }).not.toThrow()
-  })
-})
-
-describe('break-test additions', () => {
   it('freezes the joined state before and after an input', async () => {
     const { hub, keyboard } = running()
     expect(Object.isFrozen(hub.read())).toBe(true)
@@ -384,48 +510,16 @@ describe('break-test additions', () => {
     await keyboard.submit({ type: 'probe/run' })
     expect(frozen).toBe(true)
   })
+})
 
-  it('freezes the nested objects of a payload in the record', async () => {
-    const { hub, keyboard } = running()
-    await keyboard.submit({ type: 'store/set-field', payload: { name: 'a', value: '1', deep: { list: [1] } } })
-    const payload = hub.record()[0].payload as { deep: { list: number[] } }
-    expect(Object.isFrozen(payload.deep)).toBe(true)
-    expect(Object.isFrozen(payload.deep.list)).toBe(true)
-  })
-
-  it('gives one problem with the path payload for a payload that refers to itself', async () => {
-    const { keyboard } = running()
-    const payload: Record<string, unknown> = {}
-    payload.self = payload
-    const result = await keyboard.submit({ type: 'store/set-field', payload })
-    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
-    if (!result.ok) {
-      expect(result.problems).toHaveLength(1)
-      expect(result.problems[0].path).toEqual(['payload'])
-    }
-  })
-
-  it('does not change an earlier result of record() after a new input', async () => {
-    const { hub, keyboard } = running()
-    const before = hub.record()
-    await keyboard.submit(setField)
-    expect(before).toHaveLength(0)
-    expect(hub.record()).toHaveLength(1)
-  })
-
-  it('gives the sender an Error when a model subsystem throws a value that is not an Error', async () => {
-    const bad: ModelSubsystem<number> = {
-      id: 'bad',
-      inputs: ['bad/run'],
-      initial: 0,
-      apply: () => {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error
-        throw 'broken'
-      },
-    }
-    const { keyboard } = running([bad])
-    const error = await keyboard.submit({ type: 'bad/run' }).catch((caught: unknown) => caught)
-    expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toContain('broken')
+describe('subscribe', () => {
+  it('stores a listener and returns a function that removes it', () => {
+    const hub = createHub({ subsystems: [store] })
+    const port = hub.attach({ id: 'renderer', kind: 'output' })
+    const remove = port.subscribe(vi.fn())
+    expect(typeof remove).toBe('function')
+    expect(() => {
+      remove()
+    }).not.toThrow()
   })
 })

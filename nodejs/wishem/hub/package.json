@@ -2,7 +2,7 @@
   "private": true,
   "name": "@thrashplay/wishem-hub",
   "version": "0.0.0",
-  "description": "The hub of a Wishem construct. Joins the model data, orders the inputs, and keeps the record. Runs with no Node.js API.",
+  "description": "The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.",
   "type": "module",
   "exports": {
     "./index": null,
