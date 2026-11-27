@@ -213,6 +213,11 @@ describe('a record that does not apply stops the replay', () => {
     expect(error).toBeInstanceOf(HubConfigurationError)
   })
 
+  it.each([1.5, -1, Number.NaN])('throws a HubConfigurationError for the start number %s', (seq) => {
+    const state = { counter: { count: 0 }, label: { text: 'none' }, other: { n: 0 } }
+    expect(thrown(() => replayed({ start: { seq, state }, inputs: [] }))).toBeInstanceOf(HubConfigurationError)
+  })
+
   it('throws a HubConfigurationError for a start with a key that is not a model subsystem', () => {
     const state = { counter: { count: 0 }, label: { text: 'none' }, other: { n: 0 }, extra: 1 }
     const error = thrown(() => replayed({ start: { seq: 0, state }, inputs: [] }))
@@ -251,6 +256,48 @@ describe('a replay with limits', () => {
     expect(copy.seq).toBe(hub.seq)
     expect(copy.recordStart()).toEqual(hub.recordStart())
     expect(copy.record()).toEqual(hub.record())
+  })
+
+  it('rewinds from the checkpoints that a smaller limit left', async () => {
+    const { hub } = await original(45, { checkpointInterval: 10, recordLimit: 1000 })
+    const counted: Counted = { applied: [] }
+    const copy = createHub({
+      subsystems: [makeCounter(counted), label, other],
+      checkpointInterval: 10,
+      recordLimit: 20,
+      record: recordOf(hub),
+    })
+    expect(copy.recordStart().seq).toBe(30)
+    expect(copy.record().map((r) => r.seq)).toEqual(Array.from({ length: 15 }, (_unused, i) => 31 + i))
+    copy.start()
+    const port = copy.attach({ id: 'keyboard', kind: 'input' })
+
+    counted.applied.length = 0
+    expect(await port.submit(hubInputs.rewind(43))).toEqual({ ok: true, seq: 46 })
+    expect(counted.applied.map((a) => a.seq)).toEqual([41, 42, 43])
+    expect((copy.read().counter as { count: number }).count).toBe(43)
+
+    counted.applied.length = 0
+    await port.submit(hubInputs.rewind(35))
+    expect(counted.applied.map((a) => a.seq)).toEqual([31, 32, 33, 34, 35])
+    expect((copy.read().counter as { count: number }).count).toBe(35)
+    expect(await port.submit(hubInputs.rewind(29))).toMatchObject({ ok: false, reason: 'invalid' })
+  })
+
+  it('rewinds in a hub that replayed a rewind with a smaller limit', async () => {
+    const { hub, keyboard } = await original(30, { checkpointInterval: 10, recordLimit: 1000 })
+    await keyboard.submit(hubInputs.rewind(5))
+    await keyboard.submit(add)
+    const copy = withOptions(recordOf(hub), { checkpointInterval: 10, recordLimit: 20 })
+    expect(copy.recordStart().seq).toBe(31)
+    expect(copy.record().map((r) => r.seq)).toEqual([32])
+    copy.start()
+    const port = copy.attach({ id: 'keyboard', kind: 'input' })
+    expect(await port.submit(hubInputs.rewind(31))).toEqual({ ok: true, seq: 33 })
+    expect((copy.read().counter as { count: number }).count).toBe(5)
+    expect(await port.submit(hubInputs.rewind(32))).toEqual({ ok: true, seq: 34 })
+    expect((copy.read().counter as { count: number }).count).toBe(6)
+    expect(await port.submit(hubInputs.rewind(5))).toMatchObject({ ok: false, reason: 'invalid' })
   })
 
   it('keeps the record that it got when the limit is larger', async () => {
