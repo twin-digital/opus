@@ -43,7 +43,7 @@ describe('createTime', () => {
   it('refuses a length that is not correct', async () => {
     const { controls, part } = setup()
     const before = part()
-    const payloads: unknown[] = [{ ms: 0 }, { ms: -5 }, { ms: '50' }, { ms: null }, { ms: Infinity }, {}, null]
+    const payloads: unknown[] = [{ ms: 0 }, { ms: -5 }, { ms: '50' }, { ms: null }, { ms: true }, {}, null]
     for (const payload of payloads) {
       const result = await controls.submit({ type: 'time/advance', payload })
       expect(result).toMatchObject({ ok: false, reason: 'invalid' })
@@ -76,6 +76,12 @@ describe('createTime', () => {
       }
     }
     expect(part()).toBe(before)
+    const subsystem = createTime()
+    const initial = { now: 0, ticks: 0, running: true }
+    for (const type of ['time/advance', 'time/set-running']) {
+      const input = { seq: 1, source: 'test', type, payload: undefined }
+      expect(() => subsystem.apply(initial, input, { read: () => ({}) })).toThrow(InputRefusedError)
+    }
   })
 
   it('pauses without a change to time and ticks', async () => {
