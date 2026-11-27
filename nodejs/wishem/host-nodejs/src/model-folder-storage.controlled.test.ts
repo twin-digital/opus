@@ -386,6 +386,40 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     expect(onWatchError).toHaveBeenCalledExactlyOnceWith(failure)
   })
 
+  it('reports a value that is not an Error when the watch throws it again', async () => {
+    const onWatchError = startWithErrorHandler()
+    await pause(150)
+    vi.mocked(watch).mockImplementationOnce(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw 'no space'
+    })
+    watchers[0]?.change('rename', 'definitions')
+    expect(lines).toContain('wishem: the watch failed: no space')
+    expect(onWatchError).toHaveBeenCalledOnce()
+    expect(onWatchError.mock.calls[0]?.[0]).toBeInstanceOf(Error)
+  })
+
+  it('does not attach the watcher of definitions again when the folder is removed', async () => {
+    start()
+    await pause(150)
+    const old = watchers[1]
+    await rm(path.join(folder, 'definitions'), { recursive: true })
+    watchers[0]?.change('rename', 'definitions')
+    expect(old.close).toHaveBeenCalledOnce()
+    expect(watchers).toHaveLength(2)
+    await storage.close()
+    expect(old.close).toHaveBeenCalledOnce()
+  })
+
+  it('does not attach the watcher of definitions again for an event after close', async () => {
+    start()
+    await pause(150)
+    await storage.close()
+    watchers[0]?.change('rename', 'definitions')
+    expect(watchers).toHaveLength(2)
+    expect(watchers[1]?.close).toHaveBeenCalledOnce()
+  })
+
   it('joins the changes of one wait into one read', async () => {
     start()
     await pause(150)
