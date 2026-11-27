@@ -59,6 +59,8 @@ const run = (options: Pick<HubOptions, 'checkpointInterval' | 'recordLimit'>, re
     await send(timeInputs.setRunning(false))
     await send(timeInputs.setRunning(true))
     await tick()
+    // A store input after each rewind target, so the store before a rewind differs from the store at the target
+    await send(storeInputs().setField({ entity: ENT2, componentType: CT, field: FLD, value: 'Late' }))
     const before = hub.read()
     await send(hubInputs.rewind(rewindTarget))
     const afterRewind = hub.read()
@@ -74,11 +76,16 @@ const expectSameState = (a: JoinedState, b: JoinedState) => {
   expect(a[TIME_ID]).toEqual(b[TIME_ID])
 }
 
+const expectRewindDiscriminates = (before: JoinedState, target: JoinedState) => {
+  expect(isEqual(store(before), store(target))).toBe(false)
+  expect(before[TIME_ID]).not.toEqual(target[TIME_ID])
+}
+
 describe('a replay with the store and the time subsystem', () => {
   it('returns to the state at the target after a rewind', async () => {
     const { before, afterRewind, target, hub } = await run({}, 3)
     expect(target).toBeDefined()
-    expect(before[TIME_ID]).not.toEqual(target?.[TIME_ID])
+    expectRewindDiscriminates(before, target!)
     expectSameState(afterRewind, target!)
     expect(hub.record().some((input) => input.type === REWIND_INPUT_TYPE)).toBe(true)
   })
@@ -91,7 +98,10 @@ describe('a replay with the store and the time subsystem', () => {
   })
 
   it('replays a record with a start that is not 0 and holds a rewind', async () => {
-    const { hub } = await run({ checkpointInterval: 3, recordLimit: 6 }, 6)
+    const { hub, before, afterRewind, target } = await run({ checkpointInterval: 3, recordLimit: 6 }, 6)
+    expect(target).toBeDefined()
+    expectRewindDiscriminates(before, target!)
+    expectSameState(afterRewind, target!)
     expect(hub.recordStart().seq).toBeGreaterThan(0)
     expect(hub.record().some((input) => input.type === REWIND_INPUT_TYPE)).toBe(true)
     const copy = createHub({ subsystems: subsystems(), record: { start: hub.recordStart(), inputs: hub.record() } })
