@@ -55,6 +55,7 @@ A port has `submit`, `read`, and `subscribe`. No operation names a different sub
 - The control of an I/O subsystem is state. Example: `time/set-running` changes the part of `time`, and the clock reads that part.
 - Reason: each thing that changes the result of a construct is then in the record. A direct call between subsystems is state that the record does not hold.
 - Alternative: `request(subsystem, operation)` through the hub, for a screenshot or a pause. It is not necessary for the nine results of the brief. It can be added later with no change to the three operations.
+- The owner confirmed this decision on 2026-11-27: the three operations stay, and a request with a reply is a possible later addition.
 
 ### 3. The type of an input selects the model subsystems that get it
 

@@ -15,6 +15,19 @@ import type {
   SubmitResult,
 } from './types.js'
 
+interface PortEntry {
+  /** Each registration is one object, so one function can register two times. */
+  registrations: Set<{ listener: (event: HubEvent) => void }>
+  closed: boolean
+}
+
+interface QueuedInput {
+  source: string
+  input: Input
+  resolve: (result: SubmitResult) => void
+  reject: (error: Error) => void
+}
+
 const reject = (reason: 'not-permitted' | 'not-running' | 'unknown-type', problems: InputProblem[] = []) =>
   ({ ok: false, reason, problems }) satisfies SubmitResult
 
@@ -58,7 +71,67 @@ export const createHub = (options: HubOptions): Hub => {
   let status: HubStatus = 'created'
   let joined: JoinedState = Object.freeze(Object.fromEntries(subsystems.map((s) => [s.id, s.initial])))
   const record: RecordedInput[] = []
-  const attached = new Map<string, Set<(event: HubEvent) => void>>()
+  const onError = options.onError ?? (() => undefined)
+  const attached = new Map<string, PortEntry>()
+  const queue: QueuedInput[] = []
+  let busy = false
+
+  const emit = (event: HubEvent) => {
+    for (const entry of [...attached.values()]) {
+      for (const registration of [...entry.registrations]) {
+        if (entry.closed || !entry.registrations.has(registration)) {
+          continue
+        }
+        try {
+          registration.listener(event)
+        } catch (error) {
+          onError(error)
+        }
+      }
+    }
+  }
+
+  const handle = ({ source, input, resolve, reject: fail }: QueuedInput) => {
+    if (status !== 'running') {
+      resolve(reject('not-running'))
+      return
+    }
+    try {
+      const result = apply(source, input)
+      if (result.ok) {
+        emit({ type: 'applied', input: record[result.seq - 1] })
+      }
+      resolve(result)
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  const drain = () => {
+    if (busy) {
+      return
+    }
+    busy = true
+    try {
+      for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+        handle(next)
+      }
+    } finally {
+      busy = false
+    }
+  }
+
+  const emitExclusive = (event: HubEvent, afterEmit?: () => void) => {
+    const wasBusy = busy
+    busy = true
+    try {
+      emit(event)
+      afterEmit?.()
+    } finally {
+      busy = wasBusy
+    }
+    drain()
+  }
 
   const apply = (source: string, input: Input): SubmitResult => {
     const targets = subsystems.filter((subsystem) => subsystem.inputs.includes(input.type))
@@ -103,33 +176,34 @@ export const createHub = (options: HubOptions): Hub => {
       throw new HubConfigurationError(`The subsystem ID "${subsystem.id}" is in use.`)
     }
 
-    const listeners = new Set<(event: HubEvent) => void>()
-    attached.set(subsystem.id, listeners)
+    const entry: PortEntry = { registrations: new Set(), closed: false }
+    attached.set(subsystem.id, entry)
 
     return {
       subsystem,
       read: () => joined,
       subscribe: (listener) => {
-        listeners.add(listener)
+        const registration = { listener }
+        entry.registrations.add(registration)
         return () => {
-          listeners.delete(listener)
+          entry.registrations.delete(registration)
         }
       },
       submit: (input) => {
-        if (subsystem.kind !== 'input') {
+        if (subsystem.kind !== 'input' || entry.closed) {
           return Promise.resolve(reject('not-permitted'))
         }
         if (status !== 'running') {
           return Promise.resolve(reject('not-running'))
         }
-        try {
-          return Promise.resolve(apply(subsystem.id, input))
-        } catch (error) {
-          return Promise.reject(error instanceof Error ? error : new Error(String(error)))
-        }
+        return new Promise<SubmitResult>((resolve, fail) => {
+          queue.push({ source: subsystem.id, input, resolve, reject: fail })
+          drain()
+        })
       },
       close: () => {
-        listeners.clear()
+        entry.closed = true
+        entry.registrations.clear()
         attached.delete(subsystem.id)
       },
     }
@@ -144,12 +218,15 @@ export const createHub = (options: HubOptions): Hub => {
         throw new Error(`The hub cannot start from the status "${status}".`)
       }
       status = 'running'
+      emitExclusive({ type: 'started' })
     },
     stop: () => {
       if (status !== 'running') {
         throw new Error(`The hub cannot stop from the status "${status}".`)
       }
-      status = 'stopped'
+      emitExclusive({ type: 'stopping' }, () => {
+        status = 'stopped'
+      })
     },
     attach,
     read: () => joined,
