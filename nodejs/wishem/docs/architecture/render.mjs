@@ -658,18 +658,27 @@ const cRenderer = el(
 
 const cClock = el(
   'container',
-  gx(RIGHT),
+  gx(LEFT),
   1164,
   'clock',
   '[Container: TypeScript package]',
   'Holds the time subsystem and the clock.',
 )
 
+const cSample = el(
+  'container',
+  gx(RIGHT),
+  1164,
+  'sample-product',
+  '[Container: TypeScript package]',
+  'Holds the example model folder and the count rule.',
+)
+
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has nine containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.',
+    'Wishem has ten containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The sample-product package builds on the core package and on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.',
   width: WIDTH_PX + GUTTER + 32,
   height: 1592,
   items: [
@@ -684,6 +693,7 @@ const containers = {
     cHub,
     cRenderer,
     cClock,
+    cSample,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
@@ -739,7 +749,9 @@ const containers = {
       'Builds on [import]',
       [772, 1416],
     ),
-    rel('quiet', [top(cClock), [gx(707), 1044], right(cHub, 1044)], 'Builds on [import]', [gx(707), 1104]),
+    rel('quiet', [right(cClock, 1190), [450, 1190], bottom(cHub, 450)], 'Builds on [import]', [450, 1130]),
+    rel('quiet', [top(cSample), [gx(707), 1044], right(cHub, 1044)], 'Builds on [import]', [gx(707), 1104]),
+    rel('quiet', [top(cSample, 840), bottom(cCore, 840)], 'Builds on [import]', [840, 960]),
     {
       kind: 'legend',
       x: 24,

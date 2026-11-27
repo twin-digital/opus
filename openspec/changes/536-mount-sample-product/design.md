@@ -435,7 +435,7 @@ flowchart TB
   process -- "Builds on [import]" --> rr
 ```
 
-- The package `sample-product` is not a container. No package builds on it now: `workbench-app` uses it only as a development dependency of a test. The table row of the product model folder names `@thrashplay/wishem-sample-product` (`model/`) as the example folder.
+- The package `sample-product` is a container, as each TypeScript package of `nodejs/wishem/` is. It has the relationships "Builds on [import]" to `core` and to `hub`, and the container diagram shows both. Its table row says that it holds `model/` and `withCountRule`, and that `model/` is the example product model folder. The table row of the product model folder names `@thrashplay/wishem-sample-product` (`model/`) as the example folder.
 - The entity diagram of the model folder applies to the two folders. Its title and its files do not change. The prose says that the product folder has the same entities.
 
 ## Failure Modes
