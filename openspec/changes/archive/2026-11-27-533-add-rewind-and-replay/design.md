@@ -279,7 +279,12 @@ sequenceDiagram
 A rewind on a link. The hub accepted four inputs of `counter/add`, and the count is 8. The input subsystem `page-controls` rewinds to the input 2, at which the count was 4.
 
 ```json
-{ "t": "submit", "request": 5, "subsystem": "page-controls", "input": { "type": "hub/rewind", "payload": { "seq": 2 } } }
+{
+  "t": "submit",
+  "request": 5,
+  "subsystem": "page-controls",
+  "input": { "type": "hub/rewind", "payload": { "seq": 2 } }
+}
 ```
 
 ```json
@@ -316,26 +321,26 @@ A client that asks for the ID `hub`:
 
 ## Failure Modes
 
-| Failure | Behavior | Recovery |
-| --- | --- | --- |
-| A model subsystem throws while the hub applies an input again for a rewind | The hub changes nothing and does not record the rewind. The sender gets the error. | The subsystem is not a pure function. Correct it. |
-| A model subsystem gives a different part when it applies an input again | The rewind gives a state that differs from the earlier state. The hub cannot detect it. | The test of D11 covers the store and `time`. Each new model subsystem needs the same test. |
-| The connection of a link closes during a rewind | The hub continues. The client gets the full state in the next `welcome`. | The client opens a new link, as `LINK.md` says. |
-| A client of version 1 that does not use the rule of the parts | The client keeps parts that the rewind changed. | `LINK.md` gives the rule. Such a client is a defect. |
-| The write of `state.json` after a rewind fails | The writer reports it, as for each other write. The store holds the state after the rewind. | The next change of the entities writes again. |
-| Two rewinds in a short time | The hub applies them one at a time in the order of arrival. The writer writes the entities of the last one, because it queues one write. | None needed. |
-| A replay of a record that a changed subsystem refuses | `createHub` throws a `ReplayError` with the sequence number. | The caller changes the record or the subsystem. |
+| Failure                                                                    | Behavior                                                                                                                                 | Recovery                                                                                   |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| A model subsystem throws while the hub applies an input again for a rewind | The hub changes nothing and does not record the rewind. The sender gets the error.                                                       | The subsystem is not a pure function. Correct it.                                          |
+| A model subsystem gives a different part when it applies an input again    | The rewind gives a state that differs from the earlier state. The hub cannot detect it.                                                  | The test of D11 covers the store and `time`. Each new model subsystem needs the same test. |
+| The connection of a link closes during a rewind                            | The hub continues. The client gets the full state in the next `welcome`.                                                                 | The client opens a new link, as `LINK.md` says.                                            |
+| A client of version 1 that does not use the rule of the parts              | The client keeps parts that the rewind changed.                                                                                          | `LINK.md` gives the rule. Such a client is a defect.                                       |
+| The write of `state.json` after a rewind fails                             | The writer reports it, as for each other write. The store holds the state after the rewind.                                              | The next change of the entities writes again.                                              |
+| Two rewinds in a short time                                                | The hub applies them one at a time in the order of arrival. The writer writes the entities of the last one, because it queues one write. | None needed.                                                                               |
+| A replay of a record that a changed subsystem refuses                      | `createHub` throws a `ReplayError` with the sequence number.                                                                             | The caller changes the record or the subsystem.                                            |
 
 A rewind is not idempotent in the record: each one adds an input. Its effect on the state is idempotent: two rewinds to one target give the same state.
 
 ## Package Impact
 
-| Package | Published | Bump | Why |
-| --- | --- | --- | --- |
-| `@thrashplay/wishem-hub` | private | minor | `hub/rewind`, checkpoints, the record limit, replay, `Hub.seq`, `Hub.recordStart`, `ReplayError`, the reserved ID. `serveLink` reads `hub.seq` and handles each event by name. `LINK.md` and `README.md`. |
-| `@thrashplay/wishem-clock` | private | patch | The clock measures the real time again after a rewind. A test of replay with a development dependency on `core`. |
-| `@thrashplay/wishem-host-nodejs` | private | patch | The writer compares by identity first, and writes after a rewind. |
-| `@thrashplay/wishem-workbench-app` | private | patch | The generator of the view types compares by identity first. |
+| Package                            | Published | Bump  | Why                                                                                                                                                                                                       |
+| ---------------------------------- | --------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@thrashplay/wishem-hub`           | private   | minor | `hub/rewind`, checkpoints, the record limit, replay, `Hub.seq`, `Hub.recordStart`, `ReplayError`, the reserved ID. `serveLink` reads `hub.seq` and handles each event by name. `LINK.md` and `README.md`. |
+| `@thrashplay/wishem-clock`         | private   | patch | The clock measures the real time again after a rewind. A test of replay with a development dependency on `core`.                                                                                          |
+| `@thrashplay/wishem-host-nodejs`   | private   | patch | The writer compares by identity first, and writes after a rewind.                                                                                                                                         |
+| `@thrashplay/wishem-workbench-app` | private   | patch | The generator of the view types compares by identity first.                                                                                                                                               |
 
 `@thrashplay/wishem-core` does not change. No change is breaking.
 
