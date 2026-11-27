@@ -47,10 +47,14 @@ const main = async () => {
 
   let construct: Construct | undefined
   const stopState = { requested: false }
-  const closeAndExit = (target: Construct) => {
-    void target.close().then(() => {
-      process.exit(0)
-    })
+  const closeAndExit = (target: Construct, code = 0) => {
+    target.close().then(
+      () => process.exit(code),
+      (error: unknown) => {
+        console.error(`wishem: cannot stop: ${String(error)}`)
+        process.exit(1)
+      },
+    )
   }
   const stop = () => {
     if (stopState.requested) {
@@ -70,7 +74,11 @@ const main = async () => {
       port,
       log: say,
       onWatchError: () => {
-        process.exit(1)
+        if (construct === undefined) {
+          process.exit(1)
+        } else {
+          closeAndExit(construct, 1)
+        }
       },
     })
     construct = started

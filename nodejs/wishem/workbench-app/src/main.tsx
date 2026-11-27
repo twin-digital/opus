@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { Page } from './Page.js'
-import { collectViews, connectHub, ViewCollectionError, type ViewTable } from './renderer/index.js'
+import { collectViews, connectHub, reloadOnRestore, ViewCollectionError, type ViewTable } from './renderer/index.js'
 import { collectAppViews } from './views.js'
 import './styles/theme.css'
 
@@ -21,6 +21,9 @@ if (root) {
   const views = loadViews()
   const page = createRoot(root)
   page.render(<Page reader={undefined} views={views} />)
+  reloadOnRestore(window, () => {
+    location.reload()
+  })
   void connectHub().then((reader) => {
     page.render(<Page reader={reader} views={views} />)
   })

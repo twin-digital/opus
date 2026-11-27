@@ -112,4 +112,46 @@ describe('the stop signal during the start of the wishem command', () => {
     })
     expect(close).toHaveBeenCalledTimes(1)
   })
+  it('closes the construct and then exits with code 1 after a watch error', async () => {
+    const loaded = load()
+    await vi.waitFor(() => {
+      expect(output).toContain('wishem: model /model')
+    })
+    finish(construct())
+    await loaded
+    const { startConstruct } = await import('./start-construct.js')
+    vi.mocked(startConstruct).mock.lastCall?.[0].onWatchError?.(new Error('watch broke'))
+    await vi.waitFor(() => {
+      expect(exitCodes).toEqual([1])
+    })
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('exits with code 1 after a watch error before the construct starts', async () => {
+    const loaded = load()
+    await vi.waitFor(() => {
+      expect(output).toContain('wishem: model /model')
+    })
+    const { startConstruct } = await import('./start-construct.js')
+    vi.mocked(startConstruct).mock.lastCall?.[0].onWatchError?.(new Error('watch broke'))
+    expect(exitCodes).toEqual([1])
+    expect(close).not.toHaveBeenCalled()
+    finish(construct())
+    await loaded
+  })
+
+  it('prints the problem and exits with code 1 when the close fails', async () => {
+    close.mockRejectedValue(new Error('close broke'))
+    const loaded = load()
+    await vi.waitFor(() => {
+      expect(output).toContain('wishem: model /model')
+    })
+    finish(construct())
+    await loaded
+    handlers.get('SIGINT')?.()
+    await vi.waitFor(() => {
+      expect(exitCodes).toEqual([1])
+    })
+    expect(output.join('\n')).toContain('close broke')
+  })
 })
