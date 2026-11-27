@@ -278,13 +278,16 @@ export interface ModelFolderStorage {
 export const attachModelFolderStorage: (options: ModelFolderStorageOptions) => ModelFolderStorage
 
 // src/link-server.ts
-import type { Server } from 'node:http'
+import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 
 /** True for no origin, and for an origin whose host name is 127.0.0.1, localhost, or [::1]. */
 export const isAllowedOrigin: (origin: string | undefined) => boolean
 
+/** Answers a plain HTTP request with status 404 and a JSON `error` message. */
+export const respondNotFound: (request: IncomingMessage, response: ServerResponse) => void
+
 export interface LinkServer {
-  /** Terminates each open socket. Gives the same promise on each call. */
+  /** Closes each open socket, and terminates a socket that stays open for one second. Gives the same promise on each call. */
   close(): Promise<void>
 }
 
