@@ -261,6 +261,22 @@ describe('the start of a link', () => {
     expect(closed).toBe(true)
   })
 
+  it('resolves for a welcome that has a key named unknown', async () => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page])
+    manual.deliver({ ...welcomeMessage, unknown: true })
+    const link = await opening
+    expect(link.ports.page.read()).toEqual({ time: { ticks: 0 } })
+  })
+
+  it('closes the channel and rejects with a LinkClosedError for a welcome of a different protocol version', async () => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page])
+    manual.deliver({ ...welcomeMessage, protocol: 2 })
+    await expect(opening).rejects.toBeInstanceOf(LinkClosedError)
+    expect(manual.state.closes).toBe(1)
+  })
+
   it('has a first expected sequence number of welcome.seq + 1', async () => {
     const { link, send, counts } = await connectRaw([page], { seq: 3 })
     send(applied(4))
@@ -281,6 +297,15 @@ describe('a remote port reads and listens', () => {
     expect(after.store).toBe(before.store)
     expect(after).not.toBe(before)
     expect(Object.isFrozen(after)).toBe(true)
+  })
+
+  it('applies an applied message that has a key named unknown', async () => {
+    const { link, send, counts } = await connectRaw()
+    send({ ...applied(1, { time: { ticks: 1 } }), unknown: true })
+    send(applied(2, { time: { ticks: 2 } }))
+    await settle()
+    expect(link.ports.page.read().time).toEqual({ ticks: 2 })
+    expect(counts.clientClose).toBe(0)
   })
 
   it('updates the state before it calls the listeners of an applied event', async () => {
@@ -527,6 +552,13 @@ describe('a remote port sends inputs', () => {
     send({ t: 'result', request: 1, result: { ok: false, reason: 'invalid', problems: [] } })
     await expect(second).resolves.toEqual({ ok: true, seq: 9 })
     await expect(first).resolves.toEqual({ ok: false, reason: 'invalid', problems: [] })
+  })
+
+  it('resolves a request with a result that has a key named unknown', async () => {
+    const { link, send } = await connectRaw()
+    const request = link.ports['page-controls'].submit(setField('a'))
+    send({ t: 'result', request: 1, result: { ok: true, seq: 9 }, unknown: true })
+    await expect(request).resolves.toEqual({ ok: true, seq: 9 })
   })
 
   it('rejects with the error text when the result holds an error', async () => {

@@ -149,6 +149,23 @@ describe('a message with an unknown type after the start', () => {
   })
 })
 
+describe('a known message that has a key named unknown', () => {
+  it('answers a hello with a welcome', async () => {
+    const link = connect(makeHub())
+    link.send({ ...hello(page), unknown: true })
+    await settle()
+    expect(link.messages.map((m) => m.t)).toEqual(['welcome'])
+    expect(link.isClosed()).toBe(false)
+  })
+
+  it('answers a submit with its result', async () => {
+    const link = await joined(makeHub(), page, keyboard)
+    link.send({ t: 'submit', request: 1, subsystem: 'keyboard', input: setField('a'), unknown: true })
+    await settle()
+    expect(link.messages.map((m) => m.t)).toEqual(['welcome', 'applied', 'result'])
+  })
+})
+
 describe('the hello message', () => {
   it('attaches the subsystems and sends one welcome', async () => {
     const hub = makeHub()

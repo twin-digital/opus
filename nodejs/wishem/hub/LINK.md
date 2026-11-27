@@ -82,7 +82,7 @@ The hub side sends `welcome` as the first message after it accepts `hello`.
 | Key        | JSON type | Meaning                                                                      |
 | ---------- | --------- | ---------------------------------------------------------------------------- |
 | `t`        | text      | `"welcome"`                                                                  |
-| `protocol` | number    | The protocol version of the hub side.                                        |
+| `protocol` | number    | The protocol version of this link. It is equal to `protocol` of the `hello`. |
 | `status`   | text      | The status of the hub: `"created"`, `"running"`, or `"stopped"`.             |
 | `seq`      | number    | The sequence number of the last accepted input. The value is 0 for no input. |
 | `state`    | object    | The full joined state.                                                       |
@@ -227,7 +227,7 @@ Each item of `problems` is an object with a `message` (text) and an optional `pa
 
 ## Unknown messages and reserved types
 
-After `welcome`, ignore each message that has an unknown type. Keep the link open. Do not send an error. A later version of the protocol can add types, and an older client still works.
+After `welcome`, ignore each message that has an unknown type. Keep the link open. Do not send an error. A later version of the protocol can add types, and an older client still works. A later version does not send a new message type that changes the joined state or the sequence numbers to a client of an older version.
 
 The types `apply` (hub side to client) and `part` (client to hub side) are reserved. A later version uses them for a model subsystem in the client. Version 1 does not send them. Ignore them.
 
