@@ -135,6 +135,81 @@ describe('the storage subsystem for files', () => {
     })
   })
 
+  describe('The store follows state.json after the process wrote it', () => {
+    const statePath = () => path.join(folder, 'state.json')
+    const processWrites = async (value: string) => {
+      const before = writes()
+      expect((await setTitle(value)).ok).toBe(true)
+      await eventually(() => writes() > before)
+      await eventually(async () => (await fileTitle()) === value)
+      await pause(200)
+    }
+    const editInPlace = (value: string) => writeFile(statePath(), JSON.stringify(state(value)))
+    const editByReplace = async (value: string) => {
+      await writeFile(`${statePath()}.edit`, JSON.stringify(state(value)))
+      await rename(`${statePath()}.edit`, statePath())
+    }
+
+    it('follows a write in place after one write of the process', async () => {
+      await processWrites('Hello')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a write in place after two writes of the process', async () => {
+      await processWrites('One')
+      await processWrites('Two')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a replace of the file after a write of the process', async () => {
+      await processWrites('Hello')
+      await editByReplace('Replaced')
+      await eventually(() => title() === 'Replaced')
+    })
+
+    it('follows a replace of the file, and then a write in place', async () => {
+      await editByReplace('Replaced')
+      await eventually(() => title() === 'Replaced')
+      await editInPlace('In place')
+      await eventually(() => title() === 'In place')
+    })
+
+    it('does not read again for the write of the process', async () => {
+      await processWrites('Hello')
+      expect(writes()).toBe(1)
+      expect(storeInputsRecorded()).toHaveLength(0)
+    })
+
+    it('follows a state.json that is removed and made again', async () => {
+      await rm(statePath())
+      await pause(200)
+      expect(title()).toBe('Wishem')
+      await editInPlace('Back')
+      await eventually(() => title() === 'Back')
+      await processWrites('After')
+      await editInPlace('By hand')
+      await eventually(() => title() === 'By hand')
+    })
+
+    it('follows a definitions folder that is removed and made again', async () => {
+      const file = path.join(folder, 'definitions', `${CT}.json`)
+      await rm(path.join(folder, 'definitions'), { recursive: true })
+      await mkdir(path.join(folder, 'definitions'))
+      await writeFile(file, JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
+      await writeFile(file, JSON.stringify(definition('Baz')))
+      await eventually(() => store().definitions[0]?.label === 'Baz')
+    })
+
+    it('follows a definition file after a write of the process', async () => {
+      await processWrites('Hello')
+      await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
+    })
+  })
+
   describe('The process prints the warnings of the model', () => {
     const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
     const warnings = () => lines.filter((line) => line.includes('warning')).length

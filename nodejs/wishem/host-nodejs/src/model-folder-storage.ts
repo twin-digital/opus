@@ -1,4 +1,4 @@
-import { watch } from 'node:fs'
+import { existsSync, watch } from 'node:fs'
 import type { FSWatcher } from 'node:fs'
 import { rename, rm, writeFile } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
@@ -14,6 +14,7 @@ export const FILES_WRITER_ID = 'files-writer'
 
 const STORE_ID = 'store'
 const STATE_FILE = 'state.json'
+const DEFINITIONS_FOLDER = 'definitions'
 const SETTLE_MS = 50
 
 export interface ModelFolderStorageOptions {
@@ -46,6 +47,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
   const { folder, hub, log } = options
   const inputs = storeInputs(STORE_ID)
   const stateFile = path.join(folder, STATE_FILE)
+  const definitionsFolder = path.join(folder, DEFINITIONS_FOLDER)
 
   const files: Port = hub.attach({ id: FILES_ID, kind: 'input' })
   let writer: Port
@@ -61,7 +63,8 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
   let synced = options.first
   // The definitions of the last correct read of the folder.
   let disk = options.first.definitions
-  let watcher: FSWatcher | undefined
+  let folderWatcher: FSWatcher | undefined
+  let definitionsWatcher: FSWatcher | undefined
   let timer: NodeJS.Timeout | undefined
   let queue: Promise<void> = Promise.resolve()
   let writeQueued = false
@@ -181,17 +184,37 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
     }, SETTLE_MS)
   }
 
+  const observe = (target: string, onName?: (name: string | null) => void) => {
+    const created = watch(target, { recursive: false }, (_event, name) => {
+      if (!closed) {
+        onName?.(name)
+        scheduleRead(false)
+      }
+    })
+    created.on('error', (error) => {
+      log(`wishem: the watch failed: ${error.message}`)
+      options.onWatchError?.(error)
+    })
+    return created
+  }
+
+  const watchDefinitions = () => {
+    definitionsWatcher?.close()
+    definitionsWatcher = undefined
+    if (existsSync(definitionsFolder)) {
+      definitionsWatcher = observe(definitionsFolder)
+    }
+  }
+
   return {
     watch: () => {
-      watcher = watch(folder, { recursive: true }, () => {
-        if (!closed) {
-          scheduleRead(false)
+      // Watches by name, so a replaced `state.json` stays watched.
+      folderWatcher = observe(folder, (name) => {
+        if (name === DEFINITIONS_FOLDER) {
+          watchDefinitions()
         }
       })
-      watcher.on('error', (error) => {
-        log(`wishem: the watch failed: ${error.message}`)
-        options.onWatchError?.(error)
-      })
+      watchDefinitions()
       // Picks up a change made between the first read and the start of the watch.
       scheduleRead(true)
     },
@@ -199,7 +222,8 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       closing ??= (async () => {
         closed = true
         clearTimeout(timer)
-        watcher?.close()
+        folderWatcher?.close()
+        definitionsWatcher?.close()
         let seen: Promise<void>
         do {
           seen = queue
