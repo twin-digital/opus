@@ -3,7 +3,8 @@ import type { ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { Snapshot } from '@thrashplay/wishem-core'
+import type { Model } from '@thrashplay/wishem-core'
+import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -30,7 +31,7 @@ describe('the start script of the base workbench', () => {
     child = undefined
   })
 
-  it('starts a core that serves the AppBar model', { timeout: 30000 }, async () => {
+  it('starts a construct whose link serves the AppBar model', { timeout: 30000 }, async () => {
     child = spawn('pnpm', ['start', '--port', '0'], {
       cwd: packageRoot,
       detached: true,
@@ -42,7 +43,7 @@ describe('the start script of the base workbench', () => {
     let exited = false
     child.on('close', () => (exited = true))
 
-    const address = /wishem: snapshot at (http:\/\/127\.0\.0\.1:\d+\/snapshot)/
+    const address = /wishem: link at (ws:\/\/127\.0\.0\.1:\d+\/link)/
     await until(
       () => address.test(output) || exited,
       () => output,
@@ -52,13 +53,16 @@ describe('the start script of the base workbench', () => {
       expect.fail(`the start script stopped with no address:\n${output}`)
     }
 
-    const response = await fetch(url)
-    expect(response.status).toBe(200)
-    const snapshot = (await response.json()) as Snapshot
-
-    expect(snapshot.definitions.map((definition) => definition.label)).toEqual(['AppBar'])
-    expect(snapshot.entities).toHaveLength(1)
-    const type = snapshot.definitions[0]
-    expect(snapshot.entities[0].components[type.id]).toEqual({ [type.fields[0].id]: 'Wishem' })
+    const socket = new WebSocket(url)
+    const link = await openLink(await webSocketChannel(socket), [{ id: 'start-test', kind: 'output' }])
+    try {
+      const store = link.ports['start-test'].read().store as Model
+      expect(store.definitions.map((definition) => definition.label)).toEqual(['AppBar'])
+      expect(store.entities).toHaveLength(1)
+      const type = store.definitions[0]
+      expect(store.entities[0].components[type.id]).toEqual({ [type.fields[0].id]: 'Wishem' })
+    } finally {
+      link.close()
+    }
   })
 })

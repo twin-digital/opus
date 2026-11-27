@@ -5,6 +5,8 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { Model } from '@thrashplay/wishem-core'
+import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -52,6 +54,7 @@ const until = async (check: () => boolean, ms = 4000) => {
 describe('wishem command', () => {
   let folder: string
   let running: Run[]
+  let sockets: WebSocket[]
 
   const start = (args: string[], options?: RunOptions) => {
     const process_ = run(args, options)
@@ -61,6 +64,7 @@ describe('wishem command', () => {
 
   beforeEach(async () => {
     running = []
+    sockets = []
     folder = await mkdtemp(path.join(tmpdir(), 'wishem-cli-'))
     await mkdir(path.join(folder, 'definitions'))
     await writeFile(
@@ -74,6 +78,9 @@ describe('wishem command', () => {
   })
 
   afterEach(async () => {
+    sockets.forEach((socket) => {
+      socket.close()
+    })
     running.forEach(({ child }) => child.kill('SIGKILL'))
     await Promise.all(running.map(({ exit }) => exit))
     await rm(folder, { recursive: true, force: true })
@@ -81,18 +88,20 @@ describe('wishem command', () => {
 
   it('prints the address of a correct model and keeps running', async () => {
     const process_ = start(['start', folder, '--port', '0'])
-    await until(() => process_.stdout().includes('snapshot at'))
+    await until(() => process_.stdout().includes('link at'))
     expect(process_.stdout()).toContain(`wishem: model ${folder}`)
     expect(process_.stdout()).toContain('wishem: 1 component type, 1 entity')
-    const url = /snapshot at (\S+)/.exec(process_.stdout())?.[1] ?? ''
-    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/snapshot$/)
-    const response = await fetch(url)
-    expect(((await response.json()) as { entities: unknown[] }).entities).toHaveLength(1)
+    const url = /link at (\S+)/.exec(process_.stdout())?.[1] ?? ''
+    expect(url).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
+    const socket = new WebSocket(url)
+    sockets.push(socket)
+    const link = await openLink(await webSocketChannel(socket), [{ id: 'cli-test', kind: 'output' }])
+    expect((link.ports['cli-test'].read().store as Model).entities).toHaveLength(1)
   })
 
   it.each(['SIGINT', 'SIGTERM'] as const)('exits with code 0 after the signal %s', async (signal) => {
     const process_ = start(['start', folder, '--port', '0'])
-    await until(() => process_.stdout().includes('snapshot at'))
+    await until(() => process_.stdout().includes('link at'))
     process_.child.kill(signal)
     expect(await process_.exit).toBe(0)
   })
@@ -111,7 +120,7 @@ describe('wishem command', () => {
       ].join('\n'),
     )
     const process_ = start(['start', folder, '--port', '0'], { nodeArgs: ['--import', hook] })
-    await until(() => process_.stdout().includes('snapshot at'))
+    await until(() => process_.stdout().includes('link at'))
     process_.child.kill('SIGINT')
     expect(await process_.exit).toBe(0)
     expect(process_.stdout()).toContain('test: server closed')
@@ -120,7 +129,7 @@ describe('wishem command', () => {
   it('prints the absolute path of a folder that is given as a relative path', async () => {
     const parent = await realpath(path.dirname(folder))
     const process_ = start(['start', path.basename(folder), '--port', '0'], { cwd: parent })
-    await until(() => process_.stdout().includes('snapshot at'))
+    await until(() => process_.stdout().includes('link at'))
     expect(process_.stdout().split('\n')[0]).toBe(`wishem: model ${path.join(parent, path.basename(folder))}`)
   })
 
@@ -162,7 +171,7 @@ describe('wishem command', () => {
     const process_ = start(['start', folder, '--port', '0'], { nodeArgs: ['--import', hook] })
     expect(await process_.exit).toBe(1)
     expect(process_.stderr()).toContain('wishem: no watcher')
-    expect(process_.stdout()).not.toContain('snapshot at')
+    expect(process_.stdout()).not.toContain('link at')
   })
 
   it.each([
@@ -174,7 +183,7 @@ describe('wishem command', () => {
     const process_ = start([arg(first), arg(second), '--port', '0'])
     expect(await process_.exit).not.toBe(0)
     expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
-    expect(process_.stdout()).not.toContain('snapshot at')
+    expect(process_.stdout()).not.toContain('link at')
   })
 
   it('prints the usage and exits with a non-zero code for an unknown option', async () => {
@@ -185,7 +194,7 @@ describe('wishem command', () => {
 
   it('accepts the highest port number', async () => {
     const process_ = start(['start', folder, '--port', '65535'])
-    await until(() => process_.stdout().includes('snapshot at') || process_.stderr() !== '')
+    await until(() => process_.stdout().includes('link at') || process_.stderr() !== '')
     expect(process_.stderr()).not.toContain('usage:')
     expect(process_.stderr()).not.toContain('the port must be')
   })
@@ -197,15 +206,15 @@ describe('wishem command', () => {
     const port = typeof address === 'object' && address ? address.port : 0
     await new Promise((resolve) => probe.close(resolve))
     const process_ = start(['start', folder, '--port', String(port)])
-    await until(() => process_.stdout().includes('snapshot at') || process_.stderr() !== '')
-    expect(process_.stdout()).toContain(`wishem: snapshot at http://127.0.0.1:${port}/snapshot`)
+    await until(() => process_.stdout().includes('link at') || process_.stderr() !== '')
+    expect(process_.stdout()).toContain(`wishem: link at ws://127.0.0.1:${port}/link`)
   })
 
   it('uses the port 4747 when --port is not given', async () => {
     // Port 4747 can be in use on a development computer, so the test accepts both outcomes.
     const defaults = start(['start', folder])
-    await until(() => defaults.stdout().includes('snapshot at') || defaults.stderr().includes('in use'))
-    expect(defaults.stdout() + defaults.stderr()).toMatch(/http:\/\/127\.0\.0\.1:4747\/snapshot|port 4747 is in use/)
+    await until(() => defaults.stdout().includes('link at') || defaults.stderr().includes('in use'))
+    expect(defaults.stdout() + defaults.stderr()).toMatch(/ws:\/\/127\.0\.0\.1:4747\/link|port 4747 is in use/)
   })
 
   it('exits with code 1 and names the file for a model that is not correct', async () => {
@@ -213,8 +222,8 @@ describe('wishem command', () => {
     const process_ = start(['start', folder, '--port', '0'])
     expect(await process_.exit).toBe(1)
     expect(process_.stderr()).toContain('problem in state.json')
-    expect(process_.stderr()).toContain('wishem: the model is not correct, so the core did not start')
-    expect(process_.stdout()).not.toContain('snapshot at')
+    expect(process_.stderr()).toContain('wishem: the model is not correct, so the hub did not start')
+    expect(process_.stdout()).not.toContain('link at')
   })
 
   it('exits with code 1 when the folder does not exist', async () => {
@@ -246,7 +255,7 @@ describe('wishem command', () => {
       const process_ = start(['start', folder, '--port', value])
       expect(await process_.exit).not.toBe(0)
       expect(process_.stderr()).toContain('usage: wishem start <folder> [--port <number>]')
-      expect(process_.stdout()).not.toContain('snapshot at')
+      expect(process_.stdout()).not.toContain('link at')
     },
   )
 
@@ -258,10 +267,10 @@ describe('wishem command', () => {
 
   it('shows a problem during a run, and that the model is correct again', async () => {
     const process_ = start(['start', folder, '--port', '0'])
-    await until(() => process_.stdout().includes('snapshot at'))
+    await until(() => process_.stdout().includes('link at'))
     await writeFile(path.join(folder, 'state.json'), '{')
     await until(() => process_.stdout().includes('problem in state.json'))
-    expect(process_.stdout()).toContain('wishem: the last correct snapshot stays')
+    expect(process_.stdout()).toContain('wishem: the last correct model stays')
     await writeFile(
       path.join(folder, 'state.json'),
       JSON.stringify({ entities: [{ id: E, components: { [CT]: { [FLD]: 'Again' } } }] }),

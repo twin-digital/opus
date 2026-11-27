@@ -10,9 +10,9 @@ export type {
   Snapshot,
   ValidationResult,
 } from './model.js'
-export { createCore, ModelError } from './core.js'
-export type { Core, CoreReader } from './core.js'
+export { ModelError } from './errors.js'
 export { validateModel } from './validate-model.js'
+export { isEqual } from './equality.js'
 export { createStore, storeInputs } from './store.js'
 export type {
   AddEntityPayload,

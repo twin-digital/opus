@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 492" width="880" height="492" role="img" aria-labelledby="title desc">
 <title id="title">Dynamic diagram: a change to the model becomes a new picture</title>
-<desc id="desc">Four steps in order. The designer saves a model file in the model folder. The workbench process reads after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.</desc>
+<desc id="desc">Four steps in order. The designer saves a model file in the model folder. The workbench process reads after the watch event. The process sends the changed parts to the page over the WebSocket link. The page shows the new picture to the designer.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.12"/></filter></defs>
 <rect width="880" height="492" fill="#f7f7fa"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#1c1c2e" text-anchor="start">Dynamic diagram: a change to the model becomes a new picture</text>
@@ -28,9 +28,9 @@
 <text x="707" y="228.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">2. Reads after the watch event</text>
 <path d="M582 324 L308 324" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="298,324 309,318.5 309,329.5" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
-<rect x="339" y="304" width="202" height="40" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
-<text x="440" y="321" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">3. Sends the new snapshot</text>
-<text x="440" y="336" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">[SSE]</text>
+<rect x="335.4" y="304" width="209.2" height="40" rx="12" fill="#ffffff" stroke="#9e5b0c"/>
+<text x="440" y="321" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#9e5b0c" text-anchor="middle">3. Sends the changed parts</text>
+<text x="440" y="336" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#9e5b0c" text-anchor="middle">[WebSocket link]</text>
 <path d="M173 272 L173 186" fill="none" stroke="#9e5b0c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="173,176 178.5,187 167.5,187" fill="#9e5b0c" stroke="#9e5b0c" stroke-width="1" stroke-linejoin="round"/>
 <rect x="75.6" y="212" width="194.8" height="24" rx="12" fill="#ffffff" stroke="#9e5b0c"/>

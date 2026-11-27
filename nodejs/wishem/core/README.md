@@ -1,8 +1,8 @@
 # @thrashplay/wishem-core
 
-The core of Wishem. It holds a model, checks that the model is correct, and sends a snapshot of the model to each listener after a change.
+The model, the validation, and the store of Wishem. The package checks that a model is correct, and it provides the store, a model subsystem of a hub.
 
-The package uses no Node.js API. It runs in a web browser and in Node.js. A host reads the files and gives the data to the core.
+The package uses no Node.js API. It runs in a web browser and in Node.js.
 
 ## The model
 
@@ -35,28 +35,11 @@ Each ID has a prefix for its kind, an underscore, and a UUID in lowercase. The p
 
 Two component types with the same label cause a warning. The model stays correct.
 
-## Example
+## Validation
 
-`createCore` throws a `ModelError` when the model is not correct. The error has the list `problems`.
+`validateModel(data)` checks data against the rules of the model. It returns `{ ok: true, model, warnings }` or `{ ok: false, problems }`. Each problem has a `severity`, a `message`, and a `path`.
 
-```ts
-import { createCore } from '@thrashplay/wishem-core'
-
-const core = createCore(modelData)
-
-const stop = core.subscribe((snapshot) => {
-  console.log(snapshot.entities.length)
-})
-
-const result = core.setModel(newModelData)
-if (!result.ok) {
-  console.error(result.problems)
-}
-
-stop()
-```
-
-`setModel` keeps the current model when the new model is not correct. It sends no snapshot when the new model is equal to the current model.
+`ModelError` is the error that `createStore` throws when the first model is not correct. The error has the list `problems`.
 
 ## The store
 
@@ -102,13 +85,10 @@ const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-40
 ## API
 
 - `validateModel(data)`: checks data against the rules of the model. Returns `{ ok: true, model, warnings }` or `{ ok: false, problems }`.
+- `ModelError`: the error with the list `problems`. `createStore` throws it for a first model that is not correct.
 - `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
 - `storeInputs(id)`: gives the functions that make the four inputs of a store.
-- `createCore(data)`: makes a core.
-- `core.getSnapshot()`: returns the current snapshot.
-- `core.subscribe(listener)`: registers a listener. Returns a function that removes it.
-- `core.setModel(data)`: gives a new model to the core. For the host that owns the storage.
-- `CoreReader`: the interface with `getSnapshot` and `subscribe` only. A `Core` extends it. Code that only reads a model, such as a renderer, accepts a `CoreReader`.
+- `isEqual(a, b)`: compares two models by canonical JSON.
 
 ## No Node.js API
 

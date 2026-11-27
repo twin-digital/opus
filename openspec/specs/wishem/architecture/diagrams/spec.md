@@ -39,6 +39,21 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `hub` as a TypeScript package, and a relationship from `core` to `hub` with the label "Builds on [import]"
 
+#### Scenario: The host package and the page build on the hub package
+
+- **WHEN** `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-hub`, and the page imports a value of `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows a relationship from `host-nodejs` to `hub` and a relationship from the page to `hub`, each with the label "Builds on [import]"
+
+#### Scenario: A change alters the protocol between two containers
+
+- **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket
+- **THEN** the container diagram labels that relationship with the link and its technology
+
+#### Scenario: A change makes a process write a store
+
+- **WHEN** a change makes the workbench process write the model folder
+- **THEN** the relationship between the process and the model folder says that the process writes it
+
 ### Requirement: The dynamic diagram of the path of a change
 
 The architecture document SHALL hold a C4 dynamic diagram of the primary path of Wishem, in `nodejs/wishem/docs/architecture/dynamic-change-light.svg` and `dynamic-change-dark.svg`. The primary path is the path from a change to the model to a new picture. The diagram SHALL number each relationship in the order of the flow.
@@ -48,6 +63,11 @@ The architecture document SHALL hold a C4 dynamic diagram of the primary path of
 - **WHEN** a change puts a container between the model folder and the page on the path of a change
 - **THEN** the dynamic diagram shows the container and gives its relationships their numbers
 
+#### Scenario: A change alters the transport of a step
+
+- **WHEN** a change makes the workbench process send the changed parts to the page on a link
+- **THEN** the step from the process to the page names what the process sends and the technology
+
 ### Requirement: The component diagram of the page
 
 The architecture document SHALL hold a C4 component diagram of the page of the workbench, in `nodejs/wishem/docs/architecture/components-page-light.svg` and `components-page-dark.svg`. The diagram SHALL show the parts of the HTML renderer and how a view gets to the renderer.
@@ -56,6 +76,11 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 
 - **WHEN** a change adds a part between the view files and the renderer, or removes one
 - **THEN** the component diagram shows the parts and their relationships after the change
+
+#### Scenario: A change replaces the client of the page
+
+- **WHEN** a change replaces the part of the page that gets the model from the workbench process
+- **THEN** the component diagram shows the new part, its technology, and its relationship to the process
 
 ### Requirement: The entity diagram of the model folder
 

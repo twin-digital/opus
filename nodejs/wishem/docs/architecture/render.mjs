@@ -585,11 +585,15 @@ const context = {
   ],
 }
 
-// Containers
-const cDesigner = el('person', MIDDLE, 64, 'Designer', '[Person]', 'Makes a product with the workbench.', { h: 124 })
+// Containers. The gutter on the left holds the arrow from the page to `hub`.
+const GUTTER = 64
+const gx = (x) => x + GUTTER
+const cDesigner = el('person', gx(MIDDLE), 64, 'Designer', '[Person]', 'Makes a product with the workbench.', {
+  h: 124,
+})
 const cPage = el(
   'container',
-  LEFT,
+  gx(LEFT),
   284,
   'Page',
   '[Container: React, web browser]',
@@ -597,7 +601,7 @@ const cPage = el(
 )
 const cModel = el(
   'store',
-  RIGHT,
+  gx(RIGHT),
   284,
   'Model folder',
   '[Container: JSON files]',
@@ -605,46 +609,46 @@ const cModel = el(
 )
 const cProcess = el(
   'container',
-  MIDDLE,
+  gx(MIDDLE),
   484,
   'Workbench process',
   '[Container: Node.js]',
-  'Holds the core and serves the page.',
+  'Holds the construct and serves the page.',
 )
 const cHost = el(
   'container',
-  LEFT,
+  gx(LEFT),
   684,
   'host-nodejs',
   '[Container: TypeScript package]',
-  'Reads a model folder and serves snapshots.',
+  'Runs a construct and serves the link.',
 )
 const cCore = el(
   'container',
-  RIGHT,
+  gx(RIGHT),
   684,
   'core',
   '[Container: TypeScript package]',
-  'Checks a model and gives snapshots.',
+  'Checks a model and holds the store.',
 )
 const cHub = el(
   'container',
-  MIDDLE,
+  gx(MIDDLE),
   884,
   'hub',
   '[Container: TypeScript package]',
-  'Joins the subsystems of a construct.',
+  'Joins the subsystems and carries the link.',
 )
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. The workbench process reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
-  width: WIDTH_PX,
+    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
+  width: WIDTH_PX + GUTTER,
   height: 1104,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832, h: 788, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER, h: 788, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
@@ -654,23 +658,43 @@ const containers = {
     cHub,
 
     // The primary path: a change to the model becomes a new picture
-    rel('flow', [left(cDesigner, 126), [240, 126], top(cPage, 240)], 'Looks at [web browser]', [240, 200]),
-    rel('flow', [right(cDesigner, 126), [640, 126], top(cModel, 640)], 'Edits files [text editor]', [640, 200]),
-    rel('flow', [right(cProcess, 536), [707, 536], bottom(cModel)], 'Reads and watches [file system]', [707, 460]),
-    rel('flow', [bottom(cPage, 96), [96, 560], left(cProcess, 560)], 'Gets snapshots [SSE]', [96, 470]),
+    rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
+    rel('flow', [right(cDesigner, 126), [gx(640), 126], top(cModel, gx(640))], 'Edits files [text editor]', [
+      gx(640),
+      200,
+    ]),
+    rel('flow', [right(cProcess, 536), [gx(707), 536], bottom(cModel)], 'Reads, watches, and writes [file system]', [
+      gx(707),
+      460,
+    ]),
+    rel('flow', [bottom(cPage, gx(96)), [gx(96), 560], left(cProcess, 560)], 'Connects to the hub [WebSocket link]', [
+      gx(96),
+      470,
+    ]),
 
     // The other relationships
-    rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [440, 336]),
-    rel('quiet', [bottom(cPage, 250), [250, 520], left(cProcess, 520)], 'Gets page code [HTTP]', [250, 444]),
-    rel('quiet', [bottom(cProcess, 375), [375, 636], [173, 636], top(cHost)], 'Runs [import]', [274, 636]),
-    rel('quiet', [bottom(cProcess, 505), [505, 636], [707, 636], top(cCore)], 'Uses [import]', [606, 636]),
-    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [440, 736]),
-    rel('quiet', [bottom(cCore), [707, 936], right(cHub, 936)], 'Builds on [import]', [707, 850]),
+    rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
+    rel('quiet', [bottom(cPage, gx(250)), [gx(250), 520], left(cProcess, 520)], 'Gets page code [HTTP]', [
+      gx(250),
+      444,
+    ]),
+    rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 636], [gx(173), 636], top(cHost)], 'Runs [import]', [
+      gx(274),
+      636,
+    ]),
+    rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 636], [gx(707), 636], top(cCore)], 'Uses [import]', [
+      gx(606),
+      636,
+    ]),
+    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 736]),
+    rel('quiet', [bottom(cCore), [gx(707), 936], right(cHub, 936)], 'Builds on [import]', [gx(707), 850]),
+    rel('quiet', [bottom(cHost), [gx(173), 920], left(cHub, 920)], 'Builds on [import]', [gx(173), 864]),
+    rel('quiet', [left(cPage, 360), [68, 360], [68, 960], left(cHub, 960)], 'Builds on [import]', [223, 960]),
     {
       kind: 'legend',
       x: 24,
       y: 1044,
-      w: 832,
+      w: 832 + GUTTER,
       entries: [
         ['person', 'Person'],
         ['container', 'Container'],
@@ -693,7 +717,7 @@ const dynamicChange = {
   name: 'dynamic-change',
   title: 'Dynamic diagram: a change to the model becomes a new picture',
   description:
-    'Four steps in order. The designer saves a model file in the model folder. The workbench process reads after the watch event. The process sends the new snapshot to the page. The page shows the new picture to the designer.',
+    'Four steps in order. The designer saves a model file in the model folder. The workbench process reads after the watch event. The process sends the changed parts to the page over the WebSocket link. The page shows the new picture to the designer.',
   width: WIDTH_PX,
   height: 492,
   items: [
@@ -703,7 +727,7 @@ const dynamicChange = {
     dPage,
     rel('flow', [right(dDesigner), left(dModel)], '1. Saves a model file', [440, 124]),
     rel('flow', [top(dProcess), bottom(dModel)], '2. Reads after the watch event', [707, 224]),
-    rel('flow', [left(dProcess), right(dPage)], '3. Sends the new snapshot [SSE]', [440, 324]),
+    rel('flow', [left(dProcess), right(dPage)], '3. Sends the changed parts [WebSocket link]', [440, 324]),
     rel('flow', [top(dPage), bottom(dDesigner)], '4. Shows the new picture', [173, 224]),
     {
       kind: 'legend',
@@ -727,7 +751,7 @@ const pProcess = el(
   64,
   'Workbench process',
   '[Container: Node.js]',
-  'Holds the core and serves the page.',
+  'Holds the construct and serves the page.',
 )
 const pSidecars = el(
   'component',
@@ -737,7 +761,14 @@ const pSidecars = el(
   '[Component: JSON files]',
   'Attach each view to a component type.',
 )
-const pClient = el('component', RIGHT, 316, 'Client of the core', '[Component: connect]', 'Gives the newest snapshot.')
+const pClient = el(
+  'component',
+  RIGHT,
+  316,
+  'Client of the hub',
+  '[Component: connectHub]',
+  'Keeps the newest model of the store.',
+)
 const pTable = el(
   'component',
   LEFT,
@@ -761,7 +792,7 @@ const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has six components. The client of the core gets snapshots from the workbench process. The renderer reads the snapshot, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
+    'The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the model from the client, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
   width: WIDTH_PX,
   height: 940,
   items: [
@@ -774,9 +805,9 @@ const componentsPage = {
     pViews,
     pCatalog,
 
-    // The path of a snapshot to a view
-    rel('flow', [top(pClient), bottom(pProcess)], 'Gets snapshots [SSE]', [707, 216]),
-    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the snapshot', [707, 468]),
+    // The path of the model to a view
+    rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the model', [707, 468]),
     rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
 

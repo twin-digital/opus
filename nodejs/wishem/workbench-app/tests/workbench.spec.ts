@@ -2,6 +2,8 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { storeInputs } from '@thrashplay/wishem-core'
+import { openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 
 const ENTITY = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
@@ -67,7 +69,7 @@ test('the heading of the app bar is inside an element that has the entity ID', a
 
 test('text that is not valid JSON keeps the title, and a correct file shows the new title', async ({ page }) => {
   await writeState('{ "entities": [')
-  // Waits for the core to read the file, so that a wrong change of the picture can show.
+  // Waits for the construct to read the file, so that a wrong change of the picture can show.
   await page.waitForTimeout(500)
   await expect(heading(page, 'Wishem')).toBeVisible()
   await writeState(stateOf({ id: ENTITY, title: 'Hello' }))
@@ -123,14 +125,48 @@ test('two entities with an AppBar component give two app bars', async ({ page })
 
 test('no request of the page goes to a different host', async ({ page, baseURL }) => {
   const hosts = new Set<string>()
+  const sockets: string[] = []
   page.on('request', (request) => {
     if (request.url().startsWith('http')) {
       hosts.add(new URL(request.url()).host)
     }
   })
+  page.on('websocket', (socket) => {
+    sockets.push(socket.url())
+  })
   await page.reload()
   await expect(heading(page, 'Wishem')).toBeVisible()
-  expect([...hosts]).toEqual([new URL(baseURL ?? '').host])
+  const { host } = new URL(baseURL ?? '')
+  expect([...hosts]).toEqual([host])
+  // The Vite server opens its own socket for the reload of the development page.
+  expect(new Set(sockets.map((url) => new URL(url).host))).toEqual(new Set([host]))
+  expect(sockets.filter((url) => new URL(url).pathname === '/link')).toEqual([`ws://${host}/link`])
+})
+
+test('two pages each show the app bar and each follow a change of state.json', async ({ page, context }) => {
+  const second = await context.newPage()
+  await second.goto('/')
+  await expect(heading(second, 'Wishem')).toBeVisible()
+  await expect(heading(page, 'Wishem')).toBeVisible()
+  await writeState(stateOf({ id: ENTITY, title: 'Both' }))
+  await expect(heading(page, 'Both')).toBeVisible()
+  await expect(heading(second, 'Both')).toBeVisible()
+})
+
+test('an input through the link shows on the page and in state.json', async ({ page }) => {
+  const link = await openLink(await webSocketChannel(new WebSocket('ws://127.0.0.1:4180/link')), [
+    { id: 'e2e-input', kind: 'input' },
+  ])
+  try {
+    const result = await link.ports['e2e-input'].submit(
+      storeInputs().setField({ entity: ENTITY, componentType: APP_BAR, field: TITLE, value: 'Through the link' }),
+    )
+    expect(result.ok).toBe(true)
+    await expect(heading(page, 'Through the link')).toBeVisible()
+    await expect.poll(() => readFile(statePath, 'utf8')).toContain('Through the link')
+  } finally {
+    link.close()
+  }
 })
 
 test('the mark does not change the layout', async ({ page }) => {
