@@ -203,7 +203,7 @@ describe('a rewind restores the last checkpoint and applies the inputs after it'
     expect(counted.applied).toEqual([7, 8])
   })
 
-  it('keeps one checkpoint when the rewind has a multiple of the interval as its number', async () => {
+  it('moves the start to the checkpoint of a rewind that has a multiple of the interval as its number', async () => {
     const { hub, keyboard } = running({ checkpointInterval: 5, recordLimit: 5 })
     await send(keyboard, 4)
     await keyboard.submit(hubInputs.rewind(1))
@@ -211,6 +211,19 @@ describe('a rewind restores the last checkpoint and applies the inputs after it'
     expect(count(hub)).toBe(1)
     await send(keyboard, 3)
     expect(count(hub)).toBe(4)
+    expect(hub.recordStart().seq).toBe(5)
+    expect(hub.recordStart().state.counter).toEqual({ count: 1 })
+    expect(hub.record().map((r) => r.seq)).toEqual([6, 7, 8])
+  })
+
+  it('applies from the start of the record after the limit moved it', async () => {
+    const { hub, keyboard, counted } = running({ checkpointInterval: 5, recordLimit: 10 })
+    await send(keyboard, 20)
+    expect(hub.recordStart().seq).toBe(10)
+    counted.applied.length = 0
+    await keyboard.submit(hubInputs.rewind(13))
+    expect(counted.applied).toEqual([11, 12, 13])
+    expect(count(hub)).toBe(13)
   })
 })
 
@@ -297,6 +310,7 @@ describe('the validity of the start of the record', () => {
     await send(keyboard, 7)
     expect(hub.seq).toBe(32)
     expect(hub.recordStart().seq).toBe(15)
+    expect(hub.record().map((r) => r.seq)).toEqual(Array.from({ length: 17 }, (_unused, i) => 16 + i))
   })
 
   it('never holds more inputs than the limit, and each rewind in the record has a target at or after the start', async () => {

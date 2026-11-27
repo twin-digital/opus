@@ -108,3 +108,8 @@ A subsystem has three operations on the hub: send an input, read the joined stat
 Reason: the hub keeps the record of inputs. A replay gives the same result only if the hub sees each thing that changes state.
 Rejected: a direct request from one subsystem to a different subsystem, for control such as pause. Control that the record does not hold makes a replay give a different result.
 Rejected: a mesh, in which subsystems communicate with each other and the hub is one peer. A message between two subsystems is state that the hub did not see. The hub could not keep a record that gives the same result again.
+
+**R21. The hub of a construct runs in a Node.js process.** (**Agreed**)
+For the first versions of Wishem, the hub of each construct is in a Node.js process. A renderer is in a different process, such as a page in a web browser or an engine, and it reaches the hub through the link. Each renderer must work through the link. A demonstration of a renderer has a construct of its own and does not use the hub of the workbench.
+Reason: the link between a hub and a renderer in different processes is the thing that the renderers must prove. A hub in the page of a renderer proves only that a library can draw from a port.
+Rejected: a hub in the page of a renderer, with no link. The owner rejected it for the PixiJS renderer on 2026-11-27.

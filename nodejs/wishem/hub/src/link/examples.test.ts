@@ -114,15 +114,27 @@ describe('a rewind on a real link', () => {
       { ...examples.rewind, request: 6, input: { type: 'hub/rewind', payload: { seq: 9 } } },
     ])
 
-    expect(seen).toContainEqual(examples.rewound)
-    expect(seen).toContainEqual(examples.rewindResult)
-    expect(seen).toContainEqual({
-      ...examples.rewindRejected,
-      result: {
-        ...examples.rewindRejected.result,
-        problems: [{ message: expect.any(String) as string, path: ['payload', 'seq'] }],
+    const applied = ['applied', 'result']
+    expect(seen.map((message) => message.t)).toEqual([
+      'welcome',
+      ...applied,
+      ...applied,
+      ...applied,
+      ...applied,
+      ...applied,
+      'result',
+    ])
+    expect(seen.slice(-3)).toEqual([
+      examples.rewound,
+      examples.rewindResult,
+      {
+        ...examples.rewindRejected,
+        result: {
+          ...examples.rewindRejected.result,
+          problems: [{ message: expect.any(String) as string, path: ['payload', 'seq'] }],
+        },
       },
-    })
+    ])
   })
 
   it('refuses the ID hub', async () => {
