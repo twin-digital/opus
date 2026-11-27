@@ -2,4 +2,4 @@
 '@thrashplay/wishem-host-nodejs': patch
 ---
 
-A hand edit of `state.json` is now followed after the process writes the file.
+The process follows a hand edit of `state.json` after it writes the file.

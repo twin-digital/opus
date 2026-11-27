@@ -184,6 +184,11 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
     }, SETTLE_MS)
   }
 
+  const reportWatchError = (error: Error) => {
+    log(`wishem: the watch failed: ${error.message}`)
+    options.onWatchError?.(error)
+  }
+
   const observe = (target: string, onName?: (name: string | null) => void) => {
     const created = watch(target, { recursive: false }, (_event, name) => {
       if (!closed) {
@@ -191,10 +196,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
         scheduleRead(false)
       }
     })
-    created.on('error', (error) => {
-      log(`wishem: the watch failed: ${error.message}`)
-      options.onWatchError?.(error)
-    })
+    created.on('error', reportWatchError)
     return created
   }
 
@@ -206,12 +208,21 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
     }
   }
 
+  /** Attaches the watcher again after the start. A failure goes to `onWatchError`. */
+  const rewatchDefinitions = () => {
+    try {
+      watchDefinitions()
+    } catch (error) {
+      reportWatchError(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
   return {
     watch: () => {
       // Watches by name, so a replaced `state.json` stays watched.
       folderWatcher = observe(folder, (name) => {
-        if (name === DEFINITIONS_FOLDER) {
-          watchDefinitions()
+        if (name === DEFINITIONS_FOLDER || name == null) {
+          rewatchDefinitions()
         }
       })
       watchDefinitions()
