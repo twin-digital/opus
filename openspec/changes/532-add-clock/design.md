@@ -165,6 +165,29 @@ classDiagram
   Clock ..> Time : sends time/advance
 ```
 
+The time subsystem has two states, and each one accepts a tick. The clock has its own short life.
+
+```mermaid
+stateDiagram-v2
+  state "time: running" as Running
+  state "time: paused" as Paused
+  [*] --> Running : createTime()
+  [*] --> Paused : createTime({ running false })
+  Running --> Paused : time/set-running false
+  Paused --> Running : time/set-running true
+  Running --> Running : time/advance
+  Paused --> Paused : time/advance (a step)
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> Started : startClock
+  Started --> Started : call of the timer
+  Started --> Stopped : stop(), or the hub event stopping
+  Stopped --> Stopped : stop()
+  Stopped --> [*]
+```
+
 ## The path of a tick
 
 ```mermaid
@@ -185,6 +208,21 @@ sequenceDiagram
     end
   end
 ```
+
+## Failure Modes
+
+The clock is a job that a timer starts again and again. A tick is not idempotent: each `time/advance` adds to the time. The clock sends a tick one time, and it does not send a tick again after a failure.
+
+| Failure                                          | Result                                                                                                               | Recovery                                                                                                                                          |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The timer is late                                | The clock sends the ticks that are due at the next call, at most 5 in one call.                                      | None is necessary.                                                                                                                                |
+| The process stops for a long time                | The clock sends 5 ticks and drops the other time. The construct continues at normal speed.                           | None is necessary. The time of the construct is behind real time.                                                                                 |
+| The hub rejects a tick, or its promise fails     | The clock drops the result. It counts the tick as sent, so the time of the construct is short.                       | None. A hub that is stopped sends `stopping`, and the clock stops.                                                                                |
+| A tick through a link has no result              | The clock does not know if the hub applied the tick. It does not send the tick again.                                | The code that opened the link opens a new link and starts a new clock.                                                                            |
+| Two clocks run for one construct                 | The time of the construct advances at two times the speed. The hub does not prevent this.                            | The code that assembles a construct starts one clock. A second ID is necessary to attach a second clock, so the fault is visible in the assembly. |
+| The joined state has no part `time`              | `startClock` throws.                                                                                                 | Add the time subsystem to the hub.                                                                                                                |
+| A pause and a resume occur between two calls     | The clock measures real time again from each `time/set-running` event, so no tick is sent for the time of the pause. | None is necessary.                                                                                                                                |
+| The code that started the clock does not stop it | The timer keeps the process alive until the hub stops.                                                               | Stop the hub. The clock stops on the `stopping` event.                                                                                            |
 
 ## Package Impact
 
