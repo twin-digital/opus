@@ -2,8 +2,8 @@ import { createTime } from '@thrashplay/wishem-clock'
 import { createStore } from '@thrashplay/wishem-core'
 import { createHub } from '@thrashplay/wishem-hub'
 import type { Hub } from '@thrashplay/wishem-hub'
-import { withColorRule } from './color-rule.js'
-import { CLEAR_COLOR_TYPE, COLORS, COLOR_FIELD, CONSTRUCT_MODEL, SCREEN_ENTITY } from './model.js'
+import { withColorRule } from './color-rule.ts'
+import { CLEAR_COLOR_TYPE, COLORS, COLOR_FIELD, CONSTRUCT_MODEL, SCREEN_ENTITY } from './model.ts'
 
 export interface PixiHubOptions {
   running: boolean

@@ -2,8 +2,8 @@ import { startClock } from '@thrashplay/wishem-clock'
 import type { ClockTimer } from '@thrashplay/wishem-clock'
 import { serveHub } from '@thrashplay/wishem-host-nodejs'
 import type { Hub } from '@thrashplay/wishem-hub'
-import { createPixiHub } from './create-hub.js'
-import { STEP_MS } from './model.js'
+import { createPixiHub } from './create-hub.ts'
+import { STEP_MS } from './model.ts'
 
 export interface PixiConstructOptions {
   /** Use 0 to let the system select a port. */
