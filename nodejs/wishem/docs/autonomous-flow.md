@@ -163,6 +163,7 @@ A test of one requirement does not find a fault that needs two features in a seq
 ### Reviews
 
 - A change with two or more tasks has a review of each task and one final review of the full branch.
+- The final reviewer compares the packages of `nodejs/wishem/` and their imports in the code with the container diagram and the tables of the architecture document. A package, a process, or a relationship that the document does not show is a finding of the grade Important. Reason: the change that added the clock package did not add it to the document, and a milestone with two changes has no review of the full milestone that would find it.
 - A change with one task has one review: the final review of the full branch. The diff of the task is the diff of the branch, so a review of the task reads the same code.
 
 ### Break-tests
@@ -323,8 +324,28 @@ If the request fails, add a note to **Process notes** and continue. A notice tha
 
 ## How a session continues the work
 
+The state of the work is not kept in a summary. A summary is not current after the next step. Each kind of state has one place, and a script reads the places.
+
+| State                                                                                                            | Its place                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| The tasks, their status, their milestones, and what blocks each one                                              | The project and the relations of the issues                                                        |
+| A question or a review that waits for the owner                                                                  | An issue of the type `Question` or `Review`, with the owner as assignee                            |
+| A decision of the owner about the process                                                                        | This file                                                                                          |
+| A decision of the owner about the product                                                                        | `rules.md`, or the specification that it changes                                                   |
+| The state of a change in work: the task, the base commits, the rulings of the lead agent, the findings that wait | The ledger of the change                                                                           |
+| An order between two changes that the relations of the issues do not show                                        | A "blocked by" relation between the two issues, which the lead agent removes when the order is met |
+| A fact about the process, for the next retrospective                                                             | [Process notes](https://github.com/twin-digital/opus/issues/521)                                   |
+
+Rules that keep these places complete:
+
+- A decision of the owner is recorded when it is in one of these places on `main`, or in a comment on the issue that it changes. A decision that is only in the conversation of a session is not recorded.
+- Push the branch of a change as a draft pull request when the plan is committed. The plan and each later commit are then not only on one computer.
+- Commit the ledger of a change in the folder of the change, as `ledger.md`, after each task and before each push. It is archived with the change, as the record of the rulings.
+
+To start or to continue a session:
+
 1. Read this file.
-2. If [Architecture brief from the design discussion](https://github.com/twin-digital/opus/issues/522) is open, read it. It holds the decisions and the inputs that the blueprint does not hold.
-3. Read the project: the issues that are `In Progress`, then `Blocked`, then `Todo`.
-4. Read the discovery issues that are closed since the last session, and apply each answer.
-5. Continue with the first task that is not blocked.
+2. Run `node nodejs/wishem/docs/flow-scripts/state.mjs`. It prints the items of the project that are in work or blocked, the open pull requests with their checks, each worktree of this work with the last lines of its ledger, the issues that wait for the owner, the break-test issues in their order, and the processes that stayed alive.
+3. For each change in work, read its ledger in full.
+4. Read the comments that the owner added to an issue of the type `Question` or `Review` since the last session, and apply each answer.
+5. Continue with each task that is not blocked, to the limit of subagents.

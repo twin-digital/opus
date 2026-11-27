@@ -82,20 +82,6 @@ When the model files are not correct, the store keeps its last correct model. Th
 - **WHEN** the model files were not correct and a person saves a correct `state.json` with the title `Hello`
 - **THEN** the page shows `Hello`
 
-### Requirement: Each drawn element gives its entity
-
-The renderer SHALL mark the picture of each component with the ID of its entity and the ID of its component type. The renderer SHALL add the mark. A view SHALL NOT need to add it. For each element in the picture of a component, a program SHALL be able to find the entity ID from the element.
-
-#### Scenario: Find the entity of the app bar
-
-- **WHEN** the page shows the app bar of the entity `e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2`
-- **THEN** the heading of the app bar is in an element that is marked with that entity ID
-
-#### Scenario: The mark does not change the layout
-
-- **WHEN** the page draws the app bar with its mark
-- **THEN** the app bar has the same size and position as the app bar of the style guide at the same width
-
 ### Requirement: The page uses only the address that served it
 
 The page SHALL open its link at the path `/link` of the address that served the page, with `ws:` for `http:` and `wss:` for `https:`. The page SHALL NOT need the address of the hub. The page SHALL make no request to a different host.
@@ -130,7 +116,7 @@ Before the first `welcome` message arrives, the page SHALL show its fixed conten
 
 ### Requirement: The page is one output subsystem of the hub
 
-The page SHALL attach to the hub through a link as one output subsystem. The ID of the subsystem SHALL be `page-` and random lowercase hexadecimal digits, new for each link, so that two pages of one construct do not use one ID. The page SHALL send no input.
+The page SHALL attach to the hub through a link as one output subsystem. The ID of the subsystem SHALL be `page-` and random lowercase hexadecimal digits, new for each link, so that two pages of one construct do not use one ID. The page SHALL send no input. The page SHALL give the remote port of each new link to the React renderer.
 
 #### Scenario: Two pages
 
@@ -141,6 +127,11 @@ The page SHALL attach to the hub through a link as one output subsystem. The ID 
 
 - **WHEN** a page opens a link and draws the model
 - **THEN** the record of the hub holds no input with a source that starts with `page-`
+
+#### Scenario: A new link
+
+- **WHEN** the link ended, and the page opens a new link
+- **THEN** the renderer draws from the remote port of the new link
 
 ### Requirement: The page connects again after the link ends
 

@@ -639,16 +639,33 @@ const cHub = el(
   '[Container: TypeScript package]',
   'Joins the subsystems and carries the link.',
 )
+const cRenderer = el(
+  'container',
+  gx(MIDDLE),
+  1284,
+  'renderer-react',
+  '[Container: TypeScript package]',
+  'Draws React views from a port.',
+)
+
+const cClock = el(
+  'container',
+  gx(RIGHT),
+  1084,
+  'clock',
+  '[Container: TypeScript package]',
+  'Holds the time subsystem and the clock.',
+)
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
-  width: WIDTH_PX + GUTTER,
-  height: 1104,
+    'Wishem has eight containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
+  width: WIDTH_PX + GUTTER + 32,
+  height: 1512,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER, h: 788, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1196, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
@@ -656,6 +673,8 @@ const containers = {
     cHost,
     cCore,
     cHub,
+    cRenderer,
+    cClock,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
@@ -690,11 +709,19 @@ const containers = {
     rel('quiet', [bottom(cCore), [gx(707), 936], right(cHub, 936)], 'Builds on [import]', [gx(707), 850]),
     rel('quiet', [bottom(cHost), [gx(173), 920], left(cHub, 920)], 'Builds on [import]', [gx(173), 864]),
     rel('quiet', [left(cPage, 360), [68, 360], [68, 960], left(cHub, 960)], 'Builds on [import]', [223, 960]),
+    rel('quiet', [left(cPage, 330), [44, 330], [44, 1336], left(cRenderer, 1336)], 'Builds on [import]', [211, 1336]),
+    rel(
+      'quiet',
+      [right(cProcess, 590), [916, 590], [916, 1336], right(cRenderer, 1336)],
+      'Builds on [import]',
+      [772, 1336],
+    ),
+    rel('quiet', [top(cClock), [gx(707), 964], right(cHub, 964)], 'Builds on [import]', [gx(707), 1024]),
     {
       kind: 'legend',
       x: 24,
-      y: 1044,
-      w: 832 + GUTTER,
+      y: 1452,
+      w: 832 + GUTTER + 32,
       entries: [
         ['person', 'Person'],
         ['container', 'Container'],
@@ -767,14 +794,14 @@ const pClient = el(
   316,
   'Client of the hub',
   '[Component: connectHub]',
-  'Keeps the newest model of the store.',
+  'Gives the port of each link.',
 )
 const pTable = el(
   'component',
   LEFT,
   516,
   'Table of views',
-  '[Component: collectViews]',
+  '[Component: renderer-react]',
   'Gives the view of a component type.',
 )
 const pRenderer = el(
@@ -782,7 +809,7 @@ const pRenderer = el(
   RIGHT,
   516,
   'Renderer',
-  '[Component: React]',
+  '[Component: renderer-react]',
   'Draws each component in a marked element.',
 )
 const pViews = el('component', LEFT, 716, 'Views', '[Component: React]', 'Draw one component type each.')
@@ -792,7 +819,7 @@ const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the model from the client, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
+    'The page has six components. The client of the hub connects to the workbench process through the link. The renderer reads the part store from the port that the client gives, finds the view in the table of views, and mounts it with props. The table collects the views and reads the sidecars. The views draw with the catalog.',
   width: WIDTH_PX,
   height: 940,
   items: [
@@ -807,7 +834,7 @@ const componentsPage = {
 
     // The path of the model to a view
     rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
-    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the model', [707, 468]),
+    rel('flow', [top(pRenderer), bottom(pClient)], 'Reads the part store [port]', [707, 468]),
     rel('flow', [bottom(pRenderer, 740), [740, 668], [250, 668], top(pViews, 250)], 'Mounts with props', [495, 668]),
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
 

@@ -24,7 +24,7 @@ The designer is the one person who uses Wishem. Wishem connects to no external s
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="containers-dark.svg">
-  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder, and looks at the page. The page gets page code [HTTP] from the workbench process and connects to the hub through a WebSocket link. The page builds on the hub package. The workbench process reads, watches, and writes the model folder, runs the host-nodejs package, and uses the core package. The host-nodejs package builds on the core package and on the hub package. The core package builds on the hub package." src="containers-light.svg">
+  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder, and looks at the page. The page gets page code [HTTP] from the workbench process and connects to the hub through a WebSocket link. The page builds on the hub package and on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder, runs the host-nodejs package, uses the core package, and builds on the renderer-react package. The host-nodejs package builds on the core package and on the hub package. The core package builds on the hub package." src="containers-light.svg">
 </picture>
 
 Amber arrows show the primary path: a change to the model becomes a new picture. Gray arrows show the other relationships.
@@ -39,21 +39,29 @@ The workbench process makes its hub through `startConstruct` of `host-nodejs`, a
 
 `@thrashplay/wishem-workbench-app` is not a container of its own. It holds the page and the `start` script. They are in the page and in the workbench process.
 
+The package `renderer-react` is a container because `workbench-app` builds on it. The page imports `Renderer` and `collectViews` from it. The `start` and `generate` scripts of the workbench process import the generator from its entry `view-types`. The package imports only types from `core` and `hub`, so the diagram shows no relationship from it.
+
+The package `clock` is a container because it holds the `time` subsystem and the clock. It builds on `hub`. No package or process of Wishem starts a clock at this time, so the diagram shows no other relationship for it.
+
 To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md).
 
-| Element           | Type                          | Responsibility                                                                                                                                                                                                                    |
-| ----------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Page              | Container: React, web browser | Draws each component that has a view. It holds the HTML renderer, the views, and the components. Package: `@thrashplay/wishem-workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/renderer/`, `src/views/`, `src/components/`).  |
-| Workbench process | Container: Node.js            | Runs the construct and the Vite development server, and serves the page. Package: `@thrashplay/wishem-workbench-app` (`scripts/start.ts`).                                                                                        |
-| Model folder      | Container: JSON files         | The one store of persisted data. It holds the definition files and `state.json`. Package: `@thrashplay/wishem-workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`).                                        |
-| host-nodejs       | Container: TypeScript package | `startConstruct` and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                              |
-| core              | Container: TypeScript package | The model types, `validateModel`, `ModelError`, `isEqual`, and the store (`createStore`, `storeInputs`). The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`.                   |
-| hub               | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`. |
+| Element           | Type                          | Responsibility                                                                                                                                                                                                                           |
+| ----------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page              | Container: React, web browser | Draws each component that has a view. It holds the client of the hub, the views, and the components. Package: `@thrashplay/wishem-workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/hub-client.ts`, `src/views/`, `src/components/`). |
+| Workbench process | Container: Node.js            | Runs the construct and the Vite development server, and serves the page. Package: `@thrashplay/wishem-workbench-app` (`scripts/start.ts`).                                                                                               |
+| Model folder      | Container: JSON files         | The one store of persisted data. It holds the definition files and `state.json`. Package: `@thrashplay/wishem-workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`).                                               |
+| host-nodejs       | Container: TypeScript package | `startConstruct` and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                                     |
+| core              | Container: TypeScript package | The model types, `validateModel`, `ModelError`, `isEqual`, and the store (`createStore`, `storeInputs`). The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`.                          |
+| hub               | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.        |
+| clock             | Container: TypeScript package | The `time` subsystem and the clock of a construct. It builds on the hub. It uses no Node.js API. Package: `@thrashplay/wishem-clock`.                                                                                                    |
+| renderer-react    | Container: TypeScript package | The React renderer: `Renderer`, `collectViews`, the names of props, and the generator of the types of the props. `Renderer` draws from a port. The root entry uses no Node.js API. Package: `@thrashplay/wishem-renderer-react`.         |
 
-- `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, and `@thrashplay/wishem-workbench`.
+- `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-renderer-react`, and `@thrashplay/wishem-workbench`.
 - `@thrashplay/wishem-workbench` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-host-nodejs`. It does not depend on `@thrashplay/wishem-workbench-app`.
 - `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
+- `@thrashplay/wishem-renderer-react` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub` for types only. It has `react` as a peer dependency.
+- `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. No other package of Wishem depends on it. `@thrashplay/wishem-core` is a development dependency of it, for a test.
 - `@thrashplay/wishem-hub` depends on no other package of Wishem.
 
 The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`).
@@ -73,8 +81,8 @@ This is the path from a saved `state.json` to a new picture.
 2. The storage subsystem of the construct reads the model folder again (`readModelFolder`) and checks it (`validateModel`). If a file is not correct, it prints each problem in the terminal. The page keeps the last picture.
 3. The storage subsystem sends the input `store/replace-model` to the hub. The store applies it. When the model is equal to the old one, the store keeps the same part.
 4. The hub sends the `applied` message with the new part `store` on each open link. The Vite development server passes the WebSocket to the page.
-5. The client of the hub (`connectHub()` in `src/renderer/hub-client.ts`) compares the part `store` with the last one by identity. For a new part, it tells its subscribers.
-6. The `Renderer` reads the new model. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
+5. The port of the link tells its subscribers about the `applied` event. The client of the hub (`connectHub()` in `src/hub-client.ts`) gave this port to the page after the `welcome` message.
+6. The `Renderer` of `renderer-react` reads the part `store` of the port and compares it with the last one by identity. For a new part, it reads the new model. `viewWarnings` compares each sidecar with the definitions. A sidecar for a component type that is not defined, or two labels that give one prop name, gives a warning in the browser console.
 7. For each entity and each component type that has a view, the `Renderer` gives the view one prop for each field of the definition, with the name that the label of the field gives. It mounts the view as a React component.
 8. The `Renderer` puts the result in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`. The wrapper is the map from a point on the screen to an entity.
 9. React updates the page. The app bar shows the new title.
@@ -94,27 +102,27 @@ After a change to a definition file that the hub accepts, or to a sidecar, the `
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="components-page-dark.svg">
-  <img alt="Component diagram of the page of the workbench. The client of the hub connects to the workbench process through the WebSocket link. The renderer reads the model from the client, finds the view in the table of views, and mounts the view with props. The table of views reads the sidecars and collects the views. The views draw with the catalog." src="components-page-light.svg">
+  <img alt="Component diagram of the page of the workbench. The client of the hub connects to the workbench process through the WebSocket link. The renderer reads the part store from the port that the client gives, finds the view in the table of views, and mounts the view with props. The table of views reads the sidecars and collects the views. The views draw with the catalog." src="components-page-light.svg">
 </picture>
 
 Amber arrows show the primary path inside the page: how the changed parts of step 3 of the dynamic diagram become the picture of step 4. Gray arrows show where the table of views gets its content.
 
-`src/main.tsx` connects the client of the hub and passes the table of views and the reader to the page. The `Renderer` mounts each view in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`.
+`src/main.tsx` connects the client of the hub. After each `welcome` message, it draws the `Page` with the port of the new link and the table of views. The `Renderer` mounts each view in a wrapper element that has `data-wishem-entity` and `data-wishem-component-type`.
 
 The sidecars are source files of `workbench-app`. Each sidecar sits beside the view that it describes. `src/views/AppBar.view.gen.ts` has the type `Props` of the view, with one member for each field of the component type. The `generate` script of `workbench-app` writes it from the definition file and the sidecar. The type check reads it. The page does not.
 
-The `Page` shows the zero state (`ZeroState`) of the catalog in the space below the pictures, with or without a reader. The diagram does not show the `Page` module.
+The `Page` shows the zero state (`ZeroState`) of the catalog in the space below the pictures, with or without a port. The diagram does not show the `Page` module.
 
-| Element           | Type                      | Responsibility                                                                                                                                                           |
-| ----------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Client of the hub | Component: `connectHub`   | `connectHub()` in `src/renderer/hub-client.ts`. It opens the link at `/link` as one output subsystem and gives the newest model of the part `store`.                     |
-| Renderer          | Component: React          | `Renderer` in `src/renderer/Renderer.tsx`. It gives each view one prop for each field of the definition, and mounts the view in a marked element.                        |
-| Table of views    | Component: `collectViews` | `collectViews` in `src/renderer/collect-views.ts`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view. |
-| Sidecars          | Component: JSON files     | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                     |
-| Views             | Component: React          | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                         |
-| Catalog           | Component: React          | `src/components/`. It holds the components of the workbench, such as `AppBar` and `ZeroState`.                                                                           |
+| Element           | Type                        | Responsibility                                                                                                                                                                |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client of the hub | Component: `connectHub`     | `connectHub()` in `src/hub-client.ts`. It opens the link at `/link` as one output subsystem and gives the port of each link to the page.                                      |
+| Renderer          | Component: `renderer-react` | `Renderer` in `renderer-react`. It reads the part `store` of the port. It gives each view one prop for each field of the definition, and mounts the view in a marked element. |
+| Table of views    | Component: `renderer-react` | `collectViews` in `renderer-react`. It pairs each sidecar of `src/views/*.view.json` with its view file and makes a table from component type ID to view.                     |
+| Sidecars          | Component: JSON files       | `src/views/*.view.json`. Each one holds the kind of the view (`react`) and the ID of its component type. It attaches the view to the component type.                          |
+| Views             | Component: React            | `src/views/*.tsx`. Each view has a React component as its default export. The file states no ID.                                                                              |
+| Catalog           | Component: React            | `src/components/`. It holds the components of the workbench, such as `AppBar` and `ZeroState`.                                                                                |
 
-The HTML renderer is a folder of modules in `workbench-app`. It is not a package. `src/renderer/` holds `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, `connectHub`, and `Renderer`.
+The React renderer is the package `renderer-react`. It holds `Renderer`, `collectViews`, `viewWarnings`, the rule for the names of props, the parser of a sidecar, and the generator. The page keeps `connectHub`, the views, and the sidecars.
 
 ## Entity diagram: the model folder
 
@@ -153,6 +161,7 @@ The files of the model folder are `definitions/*.json` for the component types a
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
 - [`wishem/core/store`](../../../../openspec/specs/wishem/core/store/spec.md): the store.
+- [`wishem/clock/time`](../../../../openspec/specs/wishem/clock/time/spec.md): the `time` subsystem and the clock.
 - [`wishem/hub/construct`](../../../../openspec/specs/wishem/hub/construct/spec.md): the hub, the ports, and the record.
 - [`wishem/hub/link`](../../../../openspec/specs/wishem/hub/link/spec.md): the link between two processes.
 - [`wishem/hub/record`](../../../../openspec/specs/wishem/hub/record/spec.md): the record, the checkpoints, the rewind, and the replay.

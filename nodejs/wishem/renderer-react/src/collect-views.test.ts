@@ -104,4 +104,8 @@ describe('collectViews', () => {
     )
     expect(error.files).toEqual(['AppBar.test.view.json'])
   })
+
+  it('gives an empty table for a product with no sidecar and no view file', () => {
+    expect(collectViews({}, {}).size).toBe(0)
+  })
 })

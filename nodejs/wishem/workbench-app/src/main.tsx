@@ -1,6 +1,8 @@
+import { collectViews, ViewCollectionError, type ViewTable } from '@thrashplay/wishem-renderer-react'
 import { createRoot } from 'react-dom/client'
+import { connectHub } from './hub-client.js'
 import { Page } from './Page.js'
-import { collectViews, connectHub, reloadOnRestore, ViewCollectionError, type ViewTable } from './renderer/index.js'
+import { reloadOnRestore } from './reload-on-restore.js'
 import { collectAppViews } from './views.js'
 import './styles/theme.css'
 
@@ -20,11 +22,13 @@ const root = document.getElementById('root')
 if (root) {
   const views = loadViews()
   const page = createRoot(root)
-  page.render(<Page reader={undefined} views={views} />)
+  page.render(<Page port={undefined} views={views} />)
   reloadOnRestore(window, () => {
     location.reload()
   })
-  void connectHub().then((reader) => {
-    page.render(<Page reader={reader} views={views} />)
+  connectHub({
+    onPort: (port) => {
+      page.render(<Page port={port} views={views} />)
+    },
   })
 }
