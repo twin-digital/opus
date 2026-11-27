@@ -58,9 +58,52 @@ stop()
 
 `setModel` keeps the current model when the new model is not correct. It sends no snapshot when the new model is equal to the current model.
 
+## The store
+
+The store is a model subsystem of a hub (`@thrashplay/wishem-hub`). Its part of the joined state is one model. `createStore(options)` makes the store. `createStore` throws a `ModelError` when the first model is not correct.
+
+Options:
+
+- `id`: the ID of the store. The default is `store`. Each input type starts with the ID and a slash.
+- `model`: the first model. The default is a model with no definitions and no entities.
+
+The store applies four inputs.
+
+| Input type            | Payload                                   | Effect                                                       |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| `store/replace-model` | `{ model }`                               | Replaces the model.                                          |
+| `store/add-entity`    | `{ entity }`                              | Adds the entity at the end of the list. The ID must be new.  |
+| `store/remove-entity` | `{ entity }`, the ID of the entity        | Removes the entity.                                          |
+| `store/set-field`     | `{ entity, componentType, field, value }` | Sets the value. Adds the component when the entity has none. |
+
+`storeInputs(id)` gives the functions that make these inputs: `replaceModel`, `addEntity`, `removeEntity`, and `setField`.
+
+The store applies an input only when the model after the input is correct. Otherwise, the store refuses the input with problems. Each problem has a `message` and a `path`. The part and the record of the hub do not change. An input that changes nothing keeps the same part object. Each part is frozen. An entity that an input does not change is the same object in the new part.
+
+```ts
+const hub = createHub({ subsystems: [createStore({ model })] })
+const form = hub.attach({ id: 'form', kind: 'input' })
+hub.start()
+
+const result = await form.submit(
+  storeInputs().setField({
+    entity: 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2',
+    componentType: 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34',
+    field: 'fld_b81d04e7-2c6f-4a39-8d15-0e9a7f3c5b62',
+    value: 'Wishem workbench',
+  }),
+)
+// { ok: true, seq: 1 }
+
+const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-4000-8000-000000000000'))
+// { ok: false, reason: 'invalid', problems: [{ message: 'No entity has the ID "e_00000000-0000-4000-8000-000000000000"', path: ['payload', 'entity'] }] }
+```
+
 ## API
 
 - `validateModel(data)`: checks data against the rules of the model. Returns `{ ok: true, model, warnings }` or `{ ok: false, problems }`.
+- `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
+- `storeInputs(id)`: gives the functions that make the four inputs of a store.
 - `createCore(data)`: makes a core.
 - `core.getSnapshot()`: returns the current snapshot.
 - `core.subscribe(listener)`: registers a listener. Returns a function that removes it.
