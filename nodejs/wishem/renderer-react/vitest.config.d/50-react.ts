@@ -8,6 +8,7 @@ export default defineConfig({
     conditions: ['source', 'module', 'browser', 'development|production'],
   },
   test: {
+    environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
   },
 })
