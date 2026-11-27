@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { HubConfigurationError } from './errors.js'
 import { createHub } from './hub.js'
-import { HUB_ID, REWIND_INPUT_TYPE } from './names.js'
+import { HUB_ID, hubInputs, REWIND_INPUT_TYPE } from './names.js'
 import { serveLink } from './link/serve-link.js'
 import { createChannelPair } from './link/channel.js'
 import type { HubMessage } from './link/messages.js'
@@ -44,7 +44,7 @@ describe('reserved names', () => {
   it('refuses a model subsystem with the ID hub and names the ID', () => {
     const model: ModelSubsystem = { id: 'hub', inputs: [], initial: {}, apply: (part) => part }
     expect(() => createHub({ subsystems: [model] })).toThrow(HubConfigurationError)
-    expect(() => createHub({ subsystems: [model] })).toThrow(/"hub"/)
+    expect(() => createHub({ subsystems: [model] })).toThrow(/["'`]hub["'`]/)
   })
 
   it('refuses a model subsystem that declares a type of the hub and names the type', () => {
@@ -63,7 +63,7 @@ describe('reserved names', () => {
   it('refuses to attach an I/O subsystem with the ID hub and names the ID', () => {
     const hub = createHub({ subsystems: [counter] })
     expect(() => hub.attach({ id: 'hub', kind: 'input' })).toThrow(HubConfigurationError)
-    expect(() => hub.attach({ id: 'hub', kind: 'output' })).toThrow(/"hub"/)
+    expect(() => hub.attach({ id: 'hub', kind: 'output' })).toThrow(/["'`]hub["'`]/)
   })
 
   it('refuses a hello with the ID hub with id-in-use', async () => {
@@ -73,7 +73,9 @@ describe('reserved names', () => {
     client.onMessage((message) => messages.push(JSON.parse(message) as HubMessage))
     serveLink(hub, server)
     client.send(JSON.stringify({ t: 'hello', protocol: 1, subsystems: [{ id: 'hub', kind: 'output' }] }))
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.waitFor(() => {
+      expect(messages).toHaveLength(1)
+    })
     expect(messages).toEqual([expect.objectContaining({ t: 'refused', reason: 'id-in-use' })])
   })
 })
@@ -91,16 +93,25 @@ describe('Hub.seq', () => {
     expect(hub.seq).toBe(2)
   })
 
-  it('is the seq that serveLink sends in welcome', async () => {
-    const { hub, keyboard } = running()
-    await send(keyboard, 3)
+  it('is not the length of a limited record', async () => {
+    const { hub, keyboard } = running({ checkpointInterval: 2, recordLimit: 4 })
+    await send(keyboard, 9)
+    expect(hub.record().length).toBeLessThan(9)
+    expect(hub.seq).toBe(9)
+  })
+
+  it('is the seq that serveLink sends in welcome, also for a limited record', async () => {
+    const { hub, keyboard } = running({ checkpointInterval: 2, recordLimit: 4 })
+    await send(keyboard, 9)
     const [client, server] = createChannelPair()
     const messages: HubMessage[] = []
     client.onMessage((message) => messages.push(JSON.parse(message) as HubMessage))
     serveLink(hub, server)
     client.send(JSON.stringify({ t: 'hello', protocol: 1, subsystems: [{ id: 'page', kind: 'output' }] }))
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    expect(messages[0]).toEqual(expect.objectContaining({ t: 'welcome', seq: 3 }))
+    await vi.waitFor(() => {
+      expect(messages).toHaveLength(1)
+    })
+    expect(messages[0]).toEqual(expect.objectContaining({ t: 'welcome', seq: 9 }))
   })
 })
 
@@ -149,6 +160,32 @@ describe('the limit of the record', () => {
     expect(seqs.at(-1)).toBe(250)
     expect(seqs).toHaveLength(150)
     expect(hub.seq).toBe(250)
+  })
+
+  it('holds exactly the limit of inputs when a checkpoint is at the limit', async () => {
+    const { hub, keyboard } = running({ recordLimit: 3, checkpointInterval: 1 })
+    await send(keyboard, 4)
+    expect(hub.recordStart().seq).toBe(1)
+    expect(hub.record().map((r) => r.seq)).toEqual([2, 3, 4])
+  })
+
+  it('has the default interval 100 and the default limit 100000', async () => {
+    const { hub, keyboard } = running()
+    await send(keyboard, 100_000)
+    expect(hub.recordStart().seq).toBe(0)
+    expect(hub.record()).toHaveLength(100_000)
+    await send(keyboard, 1)
+    expect(hub.recordStart().seq).toBe(100)
+    expect(hub.record()).toHaveLength(99_901)
+  }, 30_000)
+
+  it('keeps the start at a checkpoint that is the target of a rewind in the record', async () => {
+    const { hub, keyboard } = running({ recordLimit: 10, checkpointInterval: 5 })
+    await send(keyboard, 10)
+    await keyboard.submit(hubInputs.rewind(5))
+    expect(hub.seq).toBe(11)
+    expect(hub.recordStart().seq).toBe(5)
+    expect(hub.record()).toHaveLength(6)
   })
 
   it('holds no more inputs than the limit after each accepted input', async () => {
