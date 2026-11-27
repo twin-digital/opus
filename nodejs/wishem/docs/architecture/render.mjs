@@ -640,7 +640,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. It reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. The workbench process reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.',
   width: WIDTH_PX,
   height: 1104,
   items: [

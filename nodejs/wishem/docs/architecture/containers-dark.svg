@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 1104" width="880" height="1104" role="img" aria-labelledby="title desc">
 <title id="title">Container diagram: Wishem</title>
-<desc id="desc">Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. It reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.</desc>
+<desc id="desc">Wishem has six containers. The workbench process runs the host-nodejs package and uses the core package. The core package builds on the hub package. The workbench process reads and watches the model folder. The page gets page code over HTTP and gets snapshots over SSE from the process. The designer starts the process, edits the model folder, and looks at the page.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
 <rect width="880" height="1104" fill="#121222"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Container diagram: Wishem</text>
