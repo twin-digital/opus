@@ -41,6 +41,7 @@ Text with no label has no status. It is explanation, an example, or the reading 
 | Start the brainstorm for a milestone         | The GitHub issue of the milestone. See `roadmap.md`.               |
 | Check if a question is already settled       | `rules.md`, then the GitHub issue for the topic. See `roadmap.md`. |
 | See what the workbench is made of            | `architecture/README.md`                                           |
+| Work with little help from the owner         | `autonomous-flow.md`                                               |
 | Learn why the design has this shape          | `brainstorm.md`                                                    |
 
 ## Files
