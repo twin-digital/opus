@@ -24,7 +24,7 @@ describe('the examples', () => {
   it.each(Object.entries(examples))('the example %s is a message that a reader accepts', (_name, message) => {
     const text = JSON.stringify(message)
     const parsed = ['hello', 'submit'].includes(message.t) ? parseClientMessage(text) : parseHubMessage(text)
-    expect(parsed).toEqual(message)
+    expect(parsed).toEqual({ kind: 'message', message })
   })
 })
 

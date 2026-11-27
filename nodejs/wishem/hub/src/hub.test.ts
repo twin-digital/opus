@@ -220,6 +220,30 @@ describe('submit', () => {
     expect(hub.read().store).toBe(before.store)
   })
 
+  it('gives each input the part that the last input made', async () => {
+    const { hub, keyboard } = running()
+    await keyboard.submit({ type: 'time/advance', payload: { by: 1 } })
+    await keyboard.submit({ type: 'time/advance', payload: { by: 2 } })
+    expect(hub.read().time).toEqual({ now: 3, running: false })
+  })
+
+  it('gives a model subsystem each recorded input with its sequence number', async () => {
+    const seen: number[] = []
+    const spy: ModelSubsystem<number> = {
+      id: 'spy',
+      inputs: ['spy/look'],
+      initial: 0,
+      apply: (part, input) => {
+        seen.push(input.seq)
+        return part
+      },
+    }
+    const { keyboard } = running([spy])
+    await keyboard.submit({ type: 'spy/look' })
+    await keyboard.submit({ type: 'spy/look' })
+    expect(seen).toEqual([1, 2])
+  })
+
   it('gives an input to each subsystem that declares the type, in order, with the earlier parts readable', async () => {
     const seen: unknown[] = []
     const physics: ModelSubsystem<{ sawNow: number }> = {
@@ -340,6 +364,81 @@ describe('submit', () => {
     hub.attach({ id: 'screen', kind: 'output' }).subscribe(listener)
     await expect(keyboard.submit({ type: 'broken/run' })).rejects.toThrow('defect')
     expect(listener).not.toHaveBeenCalled()
+  })
+})
+
+describe('settling of submit', () => {
+  // One microtask turn runs a callback that is registered on a settled promise.
+  const settle = async () => {
+    await Promise.resolve()
+  }
+
+  it('gives a result to each of two inputs that are sent one after the other', async () => {
+    const { keyboard } = running()
+    const first = vi.fn()
+    const second = vi.fn()
+    void keyboard.submit(setField).then(first)
+    await settle()
+    expect(first).toHaveBeenCalledWith({ ok: true, seq: 1 })
+    void keyboard.submit(setField).then(second)
+    await settle()
+    expect(second).toHaveBeenCalledWith({ ok: true, seq: 2 })
+  })
+
+  it('gives its own accepted result to an input that a listener sends during an applied event', async () => {
+    const { hub, keyboard } = running()
+    const inner = vi.fn()
+    const outer = vi.fn()
+    let sent = false
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField).then(inner)
+      }
+    })
+    void keyboard.submit(setField).then(outer)
+    await settle()
+    expect(outer).toHaveBeenCalledWith({ ok: true, seq: 1 })
+    expect(inner).toHaveBeenCalledWith({ ok: true, seq: 2 })
+  })
+
+  it('gives not-running to an input that is in the queue when the hub stops', async () => {
+    const { hub, keyboard } = running()
+    const queued = vi.fn()
+    let sent = false
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField).then(queued)
+        hub.stop()
+      }
+    })
+    void keyboard.submit(setField)
+    await settle()
+    expect(queued).toHaveBeenCalledWith({ ok: false, reason: 'not-running', problems: [] })
+  })
+
+  it('gives a result to an input that is sent after a model subsystem threw', async () => {
+    const broken: ModelSubsystem<number> = {
+      id: 'broken',
+      inputs: ['broken/run', 'broken/ok'],
+      initial: 0,
+      apply: (part, input) => {
+        if (input.type === 'broken/run') {
+          throw new Error('defect')
+        }
+        return part + 1
+      },
+    }
+    const { keyboard } = running([broken])
+    const thrown = vi.fn()
+    const after = vi.fn()
+    void keyboard.submit({ type: 'broken/run' }).catch(thrown)
+    await settle()
+    expect(thrown).toHaveBeenCalledTimes(1)
+    void keyboard.submit({ type: 'broken/ok' }).then(after)
+    await settle()
+    expect(after).toHaveBeenCalledWith({ ok: true, seq: 1 })
   })
 })
 
@@ -480,12 +579,16 @@ describe('joined state', () => {
     expect(hub.read()).toBe(later)
   })
 
-  it('has the same joined state for a model subsystem that returns the same part', async () => {
-    const same: ModelSubsystem<number> = { id: 'same', inputs: ['same/noop'], initial: 4, apply: (part) => part }
+  it('keeps the same part object when a model subsystem returns it', async () => {
+    const same: ModelSubsystem<{ n: number }> = {
+      id: 'same',
+      inputs: ['same/noop'],
+      initial: { n: 4 },
+      apply: (part) => part,
+    }
     const { hub, keyboard } = running([same])
-    const before = hub.read()
     await keyboard.submit({ type: 'same/noop' })
-    expect(hub.read().same).toBe(before.same)
+    expect(hub.read().same).toBe(same.initial)
   })
 
   it('freezes the joined state before and after an input', async () => {
@@ -513,13 +616,15 @@ describe('joined state', () => {
 })
 
 describe('subscribe', () => {
-  it('stores a listener and returns a function that removes it', () => {
+  it('calls a listener until the function that it got removes the listener', () => {
     const hub = createHub({ subsystems: [store] })
     const port = hub.attach({ id: 'renderer', kind: 'output' })
-    const remove = port.subscribe(vi.fn())
-    expect(typeof remove).toBe('function')
-    expect(() => {
-      remove()
-    }).not.toThrow()
+    const listener = vi.fn()
+    const remove = port.subscribe(listener)
+    hub.start()
+    expect(listener).toHaveBeenCalledTimes(1)
+    remove()
+    hub.stop()
+    expect(listener).toHaveBeenCalledTimes(1)
   })
 })

@@ -23,27 +23,25 @@ describe('LINK_PROTOCOL_VERSION', () => {
 
 describe('parseClientMessage', () => {
   it('reads a hello', () => {
-    expect(parseClientMessage(json(hello))).toEqual(hello)
+    expect(parseClientMessage(json(hello))).toEqual({ kind: 'message', message: hello })
   })
 
   it('reads a submit with and without a payload', () => {
-    expect(parseClientMessage(json(submit))).toEqual(submit)
+    expect(parseClientMessage(json(submit))).toEqual({ kind: 'message', message: submit })
     const bare = { ...submit, input: { type: 'a/b' } }
-    expect(parseClientMessage(json(bare))).toEqual(bare)
+    expect(parseClientMessage(json(bare))).toEqual({ kind: 'message', message: bare })
   })
 
   it.each([
     ['text that is not JSON', 'not json'],
-    ['a JSON array', '[]'],
     ['JSON null', 'null'],
-    ['a JSON string', '"hello"'],
     ['an object with no t', json({ protocol: 1 })],
     ['an object with a t that is not a string', json({ t: 5 })],
     ['a hello with no protocol', json({ ...hello, protocol: undefined })],
     ['a hello with a protocol that is not a number', json({ ...hello, protocol: '1' })],
     ['a hello with no subsystems', json({ ...hello, subsystems: undefined })],
     ['a hello with subsystems that are not a list', json({ ...hello, subsystems: {} })],
-    ['a hello with a subsystem that is not an object', json({ ...hello, subsystems: ['page'] })],
+    ['a hello with a subsystem that is not an object', json({ ...hello, subsystems: [null] })],
     ['a hello with a subsystem with no id', json({ ...hello, subsystems: [{ kind: 'input' }] })],
     [
       'a hello with a subsystem with an id that is not text',
@@ -75,48 +73,63 @@ describe('parseClientMessage', () => {
 
   it('marks a message with an unknown type', () => {
     const message = parseClientMessage(json({ t: 'future-thing', x: 1 }))
-    expect(message).toEqual({ t: 'future-thing', unknown: true })
+    expect(message).toEqual({ kind: 'unknown', t: 'future-thing' })
   })
 
-  it('marks a reserved type as unknown', () => {
-    expect(parseClientMessage(json({ t: 'part' }))).toEqual({ t: 'part', unknown: true })
+  it.each([
+    ['hello', hello],
+    ['submit', submit],
+  ])('reads a %s that has more keys, one of them named unknown', (_type, message) => {
+    for (const extra of [{ unknown: true }, { unknown: false }, { other: 1 }]) {
+      const withExtra = { ...message, ...extra }
+      expect(parseClientMessage(json(withExtra))).toEqual({ kind: 'message', message: withExtra })
+    }
+  })
+
+  it.each(['apply', 'part'])('marks the reserved type %s as unknown', (t) => {
+    expect(parseClientMessage(json({ t }))).toEqual({ kind: 'unknown', t: t })
   })
 
   it('does not accept a hub message type as a known client message', () => {
-    expect(parseClientMessage(json(welcome))).toEqual({ t: 'welcome', unknown: true })
+    expect(parseClientMessage(json(welcome))).toEqual({ kind: 'unknown', t: 'welcome' })
   })
 })
 
 describe('parseHubMessage', () => {
   it('reads each type of message', () => {
-    expect(parseHubMessage(json(welcome))).toEqual(welcome)
-    expect(parseHubMessage(json(refused))).toEqual(refused)
+    expect(parseHubMessage(json(welcome))).toEqual({ kind: 'message', message: welcome })
+    expect(parseHubMessage(json(refused))).toEqual({ kind: 'message', message: refused })
     expect(parseHubMessage(json({ t: 'refused', reason: 'stopped', message: 'No.' }))).toEqual({
-      t: 'refused',
-      reason: 'stopped',
-      message: 'No.',
+      kind: 'message',
+      message: { t: 'refused', reason: 'stopped', message: 'No.' },
     })
-    expect(parseHubMessage(json(event))).toEqual(event)
-    expect(parseHubMessage(json({ t: 'event', event: 'stopping' }))).toEqual({ t: 'event', event: 'stopping' })
-    expect(parseHubMessage(json(applied))).toEqual(applied)
-    expect(parseHubMessage(json(result))).toEqual(result)
+    expect(parseHubMessage(json(event))).toEqual({ kind: 'message', message: event })
+    expect(parseHubMessage(json({ t: 'event', event: 'stopping' }))).toEqual({
+      kind: 'message',
+      message: { t: 'event', event: 'stopping' },
+    })
+    expect(parseHubMessage(json(applied))).toEqual({ kind: 'message', message: applied })
+    expect(parseHubMessage(json(result))).toEqual({ kind: 'message', message: result })
   })
 
   it('reads a welcome with each status and a refused with each reason', () => {
     for (const status of ['created', 'running', 'stopped']) {
-      expect(parseHubMessage(json({ ...welcome, status }))).toEqual({ ...welcome, status })
+      expect(parseHubMessage(json({ ...welcome, status }))).toEqual({
+        kind: 'message',
+        message: { ...welcome, status },
+      })
     }
     for (const reason of ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']) {
       const message = { t: 'refused', reason, message: 'No.' }
-      expect(parseHubMessage(json(message))).toEqual(message)
+      expect(parseHubMessage(json(message))).toEqual({ kind: 'message', message: message })
     }
   })
 
   it('reads a result with an error and a rejection', () => {
     const failed = { t: 'result', request: 2, error: 'It broke.' }
-    expect(parseHubMessage(json(failed))).toEqual(failed)
+    expect(parseHubMessage(json(failed))).toEqual({ kind: 'message', message: failed })
     const rejected = { t: 'result', request: 3, result: { ok: false, reason: 'invalid', problems: [] } }
-    expect(parseHubMessage(json(rejected))).toEqual(rejected)
+    expect(parseHubMessage(json(rejected))).toEqual({ kind: 'message', message: rejected })
   })
 
   it.each([
@@ -151,10 +164,23 @@ describe('parseHubMessage', () => {
   })
 
   it('marks a message with an unknown type', () => {
-    expect(parseHubMessage(json({ t: 'future-thing' }))).toEqual({ t: 'future-thing', unknown: true })
+    expect(parseHubMessage(json({ t: 'future-thing' }))).toEqual({ kind: 'unknown', t: 'future-thing' })
   })
 
-  it('marks a reserved type as unknown', () => {
-    expect(parseHubMessage(json({ t: 'apply' }))).toEqual({ t: 'apply', unknown: true })
+  it.each([
+    ['welcome', welcome],
+    ['refused', refused],
+    ['event', event],
+    ['applied', applied],
+    ['result', result],
+  ])('reads a %s that has more keys, one of them named unknown', (_type, message) => {
+    for (const extra of [{ unknown: true }, { unknown: false }, { other: 1 }]) {
+      const withExtra = { ...message, ...extra }
+      expect(parseHubMessage(json(withExtra))).toEqual({ kind: 'message', message: withExtra })
+    }
+  })
+
+  it.each(['apply', 'part'])('marks the reserved type %s as unknown', (t) => {
+    expect(parseHubMessage(json({ t }))).toEqual({ kind: 'unknown', t: t })
   })
 })

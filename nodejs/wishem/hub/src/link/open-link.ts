@@ -203,8 +203,9 @@ export const openLink = async (
       }
     }
 
-    const onStart = (message: HubMessage | { unknown: true } | undefined) => {
-      if (message === undefined || 'unknown' in message || (message.t !== 'welcome' && message.t !== 'refused')) {
+    const onStart = (parsed: ReturnType<typeof parseHubMessage>) => {
+      const message = parsed?.kind === 'message' ? parsed.message : undefined
+      if (message?.t !== 'welcome' && message?.t !== 'refused') {
         ended = true
         closeChannel()
         rejectOpen(new LinkClosedError('The hub side sent no welcome message.'))
@@ -214,6 +215,12 @@ export const openLink = async (
         ended = true
         closeChannel()
         rejectOpen(new LinkRefusedError(message.reason, message.message, message.supported))
+        return
+      }
+      if (message.protocol !== LINK_PROTOCOL_VERSION) {
+        ended = true
+        closeChannel()
+        rejectOpen(new LinkClosedError('The welcome message has a different protocol version.'))
         return
       }
       started = true
@@ -230,16 +237,20 @@ export const openLink = async (
       if (ended) {
         return
       }
-      const message = parseHubMessage(text)
+      const parsed = parseHubMessage(text)
       if (!started) {
-        onStart(message)
+        onStart(parsed)
         return
       }
-      if (message === undefined) {
+      if (parsed === undefined) {
         end()
-      } else if ('unknown' in message) {
         return
-      } else if (message.t === 'applied') {
+      }
+      if (parsed.kind === 'unknown') {
+        return
+      }
+      const { message } = parsed
+      if (message.t === 'applied') {
         onApplied(message)
       } else if (message.t === 'result') {
         onResult(message)

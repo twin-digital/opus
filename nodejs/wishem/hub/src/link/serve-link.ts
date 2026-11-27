@@ -163,19 +163,23 @@ export const serveLink = (hub: Hub, channel: Channel): void => {
     if (closed) {
       return
     }
-    const message = parseClientMessage(text)
-    if (message === undefined || (!started && message.t !== 'hello')) {
+    const parsed = parseClientMessage(text)
+    if (parsed === undefined) {
       refuse('malformed', 'The message is not correct or is not the hello message.')
-    } else if ('unknown' in message) {
       return
-    } else if (message.t === 'hello') {
-      if (started) {
+    }
+    const type = parsed.kind === 'unknown' ? parsed.t : parsed.message.t
+    if (!started && type !== 'hello') {
+      refuse('malformed', 'The message is not correct or is not the hello message.')
+    } else if (parsed.kind === 'message') {
+      const { message } = parsed
+      if (message.t === 'submit') {
+        handleSubmit(message)
+      } else if (started) {
         refuse('malformed', 'The link has started already.')
       } else {
         handleHello(message)
       }
-    } else {
-      handleSubmit(message)
     }
   }
 

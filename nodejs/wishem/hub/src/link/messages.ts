@@ -16,11 +16,9 @@ export type HubMessage =
   | { t: 'applied'; input: RecordedInput; parts: Record<string, unknown> }
   | { t: 'result'; request: number; result?: SubmitResult; error?: string }
 
-/** A message with a type that the reader does not know. The reader ignores it. */
-export interface UnknownMessage {
-  readonly t: string
-  readonly unknown: true
-}
+/** The result of a reader: a known message, or the type of a message that the reader does not know. */
+export type Parsed<Message> =
+  { readonly kind: 'message'; readonly message: Message } | { readonly kind: 'unknown'; readonly t: string }
 
 const REASONS: readonly string[] = ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']
 const STATUSES: readonly string[] = ['created', 'running', 'stopped']
@@ -81,11 +79,11 @@ const HUB_CHECKS: Record<string, (fields: Fields) => boolean> = {
   result: isResult,
 }
 
-const parse = (
+const parse = <Message>(
   text: string,
   types: readonly string[],
   checks: Record<string, (fields: Fields) => boolean>,
-): Fields | UnknownMessage | undefined => {
+): Parsed<Message> | undefined => {
   let value: unknown
   try {
     value = JSON.parse(text)
@@ -96,21 +94,19 @@ const parse = (
     return undefined
   }
   if (!types.includes(value.t)) {
-    return { t: value.t, unknown: true }
+    return { kind: 'unknown', t: value.t }
   }
-  return checks[value.t](value) ? value : undefined
+  return checks[value.t](value) ? { kind: 'message', message: value as Message } : undefined
 }
 
 /**
  * Reads a message of the client. Gives `undefined` for text that is not a message.
- * Gives an `UnknownMessage` for a type that is not known.
+ * Gives `{ kind: "unknown" }` for a type that is not known.
  */
-export const parseClientMessage = (text: string): ClientMessage | UnknownMessage | undefined =>
-  parse(text, CLIENT_TYPES, CLIENT_CHECKS) as ClientMessage | UnknownMessage | undefined
+export const parseClientMessage = (text: string) => parse<ClientMessage>(text, CLIENT_TYPES, CLIENT_CHECKS)
 
 /**
  * Reads a message of the hub side. Gives `undefined` for text that is not a message.
- * Gives an `UnknownMessage` for a type that is not known.
+ * Gives `{ kind: "unknown" }` for a type that is not known.
  */
-export const parseHubMessage = (text: string): HubMessage | UnknownMessage | undefined =>
-  parse(text, HUB_TYPES, HUB_CHECKS) as HubMessage | UnknownMessage | undefined
+export const parseHubMessage = (text: string) => parse<HubMessage>(text, HUB_TYPES, HUB_CHECKS)

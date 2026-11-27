@@ -31,7 +31,7 @@ The first message of the client SHALL be `hello`. It SHALL hold the version of t
 
 ### Requirement: The welcome message holds the joined state
 
-The `welcome` message SHALL hold the version of the protocol, the status of the hub, the sequence number of the last accepted input (0 when no input was accepted), and the full joined state. Each event that the hub sends after it made the `welcome` message SHALL follow on the link, and the client SHALL miss no event.
+The `welcome` message SHALL hold the version of the protocol of this link, which is the version of the `hello`, the status of the hub, the sequence number of the last accepted input (0 when no input was accepted), and the full joined state. Each event that the hub sends after it made the `welcome` message SHALL follow on the link, and the client SHALL miss no event.
 
 #### Scenario: A link starts after three inputs
 
@@ -154,6 +154,11 @@ The code that opens a link SHALL get a failure with the reason and the text of t
 
 - **WHEN** a remote port that has the sequence number 4 gets an `applied` message with the sequence number 6
 - **THEN** the remote port closes the connection and reports that the link ended
+
+#### Scenario: A welcome with a different version
+
+- **WHEN** a remote port that sent version 1 gets a welcome message with version 2
+- **THEN** the remote port closes the connection, and the code that opened the link gets a failure
 
 ### Requirement: The link runs on a WebSocket and in memory
 

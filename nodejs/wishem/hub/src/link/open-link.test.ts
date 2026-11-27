@@ -53,6 +53,10 @@ const settle = async () => {
   }
 }
 
+/** Tells at once if a promise has resolved. Does not wait for a promise that never resolves. */
+const isResolved = async (promise: Promise<unknown>) =>
+  Promise.race([promise.then(() => true), settle().then(() => false)])
+
 const page: IoSubsystem = { id: 'page', kind: 'output' }
 const controls: IoSubsystem = { id: 'page-controls', kind: 'input' }
 const setField = (name: string, value = '1') => ({ type: 'store/set-field', payload: { name, value } })
@@ -257,6 +261,22 @@ describe('the start of a link', () => {
     expect(closed).toBe(true)
   })
 
+  it('resolves for a welcome that has a key named unknown', async () => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page])
+    manual.deliver({ ...welcomeMessage, unknown: true })
+    const link = await opening
+    expect(link.ports.page.read()).toEqual({ time: { ticks: 0 } })
+  })
+
+  it('closes the channel and rejects with a LinkClosedError for a welcome of a different protocol version', async () => {
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page])
+    manual.deliver({ ...welcomeMessage, protocol: 2 })
+    await expect(opening).rejects.toBeInstanceOf(LinkClosedError)
+    expect(manual.state.closes).toBe(1)
+  })
+
   it('has a first expected sequence number of welcome.seq + 1', async () => {
     const { link, send, counts } = await connectRaw([page], { seq: 3 })
     send(applied(4))
@@ -277,6 +297,15 @@ describe('a remote port reads and listens', () => {
     expect(after.store).toBe(before.store)
     expect(after).not.toBe(before)
     expect(Object.isFrozen(after)).toBe(true)
+  })
+
+  it('applies an applied message that has a key named unknown', async () => {
+    const { link, send, counts } = await connectRaw()
+    send({ ...applied(1, { time: { ticks: 1 } }), unknown: true })
+    send(applied(2, { time: { ticks: 2 } }))
+    await settle()
+    expect(link.ports.page.read().time).toEqual({ ticks: 2 })
+    expect(counts.clientClose).toBe(0)
   })
 
   it('updates the state before it calls the listeners of an applied event', async () => {
@@ -443,11 +472,14 @@ describe('a remote port reads and listens', () => {
 
   it('ignores a closed port, but the other ports still get events', async () => {
     const { link, send } = await connectRaw()
+    const closedListener = vi.fn()
     const listener = vi.fn()
-    link.ports.page.close()
+    link.ports.page.subscribe(closedListener)
     link.ports['page-controls'].subscribe(listener)
+    link.ports.page.close()
     send({ t: 'event', event: 'started' })
     await settle()
+    expect(closedListener).not.toHaveBeenCalled()
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
@@ -520,6 +552,13 @@ describe('a remote port sends inputs', () => {
     send({ t: 'result', request: 1, result: { ok: false, reason: 'invalid', problems: [] } })
     await expect(second).resolves.toEqual({ ok: true, seq: 9 })
     await expect(first).resolves.toEqual({ ok: false, reason: 'invalid', problems: [] })
+  })
+
+  it('resolves a request with a result that has a key named unknown', async () => {
+    const { link, send } = await connectRaw()
+    const request = link.ports['page-controls'].submit(setField('a'))
+    send({ t: 'result', request: 1, result: { ok: true, seq: 9 }, unknown: true })
+    await expect(request).resolves.toEqual({ ok: true, seq: 9 })
   })
 
   it('rejects with the error text when the result holds an error', async () => {
@@ -637,10 +676,23 @@ describe('the end of a link', () => {
   })
 
   it('ends when a sequence number repeats', async () => {
-    const { link, send } = await connectRaw()
-    send(applied(1))
-    send(applied(1))
-    await link.closed
+    const { link, send, counts } = await connectRaw()
+    const listener = vi.fn()
+    link.ports.page.subscribe(listener)
+    send(applied(1, { time: { ticks: 1 } }))
+    send(applied(1, { time: { ticks: 2 } }))
+    await settle()
+    expect(await isResolved(link.closed)).toBe(true)
+    expect(counts.clientClose).toBe(1)
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(link.ports.page.read().time).toEqual({ ticks: 1 })
+  })
+
+  it('resolves closed when the link ends, and not before', async () => {
+    const { link, server } = await connectRaw()
+    expect(await isResolved(link.closed)).toBe(false)
+    server.close()
+    expect(await isResolved(link.closed)).toBe(true)
   })
 
   it.each([
@@ -664,16 +716,20 @@ describe('the end of a link', () => {
   })
 
   it('sends nothing more and gives no event after the end', async () => {
-    const { link, send, sent } = await connectRaw()
+    const manual = manualChannel()
+    const opening = openLink(manual.channel, [page, controls])
+    manual.deliver(welcomeMessage)
+    const link = await opening
     const listener = vi.fn()
     link.ports.page.subscribe(listener)
+    const sentBefore = manual.sent.length
     link.close()
-    send(applied(1, { time: { ticks: 1 } }))
-    send({ t: 'event', event: 'stopping' })
+    manual.deliver(applied(1, { time: { ticks: 1 } }))
+    manual.deliver({ t: 'event', event: 'stopping' })
     await settle()
     expect(listener).not.toHaveBeenCalled()
     expect(link.ports.page.read().time).toEqual({ ticks: 0 })
-    expect(sent).toEqual([])
+    expect(manual.sent).toHaveLength(sentBefore)
   })
 
   it('makes no stopping event when the link ends', async () => {
