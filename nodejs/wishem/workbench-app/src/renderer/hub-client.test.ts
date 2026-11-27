@@ -45,6 +45,8 @@ class FakeSocket implements WebSocketLike {
   closeCalls = 0
   readonly sent: string[] = []
   held = false
+  /** A socket that ends only when the hub side ends it, like a close that is not yet done. */
+  lazy = false
   private readonly handlers: Record<string, Handler[]> = {}
   private readonly heldMessages: string[] = []
   private client: Channel | undefined
@@ -73,6 +75,9 @@ class FakeSocket implements WebSocketLike {
 
   close = () => {
     this.closeCalls += 1
+    if (this.lazy) {
+      return
+    }
     if (this.readyState === 0) {
       this.readyState = 3
       this.emit('close')
@@ -510,7 +515,7 @@ describe('connectHub', () => {
       expect(remove.mock.calls).toHaveLength(removed)
     })
 
-    it('closes the new link at once when it runs while a socket opens', async () => {
+    it('closes the socket at once when it runs while a socket opens', async () => {
       const client = await connectAndDrop()
       const listener = vi.fn()
       client.subscribe(listener)
@@ -518,28 +523,48 @@ describe('connectHub', () => {
       await flush(500)
       expect(env.sockets).toHaveLength(2)
       client.close()
-      env.last().open()
-      await flush(10_000)
       expect(env.last().closeCalls).toBeGreaterThan(0)
       expect(env.last().readyState).toBe(3)
+      await flush(10_000)
       expect(listener).not.toHaveBeenCalled()
       expect(env.sockets).toHaveLength(2)
     })
 
-    it('closes the new link at once when it runs while the hello waits for the welcome', async () => {
+    it('closes a socket that opens after it ran, and sends no hello', async () => {
+      const client = await connectAndDrop()
+      const listener = vi.fn()
+      client.subscribe(listener)
+      env.plan = ['manual']
+      await flush(500)
+      const socket = env.last()
+      socket.lazy = true
+      client.close()
+      expect(socket.closeCalls).toBe(1)
+      socket.open()
+      await flush(10_000)
+      expect(socket.sent).toHaveLength(0)
+      expect(socket.closeCalls).toBe(2)
+      expect(listener).not.toHaveBeenCalled()
+      expect(env.sockets).toHaveLength(2)
+    })
+
+    it('closes a link whose welcome comes after it ran, and draws nothing', async () => {
       const client = await connectAndDrop()
       const listener = vi.fn()
       client.subscribe(listener)
       const first = client.getSnapshot()
       env.plan = ['manual']
       await flush(500)
-      env.last().held = true
-      env.last().open()
+      const socket = env.last()
+      socket.held = true
+      socket.open()
       await flush()
+      socket.lazy = true
       client.close()
-      env.last().release()
+      expect(socket.closeCalls).toBe(1)
+      socket.release()
       await flush(10_000)
-      expect(env.last().readyState).toBe(3)
+      expect(socket.closeCalls).toBe(2)
       expect(listener).not.toHaveBeenCalled()
       expect(client.getSnapshot()).toBe(first)
       expect(env.sockets).toHaveLength(2)
