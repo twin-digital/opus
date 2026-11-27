@@ -5,6 +5,7 @@ import { ModelError } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { describeCounts, formatProblem } from './format.js'
 import { DEFAULT_PORT, startConstruct } from './start-construct.js'
+import type { Construct } from './start-construct.js'
 
 const USAGE = 'usage: wishem start <folder> [--port <number>]'
 
@@ -44,8 +45,27 @@ const main = async () => {
 
   say(`wishem: model ${path.resolve(folder)}`)
 
+  let construct: Construct | undefined
+  const stopState = { requested: false }
+  const closeAndExit = (target: Construct) => {
+    void target.close().then(() => {
+      process.exit(0)
+    })
+  }
+  const stop = () => {
+    if (stopState.requested) {
+      return
+    }
+    stopState.requested = true
+    if (construct !== undefined) {
+      closeAndExit(construct)
+    }
+  }
+  process.once('SIGINT', stop)
+  process.once('SIGTERM', stop)
+
   try {
-    const construct = await startConstruct({
+    const started = await startConstruct({
       folder,
       port,
       log: say,
@@ -53,16 +73,13 @@ const main = async () => {
         process.exit(1)
       },
     })
-    say(`wishem: ${describeCounts(construct.hub.read().store as Model)}`)
-    say(`wishem: link at ${construct.linkUrl}`)
-
-    const stop = () => {
-      void construct.close().then(() => {
-        process.exit(0)
-      })
+    construct = started
+    if (stopState.requested) {
+      closeAndExit(started)
+      return
     }
-    process.once('SIGINT', stop)
-    process.once('SIGTERM', stop)
+    say(`wishem: ${describeCounts(started.hub.read().store as Model)}`)
+    say(`wishem: link at ${started.linkUrl}`)
   } catch (error) {
     if (error instanceof ModelError) {
       error.problems.forEach((problem) => {
