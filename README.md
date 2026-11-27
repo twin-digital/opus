@@ -54,6 +54,7 @@ Repository of all public works developed by Twin Digital.
 - [@thrashplay/launchpad-sim](./nodejs/music/launchpad-sim): Browser-based Launchpad Mini Mk3 simulator: runs the music programs against Web MIDI and soundfont playback instead of hardware.
 - [@thrashplay/music](./nodejs/music/music): MIDI music games for the Novation Launchpad Mini Mk3: device drivers, a small program engine, and musical exercises.
 - [@twin-digital/design-process](./nodejs/plan/design-process): Validator, projection, backlog, and fold tools for the twin-digital incremental design process.
+- [@thrashplay/wishem-clock](./nodejs/wishem/clock): The time subsystem and the clock of a Wishem construct. Runs with no Node.js API.
 - [@thrashplay/wishem-core](./nodejs/wishem/core): The model, the validation, and the core of Wishem. Runs with no Node.js API.
 - [@thrashplay/wishem-host-nodejs](./nodejs/wishem/host-nodejs): The Node.js host of Wishem. Reads a model folder, serves the snapshot over local HTTP, and provides the wishem command.
 - [@thrashplay/wishem-hub](./nodejs/wishem/hub): The hub of a Wishem construct. Joins the joined state, orders the inputs, and keeps the record. Runs with no Node.js API.
