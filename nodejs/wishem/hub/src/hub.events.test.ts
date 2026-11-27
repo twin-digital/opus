@@ -326,6 +326,53 @@ describe('failure in a listener', () => {
   })
 })
 
+describe('break-test additions', () => {
+  it('applies inputs that a listener sends in the order of sending', async () => {
+    const { hub, keyboard, renderer } = make()
+    let sent = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField('b'))
+        void keyboard.submit(setField('c'))
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(hub.record().map((input) => (input.payload as { name: string }).name)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('does not send the current event to a listener that registers during the event', async () => {
+    const { hub, keyboard, renderer } = make()
+    const late = vi.fn()
+    let added = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !added) {
+        added = true
+        renderer.subscribe(late)
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(late).not.toHaveBeenCalled()
+  })
+
+  it('does not send the current event to a port that attaches during the event', async () => {
+    const { hub, keyboard, renderer } = make()
+    const late = vi.fn()
+    let added = false
+    renderer.subscribe((event) => {
+      if (event.type === 'applied' && !added) {
+        added = true
+        hub.attach({ id: 'late', kind: 'output' }).subscribe(late)
+      }
+    })
+    hub.start()
+    await keyboard.submit(setField('a'))
+    expect(late).not.toHaveBeenCalled()
+  })
+})
+
 describe('determinism', () => {
   it('gives equal joined states and records with and without an output subsystem', async () => {
     const inputs = [setField('a'), setField('b', '2'), { type: 'sound/play' }, setField('a', '3')]

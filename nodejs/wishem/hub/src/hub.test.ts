@@ -360,3 +360,72 @@ describe('subscribe', () => {
     }).not.toThrow()
   })
 })
+
+describe('break-test additions', () => {
+  it('freezes the joined state before and after an input', async () => {
+    const { hub, keyboard } = running()
+    expect(Object.isFrozen(hub.read())).toBe(true)
+    await keyboard.submit(setField)
+    expect(Object.isFrozen(hub.read())).toBe(true)
+  })
+
+  it('freezes the joined state that a model subsystem reads', async () => {
+    let frozen: boolean | undefined
+    const probe: ModelSubsystem<number> = {
+      id: 'probe',
+      inputs: ['probe/run'],
+      initial: 0,
+      apply: (part, _input, context) => {
+        frozen = Object.isFrozen(context.read())
+        return part
+      },
+    }
+    const { keyboard } = running([probe])
+    await keyboard.submit({ type: 'probe/run' })
+    expect(frozen).toBe(true)
+  })
+
+  it('freezes the nested objects of a payload in the record', async () => {
+    const { hub, keyboard } = running()
+    await keyboard.submit({ type: 'store/set-field', payload: { name: 'a', value: '1', deep: { list: [1] } } })
+    const payload = hub.record()[0].payload as { deep: { list: number[] } }
+    expect(Object.isFrozen(payload.deep)).toBe(true)
+    expect(Object.isFrozen(payload.deep.list)).toBe(true)
+  })
+
+  it('gives one problem with the path payload for a payload that refers to itself', async () => {
+    const { keyboard } = running()
+    const payload: Record<string, unknown> = {}
+    payload.self = payload
+    const result = await keyboard.submit({ type: 'store/set-field', payload })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    if (!result.ok) {
+      expect(result.problems).toHaveLength(1)
+      expect(result.problems[0].path).toEqual(['payload'])
+    }
+  })
+
+  it('does not change an earlier result of record() after a new input', async () => {
+    const { hub, keyboard } = running()
+    const before = hub.record()
+    await keyboard.submit(setField)
+    expect(before).toHaveLength(0)
+    expect(hub.record()).toHaveLength(1)
+  })
+
+  it('gives the sender an Error when a model subsystem throws a value that is not an Error', async () => {
+    const bad: ModelSubsystem<number> = {
+      id: 'bad',
+      inputs: ['bad/run'],
+      initial: 0,
+      apply: () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'broken'
+      },
+    }
+    const { keyboard } = running([bad])
+    const error = await keyboard.submit({ type: 'bad/run' }).catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toContain('broken')
+  })
+})
