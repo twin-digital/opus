@@ -24,7 +24,7 @@ The designer is the one person who uses Wishem. Wishem connects to no external s
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="containers-dark.svg">
-  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder, and looks at the page. The page gets page code [HTTP] from the workbench process and connects to the hub through a WebSocket link. The page builds on the hub package and on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder, runs the host-nodejs package, uses the core package, and builds on the renderer-react package. The host-nodejs package builds on the core package and on the hub package. The core package builds on the hub package." src="containers-light.svg">
+  <img alt="Container diagram of Wishem. The designer starts the workbench process, edits the model folder and the product model folder, and looks at the page. The page gets page code [HTTP] from the workbench process and connects to the hub through a WebSocket link. The page builds on the hub package and on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder, runs the host-nodejs package, uses the core package, and builds on the renderer-react package. The host-nodejs package builds on the core package and on the hub package. The core package builds on the hub package." src="containers-light.svg">
 </picture>
 
 Amber arrows show the primary path: a change to the model becomes a new picture. Gray arrows show the other relationships.
@@ -43,28 +43,34 @@ The package `renderer-react` is a container because `workbench-app` builds on it
 
 The package `clock` is a container because it holds the `time` subsystem and the clock. It builds on `hub`. No package or process of Wishem starts a clock at this time, so the diagram shows no other relationship for it.
 
+The product model folder is a second folder that the workbench process mounts. The option `--product <folder>` of the `start` script gives it. The construct holds its model as the store `product`, with a storage subsystem of its own, and the page ignores it. With no option, the workbench process mounts no product. `@thrashplay/wishem-sample-product` (`model/`) is the example folder.
+
+The package `sample-product` is not a container. No package builds on it. It is a development dependency of `workbench-app`, for a test. It holds the model folder `model/` and the count rule `withCountRule`, which wraps a store and adds 1 to each count at each tick of the clock. The count rule is a native behavior in a first form. It stands in for the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)). The package builds on `core` and `hub`, and it uses `clock` in its tests.
+
 To start the workbench, see [`workbench-app/README.md`](../../workbench-app/README.md).
 
-| Element           | Type                          | Responsibility                                                                                                                                                                                                                           |
-| ----------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Page              | Container: React, web browser | Draws each component that has a view. It holds the client of the hub, the views, and the components. Package: `@thrashplay/wishem-workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/hub-client.ts`, `src/views/`, `src/components/`). |
-| Workbench process | Container: Node.js            | Runs the construct and the Vite development server, and serves the page. Package: `@thrashplay/wishem-workbench-app` (`scripts/start.ts`).                                                                                               |
-| Model folder      | Container: JSON files         | The one store of persisted data. It holds the definition files and `state.json`. Package: `@thrashplay/wishem-workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`).                                               |
-| host-nodejs       | Container: TypeScript package | `startConstruct` and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                                     |
-| core              | Container: TypeScript package | The model types, `validateModel`, `ModelError`, `isEqual`, and the store (`createStore`, `storeInputs`). The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`.                          |
-| hub               | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.        |
-| clock             | Container: TypeScript package | The `time` subsystem and the clock of a construct. It builds on the hub. It uses no Node.js API. Package: `@thrashplay/wishem-clock`.                                                                                                    |
-| renderer-react    | Container: TypeScript package | The React renderer: `Renderer`, `collectViews`, the names of props, and the generator of the types of the props. `Renderer` draws from a port. The root entry uses no Node.js API. Package: `@thrashplay/wishem-renderer-react`.         |
+| Element              | Type                          | Responsibility                                                                                                                                                                                                                           |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page                 | Container: React, web browser | Draws each component that has a view. It holds the client of the hub, the views, and the components. Package: `@thrashplay/wishem-workbench-app` (`src/main.tsx`, `src/Page.tsx`, `src/hub-client.ts`, `src/views/`, `src/components/`). |
+| Workbench process    | Container: Node.js            | Runs the construct and the Vite development server, and serves the page. With `--product`, it mounts a product model folder. Package: `@thrashplay/wishem-workbench-app` (`scripts/start.ts`).                                           |
+| Model folder         | Container: JSON files         | The folder of the model of the workbench. It holds the definition files and `state.json`. Package: `@thrashplay/wishem-workbench` (`model/definitions/`, `model/state.json`, export `modelFolder`).                                      |
+| Product model folder | Container: JSON files         | The folder of the model of the mounted product. It has the same layout as the model folder. Example: `@thrashplay/wishem-sample-product` (`model/`).                                                                                     |
+| host-nodejs          | Container: TypeScript package | `startConstruct` and `readModelFolder`. A construct holds a hub and the store, reads, watches, and writes a model folder, and serves the link at `/link`. Package: `@thrashplay/wishem-host-nodejs`.                                     |
+| core                 | Container: TypeScript package | The model types, `validateModel`, `ModelError`, `isEqual`, and the store (`createStore`, `storeInputs`). The store is a model subsystem of the hub. It uses no Node.js API. Package: `@thrashplay/wishem-core`.                          |
+| hub                  | Container: TypeScript package | The hub of a construct: `createHub`, the ports, the record of inputs, the joined state, and the hub events. The link: `serveLink`, `openLink`, and `webSocketChannel`. It uses no Node.js API. Package: `@thrashplay/wishem-hub`.        |
+| clock                | Container: TypeScript package | The `time` subsystem and the clock of a construct. It builds on the hub. It uses no Node.js API. Package: `@thrashplay/wishem-clock`.                                                                                                    |
+| renderer-react       | Container: TypeScript package | The React renderer: `Renderer`, `collectViews`, the names of props, and the generator of the types of the props. `Renderer` draws from a port. The root entry uses no Node.js API. Package: `@thrashplay/wishem-renderer-react`.         |
 
-- `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-renderer-react`, and `@thrashplay/wishem-workbench`.
+- `@thrashplay/wishem-workbench-app` depends on `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, `@thrashplay/wishem-host-nodejs`, `@thrashplay/wishem-renderer-react`, and `@thrashplay/wishem-workbench`. `@thrashplay/wishem-sample-product` is a development dependency of it, for a test.
 - `@thrashplay/wishem-workbench` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-host-nodejs`. It does not depend on `@thrashplay/wishem-workbench-app`.
 - `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`.
 - `@thrashplay/wishem-renderer-react` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub` for types only. It has `react` as a peer dependency.
 - `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. No other package of Wishem depends on it. `@thrashplay/wishem-core` is a development dependency of it, for a test.
+- `@thrashplay/wishem-sample-product` depends on `@thrashplay/wishem-core` and `@thrashplay/wishem-hub`. `@thrashplay/wishem-clock` is a development dependency of it, for a test. Only the test of `workbench-app` depends on it.
 - `@thrashplay/wishem-hub` depends on no other package of Wishem.
 
-The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`).
+The package `host-nodejs` also provides the `wishem` command. The command starts a construct for a model folder, with no page. The option `--product <folder>` mounts a product model folder. The `start` script of `@thrashplay/wishem-workbench` uses it (`wishem start ./model`).
 
 ## Dynamic diagram: a change to the model becomes a new picture
 
@@ -131,7 +137,7 @@ The React renderer is the package `renderer-react`. It holds `Renderer`, `collec
   <img alt="Entity diagram of the model folder. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field." src="entities-model-folder-light.svg">
 </picture>
 
-The model folder is the one store of persisted data. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
+The diagram applies to each model folder: the model folder of the workbench and the product model folder have the same entities. The sidecars are source files of `workbench-app`, so the diagram shows no entity for them.
 
 The schema has the names `ComponentTypeDefinition`, `FieldDefinition`, `Entity`, and `FieldValue`. The schema has no type name for a component. A component is one record in `components` of an entity, and the ID of its component type is the key of the record. The diagram uses the name `Component` for it, as the glossary does. A field value is one entry of that record, and the ID of its field is the key of the entry. The diagram uses the schema name `FieldValue`.
 

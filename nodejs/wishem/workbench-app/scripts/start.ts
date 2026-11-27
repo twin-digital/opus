@@ -1,5 +1,5 @@
 // Starts the construct of the workbench and the page server in one Node.js process.
-// Usage: node start.ts [--model <folder>] [--port <number>] [--hub-port <number>]
+// Usage: node start.ts [--model <folder>] [--product <folder>] [--port <number>] [--hub-port <number>]
 //   [--views <folder>] [--no-view-types]
 import type { AddressInfo } from 'node:net'
 import { dirname, resolve } from 'node:path'
@@ -16,6 +16,8 @@ import { viewTypesLines } from './view-types-report.ts'
 export interface WorkbenchOptions {
   /** Default: the model folder of the base workbench. */
   model?: string
+  /** The folder of a product model to mount as the store `product`. Default: no product. */
+  product?: string
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
   /** Default 4747. Use 0 to let the system select a port. */
@@ -130,6 +132,7 @@ const keepViewTypesCurrent = ({ hub, server, views, log }: KeeperOptions) => {
 export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Workbench> => {
   const {
     model = modelFolder,
+    product,
     port = DEFAULT_PAGE_PORT,
     hubPort = DEFAULT_HUB_PORT,
     views = resolve(packageRoot, 'src', 'views'),
@@ -142,10 +145,13 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     })
 
   log(`wishem: model ${model}`)
+  if (product !== undefined) {
+    log(`wishem: product ${product}`)
+  }
 
   let construct
   try {
-    construct = await startConstruct({ folder: model, port: hubPort, log })
+    construct = await startConstruct({ folder: model, product, port: hubPort, log })
   } catch (error) {
     if (error instanceof ModelError) {
       error.problems.forEach((problem) => {
@@ -223,6 +229,7 @@ const main = async () => {
     const { values } = parseArgs({
       options: {
         model: { type: 'string' },
+        product: { type: 'string' },
         port: { type: 'string' },
         'hub-port': { type: 'string' },
         views: { type: 'string' },
@@ -232,6 +239,8 @@ const main = async () => {
     const workbench = await startWorkbench({
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
+      product:
+        values.product === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.product),
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
       hubPort: parsePort('--hub-port', values['hub-port'], DEFAULT_HUB_PORT),
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),

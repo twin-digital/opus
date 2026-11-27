@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 1512" width="976" height="1512" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 1592" width="976" height="1592" role="img" aria-labelledby="title desc">
 <title id="title">Container diagram: Wishem</title>
-<desc id="desc">Wishem has eight containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.</desc>
+<desc id="desc">Wishem has nine containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.</desc>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#17172a" flood-opacity="0.5"/></filter></defs>
-<rect width="976" height="1512" fill="#121222"/>
+<rect width="976" height="1592" fill="#121222"/>
 <text x="24" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="18" fill="#ececf3" text-anchor="start">Container diagram: Wishem</text>
-<rect x="24" y="224" width="928" height="1196" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5" stroke-dasharray="7 5"/>
+<rect x="24" y="224" width="928" height="1276" rx="14" fill="#1e1f30" stroke="#45455d" stroke-width="1.5" stroke-dasharray="7 5"/>
 <text x="40" y="250" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#a3a3b8" text-anchor="start">Wishem [Software System]</text>
 <rect x="379" y="64" width="250" height="124" rx="14" fill="#2f3146" stroke="#45455d" filter="url(#shadow)"/>
 <g transform="translate(490 72.5) scale(0.7)" fill="none" stroke="#c2d0ea" stroke-width="2.86" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="12" r="6.5"/><path d="M7 35c0-8 6-12 13-12s13 4 13 12"/></g>
@@ -23,35 +23,41 @@
 <text x="771" y="338.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: JSON files]</text>
 <text x="771" y="354.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the definitions and the</text>
 <text x="771" y="370.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">authored state.</text>
-<rect x="379" y="484" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="504" y="516.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Workbench process</text>
-<text x="504" y="534.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: Node.js]</text>
-<text x="504" y="550.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the construct and serves</text>
-<text x="504" y="566.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">the page.</text>
-<rect x="112" y="684" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="237" y="716.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">host-nodejs</text>
-<text x="237" y="734.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
-<text x="237" y="750.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Runs a construct and serves the</text>
-<text x="237" y="766.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">link.</text>
-<rect x="646" y="684" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="771" y="716.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">core</text>
-<text x="771" y="734.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
-<text x="771" y="750.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Checks a model and holds the</text>
-<text x="771" y="766.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">store.</text>
-<rect x="379" y="884" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="504" y="916.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">hub</text>
-<text x="504" y="934.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
-<text x="504" y="950.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Joins the subsystems and carries</text>
-<text x="504" y="966.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">the link.</text>
-<rect x="379" y="1284" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="504" y="1324.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">renderer-react</text>
-<text x="504" y="1342.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
-<text x="504" y="1358.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Draws React views from a port.</text>
-<rect x="646" y="1084" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
-<text x="771" y="1116.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">clock</text>
-<text x="771" y="1134.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
-<text x="771" y="1150.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the time subsystem and the</text>
-<text x="771" y="1166.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">clock.</text>
+<path d="M646 572 a125 8 0 0 1 250 0 v88 a125 8 0 0 1 -250 0 z" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<path d="M646 572 a125 8 0 0 0 250 0" fill="none" stroke="#45455d"/>
+<text x="771" y="600.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Product model folder</text>
+<text x="771" y="618.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: JSON files]</text>
+<text x="771" y="634.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the model of the mounted</text>
+<text x="771" y="650.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">product.</text>
+<rect x="379" y="564" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="504" y="596.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">Workbench process</text>
+<text x="504" y="614.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: Node.js]</text>
+<text x="504" y="630.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the construct and serves</text>
+<text x="504" y="646.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">the page.</text>
+<rect x="112" y="764" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="237" y="796.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">host-nodejs</text>
+<text x="237" y="814.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
+<text x="237" y="830.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Runs a construct and serves the</text>
+<text x="237" y="846.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">link.</text>
+<rect x="646" y="764" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="771" y="796.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">core</text>
+<text x="771" y="814.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
+<text x="771" y="830.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Checks a model and holds the</text>
+<text x="771" y="846.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">store.</text>
+<rect x="379" y="964" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="504" y="996.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">hub</text>
+<text x="504" y="1014.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
+<text x="504" y="1030.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Joins the subsystems and carries</text>
+<text x="504" y="1046.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">the link.</text>
+<rect x="379" y="1364" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="504" y="1404.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">renderer-react</text>
+<text x="504" y="1422.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
+<text x="504" y="1438.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Draws React views from a port.</text>
+<rect x="646" y="1164" width="250" height="104" rx="14" fill="#1b1b30" stroke="#45455d" filter="url(#shadow)"/>
+<text x="771" y="1196.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="15" fill="#ececf3" text-anchor="middle">clock</text>
+<text x="771" y="1214.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[Container: TypeScript package]</text>
+<text x="771" y="1230.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">Holds the time subsystem and the</text>
+<text x="771" y="1246.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">clock.</text>
 <path d="M379 126 L314 126 Q304 126 304 136 L304 274" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <polygon points="304,284 298.5,273 309.5,273" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
 <rect x="246.2" y="180" width="115.6" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
@@ -62,86 +68,96 @@
 <rect x="646.2" y="180" width="115.6" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
 <text x="704" y="197" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Edits files</text>
 <text x="704" y="212" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[text editor]</text>
-<path d="M629 536 L761 536 Q771 536 771 526 L771 398" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="771,388 776.5,399 765.5,399" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<rect x="666.4" y="440" width="209.2" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
-<text x="771" y="457" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Reads, watches, and writes</text>
-<text x="771" y="472" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[file system]</text>
-<path d="M160 388 L160 550 Q160 560 170 560 L369 560" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="379,560 368,565.5 368,554.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<rect x="80.6" y="450" width="158.8" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
-<text x="160" y="467" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Connects to the hub</text>
-<text x="160" y="482" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[WebSocket link]</text>
-<path d="M504 188 L504 474" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="504,484 498.5,473 509.5,473" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<path d="M530 564 L530 434 Q530 424 540 424 L790 424 Q800 424 800 414 L800 398" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="800,388 805.5,399 794.5,399" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="558.4" y="404" width="209.2" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="663" y="421" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Reads, watches, and writes</text>
+<text x="663" y="436" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[file system]</text>
+<path d="M590 564 L590 510 Q590 500 600 500 L840 500 Q850 500 850 510 L850 554" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="850,564 844.5,553 855.5,553" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="615.4" y="480" width="209.2" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="720" y="497" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Reads, watches, and writes</text>
+<text x="720" y="512" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[file system]</text>
+<path d="M629 96 L920 96 Q930 96 930 106 L930 606 Q930 616 920 616 L906 616" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="896,616 907,610.5 907,621.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="702.2" y="76" width="115.6" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="760" y="93" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Edits files</text>
+<text x="760" y="108" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[text editor]</text>
+<path d="M160 388 L160 630 Q160 640 170 640 L369 640" fill="none" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="379,640 368,645.5 368,634.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<rect x="80.6" y="530" width="158.8" height="40" rx="12" fill="#1b1b30" stroke="#f2a93b"/>
+<text x="160" y="547" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#f2a93b" text-anchor="middle">Connects to the hub</text>
+<text x="160" y="562" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#f2a93b" text-anchor="middle">[WebSocket link]</text>
+<path d="M504 188 L504 554" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="504,564 498.5,553 509.5,553" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
 <rect x="435.4" y="316" width="137.2" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
 <text x="504" y="333" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Starts and stops</text>
 <text x="504" y="348" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[terminal]</text>
-<path d="M314 388 L314 510 Q314 520 324 520 L369 520" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="379,520 368,525.5 368,514.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="252.6" y="424" width="122.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="314" y="441" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Gets page code</text>
-<text x="314" y="456" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[HTTP]</text>
-<path d="M439 588 L439 626 Q439 636 429 636 L247 636 Q237 636 237 646 L237 674" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="237,684 231.5,673 242.5,673" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="298.2" y="616" width="79.6" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="338" y="633" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Runs</text>
-<text x="338" y="648" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M569 588 L569 626 Q569 636 579 636 L761 636 Q771 636 771 646 L771 674" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="771,684 765.5,673 776.5,673" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="630.2" y="616" width="79.6" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="670" y="633" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Uses</text>
-<text x="670" y="648" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M362 736 L636 736" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="646,736 635,741.5 635,730.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="460.6" y="716" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="504" y="733" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="504" y="748" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M771 788 L771 926 Q771 936 761 936 L639 936" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="629,936 640,930.5 640,941.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="727.6" y="830" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="771" y="847" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="771" y="862" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M237 788 L237 910 Q237 920 247 920 L369 920" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="379,920 368,925.5 368,914.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="193.6" y="844" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="237" y="861" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="237" y="876" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M112 360 L78 360 Q68 360 68 370 L68 950 Q68 960 78 960 L369 960" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="379,960 368,965.5 368,954.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="179.6" y="940" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="223" y="957" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="223" y="972" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M112 330 L54 330 Q44 330 44 340 L44 1326 Q44 1336 54 1336 L369 1336" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="379,1336 368,1341.5 368,1330.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="167.6" y="1316" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="211" y="1333" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="211" y="1348" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M629 590 L906 590 Q916 590 916 600 L916 1326 Q916 1336 906 1336 L639 1336" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="629,1336 640,1330.5 640,1341.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="728.6" y="1316" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="772" y="1333" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="772" y="1348" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<path d="M771 1084 L771 974 Q771 964 761 964 L639 964" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-<polygon points="629,964 640,958.5 640,969.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<rect x="727.6" y="1004" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
-<text x="771" y="1021" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
-<text x="771" y="1036" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
-<rect x="24" y="1452" width="928" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
-<text x="40" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
-<rect x="100.64" y="1466" width="26" height="16" rx="5" fill="#2f3146" stroke="#45455d"/>
-<text x="134.64" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Person</text>
-<rect x="195.84" y="1466" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
-<text x="229.84" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Container</text>
-<path d="M312.64 1470 a13 4 0 0 1 26 0 v8 a13 4 0 0 1 -26 0 z" fill="#1b1b30" stroke="#45455d"/>
-<path d="M312.64 1470 a13 4 0 0 0 26 0" fill="none" stroke="#45455d"/>
-<text x="346.64" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Store</text>
-<rect x="400.64" y="1466" width="26" height="16" rx="5" fill="#1e1f30" stroke="#45455d" stroke-width="1.5" stroke-dasharray="4 3"/>
-<text x="434.64" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Boundary</text>
-<path d="M510.24 1474 L526.24 1474" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round"/>
-<polygon points="536.24,1474 525.24,1479.5 525.24,1468.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
-<text x="544.24" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Primary path</text>
-<path d="M648.64 1474 L664.64 1474" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round"/>
-<polygon points="674.64,1474 663.64,1479.5 663.64,1468.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
-<text x="682.64" y="1478.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Other relationship</text>
+<path d="M314 388 L314 590 Q314 600 324 600 L369 600" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="379,600 368,605.5 368,594.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="252.6" y="504" width="122.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="314" y="521" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Gets page code</text>
+<text x="314" y="536" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[HTTP]</text>
+<path d="M439 668 L439 706 Q439 716 429 716 L247 716 Q237 716 237 726 L237 754" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="237,764 231.5,753 242.5,753" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="298.2" y="696" width="79.6" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="338" y="713" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Runs</text>
+<text x="338" y="728" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M569 668 L569 706 Q569 716 579 716 L761 716 Q771 716 771 726 L771 754" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="771,764 765.5,753 776.5,753" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="630.2" y="696" width="79.6" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="670" y="713" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Uses</text>
+<text x="670" y="728" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M362 816 L636 816" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="646,816 635,821.5 635,810.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="460.6" y="796" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="504" y="813" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="504" y="828" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M771 868 L771 1006 Q771 1016 761 1016 L639 1016" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="629,1016 640,1010.5 640,1021.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="727.6" y="910" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="771" y="927" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="771" y="942" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M237 868 L237 990 Q237 1000 247 1000 L369 1000" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="379,1000 368,1005.5 368,994.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="193.6" y="924" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="237" y="941" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="237" y="956" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M112 360 L78 360 Q68 360 68 370 L68 1030 Q68 1040 78 1040 L369 1040" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="379,1040 368,1045.5 368,1034.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="179.6" y="1020" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="223" y="1037" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="223" y="1052" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M112 330 L54 330 Q44 330 44 340 L44 1406 Q44 1416 54 1416 L369 1416" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="379,1416 368,1421.5 368,1410.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="167.6" y="1396" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="211" y="1413" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="211" y="1428" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M614 668 L614 682 Q614 692 624 692 L906 692 Q916 692 916 702 L916 1406 Q916 1416 906 1416 L639 1416" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="629,1416 640,1410.5 640,1421.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="728.6" y="1396" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="772" y="1413" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="772" y="1428" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<path d="M771 1164 L771 1054 Q771 1044 761 1044 L639 1044" fill="none" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="629,1044 640,1038.5 640,1049.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<rect x="727.6" y="1084" width="86.8" height="40" rx="12" fill="#1b1b30" stroke="#6b6b88"/>
+<text x="771" y="1101" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="12" fill="#a3a3b8" text-anchor="middle">Builds on</text>
+<text x="771" y="1116" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="middle">[import]</text>
+<rect x="24" y="1532" width="928" height="44" rx="12" fill="#1b1b30" stroke="#45455d"/>
+<text x="40" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="600" font-size="12" fill="#c2d0ea" text-anchor="start">Legend</text>
+<rect x="100.64" y="1546" width="26" height="16" rx="5" fill="#2f3146" stroke="#45455d"/>
+<text x="134.64" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Person</text>
+<rect x="195.84" y="1546" width="26" height="16" rx="5" fill="#1b1b30" stroke="#45455d"/>
+<text x="229.84" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Container</text>
+<path d="M312.64 1550 a13 4 0 0 1 26 0 v8 a13 4 0 0 1 -26 0 z" fill="#1b1b30" stroke="#45455d"/>
+<path d="M312.64 1550 a13 4 0 0 0 26 0" fill="none" stroke="#45455d"/>
+<text x="346.64" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Store</text>
+<rect x="400.64" y="1546" width="26" height="16" rx="5" fill="#1e1f30" stroke="#45455d" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="434.64" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Boundary</text>
+<path d="M510.24 1554 L526.24 1554" stroke="#f2a93b" stroke-width="2.5" stroke-linecap="round"/>
+<polygon points="536.24,1554 525.24,1559.5 525.24,1548.5" fill="#f2a93b" stroke="#f2a93b" stroke-width="1" stroke-linejoin="round"/>
+<text x="544.24" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Primary path</text>
+<path d="M648.64 1554 L664.64 1554" stroke="#6b6b88" stroke-width="2.5" stroke-linecap="round"/>
+<polygon points="674.64,1554 663.64,1559.5 663.64,1548.5" fill="#6b6b88" stroke="#6b6b88" stroke-width="1" stroke-linejoin="round"/>
+<text x="682.64" y="1558.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="12" fill="#a3a3b8" text-anchor="start">Other relationship</text>
 </svg>

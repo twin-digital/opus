@@ -22,7 +22,7 @@ Terms in each group are in alphabetical order.
 
 **Model side** (**Proposed**): The definitions, the behaviors, and the authored state of a product or of a workbench. The model side is the model.
 
-**Mount** (**Proposed**): To put the model of a product in the authored model of the workbench. The product model stays a separate model that refers to nothing of the workbench.
+**Mount** (**Proposed**): To put the model of a product in the workbench construct. The product model is the store `product` of the workbench construct. The store validates it alone, and it refers to nothing of the workbench. A storage subsystem keeps it in a folder of its own.
 
 **Presentation side** (**Proposed**): The views of a product or of a workbench for one output subsystem. The presentation side is code of the product. It is not part of the model.
 
@@ -34,7 +34,7 @@ Terms in each group are in alphabetical order.
 
 ## The model
 
-**Authored state**: The things of a model that the designer or the agent makes and that Wishem keeps: rooms, entity definitions, prompts, expectations, assets. It is part of the model. The store of the workbench construct holds it, and a storage subsystem keeps it (**Proposed**).
+**Authored state**: The things of a model that the designer or the agent makes and that Wishem keeps: rooms, entity definitions, prompts, expectations, assets. It is part of the model. The stores of the workbench construct hold it (`store` and `product`), and a storage subsystem keeps each one (**Proposed**).
 
 **Behavior**: Something a component does during play. A behavior has a prompt, code, fields, checks, and a history.
 
@@ -60,7 +60,7 @@ Terms in each group are in alphabetical order.
 
 **Model**: The definitions, the behaviors, and the authored state of a product or of a workbench. The model subsystems of a construct hold the model. The hub does not hold it.
 
-**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt.
+**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count rule of the sample product is a native behavior in a first form. It stands in for the behavior feature (issue #481).
 
 **Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 

@@ -3650,6 +3650,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.4(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.44.1)(tsx@4.23.13)(yaml@2.9.1))
+      '@thrashplay/wishem-sample-product':
+        specifier: workspace:*
+        version: link:../sample-product
       '@twin-digital/eslint-config':
         specifier: workspace:*
         version: link:../../devtools/eslint-config
