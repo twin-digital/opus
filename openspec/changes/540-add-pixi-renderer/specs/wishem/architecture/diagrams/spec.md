@@ -26,15 +26,25 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-hub`, and the page imports a value of `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows a relationship from `host-nodejs` to `hub` and a relationship from the page to `hub`, each with the label "Builds on [import]"
 
-#### Scenario: The PixiJS page builds on the PixiJS renderer, the clock, the hub, and core
+#### Scenario: The page and the workbench process build on the React renderer package
 
-- **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-clock`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-core`
-- **THEN** the container diagram shows the PixiJS page as a container in a web browser, the containers `renderer-pixi` and `clock` as TypeScript packages, a relationship from the PixiJS page to each of the four packages with the label "Builds on [import]", and a relationship from `clock` to `hub` with the label "Builds on [import]"
+- **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
+- **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
 
-#### Scenario: The server of the PixiJS page serves the page code
+#### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
 
-- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` serves the page
-- **THEN** the container diagram shows the server of the PixiJS page as a Node.js container, a relationship from the PixiJS page to it with the label "Gets page code [HTTP]", and relationships from the designer to the PixiJS page and to its server
+- **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
+- **THEN** the container diagram shows the PixiJS process as a Node.js container, relationships from the designer to the PixiJS process and to the PixiJS page, and relationships from the PixiJS page to the PixiJS process with the labels "Gets page code [HTTP]" and "Connects to the hub [WebSocket link]"
+
+#### Scenario: The PixiJS process builds on host-nodejs, the clock, and core
+
+- **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock` and `@thrashplay/wishem-core`
+- **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock` and to `core`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The PixiJS page builds on the PixiJS renderer, the hub, and the clock
+
+- **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
+- **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
 
 #### Scenario: A change alters the protocol between two containers
 
