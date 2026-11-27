@@ -59,6 +59,10 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
     throw new Error('the product folder and the model folder are the same folder')
   }
 
+  /** A line that names a file keeps its text. Each other line names the product. */
+  const nameProduct = (line: string) =>
+    /^wishem: (problem|warning) in /.test(line) ? line : line.replace(/^wishem: /, 'wishem: product: ')
+
   const readValid = async (target: string, absolute: boolean) => {
     const read = await readModelFolder(target)
     const checked = read.data === undefined ? undefined : validateModel(read.data)
@@ -86,7 +90,7 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
   const first = initial.model
   const productFirst = productInitial?.model
   productInitial?.warnings.forEach((warning) => {
-    log(formatProblem(warning))
+    log(nameProduct(formatProblem(warning)))
   })
 
   const hub = createHub({
@@ -110,7 +114,7 @@ export const startConstruct = async (options: ConstructOptions): Promise<Constru
           hub,
           first: productFirst,
           log: (line) => {
-            log(/^wishem: (problem|warning)/.test(line) ? line : line.replace(/^wishem: /, 'wishem: product: '))
+            log(nameProduct(line))
           },
           onWatchError: options.onWatchError,
           storeId: PRODUCT_ID,

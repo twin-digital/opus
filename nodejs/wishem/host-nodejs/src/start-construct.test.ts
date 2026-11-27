@@ -514,6 +514,40 @@ describe('startConstruct with a product', () => {
     await rm(productFolder, { recursive: true, force: true })
   })
 
+  describe('A warning of the product that has no source', () => {
+    const DUPLICATE = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    const duplicateLabel = { ...counterDefinition('Counter'), id: DUPLICATE, fields: [] }
+    const warnings = () => lines.filter((line) => line.includes('warning'))
+
+    it('names the product when the warning is found at the start', async () => {
+      await writeModel(
+        productFolder,
+        [colorDefinition, counterDefinition('Counter'), duplicateLabel],
+        productState('0'),
+      )
+      await start()
+      expect(warnings()).toHaveLength(1)
+      expect(warnings()[0]).toMatch(/^wishem: product: warning: /)
+    })
+
+    it('names the product when a change of the files causes the warning', async () => {
+      await start()
+      await writeFile(path.join(productFolder, 'definitions', 'dup.json'), JSON.stringify(duplicateLabel))
+      await eventually(() => warnings().length === 1)
+      expect(warnings()[0]).toMatch(/^wishem: product: warning: /)
+    })
+
+    it('does not name the product for a warning of the workbench', async () => {
+      await writeFile(
+        path.join(folder, 'definitions', 'dup.json'),
+        JSON.stringify({ ...definition, id: DUPLICATE, fields: [] }),
+      )
+      await start()
+      expect(warnings()).toHaveLength(1)
+      expect(warnings()[0]).toMatch(/^wishem: warning: /)
+    })
+  })
+
   describe('A mounted product is a second store', () => {
     it('holds the workbench in the part store and the product in the part product', async () => {
       const started = await start()
