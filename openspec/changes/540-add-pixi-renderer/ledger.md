@@ -39,6 +39,14 @@ Task 3: review: spec compliant, quality Approved, no Critical or Important. Item
 Task 3: minor (deferred): the catch of startPixiConstruct closes the server but has no test (close() of serveHub stops a running hub, so no hub stays); in close() of startPixiConstruct, a throw of clock.stop() or of the close of the clock port skips server.close() (use try/finally); the port-in-use test proves only that no clock runs; the changeset waits for the finish.
 Task 3: complete (commits e4f64a6..9966e6b, review clean)
 
+Main merged (7b642ee5, no conflict; install, sync, update-readme gave no change), as Task 4 says. Task 4: dispatched (implementer: sonnet), base 7b642ee5.
+
+Task 4: implementer DONE, commit 2f03fed4 (hub 474 tests, connect-link 29; workbench-app 240; lint, typecheck, build pass; hub-client.test.ts not changed). Concerns: the timer handle is ReturnType<typeof setTimeout>, because unknown failed the type check of workbench-app; a throw of onRefused goes to onError (the brief does not say so); RED was the missing module only. Review dispatched (sonnet).
+
+Task 4: review: spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the report shows lint, typecheck, test of hub (474) and workbench-app (240, hub-client.test.ts not changed); the lead ran the type check of workbench-app again (pass; the risks of `crypto` in globals.d.ts and of `firstDelayMs: undefined` do not occur); the four scenarios of hub/link have tests (the waits, one report for each loss, the close, the stop and start of the hub side). No gap.
+Task 4: minor (deferred): the message `wishem: a listener of the link failed.` of connectHub is now also used for errors of onDown, onRefused, and onLink; the README bullet of connectLink does not name onRefused and onError, and its example calls client.close() at once; the test "calls onDown one time for the loss of a link" sets env.plan after the drop (fragile if the wait changes).
+Task 4: complete (commits 7b642ee..2f03fed, review clean)
+
 ## State at the end of the session of 2026-11-27
 
 - NEXT STEP: the scoped re-review of fix round 1 (review package 0c52ebd6..4de8f972, re-review instructions of the skill, the finding I1 above). Then Task 2 is complete, and Task 3 (the construct in a Node.js process) starts.
