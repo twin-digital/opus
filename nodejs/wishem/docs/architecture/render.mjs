@@ -642,21 +642,30 @@ const cHub = el(
 const cRenderer = el(
   'container',
   gx(MIDDLE),
-  1084,
+  1284,
   'renderer-react',
   '[Container: TypeScript package]',
   'Draws React views from a port.',
+)
+
+const cClock = el(
+  'container',
+  gx(RIGHT),
+  1084,
+  'clock',
+  '[Container: TypeScript package]',
+  'Holds the time subsystem and the clock.',
 )
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has seven containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has eight containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
   width: WIDTH_PX + GUTTER + 32,
-  height: 1312,
+  height: 1512,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 996, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1196, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
@@ -665,6 +674,7 @@ const containers = {
     cCore,
     cHub,
     cRenderer,
+    cClock,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
@@ -699,17 +709,18 @@ const containers = {
     rel('quiet', [bottom(cCore), [gx(707), 936], right(cHub, 936)], 'Builds on [import]', [gx(707), 850]),
     rel('quiet', [bottom(cHost), [gx(173), 920], left(cHub, 920)], 'Builds on [import]', [gx(173), 864]),
     rel('quiet', [left(cPage, 360), [68, 360], [68, 960], left(cHub, 960)], 'Builds on [import]', [223, 960]),
-    rel('quiet', [left(cPage, 330), [44, 330], [44, 1136], left(cRenderer, 1136)], 'Builds on [import]', [211, 1136]),
+    rel('quiet', [left(cPage, 330), [44, 330], [44, 1336], left(cRenderer, 1336)], 'Builds on [import]', [211, 1336]),
     rel(
       'quiet',
-      [right(cProcess, 590), [916, 590], [916, 1136], right(cRenderer, 1136)],
+      [right(cProcess, 590), [916, 590], [916, 1336], right(cRenderer, 1336)],
       'Builds on [import]',
-      [772, 1136],
+      [772, 1336],
     ),
+    rel('quiet', [top(cClock), [gx(707), 964], right(cHub, 964)], 'Builds on [import]', [gx(707), 1024]),
     {
       kind: 'legend',
       x: 24,
-      y: 1252,
+      y: 1452,
       w: 832 + GUTTER + 32,
       entries: [
         ['person', 'Person'],
