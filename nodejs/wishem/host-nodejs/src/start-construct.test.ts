@@ -352,6 +352,31 @@ describe('startConstruct', () => {
     expect(Date.now() - begin).toBeLessThan(2000)
   })
 
+  it('starts again from a folder after a client added a component type with an entity', async () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    const field = 'fld_1d2e3f40-5a6b-4c7d-8e9f-a0b1c2d3e4f5'
+    const first = await start()
+    const socket = new WebSocket(first.linkUrl)
+    sockets.push(socket)
+    const link = await openLink(await webSocketChannel(socket as unknown as WebSocketLike), [
+      { id: 'page-a', kind: 'input' },
+    ])
+    links.push(link)
+    const model: Model = {
+      definitions: [definition, { id: other, label: 'Card', fields: [{ id: field, label: 'text', type: 'string' }] }],
+      entities: [
+        ...(first.hub.read().store as Model).entities,
+        { id: 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6', components: { [other]: { [field]: 'x' } } },
+      ],
+    } as Model
+    const outcome = await link.ports['page-a'].submit({ type: 'store/replace-model', payload: { model } })
+    expect(outcome.ok).toBe(true)
+    await first.close()
+    expect(lines.some((line) => line.includes('state.json is not written'))).toBe(true)
+    const again = await start()
+    expect((again.hub.read().store as Model).definitions).toHaveLength(1)
+  })
+
   it('runs the example of the README', async () => {
     const { startConstruct: fromPackage } = await import('./index.js')
     const example = async (model: string) => {

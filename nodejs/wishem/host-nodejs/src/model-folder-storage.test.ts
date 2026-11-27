@@ -42,6 +42,12 @@ const eventually = async (check: () => boolean | Promise<boolean>, ms = 2000) =>
 }
 
 const definition = (label: string) => ({ id: CT, label, fields: [{ id: FLD, label: 'title', type: 'string' }] })
+const CT2 = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+const FLD2 = 'fld_1d2e3f40-5a6b-4c7d-8e9f-a0b1c2d3e4f5'
+const E2 = 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6'
+const isHeld = (line: string) => line.includes('state.json is not written')
+const isEqualAgain = (line: string) => line.includes('are equal to the files in definitions again')
+
 const state = (title: string) => ({ entities: [{ id: E, components: { [CT]: { [FLD]: title } } }] })
 
 describe('the storage subsystem for files', () => {
@@ -225,6 +231,7 @@ describe('the storage subsystem for files', () => {
       expect(store().definitions[0]?.label).toBe('Renamed')
       expect(writes()).toBe(0)
       expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
+      expect(lines.filter(isHeld)).toHaveLength(1)
     })
 
     it('writes an input that arrives directly before the stop', async () => {
@@ -235,14 +242,79 @@ describe('the storage subsystem for files', () => {
     })
   })
 
+  describe('The model folder that the process writes always starts', () => {
+    const second = { id: CT2, label: 'Card', fields: [{ id: FLD2, label: 'text', type: 'string' }] }
+    const unchanged = async () => {
+      await pause(300)
+      expect(writes()).toBe(0)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
+    }
+
+    it('does not write a new component type with an entity that uses it', async () => {
+      const entity = { id: E2, components: { [CT2]: { [FLD2]: 'x' } } }
+      const model = { definitions: [definition('AppBar'), second], entities: [...store().entities, entity] }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await unchanged()
+    })
+
+    it('does not write a new component type, then an added entity', async () => {
+      const model = { definitions: [definition('AppBar'), second], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      const entity = { id: E2, components: { [CT2]: { [FLD2]: 'x' } } }
+      expect((await client.submit(inputs.addEntity(entity))).ok).toBe(true)
+      await unchanged()
+    })
+
+    it('does not write a new field, then a value for it', async () => {
+      const extra = { id: FLD2, label: 'text', type: 'string' }
+      const changed = { ...definition('AppBar'), fields: [...definition('AppBar').fields, extra] }
+      const model = { definitions: [changed], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      const result = await client.submit(inputs.setField({ entity: E, componentType: CT, field: FLD2, value: 'x' }))
+      expect(result.ok).toBe(true)
+      await unchanged()
+    })
+
+    it('does not write a removed component type', async () => {
+      const entities = [{ id: E, components: {} }]
+      expect((await client.submit(inputs.replaceModel({ definitions: [], entities }))).ok).toBe(true)
+      await unchanged()
+      expect(await readdir(path.join(folder, 'definitions'))).toEqual([`${CT}.json`])
+    })
+  })
+
+  describe('The process reports definitions that the model folder does not hold', () => {
+    it('prints the line one time for two inputs while the definitions differ', async () => {
+      const model = { definitions: [definition('Renamed')], entities: store().entities }
+      await client.submit(inputs.replaceModel(model as Model))
+      await setTitle('Title')
+      await pause(300)
+      expect(lines.filter(isHeld)).toHaveLength(1)
+      expect(lines.filter(isEqualAgain)).toHaveLength(0)
+    })
+
+    it('prints the line again for a second difference', async () => {
+      const disk = { definitions: [definition('AppBar')], entities: store().entities } as Model
+      const renamed = { definitions: [definition('Renamed')], entities: store().entities } as Model
+      await client.submit(inputs.replaceModel(renamed))
+      await eventually(() => lines.filter(isHeld).length === 1)
+      await client.submit(inputs.replaceModel(disk))
+      await eventually(() => lines.filter(isEqualAgain).length === 1)
+      await client.submit(inputs.replaceModel(renamed))
+      await eventually(() => lines.filter(isHeld).length === 2)
+      await pause(200)
+      expect(lines.filter(isEqualAgain)).toHaveLength(1)
+    })
+  })
+
   describe('The storage subsystem writes no definition file', () => {
     it('leaves the definitions folder as it is', async () => {
       const before = await readFile(path.join(folder, 'definitions', `${CT}.json`), 'utf8')
       const model = { definitions: [definition('Other label')], entities: store().entities }
       await client.submit(inputs.replaceModel(model as Model))
-      await setTitle('Also a write')
-      await eventually(async () => (await fileTitle()) === 'Also a write')
-      await pause(200)
+      await setTitle('Not written')
+      await pause(300)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
       expect(await readdir(path.join(folder, 'definitions'))).toEqual([`${CT}.json`])
       expect(await readFile(path.join(folder, 'definitions', `${CT}.json`), 'utf8')).toBe(before)
     })

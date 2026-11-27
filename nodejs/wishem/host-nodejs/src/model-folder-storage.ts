@@ -59,6 +59,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
   let queue: Promise<void> = Promise.resolve()
   let writeQueued = false
   let correct = true
+  let held = false
   let closed = false
   let closing: Promise<void> | undefined
 
@@ -123,7 +124,20 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
 
   const write = async () => {
     writeQueued = false
-    const { entities } = current()
+    const { definitions, entities } = current()
+    if (!sameDefinitions({ definitions, entities: [] }, synced)) {
+      if (!held) {
+        log(
+          `wishem: the definitions of the store differ from the files in definitions, so ${STATE_FILE} is not written`,
+        )
+        held = true
+      }
+      return
+    }
+    if (held) {
+      log('wishem: the definitions of the store are equal to the files in definitions again')
+      held = false
+    }
     if (sameEntities(entities, synced.entities)) {
       return
     }
