@@ -234,6 +234,13 @@ describe('add-entity', () => {
     expect(store.initial.entities).toHaveLength(1)
   })
 
+  it('holds the checked entity, with no key that is not in the form', () => {
+    const store = createStore({ model: workbench() })
+    const entity = { ...newEntity(), extra: 1 }
+    const next = send(store, store.initial, 'store/add-entity', { entity })
+    expect(next.entities[1]).toEqual(newEntity())
+  })
+
   it('refuses an ID that exists, with a problem that names the ID', () => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: { id: ENT, components: {} } }))
@@ -309,6 +316,12 @@ describe('remove-entity', () => {
     expect(error.problems).toHaveLength(1)
     expect(error.problems[0]?.message).toContain(MISSING)
     expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
+  })
+
+  it('refuses an entity that is not a string, with a problem about the form', () => {
+    const store = createStore({ model: workbench() })
+    const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: 7 }))
+    expect(error.problems[0]?.message).toContain('string')
   })
 
   it('refuses the second removal of one ID', () => {
