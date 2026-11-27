@@ -373,6 +373,7 @@ describe('startConstruct', () => {
     expect(outcome.ok).toBe(true)
     await first.close()
     expect(lines.some((line) => line.includes('state.json is not written'))).toBe(true)
+    expect(lines.some((line) => line.includes('does not hold the last changes of the store'))).toBe(true)
     const again = await start()
     expect((again.hub.read().store as Model).definitions).toHaveLength(1)
   })

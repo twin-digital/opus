@@ -327,6 +327,56 @@ describe('the storage subsystem for files', () => {
     })
   })
 
+  describe('An input puts back the definitions of the disk', () => {
+    it('writes the entities that wait', async () => {
+      const disk = { definitions: [definition('AppBar')], entities: store().entities } as Model
+      await client.submit(inputs.replaceModel({ ...disk, definitions: [definition('Renamed')] } as Model))
+      await eventually(() => lines.filter(isHeld).length === 1)
+      expect((await setTitle('Waiting')).ok).toBe(true)
+      await pause(200)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
+      await client.submit(inputs.replaceModel({ definitions: disk.definitions, entities: store().entities }))
+      await eventually(() => lines.filter(isEqualAgain).length === 1)
+      await eventually(async () => (await fileTitle()) === 'Waiting')
+    })
+  })
+
+  describe('A read that the store refuses', () => {
+    const isLost = (line: string) => line.includes('does not hold the last changes of the store')
+
+    it('does not let the write of an entity without a definition file', async () => {
+      const ct3 = 'ct_9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d'
+      const fld3 = 'fld_2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f6'
+      const e3 = 'e_3d4e5f60-7a8b-4c9d-8e1f-b2c3d4e5f607'
+      const third = { id: ct3, label: 'Third', fields: [{ id: fld3, label: 'x', type: 'string' }] }
+      const thirdFile = path.join(folder, 'definitions', `${ct3}.json`)
+      await writeFile(thirdFile, JSON.stringify(third))
+      await eventually(() => store().definitions.length === 2)
+      const afterStep2 = await stateText()
+      const entity = { id: e3, components: { [ct3]: { [fld3]: 'x' } } }
+      const withSecond = [definition('AppBar'), third, { id: CT2, label: 'Card', fields: [] }]
+      const held = { definitions: withSecond, entities: [...store().entities, entity] } as Model
+      expect((await client.submit(inputs.replaceModel(held))).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+
+      await rm(thirdFile)
+      await eventually(() => lines.includes('wishem: the last correct model stays'))
+      await pause(150)
+
+      const equal = { definitions: [definition('AppBar'), third], entities: store().entities } as Model
+      expect((await client.submit(inputs.replaceModel(equal))).ok).toBe(true)
+      await pause(300)
+
+      expect(await stateText()).toBe(afterStep2)
+      expect(lines.filter(isEqualAgain)).toHaveLength(0)
+      const reread = validateModel((await actualRead(folder)).data)
+      expect(reread.ok).toBe(true)
+
+      await storage.close()
+      expect(lines.filter(isLost)).toHaveLength(1)
+    })
+  })
+
   describe('The process reports a stop that loses changes', () => {
     const isLost = (line: string) => line.includes('does not hold the last changes of the store')
     const relabel = () =>
