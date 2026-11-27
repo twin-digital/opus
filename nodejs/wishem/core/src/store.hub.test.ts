@@ -63,6 +63,22 @@ describe('a store in a hub', () => {
     expect(hub.record()).toHaveLength(0)
   })
 
+  it('keeps the same part object after a refused remove-entity', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/remove-entity', payload: { entity: 7 } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('keeps the same part object after a refused set-field', async () => {
+    const { hub, form } = start()
+    const before = hub.read().store
+    const result = await form.submit({ type: 'store/set-field', payload: { entity: ENT } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+  })
+
   it('keeps the same part object after an input that changes nothing', async () => {
     const { hub, form } = start()
     const before = hub.read().store
