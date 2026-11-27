@@ -71,11 +71,13 @@ Lint, type checks, tests, and builds use much memory. They can stop the containe
 - A subagent that gets one of these two results does not try again. It stops and reports the result, with the output of `lslocks`, which shows the process that holds the lock.
 - When a subagent reports such a result, the lead agent finds the process that holds the lock, stops it if it does not end, adds a note to **Process notes**, and starts the task again.
 
-- An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test.
+- An agent holds the lock for one command only. A break-test takes the lock for each run of the tests, not for the full break-test. [`break-test-rules.md`](break-test-rules.md) gives the rules for a break-test. Put a link to that file in the brief of each break-test.
 - More than one subagent can implement at the same time, each one in the worktree of its change. Each other work of an agent, such as to read, to write, and to design, needs no lock.
 - `pnpm install`, `pnpm sync`, Prettier, and `git` need no lock.
 - Before you start a subagent, examine the free memory of the container. Start fewer subagents when the memory is low.
-- Enter the worktree of a change before you start a subagent for it. A subagent keeps the worktree in which it starts, also when the lead agent enters a different worktree later. A subagent that starts in the main checkout cannot enter a worktree.
+- Enter the worktree of a change before you start a subagent for it, and before you send a message to a subagent that stopped. A subagent that works keeps the worktree in which it starts, also when the lead agent enters a different worktree. A subagent that starts in the main checkout cannot enter a worktree.
+- A subagent does no background work: no command in the background, no monitor, and no wait for a later event. A subagent that wakes from a wait gets the worktree in which the lead agent is at that time, and then it cannot use git in its own worktree. A long job runs in the foreground, in parts that each end in less than 8 minutes.
+- A subagent writes no file to a place that other agents share, such as the scratchpad of the session or `/tmp`. It writes its scripts and its results in `.superpowers/` of its own worktree, which git ignores. The lock file is the one exception.
 - Two changes that each add a package both change `pnpm-lock.yaml` and the package list of the root `README.md`. After the first one is merged, update the branch of the second one, and make the two files again if they have a conflict.
 
 ## Where a change is permitted
@@ -150,6 +152,7 @@ A task does what its issue and its plan say. Work on a task finds other things: 
 
 Correct a finding in the task only when one of these conditions is true:
 
+- The review of the task gives the finding the level Critical or Important. The task is not complete until its review approves it.
 - The change does not do what its specification says.
 - A check of the pull request fails.
 - A later correction needs a breaking change to an interface that the task adds.
