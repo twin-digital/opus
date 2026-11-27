@@ -234,6 +234,70 @@ An error case, a client with a version that the hub side does not support:
 { "t": "refused", "reason": "version", "message": "The hub supports protocol version 1, not 2.", "supported": [1] }
 ```
 
+## Domain types
+
+Each type is new. `Hub` and `Port` are the types of #528.
+
+```mermaid
+classDiagram
+  class Channel {
+    send(text)
+    onMessage(listener)
+    onClose(listener)
+    close()
+  }
+  class RemoteLink {
+    ports
+    closed
+    close()
+  }
+  class Port {
+    subsystem
+    submit(input)
+    read()
+    subscribe(listener)
+    close()
+  }
+  class Hub {
+    attach(subsystem) Port
+    read()
+    record()
+  }
+  class ClientMessage {
+    t hello or submit
+  }
+  class HubMessage {
+    t welcome, refused, event, applied, or result
+  }
+  class LinkRefusedError {
+    reason
+    supported
+  }
+  RemoteLink "1" --> "1..*" Port : one remote port for each subsystem
+  RemoteLink "1" --> "1" Channel : openLink
+  Hub "1" --> "0..*" Channel : serveLink, one channel for each link
+  Channel ..> ClientMessage : carries, client to hub
+  Channel ..> HubMessage : carries, hub to client
+  RemoteLink ..> LinkRefusedError : openLink rejects
+```
+
+A link has the same states on its two sides.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Opening : the client sends hello
+  Opening --> Open : welcome
+  Opening --> Ended : refused, or the channel closes
+  Open --> Open : submit, result, applied, event
+  Open --> Ended : the channel closes
+  Open --> Ended : the hub stops (event stopping, then close)
+  Open --> Ended : a message that is not correct
+  Open --> Ended : a sequence number that is not the next one
+  Ended --> [*]
+```
+
+In the state `Ended`, the hub side has closed each port of the link. The remote port gives the last state on a read, and it rejects each send with `not-running`.
+
 ## The messages of one link
 
 ```mermaid
