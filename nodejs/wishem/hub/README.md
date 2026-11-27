@@ -18,7 +18,7 @@ The record has a start and a list of inputs. The start is a checkpoint: a sequen
 - `hub.recordStart()` returns the start.
 - `hub.seq` returns the sequence number of the last accepted input, or 0. A read does not copy the record.
 
-The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of `checkpointInterval`. The default is 100. A checkpoint refers to the parts of the joined state and copies none.
+The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of `checkpointInterval`, and after each rewind. The default is 100. A checkpoint refers to the parts of the joined state and copies none.
 
 The option `recordLimit` is the largest number of inputs after the start. The default is 100000. After an accepted input, when the list holds more inputs than the limit, the hub moves the start to the first valid checkpoint in range. A checkpoint is valid when each rewind in the record after it has a target at or after it. The hub removes the inputs up to that checkpoint and the checkpoints before it. `createHub` throws a `HubConfigurationError` when an option is not a positive integer, or when `recordLimit` is smaller than `checkpointInterval`.
 
@@ -44,7 +44,7 @@ A target that is not an integer, is before the start of the record, or is after 
 
 ## Replay
 
-The option `record` makes a hub from a record. The hub takes `record.start` as its first joined state and its first checkpoint. It applies each input of `record.inputs` in order, with the recorded source and sequence number, before `createHub` returns. It sends no event for these inputs. The new hub has the status `created`. Its record and its `seq` equal those of the record that it got, so the next input gets the next sequence number. An input `hub/rewind` in the record applies as it applied the first time.
+The option `record` makes a hub from a record. The hub takes `record.start` as its first joined state and its first checkpoint. It applies each input of `record.inputs` in order, with the recorded source and sequence number, before `createHub` returns. It sends no event for these inputs. The new hub has the status `created`. Its joined state and its `seq` equal those of the record that it got, so the next input gets the next sequence number. The hub applies `recordLimit` one time, after the last input of the record. When `recordLimit` is not less than the number of inputs of the record, the new hub has the same record and the same `recordStart()`. A smaller `recordLimit` gives a shorter record. An input `hub/rewind` in the record applies as it applied the first time.
 
 ```ts
 import { createHub } from '@thrashplay/wishem-hub'
@@ -53,7 +53,7 @@ import { createHub } from '@thrashplay/wishem-hub'
 const copy = createHub({ subsystems, record: { start: hub.recordStart(), inputs: hub.record() } })
 ```
 
-`checkpointInterval` and `recordLimit` apply to the new hub. They do not need to equal the values of the first hub.
+`checkpointInterval` and `recordLimit` apply to the new hub. They do not need to equal the values of the first hub. The hub does not move the start of the record during the replay, so each rewind of a correct record applies.
 
 `createHub` throws a `HubConfigurationError` when the keys of `record.start.state` are not the IDs of the model subsystems, or when the sequence numbers of the record have a gap or do not follow `record.start.seq`. `createHub` throws a `ReplayError` with `seq` and `problems` when a model subsystem refuses an input of the record, throws while it applies one, or when the hub rejects an input of the record.
 

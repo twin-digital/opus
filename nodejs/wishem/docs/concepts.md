@@ -225,7 +225,7 @@ The hub does these things with each input (**Proposed**):
 
 The record is a record of inputs. It is not a record of each change of a value. (**Proposed**)
 
-The record has a start and a list of inputs. The start is a checkpoint: the joined state after one sequence number. For a new hub, the start is the sequence number 0 and the first joined state. The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of the checkpoint interval (default 100). A checkpoint refers to the parts and makes no copy. (**Proposed**)
+The record has a start and a list of inputs. The start is a checkpoint: the joined state after one sequence number. For a new hub, the start is the sequence number 0 and the first joined state. The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of the checkpoint interval (default 100), and after each rewind. A checkpoint refers to the parts and makes no copy. (**Proposed**)
 
 The record has a limit (default 100000 inputs after the start). When the list is longer, the hub moves the start to a checkpoint and removes the earlier inputs and checkpoints. (**Proposed**)
 
@@ -277,16 +277,16 @@ Time has two subsystems (**Proposed**):
 
 These operations follow from the record and the two subsystems (**Proposed**):
 
-| Operation         | Meaning                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| **Pause**, resume | Send `time/set-running`.                                                                                 |
-| **Step**          | Send one `time/advance` while the clock is paused.                                                       |
-| **Snapshot**      | A model library that holds its own state saves that state as data.                                       |
-| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                     |
-| **Restore**       | Load a checkpoint into a construct.                                                                      |
-| **Rewind**        | Restore the last checkpoint before the target, then apply the record from that checkpoint to the target. |
-| **Replay**        | Apply a record to a new construct, with or without a changed value. The hub option `record` does it.     |
-| **Bookmark**      | Give a name to a point in a record.                                                                      |
+| Operation         | Meaning                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Pause**, resume | Send `time/set-running`.                                                                                       |
+| **Step**          | Send one `time/advance` while the clock is paused.                                                             |
+| **Snapshot**      | A model library that holds its own state saves that state as data.                                             |
+| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                           |
+| **Restore**       | Load a checkpoint into a construct.                                                                            |
+| **Rewind**        | Restore the last checkpoint at or before the target, then apply the record from that checkpoint to the target. |
+| **Replay**        | Apply a record to a new construct, with or without a changed value. The hub option `record` does it.           |
+| **Bookmark**      | Give a name to a point in a record.                                                                            |
 
 The agent sends `time/advance` inputs to run a construct faster than real time. (**Proposed**)
 

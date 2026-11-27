@@ -567,12 +567,12 @@ describe('the start script of the workbench', () => {
     it('does not turn the definitions into text for an input that does not change the store', async () => {
       const { workbench, hub } = await startInProcess()
       const port = hub.attach({ id: 'tester', kind: 'input' })
+      const spy = vi.spyOn(JSON, 'stringify')
       try {
         await vi.waitFor(() => {
           expect(readGenerated()).toContain('readonly title')
         })
         const before = hub.read().store as { definitions: unknown }
-        const spy = vi.spyOn(JSON, 'stringify')
 
         const result = await port.submit(
           storeInputs().setField({ entity: ENTITY, componentType: APP_BAR, field: TITLE, value: 'Wishem' }),
@@ -581,8 +581,8 @@ describe('the start script of the workbench', () => {
         expect(result.ok).toBe(true)
         expect(hub.read().store).toBe(before)
         expect(spy.mock.calls.filter(([value]) => value === before.definitions)).toHaveLength(0)
-        spy.mockRestore()
       } finally {
+        spy.mockRestore()
         await workbench.close()
       }
     })

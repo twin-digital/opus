@@ -235,7 +235,7 @@ The input `hub/rewind` returns the joined state to the state after an earlier in
 
 The target is an integer. It is not before the first number that the hub keeps, and not after the last accepted input. The target 0 is the first state, when the hub still keeps it. A rewind to the last accepted input changes no part.
 
-A rewind is an input. The hub records it with the next sequence number. The hub side sends it to each client as an `applied` message that holds the input `hub/rewind` and each part that the rewind changed. The sequence numbers go up by 1, as for each other input. The client uses the rules of `applied` and needs no other code. The link stays open.
+A rewind is an input. The hub records it with the next sequence number. The hub side sends it to each client as an `applied` message that holds the input `hub/rewind` and the parts that the hub side sends for it. The hub side sends each part that is not the same object as in the last state that it sent on this link. The client replaces each part that the message holds. A part in the message can have a value that is equal to the value that the client has. The sequence numbers go up by 1, as for each other input. The client uses the rules of `applied` and needs no other code. The link stays open.
 
 When the target is not correct, the hub rejects the input. The `result` has the reason `invalid`, and `problems` names the path `["payload", "seq"]`. The hub accepts no input, so the sequence numbers do not change.
 
@@ -333,6 +333,8 @@ The hub has a model subsystem `counter` with one part: `{ "count": number }`. Th
 { "t": "result", "request": 1, "result": { "ok": true, "seq": 4 } }
 ```
 
+The sections above show the other messages: `event`, `refused`, a rejected `result`, and a failed `result`.
+
 ### A rewind
 
 The hub accepted four inputs of `counter/add`, and the count is 8. The sequence number of the last input is 4. The subsystem `page-controls` rewinds to the input 2. The count was 4 after that input.
@@ -363,5 +365,3 @@ The hub accepted four inputs of `counter/add`, and the count is 8. The sequence 
 ```json
 { "t": "result", "request": 5, "result": { "ok": true, "seq": 5 } }
 ```
-
-The sections above show the other messages: `event`, `refused`, a rejected `result`, and a failed `result`.

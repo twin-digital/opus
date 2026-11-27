@@ -128,7 +128,10 @@ const copyPayload = (payload: unknown): unknown => {
   return deepFreeze(JSON.parse(json) as unknown)
 }
 
-/** Makes a hub. Throws a `HubConfigurationError` when the list of model subsystems is not correct. */
+/**
+ * Makes a hub. Throws a `HubConfigurationError` when the list of subsystems, an option, or the record is not correct.
+ * Throws a `ReplayError` when an input of the record does not apply.
+ */
 export const createHub = (options: HubOptions): Hub => {
   const subsystems = options.subsystems.map(copySubsystem)
   validateSubsystems(subsystems)
@@ -155,6 +158,7 @@ export const createHub = (options: HubOptions): Hub => {
   let busy = false
   let stopRequested = false
   let lastSeq = 0
+  let replaying = false
 
   const emit = (event: HubEvent) => {
     for (const entry of [...attached.values()]) {
@@ -220,7 +224,7 @@ export const createHub = (options: HubOptions): Hub => {
     )
 
   const limitRecord = () => {
-    if (lastSeq - checkpoints[0].seq <= recordLimit) {
+    if (replaying || lastSeq - checkpoints[0].seq <= recordLimit) {
       return
     }
     // The last checkpoint is always valid and in range, so the index is at least 1.
@@ -360,6 +364,7 @@ export const createHub = (options: HubOptions): Hub => {
     joined = Object.freeze({ ...start.state })
     checkpoints[0] = Object.freeze({ seq: start.seq, state: joined })
     lastSeq = start.seq
+    replaying = true
     for (const input of inputs) {
       let result: Applied
       try {
@@ -373,6 +378,8 @@ export const createHub = (options: HubOptions): Hub => {
         throw new ReplayError(input.seq, problems)
       }
     }
+    replaying = false
+    limitRecord()
   }
 
   return {

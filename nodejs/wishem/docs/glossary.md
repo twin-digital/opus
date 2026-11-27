@@ -72,7 +72,7 @@ Terms in each group are in alphabetical order.
 
 **Bookmark**: A named point in a record. Rewind and replay use it as their target.
 
-**Checkpoint** (**Proposed**): The joined state of a construct at one sequence number of the record. The hub keeps a checkpoint at the start of the record and after each input whose sequence number is a multiple of the checkpoint interval (default 100). A checkpoint refers to the parts of the joined state and makes no copy.
+**Checkpoint** (**Proposed**): The joined state of a construct at one sequence number of the record. The hub keeps a checkpoint at the start of the record and after each input whose sequence number is a multiple of the checkpoint interval (default 100), and after each rewind. A checkpoint refers to the parts of the joined state and makes no copy.
 
 **Clock**: An input subsystem that sends ticks at an interval. While `running` is true in the state of the `time` subsystem, the clock sends `time/advance` inputs (**Proposed**). A product that is not a game has no clock.
 

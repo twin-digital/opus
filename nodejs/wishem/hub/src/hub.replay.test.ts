@@ -227,3 +227,38 @@ describe('a record that does not apply stops the replay', () => {
     expect((error as Error).message).toContain('other')
   })
 })
+
+describe('a replay with limits', () => {
+  const withOptions = (record: HubRecord, options: { checkpointInterval?: number; recordLimit?: number }) =>
+    createHub({ subsystems: [makeCounter({ applied: [] }), label, other], ...options, record })
+
+  it('applies a rewind whose target is before the start that a smaller limit gives', async () => {
+    const { hub, keyboard } = await original(30, { checkpointInterval: 10, recordLimit: 1000 })
+    expect(await keyboard.submit(hubInputs.rewind(5))).toEqual({ ok: true, seq: 31 })
+    const copy = withOptions(recordOf(hub), { checkpointInterval: 10, recordLimit: 20 })
+    expect(copy.read()).toEqual(hub.read())
+    expect(copy.seq).toBe(hub.seq)
+    expect(copy.record().length).toBeLessThanOrEqual(20)
+  })
+
+  it('gives the same record, start, and number for equal limits and a start that is not 0', async () => {
+    const { hub, keyboard } = await original(25, { checkpointInterval: 10, recordLimit: 20 })
+    expect(hub.recordStart().seq).toBe(10)
+    await keyboard.submit(hubInputs.rewind(18))
+    await keyboard.submit(add)
+    const copy = withOptions(recordOf(hub), { checkpointInterval: 10, recordLimit: 20 })
+    expect(copy.read()).toEqual(hub.read())
+    expect(copy.seq).toBe(hub.seq)
+    expect(copy.recordStart()).toEqual(hub.recordStart())
+    expect(copy.record()).toEqual(hub.record())
+  })
+
+  it('keeps the record that it got when the limit is larger', async () => {
+    const { hub, keyboard } = await original(25, { checkpointInterval: 10, recordLimit: 20 })
+    await keyboard.submit(hubInputs.rewind(18))
+    const copy = withOptions(recordOf(hub), { checkpointInterval: 10, recordLimit: 1000 })
+    expect(copy.recordStart()).toEqual(hub.recordStart())
+    expect(copy.record()).toEqual(hub.record())
+    expect(copy.seq).toBe(hub.seq)
+  })
+})

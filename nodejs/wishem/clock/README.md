@@ -27,7 +27,7 @@ A tick applies for each value of `running`. To step a paused construct, send one
 
 ## Rewind
 
-After the hub applies the input `hub/rewind`, the clock measures real time again from that moment. The real time before the rewind causes no tick after it. While `running` is `true`, the next tick comes one step length after the rewind. When the rewind returns to a state with `running` set to `false`, the clock sends no tick until `running` becomes `true`.
+After the hub applies the input `hub/rewind`, the clock measures real time again from that moment. The real time before the rewind causes no tick after it. While `running` is `true`, the timer keeps its phase. The next tick comes at the first call of the timer that is one step length or more after the rewind. When the rewind returns to a state with `running` set to `false`, the clock sends no tick until `running` becomes `true`.
 
 ## Start and stop
 

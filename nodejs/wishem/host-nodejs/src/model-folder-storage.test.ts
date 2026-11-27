@@ -343,6 +343,37 @@ describe('the storage subsystem for files', () => {
     })
   })
 
+  describe('A rewind past a change of the definitions', () => {
+    it('writes state.json when the rewind makes the definitions equal to the files', async () => {
+      const before = hub.seq
+      const model = { definitions: [definition('Renamed')], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(model as Model))).ok).toBe(true)
+      await eventually(() => lines.filter(isHeld).length === 1)
+      expect(writes()).toBe(0)
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(() => lines.filter(isEqualAgain).length === 1)
+      expect((await stateFile()).entities).toEqual(store().entities)
+      expect(store().definitions[0]?.label).toBe('AppBar')
+    })
+
+    it('holds the write when the rewind makes the definitions differ from the files', async () => {
+      const before = hub.seq
+      await writeFile(path.join(folder, 'definitions', `${CT}.json`), JSON.stringify(definition('Bar')))
+      await eventually(() => store().definitions[0]?.label === 'Bar')
+      expect(lines.filter(isHeld)).toHaveLength(0)
+
+      expect((await client.submit(hubInputs.rewind(before))).ok).toBe(true)
+
+      await eventually(() => lines.filter(isHeld).length === 1)
+      await pause(200)
+      expect(store().definitions[0]?.label).toBe('AppBar')
+      expect(writes()).toBe(0)
+      expect(await stateText()).toBe(JSON.stringify(state('Wishem')))
+    })
+  })
+
   describe('A person adds the definition file', () => {
     it('writes the entities that wait, with no new input', async () => {
       const second = { id: CT2, label: 'Card', fields: [{ id: FLD2, label: 'text', type: 'string' }] }
