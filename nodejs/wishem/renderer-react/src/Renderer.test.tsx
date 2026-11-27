@@ -2,6 +2,7 @@ import { createStore, storeInputs, type Model } from '@thrashplay/wishem-core'
 import {
   createChannelPair,
   createHub,
+  hubInputs,
   openLink,
   serveLink,
   type ModelSubsystem,
@@ -284,6 +285,23 @@ describe('Renderer', () => {
       expect(wrappers()[0]?.textContent).toBe('title:Hello')
     })
 
+    it('draws the first title after a rewind to before a change', async () => {
+      const { input, output } = startWorld(baseModel('One'))
+      draw(output)
+      let seq = -1
+      await act(async () => {
+        const result = await input.submit(
+          inputs.setField({ entity: E1, componentType: CT_A, field: FLD_TITLE, value: 'Changed' }),
+        )
+        seq = result.ok ? result.seq - 1 : -1
+      })
+      expect(wrappers()[0]?.textContent).toBe('title:Changed')
+      await act(async () => {
+        expect((await input.submit(hubInputs.rewind(seq))).ok).toBe(true)
+      })
+      expect(wrappers()[0]?.textContent).toBe('title:One')
+    })
+
     it('calls no view again after an input that leaves the part store the same object', async () => {
       const { input, output } = startWorld(baseModel())
       const calls = vi.fn()
@@ -437,6 +455,14 @@ describe('Renderer', () => {
       expect(error).not.toHaveBeenCalled()
     })
 
+    it('draws nothing for an entity that has no component of a type, and logs no error', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      draw(startWorld(baseModel()).output, tableOf(sourceA, { name: 'B', componentType: CT_B, view: () => <b /> }))
+      expect(container.querySelectorAll(`[data-wishem-component-type="${CT_B}"]`)).toHaveLength(1)
+      expect(wrappers().filter((wrapper) => wrapper.dataset.wishemEntity === E1)).toHaveLength(1)
+      expect(error).not.toHaveBeenCalled()
+    })
+
     describe('with a view for each of two component types', () => {
       const sourceB: ViewSource = {
         name: 'B',
@@ -521,6 +547,25 @@ describe('Renderer', () => {
       )
       expect(warn).toHaveBeenCalledTimes(3)
       expect(String(warn.mock.calls[2]?.[0])).toContain('Other.view.json')
+    })
+
+    it('gives no new warning when the model gains the definition of a component type', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const model = baseModel()
+      const { input, output } = startWorld({
+        ...model,
+        definitions: model.definitions.filter(({ id }) => id !== CT_A),
+        entities: [],
+      })
+
+      draw(output)
+      expect(warn).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        await input.submit(inputs.replaceModel(model))
+      })
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(wrappers()).toHaveLength(2)
     })
 
     it('gives no warning for views that match their definitions', () => {

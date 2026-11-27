@@ -4,7 +4,7 @@ The Wishem workbench application. The package holds the workbench page, the view
 
 ## Start the workbench
 
-Build the Wishem packages before the first start. The `start` script loads `host-nodejs` and `workbench` from their built files.
+Build the Wishem packages before the first start. The `start` script loads `host-nodejs`, `workbench`, and the generator of `@thrashplay/wishem-renderer-react` from their built files.
 
 ```
 pnpm build --filter "@thrashplay/wishem-*"

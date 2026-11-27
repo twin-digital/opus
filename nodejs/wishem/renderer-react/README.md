@@ -36,7 +36,7 @@ This renderer uses the sidecars of the kind `react`. It ignores a sidecar of a d
 
 ## The names of props
 
-A view gets one prop for each field of the component type. `fieldName` makes the name of the prop from the label of the field. `propNames` gives the props of a definition. A label that gives an empty name, a name that starts with a digit, or the same name as another field is a problem. `viewWarnings` and the generator report each problem.
+A view gets one prop for each field of the component type. `fieldName` makes the name of the prop from the label of the field. `propNames` gives the props of a definition. A label that gives an empty name, a name that starts with a digit, or the same name as another field is a problem. `viewWarnings` reports only the same name of two fields. The generator reports each of the three problems as an error.
 
 ## The generator
 
@@ -53,7 +53,7 @@ const result = await generateViewTypes({
 viewTypesLines(result).forEach((line) => console.log(line))
 ```
 
-The option `command` is the text in the header of each generated file: `// To write this file again: <command>`. The option `check` changes no file and marks each file that is not current. `viewTypesLines` gives one line for each warning, each error, and each file that is not current.
+The option `command` is the text in the header of each generated file: `// To write this file again: <command>`. The option `check` changes no file and marks each file that is not current. `viewTypesLines` gives one line for each warning, each error, and each file that was written, changed, removed, or is not current.
 
 ## Example
 

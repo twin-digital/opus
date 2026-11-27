@@ -197,7 +197,7 @@ const describeChange = (file: ViewTypesFile) => {
   return props === '' ? '' : `: ${props}`
 }
 
-/** One line for each warning, each error, and each file that is not current. */
+/** One line for each warning, each error, and each file that is not current or that changed. */
 export const viewTypesLines = (result: ViewTypesResult): string[] => [
   ...result.warnings.map((warning) => `wishem: warning: ${warning}`),
   ...result.errors.map((error) => `wishem: error: ${error}`),
