@@ -23,7 +23,7 @@ Interfaces: consumes the checkpoints and the limit of Task 1; produces `RewindPa
 - [x] 2.2 Reject a target that is not an integer, is before the start, or is after `Hub.seq` with `invalid` and a problem at `['payload', 'seq']`. When a model subsystem throws during the new apply, change nothing and reject the promise with the error. Reject each other `hub/<name>` type with `unknown-type`. Verify with tests
 - [x] 2.3 Extend the move of the start of Task 1 with the rule of validity of D4: a checkpoint is valid when each rewind in the record after it has a target at or after it. Verify with a test in which a rewind to an early target holds the start back, and the start then moves to the checkpoint of the rewind, and the record never holds more inputs than the limit
 - [x] 2.4 Add `hubInputs.rewind(seq)` and export it. Document the rewind in `hub/README.md` with an example. In `glossary.md`, make **Hub event** list three events and make **Rewind** say that the rewind is the input `hub/rewind` with the event `applied`. In `concepts.md`, make the list of hub events three items, and replace the link to #533 in "Model subsystems" with the link to the follow-up issue that the brief gives
-- [ ] 2.5 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
+- [x] 2.5 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
 
 ## Task 3: Replay from a record
 
