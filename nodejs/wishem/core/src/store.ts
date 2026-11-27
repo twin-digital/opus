@@ -167,16 +167,17 @@ const setField = (part: Model, payload: unknown): Model => {
   if (component?.[field] === value) {
     return part
   }
-  const withValue = (changed: unknown): unknown[] =>
-    part.entities.map((existing, position) => (position === index ? changed : existing))
-  const components = { ...entity.components, [componentType]: { ...component, [field]: value } }
-  check({ definitions: part.definitions, entities: withValue({ id: entity.id, components }) })
-  if (typeof value !== 'string') {
-    return part
-  }
-  const next: Entity = {
+  const candidate = {
     id: entity.id,
     components: { ...entity.components, [componentType]: { ...component, [field]: value } },
+  }
+  const checked = check({
+    definitions: part.definitions,
+    entities: part.entities.map((existing, position) => (position === index ? candidate : existing)),
+  })
+  const next: Entity = {
+    id: entity.id,
+    components: { ...entity.components, [componentType]: checked.entities[index].components[componentType] },
   }
   return deepFreeze({
     definitions: part.definitions,
