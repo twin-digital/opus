@@ -84,6 +84,8 @@ export interface HubOptions {
   checkpointInterval?: number
   /** A positive integer, not smaller than `checkpointInterval`. Default 100000. */
   recordLimit?: number
+  /** The hub applies this record before `createHub` returns. It sends no event for the inputs. */
+  record?: HubRecord
 }
 
 export type HubStatus = 'created' | 'running' | 'stopped'

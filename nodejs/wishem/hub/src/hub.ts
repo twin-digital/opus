@@ -1,10 +1,11 @@
-import { HubConfigurationError, InputRefusedError } from './errors.js'
+import { HubConfigurationError, InputRefusedError, ReplayError } from './errors.js'
 import { HUB_ID, isHubInputType, isId, isInputType, REWIND_INPUT_TYPE } from './names.js'
 import type {
   Checkpoint,
   Hub,
   HubEvent,
   HubOptions,
+  HubRecord,
   HubStatus,
   Input,
   InputProblem,
@@ -91,6 +92,30 @@ const validateLimits = (checkpointInterval: number, recordLimit: number) => {
   }
 }
 
+const validateRecord = (record: HubRecord, subsystems: readonly ModelSubsystem[]) => {
+  const keys = Object.keys(record.start.state)
+  for (const key of keys) {
+    if (!subsystems.some((subsystem) => subsystem.id === key)) {
+      throw new HubConfigurationError(`The start of the record has the key "${key}", which is not a model subsystem.`)
+    }
+  }
+  for (const subsystem of subsystems) {
+    if (!keys.includes(subsystem.id)) {
+      throw new HubConfigurationError(`The start of the record has no key for the model subsystem "${subsystem.id}".`)
+    }
+  }
+  if (!Number.isInteger(record.start.seq) || record.start.seq < 0) {
+    throw new HubConfigurationError('The sequence number of the start of the record must be a non-negative integer.')
+  }
+  record.inputs.forEach((input, index) => {
+    if (input.seq !== record.start.seq + index + 1) {
+      throw new HubConfigurationError(
+        `The input number ${input.seq} of the record does not follow the number ${record.start.seq + index}.`,
+      )
+    }
+  })
+}
+
 /** Copies the payload as JSON data and freezes the copy. Throws when JSON cannot hold the payload. */
 const copyPayload = (payload: unknown): unknown => {
   if (payload === undefined) {
@@ -110,6 +135,9 @@ export const createHub = (options: HubOptions): Hub => {
   const checkpointInterval = options.checkpointInterval ?? DEFAULT_CHECKPOINT_INTERVAL
   const recordLimit = options.recordLimit ?? DEFAULT_RECORD_LIMIT
   validateLimits(checkpointInterval, recordLimit)
+  if (options.record) {
+    validateRecord(options.record, subsystems)
+  }
 
   let status: HubStatus = 'created'
   let joined: JoinedState = Object.freeze(Object.fromEntries(subsystems.map((s) => [s.id, s.initial])))
@@ -324,6 +352,26 @@ export const createHub = (options: HubOptions): Hub => {
         entry.registrations.clear()
         attached.delete(port.id)
       },
+    }
+  }
+
+  if (options.record) {
+    const { start, inputs } = options.record
+    joined = Object.freeze({ ...start.state })
+    checkpoints[0] = Object.freeze({ seq: start.seq, state: joined })
+    lastSeq = start.seq
+    for (const input of inputs) {
+      let result: Applied
+      try {
+        result = apply(input.source, { type: input.type, payload: input.payload })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new ReplayError(input.seq, [{ message }])
+      }
+      if (!result.ok) {
+        const problems = result.problems.length > 0 ? result.problems : [{ message: `Rejected: ${result.reason}.` }]
+        throw new ReplayError(input.seq, problems)
+      }
     }
   }
 

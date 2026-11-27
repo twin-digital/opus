@@ -285,7 +285,7 @@ These operations follow from the record and the two subsystems (**Proposed**):
 | **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                     |
 | **Restore**       | Load a checkpoint into a construct.                                                                      |
 | **Rewind**        | Restore the last checkpoint before the target, then apply the record from that checkpoint to the target. |
-| **Replay**        | Apply a record to a new construct, with or without a changed value.                                      |
+| **Replay**        | Apply a record to a new construct, with or without a changed value. The hub option `record` does it.     |
 | **Bookmark**      | Give a name to a point in a record.                                                                      |
 
 The agent sends `time/advance` inputs to run a construct faster than real time. (**Proposed**)

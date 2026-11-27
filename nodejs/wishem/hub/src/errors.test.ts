@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HubConfigurationError, InputRefusedError } from './errors.js'
+import { HubConfigurationError, InputRefusedError, ReplayError } from './errors.js'
 
 describe('InputRefusedError', () => {
   it('has the name InputRefusedError', () => {
@@ -29,5 +29,16 @@ describe('HubConfigurationError', () => {
     expect(error).toBeInstanceOf(Error)
     expect(error).not.toBeInstanceOf(InputRefusedError)
     expect(error.message).toBe('x')
+  })
+})
+
+describe('ReplayError', () => {
+  it('keeps the sequence number and the problems', () => {
+    const problems = [{ message: 'a', path: ['x'] }]
+    const error = new ReplayError(3, problems)
+    expect(error).toBeInstanceOf(Error)
+    expect(error.name).toBe('ReplayError')
+    expect(error.seq).toBe(3)
+    expect(error.problems).toEqual(problems)
   })
 })

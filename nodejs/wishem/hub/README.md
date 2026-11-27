@@ -31,8 +31,9 @@ The ID `hub` and the input types `hub/<name>` belong to the hub. `createHub` thr
 The input `hub/rewind` returns the joined state to the state after the input `seq`. The target 0 is the first state. An input subsystem sends it like each other input. `hubInputs.rewind(seq)` makes it.
 
 ```ts
-import { createHub, hubInputs } from '@thrashplay/wishem-hub'
+import { hubInputs } from '@thrashplay/wishem-hub'
 
+// `port` is the port of an input subsystem.
 const accepted = await port.submit(hubInputs.rewind(2))
 // { ok: true, seq: 6 } after five inputs
 ```
@@ -40,6 +41,21 @@ const accepted = await port.submit(hubInputs.rewind(2))
 The hub takes the last checkpoint at or before the target. It gives the inputs after that checkpoint, up to the target, to the model subsystems again. A part that none of these inputs changes is the same object as in the checkpoint. The rewind gets the next sequence number, stays in the record, and keeps a checkpoint. A rewind causes one `applied` event, and its input has the type `hub/rewind`. A rewind removes no input from the record.
 
 A target that is not an integer, is before the start of the record, or is after `hub.seq` gives the rejection `invalid` with a problem at the path `['payload', 'seq']`. A rejected rewind changes nothing. When a model subsystem throws while it applies an input again, the hub changes nothing and the promise of `submit` rejects with the error. Each other type `hub/<name>` gives the rejection `unknown-type`.
+
+## Replay
+
+The option `record` makes a hub from a record. The hub takes `record.start` as its first joined state and its first checkpoint. It applies each input of `record.inputs` in order, with the recorded source and sequence number, before `createHub` returns. It sends no event for these inputs. The new hub has the status `created`. Its record and its `seq` equal those of the record that it got, so the next input gets the next sequence number. An input `hub/rewind` in the record applies as it applied the first time.
+
+```ts
+import { createHub } from '@thrashplay/wishem-hub'
+
+// `subsystems` are the model subsystems of the first hub, or equal ones with a changed value.
+const copy = createHub({ subsystems, record: { start: hub.recordStart(), inputs: hub.record() } })
+```
+
+`checkpointInterval` and `recordLimit` apply to the new hub. They do not need to equal the values of the first hub.
+
+`createHub` throws a `HubConfigurationError` when the keys of `record.start.state` are not the IDs of the model subsystems, or when the sequence numbers of the record have a gap or do not follow `record.start.seq`. `createHub` throws a `ReplayError` with `seq` and `problems` when a model subsystem refuses an input of the record, throws while it applies one, or when the hub rejects an input of the record.
 
 ## The three kinds of subsystem
 

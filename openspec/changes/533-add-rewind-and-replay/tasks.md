@@ -30,10 +30,10 @@ Interfaces: consumes the checkpoints and the limit of Task 1; produces `RewindPa
 Files: `nodejs/wishem/hub/src/types.ts`, `nodejs/wishem/hub/src/errors.ts`, `nodejs/wishem/hub/src/hub.ts`, `nodejs/wishem/hub/src/index.ts`, `nodejs/wishem/hub/src/hub.replay.test.ts` (new), `nodejs/wishem/hub/src/errors.test.ts`, `nodejs/wishem/hub/README.md`, `nodejs/wishem/docs/concepts.md`
 Interfaces: consumes `hub/rewind` of Task 2; produces `HubOptions.record` and `ReplayError` (design.md, Interfaces)
 
-- [ ] 3.1 Add the option `record`: take `start.state` as the joined state and as the first checkpoint, and apply each input with its source and its number before `createHub` returns, with no event (D5). Verify the scenarios "A replay" and "A replay with a rewind in the record" with tests that fail before the code, with a counter subsystem and two model subsystems
-- [ ] 3.2 Throw a `HubConfigurationError` for a gap in the numbers or for a start whose keys are not the IDs of the model subsystems, and a `ReplayError` with `seq` and `problems` for an input that a model subsystem refuses or that throws. Verify the scenarios of "A record that does not apply stops the replay"
-- [ ] 3.3 Export `ReplayError`. Document the replay in `hub/README.md` with the call `createHub({ subsystems, record: { start: hub.recordStart(), inputs: hub.record() } })`. In `concepts.md`, give the replay as an option of the hub in the table of operations of "Time"
-- [ ] 3.4 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
+- [x] 3.1 Add the option `record`: take `start.state` as the joined state and as the first checkpoint, and apply each input with its source and its number before `createHub` returns, with no event (D5). Verify the scenarios "A replay" and "A replay with a rewind in the record" with tests that fail before the code, with a counter subsystem and two model subsystems
+- [x] 3.2 Throw a `HubConfigurationError` for a gap in the numbers or for a start whose keys are not the IDs of the model subsystems, and a `ReplayError` with `seq` and `problems` for an input that a model subsystem refuses or that throws. Verify the scenarios of "A record that does not apply stops the replay"
+- [x] 3.3 Export `ReplayError`. Document the replay in `hub/README.md` with the call `createHub({ subsystems, record: { start: hub.recordStart(), inputs: hub.record() } })`. In `concepts.md`, give the replay as an option of the hub in the table of operations of "Time"
+- [x] 3.4 Verify: `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` passes
 
 ## Task 4: The link carries a rewind
 
