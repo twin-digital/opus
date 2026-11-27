@@ -75,9 +75,9 @@ In the mockup, green marks what the agent added. Amber marks what the agent assu
 **What Wishem needs:**
 
 - the paused live state: the position of the player and of the ledge
-- the recording of the last seconds: the inputs and the path that the player took
+- the record of the last seconds: the inputs and the path that the player took
 - the jump rule as something the agent can read and change
-- a rerun of the same inputs with a new value, to see if the player lands
+- a replay of the same inputs with a new value, to see if the player lands
 
 The agent changes the value in the running game and writes the change to the authored state.
 
