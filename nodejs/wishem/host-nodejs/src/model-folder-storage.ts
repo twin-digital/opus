@@ -70,6 +70,8 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
   let writeQueued = false
   let correct = true
   let held = false
+  // The store and the disk definitions at the last complete check of the writer.
+  let checked: { store: unknown; disk: Model['definitions'] } | undefined
   let closed = false
   let closing: Promise<void> | undefined
 
@@ -136,7 +138,11 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
 
   const write = async () => {
     writeQueued = false
-    const { definitions, entities } = current()
+    const store = current()
+    if (checked?.store === store && checked.disk === disk) {
+      return
+    }
+    const { definitions, entities } = store
     if (!sameDefinitionList(definitions, disk)) {
       if (!held) {
         log(
@@ -144,13 +150,15 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
         )
         held = true
       }
+      checked = { store, disk }
       return
     }
     if (held) {
       log('wishem: the definitions of the store are equal to the files in definitions again')
       held = false
     }
-    if (sameEntities(entities, synced.entities)) {
+    if (entities === synced.entities || sameEntities(entities, synced.entities)) {
+      checked = { store, disk }
       return
     }
     const temporary = path.join(folder, `.${STATE_FILE}.${randomBytes(4).toString('hex')}.tmp`)
@@ -158,6 +166,7 @@ export const attachModelFolderStorage = (options: ModelFolderStorageOptions): Mo
       await writeFile(temporary, `${JSON.stringify({ entities }, null, 2)}\n`)
       await rename(temporary, stateFile)
       synced = { ...synced, entities }
+      checked = { store, disk }
     } catch (error) {
       await rm(temporary, { force: true }).catch(() => undefined)
       log(`wishem: cannot write ${STATE_FILE}: ${error instanceof Error ? error.message : String(error)}`)

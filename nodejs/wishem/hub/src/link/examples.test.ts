@@ -80,3 +80,53 @@ describe('a real link', () => {
     expect(seen).toEqual([examples.hello, examples.welcome, examples.submit, examples.applied, examples.result])
   })
 })
+
+describe('a rewind on a real link', () => {
+  const play = async (messages: unknown[]) => {
+    const hub = createHub({ subsystems: [counter] })
+    hub.start()
+    const [client, server] = createChannelPair()
+    serveLink(hub, server)
+    const seen: Record<string, unknown>[] = []
+    client.onMessage((text) => seen.push(JSON.parse(text) as Record<string, unknown>))
+    for (const message of messages) {
+      client.send(JSON.stringify(message))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+    return seen
+  }
+
+  const add = (request: number) => ({
+    t: 'submit',
+    request,
+    subsystem: 'page-controls',
+    input: { type: 'counter/add', payload: { by: 2 } },
+  })
+
+  it('puts the rewind messages on the channel', async () => {
+    const seen = await play([
+      examples.hello,
+      add(1),
+      add(2),
+      add(3),
+      add(4),
+      examples.rewind,
+      { ...examples.rewind, request: 6, input: { type: 'hub/rewind', payload: { seq: 9 } } },
+    ])
+
+    expect(seen).toContainEqual(examples.rewound)
+    expect(seen).toContainEqual(examples.rewindResult)
+    expect(seen).toContainEqual({
+      ...examples.rewindRejected,
+      result: {
+        ...examples.rewindRejected.result,
+        problems: [{ message: expect.any(String) as string, path: ['payload', 'seq'] }],
+      },
+    })
+  })
+
+  it('refuses the ID hub', async () => {
+    const seen = await play([{ ...examples.hello, subsystems: [{ id: 'hub', kind: 'input' }] }])
+    expect(seen).toEqual([examples.refusedHub])
+  })
+})

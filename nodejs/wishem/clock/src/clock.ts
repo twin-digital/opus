@@ -1,4 +1,4 @@
-import type { Port } from '@thrashplay/wishem-hub'
+import { REWIND_INPUT_TYPE, type Port } from '@thrashplay/wishem-hub'
 import { TIME_ID, timeInputs } from './time.js'
 
 export interface ClockTimer {
@@ -90,7 +90,10 @@ export const startClock = (port: Port, options: ClockOptions = {}): Clock => {
   const removeListener = port.subscribe((event) => {
     if (event.type === 'stopping') {
       stop()
-    } else if (event.type === 'applied' && event.input.type === 'time/set-running') {
+    } else if (
+      event.type === 'applied' &&
+      (event.input.type === 'time/set-running' || event.input.type === REWIND_INPUT_TYPE)
+    ) {
       last = now()
     }
   })

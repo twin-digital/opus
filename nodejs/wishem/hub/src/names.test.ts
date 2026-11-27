@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isId, isInputType } from './names.js'
+import { HUB_ID, isHubInputType, isId, isInputType, REWIND_INPUT_TYPE } from './names.js'
 
 describe('isId', () => {
   it.each(['time', 'store', 'set-field', 'a1', 'a1-b2-c3', 'renderer'])('accepts %s', (name) => {
@@ -31,5 +31,19 @@ describe('isInputType', () => {
     'store.set',
   ])('rejects %j', (name) => {
     expect(isInputType(name)).toBe(false)
+  })
+})
+
+describe('the reserved names', () => {
+  it('has a reserved ID and a reserved type that have the correct form', () => {
+    expect(isId(HUB_ID)).toBe(true)
+    expect(isInputType(REWIND_INPUT_TYPE)).toBe(true)
+  })
+
+  it('recognizes a type of the hub by its first name', () => {
+    expect(isHubInputType('hub/rewind')).toBe(true)
+    expect(isHubInputType('hub/undo')).toBe(true)
+    expect(isHubInputType('hubs/add')).toBe(false)
+    expect(isHubInputType('store/hub')).toBe(false)
   })
 })

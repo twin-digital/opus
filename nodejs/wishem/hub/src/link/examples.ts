@@ -35,6 +35,28 @@ export const examples = {
   failed: { t: 'result', request: 3, error: 'The model subsystem failed.' },
   started: { t: 'event', event: 'started' },
   stopping: { t: 'event', event: 'stopping' },
+  rewind: {
+    t: 'submit',
+    request: 5,
+    subsystem: 'page-controls',
+    input: { type: 'hub/rewind', payload: { seq: 2 } },
+  },
+  rewound: {
+    t: 'applied',
+    input: { seq: 5, source: 'page-controls', type: 'hub/rewind', payload: { seq: 2 } },
+    parts: { counter: { count: 4 } },
+  },
+  rewindResult: { t: 'result', request: 5, result: { ok: true, seq: 5 } },
+  rewindRejected: {
+    t: 'result',
+    request: 6,
+    result: {
+      ok: false,
+      reason: 'invalid',
+      problems: [{ message: 'The target must be an integer from 0 to 5.', path: ['payload', 'seq'] }],
+    },
+  },
+  refusedHub: { t: 'refused', reason: 'id-in-use', message: 'A subsystem ID is in use.' },
   refused: {
     t: 'refused',
     reason: 'version',

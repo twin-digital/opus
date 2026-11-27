@@ -171,7 +171,7 @@ A request with a reply through the hub is a possible later addition. (**Agreed**
 A model subsystem gives state or rules. It has one of two forms. (**Proposed**)
 
 - **A pure function.** The model subsystem gets its part of the state and an input, and it returns the new part. The hub holds the parts. A part that did not change is the same object.
-- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#533](https://github.com/twin-digital/opus/issues/533).
+- **A model library that holds its own state.** The model subsystem makes a snapshot of its state and restores it. The design of this form is **Open**. See [#574](https://github.com/twin-digital/opus/issues/574).
 
 A model subsystem declares the types of input that it applies. It can read the joined state while it applies an input. (**Proposed**)
 
@@ -225,6 +225,12 @@ The hub does these things with each input (**Proposed**):
 
 The record is a record of inputs. It is not a record of each change of a value. (**Proposed**)
 
+The record has a start and a list of inputs. The start is a checkpoint: the joined state after one sequence number. For a new hub, the start is the sequence number 0 and the first joined state. The hub keeps a checkpoint at the start and after each input whose sequence number is a multiple of the checkpoint interval (default 100), and after each rewind. A checkpoint refers to the parts and makes no copy. (**Proposed**)
+
+The record has a limit (default 100000 inputs after the start). When the list is longer, the hub moves the start to a checkpoint and removes the earlier inputs and checkpoints. (**Proposed**)
+
+The ID `hub` and the input types `hub/<name>` belong to the hub. No model subsystem or I/O subsystem uses them. (**Proposed**)
+
 A write from the workbench or from the agent is an input. Thus the record is also the record of changes with their sources, which provenance and undo need. (**Proposed**)
 
 ## Joined state and hub events
@@ -238,8 +244,7 @@ The **joined state** is the state of a construct that the hub gives to a reader.
 The hub has these hub events (**Proposed**):
 
 - The construct started.
-- An input was applied. The hub event has the sequence number and the type of the input.
-- The construct was restored to an earlier point.
+- An input was applied. The hub event has the sequence number and the type of the input. A rewind is an applied input of the type `hub/rewind`.
 - The construct stops.
 
 The hub has no hub event for each change of a value.
@@ -272,16 +277,16 @@ Time has two subsystems (**Proposed**):
 
 These operations follow from the record and the two subsystems (**Proposed**):
 
-| Operation         | Meaning                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| **Pause**, resume | Send `time/set-running`.                                                                                 |
-| **Step**          | Send one `time/advance` while the clock is paused.                                                       |
-| **Snapshot**      | A model library that holds its own state saves that state as data.                                       |
-| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                     |
-| **Restore**       | Load a checkpoint into a construct.                                                                      |
-| **Rewind**        | Restore the last checkpoint before the target, then apply the record from that checkpoint to the target. |
-| **Replay**        | Apply a record to a new construct, with or without a changed value.                                      |
-| **Bookmark**      | Give a name to a point in a record.                                                                      |
+| Operation         | Meaning                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Pause**, resume | Send `time/set-running`.                                                                                       |
+| **Step**          | Send one `time/advance` while the clock is paused.                                                             |
+| **Snapshot**      | A model library that holds its own state saves that state as data.                                             |
+| **Checkpoint**    | The hub keeps the joined state at one sequence number of the record.                                           |
+| **Restore**       | Load a checkpoint into a construct.                                                                            |
+| **Rewind**        | Restore the last checkpoint at or before the target, then apply the record from that checkpoint to the target. |
+| **Replay**        | Apply a record to a new construct, with or without a changed value. The hub option `record` does it.           |
+| **Bookmark**      | Give a name to a point in a record.                                                                            |
 
 The agent sends `time/advance` inputs to run a construct faster than real time. (**Proposed**)
 

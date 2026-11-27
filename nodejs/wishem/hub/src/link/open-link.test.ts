@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { InputRefusedError } from '../errors.js'
 import { createHub } from '../hub.js'
+import { hubInputs } from '../names.js'
 import type { Hub, HubEvent, IoSubsystem, JoinedState, ModelSubsystem } from '../types.js'
 import { createChannelPair, webSocketChannel } from './channel.js'
 import type { Channel, WebSocketLike } from './channel.js'
@@ -764,6 +765,24 @@ describe('a link on a real hub', () => {
     expect(events).toMatchObject([{ type: 'applied', input: { seq: 2, type: 'time/tick' } }])
     expect(link.ports.page.read()).toEqual(hub.read())
     expect(link.ports.page.read().store).toBe(link.ports.page.read().store)
+  })
+
+  it('gives the state after the target of a rewind, with the next number', async () => {
+    const hub = makeHub()
+    const { link } = await connectToHub(hub)
+    const { 'page-controls': input, page: output } = link.ports
+    for (const name of ['a', 'b', 'c', 'd']) {
+      await input.submit(setField(name))
+    }
+    const events: HubEvent[] = []
+    output.subscribe((event) => events.push(event))
+    await hub.attach({ id: 'keyboard', kind: 'input' }).submit(hubInputs.rewind(2))
+    await settle()
+    expect(events).toMatchObject([{ type: 'applied', input: { seq: 5, type: 'hub/rewind' } }])
+    expect(output.read()).toEqual(hub.read())
+    expect(output.read().store).toEqual({ fields: { a: '1', b: '1' } })
+    await expect(input.submit(setField('e'))).resolves.toEqual({ ok: true, seq: 6 })
+    expect(output.read()).toEqual(hub.read())
   })
 
   it('gets started when the hub starts after the link', async () => {
