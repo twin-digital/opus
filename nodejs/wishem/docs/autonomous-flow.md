@@ -121,7 +121,8 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - Run Prettier on the files that the change touches.
 - Do not run the pre-commit hook or the pre-push hook. Commit and push with `--no-verify`. The hooks check each package of the repository.
 - Open one pull request for each change. The checks of the pull request are the check of the other packages.
-- Merge the pull request when each check is green. Then remove the worktree and set the issue to `Done`.
+- The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
+- Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
 
 ## When a milestone is complete
 
