@@ -55,9 +55,12 @@ export const serveHub = async (hub: Hub, options: ServeHubOptions): Promise<HubS
     linkUrl: `ws://${address}${LINK_PATH}`,
     close: () => {
       closing ??= (async () => {
-        if (hub.status === 'running') {
+        try {
           hub.stop()
+        } catch {
+          // The hub is not running, or a stop is already requested.
         }
+        await Promise.resolve() // Let the current event reach each link before the links close.
         await linkServer.close()
         await closeServer()
       })()

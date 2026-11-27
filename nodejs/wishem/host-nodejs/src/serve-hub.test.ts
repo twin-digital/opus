@@ -142,9 +142,6 @@ describe('serveHub', () => {
         socket.on('error', () => undefined)
       })
       expect(status).toBe(403)
-      expect(() => {
-        hub.attach({ id: 'viewer', kind: 'output' }).close()
-      }).not.toThrow()
     })
 
     it('answers a plain request with 404 and a JSON error', async () => {
@@ -166,11 +163,10 @@ describe('serveHub', () => {
       const hub = makeHub()
       await expect(serveHub(hub, { port })).rejects.toMatchObject({ code: 'EADDRINUSE' })
       expect(hub.status).toBe('created')
-      expect(() => {
-        hub.attach({ id: 'viewer', kind: 'output' }).close()
-      }).not.toThrow()
       const server = await serve(hub)
       expect(portOf(server)).not.toBe(port)
+      hub.start()
+      expect(Object.keys((await open(server)).ports.viewer.read()).sort()).toEqual(['store', 'time'])
     })
   })
 
@@ -239,6 +235,84 @@ describe('serveHub', () => {
       expect(closing).toBeDefined()
       await expect(closing).resolves.toBeUndefined()
       expect(hub.status).toBe('stopped')
+    })
+
+    it('works from inside a listener of the event stopping', async () => {
+      setup()
+      const hub = makeHub()
+      const server = await serve(hub)
+      const watcher = hub.attach({ id: 'watcher', kind: 'output' })
+      hub.start()
+      const link = await open(server)
+      const stoppings: string[] = []
+      link.ports.viewer.subscribe((event) => {
+        if (event.type === 'stopping') {
+          stoppings.push(event.type)
+        }
+      })
+      const port = portOf(server)
+      let closing: Promise<void> | undefined
+      watcher.subscribe((event) => {
+        if (event.type === 'stopping') {
+          closing = server.close()
+        }
+      })
+      hub.stop()
+      expect(closing).toBeDefined()
+      await expect(closing).resolves.toBeUndefined()
+      await link.closed
+      expect(hub.status).toBe('stopped')
+      expect(stoppings).toEqual(['stopping'])
+      expect(await canListen(port)).toBe(true)
+    })
+
+    it('works after hub.stop in the same listener of an applied event', async () => {
+      setup()
+      const hub = makeHub()
+      const server = await serve(hub)
+      const input = hub.attach({ id: 'input', kind: 'input' })
+      const watcher = hub.attach({ id: 'watcher', kind: 'output' })
+      hub.start()
+      const port = portOf(server)
+      let closing: Promise<void> | undefined
+      watcher.subscribe((event) => {
+        if (event.type === 'applied') {
+          hub.stop()
+          closing = server.close()
+        }
+      })
+      await input.submit({ type: 'time/advance', payload: { ms: 10 } })
+      expect(closing).toBeDefined()
+      await expect(closing).resolves.toBeUndefined()
+      expect(hub.status).toBe('stopped')
+      expect(await canListen(port)).toBe(true)
+    })
+
+    it('works after hub.stop in another listener of the same applied event', async () => {
+      setup()
+      const hub = makeHub()
+      const server = await serve(hub)
+      const input = hub.attach({ id: 'input', kind: 'input' })
+      const first = hub.attach({ id: 'first', kind: 'output' })
+      const second = hub.attach({ id: 'second', kind: 'output' })
+      hub.start()
+      const port = portOf(server)
+      let closing: Promise<void> | undefined
+      first.subscribe((event) => {
+        if (event.type === 'applied') {
+          hub.stop()
+        }
+      })
+      second.subscribe((event) => {
+        if (event.type === 'applied') {
+          closing = server.close()
+        }
+      })
+      await input.submit({ type: 'time/advance', payload: { ms: 10 } })
+      expect(closing).toBeDefined()
+      await expect(closing).resolves.toBeUndefined()
+      expect(hub.status).toBe('stopped')
+      expect(await canListen(port)).toBe(true)
     })
   })
 
