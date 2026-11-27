@@ -71,7 +71,9 @@ The default timer uses `setInterval` and `clearInterval`, and the default source
 
 ### 6. The architecture document does not change now
 
-No process uses the clock after this change. [#536](https://github.com/twin-digital/opus/issues/536) adds the first construct with a clock.
+The architecture document shows a package as a container when other packages build on it. No package builds on the clock after this change, and no process uses it. [#536](https://github.com/twin-digital/opus/issues/536) adds the first construct with a clock, and it adds the clock to the container diagram.
+
+The clock builds on `@thrashplay/wishem-hub`. The hub is a container since `@thrashplay/wishem-core` depends on it, and the architecture document does not show it. [#562](https://github.com/twin-digital/opus/issues/562) corrects that. This change adds no container and no relationship between containers that the document shows.
 
 ## Interfaces
 
