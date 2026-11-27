@@ -469,9 +469,8 @@ describe('the start script of the workbench', () => {
     it('writes the generated file when the script starts', { timeout: 30000 }, async () => {
       const { run } = await startReady()
 
-      await waitFor(() => existsSync(generated()), run)
+      await waitFor(() => readGenerated().includes('readonly title: string | undefined'), run)
 
-      expect(readGenerated()).toContain('readonly title: string | undefined')
       await waitFor(() => run.output().includes('wishem: wrote AppBar.view.gen.ts: added title'), run)
     })
 
