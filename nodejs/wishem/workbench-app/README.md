@@ -1,6 +1,6 @@
 # @thrashplay/wishem-workbench-app
 
-The Wishem workbench application. The package holds the workbench page, the HTML renderer, the views, the `start` script, and the style guide. The design tokens, the components, and the screenshot tests of the style guide are also here.
+The Wishem workbench application. The package holds the workbench page, the views, the `start` script, and the style guide. The page gives the port of each link to the renderer of `@thrashplay/wishem-renderer-react`. The generator of the types of the props is also in that package. The design tokens, the components, and the screenshot tests of the style guide are also here.
 
 ## Start the workbench
 
@@ -13,7 +13,7 @@ pnpm --filter @thrashplay/wishem-workbench-app start
 
 The script starts one construct and the page server in one Node.js process. It prints the model folder, the address of the link (for example `ws://127.0.0.1:4747/link`), and the address of the page. Open the address of the page in a web browser. Press Ctrl+C to stop both.
 
-The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. It passes no other path. The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page.
+The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket at `/link` of the page address to the server of the construct, with the `Origin` header of the page. It passes no other path. The page uses the client of the hub (`connectHub`) to open its link at `/link` on the origin of the page. After each `welcome`, the client gives the remote port of the new link to `onPort`, and the page draws from that port.
 
 | Option            | Default                                            | Meaning                                         |
 | ----------------- | -------------------------------------------------- | ----------------------------------------------- |

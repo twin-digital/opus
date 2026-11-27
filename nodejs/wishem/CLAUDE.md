@@ -11,7 +11,8 @@ The `docs/` folder holds the blueprint.
 - `clock` (`@thrashplay/wishem-clock`): the `time` subsystem and the clock. It uses no Node.js API.
 - `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link, writes `state.json`, and provides the `wishem` command.
 - `workbench` (`@thrashplay/wishem-workbench`): the base workbench. It holds the first model and a `start` script.
-- `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the HTML renderer, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
+- `renderer-react` (`@thrashplay/wishem-renderer-react`): the React renderer. It draws React views from a port of the hub, and it writes the types of the props of the views. The root entry runs in a web browser. The entry `view-types` runs in Node.js.
+- `workbench-app` (`@thrashplay/wishem-workbench-app`): the browser application of the workbench. It holds the page, the client of the hub, the views, the `start` script of the workbench, and the style guide with its screenshot tests, which need Docker.
 
 ## Read before you design or build
 

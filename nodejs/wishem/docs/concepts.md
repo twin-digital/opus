@@ -388,7 +388,7 @@ Under this contract a pixel-art game can pick PixiJS, a 3D game can pick Three.j
 Wishem has three renderers: the React renderer, the PixiJS renderer, and the Godot renderer. The three renderers use the same TypeScript hub (rule R17). (**Agreed**)
 
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
-- The React renderer is a package. It runs React views. (**Proposed**)
+- The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
 - The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
 - The view of the PixiJS renderer and the view of the Godot renderer each clear the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)
