@@ -120,7 +120,7 @@ When the link ends and the page did not close it, the page SHALL keep the last p
 #### Scenario: The model did not change
 
 - **WHEN** the link ended and a new link gives a part `store` that is equal to the last one
-- **THEN** the page does not draw again
+- **THEN** the page draws one time, and the picture does not change
 
 ### Requirement: The page closes its link when the person leaves
 

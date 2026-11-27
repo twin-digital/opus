@@ -136,14 +136,16 @@ The server refuses the upgrade when the request has an `Origin` header and the h
 4. Gives `getSnapshot = () => last`, where `last` is the part `store` of the port. On each `applied` event it reads the part `store`, and when that part is a different object, it sets `last` and calls each listener with it.
 5. Resolves the promise after the first `welcome`.
 
-When the link ends (`RemoteLink.closed`) and the page did not close it, the client keeps `last`, writes `wishem: the hub is not reachable. The page tries again.` one time for each loss, and opens a new link after a delay. The delays are 500 ms, 1 s, 2 s, 4 s, then 5 s for each later attempt. A failure of an attempt (the socket does not open, or `openLink` rejects) counts as one attempt. A `LinkRefusedError` also writes its message one time with `console.error`. After a new `welcome`, the delay starts at 500 ms again, and the warning can show again. When the part `store` of the new link is equal to `last`, `last` stays the same object and no listener is called. Otherwise `last` becomes the new part and each listener is called. The comparison is `sameModel` in `hub-client.ts`: the canonical JSON texts (sorted keys) of the two parts are equal.
+When the link ends (`RemoteLink.closed`) and the page did not close it, the client keeps `last`, writes `wishem: the hub is not reachable. The page tries again.` one time for each loss, and opens a new link after a delay. The delays are 500 ms, 1 s, 2 s, 4 s, then 5 s for each later attempt. A failure of an attempt (the socket does not open, or `openLink` rejects) counts as one attempt. A `LinkRefusedError` also writes its message one time with `console.error`. After a new `welcome`, the delay starts at 500 ms again, and the warning can show again. After a new `welcome`, `last` becomes the part `store` of the new link, and each listener is called one time. The state of a new link is always a new object, also when the model is equal. A render with equal data changes nothing on the page.
+
+The client compares by identity only. Within one link, the remote port keeps the same object for each part that an `applied` message does not hold. The store keeps the same part for a `replace-model` with an equal model, so the hub side sends no part `store` in that case.
 
 On `pagehide`, and on `close()`, the client closes the link, clears the timer, removes the `pagehide` listener, and opens no new link. A second `close()` does nothing. A link that opens after `close()` is closed at once, and no listener is called.
 
 - The ID is new for each link, not only for each page. Reason: after an end that the page sees first (for example a wrong sequence number), the hub side can still hold the old ID for a short time, and the new `hello` would get `id-in-use`.
 - Alternative: one fixed ID such as `page`. A second tab would get `id-in-use`.
-- Reason for `sameModel`: the page imports only types from `core`, so the container diagram has no relationship from the page to `core`.
-- Alternative: import `isEqual` from `core`. It adds a relationship from the page to `core` for one function of six lines.
+- Reason for the identity check: the page needs no comparison function, and it imports only types from `core`. The container diagram thus has no relationship from the page to `core`. The cost is one render after each new link.
+- Alternative: compare the new part with `last` by `isEqual` of `core`, or by a copy of it. It adds a relationship from the page to `core`, or a copy of code, to save one render after a reconnect.
 - Alternative: let the `Renderer` use the remote port directly. The `Renderer` then depends on the hub and on the key `store`, and its tests need a hub. The reader keeps that knowledge in one module.
 
 ### 8. The type of the reader is local to the renderer
@@ -191,7 +193,7 @@ The container `hub` and the relationship from `core` to `hub` exist. This change
 | Page → workbench process, "Connects to the hub [WebSocket link]" | Changed | It replaces "Gets snapshots [SSE]". It stays on the primary path.              |
 | Workbench process → model folder                                 | Changed | The label is "Reads, watches, and writes [file system]".                       |
 | Workbench process → `hub`                                        | None    | The process makes its hub through `startConstruct`. It imports only types.     |
-| Page → `core`                                                    | None    | The page imports only types from `core`. `sameModel` is local (decision 7).    |
+| Page → `core`                                                    | None    | The page imports only types from `core`. It compares by identity (decision 7). |
 | A package → `clock`                                              | None    | No package of the document builds on `@thrashplay/wishem-clock`. #536 adds it. |
 
 The page connects to the workbench process, not to the package `hub`. The arrow from the page to `hub` shows an import, not a connection.
@@ -326,10 +328,6 @@ export interface HubClientOptions {
 
 /** Opens a link as one output subsystem. Resolves after the first `welcome`. */
 export const connectHub: (options?: HubClientOptions) => Promise<HubClient>
-
-// A module export of src/renderer/hub-client.ts. src/renderer/index.ts does not export it.
-/** True when the canonical JSON texts (sorted keys) of the two models are equal. */
-export const sameModel: (a: Model, b: Model) => boolean
 ```
 
 `Page` takes `{ reader: ModelReader | undefined; views: ViewTable }`.
@@ -362,7 +360,7 @@ Owner: `@thrashplay/wishem-core`. Removed: `createCore`, `Core`, `CoreReader`. N
 ```ts
 import type { Model } from './model.js'
 
-/** True when the canonical JSON texts (sorted keys) of the two models are equal. The store uses it for `replace-model`. */
+/** True when the canonical JSON texts (sorted keys) of the two models are equal. The store uses it for `replace-model`, and the storage subsystem of `host-nodejs` for the last sync (decision 3). */
 export const isEqual: (a: Model, b: Model) => boolean
 ```
 
@@ -671,7 +669,7 @@ sequenceDiagram
   V->>L: upgrade /link
   L->>H: attach page-41d0… (new ID)
   L-->>P: welcome (state)
-  P-->>P: listeners get the new part store when it differs
+  P-->>P: listeners get the new part store one time
 ```
 
 ## C4 diagrams
