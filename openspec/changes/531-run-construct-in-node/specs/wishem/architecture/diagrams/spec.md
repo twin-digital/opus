@@ -16,6 +16,16 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** a change makes a container get its data from a different container
 - **THEN** the container diagram shows the relationship between the new pair of containers
 
+#### Scenario: The core package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-core` depends on `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `hub` as a TypeScript package, and a relationship from `core` to `hub` with the label "Builds on [import]"
+
+#### Scenario: The host package and the page build on the hub package
+
+- **WHEN** `@thrashplay/wishem-host-nodejs` depends on `@thrashplay/wishem-hub`, and the page imports a value of `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows a relationship from `host-nodejs` to `hub` and a relationship from the page to `hub`, each with the label "Builds on [import]"
+
 #### Scenario: A change alters the protocol between two containers
 
 - **WHEN** a change makes the page connect to the workbench process through a link on a WebSocket

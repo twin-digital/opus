@@ -2,11 +2,13 @@
 
 ## Context
 
-See `proposal.md` for the reason. [#527](https://github.com/twin-digital/opus/issues/527) holds the architecture. This change builds on three changes, and its branch starts from `main` after they are merged:
+See `proposal.md` for the reason. [#527](https://github.com/twin-digital/opus/issues/527) holds the architecture. This change builds on the changes below. The implementation starts after the link (#530) is merged into `main`.
 
-- `@thrashplay/wishem-hub` (#528): `createHub`, `Hub`, `Port`, `HubEvent`, `IoSubsystem`.
-- The link (#530), in the same package: `serveLink(hub, channel)`, `openLink(channel, subsystems, options)`, `webSocketChannel(socket)`, `RemoteLink`, `LinkRefusedError`, `LinkClosedError`. The protocol is in `nodejs/wishem/hub/LINK.md`.
-- The store (#529), in `@thrashplay/wishem-core`: `createStore({ id?, model? })`, `storeInputs(id?)`, and the inputs `store/replace-model`, `store/add-entity`, `store/remove-entity`, `store/set-field`. A `replace-model` with an equal model keeps the same part object.
+- `@thrashplay/wishem-hub` (#528): `createHub`, `Hub`, `Port`, `HubEvent`, `IoSubsystem`. `start()` throws when the status is not `created`. `stop()` throws when the status is not `running`. `attach` throws when the hub is stopped.
+- The link (#530), in the same package: `serveLink(hub, channel)`, `openLink(channel, subsystems, { onError })`, `webSocketChannel(socket)`, `WebSocketLike`, `RemoteLink`, `LinkRefusedError`, `LinkClosedError`. `webSocketChannel` resolves at once for a socket that is open. It rejects with an `Error` when the socket closes before it opens. The protocol is in `nodejs/wishem/hub/LINK.md`.
+- The store (#529), in `@thrashplay/wishem-core`: `createStore({ id?, model? })`, `storeInputs(id?)`, and the inputs `store/replace-model`, `store/add-entity`, `store/remove-entity`, `store/set-field`. `createStore` throws `ModelError` for a first model that is not correct. A `replace-model` with an equal model keeps the same part object. The comparison is `isEqual` in `src/equality.ts`. The package root does not export it.
+- The clock (#563): `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`. No package of the workbench uses it.
+- The architecture document (#562): the container diagram shows the container `hub` and the relationship from `core` to `hub`.
 
 Today, `startHost` in `host-nodejs` reads the model folder into `createCore`, watches the folder (a settle time of 50 ms, one read at a time, "the last correct snapshot stays"), and serves `GET /snapshot` and `GET /snapshots` (Server-Sent Events) on `127.0.0.1:4747`. The page (`workbench-app/src/renderer/connect.ts`) reads `/snapshots` through the Vite server. The `start` script of `workbench-app` calls `startHost`, passes `^/snapshots?$` to it, and keeps the generated view types current with `core.subscribe`.
 
@@ -50,9 +52,9 @@ The lead agent made each decision below alone, as `nodejs/wishem/docs/autonomous
 6. Starts the watch, and schedules one quiet read, as `startHost` does, for a change between the first read and the start of the watch.
 7. Returns `{ url, linkUrl, hub, close }`.
 
-When a step fails, the steps before it are undone in the reverse order, and the promise rejects with the error of the step.
+When a step fails, the steps before it are undone in the reverse order, and the promise rejects with the error of the step. The undo of step 5 stops the hub.
 
-`close()` returns the same promise on each call. It clears the settle timer and closes the watch, stops the hub (each link gets `stopping` and closes), waits for the running read and the running write (decision 3), then closes the server of the link and the HTTP server.
+`close()` returns the same promise on each call. It clears the settle timer and closes the watch, stops the hub when its status is `running` (each link gets `stopping` and closes), waits for the running read and the running write (decision 3), then closes the server of the link and the HTTP server.
 
 - Reason for the order: the hub runs before the first read of the watch, so each input of the watch finds a running hub. A client that connects between steps 4 and 5 gets `welcome` with the status `created`, then `started` (decision 5 of the design of #530).
 - Alternative: a construct object with `start` and `stop`. The command and the `start` script need only one call and one `close`, as with `startHost`.
@@ -85,8 +87,9 @@ After an `applied` event, when the entities of the part `store` differ from `syn
 
 One queue holds the reads and the writes. A read waits for a running write, and a write waits for a running read. A write reads the part `store` when it starts, not when the event arrived. A request for a write while a write runs gives one more write after it.
 
-The equality is `isEqual` of `@thrashplay/wishem-core` (canonical JSON, the comparison of the store).
+The equality is `isEqual` of `@thrashplay/wishem-core` (canonical JSON, the comparison of the store). This change exports `isEqual` from the package root of `core`.
 
+- Reason for the export: the two guards must use one comparison. A copy in `host-nodejs` can differ from the store after a later change.
 - Reason: the decision of the brief is that the equal-model shortcut of the store stops the loop write → watch → read → write. That shortcut stops the second write, but it does not stop a stale read. Example: a read starts, a client sets a title, and then the read ends with the old file. A `replace-model` with the old file then puts back the old title, and the writer writes it. The rule "a part that did not change on the disk is not news" prevents this. It also keeps `replace-model` inputs of our own writes out of the record.
 - The shortcut of the store stays the second guard: a hand edit that makes `state.json` equal to the store gives a `replace-model` with an equal model, the part stays the same object, and no write follows. A test covers each guard.
 - Alternative: the writer ignores each watch event for a time after a write. A time does not prove that the event came from the write, and a hand edit in that time is lost.
@@ -133,12 +136,14 @@ The server refuses the upgrade when the request has an `Origin` header and the h
 4. Gives `getSnapshot = () => last`, where `last` is the part `store` of the port. On each `applied` event it reads the part `store`, and when that part is a different object, it sets `last` and calls each listener with it.
 5. Resolves the promise after the first `welcome`.
 
-When the link ends (`RemoteLink.closed`) and the page did not close it, the client keeps `last`, writes `wishem: the hub is not reachable. The page tries again.` one time for each loss, and opens a new link after a delay. The delays are 500 ms, 1 s, 2 s, 4 s, then 5 s for each later attempt. A failure of an attempt (the socket does not open, or `openLink` rejects) counts as one attempt. A `LinkRefusedError` also writes its message one time with `console.error`. After a new `welcome`, the delay starts at 500 ms again, and the warning can show again. When the part `store` of the new link is equal to `last` by canonical JSON, `last` stays the same object and no listener is called. Otherwise `last` becomes the new part and each listener is called.
+When the link ends (`RemoteLink.closed`) and the page did not close it, the client keeps `last`, writes `wishem: the hub is not reachable. The page tries again.` one time for each loss, and opens a new link after a delay. The delays are 500 ms, 1 s, 2 s, 4 s, then 5 s for each later attempt. A failure of an attempt (the socket does not open, or `openLink` rejects) counts as one attempt. A `LinkRefusedError` also writes its message one time with `console.error`. After a new `welcome`, the delay starts at 500 ms again, and the warning can show again. When the part `store` of the new link is equal to `last`, `last` stays the same object and no listener is called. Otherwise `last` becomes the new part and each listener is called. The comparison is `sameModel` in `hub-client.ts`: the canonical JSON texts (sorted keys) of the two parts are equal.
 
 On `pagehide`, and on `close()`, the client closes the link, clears the timer, removes the `pagehide` listener, and opens no new link. A second `close()` does nothing. A link that opens after `close()` is closed at once, and no listener is called.
 
 - The ID is new for each link, not only for each page. Reason: after an end that the page sees first (for example a wrong sequence number), the hub side can still hold the old ID for a short time, and the new `hello` would get `id-in-use`.
 - Alternative: one fixed ID such as `page`. A second tab would get `id-in-use`.
+- Reason for `sameModel`: the page imports only types from `core`, so the container diagram has no relationship from the page to `core`.
+- Alternative: import `isEqual` from `core`. It adds a relationship from the page to `core` for one function of six lines.
 - Alternative: let the `Renderer` use the remote port directly. The `Renderer` then depends on the hub and on the key `store`, and its tests need a hub. The reader keeps that knowledge in one module.
 
 ### 8. The type of the reader is local to the renderer
@@ -175,9 +180,32 @@ On `pagehide`, and on `close()`, the client closes the link, clears the timer, r
 
 After the archive, `openspec/specs/wishem/core/snapshot/` has no requirement, and the archive step removes the folder.
 
-### 12. The architecture document changes at the container level
+### 12. The container diagram gets two new arrows and a gutter
 
-The hub package is a container that other packages build on. The page and the workbench process talk through a link. The process writes the model folder. The document, `render.mjs`, and the SVG files change in the tasks that make each change (see the C4 diagrams below and `tasks.md`). The system context diagram and the entity diagram of the model folder do not change.
+The container `hub` and the relationship from `core` to `hub` exist. This change gives the container diagram these relationships:
+
+| Relationship                                                     | Result  | Reason                                                                         |
+| ---------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------ |
+| `host-nodejs` → `hub`, "Builds on [import]"                      | New     | `host-nodejs` imports `createHub`, `serveLink`, and `webSocketChannel`.        |
+| Page → `hub`, "Builds on [import]"                               | New     | The page imports `openLink` and `webSocketChannel`.                            |
+| Page → workbench process, "Connects to the hub [WebSocket link]" | Changed | It replaces "Gets snapshots [SSE]". It stays on the primary path.              |
+| Workbench process → model folder                                 | Changed | The label is "Reads, watches, and writes [file system]".                       |
+| Workbench process → `hub`                                        | None    | The process makes its hub through `startConstruct`. It imports only types.     |
+| Page → `core`                                                    | None    | The page imports only types from `core`. `sameModel` is local (decision 7).    |
+| A package → `clock`                                              | None    | No package of the document builds on `@thrashplay/wishem-clock`. #536 adds it. |
+
+The page connects to the workbench process, not to the package `hub`. The arrow from the page to `hub` shows an import, not a connection.
+
+The layout of the diagram:
+
+- The arrow from `host-nodejs` to `hub` uses the free path below `host-nodejs`. It goes from the bottom of `host-nodejs` down, then right into the upper half of the left edge of `hub`.
+- The current layout has no free path from the page to `hub`. `host-nodejs` is below the page, and the columns have 17 px between them. The diagram gets a gutter on the left: each element and each point of an arrow moves 64 px to the right, and the diagram, the boundary, and the legend get 64 px wider. The arrow goes from the left edge of the page into the gutter, down to the level of `hub`, and right into the lower half of the left edge of `hub`. Its label is on the horizontal part.
+- The other arrows keep their paths.
+
+The document, `render.mjs`, and the SVG files change in the task that makes each change (see the C4 diagrams below and `tasks.md`). The system context diagram and the entity diagram of the model folder do not change.
+
+- Alternative: put `hub` in the row of the process. The arrows from the page to the process and from the process to the model folder use the two places beside the process.
+- Alternative: no arrow from the page to `hub`. The document shows each import of a value as a relationship, so the diagram is then wrong.
 
 ## Interfaces
 
@@ -298,6 +326,10 @@ export interface HubClientOptions {
 
 /** Opens a link as one output subsystem. Resolves after the first `welcome`. */
 export const connectHub: (options?: HubClientOptions) => Promise<HubClient>
+
+// A module export of src/renderer/hub-client.ts. src/renderer/index.ts does not export it.
+/** True when the canonical JSON texts (sorted keys) of the two models are equal. */
+export const sameModel: (a: Model, b: Model) => boolean
 ```
 
 `Page` takes `{ reader: ModelReader | undefined; views: ViewTable }`.
@@ -325,7 +357,16 @@ export interface Workbench {
 }
 ```
 
-Owner: `@thrashplay/wishem-core`. Removed: `createCore`, `Core`, `CoreReader`. No change to the other exports.
+Owner: `@thrashplay/wishem-core`. Removed: `createCore`, `Core`, `CoreReader`. New export of the package root, from `src/equality.ts` with no change to the function:
+
+```ts
+import type { Model } from './model.js'
+
+/** True when the canonical JSON texts (sorted keys) of the two models are equal. The store uses it for `replace-model`. */
+export const isEqual: (a: Model, b: Model) => boolean
+```
+
+No change to the other exports.
 
 ### The link at the HTTP level
 
@@ -402,7 +443,7 @@ Content-Type: application/json
 
 ## Domain types
 
-New: `Construct`, `ModelFolderStorage`, `LinkServer`, `HubClient`, `ModelReader`. Modified: `Workbench` (`linkUrl`), `RendererProps` (`reader`). Removed: `Host`, `Core`, `CoreReader`, `CoreConnection`.
+New: `Construct`, `ModelFolderStorage`, `LinkServer`, `HubClient`, `ModelReader`. The lifecycles of the construct, the storage subsystem, and the client of the page are new. Modified: `Workbench` (`linkUrl`), `RendererProps` (`reader`). Removed: `Host`, `Core`, `CoreReader`, `CoreConnection`.
 
 ```mermaid
 classDiagram
@@ -458,6 +499,32 @@ stateDiagram-v2
   Closed --> [*]
 ```
 
+### The life of the storage subsystem
+
+One queue holds the reads and the writes (decision 3). A pending write runs before `close()` resolves. A pending read does not run after `close()`.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Attached : attachModelFolderStorage
+  Attached --> Idle : watch()
+  Idle --> Settling : watch event
+  Settling --> Settling : watch event (the 50 ms start again)
+  Settling --> Reading : 50 ms end, and no write runs
+  Idle --> Writing : applied, and the entities differ from synced
+  Reading --> Writing : a write was requested during the read
+  Writing --> Reading : a read was requested during the write
+  Writing --> Writing : a write was requested during the write (one more write)
+  Reading --> Idle : the read ends (replace-model, or nothing)
+  Writing --> Idle : the write ends, or fails (the reason is printed, synced stays)
+  Attached --> Closed : close()
+  Idle --> Closed : close()
+  Settling --> Closed : close() (the timer is cleared, no read)
+  Reading --> Closing : close()
+  Writing --> Closing : close()
+  Closing --> Closed : the running job and a pending write end
+  Closed --> [*]
+```
+
 ### The life of the client of the page
 
 ```mermaid
@@ -475,6 +542,53 @@ stateDiagram-v2
 ```
 
 ## The main flows
+
+### The start of a construct, with its error paths
+
+```mermaid
+sequenceDiagram
+  participant C as Caller (wishem start, or the start script)
+  participant S as startConstruct
+  participant F as Model folder
+  participant H as Hub and store
+  participant M as Storage subsystem
+  participant N as HTTP server and server of the link
+  C->>S: startConstruct({ folder, port })
+  S->>F: readModelFolder
+  alt the model is not correct
+    S-->>C: rejects with ModelError (nothing started)
+  end
+  S->>H: createHub({ subsystems: [createStore({ model })] })
+  S->>M: attachModelFolderStorage (files, files-writer)
+  S->>N: listen on 127.0.0.1
+  alt the port is in use
+    S->>M: close (the two ports close)
+    S-->>C: rejects with EADDRINUSE
+  end
+  S->>H: start
+  S->>M: watch, and one quiet read
+  alt the watch cannot start
+    S->>H: stop
+    S->>M: close
+    S->>N: close
+    S-->>C: rejects with the error of the watch
+  end
+  S-->>C: { url, linkUrl, hub, close }
+```
+
+### A request for a link that the server refuses
+
+```mermaid
+sequenceDiagram
+  participant B as Page of a different site
+  participant N as Server of the link
+  participant H as Hub
+  B->>N: GET /link, Upgrade: websocket, Origin: https://example.com
+  N-->>B: HTTP/1.1 403 Forbidden, the socket is destroyed
+  Note over H: no subsystem is attached
+  B->>N: GET /links, Upgrade: websocket
+  N-->>B: HTTP/1.1 404 Not Found, the socket is destroyed
+```
 
 ### A hand edit becomes a new picture
 
@@ -546,7 +660,11 @@ sequenceDiagram
   P-->>P: console.warn one time, keep the picture
   loop 500 ms, 1 s, 2 s, 4 s, then 5 s
     P->>V: WebSocket /link
-    V-->>P: proxy error, socket closes
+    alt the process is away
+      V-->>P: proxy error, socket closes
+    else the hub is stopped and the server is open
+      L-->>P: refused (stopped), console.error one time
+    end
   end
   Note over L,H: the process starts again
   P->>V: WebSocket /link
@@ -560,7 +678,7 @@ sequenceDiagram
 
 ### Container diagram after the change
 
-New: the `hub` package and its relationships. Changed: the page connects to the process through a link [WebSocket] (it got snapshots [SSE]); the process reads, watches, and writes the model folder (it read and watched); the descriptions of the process, `host-nodejs`, and `core`. Removed: no element.
+New: the relationship from `host-nodejs` to `hub`, and the relationship from the page to `hub` (decision 12). Changed: the page connects to the process through a link [WebSocket] (it got snapshots [SSE]); the process reads, watches, and writes the model folder (it read and watched); the descriptions of the process, `host-nodejs`, `core`, and `hub`. Not new: the container `hub` and the relationship from `core` to `hub`. Moved: no element and no relationship. Removed: no element and no relationship.
 
 ```mermaid
 ---
@@ -661,6 +779,14 @@ The system context diagram does not change: the designer is the one person, and 
 | The hub refuses the `replace-model` of a read (`invalid`)   | The subsystem prints the problems and "the last correct model stays".                                                          | Correct the files.                                                                                  |
 | `close()` is called two times, or during a read             | One stop. The second call gets the same promise. The read ends, and its `submit` gives `not-running`, which is not printed.    | None needed.                                                                                        |
 
+The idempotency of each operation:
+
+- The write of `state.json` is idempotent. The same entities give the same file.
+- The hub records each `replace-model` input of a read. The effect is idempotent: an equal model keeps the same part object. Decision 3 sends no input for a part that did not change on the disk.
+- A client that sends `set-field` again after a lost connection puts two inputs in the record. The effect is idempotent: the same value keeps the same part object, and no second write occurs.
+- `close()` of the construct, of the storage subsystem, and of the server of the link is idempotent. Each call gives the same promise.
+- `close()` of the client of the page is idempotent. A new link after a loss has a new ID. The page sends no input, so a new link has no duplicate effect.
+
 ## Examples
 
 ### `wishem start`, with one problem during the run
@@ -725,11 +851,11 @@ $ echo $?
 | Package                            | Published or private | Bump  | Reason                                                                                                                                                                                                                 |
 | ---------------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@thrashplay/wishem-host-nodejs`   | Private              | minor | **Breaking**: `startConstruct`, `Construct`, `ConstructOptions` replace `startHost`, `Host`, `HostOptions`. The link replaces `/snapshot(s)`. Writes `state.json`. New dependencies `@thrashplay/wishem-hub` and `ws`. |
-| `@thrashplay/wishem-core`          | Private              | minor | **Breaking**: `createCore`, `Core`, `CoreReader` are removed.                                                                                                                                                          |
+| `@thrashplay/wishem-core`          | Private              | minor | **Breaking**: `createCore`, `Core`, `CoreReader` are removed. The package root exports `isEqual`.                                                                                                                      |
 | `@thrashplay/wishem-workbench-app` | Private              | minor | **Breaking**: `--hub-port` replaces `--core-port`. The page reads through the link. New dependency `@thrashplay/wishem-hub`.                                                                                           |
 | `@thrashplay/wishem-workbench`     | Private              | minor | The `start` script prints the address of the link. The test opens a link. New dev dependency `@thrashplay/wishem-hub`.                                                                                                 |
 
-Each package is private and has the version 0.0.0, so a breaking change is a minor bump. `@thrashplay/wishem-hub` does not change.
+Each package is private and has the version 0.0.0, so a breaking change is a minor bump. This change does not touch `@thrashplay/wishem-hub` or `@thrashplay/wishem-clock`. No package of this change depends on the clock.
 
 ## Risks / Trade-offs
 

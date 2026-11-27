@@ -2,6 +2,25 @@
 
 ## MODIFIED Requirements
 
+### Requirement: The page draws each component that has a view
+
+The page SHALL draw one picture for each component, of each entity in the part `store`, whose component type has a view. The page SHALL draw the pictures in one column, in the order of the entities in the part `store`. The root of the page SHALL NOT have a rule for a specific component type. The order SHALL NOT be a promise to a later version.
+
+#### Scenario: The base workbench
+
+- **WHEN** the model has one entity with an `AppBar` component whose title is `Wishem`
+- **THEN** the page shows one app bar with the title `Wishem`
+
+#### Scenario: Two entities with the same component type
+
+- **WHEN** the authored state has two entities that each have an `AppBar` component
+- **THEN** the page shows two app bars, in the order of the entities, and reports no error
+
+#### Scenario: No entity
+
+- **WHEN** the authored state has no entity
+- **THEN** the page shows no app bar
+
 ### Requirement: The picture follows the model
 
 After each input that changes the part `store` of the joined state, the page SHALL draw the new model. The person SHALL NOT need to reload the page. The page SHALL change the picture only when the part `store` changes.
