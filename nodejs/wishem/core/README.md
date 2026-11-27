@@ -102,6 +102,8 @@ const refused = await form.submit(storeInputs().removeEntity('e_00000000-0000-40
 ## API
 
 - `validateModel(data)`: checks data against the rules of the model. Returns `{ ok: true, model, warnings }` or `{ ok: false, problems }`.
+- `createStore(options)`: makes the store, a model subsystem for a hub. See "The store".
+- `storeInputs(id)`: gives the functions that make the four inputs of a store.
 - `createCore(data)`: makes a core.
 - `core.getSnapshot()`: returns the current snapshot.
 - `core.subscribe(listener)`: registers a listener. Returns a function that removes it.
