@@ -260,7 +260,7 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     expect(watcher.close).toHaveBeenCalledOnce()
   })
 
-  it('waits for a read that is running at close, and prints no line for not-running', async () => {
+  it('waits for a read that is running at close, and prints no line for a stopped hub', async () => {
     start()
     await pause(150)
     await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Hand edit')))
@@ -276,7 +276,7 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     expect(closed).toBe(false)
     release()
     await closing
-    expect(lines.filter((line) => line.includes('not-running') || line.includes('problem'))).toEqual([])
+    expect(lines).toEqual([])
   })
 
   it('writes a pending write before close resolves', async () => {
@@ -354,6 +354,87 @@ describe('the storage subsystem with a controlled watcher, reader, and writer', 
     watcher.change()
     await eventually(() => title() === 'After failure')
     expect(lines.filter((line) => line.includes('cannot read the model'))).toHaveLength(1)
+  })
+
+  it('writes again when an input restores the content that was last read', async () => {
+    start()
+    await pause(150)
+    await setTitle('A')
+    await eventually(async () => (await fileTitle()) === 'A')
+    await setTitle('Wishem')
+    await eventually(async () => (await fileTitle()) === 'Wishem')
+  })
+
+  it('prints the warnings of a change that the first quiet read finds', async () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    await writeFile(path.join(folder, 'definitions', 'other.json'), JSON.stringify({ ...definition, id: other }))
+    start()
+    await eventually(() => store().definitions.length === 2)
+    await pause(100)
+    expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+  })
+
+  it('prints the warnings for a read of a model that did not change, after a change of the files', async () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    await writeFile(path.join(folder, 'definitions', 'other.json'), JSON.stringify({ ...definition, id: other }))
+    const result = validateModel((await actualRead(folder)).data)
+    if (!result.ok) {
+      throw new Error('the fixture is not correct')
+    }
+    first = result.model
+    start()
+    await pause(150)
+    expect(lines.filter((line) => line.includes('warning'))).toHaveLength(0)
+    const count = reads()
+    watcher.change()
+    await eventually(() => reads() > count)
+    await pause(50)
+    expect(lines.filter((line) => line.includes('warning'))).toHaveLength(1)
+  })
+
+  it('does not read a change that waits behind a write when close starts', async () => {
+    start()
+    await pause(150)
+    const release = holdNextWrite()
+    await setTitle('A')
+    await eventually(() => vi.mocked(fsp.writeFile).mock.calls.length === 1)
+    watcher.change()
+    await pause(150)
+    const count = reads()
+    const closing = storage.close()
+    release()
+    await closing
+    expect(reads()).toBe(count)
+  })
+
+  it('writes an input that arrives while close waits for a read', async () => {
+    start()
+    await pause(150)
+    const release = holdNextRead()
+    watcher.change()
+    await eventually(() => reads() >= 2)
+    const closing = storage.close()
+    await setTitle('Late')
+    release()
+    await closing
+    expect(await fileTitle()).toBe('Late')
+  })
+
+  it('names state.json for a refusal of the entities by the store', async () => {
+    const refusing: ModelSubsystem<Model> = {
+      id: 'store',
+      inputs: ['store/replace-model', 'store/set-field'],
+      initial: first,
+      apply: () => {
+        throw new InputRefusedError([{ message: 'The store says no', path: ['entities', 0] }])
+      },
+    }
+    start(createHub({ subsystems: [refusing] }))
+    await pause(150)
+    await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('Edited')))
+    watcher.change()
+    await eventually(() => lines.includes('wishem: the last correct model stays'))
+    expect(lines).toContain('wishem: problem in state.json: The store says no')
   })
 
   it('follows a change that is made between the first read and the start of the watch', async () => {

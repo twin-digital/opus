@@ -124,6 +124,7 @@ describe('the storage subsystem for files', () => {
       await eventually(() => title() === 'Edited')
       await pause(200)
       expect(storeInputsRecorded().map(({ type }) => type)).toEqual(['store/replace-model'])
+      expect(hub.record().map(({ source }) => source)).toEqual(['files'])
       expect(writes()).toBe(0)
     })
   })
@@ -172,6 +173,13 @@ describe('the storage subsystem for files', () => {
   })
 
   describe('The last correct model stays', () => {
+    it('names state.json for a model that is not correct although the JSON is valid', async () => {
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify({ entities: [{ id: 'bad' }] }))
+      await eventually(() => lines.includes('wishem: the last correct model stays'))
+      expect(lines.some((line) => line.startsWith('wishem: problem in state.json:'))).toBe(true)
+      expect(title()).toBe('Wishem')
+    })
+
     it('keeps the model for a file that is saved in part', async () => {
       const before = store()
       const count = hub.record().length
@@ -257,6 +265,14 @@ describe('the storage subsystem for files', () => {
       expect(hub.record()).toHaveLength(count)
     })
 
+    it('keeps a definition that an input changed when only state.json is saved', async () => {
+      const renamed = { definitions: [definition('Renamed')], entities: store().entities }
+      expect((await client.submit(inputs.replaceModel(renamed as Model))).ok).toBe(true)
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('By hand')))
+      await eventually(() => title() === 'By hand')
+      expect(store().definitions[0]?.label).toBe('Renamed')
+    })
+
     it('keeps the same part and writes nothing for a full model that is equal', async () => {
       const before = store()
       const result = await client.submit(inputs.replaceModel(JSON.parse(JSON.stringify(before)) as Model))
@@ -302,8 +318,29 @@ describe('the storage subsystem for files', () => {
     })
   })
 
-  it('attaches the subsystems files and files-writer', () => {
-    expect(() => hub.attach({ id: FILES_ID, kind: 'input' })).toThrow()
-    expect(() => hub.attach({ id: FILES_WRITER_ID, kind: 'output' })).toThrow()
+  describe('the subsystems of the storage', () => {
+    it('attaches the subsystems files and files-writer', () => {
+      expect(FILES_ID).toBe('files')
+      expect(FILES_WRITER_ID).toBe('files-writer')
+      expect(() => hub.attach({ id: 'files', kind: 'input' })).toThrow()
+      expect(() => hub.attach({ id: 'files-writer', kind: 'output' })).toThrow()
+    })
+
+    it('frees both subsystems at close', async () => {
+      await storage.close()
+      expect(() => {
+        hub.attach({ id: 'files', kind: 'input' }).close()
+      }).not.toThrow()
+      expect(() => {
+        hub.attach({ id: 'files-writer', kind: 'output' }).close()
+      }).not.toThrow()
+    })
+
+    it('frees files when files-writer is already attached', () => {
+      const other = createHub({ subsystems: [createStore({ model: store() })] })
+      other.attach({ id: 'files-writer', kind: 'output' })
+      expect(() => attachModelFolderStorage({ folder, hub: other, first: store(), log: () => undefined })).toThrow()
+      expect(() => other.attach({ id: 'files', kind: 'input' })).not.toThrow()
+    })
   })
 })

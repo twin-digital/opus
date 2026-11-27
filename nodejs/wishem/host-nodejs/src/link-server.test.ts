@@ -1,11 +1,12 @@
 import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import type { Duplex } from 'node:stream'
 import { createStore, storeInputs, validateModel } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { createHub, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { Hub, HubEvent, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { attachLinkServer, isAllowedOrigin, respondNotFound } from './link-server.js'
 import type { LinkServer } from './link-server.js'
@@ -16,9 +17,9 @@ const E = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const eventually = async (check: () => boolean, ms = 2000) => {
+const eventually = async (check: () => boolean | Promise<boolean>, ms = 2000) => {
   const deadline = Date.now() + ms
-  while (!check()) {
+  while (!(await check())) {
     if (Date.now() > deadline) {
       throw new Error('timeout')
     }
@@ -135,6 +136,11 @@ describe('the server of the link', () => {
       expect(part.entities).toHaveLength(1)
     })
 
+    it('opens a link for a request that has a query string', async () => {
+      const link = await open('page-a', '/link?client=1')
+      expect((link.ports['page-a'].read().store as Model).entities).toHaveLength(1)
+    })
+
     it('sends one applied message to each of two links', async () => {
       const one = await open('page-a')
       const two = await open('page-b')
@@ -200,13 +206,71 @@ describe('the server of the link', () => {
   })
 
   describe('close', () => {
-    it('terminates each open socket and gives one promise for each call', async () => {
+    /** Opens a raw WebSocket and gives its close code and the time of the close. */
+    const openRaw = async () => {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}/link`)
+      sockets.push(socket)
+      await new Promise<void>((resolve, reject) => {
+        socket.once('open', () => {
+          resolve()
+        })
+        socket.once('error', reject)
+      })
+      const closed = new Promise<number>((resolve) => {
+        socket.once('close', (code) => {
+          resolve(code)
+        })
+      })
+      return { socket, closed }
+    }
+
+    it('gives one promise for each call', async () => {
       const link = await open('page-a')
       const first = linkServer.close()
       expect(linkServer.close()).toBe(first)
       await first
       await link.closed
       expect(sockets.every((socket) => socket.readyState === WebSocket.CLOSED)).toBe(true)
+    })
+
+    it('closes an open socket with a close frame, and does not wait for the grace time', async () => {
+      const { closed } = await openRaw()
+      const begin = Date.now()
+      await linkServer.close()
+      expect(await closed).not.toBe(1006)
+      expect(Date.now() - begin).toBeLessThan(500)
+    })
+
+    it('leaves no timer after close', async () => {
+      const { closed } = await openRaw()
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      try {
+        await linkServer.close()
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.useRealTimers()
+      }
+      await closed
+    })
+
+    it('terminates a socket that does not answer the close frame after one second', async () => {
+      const { socket, closed } = await openRaw()
+      const raw = (socket as unknown as { _socket: Duplex })._socket
+      raw.pause()
+      const begin = Date.now()
+      await linkServer.close()
+      const elapsed = Date.now() - begin
+      expect(elapsed).toBeGreaterThanOrEqual(900)
+      expect(elapsed).toBeLessThan(2500)
+      const open = () =>
+        new Promise<number>((resolve) => {
+          server.getConnections((_error, count) => {
+            resolve(count)
+          })
+        })
+      await eventually(async () => (await open()) === 0, 500)
+      raw.resume()
+      await closed
     })
   })
 })

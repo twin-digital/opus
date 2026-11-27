@@ -1,7 +1,8 @@
 import { createServer } from 'node:http'
 import type { watch as watchType } from 'node:fs'
 import { watch } from 'node:fs'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { connect } from 'node:net'
 import type { AddressInfo } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import path from 'node:path'
@@ -130,6 +131,16 @@ describe('startConstruct', () => {
       const started = await start()
       const address = new URL(started.url)
       expect(address.hostname).toBe('127.0.0.1')
+      const other = await new Promise<string>((resolve) => {
+        const socket = new WebSocket(`ws://127.0.0.2:${address.port}/link`)
+        socket.on('open', () => {
+          resolve('open')
+        })
+        socket.on('error', () => {
+          resolve('refused')
+        })
+      })
+      expect(other).toBe('refused')
       const external = Object.values(networkInterfaces())
         .flat()
         .find((item) => item?.family === 'IPv4' && !item.internal)
@@ -173,12 +184,47 @@ describe('startConstruct', () => {
     it('refuses a client that connects during close()', async () => {
       const started = await start()
       const closing = started.close()
+      expect(started.hub.status).toBe('stopped')
       const outcome = await open(started, 'page-a').then(
         () => 'opened',
         (error: unknown) => (error instanceof LinkRefusedError ? error.reason : 'connection refused'),
       )
       await closing
       expect(['stopped', 'connection refused']).toContain(outcome)
+    })
+
+    it('closes an HTTP connection that sends a partial request without a wait', async () => {
+      const started = await start()
+      const client = connect(Number(new URL(started.url).port), '127.0.0.1')
+      await new Promise<void>((resolve) => client.once('connect', resolve))
+      client.on('error', () => undefined)
+      client.write('GET /x HTTP/1.1\r\nHost: 127.0.0.1\r\n')
+      await pause(50)
+      const outcome = await Promise.race([started.close().then(() => 'closed'), pause(1500).then(() => 'waiting')])
+      client.destroy()
+      expect(outcome).toBe('closed')
+    })
+
+    it('closes the connection of a link with a close frame', async () => {
+      const started = await start()
+      const socket = new WebSocket(started.linkUrl)
+      sockets.push(socket)
+      const code = new Promise<number>((resolve) => socket.once('close', resolve))
+      await new Promise<void>((resolve) => socket.once('open', resolve))
+      await started.close()
+      expect(await code).not.toBe(1006)
+    })
+
+    it('writes an input that arrives directly before close()', async () => {
+      const started = await start()
+      const sender = started.hub.attach({ id: 'sender', kind: 'input' })
+      await sender.submit({
+        type: 'store/set-field',
+        payload: { entity: E, componentType: CT, field: FLD, value: 'Last words' },
+      })
+      await started.close()
+      const text = await readFile(path.join(folder, 'state.json'), 'utf8')
+      expect(text).toContain('Last words')
     })
 
     it('gives the same promise for each call of close()', async () => {
@@ -240,6 +286,21 @@ describe('startConstruct', () => {
     expect(await canListen(port)).toBe(true)
   })
 
+  it('prints to the terminal when no log function is given', async () => {
+    const other = 'ct_7a1c2d3e-4b5f-4a6b-8c7d-9e0f1a2b3c4d'
+    await writeFile(
+      path.join(folder, 'definitions', 'other.json'),
+      JSON.stringify({ id: other, label: 'AppBar', fields: [] }),
+    )
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    try {
+      construct = await startConstruct({ folder, port: 0 })
+      expect(spy.mock.calls.some(([line]) => String(line).includes('warning'))).toBe(true)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('gives url and linkUrl with the port that the system selected', async () => {
     const started = await start()
     const { port } = new URL(started.url)
@@ -248,7 +309,7 @@ describe('startConstruct', () => {
     expect(started.linkUrl).toBe(`ws://127.0.0.1:${port}/link`)
   })
 
-  it('prints the warnings of the first model and the failure of a listener', async () => {
+  it('prints the failure of a listener', async () => {
     const started = await start()
     expect(started.hub.status).toBe('running')
     expect(lines.filter((line) => line.includes('a listener failed'))).toEqual([])
