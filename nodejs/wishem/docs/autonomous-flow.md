@@ -110,6 +110,7 @@ Then:
 - Give the issue the type `Question`. Put it in the milestone `[WSH] Discovery`, add it to the project, and assign it to the owner.
 - Set the status of each task that waits to `Blocked`.
 - Continue with a task that is not blocked. Keep one subagent at work when such a task exists.
+- When no task can start after the task in progress, see "A notice to the phone of the owner".
 - The owner answers on the issue and tells the lead agent. Record the answer in the OpenSpec change that uses it, set the tasks that waited to `Todo`, and close the discovery issue.
 
 ## How a change is made
@@ -182,6 +183,38 @@ Stop and tell the owner in each of these cases:
 - A milestone fails its final review two times.
 - The checks on `main` stay red after one attempt to correct them.
 - The credentials do not work. Read `/creds/status/`. Continue with the work that needs no credentials, and do not try a different way to get access.
+
+## A notice to the phone of the owner
+
+Do the steps of this section only if the owner gave Pushover credentials to this session. If the owner gave none, ignore this section. The owner tells the session how to get the credentials. Do not write the credentials in a file of the repository, in an issue, or in a brief.
+
+GitHub tells the owner about each discovery issue and each review issue, because the issue is assigned to the owner. A notice to the phone is for the cases in which the work stops or is about to stop.
+
+### When to send a notice
+
+- **The work is about to stop.** No task with the status `Todo` can start, and at least one task is `Blocked` by a discovery issue. Send the notice when this condition becomes true, also when an agent still works on a task. Reason: the owner can answer before that agent completes its task, and then the work does not stop.
+- **The work stopped.** Each case of "When to stop": a milestone fails its final review two times, the checks on `main` stay red, or the credentials do not work.
+
+Send one notice for each set of open discovery issues. Send a new notice only when the set changes. Do not send a notice for a question that blocks only a part of the work, or for a review issue.
+
+### What a notice holds
+
+- A title that says what the owner must do. Example: "Wishem: answer 2 questions to keep the work going".
+- The number and the link of each discovery issue that blocks, or the cause of the stop.
+- No secret, no code, and no text of an issue.
+
+### How to send a notice
+
+Pushover needs two values: the token of the application and the key of the user.
+
+```bash
+curl --silent --fail https://api.pushover.net/1/messages.json \
+  --form-string "token=<application token>" --form-string "user=<user key>" \
+  --form-string "title=<title>" --form-string "message=<message>" \
+  --form-string "url=<link to the first issue>"
+```
+
+If the request fails, add a note to **Process notes** and continue. A notice that fails does not stop the work.
 
 ## How a session continues the work
 
