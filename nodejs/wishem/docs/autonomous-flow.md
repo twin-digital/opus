@@ -125,6 +125,25 @@ Each feature has an OpenSpec change and a specification. The `CLAUDE.md` of the 
 - The rules of `main` require that the branch is up to date. When `main` has a new commit, run `gh pr update-branch <number>` and wait for the checks again.
 - Merge the pull request with a squash merge when each check is green. Then remove the worktree and set the issue to `Done`.
 
+## The scope of a task
+
+A task does what its issue and its plan say. Work on a task finds other things: a fault in code that the task did not change, an improvement, a minor finding of a review. Do not do them in the task. Reason: a task that grows causes rework, and its pull request is harder to review.
+
+Correct a finding in the task only when one of these conditions is true:
+
+- The change does not do what its specification says.
+- A check of the pull request fails.
+- A later correction needs a breaking change to an interface that the task adds.
+
+For each other finding, create a follow-up issue:
+
+- Give the issue the type, the label `app:wishem`, and a milestone: the milestone of the outcome that the finding belongs to, or `[WSH] R1 Tech Debt`. Add it to the project.
+- Put a link to the pull request or to the review that found it in the issue.
+- Put related findings of one review in one issue.
+- Start a follow-up issue in its turn, as each other task. A follow-up issue that changes no behavior does not need an OpenSpec change.
+
+The brief of each subagent says: report each thing that is not in the scope of the task, and do not correct it.
+
 ## When a milestone is complete
 
 1. If the milestone has more than three changes, review the full result of the milestone with a subagent that did not write it. Correct each fault that the review finds.
