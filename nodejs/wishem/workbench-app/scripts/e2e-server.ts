@@ -16,7 +16,7 @@ const startModule = './start.ts'
 const { startWorkbench } = (await import(startModule)) as typeof import('./start.js')
 
 // The generator stays off so that the tests change no file of the repository.
-const workbench = await startWorkbench({ model: copy, port: PAGE_PORT, corePort: 0, viewTypes: false })
+const workbench = await startWorkbench({ model: copy, port: PAGE_PORT, hubPort: 0, viewTypes: false })
 
 const stop = () => {
   workbench.close().then(

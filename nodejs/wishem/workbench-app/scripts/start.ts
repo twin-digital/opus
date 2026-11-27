@@ -1,13 +1,14 @@
-// Starts the core of the workbench and the page server in one Node.js process.
-// Usage: node start.ts [--model <folder>] [--port <number>] [--core-port <number>]
+// Starts the construct of the workbench and the page server in one Node.js process.
+// Usage: node start.ts [--model <folder>] [--port <number>] [--hub-port <number>]
 //   [--views <folder>] [--no-view-types]
 import type { AddressInfo } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createServer, type ViteDevServer } from 'vite'
-import { ModelError, type Core } from '@thrashplay/wishem-core'
-import { startHost } from '@thrashplay/wishem-host-nodejs'
+import { ModelError, type Model } from '@thrashplay/wishem-core'
+import { startConstruct } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
+import type { Hub } from '@thrashplay/wishem-hub'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 import { generateViewTypes } from './view-types.ts'
 import { viewTypesLines } from './view-types-report.ts'
@@ -18,7 +19,7 @@ export interface WorkbenchOptions {
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
   /** Default 4747. Use 0 to let the system select a port. */
-  corePort?: number
+  hubPort?: number
   /** The folder whose generated files follow the model. Default: `src/views` of the package. */
   views?: string
   /** Default `true`. */
@@ -30,8 +31,8 @@ export interface WorkbenchOptions {
 export interface Workbench {
   /** For example `http://127.0.0.1:5173/`. */
   pageUrl: string
-  /** For example `http://127.0.0.1:4747`. */
-  coreUrl: string
+  /** For example `ws://127.0.0.1:4747/link`. */
+  linkUrl: string
   close(): Promise<void>
 }
 
@@ -39,7 +40,7 @@ export interface Workbench {
 export class StartError extends Error {}
 
 const DEFAULT_PAGE_PORT = 5173
-const DEFAULT_CORE_PORT = 4747
+const DEFAULT_HUB_PORT = 4747
 const PAGE_ADDRESS = '127.0.0.1'
 const packageRoot = resolve(import.meta.dirname, '..')
 const SIDECAR_SUFFIX = '.view.json'
@@ -49,22 +50,24 @@ const isPortInUse = (error: unknown) =>
   ((error as { code?: string }).code === 'EADDRINUSE' || error.message.includes('already in use'))
 
 interface KeeperOptions {
-  core: Core
+  hub: Hub
   server: ViteDevServer
   views: string
   log: (line: string) => void
 }
 
 /** Runs the generator at the start, after a change to the definitions, and after a change to a sidecar. */
-const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
+const keepViewTypesCurrent = ({ hub, server, views, log }: KeeperOptions) => {
   const state: { running?: Promise<void>; again: boolean } = { again: false }
-  let lastDefinitions = JSON.stringify(core.getSnapshot().definitions)
+  const port = hub.attach({ id: 'view-types', kind: 'output' })
+  const definitionsOf = () => (port.read().store as Model).definitions
+  let lastDefinitions = JSON.stringify(definitionsOf())
 
   const hasRequest = () => state.again
 
   const runOnce = async () => {
     try {
-      const result = await generateViewTypes({ definitions: core.getSnapshot().definitions, views })
+      const result = await generateViewTypes({ definitions: definitionsOf(), views })
       viewTypesLines(result).forEach(log)
     } catch (error) {
       log(`wishem: error: the generator failed (${error instanceof Error ? error.message : String(error)})`)
@@ -86,8 +89,11 @@ const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
     })()
   }
 
-  const unsubscribe = core.subscribe((snapshot) => {
-    const definitions = JSON.stringify(snapshot.definitions)
+  const unsubscribe = port.subscribe((event) => {
+    if (event.type !== 'applied') {
+      return
+    }
+    const definitions = JSON.stringify(definitionsOf())
     if (definitions !== lastDefinitions) {
       lastDefinitions = definitions
       request()
@@ -107,6 +113,7 @@ const keepViewTypesCurrent = ({ core, server, views, log }: KeeperOptions) => {
   return {
     stop: async () => {
       unsubscribe()
+      port.close()
       server.watcher.off('add', onSidecar).off('change', onSidecar).off('unlink', onSidecar)
       server.watcher.unwatch(views)
       await state.running
@@ -118,7 +125,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   const {
     model = modelFolder,
     port = DEFAULT_PAGE_PORT,
-    corePort = DEFAULT_CORE_PORT,
+    hubPort = DEFAULT_HUB_PORT,
     views = resolve(packageRoot, 'src', 'views'),
     viewTypes = true,
   } = options
@@ -130,9 +137,9 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
 
   log(`wishem: model ${model}`)
 
-  let host
+  let construct
   try {
-    host = await startHost({ folder: model, port: corePort, log })
+    construct = await startConstruct({ folder: model, port: hubPort, log })
   } catch (error) {
     if (error instanceof ModelError) {
       error.problems.forEach((problem) => {
@@ -142,13 +149,13 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
       throw new StartError('the model is not correct')
     }
     if (isPortInUse(error)) {
-      log(`wishem: port ${corePort} is in use`)
-      throw new StartError('the port of the core is in use')
+      log(`wishem: port ${hubPort} is in use`)
+      throw new StartError('the port of the hub is in use')
     }
     throw error
   }
 
-  const proxy = { target: host.url, changeOrigin: false }
+  const proxy = { target: construct.url, ws: true, changeOrigin: false }
   let server: ViteDevServer | undefined
   try {
     server = await createServer({
@@ -158,7 +165,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
         host: PAGE_ADDRESS,
         port,
         strictPort: true,
-        proxy: { '^/snapshots?$': proxy },
+        proxy: { '^/link$': proxy },
       },
     })
     await server.listen()
@@ -168,7 +175,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
     } catch {
       // The start error below is the one to report.
     } finally {
-      await host.close()
+      await construct.close()
     }
     if (isPortInUse(error)) {
       log(`wishem: port ${port} is in use`)
@@ -178,18 +185,18 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   }
 
   const pageUrl = `http://${PAGE_ADDRESS}:${String((server.httpServer?.address() as AddressInfo).port)}/`
-  log(`wishem: core at ${host.url}`)
+  log(`wishem: link at ${construct.linkUrl}`)
   log(`wishem: workbench at ${pageUrl}`)
 
-  const keeper = viewTypes ? keepViewTypesCurrent({ core: host.core, server, views, log }) : undefined
+  const keeper = viewTypes ? keepViewTypesCurrent({ hub: construct.hub, server, views, log }) : undefined
 
   return {
     pageUrl,
-    coreUrl: host.url,
+    linkUrl: construct.linkUrl,
     close: async () => {
       await keeper?.stop()
       await server.close()
-      await host.close()
+      await construct.close()
     },
   }
 }
@@ -211,7 +218,7 @@ const main = async () => {
       options: {
         model: { type: 'string' },
         port: { type: 'string' },
-        'core-port': { type: 'string' },
+        'hub-port': { type: 'string' },
         views: { type: 'string' },
         'no-view-types': { type: 'boolean' },
       },
@@ -220,7 +227,7 @@ const main = async () => {
       // pnpm runs the script in the package folder and sets INIT_CWD to the folder of the person.
       model: values.model === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.model),
       port: parsePort('--port', values.port, DEFAULT_PAGE_PORT),
-      corePort: parsePort('--core-port', values['core-port'], DEFAULT_CORE_PORT),
+      hubPort: parsePort('--hub-port', values['hub-port'], DEFAULT_HUB_PORT),
       views: values.views === undefined ? undefined : resolve(process.env.INIT_CWD ?? process.cwd(), values.views),
       viewTypes: values['no-view-types'] !== true,
     })
