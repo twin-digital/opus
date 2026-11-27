@@ -353,7 +353,7 @@ describe('Renderer', () => {
             ...model,
             definitions: [
               { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: 'heading', type: 'string' }] },
-              model.definitions[1] as Model['definitions'][number],
+              model.definitions[1],
             ],
           }),
         )
@@ -382,7 +382,7 @@ describe('Renderer', () => {
     it('gives the element of a view its entity from the wrapper', () => {
       draw(startWorld(baseModel()).output)
       const element = container.querySelectorAll('.a')[1]
-      expect(element?.closest<HTMLElement>('[data-wishem-entity]')?.dataset.wishemEntity).toBe(E2)
+      expect(element.closest<HTMLElement>('[data-wishem-entity]')?.dataset.wishemEntity).toBe(E2)
     })
 
     it('gives a view no value for a field that the component omits', () => {

@@ -6,7 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 const plugin = /** @type {import('eslint').ESLint.Plugin} */ (/** @type {unknown} */ (reactHooks))
 
 /** @type {import('eslint').Linter.Config[]} */
-export default [
+const config = [
   { ignores: ['dist'] },
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -17,3 +17,5 @@ export default [
     },
   },
 ]
+
+export default config
