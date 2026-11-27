@@ -1,19 +1,25 @@
 import { createServer } from 'node:http'
-import type { watch as watchType } from 'node:fs'
+import type { FSWatcher, PathLike } from 'node:fs'
 import { watch } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import type { AddressInfo } from 'node:net'
 import { networkInterfaces, tmpdir } from 'node:os'
 import path from 'node:path'
-import { ModelError } from '@thrashplay/wishem-core'
+import { ModelError, storeInputs } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { createHub, LinkRefusedError, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
-import type { Hub, HubEvent, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs, LinkRefusedError, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import type { Hub, HubEvent, Port, RemoteLink, WebSocketLike } from '@thrashplay/wishem-hub'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { FILES_ID } from './model-folder-storage.js'
-import { startConstruct } from './start-construct.js'
+import { readModelFolder } from './read-model-folder.js'
+import {
+  PRODUCT_FILES_ID,
+  PRODUCT_FILES_WRITER_ID,
+  PRODUCT_ID,
+  startConstruct,
+} from './start-construct.js'
 import type { Construct } from './start-construct.js'
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -26,6 +32,14 @@ vi.mock('@thrashplay/wishem-hub', async (importOriginal) => {
   return { ...actual, createHub: vi.fn(actual.createHub) }
 })
 
+vi.mock('./read-model-folder.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./read-model-folder.js')>()
+  return { ...actual, readModelFolder: vi.fn(actual.readModelFolder) }
+})
+
+const actualReadModelFolder = (await vi.importActual<typeof import('./read-model-folder.js')>('./read-model-folder.js'))
+  .readModelFolder
+const actualCreateHub = (await vi.importActual<typeof import('@thrashplay/wishem-hub')>('@thrashplay/wishem-hub')).createHub
 const actualWatch = (await vi.importActual<typeof import('node:fs')>('node:fs')).watch
 
 const CT = 'ct_3f2a9c1e-8b47-4d0a-9e51-6c2f7a1b0d34'
@@ -34,9 +48,9 @@ const E = 'e_c0d5e6f1-7a82-4b93-a104-5d6e7f8091a2'
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const eventually = async (check: () => boolean, ms = 2000) => {
+const eventually = async (check: () => boolean | Promise<boolean>, ms = 2000) => {
   const deadline = Date.now() + ms
-  while (!check()) {
+  while (!(await check())) {
     if (Date.now() > deadline) {
       throw new Error('timeout')
     }
@@ -389,5 +403,433 @@ describe('startConstruct', () => {
     const result = await example(folder)
     expect(result.link).toMatch(/^ws:\/\/127\.0\.0\.1:\d+\/link$/)
     expect((result.store as Model).entities).toHaveLength(1)
+  })
+})
+
+describe('startConstruct with a product', () => {
+  const COLOR_CT = 'ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512'
+  const COLOR_FLD = 'fld_694d6cb2-97e8-444e-961e-aa76744837fb'
+  const COUNTER_CT = 'ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d'
+  const COUNT_FLD = 'fld_ef085a2e-22ef-4409-bac4-9cd5648d0705'
+  const PRODUCT_E = 'e_99969ed3-f499-4dbb-bf6d-958db4542884'
+
+  const colorDefinition = {
+    id: COLOR_CT,
+    label: 'Color',
+    fields: [{ id: COLOR_FLD, label: 'value', type: 'string' }],
+  }
+  const counterDefinition = (label: string) => ({
+    id: COUNTER_CT,
+    label,
+    fields: [{ id: COUNT_FLD, label: 'count', type: 'string' }],
+  })
+  const productState = (count: string) => ({
+    entities: [
+      { id: PRODUCT_E, components: { [COLOR_CT]: { [COLOR_FLD]: '#1d4ed8' }, [COUNTER_CT]: { [COUNT_FLD]: count } } },
+    ],
+  })
+
+  let folder: string
+  let productFolder: string
+  let lines: string[]
+  let construct: Construct | undefined
+
+  const writeModel = async (target: string, definitions: object[], stateValue: object) => {
+    await mkdir(path.join(target, 'definitions'), { recursive: true })
+    for (const item of definitions) {
+      await writeFile(path.join(target, 'definitions', `${(item as { id: string }).id}.json`), JSON.stringify(item))
+    }
+    await writeFile(path.join(target, 'state.json'), JSON.stringify(stateValue))
+  }
+
+  const start = async (options: { port?: number; product?: string; onWatchError?: (error: Error) => void } = {}) => {
+    construct = await startConstruct({
+      folder,
+      product: productFolder,
+      port: 0,
+      log: (line) => lines.push(line),
+      ...options,
+    })
+    return construct
+  }
+
+  const part = (target: Construct, id: string) => target.hub.read()[id] as Model
+  const count = (target: Construct) => part(target, 'product').entities[0]?.components[COUNTER_CT]?.[COUNT_FLD]
+  const workbenchTitle = (target: Construct) => part(target, 'store').entities[0]?.components[CT]?.[FLD]
+  const fileHas = async (target: string, text: string) => (await readFile(path.join(target, 'state.json'), 'utf8')).includes(text)
+  const client = (target: Construct) => target.hub.attach({ id: 'client', kind: 'input' })
+  const setCount = (port: Port, value: string) =>
+    port.submit(storeInputs('product').setField({ entity: PRODUCT_E, componentType: COUNTER_CT, field: COUNT_FLD, value }))
+  const setTitle = (port: Port, value: string) =>
+    port.submit(storeInputs().setField({ entity: E, componentType: CT, field: FLD, value }))
+  const relabelProduct = (target: Construct, port: Port) =>
+    port.submit(
+      storeInputs('product').replaceModel({
+        definitions: [colorDefinition, counterDefinition('Renamed')],
+        entities: part(target, 'product').entities,
+      } as Model),
+    )
+  const productFile = () => path.join(productFolder, 'state.json')
+
+  /** Records the ID of each port that the hub gives out, each time that the port closes. */
+  const trackClosedPorts = () => {
+    const closed: string[] = []
+    vi.mocked(createHub).mockImplementationOnce((options) => {
+      const hub = actualCreateHub(options)
+      const attach = hub.attach.bind(hub)
+      hub.attach = ((request: Parameters<Hub['attach']>[0]) => {
+        const port = attach(request)
+        const close = port.close.bind(port)
+        port.close = () => {
+          closed.push(request.id)
+          close()
+        }
+        return port
+      }) as Hub['attach']
+      return hub
+    })
+    return closed
+  }
+  const FOUR_IDS = [FILES_ID, 'files-writer', PRODUCT_FILES_ID, PRODUCT_FILES_WRITER_ID].sort()
+
+  beforeEach(async () => {
+    lines = []
+    construct = undefined
+    vi.mocked(createHub).mockClear()
+    vi.mocked(watch).mockReset()
+    vi.mocked(watch).mockImplementation(actualWatch)
+    vi.mocked(readModelFolder).mockReset()
+    vi.mocked(readModelFolder).mockImplementation(actualReadModelFolder)
+    folder = await mkdtemp(path.join(tmpdir(), 'wishem-construct-'))
+    productFolder = await mkdtemp(path.join(tmpdir(), 'wishem-product-'))
+    await writeModel(folder, [definition], state('Wishem'))
+    await writeModel(productFolder, [colorDefinition, counterDefinition('Counter')], productState('0'))
+  })
+
+  afterEach(async () => {
+    await construct?.close()
+    vi.mocked(readModelFolder).mockImplementation(actualReadModelFolder)
+    await rm(folder, { recursive: true, force: true })
+    await rm(productFolder, { recursive: true, force: true })
+  })
+
+  describe('A mounted product is a second store', () => {
+    it('holds the workbench in the part store and the product in the part product', async () => {
+      const started = await start()
+      expect(part(started, 'store').definitions.map(({ label }) => label)).toEqual(['AppBar'])
+      expect(part(started, 'product').definitions.map(({ label }) => label).sort()).toEqual(['Color', 'Counter'])
+      expect(part(started, 'product').entities).toHaveLength(1)
+    })
+
+    it('exports the IDs of the product', () => {
+      expect([PRODUCT_ID, PRODUCT_FILES_ID, PRODUCT_FILES_WRITER_ID]).toEqual([
+        'product',
+        'product-files',
+        'product-files-writer',
+      ])
+    })
+
+    it('changes the part product and not the part store for an input to the product', async () => {
+      const started = await start()
+      const before = part(started, 'store')
+      expect((await setCount(client(started), '7')).ok).toBe(true)
+      expect(count(started)).toBe('7')
+      expect(part(started, 'store')).toBe(before)
+    })
+
+    it('changes the part store and not the part product for an input to the workbench', async () => {
+      const started = await start()
+      const before = part(started, 'product')
+      expect(before.entities).toHaveLength(1)
+      expect((await setTitle(client(started), 'Second')).ok).toBe(true)
+      expect(part(started, 'product')).toBe(before)
+    })
+
+    it('has no part product and refuses a product input when no product is mounted', async () => {
+      const started = await start({ product: undefined })
+      expect(Object.keys(started.hub.read())).not.toContain('product')
+      const outcome = await setCount(client(started), '7')
+      expect(outcome).toMatchObject({ ok: false, reason: 'unknown-type' })
+    })
+
+    it('refuses a product entity with a component of the workbench', async () => {
+      const started = await start()
+      const before = part(started, 'product')
+      const outcome = await client(started).submit(
+        storeInputs('product').addEntity({
+          entity: { id: 'e_d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6', components: { [CT]: { [FLD]: 'x' } } },
+        }),
+      )
+      expect(outcome).toMatchObject({ ok: false, reason: 'invalid' })
+      expect(part(started, 'product')).toBe(before)
+    })
+  })
+
+  describe('Each model has its own model folder', () => {
+    it('follows a hand edit of the product with one product/replace-model input', async () => {
+      const started = await start()
+      const before = part(started, 'store')
+      await writeFile(productFile(), JSON.stringify(productState('5')))
+      await eventually(() => count(started) === '5')
+      await pause(200)
+      expect(started.hub.record().map(({ type, source }) => [type, source])).toEqual([
+        ['product/replace-model', PRODUCT_FILES_ID],
+      ])
+      expect(part(started, 'store')).toBe(before)
+    })
+
+    it('writes the product input to the product folder only', async () => {
+      const started = await start()
+      await setCount(client(started), '7')
+      await eventually(() => fileHas(productFolder, '"7"'))
+      await pause(200)
+      expect(JSON.parse(await readFile(path.join(folder, 'state.json'), 'utf8'))).toEqual(state('Wishem'))
+    })
+
+    it('writes the workbench input to the model folder only', async () => {
+      const started = await start()
+      await setTitle(client(started), 'Second')
+      await eventually(() => fileHas(folder, 'Second'))
+      await pause(200)
+      expect(JSON.parse(await readFile(productFile(), 'utf8'))).toEqual(productState('0'))
+    })
+
+    it('keeps the count of the product after a stop and a start', async () => {
+      const first = await start()
+      await setCount(client(first), '9')
+      await first.close()
+      const again = await start()
+      expect(count(again)).toBe('9')
+    })
+
+    it('restores the product with a rewind and writes its file', async () => {
+      const started = await start()
+      const port = client(started)
+      const before = started.hub.record().at(-1)?.seq ?? 0
+      await setCount(port, '3')
+      await eventually(() => fileHas(productFolder, '"3"'))
+      expect((await port.submit(hubInputs.rewind(before))).ok).toBe(true)
+      await eventually(() => fileHas(productFolder, '"0"'))
+      expect(count(started)).toBe('0')
+      expect(JSON.parse(await readFile(path.join(folder, 'state.json'), 'utf8'))).toEqual(state('Wishem'))
+    })
+
+    it('restores the two models with one rewind and writes the two files', async () => {
+      const started = await start()
+      const port = client(started)
+      const before = started.hub.record().at(-1)?.seq ?? 0
+      await setTitle(port, 'Second')
+      await setCount(port, '3')
+      await eventually(async () => (await fileHas(folder, 'Second')) && (await fileHas(productFolder, '"3"')))
+      expect((await port.submit(hubInputs.rewind(before))).ok).toBe(true)
+      await eventually(async () => (await fileHas(folder, 'Wishem')) && (await fileHas(productFolder, '"0"')))
+    })
+
+    it('rejects with an Error for the same folder, before it reads a folder', async () => {
+      const missing = path.join(folder, 'missing')
+      const error: unknown = await start({ folder: missing, product: missing }).catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(Error)
+      expect(error).not.toBeInstanceOf(ModelError)
+      expect((error as Error).message).toBe('the product folder and the model folder are the same folder')
+      expect(vi.mocked(readModelFolder)).not.toHaveBeenCalled()
+      expect(vi.mocked(createHub)).not.toHaveBeenCalled()
+    })
+
+    it('rejects for the same folder that is given in two spellings', async () => {
+      const spelled = `${folder}/../${path.basename(folder)}`
+      await expect(start({ product: spelled })).rejects.toThrow('are the same folder')
+    })
+
+    it('starts with a product folder inside the model folder and sends no product input for a hand edit of the model', async () => {
+      const nested = path.join(folder, 'product')
+      await writeModel(nested, [colorDefinition, counterDefinition('Counter')], productState('0'))
+      const started = await start({ product: nested })
+      await writeFile(path.join(folder, 'state.json'), JSON.stringify(state('By hand')))
+      await eventually(() => workbenchTitle(started) === 'By hand')
+      await pause(200)
+      expect(started.hub.record().map(({ type }) => type)).toEqual(['store/replace-model'])
+      await writeFile(path.join(nested, 'state.json'), JSON.stringify(productState('4')))
+      await eventually(() => count(started) === '4')
+      await pause(200)
+      expect(started.hub.record().map(({ type }) => type)).toEqual(['store/replace-model', 'product/replace-model'])
+    })
+  })
+
+  describe('A product that is not correct at the start', () => {
+    it('rejects with a ModelError whose problem names the absolute path of the file', async () => {
+      await writeFile(productFile(), '{ nope')
+      const error: unknown = await start().catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ModelError)
+      expect((error as ModelError).problems.map(({ source }) => source)).toEqual([productFile()])
+      expect(vi.mocked(createHub)).not.toHaveBeenCalled()
+      expect(vi.mocked(watch)).not.toHaveBeenCalled()
+    })
+
+    it('rejects with a problem of the product that uses a component type of the workbench', async () => {
+      await writeFile(
+        productFile(),
+        JSON.stringify({ entities: [{ id: PRODUCT_E, components: { [CT]: { [FLD]: 'x' } } }] }),
+      )
+      const error: unknown = await start().catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ModelError)
+      const sources = (error as ModelError).problems.map(({ source }) => source)
+      expect(sources.length).toBeGreaterThan(0)
+      expect(sources.every((source) => source === productFile())).toBe(true)
+    })
+
+    it('rejects with the problems of the two folders, the product with the absolute path', async () => {
+      await writeFile(path.join(folder, 'state.json'), '{')
+      await writeFile(productFile(), '{')
+      const error: unknown = await start().catch((caught: unknown) => caught)
+      expect((error as ModelError).problems.map(({ source }) => source)).toEqual(['state.json', productFile()])
+    })
+
+    it('rejects with a problem that names a product folder that does not exist', async () => {
+      const missing = path.join(productFolder, 'missing')
+      const error: unknown = await start({ product: missing }).catch((caught: unknown) => caught)
+      expect(error).toBeInstanceOf(ModelError)
+      expect((error as ModelError).problems[0]?.source).toBe(missing)
+    })
+
+    it('names the absolute path for a product folder that is given as a relative path', async () => {
+      await writeFile(productFile(), '{')
+      const error: unknown = await start({ product: path.relative(process.cwd(), productFolder) }).catch(
+        (caught: unknown) => caught,
+      )
+      expect((error as ModelError).problems[0]?.source).toBe(productFile())
+    })
+  })
+
+  describe('The construct closes each part', () => {
+    it('gives one promise for close() called two times and closes each port of the four subsystems one time', async () => {
+      const closed = trackClosedPorts()
+      const started = await start()
+      const one = started.close()
+      expect(started.close()).toBe(one)
+      await one
+      await started.close()
+      expect([...closed].sort()).toEqual(FOUR_IDS)
+    })
+
+    it('waits for a read of the product folder', async () => {
+      const started = await start()
+      let release: () => void = () => undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      vi.mocked(readModelFolder).mockImplementation(async (target) => {
+        const result = await actualReadModelFolder(target)
+        if (target === productFolder) {
+          await gate
+        }
+        return result
+      })
+      vi.mocked(readModelFolder).mockClear()
+      await writeFile(productFile(), JSON.stringify(productState('6')))
+      await eventually(() => vi.mocked(readModelFolder).mock.calls.some(([target]) => target === productFolder))
+      let closed = false
+      const closing = started.close().then(() => {
+        closed = true
+      })
+      await pause(200)
+      expect(closed).toBe(false)
+      release()
+      await closing
+      expect(closed).toBe(true)
+    })
+
+    it('closes the two storage subsystems and leaves no watcher for a port in use', async () => {
+      const closed = trackClosedPorts()
+      const blocker = createServer()
+      await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve))
+      const { port } = blocker.address() as AddressInfo
+      try {
+        await expect(start({ port })).rejects.toMatchObject({ code: 'EADDRINUSE' })
+        expect(vi.mocked(watch)).not.toHaveBeenCalled()
+        expect([...closed].sort()).toEqual(FOUR_IDS)
+      } finally {
+        await new Promise<void>((resolve) =>
+          blocker.close(() => {
+            resolve()
+          }),
+        )
+      }
+    })
+
+    it('stops the hub and closes each part when the watch of the product folder cannot start', async () => {
+      const port = await freePort()
+      const opened: FSWatcher[] = []
+      vi.mocked(watch).mockImplementation(((target: PathLike, ...rest: unknown[]) => {
+        if (String(target).startsWith(productFolder)) {
+          throw new Error('no product watch')
+        }
+        const watcher = (actualWatch as (...args: unknown[]) => FSWatcher)(target, ...rest)
+        vi.spyOn(watcher, 'close')
+        opened.push(watcher)
+        return watcher
+      }) as unknown as typeof watch)
+      const closed = trackClosedPorts()
+      await expect(start({ port })).rejects.toThrow('no product watch')
+      const hub = vi.mocked(createHub).mock.results[0]?.value as Hub
+      expect(hub.status).toBe('stopped')
+      expect(opened.length).toBeGreaterThan(0)
+      opened.forEach((watcher) => {
+        expect(watcher.close).toHaveBeenCalled()
+      })
+      expect(await canListen(port)).toBe(true)
+      expect([...closed].sort()).toEqual(FOUR_IDS)
+    })
+  })
+
+  describe('The lines about the product start with wishem: product: ', () => {
+    const isProblem = (line: string) => line.startsWith('wishem: problem in ')
+
+    it('prints the last correct model and the correct model again for the product', async () => {
+      await start()
+      await writeFile(productFile(), '{')
+      await eventually(() => lines.includes('wishem: product: the last correct model stays'))
+      expect(lines.filter(isProblem)).toEqual([
+        `wishem: problem in ${productFile()}: the text is not valid JSON (line 1)`,
+      ])
+      expect(lines).not.toContain('wishem: the last correct model stays')
+      await writeFile(productFile(), JSON.stringify(productState('2')))
+      await eventually(() => lines.some((line) => line.startsWith('wishem: product: the model is correct: ')))
+      expect(lines.filter((line) => line.startsWith('wishem: the model is correct'))).toEqual([])
+    })
+
+    it('keeps the lines of the workbench model as they are', async () => {
+      await start()
+      await writeFile(path.join(folder, 'state.json'), '{')
+      await eventually(() => lines.includes('wishem: the last correct model stays'))
+      expect(lines.filter(isProblem)).toEqual(['wishem: problem in state.json: the text is not valid JSON (line 1)'])
+      expect(lines.filter((line) => line.startsWith('wishem: product: '))).toEqual([])
+    })
+
+    it('prints the hold of the product with the prefix and not the hold of the workbench', async () => {
+      const started = await start()
+      expect((await relabelProduct(started, client(started))).ok).toBe(true)
+      await eventually(() => lines.some((line) => line.includes('state.json is not written')))
+      const held = lines.filter((line) => line.includes('state.json is not written'))
+      expect(held).toHaveLength(1)
+      expect(held[0]?.startsWith('wishem: product: ')).toBe(true)
+    })
+
+    it('prints the stop with a hold of the product with the prefix, and one line only', async () => {
+      const started = await start()
+      await relabelProduct(started, client(started))
+      await started.close()
+      const lost = lines.filter((line) => line.includes('does not hold the last changes of the store'))
+      expect(lost).toHaveLength(1)
+      expect(lost[0]?.startsWith('wishem: product: ')).toBe(true)
+    })
+
+    it('names the absolute path of a failed product write', async () => {
+      const started = await start()
+      await rm(productFolder, { recursive: true, force: true })
+      await setCount(client(started), '8')
+      await eventually(() => lines.some((line) => line.includes('cannot write')))
+      const failed = lines.filter((line) => line.includes('cannot write'))
+      expect(failed[0]?.startsWith(`wishem: product: cannot write ${productFile()}: `)).toBe(true)
+    })
   })
 })
