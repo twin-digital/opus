@@ -31,4 +31,14 @@ describe('isEqual', () => {
     expect(api.isEqual(a, { entities: [], definitions: [] })).toBe(true)
     expect(api.isEqual(a, { definitions: [], entities: [{ id: 'e_1', components: {} }] })).toBe(false)
   })
+
+  it('ignores the order of keys in nested records and not the order of lists', () => {
+    const entity = (components: Record<string, Record<string, string>>) => ({ id: 'e_1', components })
+    const one = entity({ ct_1: { a: 'x', b: 'y' }, ct_2: {} })
+    const two = entity({ ct_2: {}, ct_1: { b: 'y', a: 'x' } })
+    expect(api.isEqual({ definitions: [], entities: [one] }, { definitions: [], entities: [two] })).toBe(true)
+    expect(
+      api.isEqual({ definitions: [], entities: [one, entity({})] }, { definitions: [], entities: [entity({}), one] }),
+    ).toBe(false)
+  })
 })

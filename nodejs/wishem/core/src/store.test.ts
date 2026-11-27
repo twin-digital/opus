@@ -137,8 +137,24 @@ describe('replace-model', () => {
   })
 
   it('keeps the same part object when only the order of the keys differs', () => {
-    const store = createStore({ model: workbench() })
-    const reordered = { entities: workbench().entities, definitions: workbench().definitions }
+    const base = {
+      definitions: [
+        {
+          id: CT,
+          label: 'AppBar',
+          fields: [
+            { id: FLD, label: 'title', type: 'string' as const },
+            { id: FLD2, label: 'text', type: 'string' as const },
+          ],
+        },
+      ],
+      entities: [{ id: ENT, components: { [CT]: { [FLD]: 'A', [FLD2]: 'B' } } }],
+    }
+    const store = createStore({ model: base })
+    const reordered = {
+      entities: [{ components: { [CT]: { [FLD2]: 'B', [FLD]: 'A' } }, id: ENT }],
+      definitions: base.definitions,
+    }
     expect(send(store, store.initial, 'store/replace-model', { model: reordered })).toBe(store.initial)
   })
 
