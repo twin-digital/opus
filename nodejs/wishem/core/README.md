@@ -8,7 +8,7 @@ The package uses no Node.js API. It runs in a web browser and in Node.js.
 
 A model is data with two parts.
 
-- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The only type is `string`.
+- `definitions`: a list of component types. Each component type has an `id`, a `label`, and a list of `fields`. Each field has an `id`, a `label`, and a `type`. The types are `string`, `number`, `boolean`, and `reference`. A value of a `reference` field is the ID of an entity of the model.
 - `entities`: a list of entities. Each entity has an `id` and a `components` record. The record maps the ID of a component type to a record. That record maps the ID of a field to a value.
 
 Each ID has a prefix for its kind, an underscore, and a UUID in lowercase. The prefix is `ct` for a component type, `fld` for a field, and `e` for an entity.

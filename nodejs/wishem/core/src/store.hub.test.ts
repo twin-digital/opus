@@ -103,6 +103,52 @@ describe('a store in a hub', () => {
   })
 })
 
+describe('a store with the four field types in a hub', () => {
+  const F = ['string', 'number', 'boolean', 'reference'].map((type, i) => ({
+    id: `fld_0000000${i}-0000-4000-8000-000000000000`,
+    label: type,
+    type,
+  }))
+  const typed = {
+    definitions: [{ id: CT, label: 'Item', fields: F }],
+    entities: [
+      { id: ENT, components: { [CT]: { [F[0].id]: 'x', [F[1].id]: 3, [F[2].id]: false, [F[3].id]: ENT2 } } },
+      { id: ENT2, components: {} },
+    ],
+  }
+  const startTyped = () => {
+    const hub = createHub({ subsystems: [createStore({ model: typed })] })
+    const form = hub.attach({ id: 'form', kind: 'input' })
+    hub.start()
+    return { hub, form }
+  }
+
+  it.each([
+    ['string', 0, 'x'],
+    ['number', 1, 3],
+    ['boolean', 2, false],
+    ['reference', 3, ENT2],
+  ])('accepts and records the same value of a %s field and keeps the part', async (_type, index, value) => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(
+      storeInputs().setField({ entity: ENT, componentType: CT, field: F[index].id, value }),
+    )
+    expect(result).toEqual({ ok: true, seq: 1 })
+    expect(hub.record()).toHaveLength(1)
+    expect(hub.read().store).toBe(before)
+  })
+
+  it('refuses the removal of an entity that another entity refers to and keeps the part', async () => {
+    const { hub, form } = startTyped()
+    const before = hub.read().store
+    const result = await form.submit(storeInputs().removeEntity(ENT2))
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.read().store).toBe(before)
+    expect(hub.record()).toHaveLength(0)
+  })
+})
+
 describe('the record of a hub', () => {
   it('gives the same model in a second hub that gets the inputs in order', async () => {
     const first = start()

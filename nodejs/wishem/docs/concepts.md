@@ -76,7 +76,7 @@ Example: before the agent adds a `docile` status, it asks which behaviors read t
 
 Entities relate to each other. A room contains the entities in it. An entity can be attached to another, as a held item is attached to the hero.
 
-A relation is a declared field that refers to another entity. It is part of a snapshot, and the registry reports it, in the same way as any other field.
+A relation is a field of the type `reference`. Its value is the ID of an entity of the same model. The store refuses the removal of an entity that a reference of a different entity names. It is part of a snapshot, and the registry reports it, in the same way as any other field.
 
 Which relations exist in every product, and which a product adds, is an open question.
 
@@ -95,7 +95,7 @@ The ways that exist now:
 The cases to list in the brainstorm:
 
 - a reference to a different component of the same entity
-- a reference to a different entity
+- a reference to a different entity, in one store: a `reference` field (settled)
 - a reference to a component of a different entity
 - each of these when the two components are in the same subsystem, and when they are in different subsystems
 

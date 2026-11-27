@@ -421,6 +421,7 @@ const entity = (c, item) => {
 /**
  * The cardinality mark at `p`. `(dx, dy)` is the unit vector from the card along the line.
  * `one` is exactly one (two bars). `many` is zero or more (a circle and a crow's foot).
+ * `zero-or-one` is a circle and one bar.
  */
 const cardinality = (c, [px, py], [dx, dy], kind) => {
   const at = (along, across) => [px + dx * along - dy * across, py + dy * along + dx * across]
@@ -429,6 +430,13 @@ const cardinality = (c, [px, py], [dx, dy], kind) => {
   if (kind === 'one') {
     return `<path d="${[10, 16].map((along) => seg(at(along, -MARK_HALF), at(along, MARK_HALF))).join(' ')}" fill="none" ${stroke}/>`
   }
+  if (kind === 'zero-or-one') {
+    const [zx, zy] = at(20, 0)
+    return [
+      `<path d="${seg(at(10, -MARK_HALF), at(10, MARK_HALF))}" fill="none" ${stroke}/>`,
+      `<circle cx="${num(zx)}" cy="${num(zy)}" r="4.5" fill="${c.ground}" ${stroke}/>`,
+    ].join('\n')
+  }
   const [cx, cy] = at(22, 0)
   return [
     `<path d="${[-MARK_HALF, 0, MARK_HALF].map((across) => seg(at(14, 0), at(0, across))).join(' ')}" fill="none" ${stroke}/>`,
@@ -436,18 +444,34 @@ const cardinality = (c, [px, py], [dx, dy], kind) => {
   ].join('\n')
 }
 
-/** A relationship between two entity cards: a straight line with a cardinality mark at each end. */
+/**
+ * A relationship between two entity cards: a straight line with a cardinality mark at each end.
+ * The label (`label.line`) sits on a chip at `label.at`.
+ */
 const relationship = (c, item) => {
-  const { from, to } = item
-  checkLength({ points: [from, to] })
+  const { from, to, label } = item
+  checkLength({ points: [from, to], label })
   const length = Math.hypot(to[0] - from[0], to[1] - from[1])
   const ux = (to[0] - from[0]) / length
   const uy = (to[1] - from[1]) / length
-  return [
+  const out = [
     `<path d="M${num(from[0])} ${num(from[1])} L${num(to[0])} ${num(to[1])}" fill="none" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
     cardinality(c, from, [ux, uy], item.fromMark),
     cardinality(c, to, [-ux, -uy], item.toMark),
-  ].join('\n')
+  ]
+  if (label !== undefined) {
+    const chip = chipSize(label.line)
+    const [ax, ay] = label.at
+    out.push(
+      rect(
+        { x: ax - chip.w / 2, y: ay - chip.h / 2, w: chip.w, h: chip.h },
+        12,
+        `fill="${c.surface}" stroke="${c.quiet}"`,
+      ),
+      text(c, { x: ax, y: ay + 4.5, line: label.line, weight: 500, color: c.fgMuted, anchor: 'middle' }),
+    )
+  }
+  return out.join('\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +501,7 @@ const sample = (c, kind, x, cy) => {
       `<path d="M${num(x)} ${num(box.y + 4)} a${num(SAMPLE_W / 2)} 4 0 0 0 ${num(SAMPLE_W)} 0" fill="none" stroke="${c.border}"/>`,
     ].join('\n')
   }
-  if (kind === 'one' || kind === 'many') {
+  if (kind === 'one' || kind === 'many' || kind === 'zero-or-one') {
     return [
       `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W)} ${num(cy)}" stroke="${c.quiet}" stroke-width="${String(MARK_STROKE)}"/>`,
       cardinality(c, [x + SAMPLE_W, cy], [-1, 0], kind),
@@ -885,14 +909,14 @@ const eValue = ent(ENTITY_RIGHT, ROW_2, H_TALL, 'FieldValue', [
 ])
 const eEntity = ent(ENTITY_LEFT, ROW_3, H_SHORT, 'Entity', [pk('id')])
 
-// A relationship from point `from` to point `to`, with a mark at each end: `one` or `many`.
-const link = (from, fromMark, to, toMark) => ({ kind: 'relationship', from, to, fromMark, toMark })
+// A relationship from point `from` to point `to`, with a mark at each end: `one`, `many`, or `zero-or-one`.
+const link = (from, fromMark, to, toMark, label) => ({ kind: 'relationship', from, to, fromMark, toMark, label })
 
 const entitiesModelFolder = {
   name: 'entities-model-folder',
   title: 'Entity diagram: the model folder',
   description:
-    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field.',
+    'The model folder has five entities. A component type has zero or more fields. An entity has zero or more components, and each component has one component type. A component has zero or more field values, and each field value has one field. A field value of the type reference has zero or one entity, and an entity has zero or more field values that refer to it.',
   width: WIDTH_PX,
   height: 632,
   items: [
@@ -906,6 +930,7 @@ const entitiesModelFolder = {
     link(top(eEntity), 'one', bottom(eComponent), 'many'),
     link(right(eComponent), 'one', left(eValue), 'many'),
     link(bottom(eField), 'one', top(eValue), 'many'),
+    link(bottom(eValue, 698), 'many', right(eEntity), 'zero-or-one', { line: 'Refers to', at: [518, 420] }),
     {
       kind: 'legend',
       x: 24,
@@ -915,8 +940,9 @@ const entitiesModelFolder = {
         ['entity', 'Entity'],
         ['pk', 'Primary key'],
         ['fk', 'Foreign key'],
-        ['one', 'Exactly one'],
+        ['one', 'One'],
         ['many', 'Zero or more'],
+        ['zero-or-one', 'Zero or one'],
       ],
     },
   ],
