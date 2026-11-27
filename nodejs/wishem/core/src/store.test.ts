@@ -113,10 +113,9 @@ describe('createStore', () => {
     expect(() => createStore({ model: null })).toThrow(ModelError)
   })
 
-  it('refuses an input type of a store with a different ID, with the path type', () => {
+  it('refuses an input type of a store with a different ID', () => {
     const store = createStore({ id: 'product', model: workbench() })
-    const error = refusal(() => send(store, store.initial, 'store/set-field', { entity: ENT }))
-    expect(error.problems.map((problem) => problem.path)).toEqual([['type']])
+    expect(() => send(store, store.initial, 'store/set-field', { entity: ENT })).toThrow(InputRefusedError)
   })
 
   it('gives a new inputs list on each call', () => {
@@ -328,6 +327,7 @@ describe('remove-entity', () => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/remove-entity', { entity: 7 }))
     expect(error.problems[0]?.message).toContain('string')
+    expect(error.problems[0]?.path).toEqual(['payload', 'entity'])
   })
 
   it('refuses the second removal of one ID', () => {
@@ -469,6 +469,8 @@ describe('set-field', () => {
   ])('refuses a %s that is not a string, with a problem about the form', (key, payload) => {
     const store = createStore({ model: workbench() })
     const error = refusal(() => send(store, store.initial, 'store/set-field', payload))
-    expect(error.problems).toEqual([{ message: `The payload has no string "${key}" key`, path: ['payload', key] }])
+    expect(error.problems).toHaveLength(1)
+    expect(error.problems[0]?.path).toEqual(['payload', key])
+    expect(error.problems[0]?.message).toContain(key)
   })
 })

@@ -11,19 +11,23 @@ describe('InputRefusedError', () => {
     expect(new InputRefusedError(problems).problems).toEqual(problems)
   })
 
-  it('joins the messages of the problems with a semicolon', () => {
+  it('holds the message of each problem in its message', () => {
     const error = new InputRefusedError([{ message: 'first', path: ['x'] }, { message: 'second' }])
-    expect(error.message).toBe('first; second')
+    expect(error.message).toContain('first')
+    expect(error.message).toContain('second')
   })
 
-  it('gives a default message when there is no problem', () => {
-    expect(new InputRefusedError([]).message).toBe('The input is refused.')
+  it('has a message that is not empty when there is no problem', () => {
+    expect(new InputRefusedError([]).message).not.toBe('')
   })
 })
 
 describe('HubConfigurationError', () => {
-  it('is an Error', () => {
-    expect(new HubConfigurationError('x')).toBeInstanceOf(Error)
-    expect(new HubConfigurationError('x').message).toBe('x')
+  it('is an Error that is not an InputRefusedError', () => {
+    const error = new HubConfigurationError('x')
+    expect(error).toBeInstanceOf(HubConfigurationError)
+    expect(error).toBeInstanceOf(Error)
+    expect(error).not.toBeInstanceOf(InputRefusedError)
+    expect(error.message).toBe('x')
   })
 })

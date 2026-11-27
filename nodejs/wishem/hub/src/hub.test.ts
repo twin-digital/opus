@@ -227,7 +227,7 @@ describe('submit', () => {
     expect(hub.read().time).toEqual({ now: 3, running: false })
   })
 
-  it('gives each model subsystem its own recorded input in turn', async () => {
+  it('gives a model subsystem each recorded input with its sequence number', async () => {
     const seen: number[] = []
     const spy: ModelSubsystem<number> = {
       id: 'spy',
@@ -364,6 +364,81 @@ describe('submit', () => {
     hub.attach({ id: 'screen', kind: 'output' }).subscribe(listener)
     await expect(keyboard.submit({ type: 'broken/run' })).rejects.toThrow('defect')
     expect(listener).not.toHaveBeenCalled()
+  })
+})
+
+describe('settling of submit', () => {
+  // One microtask turn runs a callback that is registered on a settled promise.
+  const settle = async () => {
+    await Promise.resolve()
+  }
+
+  it('gives a result to each of two inputs that are sent one after the other', async () => {
+    const { keyboard } = running()
+    const first = vi.fn()
+    const second = vi.fn()
+    void keyboard.submit(setField).then(first)
+    await settle()
+    expect(first).toHaveBeenCalledWith({ ok: true, seq: 1 })
+    void keyboard.submit(setField).then(second)
+    await settle()
+    expect(second).toHaveBeenCalledWith({ ok: true, seq: 2 })
+  })
+
+  it('gives its own accepted result to an input that a listener sends during an applied event', async () => {
+    const { hub, keyboard } = running()
+    const inner = vi.fn()
+    const outer = vi.fn()
+    let sent = false
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField).then(inner)
+      }
+    })
+    void keyboard.submit(setField).then(outer)
+    await settle()
+    expect(outer).toHaveBeenCalledWith({ ok: true, seq: 1 })
+    expect(inner).toHaveBeenCalledWith({ ok: true, seq: 2 })
+  })
+
+  it('gives not-running to an input that is in the queue when the hub stops', async () => {
+    const { hub, keyboard } = running()
+    const queued = vi.fn()
+    let sent = false
+    hub.attach({ id: 'screen', kind: 'output' }).subscribe((event) => {
+      if (event.type === 'applied' && !sent) {
+        sent = true
+        void keyboard.submit(setField).then(queued)
+        hub.stop()
+      }
+    })
+    void keyboard.submit(setField)
+    await settle()
+    expect(queued).toHaveBeenCalledWith({ ok: false, reason: 'not-running', problems: [] })
+  })
+
+  it('gives a result to an input that is sent after a model subsystem threw', async () => {
+    const broken: ModelSubsystem<number> = {
+      id: 'broken',
+      inputs: ['broken/run', 'broken/ok'],
+      initial: 0,
+      apply: (part, input) => {
+        if (input.type === 'broken/run') {
+          throw new Error('defect')
+        }
+        return part + 1
+      },
+    }
+    const { keyboard } = running([broken])
+    const thrown = vi.fn()
+    const after = vi.fn()
+    void keyboard.submit({ type: 'broken/run' }).catch(thrown)
+    await settle()
+    expect(thrown).toHaveBeenCalledTimes(1)
+    void keyboard.submit({ type: 'broken/ok' }).then(after)
+    await settle()
+    expect(after).toHaveBeenCalledWith({ ok: true, seq: 1 })
   })
 })
 
