@@ -7,6 +7,7 @@ describe('the root entry', () => {
       'DOCKER_REQUIRED_MESSAGE',
       'createDockerCli',
       'ensureImage',
+      'godotLabel',
       'imageTag',
       'runGodot',
     ])

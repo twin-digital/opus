@@ -36,6 +36,13 @@ const emptyFolder = (dir: string) => {
   }
 }
 
+/** The label (`key=value`) that `runGodot` gives to each container of the run with this screenshot folder. */
+export const godotLabel = (shotsDir: string = join(packageDir, 'shots')): string =>
+  `wishem-godot=${createHash('sha1')
+    .update(`${hostname()}\0${packageDir}\0${resolve(shotsDir)}`)
+    .digest('hex')
+    .slice(0, 8)}`
+
 const startRun = (options: RunGodotOptions): GodotRun => {
   const hubPort = options.hubPort ?? DEFAULT_HUB_PORT
   const shotsDir = options.shotsDir ?? join(packageDir, 'shots')
@@ -49,10 +56,7 @@ const startRun = (options: RunGodotOptions): GodotRun => {
   const tag = ensureImage(docker, join(packageDir, 'docker'), log)
   emptyFolder(shotsDir)
 
-  const label = `wishem-godot=${createHash('sha1')
-    .update(`${hostname()}\0${packageDir}\0${resolve(shotsDir)}`)
-    .digest('hex')
-    .slice(0, 8)}`
+  const label = godotLabel(shotsDir)
   const container = `wishem-godot-${randomBytes(4).toString('hex')}`
 
   const old = (docker.run(['ps', '-aq', '--filter', `label=${label}`]) ?? '').split('\n').filter((id) => id !== '')
