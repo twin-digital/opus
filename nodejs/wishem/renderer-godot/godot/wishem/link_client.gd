@@ -11,6 +11,8 @@ signal refused(reason: String, message: String)
 
 const Messages = preload("res://wishem/link_messages.gd")
 const RemotePort = preload("res://wishem/remote_port.gd")
+# Same reasons as REJECTIONS in hub/src/link/messages.ts.
+const REJECTIONS: Array[String] = ["not-permitted", "not-running", "unknown-type", "invalid"]
 
 enum Phase { WAITING, CONNECTING, AWAITING_WELCOME, LINKED, CLOSED }
 
@@ -240,7 +242,7 @@ func _result(message: Dictionary) -> void:
 	if request == null or has_both:
 		_end_link(true)
 		return
-	if typeof(outcome) == TYPE_DICTIONARY and typeof((outcome as Dictionary).get("ok")) != TYPE_BOOL:
+	if typeof(outcome) == TYPE_DICTIONARY and not _is_submit_result(outcome):
 		_end_link(true)
 		return
 	if message.has("error") and typeof(failure) != TYPE_STRING:
@@ -261,6 +263,16 @@ func _result(message: Dictionary) -> void:
 	var submission: RemotePort.Submission = _pending[request]
 	_pending.erase(request)
 	submission.finish(value)
+
+
+func _is_submit_result(outcome: Dictionary) -> bool:
+	var ok: Variant = outcome.get("ok")
+	if typeof(ok) != TYPE_BOOL:
+		return false
+	if ok:
+		return Messages.as_int(outcome.get("seq")) != null
+	var reason: Variant = outcome.get("reason")
+	return typeof(reason) == TYPE_STRING and REJECTIONS.has(reason) and typeof(outcome.get("problems")) == TYPE_ARRAY
 
 
 func _dispatch(event: Dictionary) -> void:
