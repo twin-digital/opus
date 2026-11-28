@@ -4,6 +4,11 @@ import type { WebSocketLike } from './channel.js'
 import { LinkRefusedError, openLink } from './open-link.js'
 import type { RemoteLink } from './open-link.js'
 
+// Globals that Node.js and a web browser both give, declared so that no Node.js types are needed.
+declare function setTimeout(callback: () => void, delayMs: number): unknown
+declare function clearTimeout(handle: unknown): void
+declare const crypto: { getRandomValues: (array: Uint8Array) => Uint8Array }
+
 export interface LinkClientSubsystem {
   /** The ID of the subsystem is `<prefix>-<16 hex><suffix>`. The ID stays the same for each link until a refusal with `id-in-use`. */
   prefix: string
@@ -58,7 +63,7 @@ export const connectLink = (options: ConnectLinkOptions): LinkClient => {
   }
   let link: RemoteLink | undefined
   let socket: WebSocketLike | undefined
-  let timer: ReturnType<typeof setTimeout> | undefined
+  let timer: unknown
   let delay = firstDelayMs
   let down = false
   let refusalReported = false
