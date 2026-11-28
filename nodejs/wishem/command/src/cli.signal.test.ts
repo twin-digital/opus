@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Construct } from './start-construct.js'
+import type { Construct } from '@thrashplay/wishem-host-nodejs'
 
-vi.mock('./start-construct.js', () => ({ DEFAULT_PORT: 4747, startConstruct: vi.fn() }))
+vi.mock('@thrashplay/wishem-host-nodejs', () => ({ DEFAULT_PORT: 4747, startConstruct: vi.fn() }))
 
 type Handler = () => void
 
@@ -15,7 +15,7 @@ describe('the stop signal during the start of the wishem command', () => {
   const argv = process.argv
 
   const load = async () => {
-    const { startConstruct } = await import('./start-construct.js')
+    const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
     vi.mocked(startConstruct).mockReturnValue(
       new Promise<Construct>((resolve, reject) => {
         finish = resolve
@@ -119,7 +119,7 @@ describe('the stop signal during the start of the wishem command', () => {
     })
     finish(construct())
     await loaded
-    const { startConstruct } = await import('./start-construct.js')
+    const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
     vi.mocked(startConstruct).mock.lastCall?.[0].onWatchError?.(new Error('watch broke'))
     await vi.waitFor(() => {
       expect(exitCodes).toEqual([1])
@@ -132,7 +132,7 @@ describe('the stop signal during the start of the wishem command', () => {
     await vi.waitFor(() => {
       expect(output).toContain('wishem: model /model')
     })
-    const { startConstruct } = await import('./start-construct.js')
+    const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
     vi.mocked(startConstruct).mock.lastCall?.[0].onWatchError?.(new Error('watch broke'))
     expect(exitCodes).toEqual([1])
     expect(close).not.toHaveBeenCalled()

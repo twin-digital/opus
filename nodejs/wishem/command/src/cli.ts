@@ -3,9 +3,9 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { ModelError } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
-import { describeCounts, formatProblem } from './format.js'
-import { DEFAULT_PORT, PRODUCT_ID, startConstruct } from './start-construct.js'
-import type { Construct } from './start-construct.js'
+import { DEFAULT_PORT, PRODUCT_ID, startConstruct } from '@thrashplay/wishem-host-nodejs'
+import type { Construct } from '@thrashplay/wishem-host-nodejs'
+import { describeCounts, formatProblem } from '@thrashplay/wishem-host-nodejs/format'
 
 const USAGE = 'usage: wishem start <folder> [--product <folder>] [--port <number>]'
 

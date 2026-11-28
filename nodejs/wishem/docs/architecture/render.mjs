@@ -777,7 +777,7 @@ const cCommand = el(
   'Wishem command process',
   '[Container: Node.js]',
   'Runs one construct, with no page.',
-  { pkg: 'Package: host-nodejs' },
+  { pkg: 'Package: command' },
 )
 const cReactPage = el(
   'container',
@@ -1535,6 +1535,7 @@ const packageLayers = [
       'sample-product',
     ],
   },
+  { name: 'Commands', packages: ['command'] },
   { name: 'Applications', packages: ['workbench', 'workbench-app', 'pixi-page', 'three-renderers'] },
   { name: 'Checks', packages: ['docs-check'] },
 ]

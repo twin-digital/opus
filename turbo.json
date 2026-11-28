@@ -96,7 +96,7 @@
       ],
       "outputs": ["coverage.json"]
     },
-    "@thrashplay/wishem-host-nodejs#test": {
+    "@thrashplay/wishem-command#test": {
       "dependsOn": ["upstream-sources", "@twin-digital/vitest-config#build", "^build", "build"],
       "inputs": [
         "src/**",
