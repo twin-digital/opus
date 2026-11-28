@@ -1,0 +1,15 @@
+# Tasks
+
+## Task 1: A field with an empty name gives no prop and a warning
+
+Files: `nodejs/wishem/renderer-react/src/field-names.ts`, `nodejs/wishem/renderer-react/src/field-names.test.ts`, `nodejs/wishem/renderer-react/src/view-warnings.ts`, `nodejs/wishem/renderer-react/src/view-warnings.test.ts`, `nodejs/wishem/renderer-react/src/view-tools.test.ts`, `nodejs/wishem/renderer-react/src/Renderer.test.tsx`, `nodejs/wishem/renderer-react/README.md`, `.changeset/<name>.md`
+Interfaces: produces `ViewWarning` with the kind `empty-name` (`fields: [<field ID>]`, no `name`); `propNames(definition).props` has no entry with the name `""`
+
+- [ ] 1.1 Write the tests first, and see each one fail on the current code. `field-names.test.ts`: the test `gives no prop for an empty name, and reports it` (the labels `title` and `???` give the props `['title']` and the problem `empty-name` for `fld_1`), and the test of two empty names (`???` and `--`) expects no prop. `view-warnings.test.ts`: replace the test `gives no warning for an empty name or a name that starts with a digit` with the test `gives one warning with the field ID for a label that gives an empty name` (one `empty-name` warning with `fields: [<field ID>]` and no `name`), a test of two empty names (two warnings, no `same-name`), and a test that a name that starts with a digit gives no warning. Add a test of `describeWarning` for `empty-name` that expects the exact line in design.md, decision 3. `view-tools.test.ts`: `setField('', 'x')` for a definition with the label `???` gives `invalid` and sends no input. `Renderer.test.tsx`: the test `gives the view no prop for a field with an empty name, and warns` (the view gets no key `""`, `wishem.setField` is a function, and `console.warn` gets one line that contains `gives an empty name`). Verify: `flock -w 15 /tmp/wishem-heavy.lock timeout 140 pnpm --filter @thrashplay/wishem-renderer-react exec vitest run src/field-names.test.ts src/view-warnings.test.ts src/view-tools.test.ts src/Renderer.test.tsx` fails, and the report shows the failed run.
+- [ ] 1.2 In `propNames`, skip a field whose name is `""` after its `empty-name` problem, as for a reserved name. Update the doc comment of `PropNames.props`. In `viewWarnings`, convert the `empty-name` problem to a warning. Add the kind to `ViewWarning` and its line to `describeWarning`. Verify: the command of 1.1 passes, and `view-types.test.ts` passes with no change.
+- [ ] 1.3 Update the README of `renderer-react`: a field whose label gives an empty name gives no prop, and `viewWarnings` reports it. Add a changeset with a patch for `@thrashplay/wishem-renderer-react`. Verify: `flock -w 15 /tmp/wishem-heavy.lock timeout 140 pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-renderer-react` passes, and `pnpm exec prettier --check` passes on each changed file.
+
+## Workflow follow-up
+
+- The final reviewer does the steps of "The test guide" in design.md.
+- Archive the change. Do the items of "Follow-up" in design.md.
