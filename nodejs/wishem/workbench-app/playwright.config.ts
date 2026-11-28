@@ -8,7 +8,7 @@ if (!wsEndpoint) {
 // The pages of the workbench. `scripts/e2e-server.ts` serves them on the computer of the test runner.
 const WORKBENCH_URL = 'http://127.0.0.1:4180'
 // The workbench with the sample product mounted (`--product`).
-const PRODUCT_URL = 'http://127.0.0.1:4182'
+const PRODUCT_URL = 'http://127.0.0.1:4190'
 
 const server = (command: string, url: string) => ({
   command,
