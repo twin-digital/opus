@@ -132,6 +132,19 @@ describe('runGodot', () => {
     expect(run.container).toMatch(/^wishem-godot-[0-9a-f]{8}$/)
   })
 
+  it('gives the runs with different shot folders different labels', async () => {
+    await start()
+    const other = mkdtempSync(join(tmpdir(), 'wishem-godot-shots-'))
+    try {
+      runs.push(await runGodot({ docker: fakeDocker(), shotsDir: other, log: () => undefined }))
+      const labels = events.filter((event) => event.startsWith('run ps')).map((event) => /label=(\S+)/.exec(event)?.[1])
+      expect(labels).toHaveLength(2)
+      expect(labels[0]).not.toBe(labels[1])
+    } finally {
+      rmSync(other, { recursive: true, force: true })
+    }
+  })
+
   it('connects to the sample construct at port 4750 by default', async () => {
     await start()
     expect(commandOf('run create')).toContain('--link ws://127.0.0.1:4750/link --shots /out')
