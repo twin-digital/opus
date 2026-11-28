@@ -14,6 +14,7 @@ describe('the root entry', () => {
       'holdWarnings',
       'parseSidecar',
       'propNames',
+      'sendInput',
       'stubViewTools',
       'viewWarnings',
     ])

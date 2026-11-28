@@ -89,6 +89,15 @@ expect(calls).toEqual([{ kind: 'setField', name: 'title', value: 'Wishem studio'
 
 The argument of `stubViewTools` is an outcome, or a function that gives an outcome or a promise for a call. With no argument, the outcome is `{ ok: true, seq: <number of the call> }`.
 
+`sendInput(input, message)` gives the same outcome rule to code that is not a view. It sends the input to an input port and gives an `InputOutcome`. The promise never rejects. When `input` is `undefined`, the outcome is `not-permitted`.
+
+```ts
+const outcome = await sendInput(port, { type: 'time/set-running', payload: true })
+if (!outcome.ok) {
+  console.warn(outcome.reason)
+}
+```
+
 ## The generator
 
 `generateViewTypes` writes `<name>.view.gen.ts` next to each sidecar of the kind `react`. The file exports the type `Values`, with the type that `setField` takes for each field, and the type `Props`, with the type of each prop and the member `wishem: ViewTools<Values>`. A field of the type `string`, `number`, or `boolean` has that type. A `reference` field has the type `string` in `Values` (the ID of an entity) and the type `ReactNode` in `Props` (the picture of the entity, see "Nested views"). A sidecar whose component type has no definition gets `Props` with only `wishem`, and `Values` with no member.
