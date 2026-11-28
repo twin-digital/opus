@@ -300,16 +300,18 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
                   </span>
                   <span className='shrink-0'>
                     <Button
-                      label='Remove'
                       accessibleName={`Remove ${option?.text ?? item}`}
                       disabled={listDisabled}
-                      onPress={() => {
+                      focusableWhenDisabled
+                      onClick={() => {
                         changeList(
                           { operation: 'remove-reference', reference: item },
                           { kind: 'remove', id: item, index, accepted: false },
                         )
                       }}
-                    />
+                    >
+                      Remove
+                    </Button>
                   </span>
                 </li>
               )
@@ -336,9 +338,9 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
           </select>
           <span className='shrink-0'>
             <Button
-              label='Add'
               disabled={listDisabled || available.length === 0}
-              onPress={() => {
+              focusableWhenDisabled
+              onClick={() => {
                 if (picked !== '') {
                   changeList(
                     { operation: 'add-reference', reference: picked },
@@ -346,7 +348,9 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
                   )
                 }
               }}
-            />
+            >
+              Add
+            </Button>
           </span>
         </div>
       </div>
@@ -418,11 +422,13 @@ export const FieldRow = ({ field, value, options = [], onChange, onListChange, o
           {control}
           <span className='shrink-0'>
             <Button
-              label='Clear'
               accessibleName={`Clear ${field.label}`}
               disabled={!onClear || saving || value === undefined}
-              onPress={clear}
-            />
+              focusableWhenDisabled
+              onClick={clear}
+            >
+              Clear
+            </Button>
           </span>
           {saving && <span className='font-mono text-label font-medium text-fg-muted uppercase'>Saving</span>}
           {value === undefined && !saving && field.type !== 'reference' && field.type !== 'reference-list' && (

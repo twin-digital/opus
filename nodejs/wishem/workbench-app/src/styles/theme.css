@@ -50,6 +50,7 @@
   --color-surface: var(--surface);
   --color-night: var(--night);
   --color-on-night: var(--on-night);
+  --color-on-fill: var(--on-fill);
   --color-line: var(--line);
   --color-control-border: var(--control-border);
   --color-fg: var(--fg);
@@ -93,6 +94,13 @@
 @utility shadow-md {
   box-shadow: var(--shadow-md);
 }
+
+/* A state variant matches the real state, a forced state (data-force), and the content of a forced element. */
+@custom-variant st-hover (&:is(:hover, [data-force~='hover'], [data-force~='hover'] *));
+@custom-variant st-active (&:is(:active, [data-force~='active'], [data-force~='active'] *));
+@custom-variant st-focus (&:is(:focus, [data-force~='focus'], [data-force~='focus'] *));
+@custom-variant st-focus-visible (&:is(:focus-visible, [data-force~='focus'], [data-force~='focus'] *));
+@custom-variant st-focus-within (&:is(:focus-within, [data-force~='focus-within'], [data-force~='focus-within'] *));
 
 @theme {
   --text-h1: 39px;

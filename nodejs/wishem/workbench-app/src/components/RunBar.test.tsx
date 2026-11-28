@@ -68,13 +68,13 @@ describe('RunBar', () => {
     expect(labels()).toEqual(['Stop', 'Pause', 'Step', 'Step back'])
   })
 
-  it('draws Run and Resume as maker buttons, and the others as plain buttons', () => {
+  it('draws Run and Resume as maker buttons, and the others as neutral buttons', () => {
     draw({ state: state({ status: 'Not running' }) })
-    expect(buttons()[0]?.classList.contains('border-maker')).toBe(true)
+    expect(buttons()[0]?.classList.contains('bg-maker')).toBe(true)
     draw()
-    expect(buttons()[1]?.classList.contains('border-maker')).toBe(true)
+    expect(buttons()[1]?.classList.contains('bg-maker')).toBe(true)
     for (const index of [0, 2, 3]) {
-      expect(buttons()[index]?.classList.contains('border-maker')).toBe(false)
+      expect(buttons()[index]?.classList.contains('bg-maker')).toBe(false)
     }
   })
 
@@ -139,6 +139,13 @@ describe('RunBar', () => {
   it('marks the busy control', () => {
     draw({ busy: 'step' })
     expect(buttons().map((b) => b.getAttribute('aria-busy'))).toEqual([null, null, 'true', null])
+  })
+
+  it('reaches an enabled control that is busy with the arrow keys', () => {
+    draw({ busy: 'step' })
+    buttons()[1]?.focus()
+    press('ArrowRight')
+    expect(document.activeElement).toBe(buttons()[2])
   })
 
   it('shows the alert line below the toolbar in danger-text', () => {

@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "catalog:",
     "@thrashplay/wishem-clock": "workspace:*",
     "@thrashplay/wishem-construct-manager": "workspace:*",
     "@thrashplay/wishem-core": "workspace:*",

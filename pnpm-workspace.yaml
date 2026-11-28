@@ -16,6 +16,7 @@ catalog:
   '@aws-sdk/client-ssm': ^3.958.0
   '@aws-sdk/lib-dynamodb': ^3.958.0
   '@axe-core/playwright': ^4.14.0
+  '@base-ui/react': ^1.9.0
   '@eslint/js': ^10.0.0
   'aws-sdk-client-mock': ^4.1.0
   'aws-sdk-client-mock-vitest': ^7.0.1

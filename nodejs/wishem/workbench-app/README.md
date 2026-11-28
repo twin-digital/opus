@@ -188,7 +188,7 @@ With the part `product` in the joined state of the link, the page shows the prod
 - Enter or a move of the focus commits a text field. Escape restores the value of the part. A text that is not a number gives the alert `Type a number.` and sends no input.
 - A commit sends one `product/set-field` input through the input port of the page. The record of the hub holds the source `page-<hex>-input`. The storage subsystem of the product writes the `state.json` of the product folder.
 - Each row has the button `Clear`. Its accessible name is `Clear <field>`. A press sends one `product/clear-field` input through the input port, and the field has no value. The row then shows `no value` (a reference shows the option `No value`).
-- The button `Clear` is disabled (`aria-disabled`, and it keeps the focus) when the field has no value, while the row saves, and when the page has no input port. A text draft commits on the blur before a press, and the button is disabled while that commit saves. A refused draft does not block `Clear`: the clear removes the draft and its alert.
+- The button `Clear` is disabled (`aria-disabled`, with `focusableWhenDisabled`, so it keeps the focus) when the field has no value, while the row saves, and when the page has no input port. A text draft commits on the blur before a press, and the button is disabled while that commit saves. A refused draft does not block `Clear`: the clear removes the draft and its alert.
 - A reason why the workbench does not accept a clear shows below the row as `The value is not cleared. <reason>`. An accepted change or clear removes the line.
 - A reason why the workbench does not accept the change shows below the row, with the text of `src/outcome-text.ts`.
 - A hand edit of the `state.json` of the product folder shows in the panel with no reload. A rewind of the hub restores the value in the panel and in the file.
@@ -265,7 +265,7 @@ pnpm --filter @thrashplay/wishem-workbench-app test:ui:update
 
 The command writes the baseline images in `tests/__screenshots__/`. Commit the images that change.
 
-Before each screenshot, the test hides every part of the page except the section and its ancestors. The section then starts at the same offset whatever the other sections hold. A change to one section changes only the baselines of that section.
+Before each screenshot, the test hides every part of the page except the section and its ancestors. The section then starts at the same offset whatever the other sections hold. A change to one section changes only the baselines of that section. The test also makes the viewport as high as the section, so an open menu has room below its trigger and does not move with the scroll position.
 
 ## Run a different command with the browser
 
@@ -285,18 +285,58 @@ The theme follows the color scheme of the system. The workbench has no control t
 
 A component uses roles only. A role gives the purpose of a color, for example `bg-ground`, `text-fg-muted`, or `text-maker-text`. A component does not use a palette color or a color value. A palette color has no Tailwind class. A test fails when a file in `src/components/` has a hexadecimal color or the name of a palette color.
 
+Text and marks on a bright fill use the role `on-fill` (`text-on-fill`, `border-on-fill`). `on-fill` has a contrast ratio of 4.5 or more on each fill.
+
+### Forced states
+
+The style guide shows the hover, active, and focus look of a component with no pointer and no key. The attribute `data-force` on a wrapper element forces the state. Its values are `hover`, `active`, `focus`, and `focus-within`. The helper `Forced` in `src/style-guide/Forced.tsx` draws the wrapper.
+
+A component does not use the Tailwind variants `hover:`, `active:`, `focus:`, `focus-visible:`, and `focus-within:`. It uses the variants of `src/styles/theme.css`: `st-hover`, `st-active`, `st-focus`, `st-focus-visible`, and `st-focus-within`. Each variant matches the real state, a forced state, and the content of a forced element. `st-focus-within` matches the force value `focus-within` and not `focus`, so a specimen can show the focus look of a box with no key ring on the controls in it. Thus the real state and the forced state use one style rule.
+
+To keep a disabled control from reacting, write `enabled:st-hover:`, as the select does.
+
+The browser tests compare the computed style of a forced specimen with the computed style of the same specimen in the real state.
+
 ## Components
 
 `src/components/` holds the components. Each component takes all its content as props.
 
 - `AppBar` (`title`, `onRename`, `initial`): the night bar, 48 pixels high. It shows the title in lowercase in the display typeface, with a full stop in the `maker` color. A title that is too long ends with an ellipsis. With `onRename`, the title is a button. `initial` sets the first state of the edit, for the style guide and the tests.
 - `ZeroState` (`label`, `message`): a mono label and one line of text in the center of the space that it gets. Both texts use `fg-muted`.
+- `Field` (`label`, `error`, `children`): a label above one control, and an optional error message below it. The label names the control. The error message describes the control and puts it in the error state. A control reads its field with the hook `useFieldControl`.
+- `Select` (`options`, `value`, `onChange`, `placeholder`, `disabled`, `invalid`, `open`, `onOpenChange`, `id`): a select built on Base UI (`@base-ui/react`). It holds no value. `onChange` reports a selection, and the select shows a new value only when the caller gives it. A value that is not in `options` shows as text. The menu is below the trigger when it fits there, and above the trigger when it does not. When it fits on neither side, it uses the larger side and its list scrolls. The menu is 4 pixels from the trigger, as wide as the trigger, and does not lock the page. A click on the label of the `Field` of a select moves focus to the trigger and does not open the menu. The `open` prop holds the menu open, for the style guide.
+- `Button` (`variant`, `loading`, `disabled`, `focusableWhenDisabled`, `accessibleName`, and each native `button` prop): `variant` is `maker`, `neutral` (default), `quiet`, or `danger`. The `type` is `button` unless the caller sets it. A loading button shows a spinner, has `aria-busy`, ignores a click, and stays in the focus order. A disabled button is dimmed, has the native `disabled` attribute, calls no handler, and is out of the tab order. With `focusableWhenDisabled`, a disabled button has `aria-disabled` and not the native attribute, and keeps the focus and its place in the tab order. `accessibleName` gives a name that starts with the label.
+- `TextInput` (`invalid` and each native `input` prop): a single-line text control. It shows `value` and reports a change with `onChange`, or holds its own text from `defaultValue`. It takes its `id`, `aria-describedby`, and error state from its `Field`.
+- `TextArea` (`invalid` and each native `textarea` prop): the multi-line text control, with the same behavior as `TextInput`. A person can drag its height and not its width.
+- `Checkbox` (`checked`, `onChange`, `children`, and each native `input` prop except `type`): a native checkbox that the catalog draws, with the label in `children`. `onChange` gets the other boolean. The box shows `checked` until the caller gives a new value.
+- `PromptBox` (`label`, `onSend`, `onStop`, `defaultValue`, `working`, `disabled`, `disabledReason`, `placeholder`, `minLines`, `maxLines`): a text area with a hint line and one button. It holds its text from `defaultValue`. Enter or `Make a wish` reports `onSend` with the text. Shift+Enter makes a new line. The text area grows from `minLines` (3) to `maxLines` (8) lines. While `working` is true, the text is read-only, `Stop` reports `onStop`, and focus moves between the text and `Stop`. `disabled` wins over `working` and shows `disabledReason` in the hint line. At the end of the work, the box becomes empty only when it reported `onSend` for this work and did not report `onStop` after it. In each other case, the text stays. A change of the text while `working` is false clears the record of the send.
+- `Panel` (`title`, `headerEnd`, `footer`, `children`): a `surface` box with a body. The header shows when the panel has a `title` (a heading 2, cut with an ellipsis) or `headerEnd`. The footer puts its content at the end of the line and wraps it.
+- `Quote` (`cite`, `children`): italic text with an `accent` bar. `cite` is the optional source below the text.
+- `SpiritAside` (`children`): a remark of Wishem with a `spirit` bar and tint. It starts with `Wishem:`.
+- `MakerLine` (`children`): one text of the designer in the mono typeface. The component draws `> ` before it.
+- `SpiritLine` (`children`): one text of Wishem in `spirit-text`.
+- `Callout` (`variant`, `title`, `children`): `variant` is `success`, `warning`, `danger`, or `info`. The optional bold `title` comes before the content.
+- `Badge` (`variant`, `children`): a pill on one line. `variant` is `neutral` (default), `maker`, `spirit`, `accent`, `success`, `warning`, `danger`, or `info`.
+- `Divider` (`variant`): `plain` (default) fills the width. `accent` is 56 by 2 pixels.
 - `FieldRow` (`field`, `value`, `options`, `onChange`, `onListChange`, `onClear`, `initial`): one field of a component, with a control for its type (text, number, check box, reference select, or reference list). It sends the value with `onChange`, or a change of a list with `onListChange`, and shows the phase: saved, saving, or not saved with a reason. `initial` sets the first phase, for the style guide and the tests.
 - `EntityList` (`items`, `selected`, `onSelect`): the list of entities. Each item shows a name and a short ID. The selected item has a bar at the start edge.
 - `EntityInspector` (`entity`, `options`, `onChange`, `onClear`): `onChange` gets the component type, the field, and a `FieldChange` (`set-field`, `add-reference`, or `remove-reference`). It shows the full ID and the components of one entity, each with a `FieldRow` for each field. With no `entity`, it shows "Select an entity to change it."
 - `ProductPanel` (`model`, `selected`, `onSelect`, `onChange`, `onClear`): the list and the inspector of the entities of a model. It makes the names and the options from the model, and it sends a `ProductChange` with `onChange`: the operation `set-field` with a `SetFieldPayload`, or `add-reference` or `remove-reference` with a `ReferencePayload`. `onClear` sends a `ClearFieldPayload`. `ProductTool` sends `product/<operation>`.
 
-A new component goes in the Components section of the style guide, in each of its states, in the same change. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
+### Rules for the props of a component
+
+- A component does not accept `className` or `style`. `Native<'button'>` in `src/components/native.ts` gives the native props of an element with no `className` and no `style`.
+- A component with variants selects the variant with a `variant` prop that has a fixed set of names.
+- A control and a button pass each other native attribute to their element.
+- A control that holds no value reports a change to its caller and shows the value that the caller gives.
+
+### A popup is in the theme scope of its control
+
+A popup draws itself in the element of the nearest `ThemeScope`. The hook `useThemeScopeElement` gives that element, or `null` when there is no scope. The popup then has the token values of the scope, the screenshot of the scope shows it, and axe checks it. A later popup follows the same rule.
+
+A new component goes in the Components section of the style guide, in each of its states, in the same change. Each group of components is one file in `src/style-guide/sections/components/`. The helpers `Specimen`, `Forced`, and `StateMatrix` in `src/style-guide/` draw the specimens. The section shows the real component. It adds a screenshot test and an accessibility test for each theme. Run `test:ui:update` and commit the new baselines.
+
+A state that a person uses has a row in `src/components/state-contrast.test.ts`. The row gives the foreground and the background of the text. The test calculates the contrast ratio from `tokens.css` in each theme. It fails when the ratio is less than 4.5, and it names the state and the theme. The `Section` of the style guide has the prop `stacked`, which draws the two scopes one above the other. The components section uses it.
 
 ### Add a token
 

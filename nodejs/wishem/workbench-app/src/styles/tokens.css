@@ -28,6 +28,7 @@
   --surface: light-dark(#ffffff, #1b1b30);
   --night: var(--ink);
   --on-night: var(--mist);
+  --on-fill: var(--ink);
   --line: light-dark(#dedee7, #2d2d46);
   --control-border: light-dark(#85859a, #6b6b88);
 

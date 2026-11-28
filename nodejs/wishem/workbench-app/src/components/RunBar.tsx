@@ -90,13 +90,15 @@ export const RunBar = ({ state, busy, alert, onControl }: RunBarProps) => {
           {controls.map(({ control, label, maker }, index) => (
             <Button
               key={index}
-              label={label}
-              variant={maker ? 'maker' : 'plain'}
+              variant={maker ? 'maker' : 'neutral'}
               disabled={!enabled.has(control)}
-              busy={busy === control}
+              focusableWhenDisabled
+              loading={busy === control}
               tabIndex={index === stop ? 0 : -1}
-              onPress={() => onControl?.(control)}
-            />
+              onClick={() => onControl?.(control)}
+            >
+              {label}
+            </Button>
           ))}
           {readout && (
             <>
