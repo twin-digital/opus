@@ -554,6 +554,22 @@ describe('a rewind on a link', () => {
   })
 })
 
+describe('a rewind on the link of a hub with rewind sources', () => {
+  it('sends a result with not-permitted', async () => {
+    const hub = createHub({ subsystems: [store, time], rewindSources: ['construct-manager'] })
+    hub.start()
+    const link = await joined(hub, page, keyboard)
+    link.send({ t: 'submit', request: 3, subsystem: 'keyboard', input: hubInputs.rewind(0) })
+    await settle()
+    expect(link.messages[1]).toEqual({
+      t: 'result',
+      request: 3,
+      result: { ok: false, reason: 'not-permitted', problems: [] },
+    })
+    expect(hub.record()).toHaveLength(0)
+  })
+})
+
 describe('the submit message', () => {
   it('records the source and sends the applied message before the result', async () => {
     const hub = makeHub()

@@ -19,6 +19,7 @@ The page server listens on `127.0.0.1` only. The Vite proxy passes the WebSocket
 | ----------------- | -------------------------------------------------- | ----------------------------------------------- |
 | `--model`         | the model folder of `@thrashplay/wishem-workbench` | The model folder.                               |
 | `--product`       | none                                               | The folder of a product model to mount.         |
+| `--product-code`  | none                                               | The module with the rules of the product.       |
 | `--port`          | `5173`                                             | The port of the page. `0`: the system selects.  |
 | `--hub-port`      | `4747`                                             | The port of the hub. `0`: the system selects.   |
 | `--views`         | `src/views/` of the package                        | The folder of the sidecars and generated files. |
@@ -31,6 +32,29 @@ With `--product`, the script mounts the model of that folder as the store `produ
 ```
 pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model
 ```
+
+### Product constructs
+
+With `--product`, the script adds the construct list (the model subsystem `constructs`) to the construct of the workbench and attaches the construct manager. The `welcome` message of the link then has the parts `store`, `product`, and `constructs`. A client of the link starts a product construct with the input `constructs/start`. The product construct runs in the process of the script, with its own link on a port that the system selects. The script prints `wishem: construct <id> runs, link at <address>`. The construct manager gives the product construct each later change of the product model. When the script stops, it stops the product constructs first.
+
+The option `--product-code <module>` names the product code. The module exports `wrapStore`, which adds the rules of the product to the store of a product construct. The value is a package name, or a path that starts with `.` or `/`. A relative path starts from the folder where you run the command. The script prints `wishem: product code <value>` after the product line. The option needs `--product`. With no option, a product construct has no rules.
+
+To start the workbench with the sample product and its rules, from the root of the repository:
+
+```
+pnpm --filter @thrashplay/wishem-workbench-app start --product nodejs/wishem/sample-product/model --product-code @thrashplay/wishem-sample-product
+```
+
+Then start a product construct and read its address. In a second terminal, from the root of the repository:
+
+```
+RAW=nodejs/wishem/docs/milestones/a1-construct/raw-link.mjs
+node $RAW --once --send '{"type":"constructs/start","payload":{"construct":"play"}}'
+PLAY=$(node $RAW --once | grep -o 'ws://127.0.0.1:[0-9]*/link')
+node $RAW --url $PLAY --once
+```
+
+The last command prints the state of the product construct. The count of the sample product advances at each tick. To pause the product construct, send `constructs/send` with `{"type":"time/set-running","payload":{"running":false}}` as its `input`.
 
 While the script runs, it keeps the generated files of the views current. It runs the generator at the start, after each change to a definition that the hub accepts, and after each change to a sidecar. A change to `state.json` does not run the generator. The script prints one line for each file that it wrote, changed, or removed, with the new and removed props. It prints each error of the generator and continues to serve the page. With `--no-view-types`, the script writes no generated file.
 

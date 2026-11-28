@@ -92,6 +92,15 @@ const validateLimits = (checkpointInterval: number, recordLimit: number) => {
   }
 }
 
+const validateRewindSources = (sources: readonly string[]): readonly string[] => {
+  for (const source of sources) {
+    if (!isId(source)) {
+      throw new HubConfigurationError(`The rewind source "${source}" is not correct.`)
+    }
+  }
+  return [...sources]
+}
+
 const validateRecord = (record: HubRecord, subsystems: readonly ModelSubsystem[]) => {
   const keys = Object.keys(record.start.state)
   for (const key of keys) {
@@ -138,6 +147,7 @@ export const createHub = (options: HubOptions): Hub => {
   const checkpointInterval = options.checkpointInterval ?? DEFAULT_CHECKPOINT_INTERVAL
   const recordLimit = options.recordLimit ?? DEFAULT_RECORD_LIMIT
   validateLimits(checkpointInterval, recordLimit)
+  const rewindSources = options.rewindSources && validateRewindSources(options.rewindSources)
   if (options.record) {
     validateRecord(options.record, subsystems)
   }
@@ -279,6 +289,9 @@ export const createHub = (options: HubOptions): Hub => {
 
   const apply = (source: string, input: Input): Applied => {
     const isRewind = input.type === REWIND_INPUT_TYPE
+    if (isRewind && !replaying && rewindSources && !rewindSources.includes(source)) {
+      return reject('not-permitted')
+    }
     if (!isRewind && !subsystems.some((subsystem) => subsystem.inputs.includes(input.type))) {
       return reject('unknown-type')
     }
