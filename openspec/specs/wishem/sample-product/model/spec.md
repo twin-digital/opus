@@ -36,11 +36,11 @@ The root entry of the package SHALL export the IDs of the two component types, o
 
 ### Requirement: A tick adds 1 to each count
 
-The package SHALL give a count rule that wraps a store. The result SHALL be a model subsystem with the ID of the store. It SHALL apply each input type of the store as the store does, and also `time/advance`. For each `time/advance`, it SHALL add 1 to each `count` value that is a number. It SHALL NOT change a value that is not a number. It SHALL NOT refuse a tick.
+The package SHALL give the count behavior: a native behavior for the component type `Counter`, which the update subsystem runs. At each tick, it SHALL add 1 to the `count` value of each `Counter` component when the value is a number. It SHALL NOT change a value that is not a number. It SHALL NOT refuse a tick.
 
 #### Scenario: Three ticks
 
-- **WHEN** a hub has the time subsystem first and the sample store with the count rule second, and it gets three ticks
+- **WHEN** a hub has the time subsystem first and the update subsystem of the sample store with the count behavior second, and it gets three ticks
 - **THEN** the count of the sample entity is the number `3`
 
 #### Scenario: A count that a person set
@@ -65,7 +65,7 @@ The package SHALL give a count rule that wraps a store. The result SHALL be a mo
 
 #### Scenario: An input of the store
 
-- **WHEN** the wrapped store gets `store/set-field` that sets the color to `#15803d`
+- **WHEN** the update subsystem with the count behavior gets `store/set-field` that sets the color to `#15803d`
 - **THEN** the part holds `#15803d`, as with the store alone
 
 ### Requirement: The count follows the record
@@ -74,7 +74,7 @@ The count SHALL depend only on the inputs of the record. A rewind and a replay S
 
 #### Scenario: A replay
 
-- **WHEN** a hub with the time subsystem and the wrapped store gets five ticks, and a new hub replays its record
+- **WHEN** a hub with the time subsystem and the update subsystem with the count behavior gets five ticks, and a new hub replays its record
 - **THEN** the new hub has the same count
 
 #### Scenario: A rewind
@@ -84,7 +84,7 @@ The count SHALL depend only on the inputs of the record. A rewind and a replay S
 
 #### Scenario: The clock advances the count
 
-- **WHEN** a clock with a step length of 100 milliseconds starts on a hub with the time subsystem and the wrapped store, and 500 milliseconds of real time pass
+- **WHEN** a clock with a step length of 100 milliseconds starts on a hub with the time subsystem and the update subsystem with the count behavior, and 500 milliseconds of real time pass
 - **THEN** the count is `5`
 
 ### Requirement: The sample product package uses no Node.js API
@@ -96,16 +96,16 @@ The root entry of the package SHALL use no Node.js API and SHALL compile with no
 - **WHEN** a source file of the package imports `node:path`
 - **THEN** the build of the package fails
 
-### Requirement: The root entry exports the rules of the product as wrapStore
+### Requirement: The root entry exports the behaviors of the product
 
-The root entry of the package SHALL export the function `wrapStore`. It SHALL be the count rule: it SHALL take a store and return the model subsystem that the count rule gives. It SHALL be the one export that a product construct needs from the code of the product. The export SHALL import nothing of the workbench.
+The root entry of the package SHALL export the list `behaviors`, which holds the count behavior. It SHALL be the one export that a product construct needs from the code of the product. The list SHALL import nothing of the workbench.
 
-#### Scenario: The construct manager loads the rules
+#### Scenario: The construct manager loads the behaviors
 
 - **WHEN** the workbench names `@thrashplay/wishem-sample-product` as the product code, and a product construct gets three ticks
 - **THEN** the count of the sample entity is three more than the count at the start
 
-#### Scenario: The same rule
+#### Scenario: The list
 
-- **WHEN** a test gives the same store to `wrapStore` and to `withCountRule`, and applies the same tick to each result
-- **THEN** the two parts are equal
+- **WHEN** a test reads `behaviors` of the root entry
+- **THEN** the list holds one behavior, the count behavior, for the component type `Counter`

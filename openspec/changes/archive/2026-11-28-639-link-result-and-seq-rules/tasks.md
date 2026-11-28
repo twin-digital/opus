@@ -1,0 +1,28 @@
+# Tasks
+
+## Task 1: The rules in LINK.md and in the reference client
+
+Files: `nodejs/wishem/hub/LINK.md`, `nodejs/wishem/hub/src/link/messages.ts`, `nodejs/wishem/hub/src/link/messages.test.ts`, `nodejs/wishem/hub/src/link/open-link.test.ts`, `nodejs/wishem/hub/src/link/serve-link.ts`
+Interfaces: produces the type `WelcomeStatus = 'created' | 'running'` and the member `welcome` of `HubMessage` with `status: WelcomeStatus` (design.md, "Interfaces"); `parseHubMessage` gives `undefined` for each malformed message of D1 to D4
+
+- [ ] 1.1 Add the failing tests to the `it.each` list "gives undefined for %s" of `messages.test.ts`: a result with a result and an error (`{ t: 'result', request: 1, result: { ok: true, seq: 4 }, error: 'It broke.' }`), a result with a result and an error that is null, a result with a request of 1.5, a result with a negative request, a welcome with a seq of 3.5, a welcome with a negative seq, a welcome with a protocol of 1.5, a welcome with the status stopped, an applied with an input with a seq of 4.5, an applied with an input with a negative seq. Remove `stopped` from the loop of the statuses that the reader accepts. Run `pnpm exec turbo run test --filter @thrashplay/wishem-hub` and verify that the new tests fail and show it in the report.
+- [ ] 1.2 Add the failing tests to `open-link.test.ts`: "closes the channel and rejects with a LinkClosedError for a welcome with the seq 3.5" (the channel closes when the welcome arrives, with no `applied`); the same for the status `stopped`; and "ends the link and rejects the waiting request for a result with a result and an error". Verify that they fail.
+- [ ] 1.3 In `messages.ts`, add an integer check (`Number.isSafeInteger(value) && value >= 0`) for `protocol` and `seq` of `welcome`, `seq` of the input of `applied`, and `request` of `result`; make `isResult` require exactly one of the present keys `result` and `error` (`'result' in fields`, `'error' in fields`); remove `stopped` from `STATUSES`; add `WelcomeStatus` and use it in `HubMessage`. Keep `isFinite` for the numbers that the rule does not name (`supported` of `refused`). Narrow the status in `serve-link.ts` at the `welcome` that it sends, with no change of behavior. Verify that the tests of 1.1 and 1.2 pass, and that each other test of `hub` still passes.
+- [ ] 1.4 Update `LINK.md`: in "The numbers", say that a message of the hub side with such a number that is not an integer from 0 to 2^53 - 1 is malformed; in `welcome`, say that the message is malformed also when `status` is not `created` or `running`, or `seq` is negative; in `result`, replace "A `result` message is malformed when it has none of the keys `result` and `error`. The hub side sends one of the two keys." with the full list of D2 (both keys or neither, a key with the value `null` is present, `result` not an object with a boolean `ok`, `error` not text, `request` not an integer). Use ASD-STE100 and the final state only. Verify that `examples.test.ts` still passes (each example of `LINK.md` is a correct message).
+- [ ] 1.5 Run `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-hub` under the lock of `nodejs/wishem/CLAUDE.md` and verify that it passes. Run `pnpm exec prettier --write` on the changed files.
+
+## Task 2: The rules in the GDScript client
+
+Files: `nodejs/wishem/renderer-godot/godot/wishem/link_client.gd`, `nodejs/wishem/renderer-godot/godot/wishem/link_messages.gd`, `nodejs/wishem/renderer-godot/godot/tests/test_link_client.gd`, `nodejs/wishem/renderer-godot/godot/tests/test_link_messages.gd`
+Interfaces: consumes the rules of `LINK.md` from Task 1 (D1 to D4 of design.md); `Messages.as_int` gives `null` for a negative number
+
+- [ ] 2.1 Add the failing tests to `test_link_messages.gd`: `as_int` gives `null` for `-1` and `-1.0`, and gives 0 for `-0.0`. Add the failing tests to `test_link_client.gd`: `test_a_result_with_result_and_error_closes_the_socket_and_gives_down_once` (an input port waits for the request 1; the port gets the failure of a closed link), `test_a_result_with_no_ok_closes_the_socket_and_gives_down_once`, `test_a_welcome_with_the_status_stopped_closes_the_socket`, `test_a_welcome_with_an_unknown_status_closes_the_socket`, `test_a_welcome_with_a_negative_seq_closes_the_socket`, and `test_a_welcome_with_a_fractional_seq_closes_the_socket`. Run `pnpm --filter @thrashplay/wishem-renderer-godot test:godot` under the lock and verify that the new tests fail (except the fractional seq, which already passes) and show it in the report.
+- [ ] 2.2 In `link_messages.gd`, make `as_int` give `null` for a number less than 0. In `link_client.gd`, make `_welcome` close the socket when `status` is not `created` or `running`, and make `_result` close the socket when the message has both keys `result` and `error` (`message.has`), when `result` is present and is not a dictionary with a boolean `ok`, or when `error` is present and is not text. Verify that the tests of 2.1 pass and that each other GDScript test still passes, with the line `wishem-godot tests: <n> passed, 0 failed`.
+- [ ] 2.3 Run `pnpm exec turbo run lint typecheck test --filter @thrashplay/wishem-renderer-godot` under the lock and verify that it passes.
+
+## Workflow follow-up
+
+- Add the changeset of the table "Package Impact" of design.md: `@thrashplay/wishem-hub` patch and `@thrashplay/wishem-renderer-godot` patch.
+- Do the steps of "The test guide" of design.md in the final review.
+- Create the follow-up issues of the section "Follow-up" of design.md.
+- Archive the change after the final review, and finish with `superpowers:finishing-a-development-branch`.

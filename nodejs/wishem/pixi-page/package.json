@@ -24,6 +24,7 @@
     "@thrashplay/wishem-host-nodejs": "workspace:*",
     "@thrashplay/wishem-hub": "workspace:*",
     "@thrashplay/wishem-renderer-pixi": "workspace:*",
+    "@thrashplay/wishem-update": "workspace:*",
     "pixi.js": "catalog:"
   },
   "devDependencies": {

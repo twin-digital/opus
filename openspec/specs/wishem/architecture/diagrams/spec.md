@@ -84,20 +84,20 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the PixiJS process imports `serveHub` of `@thrashplay/wishem-host-nodejs`, and values of `@thrashplay/wishem-clock`, `@thrashplay/wishem-core`, and `@thrashplay/wishem-hub`
 - **THEN** the container diagram shows the container `clock` as a TypeScript package, a relationship from the PixiJS process to `host-nodejs` with the label "Serves the link with [import]", relationships from the PixiJS process to `clock`, to `core`, and to `hub`, and a relationship from `clock` to `hub`, each with the label "Builds on [import]"
 
+#### Scenario: The update package builds on core, hub, and the clock
+
+- **WHEN** `@thrashplay/wishem-update` imports values of `@thrashplay/wishem-core`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
+- **THEN** the container diagram shows the container `update` as a TypeScript package, and relationships from `update` to `core`, to `hub`, and to `clock`, each with the label "Builds on [import]"
+
+#### Scenario: The PixiJS process runs its behaviors with the update package
+
+- **WHEN** the PixiJS process imports `createUpdate` of `@thrashplay/wishem-update`
+- **THEN** the container diagram shows a relationship from the PixiJS process to `update` with the label "Runs the behaviors with [import]"
+
 #### Scenario: The PixiJS page builds on the PixiJS renderer, the hub, and the clock
 
 - **WHEN** the PixiJS page imports values of `@thrashplay/wishem-renderer-pixi`, `@thrashplay/wishem-hub`, and `@thrashplay/wishem-clock`
 - **THEN** the container diagram shows the PixiJS page as a container in a web browser, the container `renderer-pixi` as a TypeScript package, and a relationship from the PixiJS page to each of the three packages with the label "Builds on [import]"
-
-#### Scenario: The Godot process runs the construct of the Godot application
-
-- **WHEN** the `start` script of `@thrashplay/wishem-renderer-godot` runs the construct of the Godot application in a Node.js process
-- **THEN** the container diagram shows the Godot process as a Node.js container, a relationship from the designer to it, a relationship from it to `host-nodejs` with the label "Serves the link with [import]", and relationships from it to `clock`, `core`, and `hub`, each with the label "Builds on [import]"
-
-#### Scenario: The Godot application connects through the Godot runner
-
-- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
-- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"
 
 #### Scenario: The workbench process runs product constructs with the construct manager
 
@@ -113,6 +113,26 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 - **WHEN** the workbench process runs a product construct whose link a renderer in a different process opens
 - **THEN** the table row of the workbench process says that it runs the product constructs and serves the link of each one, and the diagram shows no new process for a product construct
+
+#### Scenario: The construct manager and the workbench process build on the update package
+
+- **WHEN** `@thrashplay/wishem-construct-manager` imports `createUpdate`, and the workbench process imports `checkBehaviors`, each of `@thrashplay/wishem-update`
+- **THEN** the container diagram shows a relationship from `construct-manager` to `update` with the label "Runs the behaviors with [import]", and a relationship from the workbench process to `update` with the label "Checks the product code with [import]"
+
+#### Scenario: The sample product imports only types of the update package
+
+- **WHEN** `@thrashplay/wishem-sample-product` imports only types of `@thrashplay/wishem-update`
+- **THEN** the container diagram shows no relationship from `sample-product` to `update`, and the dependency list of the architecture document names the dependency
+
+#### Scenario: The Godot process runs the construct of the Godot application
+
+- **WHEN** the `start` script of `@thrashplay/wishem-renderer-godot` runs the construct of the Godot application in a Node.js process
+- **THEN** the container diagram shows the Godot process as a Node.js container, a relationship from the designer to it, a relationship from it to `host-nodejs` with the label "Serves the link with [import]", and relationships from it to `clock`, `core`, and `hub`, each with the label "Builds on [import]"
+
+#### Scenario: The Godot application connects through the Godot runner
+
+- **WHEN** the `godot` script of `@thrashplay/wishem-renderer-godot` starts the Godot application in Docker and carries the bytes of its link to the Godot process
+- **THEN** the container diagram shows the Godot runner as a Node.js container and the Godot application as a Godot container, a relationship from the designer to the Godot runner, a relationship from the Godot runner to the Godot application with the label "Starts and copies the screenshots [Docker]", a relationship from the Godot application to the Godot runner with the label "Connects to the hub [WebSocket link]", and a relationship from the Godot runner to the Godot process with the label "Carries the link [TCP]"
 
 ### Requirement: The dynamic diagram of the path of a change
 
