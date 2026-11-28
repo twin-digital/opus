@@ -117,6 +117,7 @@ The test gets steps 14 to 17 after step 13 of `three-renderers.guide.ui.test.ts`
 14. `setField` of the color to `red`. Each picture is `#ff00ff`.
 15. `setField` of the color to `#15803d`. Each picture is `#15803d`. This proves that a view draws a color again after the fallback.
 16. `replaceModel` with the model of `port.read().store`, but with no value for the field `color` of the sample entity. Each picture is `#ff00ff`.
+    16b. `replaceModel` with that model, but with a valid label and the value `#15803d`. Each picture is `#15803d`. Step 17 starts from a different color, so a stale fallback picture cannot pass it.
 17. `replaceModel` with that model, but with the label `???` for the field `color` and the value `#1d4ed8`. Each picture is `#ff00ff`.
 
 - `store/set-field` and `store/replace-model` are accepted from each input subsystem. Only `hub/rewind` has a list of sources.
@@ -133,7 +134,7 @@ A view with the fallback color is visible. Thus `entityAt` of the PixiJS rendere
 - No blueprint text changes. `rules.md` has no rule about colors, and no line that starts with "Rejected:" covers this change.
 - The glossary gets no term. The fallback color is a detail of the views of the sample product.
 - The READMEs of `three-renderers` ("The React page"), `pixi-page` ("What the page shows"), `renderer-godot` ("The view ClearColor"), and `sample-product` (a new section "The color cases") give the rule and the fallback color.
-- The architecture document: the row of `sample-product` names the table of color cases. The dependency lines of `pixi-page`, `renderer-godot`, and `three-renderers` say that their tests read the table. No import at run time changes, so no diagram changes and `render.mjs` does not run.
+- The architecture document: the row of `sample-product` names the table of color cases. The package view of the document comes from `package.json` and shows the test dependencies, so the packages `pixi-page`, `renderer-godot`, and `three-renderers` need no new line. No import at run time changes, so no diagram changes and `render.mjs` does not run.
 
 ### 10. No question for the owner
 
@@ -263,7 +264,7 @@ No data changes. To roll back, revert the pull request.
 - **#744 (pixi-page reload on restore, in progress).** It changes `pixi-page/README.md`, `src/main.ts`, and the main spec `wishem/renderer-pixi/page` (a new requirement). This change changes `pixi-page/README.md` ("What the page shows") and the requirement "The ClearColor view fills the viewport" of the same spec. Either order works. If #744 merges first, merge `main` before the archive, and read the main spec again: the delta must copy the current text of the requirement.
 - **#735 (proxy noise of pixi-page and three-renderers, next).** It changes the page servers (`scripts/start.ts`, `scripts/react-page.ts`, and the Vite configuration), and maybe the READMEs. This change changes no page server. If both change a README, the second to merge merges `main`.
 - **#740 (break-test after #542: `construct-manager`, `sample-product`).** This change adds a file to `sample-product`. Do not run the `sample-product` pass of #740 while this change is in apply.
-- **#650 (architecture diagrams).** This change changes only the text of `docs/architecture/README.md` (the row of `sample-product` and three dependency lines), not `render.mjs` or a diagram. The second to merge merges `main`.
+- **#650 (architecture diagrams).** This change changes only the text of `docs/architecture/README.md` (the row of `sample-product`), not `render.mjs` or a diagram. The second to merge merges `main`.
 - **#745 (small findings of the A5 review).** M6 and M7 change other lines of `docs/architecture/README.md`. M8 changes line 146 of `renderer-godot/README.md`, near the section that this change changes. The second to merge merges `main`.
 
 ## Open issues of the same files or behavior

@@ -84,6 +84,11 @@
     "color": "#ff00ff"
   },
   {
+    "name": "a newline after",
+    "value": "#1d4ed8\n",
+    "color": "#ff00ff"
+  },
+  {
     "name": "free text",
     "value": "blue-ish",
     "color": "#ff00ff"

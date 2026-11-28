@@ -20,7 +20,7 @@ At each check, the test SHALL read the joined state of the sample construct thro
 
 ### Requirement: Each picture shows the fallback color when the state has no color
 
-While the construct is paused, the test SHALL send these inputs through its link, in this order: a `store/set-field` that sets the color to `red`, a `store/set-field` that sets it to `#15803d`, a `store/replace-model` with no value for the field `color`, and a `store/replace-model` in which the label of that field is `???`. After each input, each pixel of each picture SHALL be `#ff00ff`, except after `#15803d`.
+While the construct is paused, the test SHALL send these inputs through its link, in this order: `store/set-field` with `red`, `store/set-field` with `#15803d`, `store/replace-model` with no value for the field `color`, `store/replace-model` with `#15803d` and a valid label, and `store/replace-model` with the label `???`. After each input, each pixel of each picture SHALL be `#ff00ff`, except after an input with `#15803d`.
 
 #### Scenario: A value that is not a color
 
@@ -36,6 +36,11 @@ While the construct is paused, the test SHALL send these inputs through its link
 
 - **WHEN** the test replaces the model with a model whose `Color` component has no value for the field `color`
 - **THEN** within 5 seconds each pixel of each picture is `#ff00ff`
+
+#### Scenario: A color again before the last step
+
+- **WHEN** the test replaces the model with a model that has a valid label and the value `#15803d`
+- **THEN** within 5 seconds each pixel of each picture is `#15803d`, so that the next step starts from a different color
 
 #### Scenario: A label that gives an empty name
 

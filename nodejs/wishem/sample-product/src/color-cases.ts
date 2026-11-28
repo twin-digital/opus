@@ -32,6 +32,7 @@ export const COLOR_CASES: readonly ColorCase[] = [
   fallback('not hexadecimal', '#1d4eg8'),
   fallback('a space before', ' #1d4ed8'),
   fallback('a space after', '#1d4ed8 '),
+  fallback('a newline after', '#1d4ed8\n'),
   fallback('free text', 'blue-ish'),
   fallback('a number', 5),
   fallback('a boolean', true),

@@ -34,6 +34,6 @@ None.
 ## Impact
 
 - Code: `three-renderers/src/views/ClearColor.tsx`, `pixi-page/src/views/ClearColor.ts`, `renderer-godot/godot/views/ClearColor.gd`, and their tests; the new file `sample-product/src/color-cases.ts`; the new fixture `renderer-godot/godot/tests/fixtures/color-cases.json`; `three-renderers/tests/three-renderers.guide.ui.test.ts`.
-- Documents: the READMEs of `sample-product`, `three-renderers`, `pixi-page`, and `renderer-godot`; the text of the architecture document about `sample-product` and the development dependencies. No diagram changes.
+- Documents: the READMEs of `sample-product`, `three-renderers`, `pixi-page`, and `renderer-godot`; the row of `sample-product` in the package table of the architecture document (the package view comes from `package.json`). No diagram changes.
 - Dependencies: none. The three packages already have `sample-product` as a dependency or a development dependency. Only tests import the table.
 - No package is published.
