@@ -64,6 +64,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** a change makes the workbench process write the model folder
 - **THEN** the relationship between the process and the model folder says that the process writes it
 
+#### Scenario: The workbench process mounts a product
+
+- **WHEN** the workbench process keeps the model of a mounted product in a product folder
+- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"
+
 ### Requirement: The dynamic diagram of the path of a change
 
 The architecture document SHALL hold a C4 dynamic diagram of the primary path of Wishem, in `nodejs/wishem/docs/architecture/dynamic-change-light.svg` and `dynamic-change-dark.svg`. The primary path is the path from a change to the model to a new picture. The diagram SHALL number each relationship in the order of the flow.
@@ -99,12 +104,17 @@ The architecture document SHALL hold a C4 component diagram of the page of the w
 
 ### Requirement: The entity diagram of the model folder
 
-The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality.
+The architecture document SHALL hold an entity diagram of the model folder, in `nodejs/wishem/docs/architecture/entities-model-folder-light.svg` and `entities-model-folder-dark.svg`. The diagram SHALL show each entity of the model folder, its keys, and each relationship with its cardinality. The diagram SHALL apply to each model folder: the model folder of the workbench and the product folder have the same entities.
 
 #### Scenario: A change adds an entity to the model folder
 
 - **WHEN** a change adds a kind of record to the model folder, such as a relation between entities
 - **THEN** the entity diagram shows the new entity, its keys, and its relationships
+
+#### Scenario: A second model folder with the same schema
+
+- **WHEN** a change adds a store of persisted data that has the layout of a model folder, such as the product folder
+- **THEN** the architecture document says that the entity diagram applies to that store, and no second entity diagram exists
 
 ### Requirement: Each diagram is written by the render script
 

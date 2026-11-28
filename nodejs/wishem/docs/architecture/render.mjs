@@ -607,10 +607,18 @@ const cModel = el(
   '[Container: JSON files]',
   'Holds the definitions and the authored state.',
 )
+const cProduct = el(
+  'store',
+  gx(RIGHT),
+  564,
+  'Product model folder',
+  '[Container: JSON files]',
+  'Holds the model of the mounted product.',
+)
 const cProcess = el(
   'container',
   gx(MIDDLE),
-  484,
+  564,
   'Workbench process',
   '[Container: Node.js]',
   'Holds the construct and serves the page.',
@@ -618,7 +626,7 @@ const cProcess = el(
 const cHost = el(
   'container',
   gx(LEFT),
-  684,
+  764,
   'host-nodejs',
   '[Container: TypeScript package]',
   'Runs a construct and serves the link.',
@@ -626,7 +634,7 @@ const cHost = el(
 const cCore = el(
   'container',
   gx(RIGHT),
-  684,
+  764,
   'core',
   '[Container: TypeScript package]',
   'Checks a model and holds the store.',
@@ -634,7 +642,7 @@ const cCore = el(
 const cHub = el(
   'container',
   gx(MIDDLE),
-  884,
+  964,
   'hub',
   '[Container: TypeScript package]',
   'Joins the subsystems and carries the link.',
@@ -642,7 +650,7 @@ const cHub = el(
 const cRenderer = el(
   'container',
   gx(MIDDLE),
-  1284,
+  1364,
   'renderer-react',
   '[Container: TypeScript package]',
   'Draws React views from a port.',
@@ -650,31 +658,42 @@ const cRenderer = el(
 
 const cClock = el(
   'container',
-  gx(RIGHT),
-  1084,
+  gx(LEFT),
+  1164,
   'clock',
   '[Container: TypeScript package]',
   'Holds the time subsystem and the clock.',
+)
+
+const cSample = el(
+  'container',
+  gx(RIGHT),
+  1164,
+  'sample-product',
+  '[Container: TypeScript package]',
+  'Holds the example model folder and the count rule.',
 )
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has eight containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the model folder, and looks at the page.',
+    'Wishem has ten containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The designer starts the process, edits the two folders, and looks at the page.',
   width: WIDTH_PX + GUTTER + 32,
-  height: 1512,
+  height: 1592,
   items: [
-    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1196, label: SYSTEM },
+    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 32, h: 1276, label: SYSTEM },
     cDesigner,
     cPage,
     cModel,
+    cProduct,
     cProcess,
     cHost,
     cCore,
     cHub,
     cRenderer,
     cClock,
+    cSample,
 
     // The primary path: a change to the model becomes a new picture
     rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
@@ -682,45 +701,59 @@ const containers = {
       gx(640),
       200,
     ]),
-    rel('flow', [right(cProcess, 536), [gx(707), 536], bottom(cModel)], 'Reads, watches, and writes [file system]', [
-      gx(707),
-      460,
-    ]),
-    rel('flow', [bottom(cPage, gx(96)), [gx(96), 560], left(cProcess, 560)], 'Connects to the hub [WebSocket link]', [
+    rel(
+      'flow',
+      [top(cProcess, 530), [530, 424], [800, 424], bottom(cModel, 800)],
+      'Reads, watches, and writes [file system]',
+      [663, 424],
+    ),
+    rel(
+      'quiet',
+      [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
+      'Reads, watches, and writes [file system]',
+      [720, 500],
+    ),
+    rel(
+      'quiet',
+      [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
+      'Edits files [text editor]',
+      [760, 96],
+    ),
+    rel('flow', [bottom(cPage, gx(96)), [gx(96), 640], left(cProcess, 640)], 'Connects to the hub [WebSocket link]', [
       gx(96),
-      470,
+      550,
     ]),
 
     // The other relationships
     rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
-    rel('quiet', [bottom(cPage, gx(250)), [gx(250), 520], left(cProcess, 520)], 'Gets page code [HTTP]', [
+    rel('quiet', [bottom(cPage, gx(250)), [gx(250), 600], left(cProcess, 600)], 'Gets page code [HTTP]', [
       gx(250),
-      444,
+      524,
     ]),
-    rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 636], [gx(173), 636], top(cHost)], 'Runs [import]', [
+    rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 716], [gx(173), 716], top(cHost)], 'Runs [import]', [
       gx(274),
-      636,
+      716,
     ]),
-    rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 636], [gx(707), 636], top(cCore)], 'Uses [import]', [
+    rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 716], [gx(707), 716], top(cCore)], 'Uses [import]', [
       gx(606),
-      636,
+      716,
     ]),
-    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 736]),
-    rel('quiet', [bottom(cCore), [gx(707), 936], right(cHub, 936)], 'Builds on [import]', [gx(707), 850]),
-    rel('quiet', [bottom(cHost), [gx(173), 920], left(cHub, 920)], 'Builds on [import]', [gx(173), 864]),
-    rel('quiet', [left(cPage, 360), [68, 360], [68, 960], left(cHub, 960)], 'Builds on [import]', [223, 960]),
-    rel('quiet', [left(cPage, 330), [44, 330], [44, 1336], left(cRenderer, 1336)], 'Builds on [import]', [211, 1336]),
+    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 816]),
+    rel('quiet', [bottom(cCore), [gx(707), 1016], right(cHub, 1016)], 'Builds on [import]', [gx(707), 930]),
+    rel('quiet', [bottom(cHost), [gx(173), 1000], left(cHub, 1000)], 'Builds on [import]', [gx(173), 944]),
+    rel('quiet', [left(cPage, 360), [68, 360], [68, 1040], left(cHub, 1040)], 'Builds on [import]', [223, 1040]),
+    rel('quiet', [left(cPage, 330), [44, 330], [44, 1416], left(cRenderer, 1416)], 'Builds on [import]', [211, 1416]),
     rel(
       'quiet',
-      [right(cProcess, 590), [916, 590], [916, 1336], right(cRenderer, 1336)],
+      [bottom(cProcess, 614), [614, 692], [916, 692], [916, 1416], right(cRenderer, 1416)],
       'Builds on [import]',
-      [772, 1336],
+      [772, 1416],
     ),
-    rel('quiet', [top(cClock), [gx(707), 964], right(cHub, 964)], 'Builds on [import]', [gx(707), 1024]),
+    rel('quiet', [right(cClock, 1190), [450, 1190], bottom(cHub, 450)], 'Builds on [import]', [450, 1130]),
     {
       kind: 'legend',
       x: 24,
-      y: 1452,
+      y: 1532,
       w: 832 + GUTTER + 32,
       entries: [
         ['person', 'Person'],
