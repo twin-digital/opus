@@ -122,6 +122,7 @@ export const serveLink = (hub: Hub, channel: Channel): void => {
       refuse('stopped', 'The hub is stopped.')
       return
     }
+    // The check of the kind runs before the check of `model`, so `malformed` wins over `unsupported`.
     if (
       subsystems.length === 0 ||
       subsystems.some((s) => !isId(s.id) || !(KINDS.includes(s.kind) || s.kind === 'model'))
