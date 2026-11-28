@@ -161,7 +161,7 @@ const shapeStyle = (c, shape, focus) => {
 const LEAD = { name: 21, type: 18, description: 16 }
 const ICON_SIZE = 28
 const STORE_RY = 8
-const DESCRIPTION_LINES = 2
+const DESCRIPTION_LINES = 3
 
 /** Breaks a line of description into at most `maxLines` lines that fit `maxWidth`. */
 const wrap = (line, maxWidth, maxLines) => {
@@ -1128,24 +1128,40 @@ const pRenderer = el(
   'Draws each component in a marked element.',
 )
 const pViews = el('component', LEFT, 716, 'Views', '[Component: React]', 'Draw one component type each.')
-const pCatalog = el('component', RIGHT, 716, 'Catalog', '[Component: React]', 'The app bar and the zero state.')
+const pCatalog = el(
+  'component',
+  RIGHT,
+  716,
+  'Catalog',
+  '[Component: React]',
+  'The app bar, the zero state, and the parts of the product panel.',
+)
+const pPanel = el(
+  'component',
+  LEFT,
+  916,
+  'Product panel',
+  '[Component: React]',
+  'Lists the entities of the product and changes a field value.',
+)
 
 const componentsPage = {
   name: 'components-page',
   title: 'Component diagram: the page of the workbench',
   description:
-    'The page has six components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog.',
+    'The page has seven components. The client of the hub connects to the workbench process through the link, with an output subsystem and an input subsystem. The renderer reads the part store from the output port and sends inputs through the input port. It finds the view in the table of views, and mounts it with props. A view sends an input through the prop wishem. The table collects the views and reads the sidecars. The views draw with the catalog. The product panel reads the part product from the output port and sends product/set-field through the input port, and it draws with the catalog.',
   width: WIDTH_PX,
-  height: 940,
+  height: 1140,
   items: [
     pProcess,
-    { kind: 'group', x: 24, y: 244, w: 832, h: 600, label: 'Page [Container: React, web browser]' },
+    { kind: 'group', x: 24, y: 244, w: 832, h: 800, label: 'Page [Container: React, web browser]' },
     pSidecars,
     pClient,
     pTable,
     pRenderer,
     pViews,
     pCatalog,
+    pPanel,
 
     // The path of the model to a view
     rel('flow', [top(pClient), bottom(pProcess)], 'Connects to the hub [WebSocket link]', [707, 216]),
@@ -1154,6 +1170,15 @@ const componentsPage = {
     rel('flow', [right(pViews), left(pCatalog)], 'Draw with', [440, 768]),
     rel('flow', [top(pViews, 200), [200, 638], [620, 638], bottom(pRenderer, 620)], 'Send inputs [wishem]', [410, 638]),
 
+    // The product panel
+    rel(
+      'quiet',
+      [left(pPanel), [36, 968], [36, 292], [620, 292], top(pClient, 620)],
+      'Reads part product and sends product/set-field [ports]',
+      [430, 292],
+    ),
+    rel('quiet', [right(pPanel), [707, 968], bottom(pCatalog, 707)], 'Draws with', [500, 968]),
+
     // How the table of views gets its content
     rel('flow', [left(pRenderer), right(pTable)], 'Finds the view', [440, 568]),
     rel('quiet', [top(pTable), bottom(pSidecars)], 'Reads', [173, 468]),
@@ -1161,7 +1186,7 @@ const componentsPage = {
     {
       kind: 'legend',
       x: 24,
-      y: 876,
+      y: 1076,
       w: 832,
       entries: [
         ['container', 'Container'],
