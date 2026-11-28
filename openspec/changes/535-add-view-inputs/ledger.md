@@ -41,9 +41,18 @@ Task 1: review (sonnet): spec compliant, quality Approved, no Critical or Import
 Task 1: minor (deferred): the legend says "One" in place of "Exactly one" (a widening of the legend keeps the exact term); one dense `if` block in validate-model.ts (type check, form check, assignment, push); `F` in store.hub.test.ts is typed as a plain string; no RED run of the store tests (store.ts needed no change).
 Task 1: complete (commits 7e8615f..93962ba, review clean)
 
+Task 2: dispatched (implementer: sonnet), base f6f391a5
+
+Task 2: implementer DONE_WITH_CONCERNS, commit f9312092 (renderer-react 151 tests; lint, typecheck, test, build pass; workbench-app 240 tests, the generated files are current). Concerns: workbench-app/src/views/AppBar.test.tsx changed (outside the file list) because Props now needs `wishem`; generated-types.test.ts uses a copy of the generated form by hand; RESERVED_PROP_NAMES is in field-names.ts (that file imports nothing relative) and view-tools.ts exports it again; Renderer builds the props with a cast; the README no longer says that the package uses hub for types only (LinkClosedError is a run-time import); two temporary files in /tmp and nodejs/wishem, removed.
+Ruling: accept the change of AppBar.test.tsx in Task 2 — 2.7 requires the type check of workbench-app to pass, and the test must give the new required prop; Task 5 changes the same file later — cost if wrong: one test file outside the list. Review dispatched (sonnet).
+
+Task 2: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the report shows the runs of 2.7 and the test "the generated files are current"; the type check of renderer-react reads each .ts file (tsconfig.json has no include), so generated-types.test.ts is checked. No gap.
+Task 2: minor (deferred): generated-types.test.ts is a copy of the generated form by hand (a test that compares it with renderViewTypes would stop a drift); ViewProps intersects an index signature with `wishem`, which forces the cast in Renderer.tsx (Task 3 widens the type: fix there); `fields?: [Id, Id] | [Id]` in view-warnings.ts with `?? ''` fallbacks; the README says a reference field has the type string "in this version" (Task 3 updates it); the "never settles" test of stubViewTools waits one microtask only; the test "sends no input when the renderer draws two times" has low value.
+Task 2: complete (commits f6f391a..f931209, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 2 (inputs from a view, and the new types in the generator).
+- NEXT STEP: Task 3 (nested views through a reference field). Carry to it: the deferred minors of Task 2 about ViewProps and the README line of a reference field.
 
 ## For the review issue of the milestone A3
 
