@@ -179,7 +179,7 @@ A test of one requirement does not find a fault that needs two features in a seq
 ### Reviews
 
 - A change with two or more tasks has a review of each task and one final review of the full branch.
-- The final reviewer compares the packages of `nodejs/wishem/` and their imports in the code with the container diagram and the tables of the architecture document. A package, a process, or a relationship that the document does not show is a finding of the grade Important. Reason: the change that added the clock package did not add it to the document, and a milestone with two changes has no review of the full milestone that would find it.
+- The final reviewer compares the runtime units that the change adds or changes with the container diagram and its table, and runs `node nodejs/wishem/docs/architecture/render.mjs --check`. The check replaces the comparison of the imports by hand. A package, a process, or a relationship that the document does not show is a finding of the grade Important. Reason: the change that added the clock package did not add it to the document, and a milestone with two changes has no review of the full milestone that would find it.
 - The final reviewer runs the type check of each package that depends on a changed package, and not only of the changed packages. Use the turbo filter `...^<package>` (the dependents only) or `...<package>` (the package and its dependents), after a build. Reason: a change of a library package can break the types of a package that imports it, and the checks of a pull request do not always find it (see #663).
 - A change with one task has one review: the final review of the full branch. The diff of the task is the diff of the branch, so a review of the task reads the same code.
 

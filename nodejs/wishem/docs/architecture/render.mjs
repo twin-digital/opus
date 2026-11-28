@@ -1,13 +1,27 @@
 // Writes the SVG diagrams of the architecture documents.
-// Usage: node render.mjs
+// Usage: node render.mjs [--check] [--packages <folder>] [--out <folder>]
 // Each diagram is described once, below. The script writes one file for each theme.
 // Colors come from the role tokens of the workbench. Text uses the standard typeface of the system.
-// The script writes C4 diagrams and an entity diagram (docs/diagrams.md).
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+// The script writes C4 diagrams, an entity diagram, and the package dependency view (docs/diagrams.md).
+// The package dependency view comes from the package.json files of the packages and from the layers below.
+// The script fails, and writes no file, when the packages disagree with the layers or with the table of the packages.
+// With --check, the script writes no file. It fails when a file on the disk is not current.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
+import { parseArgs } from 'node:util'
 
 const here = import.meta.dirname
 const tokensFile = join(here, '..', '..', 'workbench-app', 'src', 'styles', 'tokens.css')
+
+const { values: options } = parseArgs({
+  options: {
+    check: { type: 'boolean', default: false },
+    packages: { type: 'string', default: join(here, '..', '..') },
+    out: { type: 'string', default: here },
+  },
+})
+const packagesFolder = resolve(options.packages)
+const outFolder = resolve(options.out)
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -85,6 +99,7 @@ const buildColors = (tokens, theme) => {
     componentBorder: mix(c.line, c.accentText, 0.6),
     flow: c.makerText,
     quiet: c.controlBorder,
+    uses: c.fgMuted,
   }
 }
 
@@ -188,7 +203,7 @@ const wrap = (line, maxWidth, maxLines) => {
  * `shape` is `person`, `system`, `container`, `store`, or `component`.
  */
 const element = (c, item) => {
-  const { x, y, w, h, shape, name, type, description, focus = false } = item
+  const { x, y, w, h, shape, name, type, description, pkg, focus = false } = item
   const style = shapeStyle(c, shape, focus)
   const attributes = `fill="${style.fill}" stroke="${style.stroke}" filter="url(#shadow)"`
   const out = [shape === 'store' ? `<path d="${cylinder(item, STORE_RY)}" ${attributes}/>` : rect(item, 14, attributes)]
@@ -201,6 +216,7 @@ const element = (c, item) => {
   const lines = [
     { line: name, size: SIZE.name, weight: 600, color: style.ink, lead: LEAD.name },
     { line: type, size: SIZE.detail, weight: 400, color: style.muted, lead: LEAD.type },
+    ...(pkg === undefined ? [] : [{ line: pkg, size: SIZE.detail, weight: 400, color: style.muted, lead: LEAD.type }]),
     ...(description === undefined ? [] : wrap(description, inner, DESCRIPTION_LINES)).map((line) => ({
       line,
       size: SIZE.detail,
@@ -236,8 +252,11 @@ const MIN_PLAIN = 56
 const MIN_SIDE = 28
 const CHIP_PAD = 22
 
-/** The lines of a label: the verb phrase, and the technology in brackets on a second line. */
+/** The lines of a label: the lines that the label gives, or the verb phrase and the technology in brackets. */
 const labelLines = (label) => {
+  if (label.includes('\n')) {
+    return label.split('\n')
+  }
   const split = label.indexOf(' [')
   return split === -1 ? [label] : [label.slice(0, split), label.slice(split + 1)]
 }
@@ -245,7 +264,7 @@ const labelLines = (label) => {
 /** The size of the chip of a label. */
 const chipSize = (label) => ({
   w: Math.max(...labelLines(label).map((line) => textWidth(line, { size: SIZE.detail, weight: 500 }))) + CHIP_PAD,
-  h: labelLines(label).length === 1 ? 24 : 40,
+  h: labelLines(label).length === 1 ? 24 : 10 + 15 * labelLines(label).length,
 })
 
 /** Fails the run when an arrow is too short to read, or when its chip leaves too little line. */
@@ -338,7 +357,7 @@ const arrow = (c, item) => {
   const ux = (tip[0] - fromX) / length
   const uy = (tip[1] - fromY) / length
   const out = [
-    `<path d="${roundedPath(points, [tip[0] - ux * (HEAD_LENGTH - 1), tip[1] - uy * (HEAD_LENGTH - 1)])}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `<path d="${roundedPath(points, [tip[0] - ux * (HEAD_LENGTH - 1), tip[1] - uy * (HEAD_LENGTH - 1)])}" fill="none" stroke="${stroke}" stroke-width="${num(item.width ?? 2.5)}" stroke-linecap="round" stroke-linejoin="round"/>`,
     `<polygon points="${arrowHead(tip, ux, uy)}" fill="${stroke}" stroke="${stroke}" stroke-width="1" stroke-linejoin="round"/>`,
   ]
   checkLength(item)
@@ -358,7 +377,7 @@ const arrow = (c, item) => {
       out.push(
         text(c, {
           x: at[0],
-          y: lines.length === 1 ? at[1] + 4.5 : at[1] - 3 + index * 15,
+          y: at[1] + 4.5 - ((lines.length - 1) * 15) / 2 + index * 15,
           line: part,
           weight: index === 0 ? 500 : 400,
           color,
@@ -366,6 +385,15 @@ const arrow = (c, item) => {
         }),
       )
     })
+  }
+  if (item.uses !== undefined) {
+    const { from, to } = item.uses
+    return [
+      `<g class="uses" data-from="${escapeXml(from)}" data-to="${escapeXml(to)}">`,
+      `<title>${escapeXml(from)} uses ${escapeXml(to)}</title>`,
+      ...out,
+      '</g>',
+    ].join('\n')
   }
   return out.join('\n')
 }
@@ -485,12 +513,18 @@ const LEGEND_H = 44
 /** A small sample of a shape, a boundary, or a relationship. `cy` is the middle of the sample. */
 const sample = (c, kind, x, cy) => {
   const box = { x, y: cy - SAMPLE_H / 2, w: SAMPLE_W, h: SAMPLE_H }
-  if (kind === 'flow' || kind === 'quiet') {
+  if (kind === 'flow' || kind === 'quiet' || kind === 'uses') {
     const color = c[kind]
     return [
-      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W - HEAD_LENGTH + 1)} ${num(cy)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`,
+      `<path d="M${num(x)} ${num(cy)} L${num(x + SAMPLE_W - HEAD_LENGTH + 1)} ${num(cy)}" stroke="${color}" stroke-width="${kind === 'uses' ? '2' : '2.5'}" stroke-linecap="round"/>`,
       `<polygon points="${arrowHead([x + SAMPLE_W, cy], 1, 0)}" fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>`,
     ].join('\n')
+  }
+  if (kind === 'band') {
+    return rect(box, 5, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5"`)
+  }
+  if (kind === 'card') {
+    return rect(box, 5, `fill="${c.surface}" stroke="${c.border}"`)
   }
   if (kind === 'boundary') {
     return rect(box, 5, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5" stroke-dasharray="4 3"`)
@@ -534,8 +568,80 @@ const legend = (c, item) => {
   return out.join('\n')
 }
 
-const layers = { group, element, entity, arrow, relationship, legend }
-const order = ['group', 'element', 'entity', 'arrow', 'relationship', 'legend']
+// ---------------------------------------------------------------------------
+// Package dependency view: bands and cards
+// ---------------------------------------------------------------------------
+
+const BAND = { x: 24, w: 992, top: 64, pad: 14, spacing: 14 }
+const GRID = { columns: 3, left: 124, cardW: 176, gutter: 112 }
+const ROUTE = {
+  portGap: 14,
+  stagger: 4,
+  trackGap: 12,
+  trackClear: 6,
+  channelPad: 28,
+  laneGap: 11,
+  portClear: 6,
+  edge: 8,
+}
+const LABEL = { x: 16, w: 100, line: 16, top: 24 }
+const LABEL_LINES_MAX = 6
+const CARD_PAD = 8
+const CARD_TOP = 14
+const CARD_LINES_MAX = 8
+const CARD_MIN_H = 56
+
+/** A band: the tinted area of one layer. `labelLines` name the layer, in the column left of the cards. */
+const band = (c, item) =>
+  [
+    rect(item, 14, `fill="${c.groupFill}" stroke="${c.border}" stroke-width="1.5"`),
+    ...item.labelLines.map((line, index) =>
+      text(c, {
+        x: item.x + LABEL.x,
+        y: item.y + LABEL.top + index * LABEL.line,
+        line,
+        size: SIZE.detail,
+        weight: 600,
+        color: c.fgMuted,
+        maxWidth: LABEL.w,
+      }),
+    ),
+  ].join('\n')
+
+/** A package card: the name, then the lines of the lists of packages. */
+const packageCard = (c, item) => {
+  const { x, y, h, w, name, lines } = item
+  const inner = w - 2 * CARD_PAD
+  if (h < CARD_TOP + LEAD.name + lines.length * LEAD.description + 8) {
+    throw new Error(`The card of ${name} does not fit in ${String(h)} px`)
+  }
+  const out = [
+    rect(item, 12, `fill="${c.surface}" stroke="${c.border}" filter="url(#shadow)"`),
+    text(c, {
+      x: x + CARD_PAD,
+      y: y + CARD_TOP + LEAD.name - 5,
+      line: name,
+      size: SIZE.name,
+      weight: 600,
+      maxWidth: inner,
+    }),
+  ]
+  lines.forEach((line, index) => {
+    out.push(
+      text(c, {
+        x: x + CARD_PAD,
+        y: y + CARD_TOP + LEAD.name + (index + 1) * LEAD.description - 5,
+        line,
+        color: c.fgMuted,
+        maxWidth: inner,
+      }),
+    )
+  })
+  return out.join('\n')
+}
+
+const layers = { group, band, card: packageCard, element, entity, arrow, relationship, legend }
+const order = ['group', 'band', 'card', 'element', 'entity', 'arrow', 'relationship', 'legend']
 
 // ---------------------------------------------------------------------------
 // Diagram descriptions
@@ -609,493 +715,260 @@ const context = {
   ],
 }
 
-// Containers. The gutter on the left holds the arrow from the page to `hub`.
-const GUTTER = 64
-const gx = (x) => x + GUTTER
-const cDesigner = el('person', gx(MIDDLE), 64, 'Designer', '[Person]', 'Makes a product with the workbench.', {
+// Containers: one column of the runtime units. Each arrow from the designer runs through the area on the right and
+// enters the right edge of its unit. A deeper unit gets a line farther to the right and a higher start point, so that
+// no two of these lines cross.
+const COLUMN = 40
+const UNIT_GAP = 70
+const STORE_H = 128
+const cDesigner = el('person', COLUMN, 64, 'Designer', '[Person]', 'Makes a product with the workbench.', {
   h: 124,
 })
+
 const cPage = el(
   'container',
-  gx(LEFT),
+  COLUMN,
   284,
   'Page',
   '[Container: React, web browser]',
   'Draws each component that has a view.',
-)
-const cModel = el(
-  'store',
-  gx(RIGHT),
-  284,
-  'Model folder',
-  '[Container: JSON files]',
-  'Holds the definitions and the authored state.',
-)
-const cProduct = el(
-  'store',
-  gx(RIGHT),
-  564,
-  'Product model folder',
-  '[Container: JSON files]',
-  'Holds the model of the mounted product.',
+  { pkg: 'Package: workbench-app' },
 )
 const cProcess = el(
   'container',
-  gx(MIDDLE),
-  564,
+  COLUMN,
+  538,
   'Workbench process',
   '[Container: Node.js]',
   'Runs the constructs and serves the page.',
+  { pkg: 'Package: workbench-app' },
 )
-const cHost = el(
-  'container',
-  gx(LEFT),
-  804,
-  'host-nodejs',
-  '[Container: TypeScript package]',
-  'Runs a construct and serves the link.',
+const cModel = el(
+  'store',
+  COLUMN,
+  752,
+  'Model folder',
+  '[Container: JSON files]',
+  'Holds the definitions and the authored state.',
+  { h: STORE_H, pkg: 'Package: workbench' },
 )
-const cCore = el(
-  'container',
-  gx(RIGHT),
-  804,
-  'core',
-  '[Container: TypeScript package]',
-  'Checks a model and holds the store.',
+const cProduct = el(
+  'store',
+  COLUMN,
+  cModel.y + STORE_H + UNIT_GAP,
+  'Product model folder',
+  '[Container: JSON files]',
+  'Holds the model of the mounted product.',
+  { h: STORE_H, pkg: 'Example: sample-product' },
 )
-const cManager = el(
+const cCommand = el(
   'container',
-  gx(MIDDLE),
-  1004,
-  'construct-manager',
-  '[Container: TypeScript package]',
-  'The construct list and the construct manager.',
-)
-const cHub = el(
-  'container',
-  gx(MIDDLE),
-  1204,
-  'hub',
-  '[Container: TypeScript package]',
-  'Joins the subsystems and carries the link.',
-)
-const cRenderer = el(
-  'container',
-  gx(MIDDLE),
-  2044,
-  'renderer-react',
-  '[Container: TypeScript package]',
-  'Draws React views from a port.',
-)
-
-const cClock = el(
-  'container',
-  gx(MIDDLE),
-  1424,
-  'clock',
-  '[Container: TypeScript package]',
-  'Holds the time subsystem and the clock.',
-)
-
-// The update subsystem sits in its own column on the right, so that its arrows keep a free zone for their labels.
-const UPDATE_X = 1620
-const cUpdate = el(
-  'container',
-  UPDATE_X,
-  1000,
-  'update',
-  '[Container: TypeScript package]',
-  'The update subsystem: runs the native behaviors at each tick.',
-  { h: 160 },
-)
-
-const cPixiPage = el(
-  'container',
-  gx(LEFT),
-  1824,
-  'PixiJS page',
-  '[Container: PixiJS, web browser]',
-  'Draws the sample construct and sends the keys.',
-)
-const cPixiProcess = el(
-  'container',
-  gx(RIGHT),
-  1824,
-  'PixiJS process',
+  COLUMN,
+  cProduct.y + STORE_H + 110,
+  'Wishem command process',
   '[Container: Node.js]',
-  'Serves the PixiJS page and passes its link.',
-)
-const cRendererPixi = el(
-  'container',
-  gx(LEFT),
-  2044,
-  'renderer-pixi',
-  '[Container: TypeScript package]',
-  'Draws PixiJS views from a port.',
-)
-const cSample = el(
-  'container',
-  gx(RIGHT),
-  2044,
-  'sample-product',
-  '[Container: TypeScript package]',
-  'Holds the example model folder and the count and color behaviors.',
-)
-
-const cSampleProcess = el(
-  'container',
-  UPDATE_X,
-  300,
-  'Sample construct process',
-  '[Container: Node.js]',
-  'Runs the sample construct and serves its link.',
-)
-
-// The React page and its page server sit in a column of their own on the right.
-const REACT_X = 1950
-const cReactServer = el(
-  'container',
-  REACT_X,
-  560,
-  'React page server',
-  '[Container: Node.js]',
-  'Serves the React page and passes its link.',
+  'Runs one construct, with no page.',
+  { pkg: 'Package: host-nodejs' },
 )
 const cReactPage = el(
   'container',
-  REACT_X,
-  860,
+  COLUMN,
+  cCommand.y + CARD_H + UNIT_GAP,
   'React page',
   '[Container: React, web browser]',
   'Draws the sample construct.',
+  { pkg: 'Package: three-renderers' },
 )
-
-const cGodotRunner = el(
+const cReactServer = el(
   'container',
-  gx(MIDDLE),
-  2290,
-  'Godot runner',
+  COLUMN,
+  cReactPage.y + CARD_H + 150,
+  'React page server',
   '[Container: Node.js]',
-  'Starts Godot in Docker, carries the link.',
+  'Serves the page and passes its link.',
+  { pkg: 'Package: three-renderers' },
+)
+const cSample = el(
+  'container',
+  COLUMN,
+  cReactServer.y + CARD_H + 110,
+  'Sample construct process',
+  '[Container: Node.js]',
+  'Runs the sample construct and serves its link.',
+  { pkg: 'Package: three-renderers' },
+)
+const cPixiProcess = el(
+  'container',
+  COLUMN,
+  cSample.y + CARD_H + 110,
+  'PixiJS process',
+  '[Container: Node.js]',
+  'Serves the page and passes its link.',
+  { pkg: 'Package: pixi-page' },
+)
+const cPixiPage = el(
+  'container',
+  COLUMN,
+  cPixiProcess.y + CARD_H + 150,
+  'PixiJS page',
+  '[Container: PixiJS, web browser]',
+  'Draws the sample construct and sends the keys.',
+  { pkg: 'Package: pixi-page' },
 )
 const cGodotApp = el(
   'container',
-  gx(MIDDLE),
-  2610,
+  COLUMN,
+  cPixiPage.y + CARD_H + UNIT_GAP,
   'Godot application',
   '[Container: GDScript, Docker]',
   'Draws the construct and writes screenshots.',
+  { pkg: 'Package: renderer-godot' },
+)
+const cGodotRunner = el(
+  'container',
+  COLUMN,
+  cGodotApp.y + CARD_H + 150,
+  'Godot runner',
+  '[Container: Node.js]',
+  'Starts Godot in Docker, carries the link.',
+  { pkg: 'Package: renderer-godot' },
 )
 
-/** Moves each item of a diagram down by `dy`. */
-const shiftY = (items, dy) =>
-  items.map((it) =>
-    it.kind === 'arrow' ?
-      {
-        ...it,
-        points: it.points.map(([x, y]) => [x, y + dy]),
-        label: { ...it.label, at: [it.label.at[0], it.label.at[1] + dy] },
-      }
-    : { ...it, y: it.y + dy },
-  )
+// The arrow k of the designer: it leaves the right edge of the designer at a height that depends on k, runs to a
+// position that depends on k, and enters the right edge of `target` at `at`. The label sits in the middle of the last line.
+const designerArrow = (k, tone, target, at, line) => {
+  const x = 560 + 28 * k
+  const y = 176 - 10 * k
+  return rel(tone, [right(cDesigner, y), [x, y], [x, at], right(target, at)], line, [(x + CARD_W + COLUMN) / 2, at])
+}
 
-// The system boundary reaches the update column.
-const GROUP_W = REACT_X + CARD_W + 20 - 24
+// A vertical arrow between two stacked units, at the horizontal position `x`.
+const stacked = (tone, from, to, x, line) => {
+  const [upper, lower] = from.y < to.y ? [from, to] : [to, from]
+  const y = (upper.y + upper.h + lower.y) / 2
+  return rel(tone, from === upper ? [bottom(from, x), top(to, x)] : [top(from, x), bottom(to, x)], line, [x, y])
+}
+
+const SKIP_X = 310
+const COMMAND_X = 550
+const LANE_SAMPLE_X = 330
+const LANE_TCP_X = 370
+const UNITS_BOTTOM = cGodotRunner.y + CARD_H
+const LEGEND_Y = UNITS_BOTTOM + 62
 
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has twenty containers. The workbench process runs the host-nodejs package, uses the core package, and runs the product constructs with the construct-manager package, and checks the product code with the update package. The workbench process loads the product code from the sample-product package with a dynamic import. The construct-manager package builds on the core, hub, clock, and host-nodejs packages, and runs the behaviors with the update package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package, and renderer-react builds on the hub package. The clock package builds on the hub package. The update package builds on the core, hub, and clock packages. The PixiJS process serves the PixiJS page and passes its link to the sample construct process. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample construct process starts the product construct with the construct-manager package, runs the behaviors of the sample-product package, builds on the host-nodejs package, and reads the product model folder. The React page server serves the React page and passes its link to the sample construct process. The React page gets page code over HTTP and connects to the hub over a WebSocket link through the React page server, and builds on the renderer-react and hub packages. The designer starts the four processes and the Godot runner, edits the two folders, and looks at the three pages.',
-  width: 2340,
-  height: 3090,
-  items: shiftY(
-    [
-      { kind: 'group', x: 24, y: 224, w: GROUP_W, h: 2676, label: SYSTEM },
-      cDesigner,
-      cPage,
-      cModel,
-      cProduct,
-      cProcess,
-      cHost,
-      cCore,
-      cManager,
-      cHub,
-      cRenderer,
-      cClock,
-      cUpdate,
-      cSampleProcess,
-      cReactServer,
-      cReactPage,
-      cPixiPage,
-      cPixiProcess,
-      cRendererPixi,
-      cSample,
-      cGodotRunner,
-      cGodotApp,
+    'Wishem has eleven containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
+  width: WIDTH_PX,
+  height: LEGEND_Y + LEGEND_H + 24,
+  items: [
+    { kind: 'group', x: 24, y: 212, w: 832, h: UNITS_BOTTOM + 30 - 212, label: SYSTEM },
+    cDesigner,
+    cPage,
+    cProcess,
+    cModel,
+    cProduct,
+    cCommand,
+    cReactPage,
+    cReactServer,
+    cSample,
+    cPixiProcess,
+    cPixiPage,
+    cGodotApp,
+    cGodotRunner,
 
-      // The primary path: a change to the model becomes a new picture
-      rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [
-        gx(240),
-        200,
-      ]),
-      rel('flow', [right(cDesigner, 126), [gx(640), 126], top(cModel, gx(640))], 'Edits files [text editor]', [
-        gx(640),
-        200,
-      ]),
-      rel(
-        'flow',
-        [top(cProcess, 530), [530, 424], [800, 424], bottom(cModel, 800)],
-        'Reads, watches, and writes [file system]',
-        [663, 424],
-      ),
-      rel(
-        'quiet',
-        [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
-        'Reads, watches, and writes [file system]',
-        [720, 500],
-      ),
-      rel(
-        'quiet',
-        [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
-        'Edits files [text editor]',
-        [760, 96],
-      ),
-      rel('flow', [bottom(cPage, gx(96)), [gx(96), 640], left(cProcess, 640)], 'Connects to the hub [WebSocket link]', [
-        gx(96),
-        550,
-      ]),
+    // The designer
+    designerArrow(0, 'flow', cPage, 340, 'Looks at [web browser]'),
+    designerArrow(1, 'quiet', cProcess, 590, 'Starts and stops [terminal]'),
+    designerArrow(2, 'flow', cModel, 816, 'Edits files [text editor]'),
+    designerArrow(3, 'quiet', cProduct, cProduct.y + 40, 'Edits files [text editor]'),
+    designerArrow(4, 'quiet', cCommand, cCommand.y + 64, 'Starts and stops [terminal]'),
+    designerArrow(5, 'flow', cReactPage, cReactPage.y + 40, 'Looks at [web browser]'),
+    designerArrow(6, 'quiet', cReactServer, cReactServer.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(7, 'quiet', cSample, cSample.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(8, 'quiet', cPixiProcess, cPixiProcess.y + 52, 'Starts and stops [terminal]'),
+    designerArrow(9, 'flow', cPixiPage, cPixiPage.y + 40, 'Looks at and presses keys [web browser]'),
+    designerArrow(10, 'quiet', cGodotRunner, cGodotRunner.y + 52, 'Starts and looks at the screenshots [terminal]'),
 
-      // The other relationships
-      rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
-      rel('quiet', [bottom(cPage, gx(250)), [gx(250), 600], left(cProcess, 600)], 'Gets page code [HTTP]', [
-        gx(250),
-        524,
-      ]),
-      rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 716], [gx(173), 716], top(cHost)], 'Runs [import]', [
-        gx(274),
-        716,
-      ]),
-      rel('quiet', [bottom(cProcess, 569), [569, 716], [860, 716], top(cCore, 860)], 'Uses [import]', [670, 716]),
-      rel(
-        'quiet',
-        [bottom(cProcess, 470), top(cManager, 470)],
-        'Runs the product constructs with [import]',
-        [470, 940],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 520), [520, 770], [923, 770], [923, 2096], right(cSample, 2096)],
-        'Loads the product code [dynamic import]',
-        [693, 770],
-      ),
-      rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [570, 856]),
-      rel('quiet', [bottom(cCore, 771), [771, 1256], right(cHub, 1256)], 'Builds on [import]', [771, 1130]),
-      rel('quiet', [bottom(cHost, gx(173)), [gx(173), 1220], left(cHub, 1220)], 'Builds on [import]', [gx(173), 1100]),
-      rel('quiet', [left(cPage, 360), [68, 360], [68, 1252], left(cHub, 1252)], 'Builds on [import]', [223, 1252]),
-      rel(
-        'quiet',
-        [left(cPage, 330), [44, 330], [44, 2190], [460, 2190], bottom(cRenderer, 460)],
-        'Builds on [import]',
-        [250, 2190],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 614), [614, 692], [950, 692], [950, 2190], [548, 2190], bottom(cRenderer, 548)],
-        'Builds on [import]',
-        [840, 692],
-      ),
-      rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1366]),
-      rel(
-        'quiet',
-        [bottom(cRenderer, 420), [420, 2212], [90, 2212], [90, 1294], left(cHub, 1294)],
-        'Builds on [import]',
-        [250, 1294],
-      ),
+    // The workbench process
+    stacked('quiet', cPage, cProcess, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cPage, cProcess, 250, 'Connects to the hub [WebSocket link]'),
+    stacked('flow', cProcess, cModel, 165, 'Reads, watches, and writes [file system]'),
+    rel(
+      'quiet',
+      [right(cProcess, 620), [SKIP_X, 620], [SKIP_X, cProduct.y + 90], right(cProduct, cProduct.y + 90)],
+      'Reads, watches, and writes [file system]',
+      [SKIP_X, (cModel.y + STORE_H + cProduct.y) / 2],
+    ),
 
-      // The construct manager
-      rel('quiet', [bottom(cManager), top(cHub)], 'Builds on [import]', [gx(440), 1156]),
-      rel('quiet', [right(cManager, 1050), [690, 1050], bottom(cCore, 690)], 'Builds on [import]', [690, 975]),
-      rel('quiet', [left(cManager, 1050), [310, 1050], bottom(cHost, 310)], 'Builds on [import]', [310, 975]),
-      rel(
-        'quiet',
-        [right(cManager, 1080), [700, 1080], [700, 1450], right(cClock, 1450)],
-        'Builds on [import]',
-        [700, 1330],
-      ),
+    // The Wishem command process
+    stacked('quiet', cCommand, cProduct, 165, 'Reads, watches, and writes [file system]'),
+    rel(
+      'quiet',
+      [
+        right(cCommand, cCommand.y + 20),
+        [COMMAND_X, cCommand.y + 20],
+        [COMMAND_X, cModel.y + 90],
+        right(cModel, cModel.y + 90),
+      ],
+      'Reads, watches, and writes [file system]',
+      [COMMAND_X, (cProduct.y + STORE_H + cCommand.y) / 2 + 20],
+    ),
 
-      // The PixiJS page
-      rel(
-        'flow',
-        [left(cDesigner, 160), [14, 160], [14, 1876], left(cPixiPage, 1876)],
-        'Looks at and presses keys [web browser]',
-        [180, 160],
-      ),
-      rel(
-        'quiet',
-        [right(cDesigner, 160), [1016, 160], [1016, 1876], right(cPixiProcess, 1876)],
-        'Starts and stops [terminal]',
-        [800, 160],
-      ),
-      rel('quiet', [right(cPixiPage, 1852), left(cPixiProcess, 1852)], 'Gets page code [HTTP]', [gx(440), 1852]),
-      rel('flow', [right(cPixiPage, 1906), left(cPixiProcess, 1906)], 'Connects to the hub [WebSocket link]', [
-        gx(440),
-        1906,
-      ]),
-      rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1986]),
-      rel(
-        'quiet',
-        [top(cPixiPage, 250), [250, 1380], [410, 1380], bottom(cHub, 410)],
-        'Builds on [import]',
-        [250, 1570],
-      ),
-      rel('quiet', [top(cPixiPage, 345), [345, 1476], left(cClock, 1476)], 'Builds on [import]', [345, 1640]),
-      rel(
-        'quiet',
-        [right(cPixiProcess, 1850), [1910, 1850], [1910, 460], [1840, 460], bottom(cSampleProcess, 1840)],
-        'Passes the link [WebSocket]',
-        [1910, 1500],
-      ),
+    // The React page server
+    stacked('quiet', cReactPage, cReactServer, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cReactPage, cReactServer, 250, 'Connects to the hub [WebSocket link]'),
+    stacked('flow', cReactServer, cSample, 165, 'Passes the link [WebSocket]'),
 
-      // The sample construct
-      rel(
-        'quiet',
-        [right(cDesigner, 184), [1700, 184], top(cSampleProcess, 1700)],
-        'Starts and stops [terminal]',
-        [1400, 184],
-      ),
-      rel(
-        'quiet',
-        [left(cSampleProcess, 322), [1210, 322], [1210, 650], right(cProduct, 650)],
-        'Reads [file system]',
-        [1210, 486],
-      ),
-      rel(
-        'quiet',
-        [left(cSampleProcess, 342), [1290, 342], [1290, 788], [300, 788], top(cHost, 300)],
-        'Builds on [import]',
-        [1290, 570],
-      ),
-      rel(
-        'quiet',
-        [left(cSampleProcess, 362), [1370, 362], [1370, 1100], right(cManager, 1100)],
-        'Starts with [import]',
-        [1370, 900],
-      ),
-      rel(
-        'quiet',
-        [left(cSampleProcess, 382), [1450, 382], [1450, 2125], right(cSample, 2125)],
-        'Runs [import]',
-        [1450, 1500],
-      ),
+    // The sample construct process reads the product model folder
+    rel(
+      'quiet',
+      [
+        right(cSample, cSample.y + 20),
+        [LANE_SAMPLE_X, cSample.y + 20],
+        [LANE_SAMPLE_X, cProduct.y + 66],
+        right(cProduct, cProduct.y + 66),
+      ],
+      'Reads [file system]',
+      [LANE_SAMPLE_X, cReactPage.y - UNIT_GAP / 2],
+    ),
 
-      // The React page
-      rel(
-        'quiet',
-        [top(cDesigner, 570), [570, -40], [2040, -40], top(cReactServer, 2040)],
-        'Starts and stops [terminal]',
-        [1400, -40],
-      ),
-      rel(
-        'flow',
-        [right(cDesigner, 128), [2300, 128], [2300, 912], right(cReactPage, 912)],
-        'Looks at [web browser]',
-        [1650, 128],
-      ),
-      rel('quiet', [top(cReactPage, 1985), bottom(cReactServer, 1985)], 'Gets page code [HTTP]', [1985, 740]),
-      rel(
-        'flow',
-        [top(cReactPage, 2160), bottom(cReactServer, 2160)],
-        'Connects to the hub [WebSocket link]',
-        [2160, 790],
-      ),
-      rel(
-        'quiet',
-        [left(cReactServer, 600), [1760, 600], bottom(cSampleProcess, 1760)],
-        'Passes the link [WebSocket]',
-        [1760, 502],
-      ),
-      rel(
-        'quiet',
-        [left(cReactPage, 930), [1520, 930], [1520, 2250], [600, 2250], bottom(cRenderer, 600)],
-        'Builds on [import]',
-        [1520, 1700],
-      ),
-      rel(
-        'quiet',
-        [left(cReactPage, 890), [1185, 890], [1185, 1273], right(cHub, 1273)],
-        'Builds on [import]',
-        [1700, 890],
-      ),
+    // The PixiJS process
+    stacked('flow', cPixiProcess, cSample, 165, 'Passes the link [WebSocket]'),
+    stacked('quiet', cPixiPage, cPixiProcess, 100, 'Gets page code [HTTP]'),
+    stacked('flow', cPixiPage, cPixiProcess, 250, 'Connects to the hub [WebSocket link]'),
 
-      // The update subsystem
-      rel('quiet', [left(cUpdate, 1030), [1165, 1030], [1165, 850], right(cCore, 850)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1030,
-      ]),
-      rel('quiet', [left(cUpdate, 1080), [1125, 1080], [1125, 1226], right(cHub, 1226)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1080,
-      ]),
-      rel('quiet', [left(cUpdate, 1130), [1145, 1130], [1145, 1435], right(cClock, 1435)], 'Builds on [import]', [
-        UPDATE_X - 80,
-        1130,
-      ]),
-      rel(
-        'quiet',
-        [right(cManager, 1010), [1135, 1010], [1135, 970], [1800, 970], top(cUpdate, 1800)],
-        'Runs the behaviors with [import]',
-        [1640, 970],
-      ),
-      rel(
-        'quiet',
-        [bottom(cProcess, 592), [592, 744], [1840, 744], top(cUpdate, 1840)],
-        'Checks the product code with [import]',
-        [1600, 744],
-      ),
-
-      // The Godot application
-      rel(
-        'quiet',
-        [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2370], right(cGodotRunner, 2370)],
-        'Starts and stops [terminal]',
-        [800, -20],
-      ),
-      rel(
-        'quiet',
-        [bottom(cGodotRunner, 440), top(cGodotApp, 440)],
-        'Starts and copies the screenshots [Docker]',
-        [440, 2455],
-      ),
-      rel(
-        'flow',
-        [top(cGodotApp, 610), bottom(cGodotRunner, 610)],
-        'Connects to the hub [WebSocket link]',
-        [610, 2540],
-      ),
-      rel(
-        'quiet',
-        [right(cGodotRunner, 2342), [1930, 2342], [1930, 380], right(cSampleProcess, 380)],
-        'Carries the link [TCP]',
-        [1930, 2200],
-      ),
-      {
-        kind: 'legend',
-        x: 24,
-        y: 2930,
-        w: GROUP_W,
-        entries: [
-          ['person', 'Person'],
-          ['container', 'Container'],
-          ['store', 'Store'],
-          ['boundary', 'Boundary'],
-          ['flow', 'Primary path'],
-          ['quiet', 'Other relationship'],
-        ],
-      },
-    ],
-    60,
-  ),
+    // The Godot application and the Godot runner
+    stacked('quiet', cGodotRunner, cGodotApp, 100, 'Starts and copies\nthe screenshots\n[Docker]'),
+    stacked('flow', cGodotApp, cGodotRunner, 255, 'Connects to the hub [WebSocket link]'),
+    rel(
+      'quiet',
+      [
+        right(cGodotRunner, cGodotRunner.y + 20),
+        [LANE_TCP_X, cGodotRunner.y + 20],
+        [LANE_TCP_X, cSample.y + 84],
+        right(cSample, cSample.y + 84),
+      ],
+      'Carries the link [TCP]',
+      [LANE_TCP_X, cGodotApp.y - UNIT_GAP / 2],
+    ),
+    {
+      kind: 'legend',
+      x: 24,
+      y: LEGEND_Y,
+      w: 832,
+      entries: [
+        ['person', 'Person'],
+        ['container', 'Container'],
+        ['store', 'Store'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
 }
 
 // Dynamic: the path of a change
@@ -1248,6 +1121,213 @@ const componentsPage = {
   ],
 }
 
+// Components of the workbench process (`workbench-app/scripts/start.ts`)
+const WP_ROW = (n) => 284 + 200 * (n - 1)
+const wpComponent = (x, row, name, type, description, extra) =>
+  el('component', x, WP_ROW(row), name, type, description, extra)
+
+const wPage = el(
+  'container',
+  RIGHT,
+  64,
+  'Page',
+  '[Container: React, web browser]',
+  'Draws each component that has a view.',
+)
+const wVite = wpComponent(
+  RIGHT,
+  1,
+  'Vite development server',
+  '[Component: Vite]',
+  'Serves the page code and passes the link.',
+)
+const wConstruct = wpComponent(
+  RIGHT,
+  2,
+  'Workbench construct',
+  '[Component: host-nodejs]',
+  'The hub, the stores, and the construct list.',
+)
+const wGen = wpComponent(
+  RIGHT,
+  3,
+  'Generator of the view types',
+  '[Component: renderer-react]',
+  'Writes the types of the props.',
+  { w: 280, x: RIGHT + CARD_W - 280 },
+)
+const wStorage = wpComponent(
+  RIGHT,
+  4,
+  'Storage subsystems',
+  '[Component: host-nodejs]',
+  'Read, watch, and write the model folders.',
+)
+const wStart = wpComponent(
+  LEFT,
+  1,
+  'Start script',
+  '[Component: workbench-app]',
+  'Reads the options and starts each part.',
+)
+const wManager = wpComponent(
+  LEFT,
+  2,
+  'Construct manager',
+  '[Component: construct-manager]',
+  'Starts and stops the product constructs.',
+)
+const wProducts = wpComponent(
+  LEFT,
+  3,
+  'Product constructs',
+  '[Component: construct-manager]',
+  'A hub, a store, and a clock each, with a link.',
+)
+const wUpdate = wpComponent(LEFT, 4, 'Update subsystem', '[Component: update]', 'Runs the behaviors at each tick.')
+const wCode = wpComponent(
+  LEFT,
+  5,
+  'Product code',
+  '[Component: dynamic import]',
+  'The native behaviors of the product.',
+)
+
+const WP_GROUP_Y = 244
+const WP_GROUP_BOTTOM = WP_ROW(5) + CARD_H + 30
+const WP_FOLDER_Y = WP_GROUP_BOTTOM + 72
+const WP_FOLDER_H = 112
+const wModel = el(
+  'store',
+  RIGHT,
+  WP_FOLDER_Y,
+  'Model folder',
+  '[Container: JSON files]',
+  'Holds the definitions and state.json.',
+  { h: WP_FOLDER_H },
+)
+const wProduct = el(
+  'store',
+  LEFT,
+  WP_FOLDER_Y,
+  'Product model folder',
+  '[Container: JSON files]',
+  'The model of the mounted product.',
+  { h: WP_FOLDER_H },
+)
+const WP_LEGEND_Y = WP_FOLDER_Y + WP_FOLDER_H + 40
+const WP_LANE = { construct: 440, code: 380, storage: 530 }
+const WP_MID = (row) => WP_ROW(row) + CARD_H + 48
+
+const componentsWorkbenchProcess = {
+  name: 'components-workbench-process',
+  title: 'Component diagram: the workbench process',
+  description:
+    'The workbench process has nine components. The start script loads the product code, starts the workbench construct and the Vite development server, and attaches the construct manager with the behaviors. The page gets page code from the Vite development server and connects to the hub through it. The Vite development server passes the link to the workbench construct. The storage subsystems read, watch, and write the model folder and the product model folder, and send the model to the workbench construct. The construct manager reads the product and the construct list from the workbench construct, and starts, stops, and updates the product constructs. Each product construct runs the behaviors with the update subsystem, which calls the product code. The generator of the view types reads the definitions from the workbench construct.',
+  width: WIDTH_PX,
+  height: WP_LEGEND_Y + LEGEND_H + 24,
+  items: [
+    wPage,
+    {
+      kind: 'group',
+      x: 24,
+      y: WP_GROUP_Y,
+      w: 832,
+      h: WP_GROUP_BOTTOM - WP_GROUP_Y,
+      label: 'Workbench process [Container: Node.js]',
+    },
+    wVite,
+    wConstruct,
+    wGen,
+    wStorage,
+    wStart,
+    wManager,
+    wProducts,
+    wUpdate,
+    wCode,
+    wModel,
+    wProduct,
+
+    // The path of the page to the construct
+    rel('quiet', [bottom(wPage, 780), top(wVite, 780)], 'Gets page code [HTTP]', [780, 216]),
+    rel('flow', [bottom(wPage, 630), top(wVite, 630)], 'Connects to the hub [WebSocket link]', [630, 216]),
+    rel('flow', [bottom(wVite, 630), top(wConstruct, 630)], 'Passes the link [WebSocket]', [630, WP_MID(1)]),
+
+    // The start script
+    rel('quiet', [right(wStart, WP_ROW(1) + 26), left(wVite, WP_ROW(1) + 26)], 'Starts', [440, WP_ROW(1) + 26]),
+    rel(
+      'quiet',
+      [
+        right(wStart, WP_ROW(1) + 78),
+        [WP_LANE.construct, WP_ROW(1) + 78],
+        [WP_LANE.construct, WP_ROW(2) + 18],
+        left(wConstruct, WP_ROW(2) + 18),
+      ],
+      'Starts',
+      [WP_LANE.construct, WP_ROW(1) + 150],
+    ),
+    rel('quiet', [bottom(wStart, 173), top(wManager, 173)], 'Attaches with the behaviors', [173, WP_MID(1)]),
+    rel(
+      'quiet',
+      [
+        right(wStart, WP_ROW(1) + 52),
+        [WP_LANE.code, WP_ROW(1) + 52],
+        [WP_LANE.code, WP_ROW(5) + 52],
+        right(wCode, WP_ROW(5) + 52),
+      ],
+      'Loads and checks [import()]',
+      [WP_LANE.code, WP_ROW(4) + 52],
+    ),
+
+    // The construct manager and the product constructs
+    rel('quiet', [right(wManager, WP_ROW(2) + 52), left(wConstruct, WP_ROW(2) + 52)], 'Reads and reports\n[port]', [
+      480,
+      WP_ROW(2) + 52,
+    ]),
+    rel('flow', [bottom(wManager, 173), top(wProducts, 173)], 'Starts, stops, and updates [port]', [173, WP_MID(2)]),
+    rel('flow', [bottom(wProducts, 173), top(wUpdate, 173)], 'Runs the behaviors with', [173, WP_MID(3)]),
+    rel('quiet', [bottom(wUpdate, 173), top(wCode, 173)], 'Calls', [173, WP_MID(4)]),
+
+    // The storage subsystems and the generator
+    rel('quiet', [top(wGen, 630), bottom(wConstruct, 630)], 'Reads the definitions [port]', [630, WP_MID(2)]),
+    rel(
+      'quiet',
+      [
+        left(wStorage, WP_ROW(4) + 52),
+        [WP_LANE.storage, WP_ROW(4) + 52],
+        [WP_LANE.storage, WP_ROW(2) + 86],
+        left(wConstruct, WP_ROW(2) + 86),
+      ],
+      'Sends the model [port]',
+      [WP_LANE.storage, WP_MID(3)],
+    ),
+    rel('quiet', [bottom(wStorage, 700), top(wModel, 700)], 'Reads, watches, and writes [file system]', [
+      700,
+      (WP_ROW(4) + CARD_H + WP_FOLDER_Y) / 2,
+    ]),
+    rel(
+      'quiet',
+      [bottom(wStorage, 610), [610, WP_GROUP_BOTTOM + 36], [230, WP_GROUP_BOTTOM + 36], top(wProduct, 230)],
+      'Reads, watches, and writes [file system]',
+      [420, WP_GROUP_BOTTOM + 36],
+    ),
+    {
+      kind: 'legend',
+      x: 24,
+      y: WP_LEGEND_Y,
+      w: 832,
+      entries: [
+        ['container', 'Container'],
+        ['component', 'Component'],
+        ['store', 'Store'],
+        ['boundary', 'Boundary'],
+        ['flow', 'Primary path'],
+        ['quiet', 'Other relationship'],
+      ],
+    },
+  ],
+}
+
 // Entities of the model folder (`core/src/model.ts`)
 const ENTITY_W = 290
 const ENTITY_LEFT = 48
@@ -1314,7 +1394,551 @@ const entitiesModelFolder = {
   ],
 }
 
-const diagrams = [context, containers, dynamicChange, componentsPage, entitiesModelFolder]
+// ---------------------------------------------------------------------------
+// Packages: the layers, the checks, and the package dependency view
+// ---------------------------------------------------------------------------
+
+// The layers, from the lowest to the highest. A runtime dependency goes to the same layer or a lower layer.
+const packageLayers = [
+  { name: 'Hub', packages: ['hub'] },
+  { name: 'Model and subsystems', packages: ['core', 'clock', 'update'] },
+  {
+    name: 'Hosts, renderers, and products',
+    packages: [
+      'host-nodejs',
+      'construct-manager',
+      'renderer-react',
+      'renderer-pixi',
+      'renderer-godot',
+      'sample-product',
+    ],
+  },
+  { name: 'Applications', packages: ['workbench', 'workbench-app', 'pixi-page', 'three-renderers'] },
+  { name: 'Checks', packages: ['docs-check'] },
+]
+
+const PACKAGE_PREFIX = '@thrashplay/wishem-'
+const CHECK_PACKAGE = 'docs-check'
+const TABLE_HEADING = '## Package dependency view: Wishem'
+
+/** Reads each package of the folder: its folder name, its name field, and its Wishem dependencies. */
+const readPackages = () =>
+  readdirSync(packagesFolder, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(packagesFolder, entry.name, 'package.json')))
+    .map((entry) => entry.name)
+    .sort()
+    .map((folder) => {
+      const manifest = JSON.parse(readFileSync(join(packagesFolder, folder, 'package.json'), 'utf8'))
+      const wishemNames = (record) =>
+        Object.keys(record ?? {})
+          .filter((name) => name.startsWith(PACKAGE_PREFIX))
+          .map((name) => name.slice(PACKAGE_PREFIX.length))
+      const uses = [
+        ...new Set([...wishemNames(manifest.dependencies), ...wishemNames(manifest.peerDependencies)]),
+      ].sort()
+      const tests = wishemNames(manifest.devDependencies)
+        .filter((name) => !uses.includes(name))
+        .sort()
+      return { folder, name: manifest.name, uses, tests, devDependencies: wishemNames(manifest.devDependencies) }
+    })
+
+/** Reads the short names of the packages in the first table after the heading of the view in `README.md`. */
+const readTableRows = () => {
+  const file = join(outFolder, 'README.md')
+  if (!existsSync(file)) {
+    return new Set()
+  }
+  const lines = readFileSync(file, 'utf8').split('\n')
+  const start = lines.findIndex((line) => line.trim() === TABLE_HEADING)
+  const rows = new Set()
+  if (start === -1) {
+    return rows
+  }
+  let inTable = false
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('|')) {
+      inTable = true
+      const first = /^\|\s*`([^`]+)`\s*\|/.exec(line)
+      if (first) {
+        rows.add(first[1])
+      }
+    } else if (inTable) {
+      break
+    }
+  }
+  return rows
+}
+
+/** The rank of each package of one layer: 1 plus the highest rank of the packages of the layer that it uses. */
+const rankLayer = (names, byName) => {
+  const rank = new Map()
+  let pending = names
+  while (pending.length > 0) {
+    const inLayer = (name) => byName.get(name).uses.filter((use) => names.includes(use))
+    const ready = pending.filter((name) => inLayer(name).every((use) => rank.has(use)))
+    if (ready.length === 0) {
+      return undefined
+    }
+    for (const name of ready) {
+      rank.set(name, 1 + Math.max(0, ...inLayer(name).map((use) => rank.get(use))))
+    }
+    pending = pending.filter((name) => !rank.has(name))
+  }
+  return rank
+}
+
+/** Finds each disagreement between the packages, the layers, and the table of the packages. */
+const checkPackages = (packages) => {
+  const problems = []
+  const known = new Set(packages.map((pkg) => pkg.folder))
+  const layerOf = new Map()
+  const doubled = new Set()
+  packageLayers.forEach((layer, index) => {
+    for (const name of layer.packages) {
+      if (!known.has(name)) {
+        problems.push(`render: the layer "${layer.name}" names ${name}, which is not a package`)
+      } else if (layerOf.has(name)) {
+        doubled.add(name)
+      } else {
+        layerOf.set(name, index)
+      }
+    }
+  })
+  const rows = readTableRows()
+  const checker = packages.find((pkg) => pkg.folder === CHECK_PACKAGE)
+  for (const pkg of packages) {
+    if (pkg.name !== `${PACKAGE_PREFIX}${pkg.folder}`) {
+      problems.push(`render: the folder ${pkg.folder} holds the package ${String(pkg.name)}`)
+    }
+    if (doubled.has(pkg.folder)) {
+      problems.push(`render: the package ${pkg.folder} is in two layers`)
+    } else if (!layerOf.has(pkg.folder)) {
+      problems.push(`render: the package ${pkg.folder} has no layer`)
+    }
+    for (const used of pkg.uses) {
+      if (layerOf.has(pkg.folder) && layerOf.has(used) && layerOf.get(used) > layerOf.get(pkg.folder)) {
+        problems.push(
+          `render: ${pkg.folder} (layer "${packageLayers[layerOf.get(pkg.folder)].name}") uses ${used} (layer "${packageLayers[layerOf.get(used)].name}"), which is a higher layer`,
+        )
+      }
+    }
+    if (!rows.has(pkg.folder)) {
+      problems.push(`render: the table of the packages has no row for ${pkg.folder}`)
+    }
+    if (checker !== undefined && pkg !== checker && !checker.devDependencies.includes(pkg.folder)) {
+      problems.push(`render: ${pkg.folder} is not a development dependency of ${CHECK_PACKAGE}`)
+    }
+  }
+  const byName = new Map(packages.map((pkg) => [pkg.folder, pkg]))
+  packageLayers.forEach((layer, index) => {
+    const members = packages.filter((pkg) => layerOf.get(pkg.folder) === index).map((pkg) => pkg.folder)
+    if (rankLayer(members, byName) === undefined) {
+      problems.push(`render: the packages of the layer "${layer.name}" use one another in a cycle`)
+    }
+  })
+  return { problems, layerOf }
+}
+
+/** The lines of a card below its name: the packages that it tests with. */
+const cardLines = (pkg, packages) => {
+  const inner = GRID.cardW - 2 * CARD_PAD
+  if (pkg.tests.length === 0) {
+    return []
+  }
+  const others = packages.filter((other) => other !== pkg)
+  const all = others.every((other) => pkg.tests.includes(other.folder))
+  return wrap(all ? 'Tests with: each other package' : `Tests with: ${pkg.tests.join(', ')}`, inner, CARD_LINES_MAX)
+}
+
+/** The lines of the label of a layer band. */
+const bandLabel = (layerIndex) =>
+  wrap(`Layer ${String(layerIndex + 1)}: ${packageLayers[layerIndex].name}`, LABEL.w - 6, LABEL_LINES_MAX)
+
+// ---------------------------------------------------------------------------
+// Package dependency view: the grid, the ports, the lanes, the tracks, and the checks of the routes
+// ---------------------------------------------------------------------------
+
+const colX = (column) => BAND.x + GRID.left + column * (GRID.cardW + GRID.gutter)
+
+/** The rows of the cards from the highest to the lowest: one row for each chunk of three packages of one rank. */
+const arrangeRows = (packages, layerOf) => {
+  const byName = new Map(packages.map((pkg) => [pkg.folder, pkg]))
+  const column = new Map()
+  const rows = []
+  packageLayers.forEach((layer, index) => {
+    const members = packages.filter((pkg) => layerOf.get(pkg.folder) === index).map((pkg) => pkg.folder)
+    const rank = rankLayer(members, byName)
+    for (let level = 1; level <= Math.max(0, ...rank.values()); level++) {
+      const mean = (name) => {
+        const used = byName
+          .get(name)
+          .uses.map((other) => column.get(other))
+          .filter((value) => value !== undefined)
+        return used.length === 0 ? 1 : used.reduce((sum, value) => sum + value, 0) / used.length
+      }
+      const group = members
+        .filter((name) => rank.get(name) === level)
+        .sort((a, b) => mean(a) - mean(b) || a.localeCompare(b))
+      for (let start = 0; start < group.length; start += GRID.columns) {
+        const free = Array.from({ length: GRID.columns }, (_, value) => value)
+        for (const name of group.slice(start, start + GRID.columns)) {
+          const target = mean(name)
+          free.sort((a, b) => Math.abs(a - target) - Math.abs(b - target) || a - b)
+          column.set(name, free.shift())
+        }
+        rows.push({ layer: index, names: group.slice(start, start + GRID.columns) })
+      }
+    }
+  })
+  return { rows: rows.reverse(), column }
+}
+
+// The two ends of a route. A route goes from the first (above) to the second (below).
+const arrowEnds = (edge) => [edge.from, edge.to]
+
+const cardRects = (cards) => cards
+
+/** The box of the label of a band, with a margin. */
+const labelBox = (item) => ({
+  x: item.x + LABEL.x - 3,
+  y: item.y + LABEL.top - 14,
+  w: LABEL.w + 6,
+  h: item.labelLines.length * LABEL.line + 6,
+})
+
+const hitsBox = ([[ax, ay], [bx, by]], box, margin = 0.5) =>
+  Math.min(ax, bx) < box.x + box.w - margin &&
+  Math.max(ax, bx) > box.x + margin &&
+  Math.min(ay, by) < box.y + box.h - margin &&
+  Math.max(ay, by) > box.y + margin
+
+const segmentsOf = (points) => points.slice(1).map((point, index) => [points[index], point])
+
+const near = (a, b) => Math.abs(a - b) < 0.5
+const overlap = (a1, a2, b1, b2) =>
+  Math.min(Math.max(a1, a2), Math.max(b1, b2)) - Math.max(Math.min(a1, a2), Math.min(b1, b2)) > 0.5
+
+/** True when two straight segments lie on one line and overlap. */
+const shareLine = ([[ax, ay], [bx, by]], [[cx, cy], [dx, dy]]) => {
+  if (near(ay, by) && near(cy, dy) && near(ay, cy)) {
+    return overlap(ax, bx, cx, dx)
+  }
+  if (near(ax, bx) && near(cx, dx) && near(ax, cx)) {
+    return overlap(ay, by, cy, dy)
+  }
+  return false
+}
+
+/** Fails the run when a route goes up, crosses a card or a label, or shares a line with another route. */
+const checkRoutes = (routes, cards, bands) => {
+  for (const route of routes) {
+    const name = `${route.edge.from} -> ${route.edge.to}`
+    const { points } = route
+    if (points[points.length - 1][1] <= points[0][1]) {
+      throw new Error(`The arrow ${name} does not go down`)
+    }
+    for (const segment of segmentsOf(points)) {
+      for (const card of cardRects(cards)) {
+        if (hitsBox(segment, card)) {
+          throw new Error(`The arrow ${name} crosses the card ${card.name}`)
+        }
+      }
+      for (const item of bands) {
+        if (hitsBox(segment, labelBox(item), 0)) {
+          throw new Error(`The arrow ${name} crosses the label of the layer "${item.layerName}"`)
+        }
+      }
+    }
+  }
+  routes.forEach((first, index) => {
+    for (const second of routes.slice(index + 1)) {
+      if (segmentsOf(first.points).some((a) => segmentsOf(second.points).some((b) => shareLine(a, b)))) {
+        throw new Error(
+          `The arrows ${first.edge.from} -> ${first.edge.to} and ${second.edge.from} -> ${second.edge.to} share a line`,
+        )
+      }
+    }
+  })
+}
+
+const covers = (segment, x) => x > segment.min + 0.5 && x < segment.max - 0.5
+const crossings = (upper, lower) => Number(covers(lower, upper.down)) + Number(covers(upper, lower.up))
+const clashes = (a, b) => a.min < b.max + ROUTE.trackClear && b.min < a.max + ROUTE.trackClear
+
+/** Selects the track of a segment: an index in `tracks`, and whether a new track goes in at that index. */
+const trackIndex = (tracks, segment) => {
+  let best
+  const consider = (index, insert, above, below) => {
+    const cost =
+      above.flat().reduce((sum, other) => sum + crossings(other, segment), 0) +
+      below.flat().reduce((sum, other) => sum + crossings(segment, other), 0) +
+      (insert ? 0.5 : 0)
+    if (best === undefined || cost < best.cost) {
+      best = { cost, index, insert }
+    }
+  }
+  tracks.forEach((track, index) => {
+    if (!track.some((other) => clashes(other, segment))) {
+      consider(index, false, tracks.slice(0, index), tracks.slice(index + 1))
+    }
+  })
+  for (let index = 0; index <= tracks.length; index++) {
+    consider(index, true, tracks.slice(0, index), tracks.slice(index))
+  }
+  return best
+}
+
+/** Puts the segments of one channel in tracks. The longest segment goes first. */
+const placeTracks = (segments) => {
+  const tracks = []
+  const sorted = [...segments].sort((a, b) => b.max - b.min - (a.max - a.min) || a.name.localeCompare(b.name))
+  for (const segment of sorted) {
+    const { index, insert } = trackIndex(tracks, segment)
+    if (insert) {
+      tracks.splice(index, 0, [segment])
+    } else if (tracks[index] === undefined) {
+      tracks.push([segment])
+    } else {
+      tracks[index].push(segment)
+    }
+  }
+  return tracks
+}
+
+/** The height of the space under a row that holds `count` tracks. */
+const channelHeight = (count) => (count === 0 ? BAND.pad : 2 * ROUTE.channelPad + (count - 1) * ROUTE.trackGap)
+
+/** The ports of each card: evenly spaced on the edge, in the order of the card at the other end. */
+const assignPorts = (packages, routes, column) => {
+  const centerX = (name) => colX(column.get(name)) + GRID.cardW / 2
+  for (const pkg of packages) {
+    const name = pkg.folder
+    for (const [side, mine, other] of [
+      ['out', 'src', 'dst'],
+      ['in', 'dst', 'src'],
+    ]) {
+      const own = routes
+        .filter((route) => route[mine] === name)
+        .sort(
+          (x, y) => (x.lane ?? centerX(x[other])) - (y.lane ?? centerX(y[other])) || x[other].localeCompare(y[other]),
+        )
+      if ((own.length + 1) * ROUTE.portGap > GRID.cardW) {
+        throw new Error(`The card of ${name} has no room for ${String(own.length)} ports`)
+      }
+      own.forEach((route, index) => {
+        route[side] =
+          colX(column.get(name)) +
+          (GRID.cardW * (index + 1)) / (own.length + 1) +
+          (side === 'out' ? -ROUTE.stagger : ROUTE.stagger)
+      })
+    }
+  }
+}
+
+/** The lane of each route that passes a row: a vertical line in a gutter, in the margin, or in a free column. */
+const assignLanes = (routes, rows, column) => {
+  const slots = []
+  for (let index = 0; index < GRID.columns; index++) {
+    for (let x = colX(index) + ROUTE.laneGap; x <= colX(index) + GRID.cardW - ROUTE.laneGap; x += ROUTE.laneGap) {
+      slots.push({ x, column: index, used: [] })
+    }
+    const start = colX(index) + GRID.cardW
+    const limit = index === GRID.columns - 1 ? BAND.x + BAND.w - ROUTE.edge : colX(index + 1) - ROUTE.laneGap
+    for (let x = start + ROUTE.laneGap; x <= limit; x += ROUTE.laneGap) {
+      slots.push({ x, column: undefined, used: [] })
+    }
+  }
+  const occupied = rows.map((row) => new Set(row.names.map((name) => column.get(name))))
+  const everyPort = routes.flatMap((route) => [route.out, route.in])
+  const long = routes
+    .filter((route) => route.b - route.a >= 2)
+    .sort((x, y) => y.b - y.a - (x.b - x.a) || x.src.localeCompare(y.src) || x.dst.localeCompare(y.dst))
+  for (const route of long) {
+    const between = occupied.slice(route.a + 1, route.b)
+    const free = slots
+      .filter((slot) => slot.used.every(([from, to]) => to < route.a || from > route.b - 1))
+      .filter((slot) => slot.column === undefined || between.every((used) => !used.has(slot.column)))
+      .filter((slot) => everyPort.every((port) => Math.abs(port - slot.x) >= ROUTE.portClear))
+      .sort(
+        (p, q) =>
+          Math.abs(p.x - route.out) +
+            Math.abs(p.x - route.in) -
+            (Math.abs(q.x - route.out) + Math.abs(q.x - route.in)) || p.x - q.x,
+      )
+    if (free.length === 0) {
+      throw new Error(`The arrow ${route.edge.from} -> ${route.edge.to} has no free lane`)
+    }
+    free[0].used.push([route.a, route.b - 1])
+    route.lane = free[0].x
+  }
+}
+
+/** The package dependency view: one band for each layer (the highest at the top), the cards, and the arrows. */
+const packagesDiagram = (packages, layerOf) => {
+  const { rows: ordered, column } = arrangeRows(packages, layerOf)
+  const rows = ordered.map((row) => ({ ...row }))
+  const rowOf = new Map(rows.flatMap((row, index) => row.names.map((name) => [name, index])))
+  const lines = new Map(packages.map((pkg) => [pkg.folder, cardLines(pkg, packages)]))
+  for (const row of rows) {
+    row.h = Math.max(
+      CARD_MIN_H,
+      ...row.names.map((name) => CARD_TOP + LEAD.name + lines.get(name).length * LEAD.description + 12),
+    )
+  }
+  const routes = packages
+    .flatMap((pkg) => pkg.uses.map((use) => ({ edge: { from: pkg.folder, to: use } })))
+    .map((route) => {
+      const [src, dst] = arrowEnds(route.edge)
+      return { ...route, src, dst, a: rowOf.get(src), b: rowOf.get(dst) }
+    })
+  assignPorts(packages, routes, column)
+  assignLanes(routes, rows, column)
+  assignPorts(packages, routes, column)
+  assignLanes(routes, rows, column)
+
+  // Tracks: each segment of a route in a channel has its own line.
+  const channels = Array.from({ length: Math.max(0, rows.length - 1) }, () => [])
+  for (const route of routes) {
+    const add = (channel, up, down, key) => {
+      if (Math.abs(up - down) >= 0.5) {
+        const segment = {
+          key,
+          name: `${route.edge.from} -> ${route.edge.to}`,
+          up,
+          down,
+          min: Math.min(up, down),
+          max: Math.max(up, down),
+        }
+        channels[channel].push(segment)
+        route[key] = segment
+      }
+    }
+    if (route.b - route.a === 1) {
+      add(route.a, route.out, route.in, 'first')
+    } else if (route.b - route.a >= 2) {
+      add(route.a, route.out, route.lane, 'first')
+      add(route.b - 1, route.lane, route.in, 'last')
+    }
+  }
+  const tracks = channels.map((segments) => placeTracks(segments))
+  const trackCount = tracks.map((list, index) =>
+    Math.max(list.length, routes.some((route) => route.a === index && route.b === index + 1) ? 1 : 0),
+  )
+
+  // Heights: the tracks of the channel below a row sit under that row.
+  const bands = []
+  const rowBottom = []
+  let y = BAND.top
+  let current
+  rows.forEach((row, index) => {
+    if (current === undefined || current.layer !== row.layer) {
+      current = { layer: row.layer, y }
+      bands.push(current)
+      y += BAND.pad
+    }
+    row.y = y
+    y += row.h
+    rowBottom.push(y)
+    const last = index === rows.length - 1
+    y += last ? BAND.pad : channelHeight(trackCount[index])
+    if (last || rows[index + 1].layer !== row.layer) {
+      current.labelLines = bandLabel(current.layer)
+      y = Math.max(y, current.y + LABEL.top + (current.labelLines.length - 1) * LABEL.line + 14)
+      current.bottom = y
+      y += BAND.spacing
+    }
+  })
+  const bandItems = bands.map((entry) => ({
+    kind: 'band',
+    x: BAND.x,
+    y: entry.y,
+    w: BAND.w,
+    h: entry.bottom - entry.y,
+    labelLines: entry.labelLines,
+    layerName: packageLayers[entry.layer].name,
+  }))
+  const cards = rows.flatMap((row) =>
+    row.names.map((name) => ({
+      kind: 'card',
+      x: colX(column.get(name)),
+      y: row.y,
+      w: GRID.cardW,
+      h: row.h,
+      name,
+      lines: lines.get(name),
+    })),
+  )
+
+  // Routes: the points of each arrow.
+  const trackY = (channel, segment) =>
+    rowBottom[channel] +
+    ROUTE.channelPad +
+    tracks[channel].findIndex((track) => track.includes(segment)) * ROUTE.trackGap
+  const items = routes.map((route) => {
+    const from = [route.out, rowBottom[route.a]]
+    const to = [route.in, rows[route.b].y]
+    let points
+    if (route.b <= route.a) {
+      points = [from, to]
+    } else if (route.b - route.a === 1) {
+      points =
+        route.first === undefined ?
+          [from, [route.out, to[1]]]
+        : [from, [route.out, trackY(route.a, route.first)], [route.in, trackY(route.a, route.first)], to]
+    } else {
+      const first = trackY(route.a, route.first)
+      const last = trackY(route.b - 1, route.last)
+      points = [from, [route.out, first], [route.lane, first], [route.lane, last], [route.in, last], to]
+    }
+    route.points = points
+    return { kind: 'arrow', tone: 'uses', width: 2, points, uses: { from: route.edge.from, to: route.edge.to } }
+  })
+  checkRoutes(routes, cards, bandItems)
+
+  const names = packageLayers.map((layer, index) => `layer ${String(index + 1)} (${layer.name})`).join(', ')
+  return {
+    name: 'packages',
+    title: 'Package dependency view: Wishem',
+    description: `The view shows ${String(packages.length)} packages in ${String(packageLayers.length)} layers: ${names}. Layer 1 is at the bottom and layer ${String(packageLayers.length)} is at the top. Each of the ${String(routes.length)} arrows goes down from a package to a package that it uses at run time, in dependencies or peerDependencies. A package uses only packages in its own layer or in a lower layer. The line Tests with on a card names the packages that its package has only in devDependencies.`,
+    width: BAND.w + 2 * BAND.x,
+    height: y + LEGEND_H + 24,
+    items: [
+      ...bandItems,
+      ...cards,
+      ...items,
+      {
+        kind: 'legend',
+        x: BAND.x,
+        y,
+        w: BAND.w,
+        entries: [
+          ['band', 'Layer'],
+          ['card', 'Package'],
+          ['uses', 'Uses at run time [dependencies, peerDependencies]'],
+        ],
+      },
+    ],
+  }
+}
+
+const packages = readPackages()
+const { problems, layerOf } = checkPackages(packages)
+if (problems.length > 0) {
+  for (const problem of problems) {
+    console.error(problem)
+  }
+  process.exit(1)
+}
+
+const diagrams = [
+  context,
+  containers,
+  dynamicChange,
+  componentsPage,
+  componentsWorkbenchProcess,
+  packagesDiagram(packages, layerOf),
+  entitiesModelFolder,
+]
 
 // ---------------------------------------------------------------------------
 // Output
@@ -1357,12 +1981,25 @@ const tokens = readTokens()
 // Render every file first, so that a failed check writes no file.
 const files = diagrams.flatMap((diagram) =>
   ['light', 'dark'].map((theme) => ({
-    file: join(here, `${diagram.name}-${theme}.svg`),
+    file: join(outFolder, `${diagram.name}-${theme}.svg`),
     content: renderDiagram(diagram, theme, tokens),
   })),
 )
 
-for (const { file, content } of files) {
-  writeFileSync(file, content)
-  console.log(`wrote ${file}`)
+if (options.check) {
+  const stale = files.filter(({ file, content }) => !existsSync(file) || readFileSync(file, 'utf8') !== content)
+  if (stale.length === 0) {
+    console.log('render: each file is current')
+  } else {
+    for (const { file } of stale) {
+      console.log(`render: ${basename(file)} is out of date`)
+    }
+    console.log('render: run node nodejs/wishem/docs/architecture/render.mjs')
+    process.exitCode = 1
+  }
+} else {
+  for (const { file, content } of files) {
+    writeFileSync(file, content)
+    console.log(`wrote ${file}`)
+  }
 }
