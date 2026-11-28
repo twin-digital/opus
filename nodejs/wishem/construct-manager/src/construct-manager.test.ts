@@ -562,7 +562,7 @@ describe('attachConstructManager', () => {
     const manager2 = construct('play').hub.attach({ id: 'probe', kind: 'input' })
     const result = await manager2.submit({ type: 'time/advance', payload: { ms: 50 } })
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
-    expect(JSON.stringify(result)).toContain('test/broken')
+    expect(result).toMatchObject({ problems: [{ path: ['behaviors', 'test/broken', expect.any(String)] }] })
   })
 
   it('passes a pause, and reports the time state and the result under the sequence number', async () => {
