@@ -486,6 +486,18 @@ describe('validateModel', () => {
         expect(problems[0]?.message).toContain('"hero"')
       })
 
+      it.each([
+        ['an object', {}],
+        ['null', null],
+        ['a number', 3],
+      ])('names the entity and the field for %s', (_name, value) => {
+        const problems = errors(withList(value))
+        expect(problems).toHaveLength(1)
+        expect(problems[0]?.path).toEqual(listPath())
+        expect(problems[0]?.message).toContain('"cards"')
+        expect(problems[0]?.message).toContain('"reference-list"')
+      })
+
       it('names an item that is not a string', () => {
         const problems = errors(withList([ENT2, 7]))
         expect(problems).toHaveLength(1)
@@ -498,6 +510,7 @@ describe('validateModel', () => {
         expect(problems[0]?.path).toEqual(listPath(1))
         expect(problems[0]?.message).toContain(ENT)
         expect(problems[0]?.message).toContain(MISSING)
+        expect(problems[0]?.message).toContain('the index 1')
       })
 
       it('names the ID and the later index of an ID two times', () => {
@@ -506,6 +519,7 @@ describe('validateModel', () => {
         expect(problems[0]?.path).toEqual(listPath(2))
         expect(problems[0]?.message).toContain(ENT)
         expect(problems[0]?.message).toContain(ENT2)
+        expect(problems[0]?.message).toContain('the index 2')
       })
 
       it('names each item that has a fault', () => {
@@ -641,6 +655,31 @@ describe('validateModel', () => {
     it('does not warn for component types with different labels', () => {
       const result = validateModel(model([appBar(), appBar({ id: CT2, label: 'Other' })], []))
       expect(result.ok && result.warnings).toEqual([])
+    })
+  })
+  describe('a list of references shares no array with the input', () => {
+    it('gives a new array with the same IDs in the same order', () => {
+      const list = [ENT2, ENT]
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const entities = [entity({ [CT]: { [FLD5]: list } }), entity({}, ENT2)]
+      const result = validateModel({ definitions, entities })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([ENT2, ENT])
+        expect(copy).not.toBe(list)
+      }
+    })
+    it('gives a new array for an empty list', () => {
+      const list: string[] = []
+      const definitions = [{ id: CT, label: 'Deck', fields: [{ id: FLD5, label: 'cards', type: 'reference-list' }] }]
+      const result = validateModel({ definitions, entities: [entity({ [CT]: { [FLD5]: list } })] })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        const copy = result.model.entities[0]?.components[CT]?.[FLD5]
+        expect(copy).toEqual([])
+        expect(copy).not.toBe(list)
+      }
     })
   })
 })
