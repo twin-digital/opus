@@ -72,6 +72,15 @@ Ruling: the empty field name stays as built (no prop) in this task, and goes to 
 Task 3: minor (deferred): _node_for scans each entry for each item (O(n²) per sync; index by key); push_error of the expected failures prints ERROR lines in test:godot (expected noise); _layer.free() needs is_instance_valid; no test of a third sidecar of one type; field names use ASCII [A-Za-z0-9] only (compare with field-names.ts of renderer-react); no TypeScript test of the stderr wiring of godot.ts; a test file that does not load may not count as a failure in run.gd.
 Task 3: complete (commits 2ffd012..fc7b046, review clean)
 
+#540 is merged (ced6862a). Main merged (6f6536eb; README.md and pnpm-lock.yaml made again with pnpm install and update-readme; sync gives no change). The relation "blocked by #540" is removed. Task 4: dispatched (implementer: sonnet), base 6f6536eb.
+
+Task 4: implementer DONE_WITH_CONCERNS, commit 94a237e2 (57 tests; lint, typecheck pass; 4.4: --paused, rewind-client gives #1d4ed8, SIGINT exit 0). Concerns: scripts/start.ts exports no function (start.test.ts tests the spawned process only); the start test needs dist/ of the workspace dependencies (CI builds first); no gap of LINK.md. Review dispatched (sonnet).
+
+Task 4: review (sonnet): spec compliant, quality Approved, no Critical. Items it could not verify, checked by the lead: each of the 11 scenarios of renderer-godot/construct has a test (the scenario "The PixiJS page runs at the same time" is the test "runs next to a second construct"); the 4.4 run is in the report.
+Ruling: the plan-mandated duplication of the construct of pixi-page (color-rule, create-hub, process, and their tests) is accepted — design.md mandates it, and #542 joins the two constructs into one — cost if wrong: two copies until #542.
+Task 4: minor (deferred): the signal handlers are registered after startGodotConstruct resolves (a signal during the start uses the default action); a message for an invalid --port that the spec does not name; `.ts` imports in create-hub.ts and process.ts (needed for type stripping) next to `.js` in the tests; COLOR_FIELD and SCREEN_ENTITY have no doc comments.
+Task 4: complete (commits 6f6536e..94a237e, review clean)
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 4, after #540 is merged (merge main first). Carry to it the ID of ClearColor: ct_c47a0a86-b82f-43a8-8b0b-31a1e4ef6f37. Carry to Task 5: no timeout of welcome and no keepalive (gap 6). Tasks 4 to 7 wait for the merge of #540.
+- NEXT STEP: Task 5 (the Godot application and the runner). Carry to it: no timeout of welcome and no keepalive (gap 6). Then Tasks 6 and 7. Tasks 4 to 7 wait for the merge of #540.
