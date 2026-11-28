@@ -4,16 +4,17 @@ import { createStore } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { serveHub } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'
-import type { Hub, ModelSubsystem, Port } from '@thrashplay/wishem-hub'
+import type { Hub, Port } from '@thrashplay/wishem-hub'
+import { createUpdate } from '@thrashplay/wishem-update'
+import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { CONSTRUCT_MANAGER_ID } from './ids.js'
-
-export type WrapStore = (store: ModelSubsystem<Model>) => ModelSubsystem<Model>
 
 export interface ProductConstructOptions {
   /** The ID in the construct list. */
   id: string
   model: Model
-  wrapStore?: WrapStore
+  /** The native behaviors of the product, run in each tick. Default: none. */
+  behaviors?: readonly NativeBehavior[]
   /** The first `running` value of the part `time`. */
   running: boolean
   /** Default 50. */
@@ -34,14 +35,14 @@ export interface ProductConstruct {
 }
 
 /**
- * Starts a hub with the parts `time` and `store`, serves its link on a port that the system selects, and starts a clock.
+ * Starts a hub with the parts `time` and `store`, where the update subsystem runs the behaviors,, serves its link on a port that the system selects, and starts a clock.
  * Only the source `construct-manager` can rewind the hub.
  * Rejects with the error of a step, and then holds no port and no timer.
  */
 export const startProductConstruct = async (options: ProductConstructOptions): Promise<ProductConstruct> => {
-  const store = createStore({ model: options.model })
+  const update = createUpdate({ store: createStore({ model: options.model }), behaviors: options.behaviors ?? [] })
   const hub = createHub({
-    subsystems: [createTime({ running: options.running }), options.wrapStore?.(store) ?? store],
+    subsystems: [createTime({ running: options.running }), update],
     rewindSources: [CONSTRUCT_MANAGER_ID],
     ...(options.onError === undefined ? {} : { onError: options.onError }),
   })

@@ -5,14 +5,16 @@ import type { Hub, Input, JoinedState, Port, RecordedInput, SubmitResult } from 
 import { constructInputs } from './construct-list.js'
 import type { ConstructEntry, ConstructList, PassResult, ReportPayload, TimeState } from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID, CONSTRUCTS_ID } from './ids.js'
+import type { NativeBehavior } from '@thrashplay/wishem-update'
 import { productChanges } from './product-changes.js'
 import { startProductConstruct } from './product-construct.js'
-import type { ProductConstruct, WrapStore } from './product-construct.js'
+import type { ProductConstruct } from './product-construct.js'
 
 export interface ConstructManagerOptions {
   /** The workbench hub. It runs, and it has the parts `product` and `constructs`. */
   hub: Hub
-  wrapStore?: WrapStore
+  /** The native behaviors of the product. Each product construct runs them. */
+  behaviors?: readonly NativeBehavior[]
   /** Default: write to the terminal. */
   log?: (line: string) => void
   /** For tests: given to each product construct. */
@@ -133,7 +135,7 @@ export const attachConstructManager = (options: ConstructManagerOptions): Constr
         id,
         model: product,
         running: entry.startTime === 'running',
-        ...(options.wrapStore === undefined ? {} : { wrapStore: options.wrapStore }),
+        ...(options.behaviors === undefined ? {} : { behaviors: options.behaviors }),
         ...(options.stepMs === undefined ? {} : { stepMs: options.stepMs }),
         ...(options.timer === undefined ? {} : { timer: options.timer }),
         ...(options.now === undefined ? {} : { now: options.now }),

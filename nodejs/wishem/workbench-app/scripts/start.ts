@@ -6,16 +6,13 @@ import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { createServer, type ViteDevServer } from 'vite'
-import {
-  attachConstructManager,
-  type ConstructManager,
-  type WrapStore,
-} from '@thrashplay/wishem-construct-manager/node'
+import { attachConstructManager, type ConstructManager } from '@thrashplay/wishem-construct-manager/node'
 import { createConstructList } from '@thrashplay/wishem-construct-manager'
 import { ModelError, type Model } from '@thrashplay/wishem-core'
 import { startConstruct } from '@thrashplay/wishem-host-nodejs'
 import { formatProblem } from '@thrashplay/wishem-host-nodejs/format'
 import type { Hub } from '@thrashplay/wishem-hub'
+import { checkBehaviors, type NativeBehavior } from '@thrashplay/wishem-update'
 import { modelFolder } from '@thrashplay/wishem-workbench'
 import { generateViewTypes } from './view-types.ts'
 import { viewTypesLines } from './view-types-report.ts'
@@ -25,7 +22,7 @@ export interface WorkbenchOptions {
   model?: string
   /** The folder of a product model to mount as the store `product`. Default: no product. */
   product?: string
-  /** The module with the export `wrapStore`: a package name, or a path that starts with `.` or `/`. Needs `product`. */
+  /** The module with the export `behaviors`: a package name, or a path that starts with `.` or `/`. Needs `product`. */
   productCode?: string
   /** Default 5173. Use 0 to let the system select a port. */
   port?: number
@@ -59,21 +56,23 @@ const SIDECAR_SUFFIX = '.view.json'
 const isPathValue = (value: string) => value.startsWith('.') || value.startsWith('/')
 
 /** Loads the product code. Logs the reason and throws a `StartError` when it cannot be used. */
-const loadProductCode = async (value: string, log: (line: string) => void): Promise<WrapStore> => {
-  let loaded: { wrapStore?: unknown }
+const loadProductCode = async (value: string, log: (line: string) => void): Promise<readonly NativeBehavior[]> => {
+  let loaded: { behaviors?: unknown }
   try {
     const target =
       isPathValue(value) ? pathToFileURL(resolve(process.env.INIT_CWD ?? process.cwd(), value)).href : value
-    loaded = (await import(target)) as { wrapStore?: unknown }
+    loaded = (await import(target)) as { behaviors?: unknown }
   } catch (error) {
     log(`wishem: the product code ${value} cannot be loaded: ${error instanceof Error ? error.message : String(error)}`)
     throw new StartError('the product code cannot be loaded')
   }
-  if (typeof loaded.wrapStore !== 'function') {
-    log('wishem: the product code has no function wrapStore')
-    throw new StartError('the product code has no function wrapStore')
+  try {
+    return checkBehaviors(loaded.behaviors)
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    log(`wishem: the product code has no correct list behaviors: ${reason}`)
+    throw new StartError('the product code has no correct list behaviors')
   }
-  return loaded.wrapStore as WrapStore
 }
 
 const isPortInUse = (error: unknown) =>
@@ -183,10 +182,10 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
   if (product !== undefined) {
     log(`wishem: product ${product}`)
   }
-  let wrapStore: WrapStore | undefined
+  let behaviors: readonly NativeBehavior[] | undefined
   if (productCode !== undefined) {
     log(`wishem: product code ${productCode}`)
-    wrapStore = await loadProductCode(productCode, log)
+    behaviors = await loadProductCode(productCode, log)
   }
 
   let construct
@@ -215,7 +214,7 @@ export const startWorkbench = async (options: WorkbenchOptions = {}): Promise<Wo
 
   let manager: ConstructManager | undefined
   try {
-    manager = product === undefined ? undefined : attachConstructManager({ hub: construct.hub, wrapStore, log })
+    manager = product === undefined ? undefined : attachConstructManager({ hub: construct.hub, behaviors, log })
   } catch (error) {
     await construct.close()
     throw error

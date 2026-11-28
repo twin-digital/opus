@@ -57,7 +57,7 @@ const inputs = productChanges(before, after, 'product')
 
 ## The construct manager
 
-`attachConstructManager({ hub, wrapStore, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The hub must have the parts `product` and `constructs`.
+`attachConstructManager({ hub, behaviors, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The list `behaviors` holds the native behaviors of the product, and each product construct runs them. The hub must have the parts `product` and `constructs`.
 
 ```ts
 import { fileURLToPath } from 'node:url'
@@ -65,7 +65,7 @@ import { createStore } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'
-import { wrapStore } from '@thrashplay/wishem-sample-product'
+import { behaviors } from '@thrashplay/wishem-sample-product'
 import { constructInputs, createConstructList } from '@thrashplay/wishem-construct-manager'
 import type { ConstructList } from '@thrashplay/wishem-construct-manager'
 import { attachConstructManager } from '@thrashplay/wishem-construct-manager/node'
@@ -82,7 +82,7 @@ const hub = createHub({
   subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
 })
 hub.start()
-const manager = attachConstructManager({ hub, wrapStore, log: (line) => console.log(line) })
+const manager = attachConstructManager({ hub, behaviors, log: (line) => console.log(line) })
 const client = hub.attach({ id: 'client', kind: 'input' })
 const entry = () => (hub.read().constructs as ConstructList).constructs.play
 
@@ -100,7 +100,7 @@ The construct manager attaches the input port `construct-manager` and the output
 
 A product construct (`startProductConstruct`) holds:
 
-- a hub with the parts `time` and `store`, and the product rules from `wrapStore`
+- a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`
 - a link server on a port that the system selects (`linkUrl`, for example `ws://127.0.0.1:41377/link`)
 - a clock on the port `clock`
 
