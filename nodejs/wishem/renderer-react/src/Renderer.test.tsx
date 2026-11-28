@@ -202,8 +202,9 @@ describe('Renderer', () => {
     })
 
     it('leaves no input in the record of the hub', () => {
-      const { hub, output } = startWorld(baseModel())
-      draw(output)
+      const { hub, input } = startWorld(baseModel())
+      draw(input)
+      expect(wrappers()).toHaveLength(2)
       expect(hub.record()).toEqual([])
     })
 
@@ -859,6 +860,35 @@ describe('Renderer', () => {
       expect(warn).toHaveBeenCalledTimes(1)
       expect(String(warn.mock.calls[0]?.[0])).toContain('reserved name "wishem"')
     })
+
+    it('gives the view no prop for a field with an empty name, and warns', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const seen: ViewProps[] = []
+      const model = baseModel()
+      const empty: Model = {
+        ...model,
+        definitions: [
+          { id: CT_A, label: 'A', fields: [{ id: FLD_TITLE, label: '???', type: 'string' }] },
+          model.definitions[1],
+        ],
+      }
+      render(
+        startWorld(empty).output,
+        tableOf({
+          name: 'A',
+          componentType: CT_A,
+          view: (props: ViewProps) => {
+            seen.push(props)
+            return null
+          },
+        }),
+      )
+      expect(seen[0]).toBeDefined()
+      expect(Object.keys(seen[0] ?? {})).not.toContain('')
+      expect(typeof seen[0]?.wishem.setField).toBe('function')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]?.[0])).toContain('gives an empty name')
+    })
   })
 
   describe('nested views', () => {
@@ -894,6 +924,22 @@ describe('Renderer', () => {
       const held = container.querySelector(`[data-wishem-entity="${E2}"] [data-wishem-entity="${E1}"]`)
       expect(held?.getAttribute('data-wishem-component-type')).toBe(CT_A)
       expect(held?.textContent).toBe('title:Task')
+    })
+
+    it('draws a held entity at the top level again when the table of views loses the view of its holder', () => {
+      const { output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
+      draw(output, tableOf(sourceA))
+      expect(topLevel()).toEqual([E1])
+    })
+
+    it('holds an entity when the table of views gains the view of its holder', () => {
+      const { output } = startWorld(nested([task(E1, 'Task'), list(E2, E1)]))
+      draw(output, tableOf(sourceA))
+      expect(topLevel()).toEqual([E1])
+      draw(output, tableOf(sourceA, listSource))
+      expect(topLevel()).toEqual([E2])
     })
 
     it('draws a held entity in the place of each of two holders', () => {
@@ -1051,6 +1097,22 @@ describe('Renderer', () => {
         draw(startWorld(nested([list(E1, E1)])).output, tableOf(listSource))
         expect(entityTexts(container)).toEqual([`${E1}:`])
         expect(warn).toHaveBeenCalledTimes(1)
+      })
+
+      it('gives the view of an entity that names itself the prop null', () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+        const seen: unknown[] = []
+        draw(
+          startWorld(nested([list(E1, E1)])).output,
+          tableOf({
+            ...listSource,
+            view: (props: ViewProps) => {
+              seen.push(props.first)
+              return null
+            },
+          }),
+        )
+        expect(seen).toEqual([null])
       })
 
       it('draws neither entity of a cycle with no root, and warns one time', () => {

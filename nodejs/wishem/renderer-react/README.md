@@ -40,7 +40,7 @@ This renderer uses the sidecars of the kind `react`. It ignores a sidecar of a d
 
 A view gets one prop for each field of the component type. `fieldName` makes the name of the prop from the label of the field. `propNames` gives the props of a definition.
 
-These cases are a problem: a label that gives an empty name, a name that starts with a digit, a reserved name, or the same name as another field. The names `wishem` and `key` are reserved (`RESERVED_PROP_NAMES`). A field with a reserved name gives no prop. `viewWarnings` reports the same name of two fields and a reserved name. The generator reports each of the four problems as an error.
+These cases are a problem: a label that gives an empty name, a name that starts with a digit, a reserved name, or the same name as another field. The names `wishem` and `key` are reserved (`RESERVED_PROP_NAMES`). A field with an empty name or a reserved name gives no prop. `viewWarnings` reports the same name of two fields, an empty name, and a reserved name. The generator reports each of the four problems as an error.
 
 ## Nested views
 

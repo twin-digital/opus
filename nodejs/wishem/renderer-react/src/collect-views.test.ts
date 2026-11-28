@@ -26,6 +26,12 @@ describe('collectViews', () => {
     expect(table.get(APP_BAR)).toEqual({ sidecar: 'AppBar.view.json', componentType: APP_BAR, view: module.default })
   })
 
+  it('gives an error that has the name ViewCollectionError', () => {
+    const error = catchError(() => collectViews({ './views/Header.view.json': sidecar(APP_BAR) }, {}))
+
+    expect(error.name).toBe('ViewCollectionError')
+  })
+
   it('returns an empty table for no files', () => {
     expect(collectViews({}, {}).size).toBe(0)
   })
