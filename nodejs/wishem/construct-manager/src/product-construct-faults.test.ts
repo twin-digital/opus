@@ -12,6 +12,8 @@ import type { ChildProcessLauncherOptions, LaunchedConstruct } from './node.js'
 
 const MODEL_FOLDER = fileURLToPath(new URL('../../sample-product/model', import.meta.url))
 
+const SAMPLE_CODE = new URL('../../sample-product/dist/index.js', import.meta.url).href
+
 let model: Model
 
 beforeAll(async () => {
@@ -85,6 +87,16 @@ describe('the faults of a product construct process', () => {
     const construct = await launch({ productCode, stepMs: 10 })
     expect(await construct.ended).toBe('The process of the construct ended with the exit code 3.')
     expect(alive(construct.pid)).toBe(false)
+  })
+
+  it('gives stepMs to the hub and to the clock', async () => {
+    await setup()
+    const construct = await launch({ productCode: SAMPLE_CODE, stepMs: 400 })
+    await vi.waitFor(() => {
+      expect(countOf(construct.reader.read())).toBeGreaterThan(0)
+    })
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    expect(Number(countOf(construct.reader.read()))).toBeLessThanOrEqual(6)
   })
 
   it('resolves ended with the signal when the test sends SIGTERM to the child', async () => {

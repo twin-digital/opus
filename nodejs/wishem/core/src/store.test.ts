@@ -358,12 +358,24 @@ describe('add-entity', () => {
       expect(frozenDeep(next)).toBe(true)
     })
 
-    it.each([3, -1, 1.5, '1', null, NaN, Infinity])('refuses the index %j', (index) => {
+    it.each([3, -1, 1.5, '1', null])('refuses the index %j', (index) => {
       const store = createStore({ model: twoEntities() })
       const error = refusal(() => send(store, store.initial, 'store/add-entity', { entity: third(), index }))
       expect(error.problems).toEqual([
         { message: 'The index is not an integer from 0 to 2', path: ['payload', 'index'] },
       ])
+    })
+
+    it.each([NaN, Infinity, -Infinity])('refuses the index %s that JSON cannot hold', (index) => {
+      const store = createStore({ model: twoEntities() })
+      const input: RecordedInput = {
+        seq: 1,
+        source: 'test',
+        type: 'store/add-entity',
+        payload: { entity: third(), index },
+      }
+      const error = refusal(() => store.apply(store.initial, input, { read: () => ({}) }))
+      expect(error.problems.map((problem) => problem.path)).toEqual([['payload', 'index']])
     })
 
     it('gives each problem of a refused index and an entity that is not correct', () => {
@@ -382,6 +394,13 @@ describe('add-entity', () => {
         send(store, store.initial, 'store/add-entity', { entity: { id: ENT, components: {} }, index: 0 }),
       )
       expect(error.problems[0]?.path).toEqual(['payload', 'entity', 'id'])
+    })
+
+    it('accepts a reference to an entity that follows the position', () => {
+      const store = createStore({ model: typedModel() })
+      const entity = { id: ENT3, components: { [CT]: { [FLD4]: ENT } } }
+      const next = send(store, store.initial, 'store/add-entity', { entity, index: 0 })
+      expect(ids(next)).toEqual([ENT3, ENT, ENT2])
     })
 
     it('refuses an entity that the model does not allow, with the path of its position', () => {
