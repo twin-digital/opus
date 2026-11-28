@@ -147,6 +147,31 @@ func test_an_unknown_type_and_an_unknown_key_change_nothing() -> void:
 	assert_equal(before["counter"], {"count": 6.0})
 
 
+func test_an_event_with_an_unknown_value_closes_the_socket_and_gives_down_once() -> void:
+	for event: Variant in ["paused", 5, null]:
+		var h := Fake.Harness.new()
+		h.link()
+		h.receive({"t": "event", "event": event})
+		assert_equal(h.sockets[0].close_count, 1, str(event))
+		assert_equal(h.down_count, 1, str(event))
+
+
+func test_a_result_with_neither_result_nor_error_closes_the_socket_and_gives_down_once() -> void:
+	var h := Fake.Harness.new()
+	h.link()
+	h.receive({"t": "result", "request": 1})
+	assert_equal(h.sockets[0].close_count, 1)
+	assert_equal(h.down_count, 1)
+
+
+func test_a_result_for_an_unknown_request_changes_nothing() -> void:
+	var h := Fake.Harness.new()
+	h.link()
+	h.receive({"t": "result", "request": 99, "result": {"ok": true, "seq": 1}})
+	assert_equal(h.sockets[0].close_count, 0)
+	assert_equal(h.down_count, 0)
+
+
 func test_down_comes_once_at_the_start_when_the_socket_does_not_open() -> void:
 	var h := Fake.Harness.new()
 	h.connect_result = ERR_CANT_CONNECT

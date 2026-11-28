@@ -115,7 +115,7 @@ The status `created` means that the hub did not start. The client then gets the 
 
 The client keeps `seq` and `state` of `welcome`. The number `seq` is the sequence number of the first state of the client. The first `applied` message has the number `seq` plus 1. A client that tells its program about the state gives `seq` to its program.
 
-A `welcome` message is not correct when `state` is not an object or `seq` is not an integer. Treat it as a malformed message: close the connection, wait, and open a new link. See "A client that connects again".
+A `welcome` message is malformed when `state` is not an object or `seq` is not an integer. Close the connection, wait, and open a new link. See "A client that connects again".
 
 ```json
 { "t": "welcome", "protocol": 1, "status": "running", "seq": 3, "state": { "counter": { "count": 6 } } }
@@ -160,7 +160,7 @@ The hub side sends `event` for a change of the hub that has no input.
 | `t`     | text      | `"event"`                    |
 | `event` | text      | `"started"` or `"stopping"`. |
 
-Ignore an `event` message with an unknown value of `event`. Keep the link open.
+An `event` message with a value of `event` that is not `started` or `stopping` is malformed.
 
 The event `started` means that the hub now accepts inputs. The event `stopping` means that the hub stops. The hub side closes the connection after it sends `stopping`.
 
@@ -191,7 +191,7 @@ The keys of `input`:
 | `type`    | text      | The type of the input.                                        |
 | `payload` | any       | The payload of the input. The value is `null` for no payload. |
 
-An `applied` message is not correct when `input` or `parts` is not an object, or when `seq` is not an integer. Treat it as a malformed message: close the connection and open a new link.
+An `applied` message is malformed when `input` or `parts` is not an object, or when `seq` is not an integer. Close the connection and open a new link.
 
 To update the joined state, replace each key of the local state with the key of `parts`. Keep each other part. The message holds no part that did not change.
 
@@ -214,7 +214,7 @@ The hub side sends `result` as the answer to one `submit`. The message has the k
 | `result`  | object    | The result of the hub. See below.                        |
 | `error`   | text      | The text of an error. The hub failed to apply the input. |
 
-A `result` message is not correct when it has none of the keys `result` and `error`, or both. A message whose `request` matches no `submit` is also not correct. Ignore such a message and keep the link open. The `submit` that it names stays without a result.
+A `result` message is malformed when it has none of the keys `result` and `error`. The hub side sends one of the two keys. A `result` message whose `request` matches no `submit` is not malformed. Ignore it and keep the link open.
 
 The key `result` has one of two forms:
 
@@ -317,7 +317,7 @@ When the connection closes, do this:
 3. Open a new connection and send a new `hello`. The `welcome` message gives the full joined state.
 4. Read the new joined state before you send an input again. Do not send an input again blindly. An input is not idempotent, and a second send can apply it two times.
 
-A client that gets a malformed message or a wrong sequence number closes the connection and opens a new link. The hub side sends `refused` with the reason `malformed` for a message that is not correct, and closes the connection. That case is a defect in the client. Correct the client.
+A client that gets a malformed message or a wrong sequence number closes the connection and opens a new link. The hub side sends `refused` with the reason `malformed` for a malformed message, and closes the connection. That case is a defect in the client. Correct the client.
 
 ## A client that connects again
 
@@ -331,7 +331,7 @@ A client opens a new link after each end of a link. Do this:
 
 ### The start of the wait
 
-Start the first wait when the client finds that the connection is closed. A client that polls its connection starts the wait at the poll that finds the close. Count a `refused` message, and a `welcome` that is not correct, as a failed attempt.
+Start the first wait when the client finds that the connection is closed. A client that polls its connection starts the wait at the poll that finds the close. Count a `refused` message, and a malformed `welcome`, as a failed attempt.
 
 ## A full example
 

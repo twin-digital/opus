@@ -216,17 +216,20 @@ func _apply(message: Dictionary) -> void:
 
 func _event(message: Dictionary) -> void:
 	var name: Variant = message.get("event")
-	if name == "started" or name == "stopping":
+	if typeof(name) == TYPE_STRING and (name == "started" or name == "stopping"):
 		_dispatch({"type": name})
+	else:
+		_end_link(true)
 
 
 func _result(message: Dictionary) -> void:
 	var request: Variant = Messages.as_int(message.get("request"))
-	if request == null or not _pending.has(request):
-		return
 	var outcome: Variant = message.get("result")
 	var failure: Variant = message.get("error")
 	var value: Dictionary
+	if request == null:
+		_end_link(true)
+		return
 	if typeof(outcome) == TYPE_DICTIONARY:
 		value = (outcome as Dictionary).duplicate()
 		var seq: Variant = Messages.as_int(value.get("seq"))
@@ -235,6 +238,9 @@ func _result(message: Dictionary) -> void:
 	elif typeof(failure) == TYPE_STRING:
 		value = {"error": failure}
 	else:
+		_end_link(true)
+		return
+	if not _pending.has(request):
 		return
 	var submission: RemotePort.Submission = _pending[request]
 	_pending.erase(request)
