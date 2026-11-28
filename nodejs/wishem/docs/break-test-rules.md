@@ -20,7 +20,7 @@ These rules apply on top of the `break-test` skill. Where they differ from the s
 
 - Give the runner the shared lock at `init`: `--lock-file /tmp/wishem-heavy.lock`. Each run of the tests then takes the lock for that run only.
 - If the runner stops with exit code 4 and says that the wait for the lock ended, call the same range again, at most 40 times. Then stop and report it with the output of `lslocks`.
-- Each other heavy command, such as the final check, has the form `flock -w 15 /tmp/wishem-heavy.lock timeout 140 <command>`, with at most 40 tries when the lock is busy.
+- Each other heavy command, such as the final check, has the form `node nodejs/wishem/docs/flow-scripts/heavy.mjs <command>`, with at most 40 tries when both slots are busy.
 - Give the runner a test command that runs only the test files that cover the mutated files, where that is sufficient. Never run a command for the whole repository.
 
 ## No background work
