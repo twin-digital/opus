@@ -85,6 +85,7 @@ describe('the product construct process', () => {
   const sockets: WebSocket[] = []
   const spawned: ChildProcess[] = []
   const grandchildren: number[] = []
+  const groups: number[] = []
   let folder = ''
 
   const launch = async (
@@ -115,6 +116,13 @@ describe('the product construct process', () => {
   }
 
   afterEach(async () => {
+    for (const group of groups.splice(0)) {
+      try {
+        process.kill(-group, 'SIGKILL')
+      } catch {
+        // The group is gone.
+      }
+    }
     for (const parent of spawned.splice(0)) {
       parent.kill('SIGKILL')
     }
@@ -317,6 +325,87 @@ describe('the product construct process', () => {
     expect(pids).toHaveLength(1)
     expect(alive(pids[0])).toBe(false)
   })
+
+  /** Starts a parent script that launches one product construct, and gives the process IDs and the link URL. */
+  const startParent = async (productCode: string, launcherOptions: string, detached: boolean) => {
+    const modelFile = join(folder, 'model.json')
+    await writeFile(modelFile, JSON.stringify(model))
+    const script = join(folder, 'parent-group.mjs')
+    await writeFile(
+      script,
+      `import { readFileSync } from 'node:fs'
+import { childProcessLauncher } from ${JSON.stringify(NODE_ENTRY)}
+const model = JSON.parse(readFileSync(${JSON.stringify(modelFile)}, 'utf8'))
+const construct = await childProcessLauncher({ productCode: ${JSON.stringify(productCode)}, ${launcherOptions} })({ id: 'play', model, running: true })
+console.log(JSON.stringify({ pid: construct.pid, linkUrl: construct.linkUrl }))
+setInterval(() => {}, 1000)
+`,
+    )
+    const parent = spawn(process.execPath, [script], { stdio: ['ignore', 'pipe', 'inherit'], detached })
+    spawned.push(parent)
+    const info = await new Promise<{ pid: number; linkUrl: string }>((resolve, reject) => {
+      let text = ''
+      parent.stdout.on('data', (chunk: Buffer) => {
+        text += chunk.toString()
+        if (text.includes('\n')) {
+          resolve(JSON.parse(text.split('\n')[0]) as { pid: number; linkUrl: string })
+        }
+      })
+      parent.once('exit', () => {
+        reject(new Error('The parent script ended.'))
+      })
+    })
+    grandchildren.push(info.pid)
+    return { parent, ...info }
+  }
+
+  const waitDead = (pid: number, timeout: number) =>
+    vi.waitFor(
+      () => {
+        expect(alive(pid)).toBe(false)
+      },
+      { timeout, interval: 50 },
+    )
+
+  it('gives stopping to a client and ends each process when the process group gets SIGINT', async () => {
+    await setup()
+    const { parent, pid, linkUrl } = await startParent(PRODUCT_CODE, '', true)
+    const parentPid = parent.pid as number
+    groups.push(parentPid)
+    const socket = new WebSocket(linkUrl)
+    sockets.push(socket)
+    const link = await openLink(await webSocketChannel(socket), [{ id: 'client', kind: 'output' }])
+    links.push(link)
+    const events: string[] = []
+    link.ports.client.subscribe((event) => events.push(event.type))
+    process.kill(-parentPid, 'SIGINT')
+    await waitDead(pid, 5000)
+    expect(events).toContain('stopping')
+    await waitDead(parentPid, 2000)
+  })
+
+  it(
+    'ends a child whose event loop is blocked in at most 2 seconds after SIGKILL of the parent',
+    { timeout: 10000 },
+    async () => {
+      await setup()
+      const productCode = await writeCode(
+        'loop.mjs',
+        `export const behaviors = [{ id: 'fault', componentType: ${JSON.stringify(COUNTER_TYPE)}, update: () => { for (;;) {} } }]\n`,
+      )
+      const { parent, pid } = await startParent(
+        productCode,
+        'stepMs: 10, pingMs: 60000, answerMs: 60000, startMs: 60000',
+        false,
+      )
+      expect(alive(pid)).toBe(true)
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      parent.kill('SIGKILL')
+      const begin = Date.now()
+      await waitDead(pid, 3000)
+      expect(Date.now() - begin).toBeLessThan(2000)
+    },
+  )
 
   it('leaves no child when the parent gets SIGKILL, and the link refuses a connection', async () => {
     await setup()

@@ -2,6 +2,7 @@
  * The entry of a product construct process. The launcher `childProcessLauncher` forks this file.
  * The messages on the IPC channel are in `launchers.ts`.
  */
+import { Worker } from 'node:worker_threads'
 import { serveHub } from '@thrashplay/wishem-host-nodejs'
 import type { HubServer } from '@thrashplay/wishem-host-nodejs'
 import { serveLink } from '@thrashplay/wishem-hub'
@@ -129,6 +130,30 @@ if (process.send === undefined) {
   console.error('This file runs as a child process with an IPC channel.')
   process.exit(1)
 }
+
+// A terminal sends SIGINT to the full process group. The child ends through `stop` or the disconnect.
+process.on('SIGINT', () => undefined)
+
+/** Runs in a worker thread, so it also runs while the main thread is blocked. */
+const WATCHDOG_CODE = `
+const { workerData } = require('node:worker_threads')
+setInterval(() => {
+  let parentAlive = process.ppid === workerData.parentPid
+  if (parentAlive) {
+    try {
+      process.kill(workerData.parentPid, 0)
+    } catch {
+      parentAlive = false
+    }
+  }
+  if (!parentAlive) {
+    process.kill(process.pid, 'SIGKILL')
+  }
+}, workerData.intervalMs)
+`
+
+// The watchdog ends the child at most 0.5 seconds after the parent ends, also for a blocked main thread.
+new Worker(WATCHDOG_CODE, { eval: true, workerData: { parentPid: process.ppid, intervalMs: 500 } }).unref()
 
 process.on('disconnect', () => {
   void end(0)
