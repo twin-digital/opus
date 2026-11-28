@@ -290,11 +290,10 @@ describe('the start of a link', () => {
   })
 
   it('has a first expected sequence number of welcome.seq + 1', async () => {
-    const { link, send, counts } = await connectRaw([page], { seq: 3 })
+    const { send, counts } = await connectRaw([page], { seq: 3 })
     send(applied(4))
     await settle()
     expect(counts.clientClose).toBe(0)
-    void link
   })
 })
 
