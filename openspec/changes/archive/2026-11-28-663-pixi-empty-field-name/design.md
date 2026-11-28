@@ -143,7 +143,7 @@ Terminal 1:
 pnpm --filter @thrashplay/wishem-pixi-page start
 ```
 
-Result: `wishem: link at ws://127.0.0.1:4748/link` and `wishem: PixiJS page at http://127.0.0.1:5174/`. Open `http://127.0.0.1:5174/` and the developer tools. Result: the canvas is blue and then changes color two times each second. The status line is `Connected (link 1). Space: pause or run. Period: one step.` The console has no line that starts with `wishem:`.
+Result: `wishem: link at ws://127.0.0.1:4748/link` and `wishem: PixiJS page at http://127.0.0.1:5174/`. Open `http://127.0.0.1:5174/` and the developer tools. Result: the canvas changes color two times each second, in the cycle blue, red, green, amber. The first color depends on the time that the server runs. The status line is `Connected (link 1). Space: pause or run. Period: one step.` The console has no line that starts with `wishem:`.
 
 Press Ctrl+C in terminal 1.
 
@@ -163,7 +163,7 @@ Terminal 1: run the command of step 2 again. Reload the page.
 Result:
 
 - The console has exactly one line that starts with `wishem:`: `wishem: the sidecar ClearColor.view.json: the label of the field fld_5d6e7f80-9a1b-4c2d-8e3f-4a5b6c7d8e9f of the component type ct_768a9edd-1db9-4a37-9190-9ea4af8aeebe gives an empty name. The view does not get the field.`
-- The canvas is blue and changes color two times each second, as in step 2.
+- The canvas changes color two times each second, in the same cycle as in step 2.
 
 ### 4. Inputs do not repeat the warning
 
