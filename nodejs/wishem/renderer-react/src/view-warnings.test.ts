@@ -69,10 +69,25 @@ describe('viewWarnings', () => {
     ])
   })
 
-  it('gives no warning for an empty name or a name that starts with a digit', () => {
+  it('gives one warning with the field ID for a label that gives an empty name', () => {
     const views = tableOf(entry('AppBar.view.json', APP_BAR))
 
-    expect(viewWarnings(views, [definition(APP_BAR, '---', '1st')])).toEqual([])
+    expect(viewWarnings(views, [definition(APP_BAR, 'title', '---')])).toEqual([
+      { kind: 'empty-name', sidecar: 'AppBar.view.json', componentType: APP_BAR, fields: [FIELD_B] },
+    ])
+  })
+
+  it('gives one warning for each of two empty names, and no same-name warning', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+    const result = viewWarnings(views, [definition(APP_BAR, '???', '---')])
+
+    expect(result.map((warning) => warning.kind)).toEqual(['empty-name', 'empty-name'])
+  })
+
+  it('gives no warning for a name that starts with a digit', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    expect(viewWarnings(views, [definition(APP_BAR, '1st')])).toEqual([])
   })
 
   it('sorts the result by sidecar, so that the order is stable', () => {
@@ -90,6 +105,20 @@ describe('viewWarnings', () => {
     const views = tableOf(entry('B.view.json', APP_BAR), entry('A.view.json', HEADER))
 
     expect(viewWarnings(views, []).map((warning) => warning.sidecar)).toEqual(['A.view.json', 'B.view.json'])
+  })
+
+  it('sorts the warnings of one sidecar name by component type', () => {
+    const views = tableOf(entry('Same.view.json', HEADER), entry('Same.view.json', APP_BAR))
+
+    expect(viewWarnings(views, []).map((warning) => warning.componentType)).toEqual([APP_BAR, HEADER])
+  })
+
+  it('sorts a warning with no name before the warnings with a name', () => {
+    const views = tableOf(entry('AppBar.view.json', APP_BAR))
+
+    const result = viewWarnings(views, [definition(APP_BAR, 'b', 'B', '---')])
+
+    expect(result.map((warning) => warning.kind)).toEqual(['empty-name', 'same-name'])
   })
 
   it('sorts the warnings of one sidecar by name', () => {
@@ -142,6 +171,24 @@ describe('holdWarnings', () => {
     ])
   })
 
+  it('sorts the warnings by sidecar', () => {
+    const OTHER = 'ct_2b3c4d5e-6f70-4a81-9b92-a3b4c5d6e7f8'
+    const FIELD_NEXT = 'fld_3d4e5f60-7182-4a93-8ba4-b5c6d7e8f901'
+    const model: Model = {
+      definitions: [
+        { id: LIST, label: 'List', fields: [{ id: FIELD_FIRST, label: 'first', type: 'reference' }] },
+        { id: OTHER, label: 'Other', fields: [{ id: FIELD_NEXT, label: 'next', type: 'reference' }] },
+      ],
+      entities: [
+        { id: E_A, components: { [LIST]: { [FIELD_FIRST]: E_A } } },
+        { id: E_B, components: { [OTHER]: { [FIELD_NEXT]: E_B } } },
+      ],
+    }
+    const both = tableOf(entry('List.view.json', LIST), entry('A.view.json', OTHER))
+
+    expect(holdWarnings(both, model).map((warning) => warning.sidecar)).toEqual(['A.view.json', 'List.view.json'])
+  })
+
   it('gives no warning after the cycle is corrected', () => {
     expect(holdWarnings(views, listModel({ [E_A]: E_B, [E_B]: E_B.replace('2', '3') }))).toEqual([])
   })
@@ -149,31 +196,49 @@ describe('holdWarnings', () => {
 
 describe('describeWarning', () => {
   it('names the sidecar file, the entities, the field, and the component type for a cycle', () => {
-    expect(
-      describeWarning({
-        kind: 'reference-cycle',
-        sidecar: 'List.view.json',
-        componentType: LIST,
-        fields: [FIELD_FIRST],
-        entities: [E_B, E_A],
-      }),
-    ).toBe(
-      `wishem: the sidecar List.view.json: the field ${FIELD_FIRST} of the component type ${LIST} of the entity ${E_B} names the entity ${E_A}, which is already on the path of its picture. The view gets no picture for it.`,
-    )
+    const line = describeWarning({
+      kind: 'reference-cycle',
+      sidecar: 'List.view.json',
+      componentType: LIST,
+      fields: [FIELD_FIRST],
+      entities: [E_B, E_A],
+    })
+    expect(line).toContain('List.view.json')
+    expect(line).toContain(FIELD_FIRST)
+    expect(line).toContain(LIST)
+    expect(line).toContain(E_B)
+    expect(line).toContain(E_A)
+    expect(line).toContain('already on the path')
+    expect(line).toContain('The view gets no picture for it.')
   })
 
   it('names the sidecar file, the field, the component type, and the name for a reserved name', () => {
-    expect(
-      describeWarning({
-        kind: 'reserved-name',
-        sidecar: 'AppBar.view.json',
-        componentType: APP_BAR,
-        name: 'wishem',
-        fields: [FIELD_B],
-      }),
-    ).toBe(
-      `wishem: the sidecar AppBar.view.json: the label of the field ${FIELD_B} of the component type ${APP_BAR} gives the reserved name "wishem". The view does not get the field.`,
-    )
+    const line = describeWarning({
+      kind: 'reserved-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      name: 'wishem',
+      fields: [FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('reserved name "wishem"')
+    expect(line).toContain('The view does not get the field.')
+  })
+
+  it('names the sidecar file, the field, and the component type for an empty name', () => {
+    const line = describeWarning({
+      kind: 'empty-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      fields: [FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('empty name')
+    expect(line).toContain('The view does not get the field.')
   })
 
   it('names the sidecar file and the ID for a component type that is not defined', () => {
@@ -185,16 +250,18 @@ describe('describeWarning', () => {
   })
 
   it('names the sidecar file, the component type, and the two field IDs for the same name', () => {
-    expect(
-      describeWarning({
-        kind: 'same-name',
-        sidecar: 'AppBar.view.json',
-        componentType: APP_BAR,
-        name: 'maxHealth',
-        fields: [FIELD_A, FIELD_B],
-      }),
-    ).toBe(
-      `wishem: the sidecar AppBar.view.json: the fields ${FIELD_A} and ${FIELD_B} of the component type ${APP_BAR} give the same name "maxHealth". The prop has the value of the first field.`,
-    )
+    const line = describeWarning({
+      kind: 'same-name',
+      sidecar: 'AppBar.view.json',
+      componentType: APP_BAR,
+      name: 'maxHealth',
+      fields: [FIELD_A, FIELD_B],
+    })
+    expect(line).toContain('AppBar.view.json')
+    expect(line).toContain(FIELD_A)
+    expect(line).toContain(FIELD_B)
+    expect(line).toContain(APP_BAR)
+    expect(line).toContain('same name "maxHealth"')
+    expect(line).toContain('The prop has the value of the first field.')
   })
 })

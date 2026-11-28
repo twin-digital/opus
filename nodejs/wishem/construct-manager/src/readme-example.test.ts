@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { createStore, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'
-import { wrapStore } from '@thrashplay/wishem-sample-product'
+import { behaviors } from '@thrashplay/wishem-sample-product'
 import { expect, it } from 'vitest'
 import { constructInputs, createConstructList } from './index.js'
 import type { ConstructList } from './index.js'
@@ -28,7 +28,7 @@ it('runs the example of the README', async () => {
     subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
   })
   hub.start()
-  const manager = attachConstructManager({ hub, wrapStore, log: (line) => lines.push(line) })
+  const manager = attachConstructManager({ hub, behaviors, log: (line) => lines.push(line) })
   const client = hub.attach({ id: 'client', kind: 'input' })
   const entry = () => (hub.read().constructs as ConstructList).constructs.play
 

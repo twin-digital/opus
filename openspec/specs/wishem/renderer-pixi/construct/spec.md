@@ -36,7 +36,7 @@ The model of the construct SHALL be in code, with no storage subsystem. It SHALL
 
 ### Requirement: The color rule follows the count of ticks
 
-A model subsystem of the construct SHALL apply each input of the store, and SHALL also apply `time/advance`. For each tick, it SHALL set the `Color` field of the entity to the color at the position `ticks` modulo the number of colors, in a list of four different colors. The rule SHALL be a pure function of the part `store` and the part `time`, so that the same record gives the same colors.
+The update subsystem of the construct SHALL wrap the store and SHALL run the color behavior: a native behavior for the component type `Clear color`. For each tick, the color behavior SHALL set the `Color` field to the color at the position `ticks` modulo the number of colors, in a list of four different colors. The behavior SHALL be a pure function of the fields and the tick, so that the same record gives the same colors.
 
 #### Scenario: One tick
 
@@ -57,6 +57,11 @@ A model subsystem of the construct SHALL apply each input of the store, and SHAL
 
 - **WHEN** the construct applied three ticks from tick 0, and a client of the link sends `hub/rewind` with the target 1
 - **THEN** the `Color` field has the second color of the list, and the part `time` has `ticks` 1
+
+#### Scenario: The record holds only the ticks
+
+- **WHEN** the construct applied two ticks from the clock
+- **THEN** the record holds two `time/advance` inputs and no input of the store
 
 ### Requirement: The clock of the construct
 

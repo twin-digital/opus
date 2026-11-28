@@ -1,13 +1,14 @@
 import { createStore, storeInputs, type Entity, type FieldValue, type Model } from '@thrashplay/wishem-core'
 import { startClock, createTime, timeInputs, TIME_ID, type TimePart } from '@thrashplay/wishem-clock'
-import { createHub, hubInputs, type Hub, type ModelSubsystem, type RecordedInput } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs, type Hub, type ModelSubsystem } from '@thrashplay/wishem-hub'
+import { createUpdate } from '@thrashplay/wishem-update'
 import { describe, expect, it } from 'vitest'
 import color from '../model/definitions/ct_d85ac719-7dd0-45d8-bf98-0da9e6ab0512.json' with { type: 'json' }
 import counter from '../model/definitions/ct_6af38bd9-a91d-49d9-9370-fa4e6c04769d.json' with { type: 'json' }
 import state from '../model/state.json' with { type: 'json' }
-import { withCountRule } from './count-rule.js'
+import { countBehavior } from './count-behavior.js'
 import { COLOR_FIELD, COLOR_TYPE, COUNTER_TYPE, COUNT_FIELD, SAMPLE_ENTITY } from './ids.js'
-import { wrapStore } from './index.js'
+import { behaviors } from './index.js'
 
 const ID_A = 'e_11111111-1111-4111-8111-111111111111'
 const ID_B = 'e_22222222-2222-4222-8222-222222222222'
@@ -29,7 +30,7 @@ const sampleModel = (): Model => ({ ...modelOf(), entities: state.entities })
 
 const subsystems = (model: Model, storeId?: string): ModelSubsystem[] => [
   createTime(),
-  withCountRule(createStore({ id: storeId, model })),
+  createUpdate({ store: createStore({ id: storeId, model }), behaviors }),
 ]
 
 const startHub = (model: Model = sampleModel()): Hub => {
@@ -51,7 +52,15 @@ const tick = async (hub: Hub, times: number): Promise<void> => {
   controls.close()
 }
 
-describe('withCountRule', () => {
+describe('behaviors', () => {
+  it('holds the count behavior for the component type Counter', () => {
+    expect(behaviors).toEqual([countBehavior])
+    expect(countBehavior.id).toBe('sample-product/count')
+    expect(countBehavior.componentType).toBe(COUNTER_TYPE)
+  })
+})
+
+describe('countBehavior', () => {
   it('adds 1 to the count at each tick', async () => {
     const hub = startHub()
     await tick(hub, 3)
@@ -135,12 +144,6 @@ describe('withCountRule', () => {
     expect(result).toMatchObject({ ok: false, reason: 'invalid' })
   })
 
-  it('has the ID of the store and the input types of the store and the tick', () => {
-    const rule = withCountRule(createStore({ id: 'product', model: sampleModel() }))
-    expect(rule.id).toBe('product')
-    expect(rule.inputs).toEqual(expect.arrayContaining(['product/set-field', 'product/replace-model', 'time/advance']))
-  })
-
   it('counts in a store with a different ID', async () => {
     const hub = createHub({ subsystems: subsystems(sampleModel(), 'product') })
     hub.start()
@@ -148,14 +151,9 @@ describe('withCountRule', () => {
     expect(counts(hub, 'product')).toEqual([2])
   })
 
-  it('gives equal results for the same tick on the same part', () => {
-    const rule = withCountRule(createStore({ model: sampleModel() }))
-    const input: RecordedInput = { seq: 1, source: 'clock', type: 'time/advance', payload: { ms: 100 } }
-    const context = { read: () => ({}) }
-    const first = rule.apply(rule.initial, input, context)
-    const second = rule.apply(rule.initial, input, context)
-    expect(second).toEqual(first)
-    expect(second).not.toEqual(rule.initial)
+  it('returns the same fields object for a count that is not a number', () => {
+    const fields = { [COUNT_FIELD]: 'many' }
+    expect(countBehavior.update(fields, { ticks: 1 } as never)).toBe(fields)
   })
 })
 
@@ -200,16 +198,5 @@ describe('the count follows the record', () => {
     }
     clock.stop()
     expect(counts(hub)).toEqual([5])
-  })
-})
-
-describe('wrapStore', () => {
-  it('gives the same part as withCountRule for the same tick', () => {
-    const input: RecordedInput = { seq: 1, source: 'clock', type: 'time/advance', payload: { ms: 100 } }
-    const context = { read: () => ({}) }
-    const wrapped = wrapStore(createStore({ model: sampleModel() }))
-    const direct = withCountRule(createStore({ model: sampleModel() }))
-    expect(wrapped.apply(wrapped.initial, input, context)).toEqual(direct.apply(direct.initial, input, context))
-    expect(wrapped.apply(wrapped.initial, input, context)).not.toEqual(wrapped.initial)
   })
 })

@@ -28,7 +28,7 @@ Terms in each group are in alphabetical order.
 
 **Product**: The part of a project that the designer ships. A product is a model. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the function `wrapStore`, which adds the rules to the store of a product construct. The designer names it with the option `--product-code` of the `start` script.
+**Product code** (**Proposed**): The module that holds the rules of a product in code. It exports the list `behaviors`, which holds the native behaviors of the product. The update subsystem of each product construct runs them. The designer names it with the option `--product-code` of the `start` script.
 
 **Project**: What a designer makes with Wishem. A project has two parts: the product, and the workbench. The workbench holds one authored model, and that model contains the model of the product. The product knows nothing about the workbench.
 
@@ -62,7 +62,7 @@ Terms in each group are in alphabetical order.
 
 **Model**: The definitions, the behaviors, and the authored state of a product or of a workbench. The model subsystems of a construct hold the model. The hub does not hold it.
 
-**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count rule of the sample product and the color rule of the PixiJS construct (#540) are native behaviors in a first form. It stands in for the behavior feature (issue #481).
+**Native behavior**: A behavior whose current version a person wrote by hand. It stays native until the designer gives it a new prompt. The count behavior (**Proposed**) of the sample product and the color behavior (**Proposed**) of the PixiJS construct are native behaviors in a first form. The update subsystem runs them. It stands in for the behavior feature (issue #481).
 
 **Registry**: The part that reports the definitions. The agent queries it. The registry does not hold the things themselves. The things are in the authored state and the live state. The registry is not a job of the hub. The store holds it (**Proposed**).
 
@@ -90,7 +90,7 @@ Terms in each group are in alphabetical order.
 
 **Step** (**Proposed**): One `time/advance` input that is sent while the clock is paused.
 
-**Tick** (**Agreed**): The input `time/advance`. A listener sees a tick as the hub event for an applied input.
+**Tick** (**Agreed**): The input `time/advance`. A listener sees a tick as the hub event for an applied input. The type `Tick` (**Proposed**) of the package `update` holds the facts of one tick that a behavior gets: `ms`, `ticks`, and `now`.
 
 **Time** (**Proposed**): The `time` subsystem. It is a model subsystem. Its state is the time of the construct, the count of ticks, and `running`. It declares the input types `time/advance` and `time/set-running`.
 
@@ -136,7 +136,7 @@ Terms in each group are in alphabetical order.
 
 **Construct**: One hub and all its subsystems. A construct runs in one process or in more than one. Each running copy of a product is one construct, and the workbench runs as its own construct. The hub code is the same for each construct. This is an internal term. With the designer, say the word for the kind of product, such as "the game".
 
-**Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, and `constructs/send`. Only the construct manager reports a status.
+**Construct list** (**Proposed**): The model subsystem `constructs` of the workbench construct. It holds one entry for each product construct that must run: the wanted state, the sequence number of the start that wrote it, the status that the construct manager reported last, and the address of the link. A client changes it with the inputs `constructs/start`, `constructs/stop`, and `constructs/send`. Only the construct manager reports a status.
 
 **Construct manager** (**Proposed**): The I/O part of the workbench construct that reads the construct list, starts each product construct in the process of the workbench, and gives it the product model. It sends each later change of the product model as inputs, passes inputs from a client to a product construct, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem. Only the construct manager can rewind a product construct.
 
@@ -186,7 +186,7 @@ Terms in each group are in alphabetical order.
 
 **Subsystem**: A part of a construct that has one job. Wishem provides it, or a library provides it through an adapter. A subsystem has one kind, and the hub knows the kind (**Proposed**).
 
-**Update subsystem** (**Agreed**): The model subsystem that runs the behaviors at each tick. A construct has one update subsystem. The first form runs native behaviors ([#617](https://github.com/twin-digital/opus/issues/617)).
+**Update subsystem** (**Agreed**): The model subsystem that runs the behaviors at each tick. A construct has one update subsystem. The package `update` (**Proposed** name) provides it. At each tick, it runs the first behavior of its list for each entity that has the component type of the behavior, then the second behavior, and so on. Each write goes through the store. The first form runs native behaviors ([#617](https://github.com/twin-digital/opus/issues/617)).
 
 **View** (**Agreed**): Code that a renderer runs to draw a component type. A view is content of the product, and it is not part of the renderer. Each renderer has its own kind of view. A view is a pure function of its props. A sidecar attaches a view to its component type.
 

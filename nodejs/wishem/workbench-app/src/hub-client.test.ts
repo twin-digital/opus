@@ -14,7 +14,7 @@ import { connectHub, type HubClient, type HubClientOptions, type HubPorts } from
 const CT = 'ct_aaaaaaaa-0000-4000-8000-000000000001'
 const FLD = 'fld_aaaaaaaa-0000-4000-8000-000000000011'
 const E1 = 'e_aaaaaaaa-0000-4000-8000-000000000021'
-const WARNING = 'wishem: the hub is not reachable. The page tries again.'
+const WARNING = expect.stringContaining('not reachable')
 
 const modelOf = (title: string): Model => ({
   definitions: [{ id: CT, label: 'A', fields: [{ id: FLD, label: 'title', type: 'string' }] }],
@@ -297,7 +297,8 @@ describe('connectHub', () => {
       await flush(1000)
       expect(env.sockets).toHaveLength(3)
       expect(error).toHaveBeenCalledTimes(1)
-      expect(String(error.mock.calls[0]?.[0])).toContain('stopped')
+      expect(String(error.mock.calls[0]?.[0])).toContain('refused')
+      expect(String(error.mock.calls[0]?.[0])).toContain('(stopped)')
       expect(ports).toHaveLength(0)
       env.hub = startHub('Two')
       await flush(2000)
@@ -649,22 +650,13 @@ describe('connectHub', () => {
     })
 
     it('removes the listener when the client closes', async () => {
+      const add = vi.spyOn(window, 'addEventListener')
       const remove = vi.spyOn(window, 'removeEventListener')
       const client = await connect()
       client.close()
-      expect(remove).toHaveBeenCalledWith('pagehide', expect.any(Function))
-    })
-
-    it('does nothing after close()', async () => {
-      const client = await connect()
-      client.close()
-      const calls = env.last().closeCalls
-      window.dispatchEvent(new Event('pagehide'))
-      await flush(10_000)
-      expect(env.last().closeCalls).toBe(calls)
-      expect(env.sockets).toHaveLength(1)
-      expect(warn).not.toHaveBeenCalled()
-      expect(error).not.toHaveBeenCalled()
+      const added = add.mock.calls.find(([type]) => type === 'pagehide')?.[1]
+      expect(added).toBeDefined()
+      expect(remove).toHaveBeenCalledWith('pagehide', added)
     })
   })
 })

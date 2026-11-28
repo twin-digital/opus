@@ -164,7 +164,9 @@ func _handle_first(message: Dictionary) -> void:
 
 func _welcome(message: Dictionary) -> void:
 	var seq: Variant = Messages.as_int(message.get("seq"))
-	if Messages.as_int(message.get("protocol")) != Messages.PROTOCOL or seq == null or typeof(message.get("state")) != TYPE_DICTIONARY:
+	var status: Variant = message.get("status")
+	var known_status: bool = typeof(status) == TYPE_STRING and (status == "created" or status == "running")
+	if Messages.as_int(message.get("protocol")) != Messages.PROTOCOL or not known_status or seq == null or typeof(message.get("state")) != TYPE_DICTIONARY:
 		_end_link(true)
 		return
 	_seq = seq
@@ -234,7 +236,14 @@ func _result(message: Dictionary) -> void:
 	var outcome: Variant = message.get("result")
 	var failure: Variant = message.get("error")
 	var value: Dictionary
-	if request == null:
+	var has_both: bool = message.has("result") and message.has("error")
+	if request == null or has_both:
+		_end_link(true)
+		return
+	if typeof(outcome) == TYPE_DICTIONARY and typeof((outcome as Dictionary).get("ok")) != TYPE_BOOL:
+		_end_link(true)
+		return
+	if message.has("error") and typeof(failure) != TYPE_STRING:
 		_end_link(true)
 		return
 	if typeof(outcome) == TYPE_DICTIONARY:

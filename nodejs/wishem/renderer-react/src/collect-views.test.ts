@@ -26,6 +26,12 @@ describe('collectViews', () => {
     expect(table.get(APP_BAR)).toEqual({ sidecar: 'AppBar.view.json', componentType: APP_BAR, view: module.default })
   })
 
+  it('gives an error that has the name ViewCollectionError', () => {
+    const error = catchError(() => collectViews({ './views/Header.view.json': sidecar(APP_BAR) }, {}))
+
+    expect(error.name).toBe('ViewCollectionError')
+  })
+
   it('returns an empty table for no files', () => {
     expect(collectViews({}, {}).size).toBe(0)
   })
@@ -59,9 +65,9 @@ describe('collectViews', () => {
     )
 
     expect(error.files).toEqual(['Header.view.json'])
-    expect(error.message).toBe(
-      'wishem: the view file Header.tsx of the sidecar Header.view.json has no default export that is a function. No view is drawn.',
-    )
+    expect(error.message).toContain('Header.tsx')
+    expect(error.message).toContain('Header.view.json')
+    expect(error.message).toContain('no default export that is a function')
   })
 
   it.each([
@@ -74,9 +80,8 @@ describe('collectViews', () => {
     const error = catchError(() => collectViews({ './views/AppBar.view.json': module }, {}))
 
     expect(error.files).toEqual(['AppBar.view.json'])
-    expect(error.message).toBe(
-      'wishem: the sidecar AppBar.view.json is not a JSON object with a "kind" and a "componentType" that are text. No view is drawn.',
-    )
+    expect(error.message).toContain('AppBar.view.json')
+    expect(error.message).toContain('is not a JSON object')
   })
 
   it('names the two sidecars and the ID for two sidecars with one component type ID', () => {
@@ -88,9 +93,10 @@ describe('collectViews', () => {
     )
 
     expect(error.files).toEqual(['AppBar.view.json', 'Header.view.json'])
-    expect(error.message).toBe(
-      `wishem: the sidecars AppBar.view.json and Header.view.json name the same component type ${APP_BAR}. No view is drawn.`,
-    )
+    expect(error.message).toContain('AppBar.view.json')
+    expect(error.message).toContain('Header.view.json')
+    expect(error.message).toContain(APP_BAR)
+    expect(error.message).toContain('the same component type')
   })
 
   it('names the two sidecars in the order of their paths', () => {

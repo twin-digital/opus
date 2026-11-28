@@ -249,6 +249,15 @@ describe('the start script of the workbench', () => {
     expect(await refuses('127.0.0.1', Number(new URL(link).port))).toBe(true)
   })
 
+  it('stops with exit code 0 when a second signal comes during the stop', { timeout: 30000 }, async () => {
+    const { run } = await startReady()
+
+    run.child.kill('SIGINT')
+    run.child.kill('SIGINT')
+
+    expect(await run.exit).toBe(0)
+  })
+
   it('stops with exit code 0 on a terminate signal', { timeout: 30000 }, async () => {
     const { run } = await startReady()
 
@@ -757,7 +766,7 @@ describe('the start script of the workbench', () => {
     })
 
     it('loads a product code that a path names', { timeout: 30000 }, async () => {
-      const path = codeFile('code.mjs', 'export const wrapStore = (store) => store\n')
+      const path = codeFile('code.mjs', 'export const behaviors = []\n')
       const lines: string[] = []
       const workbench = await startWorkbench({
         ...base(),
@@ -815,8 +824,11 @@ describe('the start script of the workbench', () => {
       },
     )
 
-    it('prints that the module has no function wrapStore, and starts nothing', { timeout: 30000 }, async () => {
-      const path = codeFile('no-wrap.mjs', 'export const other = 1\nexport const wrapStore = 5\n')
+    it.each([
+      ['a module with wrapStore and no behaviors', 'wrap.mjs', 'export const wrapStore = (store) => store\n'],
+      ['a module whose behaviors is the text count', 'text.mjs', "export const behaviors = 'count'\n"],
+    ])('prints the reason for %s, and starts nothing', { timeout: 30000 }, async (_name, file, code) => {
+      const path = codeFile(file, code)
       const hubPort = await freePort()
       const lines: string[] = []
 
@@ -830,7 +842,7 @@ describe('the start script of the workbench', () => {
         }),
       ).rejects.toThrow(StartError)
 
-      expect(lines.at(-1)).toBe('wishem: the product code has no function wrapStore')
+      expect(lines.at(-1)).toBe('wishem: the product code has no correct list behaviors: The behaviors are not a list.')
       expect(vite.createServer).not.toHaveBeenCalled()
       expect(await refuses('127.0.0.1', hubPort)).toBe(true)
     })
@@ -873,7 +885,7 @@ describe('the start script of the workbench', () => {
     })
 
     it('resolves a relative --product-code against INIT_CWD', { timeout: 30000 }, async () => {
-      codeFile('code.mjs', 'export const wrapStore = (store) => store\n')
+      codeFile('code.mjs', 'export const behaviors = []\n')
       const args = ['--model', model, '--product', product, '--product-code', './code.mjs', '--views', views]
       const child = spawn('node', [script, ...args, '--port', '0', '--hub-port', '0'], {
         env: { ...process.env, INIT_CWD: folder },
@@ -1165,7 +1177,7 @@ describe('the start script of the workbench', () => {
       scripts: Record<string, string>
     }
 
-    expect(manifest.scripts.start).toBe('node scripts/start.ts')
+    expect(manifest.scripts.start).toBe('exec node scripts/start.ts')
     expect(existsSync(script)).toBe(true)
   })
 

@@ -12,6 +12,8 @@ export interface ConstructEntry {
   readonly want: WantedState
   /** The time state when the construct starts. */
   readonly startTime: TimeState
+  /** The sequence number, in the workbench record, of the `constructs/start` that wrote the entry. */
+  readonly startSeq: number
   /** What the construct manager reported last. `pending` until its first report. */
   readonly status: ConstructStatus
   /** For example `ws://127.0.0.1:41377/link`. Only with the status `running`. */
@@ -81,7 +83,7 @@ const start = (part: ConstructList, input: RecordedInput): ConstructList => {
   if (entry?.want === 'running') {
     return part
   }
-  return withEntry(part, id, { want: 'running', startTime, status: 'pending' })
+  return withEntry(part, id, { want: 'running', startTime, startSeq: input.seq, status: 'pending' })
 }
 
 const stop = (part: ConstructList, input: RecordedInput): ConstructList => {
@@ -136,6 +138,7 @@ const report = (part: ConstructList, input: RecordedInput): ConstructList => {
   const next: ConstructEntry = {
     want: entry.want,
     startTime: entry.startTime,
+    startSeq: entry.startSeq,
     status: status as ConstructEntry['status'],
     ...(live && link !== undefined ? { link } : {}),
     ...(live && time !== undefined ? { time } : {}),

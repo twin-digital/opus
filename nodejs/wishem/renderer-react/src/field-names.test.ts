@@ -31,6 +31,10 @@ describe('fieldName', () => {
     expect(fieldName('Max HEALTH')).toBe('maxHEALTH')
   })
 
+  it('keeps each of the digits 0 to 9 in a name', () => {
+    expect(fieldName('a 0 1 2 3 4 5 6 7 8 9')).toBe('a0123456789')
+  })
+
   it('gives an empty name for a label with no letter or digit', () => {
     expect(fieldName('--- !!')).toBe('')
   })
@@ -44,9 +48,10 @@ describe('propNames', () => {
     expect(result.problems).toEqual([])
   })
 
-  it('reports an empty name', () => {
+  it('gives no prop for an empty name, and reports it', () => {
     const result = propNames(definition('title', '???'))
     expect(result.problems).toEqual([{ kind: 'empty-name', field: 'fld_1' }])
+    expect(result.props.map((prop) => prop.name)).toEqual(['title'])
   })
 
   it('reports a name that starts with a digit', () => {
@@ -61,6 +66,22 @@ describe('propNames', () => {
       { kind: 'reserved-name', field: 'fld_2', name: 'key' },
     ])
     expect(result.props.map((prop) => prop.name)).toEqual(['title'])
+  })
+
+  it('reports a name that starts with the digit 9', () => {
+    const result = propNames(definition('9th line'))
+    expect(result.problems).toEqual([{ kind: 'name-starts-with-digit', field: 'fld_0', name: '9thLine' }])
+  })
+
+  it('gives a prop for a field with a name that starts with a digit', () => {
+    const result = propNames(definition('title', '2nd line'))
+    expect(result.props.map((prop) => prop.name)).toEqual(['title', '2ndLine'])
+  })
+
+  it('reserves only the names wishem and key, with this case', () => {
+    const result = propNames(definition('ref', 'wISHEM', 'Keys'))
+    expect(result.problems).toEqual([])
+    expect(result.props.map((prop) => prop.name)).toEqual(['ref', 'wISHEM', 'keys'])
   })
 
   it('reports a name that starts with the digit 0', () => {
@@ -80,6 +101,7 @@ describe('propNames', () => {
       { kind: 'empty-name', field: 'fld_0' },
       { kind: 'empty-name', field: 'fld_1' },
     ])
+    expect(result.props).toEqual([])
   })
 
   it('reports two labels with one name, and keeps the first field only', () => {
@@ -90,6 +112,6 @@ describe('propNames', () => {
 
   it('has no relative import', () => {
     const source = readFileSync(join(import.meta.dirname, 'field-names.ts'), 'utf8')
-    expect(source).not.toMatch(/from '\.{1,2}\//)
+    expect(source).not.toMatch(/(?:from|import)\s*['"]\.{1,2}\//)
   })
 })

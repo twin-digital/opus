@@ -3,15 +3,16 @@ import { fileURLToPath } from 'node:url'
 import { TIME_ID, type ClockTimer, type TimePart } from '@thrashplay/wishem-clock'
 import { createStore, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
-import { createHub, hubInputs, InputRefusedError, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
-import type { Hub, HubEvent, Input, ModelSubsystem, Port, RemoteLink } from '@thrashplay/wishem-hub'
+import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
+import type { Hub, HubEvent, Input, Port, RemoteLink } from '@thrashplay/wishem-hub'
+import type { NativeBehavior } from '@thrashplay/wishem-update'
 import {
   COLOR_FIELD,
   COLOR_TYPE,
   COUNT_FIELD,
   COUNTER_TYPE,
   SAMPLE_ENTITY,
-  wrapStore,
+  behaviors,
 } from '@thrashplay/wishem-sample-product'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { attachConstructManager } from './construct-manager.js'
@@ -19,7 +20,6 @@ import type { ConstructManager, ConstructManagerOptions } from './construct-mana
 import { constructInputs, createConstructList } from './construct-list.js'
 import type { ConstructEntry, ConstructList } from './construct-list.js'
 import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID } from './ids.js'
-import type { WrapStore } from './product-construct.js'
 
 const MODEL_FOLDER = fileURLToPath(new URL('../../sample-product/model', import.meta.url))
 
@@ -101,40 +101,19 @@ const setCount = (store: string, value: number): Input => ({
   payload: { entity: SAMPLE_ENTITY, componentType: COUNTER_TYPE, field: COUNT_FIELD, value },
 })
 
-/** Wraps the rules of the sample product and refuses a color of `bad`. */
-const picky: WrapStore = (store) => {
-  const wrapped = wrapStore(store)
-  return {
-    ...wrapped,
-    apply: (part, input, context) => {
-      const payload = input.payload as { value?: unknown } | null
-      if (input.type === 'store/set-field' && payload?.value === 'bad') {
-        throw new InputRefusedError([{ message: 'The color is bad', path: ['value'] }])
-      }
-      return wrapped.apply(part, input, context)
-    },
-  } satisfies ModelSubsystem<Model>
-}
+const duplicates = [behaviors[0], behaviors[0]]
 
-/** Wraps the rules of the sample product: a color of `crash` throws an error, and a color of `two` has two problems. */
-const faulty: WrapStore = (store) => {
-  const wrapped = wrapStore(store)
-  return {
-    ...wrapped,
-    apply: (part, input, context) => {
-      const payload = input.payload as { value?: unknown } | null
-      if (input.type === 'store/set-field' && payload?.value === 'crash') {
-        throw new Error('boom')
-      }
-      if (input.type === 'store/set-field' && payload?.value === 'two') {
-        throw new InputRefusedError([
-          { message: 'first problem', path: ['value'] },
-          { message: 'second problem', path: ['value'] },
-        ])
-      }
-      return wrapped.apply(part, input, context)
-    },
-  } satisfies ModelSubsystem<Model>
+/** A behavior of the component type Color that throws an error from the read of its type after `fault.armed` is set. */
+const fault = { armed: false }
+const exploding: NativeBehavior = {
+  id: 'test/explode',
+  get componentType() {
+    if (fault.armed) {
+      throw new Error('boom')
+    }
+    return COLOR_TYPE
+  },
+  update: (fields) => fields,
 }
 
 describe('attachConstructManager', () => {
@@ -158,7 +137,7 @@ describe('attachConstructManager', () => {
     tester = hub.attach({ id: 'tester', kind: 'input' })
     manager = attachConstructManager({
       hub,
-      wrapStore,
+      behaviors,
       log: (line) => lines.push(line),
       timer: clock.timer,
       now: clock.now,
@@ -183,7 +162,7 @@ describe('attachConstructManager', () => {
     await prepare()
     manager = attachConstructManager({
       hub,
-      wrapStore,
+      behaviors,
       log: (line) => lines.push(line),
       timer: clock.timer,
       now: clock.now,
@@ -305,11 +284,15 @@ describe('attachConstructManager', () => {
         await tester.submit(constructInputs.start('check'))
       },
       () => ({
-        wrapStore: (store) => {
-          calls += 1
-          closing ??= manager.close()
-          return wrapStore(store)
-        },
+        behaviors: new Proxy([...behaviors], {
+          get: (target, property, receiver) => {
+            if (property === 'forEach') {
+              calls += 1
+              closing ??= manager.close()
+            }
+            return Reflect.get(target, property, receiver) as unknown
+          },
+        }),
       }),
     )
     await eventually(() => closing !== undefined)
@@ -375,12 +358,13 @@ describe('attachConstructManager', () => {
 
   it('reports failed when the start fails, and the workbench continues', async () => {
     setup({
-      wrapStore: () => {
-        throw new Error('the rules failed')
-      },
+      behaviors: duplicates,
     })
     await start()
-    expect(entry('play')).toMatchObject({ status: 'failed', message: 'the rules failed' })
+    expect(entry('play')).toMatchObject({
+      status: 'failed',
+      message: 'Two behaviors have the id "sample-product/count".',
+    })
     expect(entry('play')?.link).toBeUndefined()
     expect(manager.running.size).toBe(0)
     expect(hub.status).toBe('running')
@@ -391,18 +375,11 @@ describe('attachConstructManager', () => {
   })
 
   it('starts a failed construct again after a stop and a start', async () => {
-    let calls = 0
-    setup({
-      wrapStore: (store) => {
-        calls += 1
-        if (calls === 1) {
-          throw new Error('the rules failed')
-        }
-        return wrapStore(store)
-      },
-    })
+    const list = [...duplicates]
+    setup({ behaviors: list })
     await start()
     expect(entry('play')).toMatchObject({ want: 'running', status: 'failed' })
+    list.pop()
     expect((await tester.submit(constructInputs.stop('play'))).ok).toBe(true)
     expect((await tester.submit(constructInputs.start('play'))).ok).toBe(true)
     expect(entry('play')?.status).toBe('pending')
@@ -461,16 +438,51 @@ describe('attachConstructManager', () => {
   })
 
   it('reports the message of a refused change and sends the next change', async () => {
-    setup({ wrapStore: picky })
+    setup()
     await start()
-    await tester.submit(setColor('bad'))
+    await send({ type: 'store/remove-entity', payload: { entity: SAMPLE_ENTITY } })
+    await tester.submit(setColor('#b91c1c'))
     await eventually(() => entry('play')?.message !== undefined)
-    expect(entry('play')?.message).toContain('The color is bad')
-    expect(lines).toContain(
-      `wishem: construct play: the change of the product was refused: ${entry('play')?.message ?? ''}`,
-    )
+    const refusal = `No entity has the ID "${SAMPLE_ENTITY}"`
+    expect(entry('play')?.message).toBe(refusal)
+    expect(lines).toContain(`wishem: construct play: the change of the product was refused: ${refusal}`)
+    await send({ type: 'store/replace-model', payload: { model } })
     await tester.submit(setColor('#15803d'))
     await eventually(() => colorOf(construct('play').hub) === '#15803d')
+  })
+
+  it('runs the behaviors: the count of a construct grows with the ticks', async () => {
+    setup()
+    await start()
+    for (let i = 0; i < 3; i++) {
+      clock.fire(50)
+    }
+    expect(countOf(construct('play').hub)).toBe(3)
+  })
+
+  it('keeps the count of the model with no behaviors, and the part time advances', async () => {
+    setup({ behaviors: [] })
+    await start()
+    clock.fire(50)
+    clock.fire(50)
+    expect(countOf(construct('play').hub)).toBe(0)
+    expect(timeOf(construct('play').hub).ticks).toBe(2)
+  })
+
+  it('gives a pass of time/advance with ok false and invalid for a behavior that throws, and names it', async () => {
+    const broken = {
+      id: 'test/broken',
+      componentType: COUNTER_TYPE,
+      update: () => {
+        throw new Error('it broke')
+      },
+    }
+    setup({ behaviors: [broken] })
+    await start()
+    const manager2 = construct('play').hub.attach({ id: 'probe', kind: 'input' })
+    const result = await manager2.submit({ type: 'time/advance', payload: { ms: 50 } })
+    expect(result).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(JSON.stringify(result)).toContain('test/broken')
   })
 
   it('passes a pause, and reports the time state and the result under the sequence number', async () => {
@@ -483,21 +495,13 @@ describe('attachConstructManager', () => {
     expect(timeOf(construct('play').hub).ticks).toBe(0)
   })
 
-  it('reports the message of a change that makes the construct throw', async () => {
-    setup({ wrapStore: faulty })
-    await start()
-    await tester.submit(setColor('crash'))
-    await eventually(() => entry('play')?.message !== undefined)
-    expect(entry('play')?.message).toBe('boom')
-    expect(lines).toContain('wishem: construct play: the change of the product was refused: boom')
-  })
-
   it('joins the problems of a refused change', async () => {
-    setup({ wrapStore: faulty })
+    setup()
     await start()
-    await tester.submit(setColor('two'))
+    await send({ type: 'store/replace-model', payload: { model: { definitions: [], entities: [] } } })
+    await tester.submit(setColor('#b91c1c'))
     await eventually(() => entry('play')?.message !== undefined)
-    expect(entry('play')?.message).toBe('first problem; second problem')
+    expect(entry('play')?.message).toMatch(/^No entity has the ID "[^"]+"; No component type has the ID "[^"]+"$/)
   })
 
   it('reports the reason of a refused change that has no problem', async () => {
@@ -510,12 +514,11 @@ describe('attachConstructManager', () => {
   })
 
   it('reports the error of a pass that throws', async () => {
-    setup({ wrapStore: faulty })
+    setup({ behaviors: [exploding] })
     await start()
-    await send({
-      type: 'store/set-field',
-      payload: { entity: SAMPLE_ENTITY, componentType: COLOR_TYPE, field: COLOR_FIELD, value: 'crash' },
-    })
+    fault.armed = true
+    await send({ type: 'time/advance', payload: { ms: 50 } })
+    fault.armed = false
     expect(entry('play')?.lastSend?.result).toEqual({ ok: false, reason: 'error', message: 'boom' })
   })
 
@@ -641,7 +644,7 @@ describe('attachConstructManager', () => {
     expect(lines).toContain('wishem: construct play stopped')
   })
 
-  it('reports the link of the construct after a rewind to a report with an old link', async () => {
+  it('reports the link of the live construct after a rewind to a report with an old link', async () => {
     setup()
     await start()
     const first = entry('play')?.link ?? ''
@@ -649,10 +652,96 @@ describe('attachConstructManager', () => {
     await tester.submit(constructInputs.stop('play'))
     await eventually(() => entry('play')?.status === 'stopped')
     await start()
-    const second = entry('play')?.link ?? ''
+    const second = construct('play')
     await tester.submit(hubInputs.rewind(seq))
-    await eventually(() => hub.seq > seq && entry('play')?.link === second)
-    expect(entry('play')).toMatchObject({ want: 'running', status: 'running', link: second })
+    await eventually(() => hub.seq > seq && manager.running.get('play') !== second)
+    await eventually(
+      () => entry('play')?.status === 'running' && entry('play')?.link === manager.running.get('play')?.linkUrl,
+    )
+    expect(entry('play')).toMatchObject({ want: 'running', status: 'running', link: construct('play').linkUrl })
+    expect(entry('play')?.link).not.toBe(second.linkUrl)
+  })
+
+  const startSeqs = () =>
+    hub
+      .record()
+      .filter((input) => input.type === 'constructs/start')
+      .map((input) => input.seq)
+
+  it('starts a new construct when a stop and a start are applied in one pass', async () => {
+    setup()
+    await start('play', false)
+    for (let i = 0; i < 3; i++) {
+      clock.fire(50)
+    }
+    const old = construct('play')
+    const oldLink = old.linkUrl
+    const viewer = await open(oldLink)
+    const events: HubEvent['type'][] = []
+    viewer.subscribe((event) => events.push(event.type))
+    const results = await Promise.all([
+      tester.submit(constructInputs.stop('play')),
+      tester.submit(constructInputs.start('play', { running: false })),
+    ])
+    expect(results.every((result) => result.ok)).toBe(true)
+    await eventually(() => manager.running.get('play') !== undefined && manager.running.get('play') !== old)
+    await eventually(() => entry('play')?.status === 'running' && entry('play')?.link !== oldLink)
+    const fresh = construct('play')
+    expect(fresh.linkUrl).not.toBe(oldLink)
+    expect(entry('play')?.link).toBe(fresh.linkUrl)
+    expect(events).toContain('stopping')
+    expect(await canListen(portOf(oldLink))).toBe(true)
+    expect(fresh.hub.seq).toBe(0)
+    expect(timeOf(fresh.hub)).toMatchObject({ ticks: 0, running: false })
+    expect(countOf(fresh.hub)).toBe(0)
+    const stopped = lines.indexOf('wishem: construct play stopped')
+    expect(stopped).toBeGreaterThan(-1)
+    expect(lines.slice(stopped + 1).some((line) => line.startsWith('wishem: construct play runs, link at '))).toBe(true)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(2)
+  })
+
+  it('starts a new construct after a rewind to a different start', async () => {
+    setup()
+    await start()
+    const [first] = startSeqs()
+    const oldLink = construct('play').linkUrl
+    await tester.submit(constructInputs.stop('play'))
+    await eventually(() => entry('play')?.status === 'stopped')
+    await start()
+    const second = construct('play')
+    expect(entry('play')?.startSeq).not.toBe(first)
+    await tester.submit(hubInputs.rewind(first))
+    await eventually(() => entry('play')?.startSeq === first && manager.running.get('play') !== second)
+    await eventually(() => entry('play')?.status === 'running' && entry('play')?.link === construct('play').linkUrl)
+    expect(construct('play')).not.toBe(second)
+    expect(construct('play').linkUrl).not.toBe(second.linkUrl)
+    expect(construct('play').linkUrl).not.toBe(oldLink)
+    expect(entry('play')?.startSeq).toBe(first)
+  })
+
+  it('keeps one live construct for the last start when a stop and a start reach a running start', async () => {
+    setup()
+    await tester.submit(constructInputs.start('play'))
+    await tester.submit(constructInputs.stop('play'))
+    await tester.submit(constructInputs.start('play'))
+    const last = startSeqs().at(-1)
+    await eventually(
+      () => entry('play')?.status === 'running' && entry('play')?.link === manager.running.get('play')?.linkUrl,
+    )
+    await settle()
+    expect(manager.running.size).toBe(1)
+    expect(entry('play')).toMatchObject({ startSeq: last, status: 'running', want: 'running' })
+    expect(entry('play')?.link).toBe(construct('play').linkUrl)
+  })
+
+  it('keeps the same construct for two starts with no stop', async () => {
+    setup()
+    await start()
+    const before = construct('play')
+    await tester.submit(constructInputs.start('play'))
+    await settle()
+    expect(construct('play')).toBe(before)
+    expect(lines.filter((line) => line.startsWith('wishem: construct play runs'))).toHaveLength(1)
   })
 
   it('stops a construct after a rewind of the workbench before its start, and sends no report for it', async () => {
@@ -717,11 +806,12 @@ describe('attachConstructManager', () => {
   })
 
   it('prints a line for a start, a stop, a failed start, and a refused change', async () => {
-    setup({ wrapStore: picky })
+    setup()
     await start()
     const link = entry('play')?.link ?? ''
     expect(lines).toContain(`wishem: construct play runs, link at ${link}`)
-    await tester.submit(setColor('bad'))
+    await send({ type: 'store/remove-entity', payload: { entity: SAMPLE_ENTITY } })
+    await tester.submit(setColor('#b91c1c'))
     await eventually(() => lines.some((line) => line.includes('the change of the product was refused')))
     await tester.submit(constructInputs.stop('play'))
     await eventually(() => entry('play')?.status === 'stopped')
@@ -730,11 +820,9 @@ describe('attachConstructManager', () => {
 
   it('prints the line of a failed start', async () => {
     setup({
-      wrapStore: () => {
-        throw new Error('the rules failed')
-      },
+      behaviors: duplicates,
     })
     await start()
-    expect(lines).toContain('wishem: construct play failed: the rules failed')
+    expect(lines).toContain('wishem: construct play failed: Two behaviors have the id "sample-product/count".')
   })
 })

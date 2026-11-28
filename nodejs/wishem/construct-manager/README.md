@@ -10,6 +10,7 @@ The package is private. The root entry uses no Node.js API. The entry `node` (`@
 
 - `want`: `running` or `stopped`. The wanted state.
 - `startTime`: `running` or `paused`. The time state when the construct starts.
+- `startSeq`: The sequence number, in the workbench record, of the `constructs/start` that wrote the entry.
 - `status`: `pending`, `running`, `stopped`, or `failed`. What the construct manager reported last.
 - `link`, `time`: only with the status `running`.
 - `message`, `lastSend`: optional.
@@ -18,7 +19,7 @@ The ID of a construct has the form of the ID of a subsystem, for example `play`.
 
 | Input               | Effect                                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `constructs/start`  | Sets `want` to `running`. A new or stopped entry gets the status `pending`.                                                 |
+| `constructs/start`  | Sets `want` to `running`. A new or stopped entry gets the status `pending` and the `startSeq` of the input.                 |
 | `constructs/stop`   | Sets `want` to `stopped`. The entry stays. The construct must be in the list.                                               |
 | `constructs/send`   | Changes no part. The construct must be wanted to run and have the status `running`.                                         |
 | `constructs/report` | Sets the reported fields. Only the source `construct-manager` can send it. `stopped` and `failed` remove `link` and `time`. |
@@ -57,7 +58,7 @@ const inputs = productChanges(before, after, 'product')
 
 ## The construct manager
 
-`attachConstructManager({ hub, wrapStore, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The hub must have the parts `product` and `constructs`.
+`attachConstructManager({ hub, behaviors, log })` is in the entry `node`. It reads the construct list of the workbench hub `hub` and starts or stops one product construct for each entry that wants `running`. The list `behaviors` holds the native behaviors of the product, and each product construct runs them. The hub must have the parts `product` and `constructs`.
 
 ```ts
 import { fileURLToPath } from 'node:url'
@@ -65,7 +66,7 @@ import { createStore } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub } from '@thrashplay/wishem-hub'
-import { wrapStore } from '@thrashplay/wishem-sample-product'
+import { behaviors } from '@thrashplay/wishem-sample-product'
 import { constructInputs, createConstructList } from '@thrashplay/wishem-construct-manager'
 import type { ConstructList } from '@thrashplay/wishem-construct-manager'
 import { attachConstructManager } from '@thrashplay/wishem-construct-manager/node'
@@ -82,7 +83,7 @@ const hub = createHub({
   subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
 })
 hub.start()
-const manager = attachConstructManager({ hub, wrapStore, log: (line) => console.log(line) })
+const manager = attachConstructManager({ hub, behaviors, log: (line) => console.log(line) })
 const client = hub.attach({ id: 'client', kind: 'input' })
 const entry = () => (hub.read().constructs as ConstructList).constructs.play
 
@@ -100,13 +101,15 @@ The construct manager attaches the input port `construct-manager` and the output
 
 A product construct (`startProductConstruct`) holds:
 
-- a hub with the parts `time` and `store`, and the product rules from `wrapStore`
+- a hub with the parts `time` and `store`, and the update subsystem, which runs the `behaviors`
 - a link server on a port that the system selects (`linkUrl`, for example `ws://127.0.0.1:41377/link`)
 - a clock on the port `clock`
 
 Only the source `construct-manager` can rewind the hub of a product construct. The construct manager rewinds it when a client sends the input `hub/rewind` with `constructs/send`.
 
 The construct manager gives each product construct the changes of the model `product` as inputs. It reports `running`, `stopped`, or `failed` for each construct with `constructs/report`. A `failed` construct stays `failed` until a client sends `constructs/stop` and then `constructs/start`.
+
+A `constructs/stop` and a `constructs/start` always give a new product construct: a new link address and a time that starts from 0. This is also true when the hub applies both inputs in one pass.
 
 The construct manager writes these log lines:
 

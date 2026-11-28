@@ -111,7 +111,27 @@ describe('createViewTools with a direct port', () => {
 
   it('gives invalid for a reserved name', async () => {
     const { hub, input } = world()
-    expect(await toolsFor(input).setField('wishem', 'x')).toMatchObject({ ok: false, reason: 'invalid' })
+    const reserved: ComponentTypeDefinition = {
+      id: CT,
+      label: 'Task',
+      fields: [
+        { id: FLD_TITLE, label: 'Wishem', type: 'string' },
+        { id: FLD_DONE, label: 'Key', type: 'string' },
+      ],
+    }
+    const tools = createViewTools({ input, entity: E1, componentType: CT, definition: reserved })
+
+    expect(await tools.setField('wishem', 'x')).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(await tools.setField('key', 'x')).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(hub.record()).toEqual([])
+  })
+
+  it('gives invalid for an empty name, and sends no input', async () => {
+    const { hub, input } = world()
+    const empty: ComponentTypeDefinition = { ...definition, fields: [{ id: FLD_TITLE, label: '???', type: 'string' }] }
+    const tools = createViewTools({ input, entity: E1, componentType: CT, definition: empty })
+
+    expect(await tools.setField('', 'x')).toMatchObject({ ok: false, reason: 'invalid' })
     expect(hub.record()).toEqual([])
   })
 
@@ -252,8 +272,12 @@ describe('stubViewTools', () => {
 
   it('gives a promise that never settles when the function gives one', async () => {
     const { tools } = stubViewTools(() => new Promise(() => undefined))
-    const settled = await Promise.race([tools.setField('a', 'x').then(() => 'settled'), Promise.resolve('waiting')])
-    expect(settled).toBe('waiting')
+    let settled = false
+    void tools.setField('a', 'x').then(() => {
+      settled = true
+    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(settled).toBe(false)
   })
 
   it('lists the calls in order', async () => {

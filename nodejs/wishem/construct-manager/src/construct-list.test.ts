@@ -27,6 +27,12 @@ const refusal = (result: SubmitResult) => {
   return result
 }
 
+const startSeqOf = (rig: Rig): number =>
+  rig.hub
+    .record()
+    .filter((input) => input.type === 'constructs/start')
+    .at(-1)?.seq ?? -1
+
 const running = async (rig: Rig, id = 'play') => {
   await rig.client.submit(constructInputs.start(id))
   await rig.manager.submit(constructInputs.report({ construct: id, status: 'running', link: 'ws://127.0.0.1:1/link' }))
@@ -94,7 +100,12 @@ describe('constructs/start', () => {
   it('adds a pending construct that is wanted to run', async () => {
     const rig = makeRig()
     expect((await rig.client.submit(constructInputs.start('play'))).ok).toBe(true)
-    expect(rig.part().constructs.play).toEqual({ want: 'running', startTime: 'running', status: 'pending' })
+    expect(rig.part().constructs.play).toEqual({
+      want: 'running',
+      startTime: 'running',
+      startSeq: startSeqOf(rig),
+      status: 'pending',
+    })
   })
 
   it('keeps the time state of a start in a pause', async () => {
@@ -143,7 +154,38 @@ describe('constructs/start', () => {
     await rig.client.submit(constructInputs.stop('play'))
     await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'stopped', message: 'done' }))
     await rig.client.submit(constructInputs.start('play', { running: false }))
-    expect(rig.part().constructs.play).toEqual({ want: 'running', startTime: 'paused', status: 'pending' })
+    expect(rig.part().constructs.play).toEqual({
+      want: 'running',
+      startTime: 'paused',
+      startSeq: startSeqOf(rig),
+      status: 'pending',
+    })
+  })
+
+  it('gives a stopped entry the start number of the new start', async () => {
+    const rig = makeRig()
+    await running(rig)
+    const first = startSeqOf(rig)
+    await rig.client.submit(constructInputs.stop('play'))
+    await rig.client.submit(constructInputs.start('play'))
+    const second = startSeqOf(rig)
+    expect(second).toBeGreaterThan(first)
+    expect(rig.part().constructs.play).toMatchObject({ startSeq: second, status: 'pending' })
+  })
+
+  it('holds the sequence number of the start in the record', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    const seq = rig.hub.record().find((input) => input.type === 'constructs/start')?.seq
+    expect(rig.part().constructs.play.startSeq).toBe(seq)
+  })
+
+  it('keeps the start number for a second start', async () => {
+    const rig = makeRig()
+    await rig.client.submit(constructInputs.start('play'))
+    const first = rig.part().constructs.play.startSeq
+    await rig.client.submit(constructInputs.start('play'))
+    expect(rig.part().constructs.play.startSeq).toBe(first)
   })
 
   it('sets pending and removes the message of a failed entry after a stop', async () => {
@@ -152,7 +194,12 @@ describe('constructs/start', () => {
     await rig.manager.submit(constructInputs.report({ construct: 'play', status: 'failed', message: 'broken' }))
     await rig.client.submit(constructInputs.stop('play'))
     await rig.client.submit(constructInputs.start('play'))
-    expect(rig.part().constructs.play).toEqual({ want: 'running', startTime: 'running', status: 'pending' })
+    expect(rig.part().constructs.play).toEqual({
+      want: 'running',
+      startTime: 'running',
+      startSeq: startSeqOf(rig),
+      status: 'pending',
+    })
   })
 })
 
@@ -164,9 +211,18 @@ describe('constructs/stop', () => {
     expect(rig.part().constructs.play).toEqual({
       want: 'stopped',
       startTime: 'running',
+      startSeq: startSeqOf(rig),
       status: 'running',
       link: 'ws://127.0.0.1:1/link',
     })
+  })
+
+  it('keeps the start number', async () => {
+    const rig = makeRig()
+    await running(rig)
+    const first = rig.part().constructs.play.startSeq
+    await rig.client.submit(constructInputs.stop('play'))
+    expect(rig.part().constructs.play.startSeq).toBe(first)
   })
 
   it('refuses a construct that is not in the list', async () => {
@@ -253,6 +309,7 @@ describe('constructs/report', () => {
     expect(rig.part().constructs.play).toEqual({
       want: 'running',
       startTime: 'running',
+      startSeq: startSeqOf(rig),
       status: 'running',
       link,
       time: 'running',
@@ -288,6 +345,7 @@ describe('constructs/report', () => {
     expect(rig.part().constructs.play).toEqual({
       want: 'running',
       startTime: 'running',
+      startSeq: startSeqOf(rig),
       status,
       message: 'm',
     })
@@ -397,6 +455,8 @@ describe('the record', () => {
     await rig.client.submit(constructInputs.stop('check'))
     await rig.manager.submit(constructInputs.report({ construct: 'check', status: 'stopped' }))
     await rig.client.submit(constructInputs.send('play', { type: 'time/set-running', payload: { running: false } }))
+    await rig.client.submit(constructInputs.stop('play'))
+    await rig.client.submit(constructInputs.start('play'))
 
     const replay = createHub({
       subsystems: [createStore(), createConstructList()],
