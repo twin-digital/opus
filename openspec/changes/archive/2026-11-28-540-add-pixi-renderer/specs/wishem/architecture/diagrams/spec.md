@@ -31,6 +31,11 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 - **WHEN** the page imports the renderer from `@thrashplay/wishem-renderer-react`, and the workbench process imports the generator from `@thrashplay/wishem-renderer-react/view-types`
 - **THEN** the container diagram shows the container `renderer-react` as a TypeScript package, and a relationship from the page and from the workbench process to `renderer-react`, each with the label "Builds on [import]"
 
+#### Scenario: The clock package builds on the hub package
+
+- **WHEN** `@thrashplay/wishem-clock` depends on `@thrashplay/wishem-hub`
+- **THEN** the container diagram shows the container `clock` as a TypeScript package, and a relationship from `clock` to `hub` with the label "Builds on [import]"
+
 #### Scenario: The PixiJS process runs the PixiJS construct and serves the PixiJS page
 
 - **WHEN** the `start` script of `@thrashplay/wishem-pixi-page` runs the PixiJS construct and its page server in one Node.js process
@@ -55,3 +60,8 @@ The architecture document SHALL hold a C4 container diagram of Wishem, in `nodej
 
 - **WHEN** a change makes the workbench process write the model folder
 - **THEN** the relationship between the process and the model folder says that the process writes it
+
+#### Scenario: The workbench process mounts a product
+
+- **WHEN** the workbench process keeps the model of a mounted product in a product folder
+- **THEN** the container diagram shows the product model folder as a store of JSON files, a relationship from the workbench process to it with the label "Reads, watches, and writes [file system]", and a relationship from the designer to it with the label "Edits files [text editor]"

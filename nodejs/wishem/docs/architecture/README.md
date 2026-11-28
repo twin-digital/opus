@@ -184,6 +184,9 @@ The files of the model folder are `definitions/*.json` for the component types a
 - [`wishem/architecture/diagrams`](../../../../openspec/specs/wishem/architecture/diagrams/spec.md): the diagrams of this document.
 - [`wishem/renderer-html/views`](../../../../openspec/specs/wishem/renderer-html/views/spec.md): the view files, the sidecars, and the table of views.
 - [`wishem/renderer-html/page`](../../../../openspec/specs/wishem/renderer-html/page/spec.md): the page, the client of the hub, and the marked element.
+- [`wishem/renderer-pixi/renderer`](../../../../openspec/specs/wishem/renderer-pixi/renderer/spec.md): the PixiJS renderer package and the PixiJS view.
+- [`wishem/renderer-pixi/construct`](../../../../openspec/specs/wishem/renderer-pixi/construct/spec.md): the construct of the PixiJS page and its `start` script.
+- [`wishem/renderer-pixi/page`](../../../../openspec/specs/wishem/renderer-pixi/page/spec.md): the PixiJS page, its keys, and its status line.
 - [`wishem/workbench/start`](../../../../openspec/specs/wishem/workbench/start/spec.md): the `start` script of the workbench.
 - [`wishem/workbench/mount`](../../../../openspec/specs/wishem/workbench/mount/spec.md): the mount of a product in the workbench construct.
 - [`wishem/sample-product/model`](../../../../openspec/specs/wishem/sample-product/model/spec.md): the model of the sample product and its count rule.
