@@ -79,6 +79,59 @@ describe('findHolds', () => {
     ])
   })
 
+  it('holds no entity for a field that is not a reference and has the ID of an entity', () => {
+    const text: Model = {
+      definitions: [{ id: CT_LIST, label: 'List', fields: [{ id: FLD_FIRST, label: 'first', type: 'string' }] }],
+      entities: [
+        { id: A, components: { [CT_LIST]: { [FLD_FIRST]: B } } },
+        { id: B, components: { [CT_LIST]: {} } },
+      ],
+    }
+    expect([...findHolds(withView, text).held]).toEqual([])
+  })
+
+  it('gives one cycle when two paths reach the same cycle', () => {
+    const FLD_SECOND = 'fld_aaaaaaaa-0000-4000-8000-000000000013'
+    const D = 'e_aaaaaaaa-0000-4000-8000-000000000024'
+    const refs = (first: string, second?: string) => ({
+      [CT_LIST]: { [FLD_FIRST]: first, ...(second === undefined ? {} : { [FLD_SECOND]: second }) },
+    })
+    const diamond: Model = {
+      definitions: [
+        {
+          id: CT_LIST,
+          label: 'List',
+          fields: [
+            { id: FLD_FIRST, label: 'first', type: 'reference' },
+            { id: FLD_SECOND, label: 'second', type: 'reference' },
+          ],
+        },
+      ],
+      entities: [
+        { id: A, components: refs(B, C) },
+        { id: B, components: refs(D) },
+        { id: C, components: refs(D) },
+        { id: D, components: refs(B) },
+      ],
+    }
+
+    expect(findHolds(withView, diamond).cycles).toEqual([
+      { sidecar: 'List.view.json', componentType: CT_LIST, field: FLD_FIRST, holder: D, entity: B },
+    ])
+  })
+
+  it('starts at an entity that is not held, also when it comes after the cycle in the model', () => {
+    const { cycles } = findHolds(withView, model({ [B]: A, [A]: B, [C]: A }))
+    expect(cycles).toEqual([
+      { sidecar: 'List.view.json', componentType: CT_LIST, field: FLD_FIRST, holder: B, entity: A },
+    ])
+  })
+
+  it('gives the cycles in the order of the entities', () => {
+    const { cycles } = findHolds(withView, model({ [A]: A, [B]: B }))
+    expect(cycles.map((cycle) => cycle.holder)).toEqual([A, B])
+  })
+
   it('ignores a reference to an entity that the model does not have', () => {
     const { held, cycles } = findHolds(withView, model({ [A]: B }))
     expect([...held]).toEqual([])
