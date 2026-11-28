@@ -11,7 +11,8 @@ The `docs/` folder holds the blueprint.
 - `clock` (`@thrashplay/wishem-clock`): the `time` subsystem and the clock. It uses no Node.js API.
 - `update` (`@thrashplay/wishem-update`): the update subsystem. It runs the native behaviors of a product in each tick. It uses no Node.js API. It is private.
 - `sample-product` (`@thrashplay/wishem-sample-product`): the sample product. It holds a model folder with a color and a count, two native behaviors (the count behavior adds 1 to the count at each tick, and the color behavior sets the next of four colors), and React views of the color and the count in `views/react/`. The root entry uses no Node.js API and no view.
-- `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link (`startConstruct` and `serveHub`), writes `state.json`, and provides the `wishem` command.
+- `host-nodejs` (`@thrashplay/wishem-host-nodejs`): runs a construct in a Node.js process, serves the link (`startConstruct` and `serveHub`), and writes `state.json`.
+- `command` (`@thrashplay/wishem-command`): the `wishem` command (bin `wishem`, `src/cli.ts`). It starts a construct for a model folder with `startConstruct`. It has no public API of code (`exports` has only the entries that `pnpm sync` writes). It is private.
 - `construct-manager` (`@thrashplay/wishem-construct-manager`): the construct list (the model subsystem `constructs`) and `productChanges`. The entry `node` holds the construct manager, the launchers (`childProcessLauncher` starts each product construct in a product construct process, `inProcessLauncher` is for tests), `checkProductCode`, and the product construct. The root entry uses no Node.js API. It is private.
 - `workbench` (`@thrashplay/wishem-workbench`): the base workbench. It holds the first model and a `start` script.
 - `renderer-react` (`@thrashplay/wishem-renderer-react`): the React renderer. It draws React views from a port of the hub, and it writes the types of the props of the views. The root entry runs in a web browser. The entry `view-types` runs in Node.js.
@@ -45,6 +46,8 @@ These rules apply to each agent, and also to a subagent that has only a brief.
 ## Autonomous work
 
 When the owner tells you to work with little help, you are the lead agent. Read `docs/autonomous-flow.md` before you do anything else. That file replaces two items of "How to work": you do not confirm a **Proposed** item with the owner, and you can change a rule in `docs/rules.md`. It tells you when to ask the owner.
+
+Work only on a milestone whose issue has the label `autonomous:ready`. Only the owner sets or removes that label. R1 Tech Debt, break-tests, CI faults, and flow changes need no label. See "When a milestone is ready" in `docs/autonomous-flow.md`.
 
 ## How to work
 

@@ -4,7 +4,7 @@ The base workbench of Wishem. It holds the first model and a command to start it
 
 ## Start
 
-The `wishem` command comes from `@thrashplay/wishem-host-nodejs`. Build that package before the first start.
+The `wishem` command comes from `@thrashplay/wishem-command`. Build that package before the first start.
 
 ```
 pnpm build --filter "@thrashplay/wishem-*"

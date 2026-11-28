@@ -94,6 +94,26 @@ for (const tree of worktrees) {
   }
 }
 
+section('Held milestones (the issue of the milestone has no label autonomous:ready)')
+const MILESTONE_ISSUES = {
+  'M1 Core model': 479,
+  'M2 Agent access': 480,
+  'M3 Behavior prompts': 481,
+  'M4 Asset prompts': 482,
+  'M5 Expectations': 483,
+  'M6 Tools': 484,
+  'M7 Other engines': 485,
+  'A1-A6 Architecture': 522,
+}
+for (const [name, number] of Object.entries(MILESTONE_ISSUES)) {
+  const labels = json('gh', ['api', `repos/${REPO}/issues/${number}`, '--jq', '[.labels[].name]'])
+  const state =
+    !Array.isArray(labels) ? 'unknown'
+    : labels.includes('autonomous:ready') ? 'released'
+    : 'held'
+  console.log(`- ${state}: #${number} ${name}`)
+}
+
 section('Issues that wait for the owner')
 const waiting =
   json('gh', ['api', `repos/${REPO}/issues?state=open&assignee=skleinjung&labels=app:wishem&per_page=50`]) ?? []
@@ -101,7 +121,7 @@ for (const issue of waiting) {
   console.log(`- #${issue.number} [${issue.type?.name ?? 'no type'}] ${issue.title}`)
 }
 
-section('Break-test issues that are open, the oldest first')
+section('Break-test issues that are open')
 const open =
   json('gh', ['api', `repos/${REPO}/issues?state=open&labels=app:wishem&sort=created&direction=asc&per_page=100`]) ?? []
 for (const issue of open.filter((entry) => entry.title.startsWith('Break-test:'))) {

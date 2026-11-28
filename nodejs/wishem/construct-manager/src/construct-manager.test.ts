@@ -1,7 +1,7 @@
 import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { TIME_ID, type ClockTimer, type TimePart } from '@thrashplay/wishem-clock'
-import { createStore, type Model } from '@thrashplay/wishem-core'
+import { createStore, type Entity, type Model } from '@thrashplay/wishem-core'
 import { readModelFolder } from '@thrashplay/wishem-host-nodejs'
 import { createHub, hubInputs, openLink, webSocketChannel } from '@thrashplay/wishem-hub'
 import type { Hub, HubEvent, Input, Port, RemoteLink } from '@thrashplay/wishem-hub'
@@ -105,6 +105,59 @@ const setCount = (store: string, value: number): Input => ({
 
 const duplicates = [behaviors[0], behaviors[0]]
 
+const SECOND = 'e_22222222-2222-4222-8222-222222222222'
+const THIRD = 'e_33333333-3333-4333-8333-333333333333'
+const LINK_TYPE = 'ct_cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+const TARGET_FIELD = 'fld_dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+const TARGETS_FIELD = 'fld_eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+
+const counter = (id: string, count: number): Entity => ({
+  id,
+  components: { [COUNTER_TYPE]: { [COUNT_FIELD]: count } },
+})
+
+const linkTo = (id: string, other?: string): Entity => ({
+  id,
+  components: {
+    [LINK_TYPE]: other === undefined ? {} : { [TARGET_FIELD]: other, [TARGETS_FIELD]: [other] },
+  },
+})
+
+const withEntities = (base: Model, ...entities: Entity[]): Model => ({ ...structuredClone(base), entities })
+
+const idsOf = (hub: Hub) => (hub.read().store as Model).entities.map((e) => e.id)
+
+const countOfEntity = (hub: Hub, id: string) =>
+  (hub.read().store as Model).entities.find((e) => e.id === id)?.components[COUNTER_TYPE]?.[COUNT_FIELD]
+
+const addEntity = (entity: Entity): Input => ({ type: 'product/add-entity', payload: { entity } })
+
+const removeEntity = (id: string): Input => ({ type: 'product/remove-entity', payload: { entity: id } })
+
+const replaceModel = (next: Model): Input => ({ type: 'product/replace-model', payload: { model: next } })
+
+const setCountOf = (id: string, value: number): Input => ({
+  type: 'store/set-field',
+  payload: { entity: id, componentType: COUNTER_TYPE, field: COUNT_FIELD, value },
+})
+
+const sampleEntity = (): Entity => structuredClone(model.entities.find((e) => e.id === SAMPLE_ENTITY) as Entity)
+
+const linkModel = (): Model => ({
+  ...structuredClone(model),
+  definitions: [
+    ...structuredClone(model.definitions),
+    {
+      id: LINK_TYPE,
+      label: 'Link',
+      fields: [
+        { id: TARGET_FIELD, label: 'target', type: 'reference' },
+        { id: TARGETS_FIELD, label: 'targets', type: 'reference-list' },
+      ],
+    },
+  ],
+})
+
 /** A behavior of the component type Color that throws an error from the read of its type after `fault.armed` is set. */
 const fault = { armed: false }
 const exploding: NativeBehavior = {
@@ -142,13 +195,13 @@ describe('attachConstructManager', () => {
       ...rest,
     })
 
-  const setup = (options: TestOptions = {}) => {
+  const setup = (options: TestOptions = {}, productModel: Model = model) => {
     clock = makeClock()
     lines = []
     sockets = []
     links = []
     hub = createHub({
-      subsystems: [createStore(), createStore({ id: 'product', model }), createConstructList()],
+      subsystems: [createStore(), createStore({ id: 'product', model: productModel }), createConstructList()],
     })
     hub.start()
     tester = hub.attach({ id: 'tester', kind: 'input' })
@@ -684,6 +737,158 @@ describe('attachConstructManager', () => {
     expect(record.some((input) => input.type === 'hub/rewind')).toBe(false)
   })
 
+  describe('the entities of the product model', () => {
+    /** The types of the store inputs that the construct got, from the record position `from`. */
+    const storeTypes = (from = 0) =>
+      construct('play')
+        .hub.record()
+        .slice(from)
+        .map((recorded) => recorded.type)
+        .filter((type) => type.startsWith('store/'))
+
+    const recordLength = () => construct('play').hub.record().length
+
+    const storeInputsOf = (type: string) =>
+      construct('play')
+        .hub.record()
+        .filter((recorded) => recorded.type === type)
+
+    /** Starts a paused construct with the count 25. */
+    const startWith25 = async (productModel?: Model) => {
+      setup({}, productModel)
+      await start('play', false)
+      await send(setCount('store', 25))
+    }
+
+    const live = (ids: string[]) => eventually(() => idsOf(construct('play').hub).join() === ids.join())
+
+    it('sends one add-entity for a new entity, keeps the count, and holds the new entity last', async () => {
+      await startWith25()
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await live([SAMPLE_ENTITY, SECOND])
+      const adds = storeInputsOf('store/add-entity')
+      expect(adds).toHaveLength(1)
+      expect(adds[0]?.source).toBe(CONSTRUCT_MANAGER_ID)
+      expect(storeInputsOf('store/replace-model')).toHaveLength(0)
+      expect(countOf(construct('play').hub)).toBe(25)
+      expect(countOfEntity(construct('play').hub, SECOND)).toBe(1000)
+      await send({ type: 'time/advance', payload: { ms: 50 } })
+      expect(countOf(construct('play').hub)).toBe(26)
+      expect(countOfEntity(construct('play').hub, SECOND)).toBe(1001)
+    })
+
+    it('sends one remove-entity and no replace-model for a replace-model that removes an entity', async () => {
+      await startWith25()
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await live([SAMPLE_ENTITY, SECOND])
+      await tester.submit(replaceModel(model))
+      await live([SAMPLE_ENTITY])
+      expect(storeInputsOf('store/remove-entity')).toHaveLength(1)
+      expect(storeInputsOf('store/replace-model')).toHaveLength(0)
+      expect(countOf(construct('play').hub)).toBe(25)
+    })
+
+    it('sends add-entity with the index 0 for an entity before the sample entity, in the order of the product', async () => {
+      await startWith25()
+      await tester.submit(replaceModel(withEntities(model, counter(SECOND, 1000), sampleEntity())))
+      await live([SECOND, SAMPLE_ENTITY])
+      const adds = storeInputsOf('store/add-entity')
+      expect(adds).toHaveLength(1)
+      expect((adds[0]?.payload as { index?: number }).index).toBe(0)
+      expect(storeInputsOf('store/replace-model')).toHaveLength(0)
+      expect(countOf(construct('play').hub)).toBe(25)
+    })
+
+    it('puts a removed entity back at its index after a rewind, with the authored values and the live counts', async () => {
+      await startWith25()
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await tester.submit(addEntity(counter(THIRD, 2000)))
+      await live([SAMPLE_ENTITY, SECOND, THIRD])
+      await send(setCountOf(THIRD, 77))
+      const before = hub.seq
+      await tester.submit(removeEntity(SECOND))
+      await live([SAMPLE_ENTITY, THIRD])
+      await tester.submit(hubInputs.rewind(before))
+      await live([SAMPLE_ENTITY, SECOND, THIRD])
+      const last = storeInputsOf('store/add-entity').at(-1)?.payload as { entity: Entity; index?: number }
+      expect(last.index).toBe(1)
+      expect(last.entity).toEqual(counter(SECOND, 1000))
+      expect(countOf(construct('play').hub)).toBe(25)
+      expect(countOfEntity(construct('play').hub, THIRD)).toBe(77)
+      expect(countOfEntity(construct('play').hub, SECOND)).toBe(1000)
+    })
+
+    it('sends remove-entity after a rewind past an addition', async () => {
+      await startWith25()
+      const before = hub.seq
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await live([SAMPLE_ENTITY, SECOND])
+      await tester.submit(hubInputs.rewind(before))
+      await live([SAMPLE_ENTITY])
+      expect(storeInputsOf('store/remove-entity')).toHaveLength(1)
+      expect(countOf(construct('play').hub)).toBe(25)
+    })
+
+    it('sends add-entity, set-field, and remove-entity for one change with an addition, a removal, and a color', async () => {
+      await startWith25()
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await live([SAMPLE_ENTITY, SECOND])
+      const from = recordLength()
+      const changed = withEntities(model, sampleEntity(), counter(THIRD, 3000))
+      changed.entities[0].components[COLOR_TYPE] = { [COLOR_FIELD]: '#b91c1c' }
+      await tester.submit(replaceModel(changed))
+      await live([SAMPLE_ENTITY, THIRD])
+      await eventually(() => colorOf(construct('play').hub) === '#b91c1c')
+      expect(storeTypes(from)).toEqual(['store/add-entity', 'store/set-field', 'store/remove-entity'])
+      expect(countOf(construct('play').hub)).toBe(25)
+    })
+
+    it('sends one replace-model for a new order of the entities', async () => {
+      await startWith25()
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await live([SAMPLE_ENTITY, SECOND])
+      await tester.submit(replaceModel(withEntities(model, counter(SECOND, 1000), sampleEntity())))
+      await live([SECOND, SAMPLE_ENTITY])
+      expect(storeInputsOf('store/replace-model')).toHaveLength(1)
+    })
+
+    it('sends one replace-model for an addition with a new label of a component type', async () => {
+      await startWith25()
+      const changed = withEntities(model, sampleEntity(), counter(SECOND, 1000))
+      changed.definitions[0] = { ...changed.definitions[0], label: 'Renamed' }
+      await tester.submit(replaceModel(changed))
+      await live([SAMPLE_ENTITY, SECOND])
+      expect(storeInputsOf('store/replace-model')).toHaveLength(1)
+      expect(storeInputsOf('store/add-entity')).toHaveLength(0)
+    })
+
+    it('adds and removes two entities that name each other in a reference and a list, with no refusal', async () => {
+      const base = linkModel()
+      await startWith25(base)
+      const from = recordLength()
+      await tester.submit(
+        replaceModel(withEntities(base, sampleEntity(), linkTo(SECOND, THIRD), linkTo(THIRD, SECOND))),
+      )
+      await live([SAMPLE_ENTITY, SECOND, THIRD])
+      await eventually(() => storeTypes(from).length === 4)
+      expect(storeTypes(from)).toEqual(['store/add-entity', 'store/add-entity', 'store/set-field', 'store/set-field'])
+      const mark = recordLength()
+      await tester.submit(replaceModel(base))
+      await live([SAMPLE_ENTITY])
+      expect(storeTypes(mark)).toEqual([
+        'store/clear-field',
+        'store/clear-field',
+        'store/clear-field',
+        'store/clear-field',
+        'store/remove-entity',
+        'store/remove-entity',
+      ])
+      expect(entry('play')?.message).toBeUndefined()
+      expect(lines.filter((line) => line.includes('refused'))).toEqual([])
+      expect(countOf(construct('play').hub)).toBe(25)
+    })
+  })
+
   it('reports the message of a refused change and sends the next change', async () => {
     setup()
     await start()
@@ -1035,6 +1240,23 @@ describe('attachConstructManager', () => {
       await back(1)
       fault.armed = false
       expect(entry('play')?.lastSend?.result).toEqual({ ok: false, reason: 'error', message: 'boom' })
+    })
+
+    it('adds an entity after a step back, with the count before the last tick and the new entity last', async () => {
+      setup()
+      await runPaused(5)
+      await tester.submit(addEntity(counter(SECOND, 1000)))
+      await eventually(() => idsOf(construct('play').hub).length === 2)
+      const from = construct('play').hub.record().length
+      await back(1)
+      const types = construct('play')
+        .hub.record()
+        .slice(from)
+        .map((recorded) => recorded.type)
+      expect(types.slice(0, 3)).toEqual(['hub/rewind', 'store/add-entity', 'time/set-running'])
+      expect(timeOf(construct('play').hub).ticks).toBe(4)
+      expect(countOf(construct('play').hub)).toBe(4)
+      expect(idsOf(construct('play').hub)).toEqual([SAMPLE_ENTITY, SECOND])
     })
 
     it('applies the rewind, the changes, and the pause with no tick between them', async () => {
