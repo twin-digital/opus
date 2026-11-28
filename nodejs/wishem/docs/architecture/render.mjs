@@ -752,10 +752,19 @@ const cPcp = el(
   'Runs one product construct.',
   { pkg: 'Package: construct-manager' },
 )
+const cCommand = el(
+  'container',
+  COLUMN,
+  cPcp.y + CARD_H + 150,
+  'Wishem command process',
+  '[Container: Node.js]',
+  'Runs one construct, with no page.',
+  { pkg: 'Package: command' },
+)
 const cModel = el(
   'store',
   COLUMN,
-  cPcp.y + CARD_H + 110,
+  cCommand.y + CARD_H + 110,
   'Model folder',
   '[Container: JSON files]',
   'Holds the definitions and the authored state.',
@@ -770,19 +779,10 @@ const cProduct = el(
   'Holds the model of the mounted product.',
   { h: STORE_H, pkg: 'Example: sample-product' },
 )
-const cCommand = el(
-  'container',
-  COLUMN,
-  cProduct.y + STORE_H + 110,
-  'Wishem command process',
-  '[Container: Node.js]',
-  'Runs one construct, with no page.',
-  { pkg: 'Package: command' },
-)
 const cReactPage = el(
   'container',
   COLUMN,
-  cCommand.y + CARD_H + UNIT_GAP,
+  cProduct.y + STORE_H + UNIT_GAP,
   'React page',
   '[Container: React, web browser]',
   'Draws the sample construct.',
@@ -870,7 +870,7 @@ const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has twelve containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub and to each product construct over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The workbench process starts a product construct process for each product construct, reaches its hub over a child process link, and passes the WebSocket link of the product construct to it. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
+    'Wishem has twelve containers. The designer starts the five processes and the Godot runner, edits the model folder and the product model folder, and looks at the three pages. The page gets page code over HTTP and connects to the hub and to each product construct over a WebSocket link through the workbench process. The workbench process and the Wishem command process each read, watch, and write the two folders. The workbench process starts a product construct process for each product construct, reaches its hub over a child process link, and passes the WebSocket link of the product construct to it. The Wishem command process starts and reaches the product construct processes in the same way, and passes no link. The React page and the PixiJS page connect the same way to their page servers. The React page server and the PixiJS process pass the link over a WebSocket to the sample construct process, which reads the product model folder. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the sample construct process.',
   width: WIDTH_PX,
   height: LEGEND_Y + LEGEND_H + 24,
   items: [
@@ -912,7 +912,7 @@ const containers = {
       'flow',
       [right(cProcess, 626), [MODEL_X, 626], [MODEL_X, cModel.y + 30], right(cModel, cModel.y + 30)],
       'Reads,\nwatches, and\nwrites\n[file system]',
-      [MODEL_X, (cPcp.y + CARD_H + cModel.y) / 2],
+      [MODEL_X, (cCommand.y + CARD_H + cModel.y) / 2],
     ),
     rel(
       'quiet',
@@ -922,17 +922,18 @@ const containers = {
     ),
 
     // The Wishem command process
-    stacked('quiet', cCommand, cProduct, 165, 'Reads, watches, and writes [file system]'),
+    stacked('flow', cCommand, cPcp, 165, 'Starts, stops, and\nreaches the hub\n[child process,\nlink over IPC]'),
+    stacked('quiet', cCommand, cModel, 165, 'Reads, watches, and writes [file system]'),
     rel(
       'quiet',
       [
         right(cCommand, cCommand.y + 20),
         [COMMAND_X, cCommand.y + 20],
-        [COMMAND_X, cModel.y + 90],
-        right(cModel, cModel.y + 90),
+        [COMMAND_X, cProduct.y + 90],
+        right(cProduct, cProduct.y + 90),
       ],
-      'Reads, watches, and writes [file system]',
-      [COMMAND_X, (cProduct.y + STORE_H + cCommand.y) / 2 + 20],
+      'Reads,\nwatches, and\nwrites\n[file system]',
+      [COMMAND_X, (cModel.y + STORE_H + cProduct.y) / 2],
     ),
 
     // The React page server

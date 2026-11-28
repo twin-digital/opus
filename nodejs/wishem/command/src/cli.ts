@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import path from 'node:path'
 import { parseArgs } from 'node:util'
+import { createConstructList } from '@thrashplay/wishem-construct-manager'
+import { attachConstructManager, childProcessLauncher } from '@thrashplay/wishem-construct-manager/node'
+import type { ConstructManager } from '@thrashplay/wishem-construct-manager/node'
 import { ModelError } from '@thrashplay/wishem-core'
 import type { Model } from '@thrashplay/wishem-core'
 import { DEFAULT_PORT, PRODUCT_ID, startConstruct } from '@thrashplay/wishem-host-nodejs'
@@ -54,9 +57,12 @@ const main = async () => {
   }
 
   let construct: Construct | undefined
+  let manager: ConstructManager | undefined
   const stopState = { requested: false }
   const closeAndExit = (target: Construct, code = 0) => {
-    target.close().then(
+    // The manager stops each product construct before the hub closes.
+    const closing = manager === undefined ? target.close() : manager.close().then(() => target.close())
+    closing.then(
       () => process.exit(code),
       (error: unknown) => {
         console.error(`wishem: cannot stop: ${String(error)}`)
@@ -82,6 +88,7 @@ const main = async () => {
       product,
       port,
       log: say,
+      subsystems: product === undefined ? undefined : [createConstructList()],
       onWatchError: () => {
         if (construct === undefined) {
           process.exit(1)
@@ -94,6 +101,14 @@ const main = async () => {
     if (stopState.requested) {
       closeAndExit(started)
       return
+    }
+    if (product !== undefined) {
+      try {
+        manager = attachConstructManager({ hub: started.hub, launch: childProcessLauncher(), log: say })
+      } catch (error) {
+        await started.close()
+        throw error
+      }
     }
     say(`wishem: ${describeCounts(started.hub.read().store as Model)}`)
     if (product !== undefined) {

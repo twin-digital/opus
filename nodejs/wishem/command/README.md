@@ -30,3 +30,21 @@ wishem: 1 component type, 1 entity
 wishem: product: 2 component types, 1 entity
 wishem: link at ws://127.0.0.1:4747/link
 ```
+
+## Product constructs
+
+With `--product`, the construct of the command holds the construct list as the part `constructs`. The command attaches the construct manager of [`@thrashplay/wishem-construct-manager`](../construct-manager/README.md) to its hub with `childProcessLauncher()`. Each product construct runs in a product construct process, a child process of the command. With no `--product`, the command has no part `constructs` and no construct manager.
+
+A client of the link of the command sends these inputs: `constructs/start`, `constructs/stop`, `constructs/send`, and `constructs/rewind`. The command gives no product code to a product construct, so a product construct has no behaviors.
+
+The command prints each line of the construct manager:
+
+```
+wishem: construct play runs in the process 48213
+wishem: construct play runs, link at ws://127.0.0.1:41377/link
+wishem: construct play stopped
+```
+
+The command passes no link. The entry of the construct in the part `constructs` and the terminal line give the address of the product construct. A client connects to this address directly.
+
+The command stops each product construct before it stops the construct. This happens after an interrupt signal (Ctrl+C), after `SIGTERM`, and after an error of the file watcher. If a stop signal comes before the start ends, the command attaches no construct manager. If `SIGKILL` ends the command, each product construct process ends by itself, because its channel to the command closes.

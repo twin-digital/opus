@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Construct } from '@thrashplay/wishem-host-nodejs'
 
-vi.mock('@thrashplay/wishem-host-nodejs', () => ({ DEFAULT_PORT: 4747, startConstruct: vi.fn() }))
+vi.mock('@thrashplay/wishem-host-nodejs', () => ({
+  DEFAULT_PORT: 4747,
+  PRODUCT_ID: 'product',
+  startConstruct: vi.fn(),
+}))
+vi.mock('@thrashplay/wishem-construct-manager', () => ({ createConstructList: vi.fn(() => ({ id: 'constructs' })) }))
+vi.mock('@thrashplay/wishem-construct-manager/node', () => ({
+  attachConstructManager: vi.fn(),
+  childProcessLauncher: vi.fn(() => 'launcher'),
+}))
 
 type Handler = () => void
 
@@ -14,7 +23,7 @@ describe('the stop signal during the start of the wishem command', () => {
   let fail: (error: Error) => void
   const argv = process.argv
 
-  const load = async () => {
+  const load = async (extra: string[] = []) => {
     const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
     vi.mocked(startConstruct).mockReturnValue(
       new Promise<Construct>((resolve, reject) => {
@@ -22,14 +31,16 @@ describe('the stop signal during the start of the wishem command', () => {
         fail = reject
       }),
     )
-    process.argv = ['node', 'cli.js', 'start', '/model', '--port', '0']
+    process.argv = ['node', 'cli.js', 'start', '/model', '--port', '0', ...extra]
     return import('./cli.js')
   }
 
   const construct = () =>
     ({
       linkUrl: 'ws://127.0.0.1:1/link',
-      hub: { read: () => ({ store: { definitions: [], entities: [] } }) },
+      hub: {
+        read: () => ({ store: { definitions: [], entities: [] }, product: { definitions: [], entities: [] } }),
+      },
       close,
     }) as unknown as Construct
 
@@ -153,5 +164,99 @@ describe('the stop signal during the start of the wishem command', () => {
       expect(exitCodes).toEqual([1])
     })
     expect(output.join('\n')).toContain('close broke')
+  })
+
+  describe('with a product', () => {
+    let calls: string[]
+    let managerClose: ReturnType<typeof vi.fn<() => Promise<void>>>
+
+    const attached = async () => {
+      const { attachConstructManager } = await import('@thrashplay/wishem-construct-manager/node')
+      return vi.mocked(attachConstructManager)
+    }
+
+    beforeEach(async () => {
+      calls = []
+      managerClose = vi.fn<() => Promise<void>>(() => {
+        calls.push('manager')
+        return Promise.resolve()
+      })
+      close.mockImplementation(() => {
+        calls.push('construct')
+        return Promise.resolve()
+      })
+      vi.mocked(await attached()).mockClear()
+      vi.mocked(await attached()).mockReturnValue({ running: new Map(), close: managerClose })
+    })
+
+    it('attaches the manager with the construct list and the child process launcher', async () => {
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
+      expect(vi.mocked(startConstruct).mock.lastCall?.[0].subsystems).toEqual([{ id: 'constructs' }])
+      const options = (await attached()).mock.lastCall?.[0]
+      expect(options?.launch).toBe('launcher')
+      expect(options?.log).toBeTypeOf('function')
+    })
+
+    it('attaches no manager when a stop signal comes before the start ends', async () => {
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(handlers.get('SIGINT')).toBeDefined()
+      })
+      handlers.get('SIGINT')?.()
+      finish(construct())
+      await loaded
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([0])
+      })
+      expect(await attached()).not.toHaveBeenCalled()
+      expect(calls).toEqual(['construct'])
+    })
+
+    it.each(['SIGINT', 'SIGTERM'])('closes the manager before the construct after %s', async (signal) => {
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      handlers.get(signal)?.()
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([0])
+      })
+      expect(calls).toEqual(['manager', 'construct'])
+    })
+
+    it('closes the manager before the construct and exits with code 1 after a watch error', async () => {
+      const loaded = load(['--product', '/product'])
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: product /product')
+      })
+      finish(construct())
+      await loaded
+      const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
+      vi.mocked(startConstruct).mock.lastCall?.[0].onWatchError?.(new Error('watch broke'))
+      await vi.waitFor(() => {
+        expect(exitCodes).toEqual([1])
+      })
+      expect(calls).toEqual(['manager', 'construct'])
+    })
+
+    it('attaches no manager without a product', async () => {
+      const loaded = load()
+      await vi.waitFor(() => {
+        expect(output).toContain('wishem: model /model')
+      })
+      finish(construct())
+      await loaded
+      expect(await attached()).not.toHaveBeenCalled()
+      const { startConstruct } = await import('@thrashplay/wishem-host-nodejs')
+      expect(vi.mocked(startConstruct).mock.lastCall?.[0].subsystems).toBeUndefined()
+    })
   })
 })

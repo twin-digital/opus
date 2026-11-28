@@ -404,6 +404,7 @@ These items are **Proposed**:
 
 - The workbench construct has the store `store` for the model of the workbench. It has the store `product` for the **mounted** product. The store `product` validates the product model alone, and the product model refers to nothing of the workbench.
 - The workbench construct has the model subsystem `constructs`, which holds the list of the product constructs that must run.
+- The `wishem` command with `--product` holds the construct list and the construct manager in the same way, with no page.
 - The workbench construct has the **construct manager**, which reads the list. The construct manager has one job, and it attaches two subsystems: an output subsystem that reads, and an input subsystem that sends. The construct manager does these things:
   - It starts and stops the product constructs. A product construct is a hub in a product construct process, a child process of the workbench process, with the parts `time` and `store`, the rules of the product, a clock, and its own link.
   - It gives each product construct the product model.
