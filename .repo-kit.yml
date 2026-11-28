@@ -35,6 +35,11 @@ packages:
     # generated exports would offer its internals to a consumer that does not exist.
     rules:
       package-manifest: false
+  '@thrashplay/wishem-sample-product':
+    # Vite is a development dependency only for the types of `import.meta.glob` in tests.
+    # The package is a library, not a browser application.
+    rules:
+      vite: false
   '@thrashplay/wishem-workbench-app':
     # Nothing imports a browser application: what it publishes is a built asset tree, so the
     # generated exports would offer its internals to a consumer that does not exist.
