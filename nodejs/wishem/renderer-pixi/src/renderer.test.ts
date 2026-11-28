@@ -824,4 +824,65 @@ describe('startRenderer: warnings', () => {
 
     expect(warn.mock.calls).toEqual([[LINE], [LINE]])
   })
+
+  it('writes the warning again after a model that has no empty name, then one that has', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { editor, screen } = makeHub(emptyNameModel())
+    startRenderer({ port: screen, views: tableOf(makeView()), stage: new Container(), viewport: VIEWPORT })
+
+    await editor.submit(storeInputs().replaceModel(modelOf()))
+    await editor.submit(storeInputs().replaceModel(emptyNameModel()))
+
+    expect(warn.mock.calls).toEqual([[LINE], [LINE]])
+  })
+
+  describe('with two fields that have an empty name', () => {
+    const THIRD_FIELD = 'fld_2a1c2b3d-4e5f-4a6b-8c7d-0e1f2a3b4c5f'
+    const twoEmptyModel = (...ids: string[]): Model => ({
+      definitions: [
+        {
+          id: CLEAR_COLOR,
+          label: 'Clear color',
+          fields: [
+            { id: COLOR_FIELD, label: 'Color', type: 'string' },
+            ...ids.map((id) => ({ id, label: '???', type: 'string' as const })),
+          ],
+        },
+      ],
+      entities: [entity(E1, BLUE)],
+    })
+    const lineOf = (field: string): string =>
+      `wishem: the sidecar ClearColor.view.json: the label of the field ${field} of the component type ${CLEAR_COLOR} gives an empty name. The view does not get the field.`
+
+    it('writes one line for each field, in the order of the fields', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const { screen } = makeHub(twoEmptyModel(SECOND_FIELD, THIRD_FIELD))
+
+      startRenderer({ port: screen, views: tableOf(makeView()), stage: new Container(), viewport: VIEWPORT })
+
+      expect(warn.mock.calls).toEqual([[lineOf(SECOND_FIELD)], [lineOf(THIRD_FIELD)]])
+    })
+
+    it('gives no new warning after an input that keeps the definitions', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const { editor, screen } = makeHub(twoEmptyModel(SECOND_FIELD, THIRD_FIELD))
+      startRenderer({ port: screen, views: tableOf(makeView()), stage: new Container(), viewport: VIEWPORT })
+
+      await editor.submit(
+        storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: RED }),
+      )
+
+      expect(warn).toHaveBeenCalledTimes(2)
+    })
+
+    it('writes the lines again when other fields have an empty name, with the same count', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const { editor, screen } = makeHub(twoEmptyModel(SECOND_FIELD))
+      startRenderer({ port: screen, views: tableOf(makeView()), stage: new Container(), viewport: VIEWPORT })
+
+      await editor.submit(storeInputs().replaceModel(twoEmptyModel(THIRD_FIELD)))
+
+      expect(warn.mock.calls).toEqual([[lineOf(SECOND_FIELD)], [lineOf(THIRD_FIELD)]])
+    })
+  })
 })
