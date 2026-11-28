@@ -171,9 +171,14 @@ export const childProcessLauncher =
         ...(options.productCode === undefined ? {} : { productCode: options.productCode }),
       })
       await ready
-      link = await openLink(ipcChannel(child as unknown as IpcEndpoint), [
-        { id: CONSTRUCT_MANAGER_ID, kind: 'input' },
-        { id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' },
+      link = await Promise.race([
+        openLink(ipcChannel(child as unknown as IpcEndpoint), [
+          { id: CONSTRUCT_MANAGER_ID, kind: 'input' },
+          { id: CONSTRUCT_MANAGER_READER_ID, kind: 'output' },
+        ]),
+        stopped.then((text): never => {
+          throw new Error(text)
+        }),
       ])
       const serving = waitFor(child, stopped, 'serving')
       sendToChild({ t: 'serve' })

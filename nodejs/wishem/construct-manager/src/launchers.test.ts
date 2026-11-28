@@ -72,7 +72,7 @@ describe('childProcessLauncher on an error of the child process', () => {
         })
       }
     })
-    await expect(childProcessLauncher()(start)).rejects.toThrow()
+    await expect(childProcessLauncher()(start)).rejects.toThrow('had an error: lost')
     expect(child.kill).toHaveBeenCalled()
   })
 })

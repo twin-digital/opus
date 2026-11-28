@@ -19,6 +19,28 @@ import { CONSTRUCT_MANAGER_ID, CONSTRUCT_MANAGER_READER_ID } from './ids.js'
 import { childProcessLauncher } from './node.js'
 import type { LaunchedConstruct } from './node.js'
 
+const stall = vi.hoisted(() => ({ ms: 0 }))
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const original = await importOriginal<typeof import('node:child_process')>()
+  return {
+    ...original,
+    // Blocks this process when the child reports `ready`, before the launcher reads the message.
+    fork: (...args: Parameters<typeof original.fork>) => {
+      const child = original.fork(...args)
+      child.on('message', (message: { t?: string }) => {
+        if (message.t === 'ready' && stall.ms > 0) {
+          const end = Date.now() + stall.ms
+          while (Date.now() < end) {
+            // Busy wait.
+          }
+        }
+      })
+      return child
+    },
+  }
+})
+
 const MODEL_FOLDER = fileURLToPath(new URL('../../sample-product/model', import.meta.url))
 // The child has no source condition, so it loads the built file.
 const PRODUCT_CODE = new URL('../../sample-product/dist/index.js', import.meta.url).href
@@ -184,18 +206,22 @@ describe('the product construct process', () => {
 
   it('shows no tick to the manager before the first one that it sees has the sequence number 1', async () => {
     await setup()
-    const construct = await launch({}, {}, false)
+    stall.ms = 600
+    const construct = await launch({ stepMs: 200 })
+    stall.ms = 0
     const seen: { type: string; seq: number }[] = []
     construct.reader.subscribe((event: HubEvent) => {
       if (event.type === 'applied') {
         seen.push({ type: event.input.type, seq: event.input.seq })
       }
     })
-    await construct.input.submit(timeInputs.setRunning(true))
-    await vi.waitFor(() => {
-      expect(seen.some((item) => item.type === 'time/advance')).toBe(true)
-    })
-    expect(seen[0]).toEqual({ type: 'time/set-running', seq: 1 })
+    await vi.waitFor(
+      () => {
+        expect(seen.length).toBeGreaterThan(0)
+      },
+      { timeout: 4000 },
+    )
+    expect(seen[0]).toEqual({ type: 'time/advance', seq: 1 })
   })
 
   it('applies the inputs of one turn with no tick between them, in 20 runs', async () => {
