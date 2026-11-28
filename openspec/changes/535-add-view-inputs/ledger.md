@@ -50,9 +50,18 @@ Task 2: review (sonnet): spec compliant, quality Approved, no Critical or Import
 Task 2: minor (deferred): generated-types.test.ts is a copy of the generated form by hand (a test that compares it with renderViewTypes would stop a drift); ViewProps intersects an index signature with `wishem`, which forces the cast in Renderer.tsx (Task 3 widens the type: fix there); `fields?: [Id, Id] | [Id]` in view-warnings.ts with `?? ''` fallbacks; the README says a reference field has the type string "in this version" (Task 3 updates it); the "never settles" test of stubViewTools waits one microtask only; the test "sends no input when the renderer draws two times" has low value.
 Task 2: complete (commits f6f391a..f931209, review clean)
 
+Task 3: dispatched (implementer: sonnet), base 2785da9d
+
+Task 3: implementer DONE_WITH_CONCERNS, commit 20c7f076 (renderer-react 182 tests; lint, typecheck, test, build pass). ViewProps is now `Readonly<Record<string, FieldValue | ReactNode>> & { wishem }`, and the cast of Renderer.tsx is gone. Concerns: the wider ViewProps broke 9 lint sites in tests (a helper `text()` in Renderer.test.tsx); a reference field whose label gives no prop holds nothing; findHolds runs two times for each model change; concepts.md still has the section "References (**Open**)" and a general sentence (only the named sentence changed); workbench-app not checked for ViewProps. The concerns are observations, so review dispatched (sonnet).
+
+Task 3: review (sonnet): spec compliant, quality Approved, no Critical or Important. Items it could not verify, checked by the lead: the scenario "A cycle with no entity at the top level" of renderer-html/renderer (draws neither, one warning) agrees with the test (innerHTML is ''); the report shows the run of 3.6. ViewProps has no use outside renderer-react (the review checked). No gap.
+Task 3: minor (deferred): in a diamond with a cycle, the warning names the back edge of the search, which can differ from the edge that the draw cuts; a local `text` in the cycle test shadows the helper `text()`; the helper `text()` hides a ReactNode with ''; findHolds runs two times for each model change; `FieldValue | ReactNode` is redundant; concepts.md still has the section "References (**Open**)" and a general sentence near line 79 (for the final review); no type-level test of the generated ReactNode member.
+Task 3: complete (commits 2785da9..20c7f07, review clean)
+Ruling: Task 4 waits for the merge of #540, and then does the path of Decision 15 (connectLink in hub keeps one ID for the life of a client) — #540 is at its last task, and Task 4 done now on hub-client.ts must be done again after #540 merges — cost if wrong: the 535 apply waits about one hour. The order is a "blocked by" relation from #535 to #540, removed when #540 merges.
+
 ## State at the end of the session of 2026-11-27
 
-- NEXT STEP: Task 3 (nested views through a reference field). Carry to it: the deferred minors of Task 2 about ViewProps and the README line of a reference field.
+- NEXT STEP: Task 4, after #540 is merged: merge main first, then the path of Decision 15. Then Task 5.
 
 ## For the review issue of the milestone A3
 
