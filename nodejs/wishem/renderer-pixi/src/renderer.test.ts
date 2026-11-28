@@ -257,6 +257,7 @@ describe('startRenderer: props and viewport', () => {
   })
 
   it('gives the value of the first field when two labels have one name', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const model: Model = {
       definitions: [
         {
@@ -276,6 +277,11 @@ describe('startRenderer: props and viewport', () => {
     startRenderer({ port: screen, views: tableOf(view), stage: new Container(), viewport: VIEWPORT })
 
     expect(view.update.mock.calls[0][1]).toEqual({ color: BLUE })
+    expect(warn.mock.calls).toEqual([
+      [
+        `wishem: the sidecar ClearColor.view.json: the fields ${COLOR_FIELD} and ${SECOND_FIELD} of the component type ${CLEAR_COLOR} give the same name "color". The prop has the value of the first field.`,
+      ],
+    ])
   })
 
   it('reads the viewport at each update', async () => {
@@ -975,10 +981,9 @@ describe('startRenderer: warnings through a link', () => {
     })
     expect(warn).toHaveBeenCalledTimes(1)
 
-    const single = modelOf(entity(E1, GREEN))
-    await editor.submit(storeInputs().replaceModel(single))
+    await editor.submit(storeInputs().replaceModel(modelOf(entity(E1, RED))))
     await vi.waitFor(() => {
-      expect(link.ports['remote-screen'].read().store).toEqual(single)
+      expect(view.update.mock.calls.at(-1)?.[1]).toEqual({ color: RED })
     })
     expect(warn).toHaveBeenCalledTimes(1)
     link.close()
