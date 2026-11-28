@@ -169,6 +169,32 @@
         "WISHEM_BROWSER_HOST"
       ]
     },
+    "@thrashplay/wishem-renderer-godot#test:ui": {
+      "dependsOn": ["upstream-sources", "^build"],
+      "inputs": [
+        "package.json",
+        "scripts/**",
+        "$TURBO_ROOT$/nodejs/wishem/workbench/model/**",
+        "$TURBO_ROOT$/pnpm-workspace.yaml",
+        "src/**",
+        "tests/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "godot/**",
+        "docker/**"
+      ],
+      "outputs": [],
+      "passThroughEnv": [
+        "DOCKER_CERT_PATH",
+        "DOCKER_CONFIG",
+        "DOCKER_CONTEXT",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "SSH_AGENT_PID",
+        "SSH_AUTH_SOCK",
+        "WISHEM_BROWSER_HOST"
+      ]
+    },
     "test:watch": {
       "dependsOn": ["@twin-digital/vitest-config#build"],
       "cache": false,
