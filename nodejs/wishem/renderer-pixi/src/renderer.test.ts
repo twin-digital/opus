@@ -544,6 +544,113 @@ describe('startRenderer: a view that fails', () => {
     expect(object.visible).toBe(false)
   })
 
+  it('leaves a hidden object hidden after an update that succeeds when the object never failed', async () => {
+    const view = makeView()
+    view.update.mockImplementation((display, props) => {
+      display.tint = props.color === undefined ? '#000000' : colorOf(props.color)
+    })
+    const { editor, screen } = makeHub(modelOf(entity(E1, BLUE)))
+    const stage = new Container()
+    startRenderer({ port: screen, views: tableOf(view), stage, viewport: VIEWPORT, onError: vi.fn() })
+    const object = objectsOf(stage)[0] as Sprite
+    object.visible = false
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
+    )
+
+    expect(object.tint).toBe(hex(GREEN))
+    expect(object.visible).toBe(false)
+  })
+
+  it('leaves an object that the view made hidden at create hidden after the first update', () => {
+    const view = makeView()
+    view.create.mockImplementation(() => {
+      const sprite = new Sprite(Texture.WHITE)
+      sprite.visible = false
+      return sprite
+    })
+    view.update.mockImplementation((display, props) => {
+      display.tint = props.color === undefined ? '#000000' : colorOf(props.color)
+    })
+    const { screen } = makeHub(modelOf(entity(E1, BLUE)))
+    const stage = new Container()
+
+    startRenderer({ port: screen, views: tableOf(view), stage, viewport: VIEWPORT, onError: vi.fn() })
+
+    expect((objectsOf(stage)[0] as Sprite).visible).toBe(false)
+  })
+
+  it('leaves a hidden object hidden after a later update when the object recovered from a failure', async () => {
+    const view = makeView()
+    view.update.mockImplementation((display, props) => {
+      if (props.color === RED) {
+        throw BOOM
+      }
+      display.tint = props.color === undefined ? '#000000' : colorOf(props.color)
+    })
+    const { editor, screen } = makeHub(modelOf(entity(E1, RED)))
+    const stage = new Container()
+    startRenderer({ port: screen, views: tableOf(view), stage, viewport: VIEWPORT, onError: vi.fn() })
+    const object = objectsOf(stage)[0] as Sprite
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: GREEN }),
+    )
+    expect(object.visible).toBe(true)
+    object.visible = false
+
+    await editor.submit(
+      storeInputs().setField({ entity: E1, componentType: CLEAR_COLOR, field: COLOR_FIELD, value: BLUE }),
+    )
+
+    expect(object.tint).toBe(hex(BLUE))
+    expect(object.visible).toBe(false)
+  })
+
+  it('gives the object below when the top object failed to update', () => {
+    const view = makeView()
+    const normal = view.update.getMockImplementation() as (...args: Parameters<TestView['update']>) => void
+    view.update.mockImplementation((display, props, viewport) => {
+      if (props.color === RED) {
+        display.width = viewport.width
+        display.height = viewport.height
+        throw BOOM
+      }
+      normal(display, props, viewport)
+    })
+    const { screen } = makeHub(modelOf(entity(E1, BLUE), entity(E2, RED)))
+    const renderer = startRenderer({
+      port: screen,
+      views: tableOf(view),
+      stage: new Container(),
+      viewport: VIEWPORT,
+      onError: vi.fn(),
+    })
+
+    expect(renderer.entityAt(10, 10)).toEqual({ entity: E1, componentType: CLEAR_COLOR })
+  })
+
+  it('gives the entity of the first object when the create of the second object throws', () => {
+    const view = makeView()
+    const create = view.create.getMockImplementation() as () => Sprite
+    view.create.mockImplementationOnce(create)
+    view.create.mockImplementationOnce(() => {
+      throw BOOM
+    })
+    const { screen } = makeHub(modelOf(entity(E1, BLUE), entity(E2, RED)))
+    const stage = new Container()
+    const renderer = startRenderer({
+      port: screen,
+      views: tableOf(view),
+      stage,
+      viewport: VIEWPORT,
+      onError: vi.fn(),
+    })
+
+    expect(objectsOf(stage)).toHaveLength(1)
+    expect(renderer.entityAt(10, 10)).toEqual({ entity: E1, componentType: CLEAR_COLOR })
+  })
+
   it('adds no object for a view whose create throws, and reports the error one time', () => {
     const view = makeView()
     view.create.mockImplementation(() => {
