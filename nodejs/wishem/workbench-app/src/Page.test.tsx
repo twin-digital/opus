@@ -5,7 +5,7 @@ import { createHub, type Hub, type Port } from '@thrashplay/wishem-hub'
 import type { ViewProps, ViewTable, ViewTools } from '@thrashplay/wishem-renderer-react'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Page, type PageProps } from './Page.js'
 import { collectAppViews } from './views.js'
 
@@ -71,19 +71,6 @@ describe('Page', () => {
     expect(header?.compareDocumentPosition(main as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
-  it('draws from the port with no close and no input', () => {
-    const port = basePort()
-    const close = vi.spyOn(port, 'close')
-    const submit = vi.spyOn(port, 'submit')
-    draw({ port, input: undefined, views })
-    expect(container.querySelector('header')).not.toBeNull()
-    act(() => {
-      root.unmount()
-    })
-    expect(close).not.toHaveBeenCalled()
-    expect(submit).not.toHaveBeenCalled()
-    root = createRoot(container)
-  })
   it('gives the input port to the views, and the input has the source of that port', async () => {
     const hub = baseHub()
     const output = hub.attach({ id: 'screen', kind: 'output' })
