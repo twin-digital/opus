@@ -113,7 +113,7 @@ describe('parseHubMessage', () => {
   })
 
   it('reads a welcome with each status and a refused with each reason', () => {
-    for (const status of ['created', 'running', 'stopped']) {
+    for (const status of ['created', 'running']) {
       expect(parseHubMessage(json({ ...welcome, status }))).toEqual({
         kind: 'message',
         message: { ...welcome, status },
@@ -159,6 +159,22 @@ describe('parseHubMessage', () => {
     ['a result with a result that is not an object', json({ t: 'result', request: 1, result: 'ok' })],
     ['a result with a result with no ok', json({ t: 'result', request: 1, result: {} })],
     ['a result with an error that is not text', json({ t: 'result', request: 1, error: 5 })],
+    [
+      'a result with a result and an error',
+      json({ t: 'result', request: 1, result: { ok: true, seq: 4 }, error: 'It broke.' }),
+    ],
+    [
+      'a result with a result and an error that is null',
+      json({ t: 'result', request: 1, result: { ok: true, seq: 4 }, error: null }),
+    ],
+    ['a result with a request of 1.5', json({ ...result, request: 1.5 })],
+    ['a result with a negative request', json({ ...result, request: -1 })],
+    ['a welcome with a seq of 3.5', json({ ...welcome, seq: 3.5 })],
+    ['a welcome with a negative seq', json({ ...welcome, seq: -1 })],
+    ['a welcome with a protocol of 1.5', json({ ...welcome, protocol: 1.5 })],
+    ['a welcome with the status stopped', json({ ...welcome, status: 'stopped' })],
+    ['an applied with an input with a seq of 4.5', json({ ...applied, input: { ...applied.input, seq: 4.5 } })],
+    ['an applied with an input with a negative seq', json({ ...applied, input: { ...applied.input, seq: -1 } })],
   ])('gives undefined for %s', (_name, text) => {
     expect(parseHubMessage(text)).toBeUndefined()
   })
