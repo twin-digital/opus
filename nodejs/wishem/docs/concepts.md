@@ -393,7 +393,7 @@ These items are **Proposed**:
 - One link carries the subsystems of one process.
 - The side of the hub sends the joined state at the start. With each hub event, it sends the parts that changed. The other side sends inputs.
 - A process that does not hold that hub holds a **remote port**. The remote port keeps the link, and it gives the subsystems of that process the three operations of a port.
-- A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot.
+- A remote port exists in TypeScript, for a page in a web browser, and in GDScript, for Godot. The package `renderer-godot` holds the remote port in GDScript.
 - A model subsystem in a process that does not hold that hub must apply each input and confirm it before the hub continues. The protocol reserves the messages for this case. The design has no such model subsystem.
 - Two subsystems in one process that does not hold that hub can share data that is derived from the joined state. State that is not derived goes through the hub, as a part of a model subsystem.
 
@@ -440,6 +440,7 @@ Wishem has three renderers: the React renderer, the PixiJS renderer, and the God
 - Each renderer reads the hub through a port. The Godot renderer uses a remote port in GDScript. (**Proposed**)
 - The React renderer is the package `renderer-react`. It runs React views and reads a port. The page gives the port. (**Proposed**) The requirements of the package are in `wishem/renderer-html/renderer`.
 - The PixiJS renderer and the Godot renderer each have one view. (**Agreed**)
+- The Godot renderer is in the package `renderer-godot`. Its view is the Godot view (sidecar kind `godot`). Its construct runs in a Node.js process. (**Proposed**)
 - The PixiJS renderer is the package `renderer-pixi`. Its view is the PixiJS view (sidecar kind `pixi`). The package `pixi-page` holds a construct with a clock in a Node.js process, and a page that reads it through a link. (**Proposed**)
 - The view of the PixiJS renderer is `ClearColor`. The view of the Godot renderer is the same. Each clears the viewport to a color that a field gives. (**Proposed**)
 - The proof that a renderer works is a screenshot that changes when the clock advances. (**Proposed**)

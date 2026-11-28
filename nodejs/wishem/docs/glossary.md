@@ -136,6 +136,8 @@ Terms in each group are in alphabetical order.
 
 **Construct manager** (**Proposed**): The part of the workbench construct that starts and stops the constructs of the product. It gives each product construct the product model, sends each later change of the product model as an input, and reports the status of each product construct. It has one job, and it attaches two subsystems: an output subsystem and an input subsystem. To a product construct, the construct manager is also an output subsystem and an input subsystem.
 
+**Godot view** (**Agreed**): The kind of view that the Godot renderer runs, with a sidecar of the kind `godot`. A Godot view makes one node for each component of its component type. Rule R17 gives each renderer its own kind of view, as for the PixiJS view.
+
 **Hub**: The part of a construct that connects the subsystems. Each subsystem communicates only with the hub. The hub joins the model data that the model subsystems hold, and gives that data to each subsystem that asks. The hub carries hub events, and it keeps the ordered record of inputs that rewind and replay use. A job belongs in the hub only if a subsystem cannot do it.
 
 **Hub event** (**Proposed**): A message from the hub to each listener of a port. The hub events are few: the construct started, an input was applied, and the construct stops. A rewind is an applied input. No hub event exists for each change of a value.

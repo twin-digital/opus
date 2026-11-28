@@ -698,141 +698,248 @@ const cSample = el(
   'Holds the example model folder and the count rule.',
 )
 
+const cGodotRunner = el(
+  'container',
+  gx(MIDDLE),
+  2050,
+  'Godot runner',
+  '[Container: Node.js]',
+  'Starts Godot in Docker, carries the link.',
+)
+const cGodotApp = el(
+  'container',
+  gx(MIDDLE),
+  2330,
+  'Godot application',
+  '[Container: GDScript, Docker]',
+  'Draws the construct and writes screenshots.',
+)
+const cGodotProcess = el(
+  'container',
+  gx(RIGHT),
+  2330,
+  'Godot process',
+  '[Container: Node.js]',
+  'Runs the construct with a clock.',
+)
+
+/** Moves each item of a diagram down by `dy`. */
+const shiftY = (items, dy) =>
+  items.map((it) =>
+    it.kind === 'arrow' ?
+      {
+        ...it,
+        points: it.points.map(([x, y]) => [x, y + dy]),
+        label: { ...it.label, at: [it.label.at[0], it.label.at[1] + dy] },
+      }
+    : { ...it, y: it.y + dy },
+  )
+
 const containers = {
   name: 'containers',
   title: 'Container diagram: Wishem',
   description:
-    'Wishem has thirteen containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The sample-product package has no relationship in the diagram. The designer starts the two processes, edits the two folders, and looks at the two pages.',
-  width: WIDTH_PX + GUTTER + 96,
-  height: 2090,
-  items: [
-    { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 72, h: 1766, label: SYSTEM },
-    cDesigner,
-    cPage,
-    cModel,
-    cProduct,
-    cProcess,
-    cHost,
-    cCore,
-    cHub,
-    cRenderer,
-    cClock,
-    cPixiPage,
-    cPixiProcess,
-    cRendererPixi,
-    cSample,
+    'Wishem has sixteen containers. The workbench process runs the host-nodejs package and uses the core package. The host-nodejs and core packages build on the hub package, and so does the page. The page and the workbench process build on the renderer-react package. The clock package builds on the hub package. The PixiJS process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The PixiJS page builds on the renderer-pixi, hub, and clock packages. The PixiJS page gets page code over HTTP and connects to the hub over a WebSocket link through the PixiJS process. The workbench process reads, watches, and writes the model folder and the product model folder. The page gets page code over HTTP and connects to the hub over a WebSocket link through the process. The Godot process serves the link with the host-nodejs package and builds on the clock, core, and hub packages. The Godot runner starts the Godot application in Docker and carries the link of the application over TCP to the Godot process. The Godot application connects to the hub over a WebSocket link through the Godot runner. The sample-product package has no relationship in the diagram. The designer starts the three processes and the Godot runner, edits the two folders, and looks at the two pages.',
+  width: 1140,
+  height: 2810,
+  items: shiftY(
+    [
+      { kind: 'group', x: 24, y: 224, w: 832 + GUTTER + 72, h: 2396, label: SYSTEM },
+      cDesigner,
+      cPage,
+      cModel,
+      cProduct,
+      cProcess,
+      cHost,
+      cCore,
+      cHub,
+      cRenderer,
+      cClock,
+      cPixiPage,
+      cPixiProcess,
+      cRendererPixi,
+      cSample,
+      cGodotRunner,
+      cGodotApp,
+      cGodotProcess,
 
-    // The primary path: a change to the model becomes a new picture
-    rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [gx(240), 200]),
-    rel('flow', [right(cDesigner, 126), [gx(640), 126], top(cModel, gx(640))], 'Edits files [text editor]', [
-      gx(640),
-      200,
-    ]),
-    rel(
-      'flow',
-      [top(cProcess, 530), [530, 424], [800, 424], bottom(cModel, 800)],
-      'Reads, watches, and writes [file system]',
-      [663, 424],
-    ),
-    rel(
-      'quiet',
-      [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
-      'Reads, watches, and writes [file system]',
-      [720, 500],
-    ),
-    rel(
-      'quiet',
-      [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
-      'Edits files [text editor]',
-      [760, 96],
-    ),
-    rel('flow', [bottom(cPage, gx(96)), [gx(96), 640], left(cProcess, 640)], 'Connects to the hub [WebSocket link]', [
-      gx(96),
-      550,
-    ]),
+      // The primary path: a change to the model becomes a new picture
+      rel('flow', [left(cDesigner, 126), [gx(240), 126], top(cPage, gx(240))], 'Looks at [web browser]', [
+        gx(240),
+        200,
+      ]),
+      rel('flow', [right(cDesigner, 126), [gx(640), 126], top(cModel, gx(640))], 'Edits files [text editor]', [
+        gx(640),
+        200,
+      ]),
+      rel(
+        'flow',
+        [top(cProcess, 530), [530, 424], [800, 424], bottom(cModel, 800)],
+        'Reads, watches, and writes [file system]',
+        [663, 424],
+      ),
+      rel(
+        'quiet',
+        [top(cProcess, 590), [590, 500], [850, 500], top(cProduct, 850)],
+        'Reads, watches, and writes [file system]',
+        [720, 500],
+      ),
+      rel(
+        'quiet',
+        [right(cDesigner, 96), [930, 96], [930, 616], right(cProduct, 616)],
+        'Edits files [text editor]',
+        [760, 96],
+      ),
+      rel('flow', [bottom(cPage, gx(96)), [gx(96), 640], left(cProcess, 640)], 'Connects to the hub [WebSocket link]', [
+        gx(96),
+        550,
+      ]),
 
-    // The other relationships
-    rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
-    rel('quiet', [bottom(cPage, gx(250)), [gx(250), 600], left(cProcess, 600)], 'Gets page code [HTTP]', [
-      gx(250),
-      524,
-    ]),
-    rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 716], [gx(173), 716], top(cHost)], 'Runs [import]', [
-      gx(274),
-      716,
-    ]),
-    rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 716], [gx(707), 716], top(cCore)], 'Uses [import]', [
-      gx(606),
-      716,
-    ]),
-    rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 816]),
-    rel('quiet', [bottom(cCore), [gx(707), 1016], right(cHub, 1016)], 'Builds on [import]', [gx(707), 930]),
-    rel('quiet', [bottom(cHost), [gx(173), 1000], left(cHub, 1000)], 'Builds on [import]', [gx(173), 944]),
-    rel('quiet', [left(cPage, 360), [68, 360], [68, 1040], left(cHub, 1040)], 'Builds on [import]', [223, 1040]),
-    rel(
-      'quiet',
-      [left(cPage, 330), [44, 330], [44, 1950], [460, 1950], bottom(cRenderer, 460)],
-      'Builds on [import]',
-      [250, 1950],
-    ),
-    rel(
-      'quiet',
-      [bottom(cProcess, 614), [614, 692], [950, 692], [950, 1950], [548, 1950], bottom(cRenderer, 548)],
-      'Builds on [import]',
-      [790, 692],
-    ),
-    rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1126]),
+      // The other relationships
+      rel('quiet', [bottom(cDesigner), top(cProcess)], 'Starts and stops [terminal]', [gx(440), 336]),
+      rel('quiet', [bottom(cPage, gx(250)), [gx(250), 600], left(cProcess, 600)], 'Gets page code [HTTP]', [
+        gx(250),
+        524,
+      ]),
+      rel('quiet', [bottom(cProcess, gx(375)), [gx(375), 716], [gx(173), 716], top(cHost)], 'Runs [import]', [
+        gx(274),
+        716,
+      ]),
+      rel('quiet', [bottom(cProcess, gx(505)), [gx(505), 716], [gx(707), 716], top(cCore)], 'Uses [import]', [
+        gx(606),
+        716,
+      ]),
+      rel('quiet', [right(cHost), left(cCore)], 'Builds on [import]', [gx(440), 816]),
+      rel('quiet', [bottom(cCore), [gx(707), 1016], right(cHub, 1016)], 'Builds on [import]', [gx(707), 930]),
+      rel('quiet', [bottom(cHost), [gx(173), 1000], left(cHub, 1000)], 'Builds on [import]', [gx(173), 944]),
+      rel('quiet', [left(cPage, 360), [68, 360], [68, 1040], left(cHub, 1040)], 'Builds on [import]', [223, 1040]),
+      rel(
+        'quiet',
+        [left(cPage, 330), [44, 330], [44, 1950], [460, 1950], bottom(cRenderer, 460)],
+        'Builds on [import]',
+        [250, 1950],
+      ),
+      rel(
+        'quiet',
+        [bottom(cProcess, 614), [614, 692], [950, 692], [950, 1950], [548, 1950], bottom(cRenderer, 548)],
+        'Builds on [import]',
+        [790, 692],
+      ),
+      rel('quiet', [top(cClock), bottom(cHub)], 'Builds on [import]', [gx(440), 1126]),
 
-    // The PixiJS construct
-    rel(
-      'flow',
-      [left(cDesigner, 160), [14, 160], [14, 1636], left(cPixiPage, 1636)],
-      'Looks at and presses keys [web browser]',
-      [180, 160],
-    ),
-    rel(
-      'quiet',
-      [right(cDesigner, 160), [1016, 160], [1016, 1636], right(cPixiProcess, 1636)],
-      'Starts and stops [terminal]',
-      [800, 160],
-    ),
-    rel('quiet', [right(cPixiPage, 1612), left(cPixiProcess, 1612)], 'Gets page code [HTTP]', [gx(440), 1612]),
-    rel('flow', [right(cPixiPage, 1666), left(cPixiProcess, 1666)], 'Connects to the hub [WebSocket link]', [
-      gx(440),
-      1666,
-    ]),
-    rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1746]),
-    rel('quiet', [top(cPixiPage, 250), [250, 1140], [410, 1140], bottom(cHub, 410)], 'Builds on [import]', [250, 1330]),
-    rel('quiet', [top(cPixiPage, 345), [345, 1236], left(cClock, 1236)], 'Builds on [import]', [345, 1400]),
-    rel('quiet', [top(cPixiProcess, 660), [660, 1236], right(cClock, 1236)], 'Builds on [import]', [660, 1420]),
-    rel(
-      'quiet',
-      [top(cPixiProcess, 760), [760, 1140], [600, 1140], bottom(cHub, 600)],
-      'Builds on [import]',
-      [760, 1330],
-    ),
-    rel('quiet', [top(cPixiProcess, 860), bottom(cCore, 860)], 'Builds on [import]', [860, 1200]),
-    rel(
-      'quiet',
-      [top(cPixiProcess, 700), [700, 1530], [125, 1530], bottom(cHost, 125)],
-      'Serves the link with [import]',
-      [500, 1530],
-    ),
-    {
-      kind: 'legend',
-      x: 24,
-      y: 2030,
-      w: 832 + GUTTER + 72,
-      entries: [
-        ['person', 'Person'],
-        ['container', 'Container'],
-        ['store', 'Store'],
-        ['boundary', 'Boundary'],
-        ['flow', 'Primary path'],
-        ['quiet', 'Other relationship'],
-      ],
-    },
-  ],
+      // The PixiJS construct
+      rel(
+        'flow',
+        [left(cDesigner, 160), [14, 160], [14, 1636], left(cPixiPage, 1636)],
+        'Looks at and presses keys [web browser]',
+        [180, 160],
+      ),
+      rel(
+        'quiet',
+        [right(cDesigner, 160), [1016, 160], [1016, 1636], right(cPixiProcess, 1636)],
+        'Starts and stops [terminal]',
+        [800, 160],
+      ),
+      rel('quiet', [right(cPixiPage, 1612), left(cPixiProcess, 1612)], 'Gets page code [HTTP]', [gx(440), 1612]),
+      rel('flow', [right(cPixiPage, 1666), left(cPixiProcess, 1666)], 'Connects to the hub [WebSocket link]', [
+        gx(440),
+        1666,
+      ]),
+      rel('quiet', [bottom(cPixiPage), top(cRendererPixi)], 'Builds on [import]', [gx(173), 1746]),
+      rel(
+        'quiet',
+        [top(cPixiPage, 250), [250, 1140], [410, 1140], bottom(cHub, 410)],
+        'Builds on [import]',
+        [250, 1330],
+      ),
+      rel('quiet', [top(cPixiPage, 345), [345, 1236], left(cClock, 1236)], 'Builds on [import]', [345, 1400]),
+      rel('quiet', [top(cPixiProcess, 660), [660, 1236], right(cClock, 1236)], 'Builds on [import]', [660, 1420]),
+      rel(
+        'quiet',
+        [top(cPixiProcess, 760), [760, 1140], [600, 1140], bottom(cHub, 600)],
+        'Builds on [import]',
+        [760, 1330],
+      ),
+      rel('quiet', [top(cPixiProcess, 860), bottom(cCore, 860)], 'Builds on [import]', [860, 1200]),
+      rel(
+        'quiet',
+        [top(cPixiProcess, 700), [700, 1530], [125, 1530], bottom(cHost, 125)],
+        'Serves the link with [import]',
+        [500, 1530],
+      ),
+
+      // The Godot construct
+      rel(
+        'quiet',
+        [top(cDesigner, 540), [540, -20], [1056, -20], [1056, 2130], right(cGodotRunner, 2130)],
+        'Starts and stops [terminal]',
+        [800, -20],
+      ),
+      rel(
+        'quiet',
+        [top(cDesigner, 600), [600, 30], [1040, 30], [1040, 2360], right(cGodotProcess, 2360)],
+        'Starts and stops [terminal]',
+        [900, 30],
+      ),
+      rel(
+        'quiet',
+        [bottom(cGodotRunner, 440), top(cGodotApp, 440)],
+        'Starts and copies the screenshots [Docker]',
+        [440, 2242],
+      ),
+      rel(
+        'flow',
+        [top(cGodotApp, 610), bottom(cGodotRunner, 610)],
+        'Connects to the hub [WebSocket link]',
+        [610, 2282],
+      ),
+      rel(
+        'quiet',
+        [right(cGodotRunner, 2102), [770, 2102], top(cGodotProcess, 770)],
+        'Carries the link [TCP]',
+        [770, 2216],
+      ),
+      rel(
+        'quiet',
+        [bottom(cGodotProcess, 660), [660, 2516], [90, 2516], [90, 830], left(cHost, 830)],
+        'Serves the link with [import]',
+        [300, 2516],
+      ),
+      rel(
+        'quiet',
+        [bottom(cGodotProcess, 690), [690, 2562], [1105, 2562], [1105, 840], right(cCore, 840)],
+        'Builds on [import]',
+        [960, 2562],
+      ),
+      rel(
+        'quiet',
+        [bottom(cGodotProcess, 740), [740, 2516], [1090, 2516], [1090, 1050], right(cHub, 1050)],
+        'Builds on [import]',
+        [960, 2516],
+      ),
+      rel(
+        'quiet',
+        [bottom(cGodotProcess, 790), [790, 2470], [1075, 2470], [1075, 1270], right(cClock, 1270)],
+        'Builds on [import]',
+        [960, 2470],
+      ),
+      {
+        kind: 'legend',
+        x: 24,
+        y: 2650,
+        w: 832 + GUTTER + 72,
+        entries: [
+          ['person', 'Person'],
+          ['container', 'Container'],
+          ['store', 'Store'],
+          ['boundary', 'Boundary'],
+          ['flow', 'Primary path'],
+          ['quiet', 'Other relationship'],
+        ],
+      },
+    ],
+    60,
+  ),
 }
 
 // Dynamic: the path of a change

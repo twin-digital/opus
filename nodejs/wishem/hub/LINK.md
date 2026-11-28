@@ -17,9 +17,31 @@ The current protocol version is 1.
 
 ## The connection
 
-A link uses one connection. The connection carries text messages in order in each direction. A WebSocket text message is the usual choice.
+A link uses one connection. The connection carries text messages in order in each direction. The connection is a WebSocket.
 
 Each message is one JSON object. The key `t` holds the type of the message. The value of `t` is text.
+
+### The address
+
+The program that holds the hub gives the address of the link. The package `host-nodejs` serves the link at `ws://127.0.0.1:<port>/link`.
+
+A request with no `Origin` header is accepted. A client that is not a web browser, for example a game engine, usually sends no `Origin` header. A request that has an `Origin` header with a host other than `127.0.0.1`, `localhost`, or `[::1]` gets the HTTP status 403 before the WebSocket opens. The hub side sends no `refused` message in this case. A client that is not a web browser can send no `Origin` header, or an `Origin` header with one of these hosts.
+
+### The kind of message
+
+Send each message as a WebSocket text message. The hub side ignores a binary message and sends no answer. Example: in Godot, use `send_text`. Do not use `send` or `put_packet`.
+
+### The size of a message
+
+The protocol has no maximum size for a message. The message `welcome` holds the full joined state, so it can be large. Make the receive buffer of the WebSocket library large enough for the joined state. Example: `WebSocketPeer.inbound_buffer_size` of Godot has a default of 64 KiB.
+
+### The numbers
+
+Each number of version 1 is an integer from 0 to 2^53 - 1. This applies to `protocol`, `seq`, `request`, and the target of `hub/rewind`. A JSON parser that gives each number as a floating-point number (for example the parser of GDScript) can give `3.0` for `3`. Convert each such number to an integer before you compare it or send it.
+
+### No keepalive
+
+The hub side sends no WebSocket ping. The hub side has no time limit for `hello`. A client that must find a lost connection uses the ping of its WebSocket library.
 
 ## The messages
 
@@ -34,6 +56,8 @@ The client sends `hello` as the first message. It sends no other message before 
 | `t`          | text      | `"hello"`                                                   |
 | `protocol`   | number    | The protocol version of the client. Use 1.                  |
 | `subsystems` | list      | The subsystems of the client. The list has 1 or more items. |
+
+The ID of a subsystem has the form `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`. A hyphen is never first, never last, and never next to another hyphen. The form has no maximum length.
 
 Each item of `subsystems` is an object with two keys:
 
@@ -83,11 +107,15 @@ The hub side sends `welcome` as the first message after it accepts `hello`.
 | ---------- | --------- | ---------------------------------------------------------------------------- |
 | `t`        | text      | `"welcome"`                                                                  |
 | `protocol` | number    | The protocol version of this link. It is equal to `protocol` of the `hello`. |
-| `status`   | text      | The status of the hub: `"created"`, `"running"`, or `"stopped"`.             |
+| `status`   | text      | The status of the hub: `"created"` or `"running"`.                           |
 | `seq`      | number    | The sequence number of the last accepted input. The value is 0 for no input. |
 | `state`    | object    | The full joined state.                                                       |
 
-The status `created` means that the hub did not start. The client then gets the `started` event later.
+The status `created` means that the hub did not start. The client then gets the `started` event later. A stopped hub sends `refused` with the reason `stopped`, and not `welcome`.
+
+The client keeps `seq` and `state` of `welcome`. The number `seq` is the sequence number of the first state of the client. The first `applied` message has the number `seq` plus 1. A client that tells its program about the state gives `seq` to its program.
+
+A `welcome` message is not correct when `state` is not an object or `seq` is not an integer. Treat it as a malformed message: close the connection, wait, and open a new link. See "A client that connects again".
 
 ```json
 { "t": "welcome", "protocol": 1, "status": "running", "seq": 3, "state": { "counter": { "count": 6 } } }
@@ -121,6 +149,8 @@ The hub side sends `refused` when it cannot serve the `hello`. It then closes th
 }
 ```
 
+A client that gets `refused` counts it as a failed attempt. The attempt gets the wait of "A client that connects again". The reasons `version`, `unsupported`, and `malformed` show a defect in the client, and a new attempt gets the same answer. The reasons `id-in-use` and `stopped` can end later.
+
 #### `event`
 
 The hub side sends `event` for a change of the hub that has no input.
@@ -129,6 +159,8 @@ The hub side sends `event` for a change of the hub that has no input.
 | ------- | --------- | ---------------------------- |
 | `t`     | text      | `"event"`                    |
 | `event` | text      | `"started"` or `"stopping"`. |
+
+Ignore an `event` message with an unknown value of `event`. Keep the link open.
 
 The event `started` means that the hub now accepts inputs. The event `stopping` means that the hub stops. The hub side closes the connection after it sends `stopping`.
 
@@ -159,6 +191,8 @@ The keys of `input`:
 | `type`    | text      | The type of the input.                                        |
 | `payload` | any       | The payload of the input. The value is `null` for no payload. |
 
+An `applied` message is not correct when `input` or `parts` is not an object, or when `seq` is not an integer. Treat it as a malformed message: close the connection and open a new link.
+
 To update the joined state, replace each key of the local state with the key of `parts`. Keep each other part. The message holds no part that did not change.
 
 ```json
@@ -179,6 +213,8 @@ The hub side sends `result` as the answer to one `submit`. The message has the k
 | `request` | number    | The number of the request of the `submit`.               |
 | `result`  | object    | The result of the hub. See below.                        |
 | `error`   | text      | The text of an error. The hub failed to apply the input. |
+
+A `result` message is not correct when it has none of the keys `result` and `error`, or both. A message whose `request` matches no `submit` is also not correct. Ignore such a message and keep the link open. The `submit` that it names stays without a result.
 
 The key `result` has one of two forms:
 
@@ -292,6 +328,10 @@ A client opens a new link after each end of a link. Do this:
 3. Send no input again after a link ends. See "The end of a link".
 
 `connectLink` of `@thrashplay/wishem-hub` does these steps.
+
+### The start of the wait
+
+Start the first wait when the client finds that the connection is closed. A client that polls its connection starts the wait at the poll that finds the close. Count a `refused` message, and a `welcome` that is not correct, as a failed attempt.
 
 ## A full example
 
