@@ -170,6 +170,26 @@ const fakeSocket = (readyState: number) => {
   return { socket: socket satisfies WebSocketLike, fire }
 }
 
+describe('a listener that throws for a message that waited', () => {
+  it('still gives the other messages that waited, then throws', async () => {
+    const [a, b] = createChannelPair()
+    a.send('1')
+    a.send('2')
+    a.send('3')
+    await tick()
+    const got: string[] = []
+    expect(() => {
+      b.onMessage((text) => {
+        got.push(text)
+        if (text === '1') {
+          throw new Error('boom')
+        }
+      })
+    }).toThrow('boom')
+    expect(got).toEqual(['1', '2', '3'])
+  })
+})
+
 describe('webSocketChannel', () => {
   it('resolves at once for an open socket', async () => {
     const { socket } = fakeSocket(1)
@@ -192,6 +212,28 @@ describe('webSocketChannel', () => {
     const promise = webSocketChannel(socket)
     fire('error')
     await expect(promise).rejects.toBeInstanceOf(Error)
+  })
+
+  it.each([2, 3])('rejects at once for a socket with the ready state %i', async (readyState) => {
+    const { socket } = fakeSocket(readyState)
+    await expect(webSocketChannel(socket)).rejects.toBeInstanceOf(Error)
+  })
+
+  it('closes the socket for an error after the open with no close event', async () => {
+    const { socket, fire } = fakeSocket(1)
+    const channel = await webSocketChannel(socket)
+    const onClose = vi.fn()
+    channel.onClose(onClose)
+    fire('error')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(socket.closeCalls).toBe(1)
+  })
+
+  it('does not close the socket again for a close event', async () => {
+    const { socket, fire } = fakeSocket(1)
+    await webSocketChannel(socket)
+    fire('close')
+    expect(socket.closeCalls).toBe(0)
   })
 
   it('rejects when the socket closes before it opens', async () => {

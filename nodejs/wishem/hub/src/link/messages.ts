@@ -24,6 +24,7 @@ export type Parsed<Message> =
   { readonly kind: 'message'; readonly message: Message } | { readonly kind: 'unknown'; readonly t: string }
 
 const REASONS: readonly string[] = ['malformed', 'version', 'id-in-use', 'unsupported', 'stopped']
+const REJECTIONS: readonly string[] = ['not-permitted', 'not-running', 'unknown-type', 'invalid']
 const STATUSES: readonly string[] = ['created', 'running']
 const CLIENT_TYPES: readonly string[] = ['hello', 'submit']
 const HUB_TYPES: readonly string[] = ['welcome', 'refused', 'event', 'applied', 'result']
@@ -68,11 +69,17 @@ const isEvent = (fields: Fields) => fields.event === 'started' || fields.event =
 
 const isApplied = (fields: Fields) => isRecordedInput(fields.input) && isFields(fields.parts)
 
+const isSubmitResult = (value: unknown) =>
+  isFields(value) &&
+  (value.ok === true ?
+    isCount(value.seq)
+  : value.ok === false && isString(value.reason) && REJECTIONS.includes(value.reason) && Array.isArray(value.problems))
+
 const isResult = (fields: Fields) => {
   if (!isCount(fields.request) || 'result' in fields === 'error' in fields) {
     return false
   }
-  return 'error' in fields ? isString(fields.error) : isFields(fields.result) && typeof fields.result.ok === 'boolean'
+  return 'error' in fields ? isString(fields.error) : isSubmitResult(fields.result)
 }
 
 const CLIENT_CHECKS: Record<string, (fields: Fields) => boolean> = { hello: isHello, submit: isSubmit }
