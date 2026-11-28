@@ -1,0 +1,191 @@
+# @thrashplay/wishem-workbench-app
+
+## 0.1.0
+
+### Minor Changes
+
+- 5ea9a44: The title of the app bar is a control that renames the product. The page opens one link with an output subsystem and an input subsystem, and keeps one source ID for each page load.
+- 139b3cd: The `start` script has the option `--product <folder>`. It mounts a product model as the store `product`.
+- 23535f3: The workbench page shows a product panel. It lists the entities of the product and lets the designer change the value of a field.
+- d823333: The `start` script runs the construct manager with a mounted product and has the option `--product-code`.
+- 421d784: The page address carries the link of each product construct at `/constructs/<id>/link`.
+- 421d784: The option `--product-views` loads the React views of the product.
+- 421d784: The page runs, stops, pauses, resumes, steps, and steps back the product construct, and draws it on the stage.
+- 214862c: Add a list control to the product panel that adds and removes references.
+- f70b6b9: Each field row of the product panel has a `Clear` button. The button sends `product/clear-field` and shows the state of the clear.
+- 964d4aa: The check of `--product-code` runs in a child process.
+- 964d4aa: Each product construct runs in a child process, and the terminal shows its process ID and its output.
+- a0e4995: Add the `generate` script. It writes the types of the props of each view (`<name>.view.gen.ts`) from the component type definitions, and `--check` reports each file that is not current.
+- a0e4995: The `start` script keeps the generated types of the views current after each change to a definition or a sidecar. The option `--no-view-types` turns this off.
+- a0e4995: A sidecar file (`<name>.view.json`) attaches a view to its component type, and the view gets each field of the component type as a prop named from the label of the field. `defineView` and the comparison of a view with its definition are removed.
+- d04cdf9: The module of `--product-code` exports the list `behaviors` in place of the function `wrapStore`.
+- ecc7fc3: The option `--hub-port` of the `start` script replaces `--core-port`.
+- ecc7fc3: The page reads the model through the link and connects again after the link ends.
+- 4fa4a53: Add the `Badge` component.
+- 4fa4a53: Give the `Button` component the variants `maker`, `neutral`, `quiet`, and `danger`, a loading state, and each native `button` prop. The label is `children`, `onClick` replaces `onPress`, `loading` replaces `busy`, and `neutral` replaces the variant `plain`. A disabled button has the native `disabled` attribute, and the prop `focusableWhenDisabled` keeps the focus with `aria-disabled`. `accessibleName` stays.
+- 4fa4a53: Add the `Callout` component, with the variants `success`, `warning`, `danger`, and `info`.
+- 4fa4a53: Add the `Checkbox` component.
+- 4fa4a53: Add the `Divider` component, with the variants `plain` and `accent`.
+- 4fa4a53: Add the `Field` component, which gives one control its label and its error message.
+- 4fa4a53: Add the `data-force` attribute and the `st-` variants, which let the style guide show the hover, active, and focus look of a component with no interaction.
+- 4fa4a53: Add the `MakerLine` component, for one line of text of the designer.
+- 4fa4a53: Add the `on-fill` role: the color of text and marks on a bright fill.
+- 4fa4a53: Add the `Panel` component: a surface box with a body, an optional header, and an optional footer.
+- 4fa4a53: Add the `PromptBox` component: a text box that grows with its text, reports "send" and "stop", and locks while work is in progress.
+- 4fa4a53: Add the `Quote` component.
+- 4fa4a53: Add the `Select` component: a drawn select that works with a keyboard and a screen reader.
+- 4fa4a53: Add the `SpiritAside` component, for an aside that Wishem signs.
+- 4fa4a53: Add the `SpiritLine` component, for one line of text of Wishem.
+- 4fa4a53: Add the `TextArea` component.
+- 4fa4a53: Add the `TextInput` component.
+- b5f30dd: Add the `AppBar` component, which shows the title of the application on the night surface.
+- b5f30dd: New package: the browser application of the Wishem workbench, with a shell page that shows the zero state.
+- b5f30dd: Add the design tokens of the workbench for light mode and dark mode, with the bundled typefaces Bricolage Grotesque, Inter, and JetBrains Mono.
+- 21aa38f: Add the HTML renderer: `defineView` declares a view, and the renderer draws each component of the model that has a view.
+- 21aa38f: The workbench page draws the app bar from the model and follows each change to the model files with no reload.
+- 21aa38f: Add the `start` script, which starts the core of the workbench and the page in one command.
+- b5f30dd: Add the style guide page, with screenshot tests and accessibility tests that run in a pinned Playwright image.
+- b5f30dd: Add the `ZeroState` component, which shows a label and a line of text in the center of its space.
+
+### Patch Changes
+
+- ced6862: The page connects to the hub through `connectLink` of the hub package. The behavior of the page does not change.
+- 9708c13: The count of the sample product is a number. The count rule adds 1 to each count that is a number.
+- a9f747a: Ctrl+C on the `start` scripts of the workbench and of the workbench app ends with exit code 0. The scripts use `exec`, and the signal handlers stay in place for a second signal.
+- df7c5ea: Keep the live values of a paused run when the entities of the product model change.
+- 46d64c9: The terminal line of a model warning names the definition file of the duplicate label.
+- f52907f: A `constructs/stop` and a `constructs/start` that the workbench applies in one pass start the product construct again. Each entry of the construct list holds `startSeq`.
+- 9da0123: The start script of the workbench stops with exit code 0 on a terminate signal that arrives right after it prints the page address.
+- 9d70a4d: The browser tests of the workbench with a product use port 4184, which no other browser test uses.
+- 5cb8fe7: The browser tests of the workbench with a product use port 4182, so they do not conflict with the page server of `pixi-page`.
+- 0f1c57d: Make the tests of `renderer-react` and `workbench-app` check the parts of a message that matter, fix two documents, and list the resolve conditions of the tests of `renderer-react` in full.
+- 86b2e37: The keeper of the view types does no work for an input that does not change the definitions.
+- 838a454: The page draws with the package `@thrashplay/wishem-renderer-react`. A person sees no change.
+- Updated dependencies [5ea9a44]
+- Updated dependencies [5ea9a44]
+- Updated dependencies [5ea9a44]
+- Updated dependencies [5ea9a44]
+- Updated dependencies [139b3cd]
+- Updated dependencies [139b3cd]
+- Updated dependencies [139b3cd]
+- Updated dependencies [23535f3]
+- Updated dependencies [d823333]
+- Updated dependencies [d823333]
+- Updated dependencies [d823333]
+- Updated dependencies [421d784]
+- Updated dependencies [421d784]
+- Updated dependencies [421d784]
+- Updated dependencies [ced6862]
+- Updated dependencies [ced6862]
+- Updated dependencies [d107430]
+- Updated dependencies [f90da5b]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [ea8b458]
+- Updated dependencies [f972a42]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [214862c]
+- Updated dependencies [f70b6b9]
+- Updated dependencies [f70b6b9]
+- Updated dependencies [f70b6b9]
+- Updated dependencies [9708c13]
+- Updated dependencies [b36bb42]
+- Updated dependencies [b36bb42]
+- Updated dependencies [58e0189]
+- Updated dependencies [a9f747a]
+- Updated dependencies [964d4aa]
+- Updated dependencies [964d4aa]
+- Updated dependencies [964d4aa]
+- Updated dependencies [909ae54]
+- Updated dependencies [909ae54]
+- Updated dependencies [df7c5ea]
+- Updated dependencies [df7c5ea]
+- Updated dependencies [46d64c9]
+- Updated dependencies [46d64c9]
+- Updated dependencies [68b689d]
+- Updated dependencies [f52907f]
+- Updated dependencies [3adc5a1]
+- Updated dependencies [de06ddc]
+- Updated dependencies [64efce8]
+- Updated dependencies [0e5a720]
+- Updated dependencies [51689f8]
+- Updated dependencies [a6b3ba2]
+- Updated dependencies [bb32932]
+- Updated dependencies [19f055c]
+- Updated dependencies [96c1755]
+- Updated dependencies [b19239f]
+- Updated dependencies [2562f8e]
+- Updated dependencies [2562f8e]
+- Updated dependencies [2c23c78]
+- Updated dependencies [dacd357]
+- Updated dependencies [dacd357]
+- Updated dependencies [0cba44c]
+- Updated dependencies [f92552b]
+- Updated dependencies [aa8e881]
+- Updated dependencies [2acbfc9]
+- Updated dependencies [046306c]
+- Updated dependencies [29d2f44]
+- Updated dependencies [1202240]
+- Updated dependencies [0f1c57d]
+- Updated dependencies [73432e7]
+- Updated dependencies [52d739c]
+- Updated dependencies [37070eb]
+- Updated dependencies [fcf369e]
+- Updated dependencies [bdbc697]
+- Updated dependencies [86b2e37]
+- Updated dependencies [2e13b7d]
+- Updated dependencies [d04cdf9]
+- Updated dependencies [5888d4b]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [274f162]
+- Updated dependencies [21aa38f]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [b655a01]
+- Updated dependencies [07144f1]
+- Updated dependencies [05b6331]
+- Updated dependencies [28aa975]
+- Updated dependencies [99dfd5c]
+- Updated dependencies [343bf6e]
+- Updated dependencies [c05d7b6]
+- Updated dependencies [e540990]
+- Updated dependencies [86b2e37]
+- Updated dependencies [274f162]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [ecc7fc3]
+- Updated dependencies [b7d80d7]
+- Updated dependencies [24b02f3]
+- Updated dependencies [cbbd4e9]
+- Updated dependencies [24fbcff]
+- Updated dependencies [3197928]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [86b2e37]
+- Updated dependencies [b655a01]
+- Updated dependencies [45ec052]
+- Updated dependencies [9dacfe6]
+- Updated dependencies [5e4ecc0]
+- Updated dependencies [838a454]
+- Updated dependencies [838a454]
+- Updated dependencies [838a454]
+- Updated dependencies [511b905]
+- Updated dependencies [d04cdf9]
+- Updated dependencies [274f162]
+- Updated dependencies [ecc7fc3]
+  - @thrashplay/wishem-hub@0.1.0
+  - @thrashplay/wishem-core@0.1.0
+  - @thrashplay/wishem-host-nodejs@0.1.0
+  - @thrashplay/wishem-renderer-react@0.1.0
+  - @thrashplay/wishem-clock@0.1.0
+  - @thrashplay/wishem-construct-manager@0.1.0
+  - @thrashplay/wishem-update@0.1.0
+  - @thrashplay/wishem-workbench@0.1.0

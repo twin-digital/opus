@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/wishem-clock",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The time subsystem and the clock of a Wishem construct. Runs with no Node.js API.",
   "type": "module",
   "exports": {

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@thrashplay/wishem-command",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The wishem command of Wishem. Runs a construct for a model folder, and runs the product constructs of a mounted product.",
   "type": "module",
   "exports": {
