@@ -264,7 +264,7 @@ The live state of a construct is its joined state. Each model subsystem contribu
 
 Each input is in the record. The same starting state and the same inputs always give the same result. Random values come from a seed. (rule R3)
 
-The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**)
+The **clock** is a subsystem that sends ticks at an interval. A product that is not a game has no clock. (**Agreed**) [The game loop](#the-game-loop) says how the clock and the other parts work together.
 
 A tick is the input `time/advance`. A listener sees a tick as the hub event for an applied input. (**Agreed**)
 
@@ -324,15 +324,15 @@ A bookmark inside one play session is simple. A bookmark that is kept for a long
 
 A game loop has these jobs: a fixed step, an accumulator, a catch-up with a limit, a source of real time, an update of the rules, and a render. This section says which part of Wishem has each job. The facts come from `clock/src/clock.ts` and `clock/src/time.ts`.
 
-| Job                   | Part of Wishem                                                                                                                         | State                        |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.         | Built                        |
-| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.     | Built                        |
-| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                           | Built                        |
-| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                  | Built                        |
-| Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After each of them the clock measures real time again. | Built                        |
-| Update of the rules   | One model subsystem, the update step. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.      | Not built (#617)             |
-| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                | Built, with no interpolation |
+| Job                   | Part of Wishem                                                                                                                                                                            | State                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Fixed step            | The clock. Each tick is `time/advance { ms: stepMs }`, with the same `ms` each time (50 ms by default). The reason is rule R3.                                                            | Built                                                               |
+| Accumulator           | The clock. At each call of its timer it sends `floor((real time - last) / stepMs)` ticks and moves `last` by that number of steps.                                                        | Built                                                               |
+| Catch-up with a limit | The clock. One call sends at most `maxTicksPerCall` ticks (5 by default) and drops the time above the limit.                                                                              | Built                                                               |
+| Source of real time   | The option `now` of the clock. The default is `performance.now()`, a monotonic clock.                                                                                                     | Built                                                               |
+| Pause, step, rewind   | The part `time` (`running`) and the inputs `time/set-running` and `hub/rewind`. After `time/set-running` and `hub/rewind`, and when the clock starts, the clock measures real time again. | Built                                                               |
+| Update of the rules   | One model subsystem, the update subsystem. Each rule of a product that reacts to a tick is a native behavior that this subsystem runs.                                                    | Not built ([#617](https://github.com/twin-digital/opus/issues/617)) |
+| Render                | A renderer. It draws when the part that it reads changes, so it draws at the tick rate and after the delay of the link.                                                                   | Built, with no interpolation                                        |
 
 ### Fixed step
 
@@ -342,20 +342,20 @@ A tick has the same length each time, so the same record gives the same state (r
 
 The accumulator keeps the time of the construct near the real time. When the timer is late, the clock sends more than one tick in the call. When more than `maxTicksPerCall` ticks are due, the time of the construct runs slower than the real time for that moment. This stops a loop of more and more work.
 
-`performance.now()` does not jump when the user or the system changes the clock of the computer. A timer such as `setInterval` is not exact, and the accumulator corrects the count of ticks. The hub runs in a Node.js process (rule R21), so the timer is not slowed as it is in a tab of a web browser that is not in front.
+`performance.now()` does not jump when the user or the system changes the clock of the computer. A timer such as `setInterval` is not exact, and the accumulator corrects the count of ticks. The hub runs in a Node.js process (rule R21). The clock of a construct runs in the same process. A tab of a web browser can slow a timer when the tab is not in front, and a Node.js process does not have this problem.
 
 ### Not built
 
-- **The update step.** A tick changes only the part `time`. A rule that reacts to `time/advance` is a model subsystem that wraps the store. The count rule of the sample product is the first. The color rule of the PixiJS construct ([#540](https://github.com/twin-digital/opus/issues/540)) is the next. These rules are native behaviors in a first form, and each one wraps the store by itself. No part owns the order between them.
+- **The update subsystem.** A tick changes only the part `time`. A rule that reacts to `time/advance` is a model subsystem that wraps the store. The count rule of the sample product is the first. The color rule of the PixiJS construct is the next rule. [#540](https://github.com/twin-digital/opus/issues/540) adds it. These rules are native behaviors in a first form, and each one wraps the store by itself. No part owns the order between them.
 - **Interpolation.** No renderer draws a frame between two ticks.
 - **A step length that changes.** The step length is set when the clock starts. A product cannot ask for a different rate while it runs.
 - **The cost of a tick.** Each tick is an input in the record and goes to each listener and through each link. The cost for each tick of each listener is not measured. The record has a limit ([#533](https://github.com/twin-digital/opus/issues/533)).
 
-### Decision: the update step (**Agreed**)
+### Decision: the update subsystem (**Agreed**)
 
-One model subsystem is the update step. It runs the native behaviors in an order that the specification gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
+One model subsystem is the update subsystem. It runs the behaviors in an order that the specification of the update subsystem gives. A behavior is data and code that this subsystem runs. It is not a subsystem. (rule R22)
 
-The count rule and the color rule move into the update step as its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
+The count rule and the color rule move into the update subsystem as its first native behaviors. The change is [#617](https://github.com/twin-digital/opus/issues/617). The declaration of a behavior in the model, the prompt, the history, and the replacement of code while the product runs belong to the behavior feature ([#481](https://github.com/twin-digital/opus/issues/481)).
 
 ### Decision: interpolation in a renderer (**Agreed**)
 
@@ -363,7 +363,7 @@ The direction is interpolation in a renderer. A renderer keeps the state of the 
 
 The model says which fields a renderer draws between two values (for example a position) and which fields jump (for example a text or a color name). This fact belongs in the design of the field types.
 
-A renderer is not built this way until a product with motion needs it (rule R7). Until then, a renderer draws each state as it comes. The task of interpolation is in the milestone of the first product with motion.
+A renderer is not built this way until a product with motion needs it (rule R7). Until then, a renderer draws each state as it comes. The planning of the first product with motion creates the task of interpolation.
 
 ## Storage
 
